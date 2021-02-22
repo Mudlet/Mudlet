@@ -19,11 +19,6 @@ jobs:
     - uses: actions/setup-node@v2.1.4
     - uses: leafo/gh-actions-luarocks@v4
 
-    - name: install Lua dependencies
-      run: |
-        luarocks install http
-        luarocks install lunajson
-
     - name: Retrieve latest PTB version
       run: |
         export PTB_VERSION=$(curl --silent https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/linux/x86_64 | jq ".releases[0].version")
@@ -57,5 +52,15 @@ jobs:
           echo "MACOS_PTB_URL=$MACOS_PTB_URL"
         } >> "$GITHUB_ENV"
 
-    - name: Install dblsqd client
-      run: sudo npm install -g dblsqd-cli
+    - name: Setup dblsqd client
+      run: |
+        sudo npm install -g dblsqd-cli
+        dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
+      env:
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+
+    - name: Link updater with Linux/macOS downloads
+      run: |
+        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${LINUX_PTB_URL}"
+        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${MACOS_PTB_URL}"
