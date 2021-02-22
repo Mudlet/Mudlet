@@ -1,0 +1,140 @@
+name: Build Mudlet
+on:
+  push:
+    branches: [master, development]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 1 * * *'
+
+jobs:
+  compile-mudlet:
+    name: ${{matrix.buildname}}
+    runs-on: ${{matrix.os}}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # newest OS supported for latest clazy version
+          - os: ubuntu-20.04
+            buildname: 'ubuntu / gcc'
+            triplet: x64-linux
+            compiler: gcc_64
+            qt: '5.14.1'
+
+    env:
+      BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
+      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
+
+    steps:
+    - name: Checkout Mudlet source code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+
+    - name: Restore Qt cache
+      uses: actions/cache@v2.1.4
+      id: cache-qt
+      with:
+        path: ${{runner.workspace}}/Qt/${{matrix.qt}}
+        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+      with:
+        version: ${{matrix.qt}}
+        dir: ${{runner.workspace}}
+        cached: ${{steps.cache-qt.outputs.cache-hit}}
+        aqtversion: '==1.1.2'
+
+    - name: Restore Boost cache
+      uses: actions/cache@v2.1.4
+      id: cache-boost
+      with:
+        path: ${{env.BOOST_ROOT}}
+        key: boost
+
+    - name: Install Boost
+      if: steps.cache-boost.outputs.cache-hit != 'true'
+      run: |
+        if [ "$OS" == "Windows_NT" ]; then
+          # fix up paths to be forward slashes consistently
+          BOOST_ROOT=$(echo $BOOST_ROOT | sed 's/\\/\//g')
+        fi
+        mkdir -p $BOOST_ROOT
+        curl --progress-bar --location --output $BOOST_ROOT/download.tar.bz2 $BOOST_URL
+        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar.bz2 -y -bd
+        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar -y -bd
+        cd $BOOST_ROOT && cp -r boost_*/* .
+        rm -rf boost_*/* download.tar.bz2 download.tar
+      shell: bash
+
+    # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
+    - name: Restore from cache and run vcpkg
+      uses: lukka/run-vcpkg@v7
+      env:
+        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
+      with:
+        vcpkgArguments: '@${{env.vcpkgResponseFile}}'
+        vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
+        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
+
+    - name: (Linux) Install non-vcpkg dependencies
+      if: runner.os == 'Linux'
+      run: |
+        # Install from vcpkg everything we can for cross-platform consistency
+        # If not available, use other methods
+        sudo apt-get install clazy ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev -y
+
+        # switch to GCC that supports C++17 while retaining support for older OS's
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 7
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 7
+        sudo update-alternatives --set gcc /usr/bin/gcc-7
+        sudo update-alternatives --set g++ /usr/bin/g++-7
+
+        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+
+    - name: (Linux Clang) change compiler
+      if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
+      run: |
+         echo "CXX=clang++" >> $GITHUB_ENV
+         echo "CC=clang" >> $GITHUB_ENV
+
+    - name: (Linux/macOS) restore ccache
+      uses: pat-s/always-upload-cache@v2.1.3
+      with:
+        path: ${{runner.workspace}}/ccache
+        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
+        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
+      if: matrix.os != 'windows-latest'
+
+    - name: (Linux/macOS) Set build info
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      run: |
+        ${{github.workspace}}/CI/travis.validate_deployment.sh
+        ${{github.workspace}}/CI/travis.set-build-info.sh
+
+    - name: (Linux/macOS) check ccache stats prior to build
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      run: ccache --show-stats
+
+    - name: Build Mudlet
+      uses: lukka/run-cmake@v3
+      with:
+        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+        useVcpkgToolchainFile: true
+        buildDirectory: '${{runner.workspace}}/b/ninja'
+        cmakeAppendedArgs: >-
+          --target test
+          -G Ninja
+          -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
+          -DVCPKG_APPLOCAL_DEPS=OFF
+          -DCMAKE_CXX_COMPILER=clazy
+      env:
+        NINJA_STATUS: '[%f/%t %o/sec] '
+
+    - name: (Linux/macOS) check ccache stats post build
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      run: ccache --show-stats
