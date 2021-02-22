@@ -122,7 +122,7 @@ jobs:
         # Clang-tidy configuration
 
         # Configure which analyser to use
-        if [ "{{$matrix.buildname}}" = "clazy" ]; then
+        if [ "${{matrix.buildname}}" = "clazy" ]; then
           echo "ANALYSIS_TOOL=-DCMAKE_CXX_COMPILER=clazy" >> $GITHUB_ENV
         else
           echo "ANALYSIS_TOOL=-DCMAKE_CXX_CLANG_TIDY=clang-tidy" >> $GITHUB_ENV
