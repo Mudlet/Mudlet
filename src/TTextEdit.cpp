@@ -1652,10 +1652,10 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
 
         if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() >= timeout) {
             qDebug().nospace() << "timeout for image copy (" << timeout << "s) reached, managed to draw " << i << " lines";
-            return std::make_pair(false, linesDrawn);
+            return {false, linesDrawn};
         }
     }
-    return std::make_pair(true, linesDrawn);
+    return {true, linesDrawn};
 }
 
 void TTextEdit::searchSelectionOnline()

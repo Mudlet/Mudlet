@@ -11436,7 +11436,7 @@ std::pair<bool, QString> TLuaInterpreter::validateLuaCodeParam(int index)
 {
     lua_State* L = pGlobalLua;
     if (!lua_isstring(L, index)) {
-        return std::make_pair(false, QStringLiteral("lua script as string expected, got %1!").arg(luaL_typename(L, index)));
+        return {false, QStringLiteral("lua script as string expected, got %1!").arg(luaL_typename(L, index))};
     }
     QString script{lua_tostring(L, index)};
     return validLuaCode(script);
@@ -11459,7 +11459,7 @@ std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString &code)
         }
     }
     lua_pop(L, topElementIndex);
-    return std::make_pair(!error, e);
+    return {!error, e};
 }
 
 // No documentation available in wiki - internal function
@@ -11468,19 +11468,19 @@ std::pair<bool, QString> TLuaInterpreter::discordApiEnabled(lua_State* L, bool w
     mudlet* pMudlet = mudlet::self();
 
     if (!pMudlet->mDiscord.libraryLoaded()) {
-        return std::make_pair(false, QStringLiteral("Discord API is not available"));
+        return {false, QStringLiteral("Discord API is not available")};
     }
 
     auto& host = getHostFromLua(L);
     if (!(host.mDiscordAccessFlags & Host::DiscordLuaAccessEnabled)) {
-        return std::make_pair(false, QStringLiteral("Discord API is disabled in settings for privacy"));
+        return {false, QStringLiteral("Discord API is disabled in settings for privacy")};
     }
 
     if (writeAccess && !pMudlet->mDiscord.discordUserIdMatch(&host)) {
-        return std::make_pair(false, QStringLiteral("Discord API is read-only as you're logged in with a different account in Discord compared to the one you entered for this profile"));
+        return {false, QStringLiteral("Discord API is read-only as you're logged in with a different account in Discord compared to the one you entered for this profile")};
     }
 
-    return std::make_pair(true, QString());
+    return {true, QString()};
 }
 
 // No documentation available in wiki - internal function
@@ -12186,9 +12186,9 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
         lua_pop(L, lua_gettop(L));
         //lua_settop(L, 0);
         if (error == 0) {
-            return std::make_pair(true, returnValue);
+            return {true, returnValue};
         } else {
-            return std::make_pair(false, returnValue);
+            return {false, returnValue};
         }
     } else {
         QString _n = "error in anonymous Lua function";
@@ -12197,7 +12197,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
         logError(e, _n, _n2);
     }
 
-    return std::make_pair(false, false);
+    return {false, false};
 }
 
 // No documentation available in wiki - internal function
@@ -12266,9 +12266,9 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
     }
     lua_pop(L, lua_gettop(L));
     if (error == 0) {
-        return std::make_pair(true, returnValue);
+        return {true, returnValue};
     } else {
-        return std::make_pair(false, returnValue);
+        return {false, returnValue};
     }
 }
 
@@ -12461,9 +12461,9 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
     }
     lua_pop(L, lua_gettop(L));
     if (error == 0) {
-        return std::make_pair(true, returnValue);
+        return {true, returnValue};
     } else {
-        return std::make_pair(false, returnValue);
+        return {false, returnValue};
     }
 }
 
@@ -14141,7 +14141,7 @@ std::pair<int, QString> TLuaInterpreter::createPermScript(const QString& name, c
         auto ids = mpHost->getScriptUnit()->findScriptId(parent);
         auto pParentScript = mpHost->getScriptUnit()->getScript(ids.value(0, -1));
         if (!pParentScript) {
-            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent)); //parent not found
+            return {-1, QStringLiteral("parent '%1' not found").arg(parent)}; //parent not found
         }
         pS = new TScript(pParentScript, mpHost);
     }
@@ -14152,37 +14152,37 @@ std::pair<int, QString> TLuaInterpreter::createPermScript(const QString& name, c
     if (!pS->setScript(luaCode)) {
         QString errMsg = pS->getError();
         delete pS;
-        return std::make_pair(-1, QStringLiteral("unable to compile \"%1\", reason: %2").arg(luaCode, errMsg));
+        return {-1, QStringLiteral("unable to compile \"%1\", reason: %2").arg(luaCode, errMsg)};
     }
 
     int id = pS->getID();
     pS->setIsActive(false);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return std::make_pair(id, QString());
+    return {id, QString()};
 }
 
 // No documentation available in wiki - internal function
 std::pair<int, QString> TLuaInterpreter::setScriptCode(QString& name, const QString& luaCode, int pos)
 {
     if (name.isEmpty()) {
-        return std::make_pair(-1, QStringLiteral("cannot have an empty string as name"));
+        return {-1, QStringLiteral("cannot have an empty string as name")};
     }
 
     auto ids = mpHost->getScriptUnit()->findScriptId(name);
     TScript* pS = mpHost->getScriptUnit()->getScript(ids.value(pos, -1));
     if (!pS) {
-        return std::make_pair(-1, QStringLiteral("script \"%1\" at position \"%2\" not found").arg(name).arg(++pos)); //script not found
+        return {-1, QStringLiteral("script \"%1\" at position \"%2\" not found").arg(name).arg(++pos)}; //script not found
     }
     auto oldCode = pS->getScript();
     if (!pS->setScript(luaCode)) {
         QString errMsg = pS->getError();
         pS->setScript(oldCode);
-        return std::make_pair(-1, QStringLiteral("unable to compile \"%1\" at position \"%2\", reason: %3").arg(luaCode).arg(++pos).arg(errMsg));
+        return {-1, QStringLiteral("unable to compile \"%1\" at position \"%2\", reason: %3").arg(luaCode).arg(++pos).arg(errMsg)};
     }
     pS->setScript(luaCode);
     int id = pS->getID();
     mpHost->mpEditorDialog->writeScript(id);
-    return std::make_pair(id, QString());
+    return {id, QString()};
 }
 
 // No documentation available in wiki - internal function
@@ -14198,7 +14198,7 @@ std::pair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, con
         // API to handle more than one potential parent with the same name:
         auto pParentTimer = mpHost->getTimerUnit()->findFirstTimer(parent);
         if (!pParentTimer) {
-            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
+            return {-1, QStringLiteral("parent '%1' not found").arg(parent)};
         }
         pT = new TTimer(pParentTimer, mpHost);
     }
@@ -14215,12 +14215,12 @@ std::pair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, con
         QString errMsg = pT->getError();
         // Apparently this will call the TTimer::unregisterTimer(...) method:
         delete pT;
-        return std::make_pair(-1, QStringLiteral("unable to compile \"%1\", reason: %2").arg(function, errMsg));
+        return {-1, QStringLiteral("unable to compile \"%1\", reason: %2").arg(function, errMsg)};
     }
 
     pT->setIsActive(false);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return std::make_pair(pT->getID(), QString());
+    return {pT->getID(), QString()};
 }
 
 // No documentation available in wiki - internal function
@@ -14257,7 +14257,7 @@ std::pair<int, QString> TLuaInterpreter::startPermAlias(const QString& name, con
     } else {
         TAlias* pP = mpHost->getAliasUnit()->findFirstAlias(parent);
         if (!pP) {
-            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
+            return {-1, QStringLiteral("parent '%1' not found").arg(parent)};
         }
         pT = new TAlias(pP, mpHost);
     }
@@ -14269,7 +14269,7 @@ std::pair<int, QString> TLuaInterpreter::startPermAlias(const QString& name, con
     pT->setScript(function);
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return std::make_pair(pT->getID(), QString());
+    return {pT->getID(), QString()};
 }
 
 // No documentation available in wiki - internal function
@@ -14298,7 +14298,7 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
     } else {
         TKey* pP = mpHost->getKeyUnit()->findFirstKey(parent);
         if (!pP) {
-            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
+            return {-1, QStringLiteral("parent '%1' not found").arg(parent)};
         }
         pT = new TKey(pP, mpHost);
     }
@@ -14312,7 +14312,7 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
     pT->setScript(function);
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return std::make_pair(pT->getID(), QString());
+    return {pT->getID(), QString()};
 }
 
 // No documentation available in wiki - internal function
@@ -14517,7 +14517,7 @@ std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
+            return {-1, QStringLiteral("parent '%1' not found").arg(parent)};
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -14545,7 +14545,7 @@ std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
+            return {-1, QStringLiteral("parent '%1' not found").arg(parent)};
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -14557,7 +14557,7 @@ std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString
     pT->setScript(function);
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return std::make_pair(pT->getID(), QString());
+    return {pT->getID(), QString()};
 }
 
 // No documentation available in wiki - internal function
@@ -14572,7 +14572,7 @@ std::pair<int, QString> TLuaInterpreter::startPermPromptTrigger(const QString& n
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
+            return {-1, QStringLiteral("parent '%1' not found").arg(parent)};
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -14584,7 +14584,7 @@ std::pair<int, QString> TLuaInterpreter::startPermPromptTrigger(const QString& n
     pT->setScript(function);
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return std::make_pair(pT->getID(), QString());
+    return {pT->getID(), QString()};
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#alert
