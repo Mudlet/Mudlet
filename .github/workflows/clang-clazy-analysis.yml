@@ -19,12 +19,12 @@ jobs:
           - os: ubuntu-20.04
             buildname: 'clang-tidy'
             triplet: x64-linux
-            compiler: gcc_64
+            compiler: clang_64
             qt: '5.14.1'
           - os: ubuntu-20.04
             buildname: 'clazy'
             triplet: x64-linux
-            compiler: gcc_64
+            compiler: clang_64
             qt: '5.14.1'
 
     env:
@@ -92,11 +92,13 @@ jobs:
         # If not available, use other methods
         sudo apt-get install clazy clang-tidy pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev -y
 
-        # Use latest GCC for latest analysis tools
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 10
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 10
-        sudo update-alternatives --set gcc /usr/bin/gcc-10
-        sudo update-alternatives --set g++ /usr/bin/g++-10
+        # Use latest Clang for latest analysis tools
+        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-10 10
+        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-10 10
+        sudo update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-10 10
+        sudo update-alternatives --set clang /usr/bin/clang-10
+        sudo update-alternatives --set clang++ /usr/bin/clang++-10
+        sudo update-alternatives --set clang++ /usr/bin/clang-tidy-10
 
     - name: (Linux Clang) change compiler
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
