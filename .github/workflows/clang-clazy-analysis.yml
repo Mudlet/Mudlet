@@ -1,4 +1,4 @@
-name: Build Mudlet
+name: Clang-Tidy and Clazy checks
 on:
   push:
     branches: [master, development]
