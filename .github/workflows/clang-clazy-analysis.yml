@@ -121,12 +121,13 @@ jobs:
         } >> "$GITHUB_ENV"
 
         # Clang-tidy configuration
+        # TODO
 
         # Configure which analyser to use
         if [ "${{matrix.buildname}}" = "clazy" ]; then
           echo "ANALYSIS_TOOL=-DCMAKE_CXX_COMPILER=clazy" >> $GITHUB_ENV
         else
-          echo "ANALYSIS_TOOL=-DCMAKE_CXX_CLANG_TIDY=clang-tidy;--analyzer-output=sarif" >> $GITHUB_ENV
+          echo "ANALYSIS_TOOL=-DCMAKE_CXX_CLANG_TIDY=clang-tidy;--analyzer-output=sarif--output=/tmp/sarif" >> $GITHUB_ENV
         fi
 
     - name: Build Mudlet and run ${{matrix.buildname}}
@@ -146,3 +147,8 @@ jobs:
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
+    - name: Upload SARIF results file
+      uses: github/codeql-action/upload-sarif@v1
+      if: matrix.buildname == "clang-tidy"
+      with:
+        sarif_file: /tmp/sarif
