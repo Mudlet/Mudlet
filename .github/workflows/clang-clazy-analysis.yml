@@ -92,11 +92,11 @@ jobs:
         # If not available, use other methods
         sudo apt-get install clazy clang-tidy pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev -y
 
-        # switch to GCC that supports C++17 while retaining support for older OS's
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 7
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 7
-        sudo update-alternatives --set gcc /usr/bin/gcc-7
-        sudo update-alternatives --set g++ /usr/bin/g++-7
+        # Use latest GCC
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 10
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 10
+        sudo update-alternatives --set gcc /usr/bin/gcc-10
+        sudo update-alternatives --set g++ /usr/bin/g++-10
 
     - name: (Linux Clang) change compiler
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
