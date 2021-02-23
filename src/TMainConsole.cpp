@@ -774,24 +774,20 @@ bool TMainConsole::lowerWindow(const QString& name)
     if (pC) {
         pC->lower();
         mpMainDisplay->lower();
-        mpBackground->lower();
         return true;
     }
     if (pL) {
         pL->lower();
-        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->lower();
-        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
     if (pN) {
         pN->lower();
-        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
@@ -1064,7 +1060,6 @@ bool TMainConsole::setTextFormat(const QString& name, const QColor& fgColor, con
 {
     if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         mFormatCurrent.setTextFormat(fgColor, bgColor, flags);
-        mSystemMessageBgColor = bgColor;
         return true;
     }
 
