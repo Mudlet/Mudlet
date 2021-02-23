@@ -12,7 +12,7 @@ jobs:
         include:
           # newest OS supported for latest clang-tidy
           - os: ubuntu-20.04
-            buildname: 'clang-tidy'
+            buildname: 'analyze-pr'
             triplet: x64-linux
             compiler: clang_64
             qt: '5.14.1'
