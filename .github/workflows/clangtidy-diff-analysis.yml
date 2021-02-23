@@ -105,7 +105,7 @@ jobs:
         build_dir: 'b/ninja' # path is relative to checkout directory
         clang_tidy_checks: '-*,performance-*,readability-*,bugprone-*,clang-analyzer-*,cppcoreguidelines-*,mpi-*,misc-*'
         # the action doesn't see system-level libraries, need to replicate them here
-        apt_packages: 'pkg-config libzip-dev libglu1-mesa-dev libpulse-dev'
+        apt_packages: 'pkg-config,libzip-dev,libglu1-mesa-dev,libpulse-dev'
 
     # If there are any comments, fail the check
     - if: steps.static_analysis.outputs.total_comments > 0
