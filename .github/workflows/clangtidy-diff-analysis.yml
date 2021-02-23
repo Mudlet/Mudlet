@@ -90,7 +90,7 @@ jobs:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
-        buildDirectory: '${{runner.workspace}}/b/ninja'
+        buildDirectory: '${{github.workspace}}/b/ninja'
         buildWithCMake: false
         cmakeAppendedArgs: >-
           --target test
@@ -102,7 +102,7 @@ jobs:
     - uses: ZedThree/clang-tidy-review@v0.6.0
       id: static_analysis
       with:
-        build_dir: 'Mudlet/b/ninja' # path is relative to checkout directory
+        build_dir: 'b/ninja' # path is relative to checkout directory
         clang_tidy_checks: '-*,performance-*,readability-*,bugprone-*,clang-analyzer-*,cppcoreguidelines-*,mpi-*,misc-*'
         # the action doesn't see system-level libraries, need to replicate them here
         apt_packages: 'pkg-config,libzip-dev,libglu1-mesa-dev,libpulse-dev'
