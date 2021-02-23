@@ -231,7 +231,7 @@ public:
     QWidget* mpMainFrame;
     QWidget* mpRightToolBar;
     QWidget* mpMainDisplay;
-    QLabel* mpBackground;
+    QWidget* mpBackground;
 
     dlgMapper* mpMapper;
 

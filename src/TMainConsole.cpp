@@ -773,8 +773,8 @@ bool TMainConsole::lowerWindow(const QString& name)
 
     if (pC) {
         pC->lower();
-        mpBackground->lower();
         mpMainDisplay->lower();
+        mpBackground->lower();
         return true;
     }
     if (pL) {
