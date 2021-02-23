@@ -1332,7 +1332,6 @@ void dlgConnectionProfiles::fillout_form()
     profiles_tree_widget->setIconSize(QSize(120, 30));
     QString mudServer, description;
     QListWidgetItem* pItem;
-    QIcon mi;
 
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(QStringLiteral("deletedDefaultMuds"), QStringList()).toStringList();
