@@ -2,8 +2,9 @@ name: Link Linux/macOS PTBs to the updater (dblsqd)
 
 on:
   workflow_dispatch:
+  pull_request:
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 3 * * *'
 
 jobs:
   link-ptbs:
@@ -20,7 +21,8 @@ jobs:
 
     - name: Retrieve latest PTB version
       run: |
-        export PTB_VERSION=$(curl --silent https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/linux/x86_64 | jq --raw-output ".releases[0].version")
+        # Get the latest Windows version, because that one runs first and will be registered in dblsqd. Linux/macOS won't exist yet
+        export PTB_VERSION=$(curl --silent https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86 | jq --raw-output ".releases[0].version")
         export PTB_COMMIT=$(lua -e "print(os.getenv('PTB_VERSION'):match('.+\-(.+)$'))")
 
         echo "Latest PTB version is: $PTB_VERSION"
