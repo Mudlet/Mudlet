@@ -7,7 +7,7 @@ on:
     - cron: '0 2 * * *'
 
 jobs:
-  link-ptbs:
+  work:
     runs-on: ubuntu-20.04
     if: ${{ github.repository_owner == 'Mudlet' }}
 
@@ -41,8 +41,8 @@ jobs:
         #   echo "Downloaded feed from https://make.mudlet.org/snapshots/json.php?commitid=$PTB_COMMIT wasn't OK"
         # fi
 
-        export LINUX_PTB_URL=$(cat $LATEST_FEED | jq ".data[] | select(.platform == \"linux\") | .url")
-        export MACOS_PTB_URL=$(cat $LATEST_FEED | jq ".data[] | select(.platform == \"macos\") | .url")
+        export LINUX_PTB_URL=$(cat $LATEST_FEED | jq --raw-output ".data[] | select(.platform == \"linux\") | .url")
+        export MACOS_PTB_URL=$(cat $LATEST_FEED | jq --raw-output ".data[] | select(.platform == \"macos\") | .url")
 
         echo "Linux PTB link: $LINUX_PTB_URL"
         echo "macOS PTB link: $MACOS_PTB_URL"
