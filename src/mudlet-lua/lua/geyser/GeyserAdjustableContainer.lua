@@ -838,7 +838,7 @@ end
 --- overridden reposition function to raise an "AdjustableContainerReposition" event and call the shrink_title function
 --- Event: "AdjustableContainerReposition" passed values (name, width, height, x, y, isMouseAction)
 --- (the isMouseAction property is true if the reposition is an effect of user dragging/resizing the window,
---- and false if the reposition event comes as effect of external action, such as resigin of main window)
+--- and false if the reposition event comes as effect of external action, such as resizing of main window)
 function Adjustable.Container:reposition()
     Geyser.Container.reposition(self)
     raiseEvent(
