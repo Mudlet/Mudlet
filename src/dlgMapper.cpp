@@ -70,40 +70,43 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     QMapIterator<QString, QString> areaIt(areaNames);
     while (areaIt.hasNext()) {
         areaIt.next();
-        showArea->addItem(areaIt.value());
+        comboBox_showArea->addItem(areaIt.value());
     }
-    bubbles->setChecked(mpHost->mBubbleMode);
-    mp2dMap->mBubbleMode = mpHost->mBubbleMode;
-    d3buttons->setVisible(false);
-    d2buttons->setVisible(true);
-    roomSize->setValue(mpHost->mRoomSize * 10);
-    lineSize->setValue(mpHost->mLineSize);
+    slot_toggleRoundRooms(mpHost->mBubbleMode);
+    widget_3DControls->setVisible(false);
+    widget_2DControls->setVisible(true);
+    spinBox_roomSize->setValue(mpHost->mRoomSize * 10);
+    spinBox_exitSize->setValue(mpHost->mLineSize);
 
-    showRoomIDs->setChecked(mpHost->mShowRoomID);
+    checkBox_showRoomIds->setChecked(mpHost->mShowRoomID);
     mp2dMap->mShowRoomID = mpHost->mShowRoomID;
 
-    showRoomNames->setVisible(mpMap->getRoomNamesPresent());
-    showRoomNames->setChecked(mpMap->getRoomNamesShown());
+    checkBox_showRoomNames->setVisible(mpMap->getRoomNamesPresent());
+    checkBox_showRoomNames->setChecked(mpMap->getRoomNamesShown());
 
-    panel->setVisible(mpHost->mShowPanel);
-    connect(bubbles, &QAbstractButton::clicked, this, &dlgMapper::slot_bubbles);
-    connect(shiftZup, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftZup);
-    connect(shiftZdown, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftZdown);
-    connect(shiftLeft, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftLeft);
-    connect(shiftRight, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftRight);
-    connect(shiftUp, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftUp);
-    connect(shiftDown, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftDown);
-    connect(lineSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_lineSize);
-    connect(roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_roomSize);
-    connect(togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
+    widget_panel->setVisible(mpHost->mShowPanel);
+    connect(checkBox_roundRooms, &QAbstractButton::clicked, this, &dlgMapper::slot_toggleRoundRooms);
+    connect(pushButton_shiftZup, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZup);
+    connect(pushButton_shiftZdown, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZdown);
+    connect(pushButton_shiftLeft, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftLeft);
+    connect(pushButton_shiftRight, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftRight);
+    connect(pushButton_shiftUp, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftUp);
+    connect(pushButton_shiftDown, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftDown);
+    connect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_exitSize);
+    connect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_roomSize);
+    connect(toolButton_togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
-    connect(showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
+    connect(comboBox_showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
 #else
-    connect(showArea, qOverload<const QString&>(&QComboBox::activated), mp2dMap, &T2DMap::slot_switchArea);
+    connect(comboBox_showArea, qOverload<const QString&>(&QComboBox::activated), mp2dMap, &T2DMap::slot_switchArea);
 #endif
-    connect(dim2, &QAbstractButton::clicked, this, &dlgMapper::show2dView);
-    connect(showRoomIDs, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
-    connect(showRoomNames, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomNames);
+#if defined(INCLUDE_3DMAPPER)
+    connect(pushButton_3D, &QAbstractButton::clicked, this, &dlgMapper::slot_toggle3DView);
+#else
+    pushButton_3D->hide();
+#endif
+    connect(checkBox_showRoomIds, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
+    connect(checkBox_showRoomNames, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomNames);
 
     // Explicitly set the font otherwise it changes between the Application and
     // the default System one as the mapper is docked and undocked!
@@ -132,7 +135,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mpMap->mCustomEnvColors[271] = mpHost->mLightWhite_2;
     mpMap->mCustomEnvColors[272] = mpHost->mLightBlack_2;
     auto menu = new QMenu(this);
-    info_pushButton->setMenu(menu);
+    pushButton_info->setMenu(menu);
 
     if (mpHost) {
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpMap->mProfileName: " << mpMap->mProfileName;
@@ -150,7 +153,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
 void dlgMapper::updateAreaComboBox()
 {
-    QString oldValue = showArea->currentText(); // Remember where we were
+    QString oldValue = comboBox_showArea->currentText(); // Remember where we were
     QMapIterator<int, QString> itAreaNamesA(mpMap->mpRoomDB->getAreaNamesMap());
     //insert sort them alphabetically (case INsensitive)
     QMap<QString, QString> _areaNames;
@@ -170,13 +173,13 @@ void dlgMapper::updateAreaComboBox()
         _areaNames.insert(_name, itAreaNamesA.value());
     }
 
-    showArea->clear();
+    comboBox_showArea->clear();
     QMapIterator<QString, QString> itAreaNamesB(_areaNames);
     while (itAreaNamesB.hasNext()) {
         itAreaNamesB.next();
-        showArea->addItem(itAreaNamesB.value());
+        comboBox_showArea->addItem(itAreaNamesB.value());
     }
-    showArea->setCurrentText(oldValue); // Try and reset to previous value
+    comboBox_showArea->setCurrentText(oldValue); // Try and reset to previous value
 }
 
 void dlgMapper::slot_toggleShowRoomIDs(int s)
@@ -204,19 +207,18 @@ void dlgMapper::slot_toggleStrongHighlight(int v)
 
 void dlgMapper::slot_togglePanel()
 {
-    panel->setVisible(!panel->isVisible());
-    mpHost->mShowPanel = panel->isVisible();
+    widget_panel->setVisible(!widget_panel->isVisible());
+    mpHost->mShowPanel = widget_panel->isVisible();
 }
 
-void dlgMapper::show2dView()
+void dlgMapper::slot_toggle3DView(const bool is3DMode)
 {
 #if defined(INCLUDE_3DMAPPER)
-
     if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper) {
         mpHost->mpMap->mpM->update();
     }
     if (!glWidget) {
-        glWidget = new GLWidget(widget);
+        glWidget = new GLWidget(mpMap, mpHost, this);
         glWidget->setObjectName("glWidget");
 
         QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -224,51 +226,47 @@ void dlgMapper::show2dView()
         sizePolicy.setVerticalStretch(0);
         sizePolicy.setHeightForWidth(glWidget->sizePolicy().hasHeightForWidth());
         glWidget->setSizePolicy(sizePolicy);
-        verticalLayout_2->insertWidget(0, glWidget);
-
-        glWidget->mpMap = mpMap;
+        verticalLayout_mapper->insertWidget(0, glWidget);
         mpMap->mpM = mpMap->mpMapper->glWidget;
-        connect(ortho, &QAbstractButton::clicked, glWidget, &GLWidget::fullView);
-        connect(singleLevel, &QAbstractButton::clicked, glWidget, &GLWidget::singleView);
-        connect(increaseTop, &QAbstractButton::clicked, glWidget, &GLWidget::increaseTop);
-        connect(increaseBottom, &QAbstractButton::clicked, glWidget, &GLWidget::increaseBottom);
-        connect(reduceTop, &QAbstractButton::clicked, glWidget, &GLWidget::reduceTop);
-        connect(reduceBottom, &QAbstractButton::clicked, glWidget, &GLWidget::reduceBottom);
-        connect(shiftZup, &QAbstractButton::clicked, glWidget, &GLWidget::shiftZup);
-        connect(shiftZdown, &QAbstractButton::clicked, glWidget, &GLWidget::shiftZdown);
-        connect(shiftLeft, &QAbstractButton::clicked, glWidget, &GLWidget::shiftLeft);
-        connect(shiftRight, &QAbstractButton::clicked, glWidget, &GLWidget::shiftRight);
-        connect(shiftUp, &QAbstractButton::clicked, glWidget, &GLWidget::shiftUp);
-        connect(shiftDown, &QAbstractButton::clicked, glWidget, &GLWidget::shiftDown);
-        connect(defaultView, &QAbstractButton::clicked, glWidget, &GLWidget::defaultView);
-        connect(sideView, &QAbstractButton::clicked, glWidget, &GLWidget::sideView);
-        connect(topView, &QAbstractButton::clicked, glWidget, &GLWidget::topView);
-        connect(scale, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setScale);
-        connect(xRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setXRotation);
-        connect(yRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setYRotation);
-        connect(zRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setZRotation);
+        connect(pushButton_ortho, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showAllLevels);
+        connect(pushButton_singleLevel, &QAbstractButton::clicked, glWidget, &GLWidget::slot_singleLevelView);
+        connect(pushButton_increaseTop, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showMoreUpperLevels);
+        connect(pushButton_increaseBottom, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showMoreLowerLevels);
+        connect(pushButton_reduceTop, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showLessUpperLevels);
+        connect(pushButton_reduceBottom, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showLessLowerLevels);
+        connect(pushButton_shiftZup, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftZup);
+        connect(pushButton_shiftZdown, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftZdown);
+        connect(pushButton_shiftLeft, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftLeft);
+        connect(pushButton_shiftRight, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftRight);
+        connect(pushButton_shiftUp, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftUp);
+        connect(pushButton_shiftDown, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftDown);
+        connect(pushButton_defaultView, &QAbstractButton::clicked, glWidget, &GLWidget::slot_defaultView);
+        connect(pushButton_sideView, &QAbstractButton::clicked, glWidget, &GLWidget::slot_sideView);
+        connect(pushButton_topView, &QAbstractButton::clicked, glWidget, &GLWidget::slot_topView);
+        connect(slider_scale, &QAbstractSlider::valueChanged, glWidget, &GLWidget::slot_setScale);
+        connect(slider_xRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::slot_setCameraPositionX);
+        connect(slider_yRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::slot_setCameraPositionY);
+        connect(slider_zRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::slot_setCameraPositionZ);
     }
 
 
-    mp2dMap->setVisible(!mp2dMap->isVisible());
-    glWidget->setVisible(!glWidget->isVisible());
+    mp2dMap->setVisible(!is3DMode);
+    glWidget->setVisible(is3DMode);
     if (glWidget->isVisible()) {
-        d3buttons->setVisible(true);
-        d2buttons->setVisible(false);
+        widget_3DControls->setVisible(true);
+        widget_2DControls->setVisible(false);
     } else {
         // workaround for buttons reloading oddly
         QTimer::singleShot(100ms, [this]() {
-            d3buttons->setVisible(false);
-            d2buttons->setVisible(true);
+            widget_3DControls->setVisible(false);
+            widget_2DControls->setVisible(true);
         });
     }
 
 #else
     mp2dMap->setVisible(true);
-    d3buttons->setVisible(false);
-    d2buttons->setVisible(true);
-    dim2->setDisabled(true);
-    dim2->setToolTip(tr("3D mapper is not available in this version of Mudlet"));
+    widget_3DControls->setVisible(false);
+    widget_2DControls->setVisible(true);
 #endif
 }
 
@@ -279,17 +277,24 @@ void dlgMapper::slot_roomSize(int d)
     mp2dMap->update();
 }
 
-void dlgMapper::slot_lineSize(int d)
+void dlgMapper::slot_exitSize(int d)
 {
     mp2dMap->setExitSize(d);
     mp2dMap->update();
 }
 
-void dlgMapper::slot_bubbles()
+void dlgMapper::slot_toggleRoundRooms(const bool state)
 {
-    mp2dMap->mBubbleMode = bubbles->isChecked();
-    mp2dMap->mpHost->mBubbleMode = mp2dMap->mBubbleMode;
-    mp2dMap->update();
+    if (checkBox_roundRooms->isChecked() != state) {
+        checkBox_roundRooms->setChecked(state);
+    }
+    if (mp2dMap->mpHost->mBubbleMode != state) {
+        mp2dMap->mpHost->mBubbleMode = state;
+    }
+    if (mp2dMap->mBubbleMode != state) {
+        mp2dMap->mBubbleMode = state;
+        mp2dMap->update();
+    }
 }
 
 void dlgMapper::setDefaultAreaShown(bool state)
@@ -314,7 +319,7 @@ void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
         if (pA) {
             QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(playerRoomArea);
             if (!areaName.isEmpty()) {
-                showArea->setCurrentText(areaName);
+                comboBox_showArea->setCurrentText(areaName);
             } else {
                 qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area name not valid.";
             }
@@ -331,24 +336,24 @@ void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
 // QString of the activated QComboBox entry has been obsoleted:
 void dlgMapper::slot_switchArea(const int index)
 {
-    const QString areaName{showArea->itemText(index)};
+    const QString areaName{comboBox_showArea->itemText(index)};
     mp2dMap->switchArea(areaName);
 }
 #endif
 
 void dlgMapper::slot_updateInfoContributors()
 {
-    info_pushButton->menu()->clear();
-    auto* clearAction = new QAction(tr("None", "Don't show the map overlay, 'none' meaning no map overlay styled are enabled"), info_pushButton);
-    info_pushButton->menu()->addAction(clearAction);
+    pushButton_info->menu()->clear();
+    auto* clearAction = new QAction(tr("None", "Don't show the map overlay, 'none' meaning no map overlay styled are enabled"), pushButton_info);
+    pushButton_info->menu()->addAction(clearAction);
     connect(clearAction, &QAction::triggered, this, [=]() {
-        for (auto action : info_pushButton->menu()->actions()) {
+        for (auto action : pushButton_info->menu()->actions()) {
             action->setChecked(false);
         }
     });
 
     for (const auto& name : mpMap->mMapInfoContributorManager->getContributorKeys()) {
-        auto* action = new QAction(name, info_pushButton);
+        auto* action = new QAction(name, pushButton_info);
         action->setCheckable(true);
         action->setChecked(mpHost->mMapInfoContributors.contains(name));
         connect(action, &QAction::toggled, this, [=](bool isToggled) {
@@ -359,6 +364,6 @@ void dlgMapper::slot_updateInfoContributors()
             }
             mp2dMap->update();
         });
-        info_pushButton->menu()->addAction(action);
+        pushButton_info->menu()->addAction(action);
     }
 }
