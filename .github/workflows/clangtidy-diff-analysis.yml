@@ -32,14 +32,14 @@ jobs:
       uses: actions/cache@v2.1.4
       id: cache-qt
       with:
-        path: ${{runner.workspace}}/Qt/${{matrix.qt}}
+        path: ${{github.workspace}}/Qt/${{matrix.qt}}
         key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
       with:
         version: ${{matrix.qt}}
-        dir: ${{runner.workspace}}
+        dir: ${{github.workspace}}
         cached: ${{steps.cache-qt.outputs.cache-hit}}
         aqtversion: '==1.1.2'
 
