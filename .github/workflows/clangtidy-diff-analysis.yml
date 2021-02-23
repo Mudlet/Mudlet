@@ -76,13 +76,24 @@ jobs:
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
 
     - name: Create compile_commands.json
-      run: |
-        cmake --version
-        cmake . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      uses: lukka/run-cmake@v3
+      with:
+        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+        useVcpkgToolchainFile: true
+        buildDirectory: '${{runner.workspace}}/b/ninja'
+        buildWithCMake: false
+        cmakeAppendedArgs: >-
+          --target test
+          -G Ninja
+          -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
+          -DVCPKG_APPLOCAL_DEPS=OFF
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
     - uses: ZedThree/clang-tidy-review@v0.5.0
       id: static_analysis
       with:
+        build_dir: '${{runner.workspace}}/b/ninja'
         clang_tidy_checks: '-*,performance-*,readability-*,bugprone-*,clang-analyzer-*,cppcoreguidelines-*,mpi-*,misc-*'
 
     # If there are any comments, fail the check
