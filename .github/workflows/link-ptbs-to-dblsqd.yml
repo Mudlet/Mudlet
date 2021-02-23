@@ -63,6 +63,7 @@ jobs:
     - name: Link updater with Linux/macOS downloads
       run: |
         set -e
+        export TERM=xterm
         bold=$(tput bold)
         normal=$(tput sgr0)
         EXIT_CODE_LINUX=0
