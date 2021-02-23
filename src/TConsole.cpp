@@ -896,7 +896,6 @@ void TConsole::changeColors()
         mLowerPane->setFont(mDisplayFont);
         if (!mBgImageMode) {
             auto styleSheet = QStringLiteral("QWidget#MainDisplay{background-color: rgba(%1);}").arg(getColorCode(mBgColor));
-            qDebug() << getColorCode(mBgColor);
             mpMainDisplay->setStyleSheet(styleSheet);
         } else {
             setConsoleBackgroundImage(mBgImagePath, mBgImageMode);
