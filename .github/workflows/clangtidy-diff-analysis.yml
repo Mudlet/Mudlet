@@ -80,7 +80,7 @@ jobs:
       run: |
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
-        sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev -y
+        sudo apt-get install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev -y
 
         echo "Skipping generation of translation stats, so not installing lua-yajl."
 
@@ -99,16 +99,13 @@ jobs:
           -DVCPKG_APPLOCAL_DEPS=OFF
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      if: runner.os == 'Linux'
-      timeout-minutes: 20
-
-    - uses: ZedThree/clang-tidy-review@v0.5.0
+    - uses: ZedThree/clang-tidy-review@v0.6.0
       id: static_analysis
       with:
-        build_dir: '${{runner.workspace}}/b/ninja'
+        build_dir: 'b/ninja' # path is relative to checkout directory
         clang_tidy_checks: '-*,performance-*,readability-*,bugprone-*,clang-analyzer-*,cppcoreguidelines-*,mpi-*,misc-*'
+        # the action doesn't see system-level libraries, need to replicate them here
+        apt_packages: 'pkg-config libzip-dev libglu1-mesa-dev libpulse-dev'
 
     # If there are any comments, fail the check
     - if: steps.static_analysis.outputs.total_comments > 0
