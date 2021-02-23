@@ -7208,7 +7208,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
 
     bool isCurrentAreaRenamed = false;
     if (host.mpMap->mpMapper) {
-        if (id > 0 && host.mpMap->mpRoomDB->getAreaNamesMap().value(id) == host.mpMap->mpMapper->showArea->currentText()) {
+        if (id > 0 && host.mpMap->mpRoomDB->getAreaNamesMap().value(id) == host.mpMap->mpMapper->comboBox_showArea->currentText()) {
             isCurrentAreaRenamed = true;
         }
     }
@@ -7218,7 +7218,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->updateAreaComboBox();
             if (isCurrentAreaRenamed) {
-                host.mpMap->mpMapper->showArea->setCurrentText(newName);
+                host.mpMap->mpMapper->comboBox_showArea->setCurrentText(newName);
             }
             updateMap(L);
         }
@@ -10396,7 +10396,7 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
         host.mpMap->mpMapper->setDefaultAreaShown(isToShowDefaultArea);
         if (isAreaWidgetInNeedOfResetting) {
             // Corner case fixup:
-            host.mpMap->mpMapper->showArea->setCurrentText(host.mpMap->getDefaultAreaName());
+            host.mpMap->mpMapper->comboBox_showArea->setCurrentText(host.mpMap->getDefaultAreaName());
         }
         host.mpMap->mpMapper->mp2dMap->repaint();
         host.mpMap->mpMapper->update();
