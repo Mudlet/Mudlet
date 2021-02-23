@@ -2,6 +2,28 @@
 
 This version will be the first to use this changelog file for gathering notes
 
+## Changelog
+
+**added:**
+
+-   every change must have a line in this or one of the next sections, even if not featured above 
+-   put a concise description for each feature added, may use links and formatting but no images
+-   ...
+-   ..
+-   .
+
+**improved:**
+
+-   
+
+**fixed:**
+
+-   
+
+**infrastructure:**
+
+-   
+
  # [Unreleased] 4.11 - to be released soon
 
 This release is currently prepared outside of this changelog file
