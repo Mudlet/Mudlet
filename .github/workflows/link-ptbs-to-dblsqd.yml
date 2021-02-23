@@ -62,5 +62,12 @@ jobs:
 
     - name: Link updater with Linux/macOS downloads
       run: |
-        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${LINUX_PTB_URL}"
-        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${MACOS_PTB_URL}"
+        set -e
+        EXIT_CODE_LINUX=0
+        EXIT_CODE_MACOS=0
+        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${LINUX_PTB_URL}" || EXIT_CODE_LINUX=$?
+        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${MACOS_PTB_URL}" || EXIT_CODE_MACOS=$?
+
+        if [ EXIT_CODE_LINUX != 0 ]; && EXIT_CODE_MACOS != 0]; then
+          exit 1
+        fi
