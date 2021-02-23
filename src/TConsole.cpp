@@ -541,12 +541,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         setAcceptDrops(true);
         setMouseTracking(true);
     }
-
+    mpMainFrame->setStyleSheet(QStringLiteral("QWidget#MainFrame{ background-color: rgba(0,0,0,255) }"));
     if (mType & MainConsole) {
-        mpMainFrame->setStyleSheet(QStringLiteral("QWidget#MainFrame{ background-color: rgba(0,0,0,255) }"));
         mpButtonMainLayer->setVisible(!mpHost->getCompactInputLine());
-    } else {
-        mpMainFrame->setStyleSheet(QStringLiteral("QWidget#MainFrame{ background-color: rgba(0,0,0,0) }"));
     }
 }
 
