@@ -151,7 +151,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     QSizePolicy sizePolicy5(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
-    mpMainFrame->setObjectName("MainFrame");
+    mpMainFrame->setObjectName(QStringLiteral("MainFrame"));
 
     auto centralLayout = new QVBoxLayout;
     setLayout(centralLayout);
@@ -221,7 +221,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
     mpMainDisplay->setContentsMargins(0, 0, 0, 0);
     auto layout = new QVBoxLayout;
-    mpMainDisplay->setObjectName("MainDisplay");
+    mpMainDisplay->setObjectName(QStringLiteral("MainDisplay"));
     mpMainDisplay->setLayout(layout);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
@@ -243,7 +243,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     }
 
     layer = new QWidget(mpMainDisplay);
-    layer->setObjectName("layer");
+    layer->setObjectName(QStringLiteral("layer"));
     layer->setStyleSheet("QWidget#layer{background-color: rgba(0,0,0,0)}");
     layer->setContentsMargins(0, 0, 0, 0);
     layer->setSizePolicy(sizePolicy);
@@ -522,7 +522,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mUpperPane->setFocusPolicy(Qt::ClickFocus);
     mLowerPane->setFocusPolicy(Qt::ClickFocus);
 
-    buttonLayerSpacer->setAutoFillBackground(true);
     mpButtonMainLayer->setAutoFillBackground(true);
     mpButtonMainLayer->setPalette(commandLinePalette);
 
