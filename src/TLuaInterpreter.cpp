@@ -10395,14 +10395,13 @@ int TLuaInterpreter::getModules(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     auto modules = host.mInstalledModules;
-    int counter = 1;
+    int counter = 0;
     QMap<QString, QStringList>::const_iterator iter = modules.constBegin();
     lua_newtable(L);
     while (iter != modules.constEnd()) {
-        lua_pushnumber(L, counter);
+        lua_pushnumber(L, ++counter);
         lua_pushstring(L, iter.key().toUtf8().constData());
         lua_settable(L, -3);
-        counter++;
         ++iter;
     }
     return 1;
