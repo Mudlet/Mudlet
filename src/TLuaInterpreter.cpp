@@ -10381,18 +10381,13 @@ int TLuaInterpreter::getPackages(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     auto packages = host.mInstalledPackages;
-    if (packages.isEmpty()) {
-        lua_pushnil(L);
-        return 1;
-    }
     lua_newtable(L);
     for (int i = 0; i < packages.size(); i++) {
         lua_pushnumber(L, i + 1);
         lua_pushstring(L, packages.at(i).toUtf8().constData());
         lua_settable(L, -3);
     }
-    lua_pushboolean(L, true);
-    return 2;
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getModules
@@ -10400,10 +10395,6 @@ int TLuaInterpreter::getModules(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     auto modules = host.mInstalledModules;
-    if (modules.isEmpty()) {
-        lua_pushnil(L);
-        return 1;
-    }
     int counter = 1;
     QMap<QString, QStringList>::const_iterator iter = modules.constBegin();
     lua_newtable(L);
@@ -10414,8 +10405,7 @@ int TLuaInterpreter::getModules(lua_State* L)
         counter++;
         ++iter;
     }
-    lua_pushboolean(L, true);
-    return 2;
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDefaultAreaVisible
