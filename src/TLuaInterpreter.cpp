@@ -10375,6 +10375,38 @@ int TLuaInterpreter::getModuleSync(lua_State* L)
     }
 }
 
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPackages
+int TLuaInterpreter::getPackages(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    auto packages = host.mInstalledPackages;
+    lua_newtable(L);
+    for (int i = 0; i < packages.size(); i++) {
+        lua_pushnumber(L, i + 1);
+        lua_pushstring(L, packages.at(i).toUtf8().constData());
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getModules
+int TLuaInterpreter::getModules(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    auto modules = host.mInstalledModules;
+    int counter = 0;
+    QMap<QString, QStringList>::const_iterator iter = modules.constBegin();
+    lua_newtable(L);
+    while (iter != modules.constEnd()) {
+        lua_pushnumber(L, ++counter);
+        lua_pushstring(L, iter.key().toUtf8().constData());
+        lua_settable(L, -3);
+        ++iter;
+    }
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDefaultAreaVisible
 int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 {
@@ -13560,6 +13592,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "enableModuleSync", TLuaInterpreter::enableModuleSync);
     lua_register(pGlobalLua, "disableModuleSync", TLuaInterpreter::disableModuleSync);
     lua_register(pGlobalLua, "getModuleSync", TLuaInterpreter::getModuleSync);
+    lua_register(pGlobalLua, "getPackages", TLuaInterpreter::getPackages);
+    lua_register(pGlobalLua, "getModules", TLuaInterpreter::getModules);
     lua_register(pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel);
     lua_register(pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom);
     lua_register(pGlobalLua, "uninstallPackage", TLuaInterpreter::uninstallPackage);
