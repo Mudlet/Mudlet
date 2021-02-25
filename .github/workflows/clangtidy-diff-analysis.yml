@@ -94,6 +94,7 @@ jobs:
         buildDirectory: '${{github.workspace}}/b/ninja'
         cmakeAppendedArgs: >-
           -DCMAKE_GLOBAL_AUTOGEN_TARGET=ON
+          -DAUTOGEN_ORIGIN_DEPENDS=OFF
           --target autogen
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
