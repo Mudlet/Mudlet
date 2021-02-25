@@ -92,9 +92,8 @@ jobs:
         useVcpkgToolchainFile: true
         # has to be the github workspace, not the runner workspace, for the docker-based clang-tidy-review
         buildDirectory: '${{github.workspace}}/b/ninja'
-        buildWithCMake: false
         cmakeAppendedArgs: >-
-          --target test
+          --target autogen
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
           -DVCPKG_APPLOCAL_DEPS=OFF
