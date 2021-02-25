@@ -299,6 +299,7 @@ public:
     bool uninstallPackage(const QString&, int);
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&);
+    QString getPackageConfig(const QString&);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);

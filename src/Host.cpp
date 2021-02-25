@@ -1915,8 +1915,18 @@ bool Host::uninstallPackage(const QString& packageName, int module)
 
 void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
 {
+    QString newName = getPackageConfig(luaConfig);
+    if (!newName.isEmpty()){
+        packageName = newName;
+    }
+}
+
+QString Host::getPackageConfig(const QString& luaConfig)
+{
+    QString packageName;
     QFile configFile(luaConfig);
     QStringList strings;
+    QMap<QString, QString> packageInfo;
     if (configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&configFile);
         while (!in.atEnd()) {
@@ -1932,54 +1942,62 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
     if (!error) {
         error = lua_pcall(L, 0, 0, 0);
     }
-
     if (!error) {
-        // for now, only read the mpackage parameter
-        // would be nice to read author, save & version too later
         lua_getglobal(L, "mpackage");
         if (lua_isstring(L, -1)) {
             packageName = QString(lua_tostring(L, -1));
         }
         lua_pop(L, -1);
+        lua_getglobal(L, "_G");
+        lua_pushnil(L);
+        while(lua_next(L,  -2) != 0) {
+           if (lua_isstring(L, -1)) {
+                packageInfo.insert(QString(lua_tostring(L, -2)), QString(lua_tostring(L, -1)));
+            }
+            lua_pop(L, 1);
+        }
         lua_close(L);
-        return;
-    } else {
-        // error
-        std::string e = lua_tostring(L, -1);
-        if (e.empty()) {
-            e = "no error message available from Lua";
-        }
-
-        std::string reason;
-        switch (error) {
-        case 4:
-            reason = "Out of memory";
-            break;
-        case 3:
-            reason = "Syntax error";
-            break;
-        case 2:
-            reason = "Runtime error";
-            break;
-        case 1:
-            reason = "Yield error";
-            break;
-        default:
-            reason = "Unknown error";
-            break;
-        }
-
-        if (mudlet::debugMode) {
-            qDebug() << reason.c_str() << " in config.lua: " << e.c_str();
-        }
-        // should print error to main display
-        QString msg = QStringLiteral("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
-        mpConsole->printSystemMessage(msg);
-
-
-        lua_pop(L, -1);
-        lua_close(L);
+        mLuaInterpreter.fillPackageInfo(packageName, packageInfo);
+        return packageName;
     }
+
+    // error
+    std::string e = lua_tostring(L, -1);
+    if (e.empty()) {
+        e = "no error message available from Lua";
+    }
+
+    std::string reason;
+    switch (error) {
+    case 4:
+        reason = "Out of memory";
+        break;
+    case 3:
+        reason = "Syntax error";
+        break;
+    case 2:
+        reason = "Runtime error";
+        break;
+    case 1:
+        reason = "Yield error";
+        break;
+    default:
+        reason = "Unknown error";
+        break;
+
+
+    if (mudlet::debugMode) {
+        qDebug() << reason.c_str() << " in config.lua: " << e.c_str();
+    }
+    // should print error to main display
+    QString msg = QStringLiteral("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
+    mpConsole->printSystemMessage(msg);
+
+
+    lua_pop(L, -1);
+    lua_close(L);
+    }
+    return QString();
 }
 
 // Derived from the one in dlgConnectionProfile class - but it does not need a

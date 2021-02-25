@@ -13059,6 +13059,25 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
 }
 
 // No documentation available in wiki - internal function
+void TLuaInterpreter::fillPackageInfo(const QString& varName, const QMap<QString, QString>& varValueList)
+{
+    lua_State* L = pGlobalLua;
+    lua_getglobal(L, "mudlet");
+    lua_getfield(L, -1, "packageInfo");
+    QMap<QString, QString>::const_iterator iter = varValueList.constBegin();
+    lua_newtable(L);
+    while (iter != varValueList.constEnd()) {
+        lua_pushstring(L, iter.key().toUtf8().constData());
+        lua_pushstring(L, iter.value().toUtf8().constData());
+        lua_settable(L, -3);
+        ++iter;
+    }
+    lua_setfield(L, -2, varName.toUtf8().constData());
+    lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
+}
+
+
+// No documentation available in wiki - internal function
 void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& variableList)
 {
     lua_State* L = pGlobalLua;
@@ -13899,6 +13918,29 @@ void TLuaInterpreter::setupLanguageData()
 }
 
 // No documentation available in wiki - internal function
+// Creates the 'mudlet.packageInfo' and fills it with package informations
+void TLuaInterpreter::loadPackageInfos()
+{
+    lua_State* L = pGlobalLua;
+    lua_getglobal(L, "mudlet");
+    if (!lua_istable(L, 1)) {
+        return;
+    }
+    lua_newtable(L);
+    lua_setfield(L, -2, "packageInfo");
+
+    QStringList packages = mpHost->mInstalledPackages;
+    for (int i = 0; i < packages.size(); i++) {
+        QString packagePath{mudlet::self()->getMudletPath(mudlet::profilePackagePath, mpHost->getName(), packages.at(i))};
+        QDir _dir(packagePath);
+        if (_dir.exists(QStringLiteral("config.lua"))) {
+            mpHost->getPackageConfig(_dir.absoluteFilePath(QStringLiteral("config.lua")));
+        }
+    }
+    lua_pop(L, lua_gettop(L));
+}
+
+// No documentation available in wiki - internal function
 // Initialised a slimmed-down Lua state just to run the indenter in a separate sandbox.
 // The indenter by default pollutes the global environment with some utility functions
 // and we don't want to tie ourselves to it by exposing them for scripting.
@@ -14010,6 +14052,7 @@ void TLuaInterpreter::loadGlobal()
 #endif
 
     setupLanguageData();
+    loadPackageInfos();
 
     const QString executablePath{QCoreApplication::applicationDirPath()};
     // Initialise the list of path and file names so that
