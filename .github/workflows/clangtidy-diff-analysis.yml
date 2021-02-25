@@ -93,6 +93,7 @@ jobs:
         # has to be the github workspace, not the runner workspace, for the docker-based clang-tidy-review
         buildDirectory: '${{github.workspace}}/b/ninja'
         cmakeAppendedArgs: >-
+          -DCMAKE_GLOBAL_AUTOGEN_TARGET=ON
           --target autogen
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
