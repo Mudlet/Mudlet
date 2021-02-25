@@ -1926,14 +1926,16 @@ QString Host::getPackageConfig(const QString& luaConfig)
     QString packageName;
     QFile configFile(luaConfig);
     QStringList strings;
+    strings << QStringLiteral("Infos = {");
     QMap<QString, QString> packageInfo;
     if (configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&configFile);
         while (!in.atEnd()) {
             strings += in.readLine();
+            strings += ",";
         }
     }
-
+    strings << QStringLiteral("}");
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
 
@@ -1943,12 +1945,13 @@ QString Host::getPackageConfig(const QString& luaConfig)
         error = lua_pcall(L, 0, 0, 0);
     }
     if (!error) {
-        lua_getglobal(L, "mpackage");
+        lua_getglobal(L, "Infos");
+        lua_getfield(L, -1, "mpackage");
         if (lua_isstring(L, -1)) {
             packageName = QString(lua_tostring(L, -1));
         }
         lua_pop(L, -1);
-        lua_getglobal(L, "_G");
+        lua_getglobal(L, "Infos");
         lua_pushnil(L);
         while(lua_next(L,  -2) != 0) {
            if (lua_isstring(L, -1)) {
@@ -1984,19 +1987,17 @@ QString Host::getPackageConfig(const QString& luaConfig)
     default:
         reason = "Unknown error";
         break;
+    }
 
 
     if (mudlet::debugMode) {
         qDebug() << reason.c_str() << " in config.lua: " << e.c_str();
     }
     // should print error to main display
-    QString msg = QStringLiteral("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
+    QString msg = QStringLiteral("\n%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
     mpConsole->printSystemMessage(msg);
-
-
     lua_pop(L, -1);
     lua_close(L);
-    }
     return QString();
 }
 
