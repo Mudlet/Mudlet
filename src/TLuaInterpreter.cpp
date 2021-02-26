@@ -12210,8 +12210,9 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
             }
         }
         lua_pop(L, lua_gettop(L));
-        if (error == 0)
+        if (error == 0) {
             return {false, returnValue };
+        }
 
         return {false, returnValue};
     } else {
@@ -15464,8 +15465,9 @@ int TLuaInterpreter::disableMapInfo(lua_State* L)
 {
     auto name = getVerifiedString(L, __func__, 1, "label");
     auto& host = getHostFromLua(L);
-    if (!host.mpMap->mMapInfoContributorManager->disableContributor(name))
+    if (!host.mpMap->mMapInfoContributorManager->disableContributor(name)) {
         return warnArgumentValue(L, __func__, QStringLiteral("map info '%1' does not exist").arg(name));
+    }
 
     lua_pushboolean(L, true);
     return 1;
