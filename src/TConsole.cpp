@@ -59,14 +59,14 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , buffer(pH)
 , emergencyStop(new QToolButton)
 , layerCommandLine(nullptr)
-, mBgColor(Qt::transparent)
+, mBgColor(Qt::black)
 , mCommandBgColor(Qt::black)
 , mCommandFgColor(QColor(213, 195, 0))
 , mConsoleName("main")
 , mDisplayFontName("Bitstream Vera Sans Mono")
 , mDisplayFontSize(14)
 , mDisplayFont(QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal))
-, mFgColor(Qt::black)
+, mFgColor(Qt::lightGray)
 , mIndentCount(0)
 , mMainFrameBottomHeight(0)
 , mMainFrameLeftWidth(0)
@@ -81,7 +81,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpMainFrame(new QWidget(mpBaseHFrame))
 , mpRightToolBar(new QWidget(mpBaseHFrame))
 , mpMainDisplay(new QWidget(mpMainFrame))
-, mpBackground(new QLabel(mpMainFrame))
 , mpMapper(nullptr)
 , mpScrollBar(new QScrollBar)
 , mpHScrollBar(new QScrollBar(Qt::Horizontal))
@@ -116,7 +115,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         // which has its own title and icon set.
         // mIsSubConsole was left false for this
         mWrapAt = 50;
-        mStandardFormat.setTextFormat(mFgColor, mBgColor, TChar::None);
     } else {
         if (mType & (ErrorConsole|SubConsole|UserWindow)) {
             // Orginally this was for TConsole instances with a parent pointer
@@ -139,7 +137,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         } else {
             Q_ASSERT_X(false, "TConsole::TConsole(...)", "invalid TConsole type detected");
         }
-        mStandardFormat.setTextFormat(mpHost->mFgColor, mpHost->mBgColor, TChar::None);
     }
     setContentsMargins(0, 0, 0, 0);
     mFormatSystemMessage.setBackground(mBgColor);
@@ -153,16 +150,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     QSizePolicy sizePolicy4(QSizePolicy::Fixed, QSizePolicy::Expanding);
     QSizePolicy sizePolicy5(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
-    //QVBoxLayout * layoutFrame = new QVBoxLayout( mainFrame );
-    // This seems to be used to set some aspects of the borders - but only the
-    // QPalette::Window is likely to have any effect:
-    QPalette framePalette;
-    framePalette.setColor(QPalette::Text, QColor(Qt::black));
-    framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-    framePalette.setColor(QPalette::Window, QColor(0, 0, 0, 255));
-    mpMainFrame->setPalette(framePalette);
-    mpMainFrame->setAutoFillBackground(true);
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
+    mpMainFrame->setObjectName(QStringLiteral("MainFrame"));
+
     auto centralLayout = new QVBoxLayout;
     setLayout(centralLayout);
     auto baseVFrameLayout = new QVBoxLayout;
@@ -226,16 +216,13 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     centralLayout->setSpacing(0);
     centralLayout->setContentsMargins(0, 0, 0, 0);
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
-    mpBackground->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     mpMainFrame->show();
     mpMainDisplay->show();
-    mpBackground->show();
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
     mpMainDisplay->setContentsMargins(0, 0, 0, 0);
-    mpBackground->setContentsMargins(0, 0, 0, 0);
     auto layout = new QVBoxLayout;
+    mpMainDisplay->setObjectName(QStringLiteral("MainDisplay"));
     mpMainDisplay->setLayout(layout);
-    mpBackground->setLayout(layout);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
 
@@ -256,6 +243,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     }
 
     layer = new QWidget(mpMainDisplay);
+    layer->setObjectName(QStringLiteral("layer"));
+    layer->setStyleSheet("QWidget#layer{background-color: rgba(0,0,0,0)}");
     layer->setContentsMargins(0, 0, 0, 0);
     layer->setSizePolicy(sizePolicy);
     layer->setFocusPolicy(Qt::NoFocus);
@@ -397,10 +386,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpLineEdit_networkLatency->setMinimumSize(120, 30);
     mpLineEdit_networkLatency->setAutoFillBackground(true);
     mpLineEdit_networkLatency->setContentsMargins(0, 0, 0, 0);
-    QPalette basePalette;
-    basePalette.setColor(QPalette::Text, QColor(Qt::black));
-    basePalette.setColor(QPalette::Base, QColor(Qt::white));
-    mpLineEdit_networkLatency->setPalette(basePalette);
     mpLineEdit_networkLatency->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
     QFont latencyFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
@@ -443,7 +428,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     commandLinePalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
     commandLinePalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
     commandLinePalette.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
-    mpBufferSearchBox->setPalette(commandLinePalette);
     mpBufferSearchBox->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
         tr("Search buffer.")));
     connect(mpBufferSearchBox, &QLineEdit::returnPressed, this, &TConsole::slot_searchBufferUp);
@@ -485,7 +469,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutLayer2->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(layer);
     mpLineEdit_networkLatency->setFrame(false);
-    layerCommandLine->setPalette(basePalette);
     layerCommandLine->setAutoFillBackground(true);
 
     centralLayout->addWidget(layerCommandLine);
@@ -516,7 +499,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         layerCommandLine->hide();
         mpMainFrame->move(0, 0);
         mpMainDisplay->move(0, 0);
-        mpBackground->move(0, 0);
     }
     if (mType & CentralDebugConsole) {
         layerCommandLine->hide();
@@ -540,16 +522,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mUpperPane->setFocusPolicy(Qt::ClickFocus);
     mLowerPane->setFocusPolicy(Qt::ClickFocus);
 
-    buttonLayerSpacer->setAutoFillBackground(true);
-    buttonLayerSpacer->setPalette(commandLinePalette);
     mpButtonMainLayer->setAutoFillBackground(true);
     mpButtonMainLayer->setPalette(commandLinePalette);
 
     buttonLayer->setAutoFillBackground(true);
-    buttonLayer->setPalette(commandLinePalette);
-
-    layerCommandLine->setPalette(commandLinePalette);
-
     changeColors();
 
     // error and debug consoles inherit font of the main console
@@ -564,7 +540,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         setAcceptDrops(true);
         setMouseTracking(true);
     }
-
+    mpMainFrame->setStyleSheet(QStringLiteral("QWidget#MainFrame{ background-color: rgba(0,0,0,255) }"));
     if (mType & MainConsole) {
         mpButtonMainLayer->setVisible(!mpHost->getCompactInputLine());
     }
@@ -608,14 +584,11 @@ void TConsole::resizeEvent(QResizeEvent* event)
         x = x - mpLeftToolBar->width() - mpRightToolBar->width();
         y = y - mpTopToolBar->height();
         mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
-        mpBackground->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
     } else {
         mpMainFrame->resize(x, y);
         mpMainDisplay->resize(x, y); //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
-        mpBackground->resize(x, y);  //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
     }
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
-    mpBackground->move(mMainFrameLeftWidth, mMainFrameTopHeight);
 
     if (mType & (CentralDebugConsole|ErrorConsole)) {
         layerCommandLine->hide();
@@ -692,10 +665,8 @@ void TConsole::refresh()
     }
 
     mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
-    mpBackground->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
 
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
-    mpBackground->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     x = width();
     y = height();
     QSize s = QSize(x, y);
@@ -920,8 +891,8 @@ void TConsole::changeColors()
         mUpperPane->setFont(mDisplayFont);
         mLowerPane->setFont(mDisplayFont);
         if (!mBgImageMode) {
-            auto styleSheet = QStringLiteral("QLabel {background-color: rgba(%1);}").arg(getColorCode(mBgColor));
-            mpBackground->setStyleSheet(styleSheet);
+            auto styleSheet = QStringLiteral("QWidget#MainDisplay{background-color: rgba(%1);}").arg(getColorCode(mBgColor));
+            mpMainDisplay->setStyleSheet(styleSheet);
         } else {
             setConsoleBackgroundImage(mBgImagePath, mBgImageMode);
         }
@@ -937,7 +908,9 @@ void TConsole::changeColors()
             commandLinePalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
             commandLinePalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
             commandLinePalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
+            commandLinePalette.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
             mpCommandLine->setPalette(commandLinePalette);
+            mpButtonMainLayer->setPalette(commandLinePalette);
             mpCommandLine->mRegularPalette = commandLinePalette;
             mpCommandLine->setStyleSheet(styleSheet);
         }
@@ -951,18 +924,19 @@ void TConsole::changeColors()
         mUpperPane->setFont(mpHost->getDisplayFont());
         mLowerPane->setFont(mpHost->getDisplayFont());
         if (!mBgImageMode) {
-            auto styleSheet = QStringLiteral("QLabel {background-color: rgba(%1);}").arg(getColorCode(mpHost->mBgColor));
-            mpBackground->setStyleSheet(styleSheet);
+            auto styleSheet = QStringLiteral("QWidget#MainDisplay{background-color: rgba(%1);}").arg(getColorCode(mpHost->mBgColor));
+            mpMainDisplay->setStyleSheet(styleSheet);
         } else {
             setConsoleBackgroundImage(mBgImagePath, mBgImageMode);
         }
+        mBgColor = mpHost->mBgColor;
+        mFgColor = mpHost->mFgColor;
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
         if (mpCommandLine) {
             mpCommandLine->setFont(mpHost->getDisplayFont());
         }
         mFormatCurrent.setColors(mpHost->mFgColor, mpHost->mBgColor);
-        mSystemMessageBgColor = mpHost->mBgColor;
     } else {
         Q_ASSERT_X(false, "TConsole::changeColors()", "invalid TConsole type detected");
     }
@@ -1115,11 +1089,8 @@ void TConsole::hideEvent(QHideEvent* event)
 void TConsole::reset()
 {
     deselect();
-    mFormatCurrent.setColors(mStandardFormat.foreground(), mStandardFormat.background());
+    mFormatCurrent.setColors(mFgColor, mBgColor);
     mFormatCurrent.setAllDisplayAttributes(TChar::None);
-    if (mType & MainConsole) {
-         mSystemMessageBgColor = mStandardFormat.background();
-    }
 }
 
 void TConsole::insertLink(const QString& text, QStringList& func, QStringList& hint, QPoint P, bool customFormat, QVector<int> luaReference)
@@ -1402,19 +1373,19 @@ bool TConsole::setConsoleBackgroundImage(const QString& imgPath, int mode)
     }
 
     if (mode == 1) {
-        styleSheet = QStringLiteral("QLabel {background-color: rgba(%1); border-image: url(%2);}").arg(getColorCode(bgColor)).arg(imgPath);
+        styleSheet = QStringLiteral("QWidget#MainDisplay{background-color: rgba(%1); border-image: url(%2);}").arg(getColorCode(bgColor)).arg(imgPath);
     } else if (mode == 2) {
-        styleSheet = QStringLiteral("QLabel {background-color: rgba(%1); background-image: url(%2); background-repeat: no-repeat; background-position: center; background-origin: margin;}")
+        styleSheet = QStringLiteral("QWidget#MainDisplay{background-color: rgba(%1); background-image: url(%2); background-repeat: no-repeat; background-position: center; background-origin: margin;}")
                              .arg(getColorCode(bgColor))
                              .arg(imgPath);
     } else if (mode == 3) {
-        styleSheet = QStringLiteral("QLabel {background-color: rgba(%1); background-image: url(%2);}").arg(getColorCode(bgColor)).arg(imgPath);
+        styleSheet = QStringLiteral("QWidget#MainDisplay{background-color: rgba(%1); background-image: url(%2);}").arg(getColorCode(bgColor)).arg(imgPath);
     } else if (mode == 4) {
-        styleSheet = QStringLiteral("QLabel {background-color: rgba(%1); %2}").arg(getColorCode(bgColor)).arg(imgPath);
+        styleSheet = QStringLiteral("QWidget#MainDisplay{background-color: rgba(%1); %2}").arg(getColorCode(bgColor)).arg(imgPath);
     } else {
         return false;
     }
-    mpBackground->setStyleSheet(styleSheet);
+    mpMainDisplay->setStyleSheet(styleSheet);
     mBgImageMode = mode;
     mBgImagePath = imgPath;
     return true;
@@ -1623,9 +1594,6 @@ void TConsole::setBgColor(const QColor& newColor)
 {
     mFormatCurrent.setBackground(newColor);
     buffer.applyBgColor(P_begin, P_end, newColor);
-    if (mType & MainConsole) {
-        mSystemMessageBgColor = newColor;
-    }
     mUpperPane->forceUpdate();
     mLowerPane->forceUpdate();
 }
