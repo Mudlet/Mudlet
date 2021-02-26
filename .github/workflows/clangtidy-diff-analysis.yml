@@ -27,6 +27,8 @@ jobs:
       with:
         submodules: true
         fetch-depth: 0
+        # https://github.com/ZedThree/clang-tidy-review/issues/10
+        ref: ${{ github.event.pull_request.head.sha }}
 
     - name: Restore Qt cache
       uses: actions/cache@v2.1.4
