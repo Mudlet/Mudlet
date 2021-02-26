@@ -15,8 +15,40 @@
     "message": "Zapisz",
     "description": "saves the containers settings"
   },
+  "AdjustableContainer.load": {
+    "message": "Załaduj",
+    "description": "loads the previously saved settings of the container"
+  },
+  "AdjustableContainer.connectTo": {
+    "message": "Połącz z: ",
+    "description": "connect your container to a border to create a frame"
+  },
   "AdjustableContainer.disconnect": {
     "message": "Rozłącz się ",
     "description": "disconnect your container from the border frame"
+  },
+  "Mudlet.packageInstallSuccess": {
+    "message": "Pomyślnie zainstalowano pakiet „%s”.",
+    "description": "Success message after drag&drop of package file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.packageInstallFail": {
+    "message": "Instalacja pakietu „%s” nie powiodła się.",
+    "description": "Failure message after drag&drop of package file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.packageDownloading": {
+    "message": "Pobieranie pakietu z „%s”.",
+    "description": "Download package from Url for installation - %s is source url"
+  },
+  "Mudlet.prefixOk": {
+    "message": "[  OK  ]  - ",
+    "description": "Start of the line for messages telling the player something is okay. Keep at 12 characters length for nice alignment!"
+  },
+  "Mudlet.prefixWarn": {
+    "message": "[ WARN ]  - ",
+    "description": "Start of the line for messages warning the player about something. Keep at 12 characters length for nice alignment!"
+  },
+  "Mudlet.prefixInfo": {
+    "message": "[ INFO ]  - ",
+    "description": "Start of the line for messages informing the player about something. Keep at 12 characters length for nice alignment!"
   }
 }

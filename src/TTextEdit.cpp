@@ -118,11 +118,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setAttribute(Qt::WA_OpaquePaintEvent, false);
     setAttribute(Qt::WA_DeleteOnClose);
 
-    QPalette palette;
-    palette.setColor(QPalette::Text, mFgColor);
-    palette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-    palette.setColor(QPalette::Base, mBgColor);
-    setPalette(palette);
     showNewLines();
     setMouseTracking(true); // test fix for MAC
     setEnabled(true);       //test fix for MAC
@@ -901,7 +896,8 @@ void TTextEdit::expandSelectionToWords()
             break;
         }
     }
-    mPA.setX(xind+1);
+    mDragStart.setX(xind + 1);
+    mPA.setX(xind + 1);
 
     yind = mPB.y();
     xind = mPB.x();
@@ -911,7 +907,23 @@ void TTextEdit::expandSelectionToWords()
             break;
         }
     }
-    mPB.setX(xind-1);
+    mDragSelectionEnd.setX(xind - 1);
+    mPB.setX(xind - 1);
+}
+
+void TTextEdit::expandSelectionToLine(int y)
+{
+    if (!(y < mpBuffer->lineBuffer.size())) {
+        return;
+    }
+    unHighlight();
+    mDragStart.setX(0);
+    mDragStart.setY(y);
+    mDragSelectionEnd.setX(mpBuffer->buffer[y].size());
+    mDragSelectionEnd.setY(y);
+    normaliseSelection();
+    highlightSelection();
+    mMouseTracking = true;
 }
 
 
@@ -1111,10 +1123,16 @@ void TTextEdit::slot_popupMenu()
         return;
     }
     QString cmd;
+    int luaReference{0};
     if (mPopupCommands.contains(pA->text())) {
-        cmd = mPopupCommands[pA->text()];
+        cmd = mPopupCommands[pA->text()].first;
+        luaReference = mPopupCommands[pA->text()].second;
     }
-    mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
+    if (!luaReference) {
+        mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
+    } else {
+        mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, QStringLiteral("echoPopup"));
+    }
 }
 
 void TTextEdit::mousePressEvent(QMouseEvent* event)
@@ -1151,15 +1169,8 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             x = convertMouseXToBufferX(event->x(), y, &isOutOfbounds);
         }
 
-        if (mCtrlSelecting && (y < mpBuffer->lineBuffer.size())) {
-            unHighlight();
-            mDragStart.setX(0);
-            mDragStart.setY(y);
-            mDragSelectionEnd.setX(mpBuffer->buffer[y].size());
-            mDragSelectionEnd.setY(y);
-            normaliseSelection();
-            highlightSelection();
-            mMouseTracking = true;
+        if (mCtrlSelecting) {
+            expandSelectionToLine(y);
             event->accept();
             return;
         }
@@ -1168,10 +1179,15 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             if (x < static_cast<int>(mpBuffer->buffer[y].size()) && !isOutOfbounds) {
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
                     QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
+                    int luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(y).at(x).linkIndex()).value(0, false);
                     QString func;
                     if (!command.empty()) {
                         func = command.at(0);
-                        mpHost->mLuaInterpreter.compileAndExecuteScript(func);
+                        if (!luaReference){
+                            mpHost->mLuaInterpreter.compileAndExecuteScript(func);
+                        } else {
+                            mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, QStringLiteral("echoLink"));
+                        }
                         return;
                     }
                 }
@@ -1198,6 +1214,12 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             mMouseTrackLevel++;
             if (mMouseTrackLevel > 3) {
                 mMouseTrackLevel = 3;
+            }
+
+            if (mMouseTrackLevel == 3){
+                expandSelectionToLine(y);
+                event->accept();
+                return;
             }
 
             if (y >= mpBuffer->lineBuffer.size()) {
@@ -1248,16 +1270,17 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
                     QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
                     QStringList hint = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(y).at(x).linkIndex());
+                    QVector<int> luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(y).at(x).linkIndex());
                     if (command.size() > 1) {
                         auto popup = new QMenu(this);
                         for (int i = 0, total = command.size(); i < total; ++i) {
                             QAction* pA;
                             if (i < hint.size()) {
                                 pA = popup->addAction(hint[i]);
-                                mPopupCommands[hint[i]] = command[i];
+                                mPopupCommands[hint[i]] = {command[i], luaReference.value(i, 0)};
                             } else {
                                 pA = popup->addAction(command[i]);
-                                mPopupCommands[command[i]] = command[i];
+                                mPopupCommands[command[i]] = {command[i], luaReference.value(i, 0)};
                             }
                             connect(pA, &QAction::triggered, this, &TTextEdit::slot_popupMenu);
                         }
@@ -1629,10 +1652,10 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
 
         if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() >= timeout) {
             qDebug().nospace() << "timeout for image copy (" << timeout << "s) reached, managed to draw " << i << " lines";
-            return std::make_pair(false, linesDrawn);
+            return {false, linesDrawn};
         }
     }
-    return std::make_pair(true, linesDrawn);
+    return {true, linesDrawn};
 }
 
 void TTextEdit::searchSelectionOnline()
@@ -1658,13 +1681,6 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
     int startPos = std::max(0, mPA.x());
     int endPos = std::min(mPB.x(), (mpBuffer->lineBuffer.at(endLine).size() - 1));
     QStringList textLines = mpBuffer->lineBuffer.mid(startLine, endLine - startLine + 1);
-    if (showTimestamps) {
-        QStringList timestamps = mpBuffer->timeBuffer.mid(startLine, endLine - startLine + 1);
-        QStringList result;
-        std::transform(textLines.cbegin(), textLines.cend(), timestamps.cbegin(), std::back_inserter(result),
-                               [](const QString& text, const QString& timestamp) { return timestamp + text; });
-        textLines = result;
-    }
 
     if (mPA.y() == mPB.y()) {
         // Is a single line, so trim characters off the beginning and end
@@ -1685,6 +1701,14 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
         if (!textLines.at(offset).isEmpty()) {
             textLines[offset] = textLines.at(offset).left(1 + endPos);
         }
+    }
+
+     if (showTimestamps) {
+        QStringList timestamps = mpBuffer->timeBuffer.mid(startLine, endLine - startLine + 1);
+        QStringList result;
+        std::transform(textLines.cbegin(), textLines.cend(), timestamps.cbegin(), std::back_inserter(result),
+                               [](const QString& text, const QString& timestamp) { return timestamp + text; });
+        textLines = result;
     }
 
     return textLines.join(newlineChar);
