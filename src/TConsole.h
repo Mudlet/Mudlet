@@ -231,7 +231,6 @@ public:
     QWidget* mpMainFrame;
     QWidget* mpRightToolBar;
     QWidget* mpMainDisplay;
-    QLabel* mpBackground;
 
     dlgMapper* mpMapper;
 
@@ -243,7 +242,6 @@ public:
     bool mRecordReplay;
     QFile mReplayFile;
     QDataStream mReplayStream;
-    TChar mStandardFormat;
 
     QColor mSystemMessageBgColor;
     QColor mSystemMessageFgColor;
