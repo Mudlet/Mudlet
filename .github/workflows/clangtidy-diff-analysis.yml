@@ -109,9 +109,6 @@ jobs:
         # the action doesn't see system-level libraries, need to replicate them here
         apt_packages: 'pkg-config,libzip-dev,libglu1-mesa-dev,libpulse-dev'
 
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-
     # If there are any comments, fail the check
     - if: steps.static_analysis.outputs.total_comments > 0
       run: exit 1
