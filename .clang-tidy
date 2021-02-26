@@ -1,0 +1,2 @@
+Checks: '-*,performance-*,readability-*,bugprone-*,clang-analyzer-*,cppcoreguidelines-*,mpi-*,misc-*,-readability-implicit-bool-conversion'
+FormatStyle: file
