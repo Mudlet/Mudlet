@@ -13712,8 +13712,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
     lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
-    lua_register(pGlobalLua, "exportJsonMap", TLuaInterpreter::exportJsonMap);
-    lua_register(pGlobalLua, "importJsonMap", TLuaInterpreter::importJsonMap);
+    lua_register(pGlobalLua, "saveJsonMap", TLuaInterpreter::saveJsonMap);
+    lua_register(pGlobalLua, "loadJsonMap", TLuaInterpreter::loadJsonMap);
     lua_register(pGlobalLua, "registerMapInfo", TLuaInterpreter::registerMapInfo);
     lua_register(pGlobalLua, "killMapInfo", TLuaInterpreter::killMapInfo);
     lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
@@ -15328,8 +15328,8 @@ int TLuaInterpreter::showNotification(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exportJsonMap
-int TLuaInterpreter::exportJsonMap(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#saveJsonMap
+int TLuaInterpreter::saveJsonMap(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
@@ -15341,6 +15341,7 @@ int TLuaInterpreter::exportJsonMap(lua_State* L)
         return warnArgumentValue(L, __func__, "a non-empty path and file name to write to must be provided");
     }
 
+
     if (auto [result, message] = pHost->mpMap->writeJsonMapFile(dest); !result) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -15349,8 +15350,8 @@ int TLuaInterpreter::exportJsonMap(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#importJsonMap
-int TLuaInterpreter::importJsonMap(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadJsonMap
+int TLuaInterpreter::loadJsonMap(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
