@@ -1665,7 +1665,7 @@ bool Host::installPackage(const QString& fileName, int module)
         // - if it does, update the packageName from it
         if (_dir.exists(QStringLiteral("config.lua"))) {
             // read in the new packageName from Lua. Should be expanded in future to whatever else config.lua will have
-            readPackageConfig(_dir.absoluteFilePath(QStringLiteral("config.lua")), packageName);
+            readPackageConfig(_dir.absoluteFilePath(QStringLiteral("config.lua")), packageName, module);
             // now that the packageName changed, redo relevant checks to make sure it's still valid
             if (module) {
                 if (mActiveModules.contains(packageName)) {
@@ -1824,7 +1824,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
             return false;
         }
     }
-
+    mLuaInterpreter.removePackageInfo(packageName, module == 1);
     // raise 2 events - a generic one and a more detailed one to serve both
     // a simple need ("I just want the uninstall event") and a more specific need
     // ("I specifically need to know when the module was uninstalled via Lua")
@@ -1913,15 +1913,15 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     return true;
 }
 
-void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
+void Host::readPackageConfig(const QString& luaConfig, QString& packageName, int isModule)
 {
-    QString newName = getPackageConfig(luaConfig);
+    QString newName = getPackageConfig(luaConfig, isModule);
     if (!newName.isEmpty()){
         packageName = newName;
     }
 }
 
-QString Host::getPackageConfig(const QString& luaConfig)
+QString Host::getPackageConfig(const QString& luaConfig, int isModule)
 {
     QString packageName{QString()};
 
@@ -1943,7 +1943,7 @@ QString Host::getPackageConfig(const QString& luaConfig)
             lua_getglobal(L, "_G");
             lua_pushnil(L);
             lua_setfield(L, -2, "_VERSION");
-            mLuaInterpreter.fillPackageInfo(packageName, L);
+            mLuaInterpreter.fillPackageInfo(packageName, isModule, L);
         }
         lua_close(L);
         return packageName;

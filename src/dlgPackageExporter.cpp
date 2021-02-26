@@ -23,6 +23,7 @@
 
 #include "dlgPackageExporter.h"
 #include "ui_dlgPackageExporter.h"
+#include "ui_dlgPackageExporterInput.h"
 
 #include "mudlet.h"
 #include "TAction.h"
@@ -48,6 +49,8 @@
 
 dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
 : QDialog(parent)
+, inputDialog (new QDialog)
+, input(new Ui::dlgPackageExporterInput)
 , ui(new Ui::dlgPackageExporter)
 , mpHost(pHost)
 {
@@ -84,8 +87,14 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     mPackagePathFileName.clear();
     mXmlPathFileName.clear();
     QString profileName(mpHost->getName());
-
-    mPackageName = QInputDialog::getText(nullptr, tr("Package name"), tr("What do you wish to call the package:"));
+    input->setupUi(inputDialog);
+    connect(input->buttonBox->button(QDialogButtonBox::Cancel), &QAbstractButton::clicked, [this]() {input->PackageName->clear(); inputDialog->reject();});
+    connect(input->buttonBox->button(QDialogButtonBox::Ok), &QAbstractButton::clicked, [this]() {inputDialog->accept();});
+    inputDialog->installEventFilter(this);
+    connect(input->addDependency, &QToolButton::clicked, this, &dlgPackageExporter::slot_addDependency);
+    connect(input->removeDependency, &QToolButton::clicked, this, &dlgPackageExporter::slot_removeDependency);
+    inputDialog->exec();
+    mPackageName = input->PackageName->text();
     if (mPackageName.isEmpty()) {
         return;
     }
@@ -137,6 +146,8 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
 
 dlgPackageExporter::~dlgPackageExporter()
 {
+    delete inputDialog;
+    delete input;
     delete ui;
 }
 
@@ -169,6 +180,39 @@ bool dlgPackageExporter::writeFileToZip(const QString& archiveFileName, const QS
 
     return true;
 }
+
+void dlgPackageExporter::slot_addDependency()
+{
+    if (input->Dependencies->currentText().isEmpty()) {
+        return;
+    }
+    input->Dependencies->addItem(input->Dependencies->currentText());
+    input->Dependencies->clearEditText();
+}
+
+void dlgPackageExporter::slot_removeDependency()
+{
+    if (input->Dependencies->currentText().isEmpty()) {
+        return;
+    }
+    input->Dependencies->removeItem(input->Dependencies->currentIndex());
+    input->Dependencies->clearEditText();
+}
+
+bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
+{
+    if(evt->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(evt);
+        if(keyEvent->key() == Qt::Key_Escape || keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter)
+            return true; // mark the event as handled
+    }
+
+    if (evt->type() == QEvent::Close) {
+        input->PackageName->clear();
+    }
+    return false;
+}
+
 
 void dlgPackageExporter::slot_export_package()
 {

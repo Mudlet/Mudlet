@@ -13059,23 +13059,42 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::fillPackageInfo(const QString& varName, lua_State* L2)
+void TLuaInterpreter::fillPackageInfo(const QString& packageName, int isModule, lua_State* packageLua)
 {
     lua_State* L = pGlobalLua;
     lua_getglobal(L, "mudlet");
-    lua_getfield(L, -1, "packageInfo");
+    if (isModule) {
+        lua_getfield(L, -1, "moduleInfo");
+    } else {
+        lua_getfield(L, -1, "packageInfo");
+    }
     lua_newtable(L);
-    lua_getglobal(L2, "_G");
-    lua_pushnil(L2);
-    while (lua_next(L2, -2) != 0) {
-        if (lua_isstring(L2, -1)) {
-            lua_pushstring(L, lua_tostring(L2, -2));
-            lua_pushstring(L, lua_tostring(L2, -1));
+    lua_getglobal(packageLua, "_G");
+    lua_pushnil(packageLua);
+    while (lua_next(packageLua, -2) != 0) {
+        if (lua_isstring(packageLua, -1)) {
+            lua_pushstring(L, lua_tostring(packageLua, -2));
+            lua_pushstring(L, lua_tostring(packageLua, -1));
             lua_settable(L, -3);
         }
-        lua_pop(L2, 1);
+        lua_pop(packageLua, 1);
     }
-    lua_setfield(L, -2, varName.toUtf8().constData());
+    lua_setfield(L, -2, packageName.toUtf8().constData());
+    lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::removePackageInfo(const QString& packageName, int isModule)
+{
+    lua_State* L = pGlobalLua;
+    lua_getglobal(L, "mudlet");
+    if (isModule) {
+        lua_getfield(L, -1, "moduleInfo");
+    } else {
+        lua_getfield(L, -1, "packageInfo");
+    }
+    lua_pushnil(L);
+    lua_setfield(L, -2, packageName.toUtf8().constData());
     lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
 }
 
@@ -13931,6 +13950,8 @@ void TLuaInterpreter::loadPackageInfos()
     }
     lua_newtable(L);
     lua_setfield(L, -2, "packageInfo");
+    lua_newtable(L);
+    lua_setfield(L, -2, "moduleInfo");
 
     QStringList packages = mpHost->mInstalledPackages;
     for (int i = 0; i < packages.size(); i++) {

@@ -35,6 +35,7 @@ class QTreeWidgetItem;
 
 namespace Ui {
 class dlgPackageExporter;
+class dlgPackageExporterInput;
 }
 
 class dlgPackageExporter : public QDialog
@@ -78,10 +79,17 @@ public slots:
     void slot_addFiles();
     void slot_export_package();
 
+private slots:
+    void slot_addDependency();
+    void slot_removeDependency();
+
 private:
     bool writeFileToZip(const QString&, const QString&, zip*);
     void displayResultMessage(const QString&, const bool isSuccessMessage = true);
+    bool eventFilter(QObject*, QEvent*);
 
+    QDialog* inputDialog;
+    Ui::dlgPackageExporterInput* input;
     Ui::dlgPackageExporter* ui;
     QPointer<Host> mpHost;
     QTreeWidget* treeWidget;
