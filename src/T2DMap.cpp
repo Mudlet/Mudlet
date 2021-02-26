@@ -187,7 +187,7 @@ void T2DMap::init()
     flushSymbolPixmapCache();
 }
 
-void T2DMap::shiftDown()
+void T2DMap::slot_shiftDown()
 {
     mShiftMode = true;
     mOy--;
@@ -200,34 +200,34 @@ void T2DMap::toggleShiftMode()
     update();
 }
 
-void T2DMap::shiftUp()
+void T2DMap::slot_shiftUp()
 {
     mShiftMode = true;
     mOy++;
     update();
 }
 
-void T2DMap::shiftLeft()
+void T2DMap::slot_shiftLeft()
 {
     mShiftMode = true;
     mOx--;
     update();
 }
 
-void T2DMap::shiftRight()
+void T2DMap::slot_shiftRight()
 {
     mShiftMode = true;
     mOx++;
     update();
 }
-void T2DMap::shiftZup()
+void T2DMap::slot_shiftZup()
 {
     mShiftMode = true;
     mOz++;
     update();
 }
 
-void T2DMap::shiftZdown()
+void T2DMap::slot_shiftZdown()
 {
     mShiftMode = true;
     mOz--;
@@ -1576,7 +1576,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     paintMapInfo(renderTimer, painter, mAreaID, infoColor);
 
     static bool isAreaWidgetValid = true; // Remember between uses
-    QFont _f = mpMap->mpMapper->showArea->font();
+    QFont _f = mpMap->mpMapper->comboBox_showArea->font();
     if (isAreaWidgetValid) {
         if (mAreaID == -1                                 // the map being shown is the "default" area
             && !mpMap->mpMapper->getDefaultAreaShown()) { // the area widget is not showing the "default" area
@@ -1600,7 +1600,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
     }
 
-    mpMap->mpMapper->showArea->setFont(_f);
+    mpMap->mpMapper->comboBox_showArea->setFont(_f);
 
     if (!mHelpMsg.isEmpty()) {
         painter.setPen(QColor(255, 155, 50));
@@ -4212,17 +4212,17 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         int x = event->x();
         int y = height() - event->y();
         if ((mpMap->m2DPanXStart - x) > 1) {
-            shiftRight();
+            slot_shiftRight();
             mpMap->m2DPanXStart = x;
         } else if ((mpMap->m2DPanXStart - x) < -1) {
-            shiftLeft();
+            slot_shiftLeft();
             mpMap->m2DPanXStart = x;
         }
         if ((mpMap->m2DPanYStart - y) > 1) {
-            shiftDown();
+            slot_shiftDown();
             mpMap->m2DPanYStart = y;
         } else if ((mpMap->m2DPanYStart - y) < -1) {
-            shiftUp();
+            slot_shiftUp();
             mpMap->m2DPanYStart = y;
         }
         return;

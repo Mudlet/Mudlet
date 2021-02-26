@@ -7109,11 +7109,8 @@ int TLuaInterpreter::setBorderColor(lua_State* L)
     int luaGreen = getVerifiedInt(L, __func__, 2, "green");
     int luaBlue = getVerifiedInt(L, __func__, 3, "blue");
     Host& host = getHostFromLua(L);
-    QPalette framePalette;
-    framePalette.setColor(QPalette::Text, QColor(Qt::black));
-    framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-    framePalette.setColor(QPalette::Window, QColor(luaRed, luaGreen, luaBlue, 255));
-    host.mpConsole->mpMainFrame->setPalette(framePalette);
+    auto styleSheet = QStringLiteral("QWidget#MainFrame{ background-color: rgba(%1,%2,%3,255) }").arg(luaRed).arg(luaGreen).arg(luaBlue);
+    host.mpConsole->mpMainFrame->setStyleSheet(styleSheet);
     return 0;
 }
 
@@ -7208,7 +7205,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
 
     bool isCurrentAreaRenamed = false;
     if (host.mpMap->mpMapper) {
-        if (id > 0 && host.mpMap->mpRoomDB->getAreaNamesMap().value(id) == host.mpMap->mpMapper->showArea->currentText()) {
+        if (id > 0 && host.mpMap->mpRoomDB->getAreaNamesMap().value(id) == host.mpMap->mpMapper->comboBox_showArea->currentText()) {
             isCurrentAreaRenamed = true;
         }
     }
@@ -7218,7 +7215,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->updateAreaComboBox();
             if (isCurrentAreaRenamed) {
-                host.mpMap->mpMapper->showArea->setCurrentText(newName);
+                host.mpMap->mpMapper->comboBox_showArea->setCurrentText(newName);
             }
             updateMap(L);
         }
@@ -10375,6 +10372,38 @@ int TLuaInterpreter::getModuleSync(lua_State* L)
     }
 }
 
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPackages
+int TLuaInterpreter::getPackages(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    auto packages = host.mInstalledPackages;
+    lua_newtable(L);
+    for (int i = 0; i < packages.size(); i++) {
+        lua_pushnumber(L, i + 1);
+        lua_pushstring(L, packages.at(i).toUtf8().constData());
+        lua_settable(L, -3);
+    }
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getModules
+int TLuaInterpreter::getModules(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    auto modules = host.mInstalledModules;
+    int counter = 0;
+    QMap<QString, QStringList>::const_iterator iter = modules.constBegin();
+    lua_newtable(L);
+    while (iter != modules.constEnd()) {
+        lua_pushnumber(L, ++counter);
+        lua_pushstring(L, iter.key().toUtf8().constData());
+        lua_settable(L, -3);
+        ++iter;
+    }
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDefaultAreaVisible
 int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 {
@@ -10396,7 +10425,7 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
         host.mpMap->mpMapper->setDefaultAreaShown(isToShowDefaultArea);
         if (isAreaWidgetInNeedOfResetting) {
             // Corner case fixup:
-            host.mpMap->mpMapper->showArea->setCurrentText(host.mpMap->getDefaultAreaName());
+            host.mpMap->mpMapper->comboBox_showArea->setCurrentText(host.mpMap->getDefaultAreaName());
         }
         host.mpMap->mpMapper->mp2dMap->repaint();
         host.mpMap->mpMapper->update();
@@ -13560,6 +13589,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "enableModuleSync", TLuaInterpreter::enableModuleSync);
     lua_register(pGlobalLua, "disableModuleSync", TLuaInterpreter::disableModuleSync);
     lua_register(pGlobalLua, "getModuleSync", TLuaInterpreter::getModuleSync);
+    lua_register(pGlobalLua, "getPackages", TLuaInterpreter::getPackages);
+    lua_register(pGlobalLua, "getModules", TLuaInterpreter::getModules);
     lua_register(pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel);
     lua_register(pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom);
     lua_register(pGlobalLua, "uninstallPackage", TLuaInterpreter::uninstallPackage);
@@ -13678,8 +13709,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
     lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
-    lua_register(pGlobalLua, "exportJsonMap", TLuaInterpreter::exportJsonMap);
-    lua_register(pGlobalLua, "importJsonMap", TLuaInterpreter::importJsonMap);
+    lua_register(pGlobalLua, "saveJsonMap", TLuaInterpreter::saveJsonMap);
+    lua_register(pGlobalLua, "loadJsonMap", TLuaInterpreter::loadJsonMap);
     lua_register(pGlobalLua, "registerMapInfo", TLuaInterpreter::registerMapInfo);
     lua_register(pGlobalLua, "killMapInfo", TLuaInterpreter::killMapInfo);
     lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
@@ -15294,8 +15325,8 @@ int TLuaInterpreter::showNotification(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exportJsonMap
-int TLuaInterpreter::exportJsonMap(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#saveJsonMap
+int TLuaInterpreter::saveJsonMap(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
@@ -15307,6 +15338,7 @@ int TLuaInterpreter::exportJsonMap(lua_State* L)
         return warnArgumentValue(L, __func__, "a non-empty path and file name to write to must be provided");
     }
 
+
     if (auto [result, message] = pHost->mpMap->writeJsonMapFile(dest); !result) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -15315,8 +15347,8 @@ int TLuaInterpreter::exportJsonMap(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#importJsonMap
-int TLuaInterpreter::importJsonMap(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadJsonMap
+int TLuaInterpreter::loadJsonMap(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {

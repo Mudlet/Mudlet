@@ -2449,7 +2449,7 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->mpMap->mpMapper->setDefaultAreaShown(checkBox_showDefaultArea->isChecked());
             if (isAreaWidgetInNeedOfResetting) {
                 // Corner case fixup:
-                pHost->mpMap->mpMapper->showArea->setCurrentText(pHost->mpMap->getDefaultAreaName());
+                pHost->mpMap->mpMapper->comboBox_showArea->setCurrentText(pHost->mpMap->getDefaultAreaName());
             }
 
             // If a map was loaded
