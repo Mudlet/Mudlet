@@ -13059,18 +13059,21 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::fillPackageInfo(const QString& varName, const QMap<QString, QString>& varValueList)
+void TLuaInterpreter::fillPackageInfo(const QString& varName, lua_State* L2)
 {
     lua_State* L = pGlobalLua;
     lua_getglobal(L, "mudlet");
     lua_getfield(L, -1, "packageInfo");
-    QMap<QString, QString>::const_iterator iter = varValueList.constBegin();
     lua_newtable(L);
-    while (iter != varValueList.constEnd()) {
-        lua_pushstring(L, iter.key().toUtf8().constData());
-        lua_pushstring(L, iter.value().toUtf8().constData());
-        lua_settable(L, -3);
-        ++iter;
+    lua_getglobal(L2, "_G");
+    lua_pushnil(L2);
+    while (lua_next(L2, -2) != 0) {
+        if (lua_isstring(L2, -1)) {
+            lua_pushstring(L, lua_tostring(L2, -2));
+            lua_pushstring(L, lua_tostring(L2, -1));
+            lua_settable(L, -3);
+        }
+        lua_pop(L2, 1);
     }
     lua_setfield(L, -2, varName.toUtf8().constData());
     lua_pop(pGlobalLua, lua_gettop(pGlobalLua));

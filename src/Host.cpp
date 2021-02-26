@@ -1923,44 +1923,29 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
 
 QString Host::getPackageConfig(const QString& luaConfig)
 {
-    QString packageName;
-    QFile configFile(luaConfig);
-    QStringList strings;
-    strings << QStringLiteral("Infos = {");
-    QMap<QString, QString> packageInfo;
-    if (configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QTextStream in(&configFile);
-        while (!in.atEnd()) {
-            strings += in.readLine();
-            strings += ",";
-        }
-    }
-    strings << QStringLiteral("}");
+    QString packageName{QString()};
+
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
-
-    int error = luaL_loadstring(L, strings.join("\n").toUtf8().constData());
+    int error = luaL_loadfile(L, luaConfig.toUtf8().constData());
 
     if (!error) {
         error = lua_pcall(L, 0, 0, 0);
     }
     if (!error) {
-        lua_getglobal(L, "Infos");
-        lua_getfield(L, -1, "mpackage");
+        lua_getglobal(L, "mpackage");
         if (lua_isstring(L, -1)) {
             packageName = QString(lua_tostring(L, -1));
         }
         lua_pop(L, -1);
-        lua_getglobal(L, "Infos");
-        lua_pushnil(L);
-        while(lua_next(L,  -2) != 0) {
-           if (lua_isstring(L, -1)) {
-                packageInfo.insert(QString(lua_tostring(L, -2)), QString(lua_tostring(L, -1)));
-            }
-            lua_pop(L, 1);
+        if (!packageName.isEmpty()) {
+            //get rid of lua version
+            lua_getglobal(L, "_G");
+            lua_pushnil(L);
+            lua_setfield(L, -2, "_VERSION");
+            mLuaInterpreter.fillPackageInfo(packageName, L);
         }
         lua_close(L);
-        mLuaInterpreter.fillPackageInfo(packageName, packageInfo);
         return packageName;
     }
 
