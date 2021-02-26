@@ -403,7 +403,7 @@ void XMLimport::readEnvColor()
     int id = attributes().value(QStringLiteral("id")).toString().toInt();
     int color = attributes().value(QStringLiteral("color")).toString().toInt();
 
-    mpHost->mpMap->envColors[id] = color;
+    mpHost->mpMap->mEnvColors[id] = color;
 }
 
 void XMLimport::readAreas()
@@ -582,7 +582,7 @@ std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
             }
         }
     }
-    return std::make_pair(objectType, rootItemID);
+    return {objectType, rootItemID};
 }
 
 void XMLimport::readHelpPackage()
@@ -813,7 +813,6 @@ void XMLimport::readHostPackage(Host* pHost)
     bool enableUserDictionary = attributes().value(QStringLiteral("mEnableUserDictionary")) == YES;
     bool useSharedDictionary = attributes().value(QStringLiteral("mUseSharedDictionary")) == YES;
     pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
-    pHost->mShowInfo = attributes().value(QStringLiteral("mShowInfo")) == YES;
     pHost->mAcceptServerGUI = attributes().value(QStringLiteral("mAcceptServerGUI")) == YES;
     pHost->mAcceptServerMedia = attributes().value(QStringLiteral("mAcceptServerMedia")) == YES;
     pHost->mMapperUseAntiAlias = attributes().value(QStringLiteral("mMapperUseAntiAlias")) == YES;
@@ -924,7 +923,6 @@ void XMLimport::readHostPackage(Host* pHost)
     if (mudlet::self()->mpCurrentActiveHost == pHost) {
         mudlet::self()->dactionInputLine->setChecked(compactInputLine);
     }
-
 
     while (!atEnd()) {
         readNext();
@@ -1086,6 +1084,8 @@ void XMLimport::readHostPackage(Host* pHost)
                 // QDebug() error reporting associated with the following
                 // readUnknownHostElement() for "anything not otherwise parsed"
                 Q_UNUSED(readElementText());
+            } else if (name() == "mMapInfoContributors") {
+                readMapInfoContributors();
             } else if (name() == "stopwatches") {
                 readStopWatchMap();
             } else {
@@ -1819,6 +1819,22 @@ void XMLimport::readStopWatchMap()
                 readElementText();
             } else {
                 readUnknownHostElement();
+            }
+        }
+    }
+
+}
+
+void XMLimport::readMapInfoContributors()
+{
+    mpHost->mMapInfoContributors.clear();
+    while (!atEnd()) {
+        readNext();
+        if (isEndElement()) {
+            break;
+        } else if (isStartElement()) {
+            if (name() == "mapInfoContributor") {
+                mpHost->mMapInfoContributors.insert(readElementText());
             }
         }
     }

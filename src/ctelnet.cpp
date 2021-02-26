@@ -53,6 +53,8 @@
 #include <QSslError>
 #include "post_guard.h"
 
+using namespace std::chrono_literals;
+
 // Uncomment this to get debugging messages about WILL/WONT/DO/DONT commands for
 // suboptions - change the value to 2 to get a bit more detail about the sizes
 // of the messages
@@ -481,8 +483,8 @@ void cTelnet::handle_socket_signal_connected()
     QString nothing = "";
     mpHost->mLuaInterpreter.call(func, nothing);
     mConnectionTimer.start();
-    mTimerLogin->start(2000);
-    mTimerPass->start(3000);
+    mTimerLogin->start(2s);
+    mTimerPass->start(3s);
 
     emit signal_connected(mpHost);
 
@@ -642,17 +644,12 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
 
     if (mpHost->mAllowToSendCommand) {
         std::string outData;
-        auto errorMsgTemplate = "[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
-            "be encoded into the range that is acceptable for the character\n"
-            "encoding that is currently set {\"%1\"} for the game server.\n"
-            "It may not understand what is sent to it.\n"
-            "Note: this warning will only be issued once, even if this happens again, until\n"
-            "the encoding is changed.";
+        auto errorMsgTemplate = "[ WARN ]  - Tried to send '%1' to the game, but it is unlikely to understand it.";
         if (!mEncoding.isEmpty()) {
             if (outgoingDataEncoder) {
                 if ((!mEncodingWarningIssued) && (!outgoingDataCodec->canEncode(data))) {
                     QString errorMsg = tr(errorMsgTemplate,
-                                          "%1 is the name of the encoding currently set.").arg(QLatin1String(mEncoding));
+                                          "%1 is the command that was sent to the game.").arg(data);
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                 }
@@ -677,7 +674,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
             for (int i = 0, total = data.size(); i < total; ++i) {
                 if ((!mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
                     QString errorMsg = tr(errorMsgTemplate,
-                                          "%1 is the name of the encoding currently set.").arg(QStringLiteral("ASCII"));
+                                          "%1 is the command that was sent to the game.").arg(data);
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                     break;
@@ -2747,7 +2744,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
         if (mNeedDecompression) {
             datalen = decompressBuffer(in_buffer, amount, out_buffer);
             buffer = out_buffer;
-            //qDebug() << "buffer:" << buffer;
         }
         buffer[datalen] = '\0';
         if (mpHost->mpConsole->mRecordReplay) {

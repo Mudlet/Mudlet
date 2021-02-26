@@ -707,6 +707,7 @@ bool TMainConsole::setBackgroundImage(const QString& name, const QString& path)
     }
 }
 
+// Does NOT act on the TMainConsole itself:
 bool TMainConsole::setBackgroundColor(const QString& name, int r, int g, int b, int alpha)
 {
     auto pC = mSubConsoleMap.value(name);
@@ -772,25 +773,21 @@ bool TMainConsole::lowerWindow(const QString& name)
 
     if (pC) {
         pC->lower();
-        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
     if (pL) {
         pL->lower();
-        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->lower();
-        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
     if (pN) {
         pN->lower();
-        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }

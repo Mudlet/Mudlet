@@ -107,7 +107,7 @@ public:
     // to be related to the file monitoring feature in the *nix tail command.
     // See, e.g.: https://en.wikipedia.org/wiki/Tail_(Unix)#File_monitoring
     bool mIsTailMode;
-    QMap<QString, QString> mPopupCommands;
+    QMap<QString, std::pair<QString, int>> mPopupCommands;
     int mScrollVector;
     QRegion mSelectedRegion;
     bool mShowTimeStamps;
@@ -143,6 +143,7 @@ private:
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
     bool establishSelectedText();
     void expandSelectionToWords();
+    void expandSelectionToLine(int);
 
     int mFontHeight;
     int mFontWidth;

@@ -76,6 +76,8 @@
 #include <zip.h>
 #include "post_guard.h"
 
+using namespace std::chrono_literals;
+
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::Close) {
@@ -293,8 +295,7 @@ mudlet::mudlet()
     mpTabBar->setAutoHide(true);
     connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_close_profile_requested);
     // TODO: Do not enable this option currently - although the user can drag
-    // the tabs the underlying main TConsoles do not move and then it means that
-    // the wrong title can be shown over the wrong window.
+    // the tabs, the underlying main TConsoles do not move with multiview enabled
     mpTabBar->setMovable(false);
     connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
     auto layoutTopLevel = new QVBoxLayout(frame);
@@ -319,6 +320,8 @@ mudlet::mudlet()
     } else {
         mAutolog = false;
     }
+
+    firstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
 
     mpButtonConnect = new QToolButton(this);
     mpButtonConnect->setText(tr("Connect"));
@@ -1015,12 +1018,6 @@ void mudlet::migrateDebugConsole(Host* currentHost)
     mpDebugArea->close();
 }
 
-// returns true if this is the first launch of Mudlet on this machine
-bool mudlet::firstLaunch()
-{
-    return !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
-}
-
 // As we are currently only using files from a resource file we only need to
 // analyse them once per application run - if we were loading from a user
 // selectable location, or even from a read-only part of their computer's
@@ -1386,7 +1383,6 @@ void mudlet::slot_module_clicked(QTableWidgetItem* pItem)
     QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
     QTableWidgetItem* itemPriority = moduleTable->item(i, 1);
     QTableWidgetItem* itemPath = moduleTable->item(i, 3);
-    qDebug() << itemPath->text();
     if (!entry || !checkStatus || !itemPriority || !mpModuleTableHost->mInstalledModules.contains(entry->text())) {
         moduleHelpButton->setDisabled(true);
         if (checkStatus) {
@@ -1505,7 +1501,8 @@ void mudlet::slot_package_manager()
     }
 
     mpPackageManagerDlg->raise();
-    mpPackageManagerDlg->show();
+    mpPackageManagerDlg->showNormal();
+    mpPackageManagerDlg->activateWindow();
 }
 
 void mudlet::slot_install_package()
@@ -2496,7 +2493,7 @@ void mudlet::slot_update_shortcuts()
         dactionNotepad->setShortcut(QKeySequence());
 
         packagesShortcut = new QShortcut(packagesKeySequence, this);
-        connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_options_dialog);
+        connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_package_manager);
         dactionPackageManager->setShortcut(QKeySequence());
 
         modulesShortcut = new QShortcut(packagesKeySequence, this);
@@ -2857,7 +2854,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
 void mudlet::processEventLoopHack()
 {
-    QTimer::singleShot(1, this, &mudlet::processEventLoopHack_timerRun);
+    QTimer::singleShot(1ms, this, &mudlet::processEventLoopHack_timerRun);
 }
 
 void mudlet::processEventLoopHack_timerRun()
@@ -4510,15 +4507,15 @@ std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QS
     auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, QStringLiteral("profileicon"));
     if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
         qWarning() << "mudlet::setProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
-        return std::make_pair(false, QStringLiteral("couldn't remove existing icon file"));
+        return {false, QStringLiteral("couldn't remove existing icon file")};
     }
 
     if (!QFile::copy(newIconPath, profileIconPath)) {
         qWarning() << "mudlet::setProfileIcon() ERROR: couldn't copy new icon" << newIconPath<< " to" << profileIconPath;
-        return std::make_pair(false, QStringLiteral("couldn't copy icon file into new location"));
+        return {false, QStringLiteral("couldn't copy icon file into new location")};
     }
 
-    return std::make_pair(true, QString());
+    return {true, QString()};
 }
 
 std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
@@ -4527,10 +4524,10 @@ std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
     auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, QStringLiteral("profileicon"));
     if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
         qWarning() << "mudlet::resetProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
-        return std::make_pair(false, QStringLiteral("couldn't remove existing icon file"));
+        return {false, QStringLiteral("couldn't remove existing icon file")};
     }
 
-    return std::make_pair(true, QString());
+    return {true, QString()};
 }
 
 #if defined(Q_OS_WIN32)

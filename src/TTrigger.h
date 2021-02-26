@@ -53,6 +53,7 @@ class TMatchState;
 #define REGEX_PROMPT 7
 #define MAX_CAPTURE_GROUPS 33
 
+using NameGroupMatches = QVector<QPair<QString, QString>>;
 
 struct TColorTable
 {
@@ -171,7 +172,7 @@ public:
 private:
     TTrigger() = default;
 
-    void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList);
+    void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
     void filter(std::string&, int&);
 
 
