@@ -1,4 +1,4 @@
-name: 🔍 Clang-Tidy checks for the diff only
+name: 🔍 Check improvements with Mudlet's general C++ style guide
 
 on: [pull_request]
 
@@ -86,7 +86,7 @@ jobs:
 
         echo "Skipping generation of translation stats, so not installing lua-yajl."
 
-    - name: Create compile_commands.json
+    - name: Generate compile_commands.json
       uses: lukka/run-cmake@v3
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
