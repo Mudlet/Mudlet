@@ -2254,8 +2254,8 @@ void dlgRoomExits::slot_checkModified()
             if (pI->text(7)
                         == tr("(command or Lua script)", "Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same")
                 || pI->text(0).toInt() <= 0) {
-                continue
-            }; // Ignore new or to be deleted entries
+                continue;
+            } // Ignore new or to be deleted entries
             currentCount++;
         }
         if (originalCount != currentCount) {
