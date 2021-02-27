@@ -4037,21 +4037,21 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     int func = luaL_ref(L, LUA_REGISTRYINDEX);
 
     bool lua_result = false;
-    if (funcName == QStringLiteral("setLabelClickCallback"))
+    if (funcName == QStringLiteral("setLabelClickCallback")) {
         lua_result = host.setLabelClickCallback(labelName, func);
-    else if (funcName == QStringLiteral("setLabelDoubleClickCallback"))
+    } else if (funcName == QStringLiteral("setLabelDoubleClickCallback")) {
         lua_result = host.setLabelDoubleClickCallback(labelName, func);
-    else if (funcName == QStringLiteral("setLabelReleaseCallback"))
+    } else if (funcName == QStringLiteral("setLabelReleaseCallback")) {
         lua_result = host.setLabelReleaseCallback(labelName, func);
-    else if (funcName == QStringLiteral("setLabelMoveCallback"))
+    } else if (funcName == QStringLiteral("setLabelMoveCallback")) {
         lua_result = host.setLabelMoveCallback(labelName, func);
-    else if (funcName == QStringLiteral("setLabelWheelCallback"))
+    } else if (funcName == QStringLiteral("setLabelWheelCallback")) {
         lua_result = host.setLabelWheelCallback(labelName, func);
-    else if (funcName == QStringLiteral("setLabelOnEnter"))
+    } else if (funcName == QStringLiteral("setLabelOnEnter")) {
         lua_result = host.setLabelOnEnter(labelName, func);
-    else if (funcName == QStringLiteral("setLabelOnLeave"))
+    } else if (funcName == QStringLiteral("setLabelOnLeave")) {
         lua_result = host.setLabelOnLeave(labelName, func);
-    else {
+    } else {
         return warnArgumentValue(L, __func__, QStringLiteral("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));
     }
 
