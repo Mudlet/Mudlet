@@ -2251,13 +2251,16 @@ void dlgRoomExits::slot_checkModified()
  *                   pI->text(0).toInt(),
  *                   qPrintable(pI->text(7)));
  */
-            if (pI->text(7) == tr("(command or Lua script)", "Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same") || pI->text(0).toInt() <= 0)
-                continue; // Ignore new or to be deleted entries
+            if (pI->text(7)
+                        == tr("(command or Lua script)", "Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same")
+                || pI->text(0).toInt() <= 0) {
+                continue;
+            } // Ignore new or to be deleted entries
             currentCount++;
         }
-        if (originalCount != currentCount)
+        if (originalCount != currentCount) {
             isModified = true;
-        else {
+        } else {
             if (originalCount) {
                 QMap<QString, TExit*> foundMap = originalSpecialExits;
                 // Now make a TExit value for each current (valid) specialExit
@@ -2271,8 +2274,10 @@ void dlgRoomExits::slot_checkModified()
  *                           pI->text(0).toInt(),
  *                           qPrintable(pI->text(7)));
  */
-                    if (pI->text(7) == tr("(command or Lua script)", "Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same") || pI->text(0).toInt() <= 0)
+                    if (pI->text(7) == tr("(command or Lua script)", "Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same")
+                        || pI->text(0).toInt() <= 0) {
                         continue; // Ignore new or to be deleted entries
+                    }
                     QString currentCmd = pI->text(7);
                     TExit currentExit;
                     currentExit.destination = pI->text(0).toInt();
@@ -2292,8 +2297,9 @@ void dlgRoomExits::slot_checkModified()
                         break;
                     }
                 }
-                if (foundMap.count())
+                if (foundMap.count()) {
                     isModified = true;
+                }
             }
         }
     }

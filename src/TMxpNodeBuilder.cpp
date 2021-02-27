@@ -87,8 +87,9 @@ bool TMxpNodeBuilder::acceptTag(char ch)
         }
     }
 
-    if (QChar(ch).isSpace())
+    if (QChar(ch).isSpace()) {
         return false;
+    }
 
     if (ch == '<') { // reset
         resetCurrentTag();
@@ -108,8 +109,9 @@ bool TMxpNodeBuilder::acceptTag(char ch)
         return false;
     }
 
-    if (!acceptAttribute(ch))
+    if (!acceptAttribute(ch)) {
         return false;
+    }
 
     return false;
 }
