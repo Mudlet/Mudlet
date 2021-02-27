@@ -1,4 +1,4 @@
-/***************************************************************************
+﻿/***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2015, 2017-2020 by Stephen Lyons                        *
@@ -47,6 +47,22 @@
 #error Mudlet requires a version of libzip of at least 0.11
 #endif
 
+void appendToConfigFile(QString& comment, QString what, QString value)
+{
+    if (value.isEmpty()) {
+        return;
+    }
+    comment.append(QStringLiteral("%1 = \"%2\"\n").arg(what).arg(value));
+}
+
+void appendVersionToConfigFile(QString& comment, QString Major, QString Minor, QString Patch)
+{
+    if (Major == QLatin1String("0") && Minor == QLatin1String("0") && Patch == QLatin1String("0")) {
+        return;
+    }
+    comment.append(QStringLiteral("version = \"%1.%2.%3\"\n").arg(Major).arg(Minor).arg(Patch));
+}
+
 dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
 : QDialog(parent)
 , inputDialog (new QDialog)
@@ -88,9 +104,14 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     mXmlPathFileName.clear();
     QString profileName(mpHost->getName());
     input->setupUi(inputDialog);
+    QStringListModel* dependencies = new QStringListModel();
+    input->Dependencies->setModel(dependencies);
     connect(input->buttonBox->button(QDialogButtonBox::Cancel), &QAbstractButton::clicked, [this]() {input->PackageName->clear(); inputDialog->reject();});
     connect(input->buttonBox->button(QDialogButtonBox::Ok), &QAbstractButton::clicked, this, &dlgPackageExporter::slot_checkInput);
     inputDialog->installEventFilter(this);
+    input->Dependencies->installEventFilter(this);
+    input->Dependencies->view()->installEventFilter(this);
+    connect(input->Dependencies, QOverload<int>::of(&QComboBox::highlighted), [=](int index){highlightIndex = index;});
     connect(input->addDependency, &QToolButton::clicked, this, &dlgPackageExporter::slot_addDependency);
     connect(input->removeDependency, &QToolButton::clicked, this, &dlgPackageExporter::slot_removeDependency);
     inputDialog->exec();
@@ -123,11 +144,18 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     ui->filePath->show();
     mXmlPathFileName = QStringLiteral("%1/%2.xml").arg(mStagingDirName, mPackageName);
 
+    appendToConfigFile(mPackageConfig, QStringLiteral("mpackage"), mPackageName);
+    appendToConfigFile(mPackageConfig, QStringLiteral("author"), input->Author->text());
+    appendToConfigFile(mPackageConfig, QStringLiteral("description"), input->Description->text());
+    appendVersionToConfigFile(mPackageConfig, input->Major->text(), input->Minor->text(), input->Patch->text());
+    appendToConfigFile(mPackageConfig, QStringLiteral("author"), dependencies->stringList().join(","));
+    mPackageConfig.append(QStringLiteral("created = \"%1\"\n").arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss"))));
+
     QString luaConfig = QStringLiteral("%1/config.lua").arg(mStagingDirName);
     QFile configFile(luaConfig);
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out(&configFile);
-        out << QStringLiteral("mpackage = \"%1\"\n").arg(mPackageName);
+        out << mPackageConfig;
         out.flush();
         configFile.close();
     }
@@ -206,12 +234,36 @@ void dlgPackageExporter::slot_checkInput()
         return;
     }
     //change textcolor to red if no name is given
+    input->PackageName->setStyleSheet(QString());
     input->PackageName->setStyleSheet("QLineEdit[text=\"\"]{ color:red; }");
     connect(input->PackageName, &QLineEdit::textChanged, [=]{ style()->polish(input->PackageName); });
 }
 
 bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
 {
+    if (evt->type() == QEvent::KeyPress) {
+        QKeyEvent* keyEvent = static_cast<QKeyEvent*>(evt);
+        if (obj == input->Dependencies) {
+            if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
+                slot_addDependency();
+                return true;
+            }
+            if (keyEvent->key() == Qt::Key_Delete) {
+                slot_removeDependency();
+                return true;
+            }
+            if (keyEvent->key() == Qt::Key_Down || keyEvent->key() == Qt::Key_Up) {
+                input->Dependencies->showPopup();
+                return true;
+            }
+        }
+
+        if ((keyEvent->key() == Qt::Key_Delete) && (obj == input->Dependencies->view())) {
+            input->Dependencies->removeItem(highlightIndex);
+            return true;
+        }
+    }
+
     if (obj == inputDialog && evt->type() == QEvent::Close) {
         input->PackageName->clear();
     }
@@ -560,6 +612,7 @@ void dlgPackageExporter::slot_export_package()
                 // details):
                 // Change the cursor to a system busy one while we are working:
                 QApplication::setOverrideCursor(Qt::BusyCursor);
+                zip_set_archive_comment(archive, mPackageConfig.toUtf8().constData(), mPackageConfig.length());
                 ze = zip_close(archive);
                 QApplication::restoreOverrideCursor();
                 if (ze) {

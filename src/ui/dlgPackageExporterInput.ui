@@ -75,7 +75,7 @@
          <enum>Qt::StrongFocus</enum>
         </property>
         <property name="placeholderText">
-         <string>author (optional)</string>
+         <string>Author (optional)</string>
         </property>
        </widget>
       </item>
@@ -104,14 +104,14 @@
          <set>Qt::ImhNone</set>
         </property>
         <property name="placeholderText">
-         <string>description (optional)</string>
+         <string>Description (optional)</string>
         </property>
        </widget>
       </item>
       <item row="0" column="1">
        <widget class="QLineEdit" name="PackageName">
         <property name="placeholderText">
-         <string>package name (required)</string>
+         <string>Package name (required)</string>
         </property>
        </widget>
       </item>
@@ -121,7 +121,7 @@
          <number>6</number>
         </property>
         <item>
-         <widget class="QSpinBox" name="spinBox_3">
+         <widget class="QSpinBox" name="Major">
           <property name="focusPolicy">
            <enum>Qt::StrongFocus</enum>
           </property>
@@ -137,7 +137,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="spinBox_2">
+         <widget class="QSpinBox" name="Minor">
           <property name="focusPolicy">
            <enum>Qt::StrongFocus</enum>
           </property>
@@ -150,7 +150,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="spinBox">
+         <widget class="QSpinBox" name="Patch">
           <property name="focusPolicy">
            <enum>Qt::StrongFocus</enum>
           </property>
@@ -250,9 +250,9 @@
   <tabstop>PackageName</tabstop>
   <tabstop>Author</tabstop>
   <tabstop>Description</tabstop>
-  <tabstop>spinBox_3</tabstop>
-  <tabstop>spinBox_2</tabstop>
-  <tabstop>spinBox</tabstop>
+  <tabstop>Major</tabstop>
+  <tabstop>Minor</tabstop>
+  <tabstop>Patch</tabstop>
   <tabstop>Dependencies</tabstop>
   <tabstop>addDependency</tabstop>
   <tabstop>removeDependency</tabstop>

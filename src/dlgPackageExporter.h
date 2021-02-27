@@ -106,6 +106,8 @@ private:
     QString mPackageName;
     QString mPackagePath;
     QString mPackagePathFileName;
+    QString mPackageConfig;
+    int highlightIndex;
 };
 
 #endif // MUDLET_DLGPACKAGEEXPORTER_H
