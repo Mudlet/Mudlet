@@ -12211,7 +12211,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
         }
         lua_pop(L, lua_gettop(L));
         if (error == 0) {
-            return {true, returnValue };
+            return {true, returnValue};
         }
 
         return {false, returnValue};
