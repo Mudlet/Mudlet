@@ -1008,10 +1008,11 @@ void Host::reenableAllTriggers()
 
 QPair<QString, QString> Host::getSearchEngine()
 {
-    if (mSearchEngineData.contains(mSearchEngineName))
+    if (mSearchEngineData.contains(mSearchEngineName)) {
         return qMakePair(mSearchEngineName, mSearchEngineData.value(mSearchEngineName));
-    else
+    } else {
         return qMakePair(QStringLiteral("Google"), mSearchEngineData.value(QStringLiteral("Google")));
+    }
 }
 
 // cmd is UTF-16BE encoded here, but will be transcoded to Server's one by
