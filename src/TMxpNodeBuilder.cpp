@@ -111,7 +111,7 @@ bool TMxpNodeBuilder::acceptTag(char ch)
 
     if (!acceptAttribute(ch)) {
         return false;
-}
+    }
 
     return false;
 }
