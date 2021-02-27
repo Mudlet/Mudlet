@@ -8226,7 +8226,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/mapper.ui" line="427"/>
       <source>3D</source>
-      <translation type="unfinished"/>
+      <translation>3D</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="680"/>
