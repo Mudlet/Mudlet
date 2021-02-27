@@ -111,8 +111,8 @@ public:
     QString getLuaString(const QString& stringName);
     int check_for_mappingscript();
     int check_for_custom_speedwalk();
-    void fillPackageInfo(const QString& packageName, int isModule, lua_State* packageLua);
-    void removePackageInfo(const QString& packageName, int isModule);
+    void fillPackageInfo(const QString& packageName, bool isModule, lua_State* packageLua);
+    void removePackageInfo(const QString& packageName, bool isModule);
     void set_lua_integer(const QString& varName, int varValue);
     void set_lua_string(const QString& varName, const QString& varValue);
     void set_lua_table(const QString& tableName, QStringList& variableList);

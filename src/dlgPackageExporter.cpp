@@ -89,7 +89,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     QString profileName(mpHost->getName());
     input->setupUi(inputDialog);
     connect(input->buttonBox->button(QDialogButtonBox::Cancel), &QAbstractButton::clicked, [this]() {input->PackageName->clear(); inputDialog->reject();});
-    connect(input->buttonBox->button(QDialogButtonBox::Ok), &QAbstractButton::clicked, [this]() {inputDialog->accept();});
+    connect(input->buttonBox->button(QDialogButtonBox::Ok), &QAbstractButton::clicked, this, &dlgPackageExporter::slot_checkInput);
     inputDialog->installEventFilter(this);
     connect(input->addDependency, &QToolButton::clicked, this, &dlgPackageExporter::slot_addDependency);
     connect(input->removeDependency, &QToolButton::clicked, this, &dlgPackageExporter::slot_removeDependency);
@@ -196,18 +196,23 @@ void dlgPackageExporter::slot_removeDependency()
         return;
     }
     input->Dependencies->removeItem(input->Dependencies->currentIndex());
-    input->Dependencies->clearEditText();
+
+}
+
+void dlgPackageExporter::slot_checkInput()
+{
+    if (!input->PackageName->text().isEmpty()) {
+        inputDialog->accept();
+        return;
+    }
+    //change textcolor to red if no name is given
+    input->PackageName->setStyleSheet("QLineEdit[text=\"\"]{ color:red; }");
+    connect(input->PackageName, &QLineEdit::textChanged, [=]{ style()->polish(input->PackageName); });
 }
 
 bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
 {
-    if(evt->type() == QEvent::KeyPress) {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(evt);
-        if(keyEvent->key() == Qt::Key_Escape || keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter)
-            return true; // mark the event as handled
-    }
-
-    if (evt->type() == QEvent::Close) {
+    if (obj == inputDialog && evt->type() == QEvent::Close) {
         input->PackageName->clear();
     }
     return false;

@@ -1665,7 +1665,7 @@ bool Host::installPackage(const QString& fileName, int module)
         // - if it does, update the packageName from it
         if (_dir.exists(QStringLiteral("config.lua"))) {
             // read in the new packageName from Lua. Should be expanded in future to whatever else config.lua will have
-            readPackageConfig(_dir.absoluteFilePath(QStringLiteral("config.lua")), packageName, module);
+            readPackageConfig(_dir.absoluteFilePath(QStringLiteral("config.lua")), packageName, module > 0);
             // now that the packageName changed, redo relevant checks to make sure it's still valid
             if (module) {
                 if (mActiveModules.contains(packageName)) {
@@ -1824,7 +1824,11 @@ bool Host::uninstallPackage(const QString& packageName, int module)
             return false;
         }
     }
-    mLuaInterpreter.removePackageInfo(packageName, module == 1);
+    //module == 2 seems to be only used for reloading/syncing, which doesn't work for mpackages anyway
+    //No need to remove package info as it can cause the info to be lost
+    if (module != 2) {
+        mLuaInterpreter.removePackageInfo(packageName, module > 0);
+    }
     // raise 2 events - a generic one and a more detailed one to serve both
     // a simple need ("I just want the uninstall event") and a more specific need
     // ("I specifically need to know when the module was uninstalled via Lua")
@@ -1913,7 +1917,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     return true;
 }
 
-void Host::readPackageConfig(const QString& luaConfig, QString& packageName, int isModule)
+void Host::readPackageConfig(const QString& luaConfig, QString& packageName, bool isModule)
 {
     QString newName = getPackageConfig(luaConfig, isModule);
     if (!newName.isEmpty()){
@@ -1921,13 +1925,24 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName, int
     }
 }
 
-QString Host::getPackageConfig(const QString& luaConfig, int isModule)
+QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
 {
-    QString packageName{QString()};
+    QString packageName;
+    // We don't use luaL_loadfile here because that breaks on Windows as it won't work if there are accented characters in the path or file name -
+    // QFile which can work with whatever local8Bit encoding is used for file names - the luaL_loadfile(...) uses std::iostream which doesn't...
+    QFile configFile(luaConfig);
+    QStringList strings;
+    if (configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&configFile);
+        while (!in.atEnd()) {
+            strings += in.readLine();
+        }
+    }
 
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
-    int error = luaL_loadfile(L, luaConfig.toUtf8().constData());
+
+    int error = luaL_loadstring(L, strings.join("\n").toUtf8().constData());
 
     if (!error) {
         error = lua_pcall(L, 0, 0, 0);
@@ -1973,7 +1988,6 @@ QString Host::getPackageConfig(const QString& luaConfig, int isModule)
         reason = "Unknown error";
         break;
     }
-
 
     if (mudlet::debugMode) {
         qDebug() << reason.c_str() << " in config.lua: " << e.c_str();

@@ -82,6 +82,7 @@ public slots:
 private slots:
     void slot_addDependency();
     void slot_removeDependency();
+    void slot_checkInput();
 
 private:
     bool writeFileToZip(const QString&, const QString&, zip*);

@@ -13059,7 +13059,7 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::fillPackageInfo(const QString& packageName, int isModule, lua_State* packageLua)
+void TLuaInterpreter::fillPackageInfo(const QString& packageName, bool isModule, lua_State* packageLua)
 {
     lua_State* L = pGlobalLua;
     lua_getglobal(L, "mudlet");
@@ -13084,7 +13084,7 @@ void TLuaInterpreter::fillPackageInfo(const QString& packageName, int isModule, 
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::removePackageInfo(const QString& packageName, int isModule)
+void TLuaInterpreter::removePackageInfo(const QString& packageName, bool isModule)
 {
     lua_State* L = pGlobalLua;
     lua_getglobal(L, "mudlet");
@@ -13956,9 +13956,9 @@ void TLuaInterpreter::loadPackageInfos()
     QStringList packages = mpHost->mInstalledPackages;
     for (int i = 0; i < packages.size(); i++) {
         QString packagePath{mudlet::self()->getMudletPath(mudlet::profilePackagePath, mpHost->getName(), packages.at(i))};
-        QDir _dir(packagePath);
-        if (_dir.exists(QStringLiteral("config.lua"))) {
-            mpHost->getPackageConfig(_dir.absoluteFilePath(QStringLiteral("config.lua")));
+        QDir dir(packagePath);
+        if (dir.exists(QStringLiteral("config.lua"))) {
+            mpHost->getPackageConfig(dir.absoluteFilePath(QStringLiteral("config.lua")));
         }
     }
     lua_pop(L, lua_gettop(L));
