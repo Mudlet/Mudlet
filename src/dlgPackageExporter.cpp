@@ -148,7 +148,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     appendToConfigFile(mPackageConfig, QStringLiteral("author"), input->Author->text());
     appendToConfigFile(mPackageConfig, QStringLiteral("description"), input->Description->text());
     appendVersionToConfigFile(mPackageConfig, input->Major->text(), input->Minor->text(), input->Patch->text());
-    appendToConfigFile(mPackageConfig, QStringLiteral("author"), dependencies->stringList().join(","));
+    appendToConfigFile(mPackageConfig, QStringLiteral("dependencies"), dependencies->stringList().join(","));
     mPackageConfig.append(QStringLiteral("created = \"%1\"\n").arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss"))));
 
     QString luaConfig = QStringLiteral("%1/config.lua").arg(mStagingDirName);
