@@ -112,9 +112,6 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     inputDialog->installEventFilter(this);
     input->Dependencies->installEventFilter(this);
     input->Dependencies->view()->installEventFilter(this);
-    connect(input->Dependencies, QOverload<int>::of(&QComboBox::highlighted), [=](int index){highlightIndex = index;});
-    connect(input->addDependency, &QToolButton::clicked, this, &dlgPackageExporter::slot_addDependency);
-    connect(input->removeDependency, &QToolButton::clicked, this, &dlgPackageExporter::slot_removeDependency);
     inputDialog->exec();
     mPackageName = input->PackageName->text();
     if (mPackageName.isEmpty()) {
@@ -216,7 +213,8 @@ void dlgPackageExporter::slot_addDependency()
         return;
     }
     input->Dependencies->addItem(input->Dependencies->currentText());
-    input->Dependencies->clearEditText();
+    input->Dependencies->showPopup();
+    input->Dependencies->setFocus();
 }
 
 void dlgPackageExporter::slot_removeDependency()
@@ -225,7 +223,6 @@ void dlgPackageExporter::slot_removeDependency()
         return;
     }
     input->Dependencies->removeItem(input->Dependencies->currentIndex());
-
 }
 
 void dlgPackageExporter::slot_checkInput()
@@ -237,13 +234,15 @@ void dlgPackageExporter::slot_checkInput()
     //change textcolor to red if no name is given
     input->PackageName->setStyleSheet(QString());
     input->PackageName->setStyleSheet("QLineEdit[text=\"\"]{ color:red; }");
-    connect(input->PackageName, &QLineEdit::textChanged, [=]{ style()->polish(input->PackageName); });
+    connect(input->PackageName, &QLineEdit::textChanged, [=] { style()->polish(input->PackageName); });
 }
 
 bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
 {
     if (evt->type() == QEvent::KeyPress) {
         QKeyEvent* keyEvent = static_cast<QKeyEvent*>(evt);
+        //add dependencies by writing them and pressing enter
+        //delete them by pressing delete. Scroll through them by using Up and Down keys
         if (obj == input->Dependencies) {
             if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
                 slot_addDependency();
@@ -254,19 +253,51 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
                 return true;
             }
             if (keyEvent->key() == Qt::Key_Down || keyEvent->key() == Qt::Key_Up) {
+                input->Dependencies->view()->setFocus();
                 input->Dependencies->showPopup();
+                return true;
+            }
+            if (keyEvent->key() == Qt::Key_Escape) {
+                input->Dependencies->hidePopup();
                 return true;
             }
         }
 
-        if ((keyEvent->key() == Qt::Key_Delete) && (obj == input->Dependencies->view())) {
-            input->Dependencies->removeItem(highlightIndex);
-            return true;
+        if (obj == input->Dependencies->view()) {
+            if ((keyEvent->key() == Qt::Key_Delete)) {
+                input->Dependencies->removeItem(input->Dependencies->view()->currentIndex().row());
+                return true;
+            }
+            if (!(keyEvent->key() == Qt::Key_Down || keyEvent->key() == Qt::Key_Up)) {
+                input->Dependencies->lineEdit()->setFocus();
+                return true;
+            }
         }
     }
 
+    //if windows is closed clear the packagename so that it doesn't go on in package creation
     if (obj == inputDialog && evt->type() == QEvent::Close) {
         input->PackageName->clear();
+        return true;
+    }
+
+    //dependencies focus handling
+    if (obj == input->Dependencies) {
+        if (evt->type() == QEvent::FocusIn) {
+            input->Dependencies->lineEdit()->grabKeyboard();
+            input->Dependencies->lineEdit()->selectAll();
+            return true;
+        }
+
+        if (evt->type() == QEvent::FocusOut) {
+            input->Dependencies->lineEdit()->releaseKeyboard();
+            input->Dependencies->lineEdit()->deselect();
+            QFocusEvent* focusEvent = static_cast<QFocusEvent*>(evt);
+            if (focusEvent->reason() == Qt::TabFocusReason) {
+                input->Dependencies->hidePopup();
+            }
+            return true;
+        }
     }
     return false;
 }
