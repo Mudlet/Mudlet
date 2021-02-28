@@ -15382,6 +15382,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
 
     auto& host = getHostFromLua(L);
     host.mpMap->mMapInfoContributorManager->registerContributor(name, [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+        Q_UNUSED(infoColor);
         lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
         if (roomID > 0) {
             lua_pushinteger(L, roomID);
