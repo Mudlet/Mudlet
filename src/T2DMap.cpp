@@ -164,14 +164,6 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.hide();
     connect(&mMultiSelectionListWidget, &QTreeWidget::itemSelectionChanged, this, &T2DMap::slot_roomSelectionChanged);
     setCursor(Qt::OpenHandCursor);
-    // replacement parameter supplied at points of use:
-#if defined(Q_OS_WIN32)
-    mBG_ONLY_BUTTON_SSHEET = mudlet::self()->forceWindowsVistaPButtonFix()
-            ? QStringLiteral("QPushButton {background-color: %1; border: 1px solid #8f8f91;}")
-            : QStringLiteral("QPushButton {background-color: %1;}");
-#else
-    mBG_ONLY_BUTTON_SSHEET = QStringLiteral("QPushButton {background-color: %1}");
-#endif
 }
 
 void T2DMap::init()
@@ -3215,7 +3207,7 @@ void T2DMap::slot_customLineProperties()
             mpCurrentLineArrow->setChecked(room->customLinesArrow.value(exit));
             mCurrentLineColor = room->customLinesColor.value(exit);
 
-            mpCurrentLineColor->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(mCurrentLineColor.name()));
+            mpCurrentLineColor->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(mCurrentLineColor.name()));
             connect(mpCurrentLineColor, &QAbstractButton::clicked, this, &T2DMap::slot_customLineColor);
             dialog->adjustSize();
 
@@ -4832,7 +4824,7 @@ void T2DMap::slot_setCustomLine()
     mpCurrentLineStyle->setCurrentIndex(mpCurrentLineStyle->findData(static_cast<int>(mCurrentLineStyle)));
 
     mpCurrentLineArrow->setChecked(mCurrentLineArrow);
-    mpCurrentLineColor->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(mCurrentLineColor.name()));
+    mpCurrentLineColor->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(mCurrentLineColor.name()));
     connect(specialExits, &QTreeWidget::itemClicked, this, &T2DMap::slot_setCustomLine2B);
     connect(mpCurrentLineColor, &QAbstractButton::clicked, this, &T2DMap::slot_customLineColor);
     dialog->adjustSize();
@@ -4853,7 +4845,7 @@ void T2DMap::slot_customLineColor()
 
     if (color.isValid()) {
         mCurrentLineColor = color;
-        mpCurrentLineColor->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(color.name()));
+        mpCurrentLineColor->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(color.name()));
     }
 }
 

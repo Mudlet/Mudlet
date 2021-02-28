@@ -116,10 +116,6 @@ class mudlet : public QMainWindow, public Ui::main_window
 {
     Q_OBJECT
 
-#if defined(Q_OS_WIN32)
-    bool mForceWindowsVistaPButtonFix = false;
-#endif
-
 public:
     Q_DISABLE_COPY(mudlet)
     mudlet();
@@ -270,7 +266,6 @@ public:
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
     void requestProfilesToReloadMaps(QList<QString>);
-    bool firstLaunch = false;
     void showChangelogIfUpdated();
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
@@ -323,10 +318,11 @@ public:
     void startAutoLogin(const QString&);
     int64_t getPhysicalMemoryTotal();
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
-#if defined(Q_OS_WIN32)
-    bool forceWindowsVistaPButtonFix() const { return mForceWindowsVistaPButtonFix; }
-#endif
 
+    bool firstLaunch = false;
+    // Needed to work around a (likely only Windows) issue:
+    QString mBG_ONLY_BUTTON_SSHEET;
+    QString mFG_BG_BUTTON_SSHEET;
 
     FontManager mFontManager;
     Discord mDiscord;

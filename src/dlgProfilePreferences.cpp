@@ -59,22 +59,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 , mpMenu(nullptr)
 , mUseSharedDictionary(false)
 {
-#if defined(Q_OS_WIN32)
-// The default "windowsvista" style used nowadays on Windows 7 and later
-// has a nasty gotcha in that just setting the background color does not
-// work on later (Qt 5.12+) versions as the border seems to expand to cover
-// the whole of the button by default:
-    mBG_ONLY_BUTTON_SSHEET = mudlet::self()->forceWindowsVistaPButtonFix()
-            ? QStringLiteral("QPushButton{background-color: %1; border: 1px solid #8f8f91;}")
-            : QStringLiteral("QPushButton{background-color: %1;}");
-    mFG_BG_BUTTON_SSHEET = mudlet::self()->forceWindowsVistaPButtonFix()
-            ? QStringLiteral("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}")
-            : QStringLiteral("QPushButton {color: %1; background-color: %2;}");
-#else
-    mBG_ONLY_BUTTON_SSHEET = QStringLiteral("QPushButton{background-color: %1;}");
-    mFG_BG_BUTTON_SSHEET = QStringLiteral("QPushButton {color: %1; background-color: %2;}");
-#endif
-
     // init generated dialog
     setupUi(this);
 
@@ -1427,26 +1411,26 @@ void dlgProfilePreferences::setColors2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        pushButton_black_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mBlack_2.name()));
-        pushButton_Lblack_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mLightBlack_2.name()));
-        pushButton_green_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mGreen_2.name()));
-        pushButton_Lgreen_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mLightGreen_2.name()));
-        pushButton_red_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mRed_2.name()));
-        pushButton_Lred_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mLightRed_2.name()));
-        pushButton_blue_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mBlue_2.name()));
-        pushButton_Lblue_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mLightBlue_2.name()));
-        pushButton_yellow_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mYellow_2.name()));
-        pushButton_Lyellow_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mLightYellow_2.name()));
-        pushButton_cyan_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mCyan_2.name()));
-        pushButton_Lcyan_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mLightCyan_2.name()));
-        pushButton_magenta_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mMagenta_2.name()));
-        pushButton_Lmagenta_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mLightMagenta_2.name()));
-        pushButton_white_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mWhite_2.name()));
-        pushButton_Lwhite_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mLightWhite_2.name()));
+        pushButton_black_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mBlack_2.name()));
+        pushButton_Lblack_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mLightBlack_2.name()));
+        pushButton_green_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mGreen_2.name()));
+        pushButton_Lgreen_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mLightGreen_2.name()));
+        pushButton_red_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mRed_2.name()));
+        pushButton_Lred_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mLightRed_2.name()));
+        pushButton_blue_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mBlue_2.name()));
+        pushButton_Lblue_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mLightBlue_2.name()));
+        pushButton_yellow_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mYellow_2.name()));
+        pushButton_Lyellow_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mLightYellow_2.name()));
+        pushButton_cyan_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mCyan_2.name()));
+        pushButton_Lcyan_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mLightCyan_2.name()));
+        pushButton_magenta_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mMagenta_2.name()));
+        pushButton_Lmagenta_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mLightMagenta_2.name()));
+        pushButton_white_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mWhite_2.name()));
+        pushButton_Lwhite_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mLightWhite_2.name()));
 
-        pushButton_foreground_color_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mFgColor_2.name()));
-        pushButton_background_color_2->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mBgColor_2.name()));
-        pushButton_roomBorderColor->setStyleSheet(mBG_ONLY_BUTTON_SSHEET.arg(pHost->mRoomBorderColor.name()));
+        pushButton_foreground_color_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mFgColor_2.name()));
+        pushButton_background_color_2->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mBgColor_2.name()));
+        pushButton_roomBorderColor->setStyleSheet(mudlet::self()->mBG_ONLY_BUTTON_SSHEET.arg(pHost->mRoomBorderColor.name()));
     } else {
         pushButton_black_2->setStyleSheet(QString());
         pushButton_Lblack_2->setStyleSheet(QString());
@@ -3588,8 +3572,9 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
                 painter.end();
                 button->setIcon(QIcon(labelBackground));
             } else {
-                button->setStyleSheet(mFG_BG_BUTTON_SSHEET.arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"),
-                                                              color.name()));
+                button->setStyleSheet(mudlet::self()->mFG_BG_BUTTON_SSHEET
+                                              .arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"),
+                                                   color.name()));
             }
             return;
         }
@@ -3625,7 +3610,8 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
             icon.addPixmap(iconBackground, QIcon::Disabled, QIcon::Off);
             button->setIcon(icon);
         } else {
-            button->setStyleSheet(mFG_BG_BUTTON_SSHEET.arg(QLatin1String("darkGray"), disabledColor.name()));
+            button->setStyleSheet(mudlet::self()->mFG_BG_BUTTON_SSHEET
+                              .arg(QLatin1String("darkGray"), disabledColor.name()));
         }
         return;
     }
@@ -3921,23 +3907,5 @@ void dlgProfilePreferences::setPlayerRoomColor(QPushButton* b, QColor& c)
         // Also sets a contrasting foreground color so text will always be
         // visible and adjusts the saturation of a disabled button:
         setButtonColor(b, color);
-    }
-}
-
-QString dlgProfilePreferences::generateButtonStyleSheet(const QColor& color, const bool isEnabled) const
-{
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-    if (color != QColorConstants::Transparent && color.isValid()) {
-#else
-    if (color != QColor("transparent") && color.isValid()) {
-#endif
-        if (isEnabled) {
-            return mFG_BG_BUTTON_SSHEET.arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"), color.name());
-        }
-
-        QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness());
-        return mFG_BG_BUTTON_SSHEET.arg(QLatin1String("darkGray"), disabledColor.name());
-    } else {
-        return QString();
     }
 }

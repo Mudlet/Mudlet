@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018-2019, 2021 by Stephen Lyons                  *
+ *   Copyright (C) 2016, 2018-2019 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -53,9 +53,6 @@ class QTreeWidgetItem;
 class T2DMap : public QWidget
 {
     Q_OBJECT
-
-    // Needed to work around a (likely only Windows) issue:
-    QString mBG_ONLY_BUTTON_SSHEET;
 
 public:
     Q_DISABLE_COPY(T2DMap)

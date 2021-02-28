@@ -4,8 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017-2018, 2021 by Stephen Lyons                        *
- *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -47,10 +46,6 @@ class Host;
 class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 {
     Q_OBJECT
-
-    // Needed to work around a (likely only Windows) issue:
-    QString mBG_ONLY_BUTTON_SSHEET;
-    QString mFG_BG_BUTTON_SSHEET;
 
 public:
     Q_DISABLE_COPY(dlgProfilePreferences)
@@ -188,7 +183,6 @@ private:
     void hidePasswordMigrationLabel();
     void setupPasswordsMigration();
     QString mapSaveLoadDirectory(Host* pHost);
-    QString generateButtonStyleSheet(const QColor&, const bool isEnabled = true) const;
 
     int mFontSize;
     QPointer<Host> mpHost;
