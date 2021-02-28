@@ -356,11 +356,10 @@ add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS}
                       ${mudlet_UIS})
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
-set_target_properties(
-  mudlet
-  PROPERTIES AUTOMOC ON AUTOUIC ON AUTOUIC_SEARCH_PATHS
-                                   "${CMAKE_CURRENT_SOURCE_DIR}/ui" AUTORCC ON
-             POSITION_INDEPENDENT_CODE ON)
+set_target_properties(mudlet PROPERTIES
+  AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
+  AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
+  AUTOGEN_ORIGIN_DEPENDS OFF)
 
 if(USE_FONTS)
   target_compile_definitions(mudlet PRIVATE INCLUDE_FONTS)
