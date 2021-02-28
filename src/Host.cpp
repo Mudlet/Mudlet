@@ -1991,7 +1991,7 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
     }
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: "<<reason.c_str() <<" in " << luaConfig << " ERROR:" << e.c_str() << "\n" >> 0;
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: " << reason.c_str() << " in " << luaConfig << " ERROR:" << e.c_str() << "\n" >> 0;
     }
 
     lua_pop(L, -1);
