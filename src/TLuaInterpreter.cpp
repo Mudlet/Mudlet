@@ -13940,14 +13940,12 @@ void TLuaInterpreter::setupLanguageData()
 }
 
 // No documentation available in wiki - internal function
-// Creates the 'mudlet.packageInfo' and fills it with package informations
+// loads package informations from installed packages (if a config.lua is found in the profile folder) on a profile start (or restart)
+// doesn't load module informations as they work differently but the field "moduleInfo" is created here
 void TLuaInterpreter::loadPackageInfos()
 {
     lua_State* L = pGlobalLua;
     lua_getglobal(L, "mudlet");
-    if (!lua_istable(L, 1)) {
-        return;
-    }
     lua_newtable(L);
     lua_setfield(L, -2, "packageInfo");
     lua_newtable(L);

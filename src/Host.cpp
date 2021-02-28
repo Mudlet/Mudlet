@@ -27,6 +27,7 @@
 
 #include "LuaInterface.h"
 #include "TConsole.h"
+#include "TDebug.h"
 #include "TMainConsole.h"
 #include "TCommandLine.h"
 #include "TDockWidget.h"
@@ -1990,11 +1991,9 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
     }
 
     if (mudlet::debugMode) {
-        qDebug() << reason.c_str() << " in config.lua: " << e.c_str();
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: "<<reason.c_str() <<" in " << luaConfig << " ERROR:" << e.c_str() << "\n" >> 0;
     }
-    // should print error to main display
-    QString msg = QStringLiteral("\n%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
-    mpConsole->printSystemMessage(msg);
+
     lua_pop(L, -1);
     lua_close(L);
     return QString();

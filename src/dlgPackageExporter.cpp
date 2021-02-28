@@ -48,7 +48,7 @@
 #error Mudlet requires a version of libzip of at least 0.11
 #endif
 
-void appendToConfigFile(QString& comment, QString what, QString value)
+void appendToConfigFile(QString& comment, const QString& what, const QString& value)
 {
     if (value.isEmpty()) {
         return;
@@ -56,7 +56,7 @@ void appendToConfigFile(QString& comment, QString what, QString value)
     comment.append(QStringLiteral("%1 = \"%2\"\n").arg(what).arg(value));
 }
 
-void appendVersionToConfigFile(QString& comment, QString Major, QString Minor, QString Patch)
+void appendVersionToConfigFile(QString& comment, const QString& Major, const QString& Minor, const QString& Patch)
 {
     if (Major == QLatin1String("0") && Minor == QLatin1String("0") && Patch == QLatin1String("0")) {
         return;
@@ -107,6 +107,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     input->setupUi(inputDialog);
     QStringListModel* dependencies = new QStringListModel();
     input->Dependencies->setModel(dependencies);
+    input->Dependencies->lineEdit()->setPlaceholderText(tr("Dependencies (optional)"));
     connect(input->buttonBox->button(QDialogButtonBox::Cancel), &QAbstractButton::clicked, [this]() {input->PackageName->clear(); inputDialog->reject();});
     connect(input->buttonBox->button(QDialogButtonBox::Ok), &QAbstractButton::clicked, this, &dlgPackageExporter::slot_checkInput);
     inputDialog->installEventFilter(this);
@@ -232,7 +233,6 @@ void dlgPackageExporter::slot_checkInput()
         return;
     }
     //change textcolor to red if no name is given
-    input->PackageName->setStyleSheet(QString());
     input->PackageName->setStyleSheet("QLineEdit[text=\"\"]{ color:red; }");
     connect(input->PackageName, &QLineEdit::textChanged, [=] { style()->polish(input->PackageName); });
 }
@@ -275,7 +275,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
         }
     }
 
-    //if windows is closed clear the packagename so that it doesn't go on in package creation
+    //if the dialog window is closed clear the packagename so that it doesn't proceed package creation
     if (obj == inputDialog && evt->type() == QEvent::Close) {
         input->PackageName->clear();
         return true;
