@@ -261,10 +261,10 @@ mudlet::mudlet()
     loadTranslators(mInterfaceLanguage);
 
     // In the following the replacement parameter(s) are supplied at points of use:
+    qDebug().nospace().noquote() << "mudlet::mudlet() INFO - styles available: \n" << QStyleFactory::keys().join(QChar::LineFeed);
 #if defined(Q_OS_WIN32)
     if (QStyleFactory::keys().contains(QLatin1String("windowsvista"))) {
         if (qApp->style()->objectName() == QLatin1String("windowsvista")) {
-            mForceWindowsVistaPButtonFix = true;
             qDebug().nospace().noquote() << "mudlet::mudlet() INFO - \"windowsvista\" has been detected as the style factory in use!";
             mBG_ONLY_BUTTON_SSHEET = QStringLiteral("QPushButton {background-color: %1; border: 1px solid #8f8f91;}");
             mFG_BG_BUTTON_SSHEET = QStringLiteral("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}");
