@@ -1,4 +1,4 @@
-name: Build Mudlet
+name: 🔨 Build Mudlet
 on:
   push:
     branches: [master, development]

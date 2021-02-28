@@ -12213,6 +12213,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
         if (error == 0) {
             return {true, returnValue};
         }
+
         return {false, returnValue};
     } else {
         QString _n = "error in anonymous Lua function";
@@ -15467,6 +15468,7 @@ int TLuaInterpreter::disableMapInfo(lua_State* L)
     if (!host.mpMap->mMapInfoContributorManager->disableContributor(name)) {
         return warnArgumentValue(L, __func__, QStringLiteral("map info '%1' does not exist").arg(name));
     }
+
     lua_pushboolean(L, true);
     return 1;
 }
