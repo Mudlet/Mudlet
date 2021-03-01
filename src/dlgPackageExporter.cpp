@@ -53,7 +53,7 @@ void appendToConfigFile(QString& comment, const QString& what, const QString& va
     if (value.isEmpty()) {
         return;
     }
-    comment.append(QStringLiteral("%1 = \"%2\"\n").arg(what).arg(value));
+    comment.append(QStringLiteral("%1 = [[%2]]\n").arg(what).arg(value));
 }
 
 void appendVersionToConfigFile(QString& comment, const QString& Major, const QString& Minor, const QString& Patch)
@@ -145,7 +145,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
 
     appendToConfigFile(mPackageConfig, QStringLiteral("mpackage"), mPackageName);
     appendToConfigFile(mPackageConfig, QStringLiteral("author"), input->Author->text());
-    appendToConfigFile(mPackageConfig, QStringLiteral("description"), input->Description->text());
+    appendToConfigFile(mPackageConfig, QStringLiteral("description"), input->Description->toPlainText());
     appendVersionToConfigFile(mPackageConfig, input->Major->text(), input->Minor->text(), input->Patch->text());
     appendToConfigFile(mPackageConfig, QStringLiteral("dependencies"), dependencies->stringList().join(","));
     mPackageConfig.append(QStringLiteral("created = \"%1\"\n").arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss"))));
