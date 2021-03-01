@@ -512,9 +512,11 @@ SOURCES += \
     dlgConnectionProfiles.cpp \
     dlgIRC.cpp \
     dlgKeysMainArea.cpp \
+    dlgModuleManager.cpp \
     dlgMapper.cpp \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
+    dlgPackageManager.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
     dlgRoomSymbol.cpp \
@@ -619,8 +621,10 @@ HEADERS += \
     dlgIRC.h \
     dlgKeysMainArea.h \
     dlgMapper.h \
+    dlgModuleManager.h \
     dlgNotepad.h \
     dlgPackageExporter.h \
+    dlgPackageManager.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
     dlgRoomSymbol.h \
@@ -734,8 +738,10 @@ FORMS += \
     ui/irc.ui \
     ui/keybindings_main_area.ui \
     ui/main_window.ui \
+    ui/module_manager.ui \
     ui/mapper.ui \
     ui/notes_editor.ui \
+    ui/package_manager.ui \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
     ui/room_symbol.ui \

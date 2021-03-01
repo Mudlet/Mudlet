@@ -358,7 +358,6 @@ public:
     bool mHasSavedLayout;
     QPointer<dlgAboutDialog> mpAboutDlg;
     QPointer<QDialog> mpModuleDlg;
-    QPointer<QDialog> mpPackageManagerDlg;
     QPointer<dlgConnectionProfiles> mConnectionDialog;
     // More modern Desktop styles no longer include icons on the buttons in
     // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
@@ -448,8 +447,6 @@ public slots:
     void slot_close_profile_requested(int);
     void slot_irc();
     void slot_discord();
-    void slot_uninstall_package();
-    void slot_install_package();
     void slot_package_manager();
     void slot_package_exporter();
     void slot_uninstall_module();
@@ -607,10 +604,6 @@ private:
     QPointer<QAction> mpActionTimers;
     QPointer<QAction> mpActionTriggers;
     QPointer<QAction> mpActionVariables;
-
-    QPointer<QListWidget> packageList;
-    QPointer<QPushButton> uninstallButton;
-    QPointer<QPushButton> installButton;
 
     QPointer<Host> mpModuleTableHost;
     QPointer<QPushButton> moduleUninstallButton;

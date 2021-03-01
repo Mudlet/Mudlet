@@ -47,6 +47,7 @@
 #include "dlgMapper.h"
 #include "dlgNotepad.h"
 #include "dlgPackageExporter.h"
+#include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
 #include "VarUnit.h"
@@ -167,7 +168,6 @@ mudlet::mudlet()
 , mHasSavedLayout(false)
 , mpAboutDlg(nullptr)
 , mpModuleDlg(nullptr)
-, mpPackageManagerDlg(nullptr)
 , mConnectionDialog(nullptr)
 , mShowIconsOnDialogs(true)
 , mShowIconsOnMenuCheckedState(Qt::PartiallyChecked)
@@ -231,9 +231,6 @@ mudlet::mudlet()
 , mpActionTimers(nullptr)
 , mpActionTriggers(nullptr)
 , mpActionVariables(nullptr)
-, packageList(nullptr)
-, uninstallButton(nullptr)
-, installButton(nullptr)
 , mpModuleTableHost(nullptr)
 , moduleUninstallButton(nullptr)
 , moduleInstallButton(nullptr)
@@ -1474,74 +1471,10 @@ void mudlet::slot_package_manager()
         return;
     }
 
-    if (!mpPackageManagerDlg) {
-        QUiLoader loader;
-        QFile file(":/ui/package_manager.ui");
-        file.open(QFile::ReadOnly);
-        mpPackageManagerDlg = dynamic_cast<QDialog*>(loader.load(&file, this));
-        file.close();
-
-        if (!mpPackageManagerDlg) {
-            return;
-        }
-
-        packageList = mpPackageManagerDlg->findChild<QListWidget*>("packageList");
-        uninstallButton = mpPackageManagerDlg->findChild<QPushButton*>("uninstallButton");
-        installButton = mpPackageManagerDlg->findChild<QPushButton*>("installButton");
-
-        if (!packageList || !uninstallButton) {
-            return;
-        }
-
-        packageList->addItems(pH->mInstalledPackages);
-        connect(uninstallButton.data(), &QAbstractButton::clicked, this, &mudlet::slot_uninstall_package);
-        connect(installButton.data(), &QAbstractButton::clicked, this, &mudlet::slot_install_package);
-        mpPackageManagerDlg->setWindowTitle(tr("Package Manager"));
-        mpPackageManagerDlg->setAttribute(Qt::WA_DeleteOnClose);
-    }
-
-    mpPackageManagerDlg->raise();
-    mpPackageManagerDlg->showNormal();
-    mpPackageManagerDlg->activateWindow();
-}
-
-void mudlet::slot_install_package()
-{
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), QDir::currentPath());
-    if (fileName.isEmpty()) {
-        return;
-    }
-
-    QFile file(fileName);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Import Mudlet Package:"), tr("Cannot read file %1:\n%2.").arg(fileName, file.errorString()));
-        return;
-    }
-
-    Host* pH = getActiveHost();
-    if (!pH) {
-        return;
-    }
-
-    pH->installPackage(fileName, 0);
-    packageList->clear();
-    packageList->addItems(pH->mInstalledPackages);
-}
-
-void mudlet::slot_uninstall_package()
-{
-    Host* pH = getActiveHost();
-    if (!pH) {
-        return;
-    }
-    auto selectedPackages = packageList->selectedItems();
-    if (!selectedPackages.empty()) {
-        for (auto package : selectedPackages) {
-            pH->uninstallPackage(package->text(), 0);
-        }
-    }
-    packageList->clear();
-    packageList->addItems(pH->mInstalledPackages);
+    auto packageManager = new dlgPackageManager(this, pH);
+    packageManager->raise();
+    packageManager->showNormal();
+    packageManager->activateWindow();
 }
 
 void mudlet::slot_package_exporter()
