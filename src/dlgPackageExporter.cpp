@@ -298,7 +298,14 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
 
         if (evt->type() == QEvent::FocusOut) {
             mPlainDescription = input->Description->toPlainText();
-            input->Description->setMarkdown(mPlainDescription);
+            #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+            //$packagePath allows to put images in a package which will then be displayed in the description
+            //during package creation it uses the profile folder. But once the package is created it will use
+            //profile folder/packagename
+            QString plainText{mPlainDescription};
+            plainText.replace(QLatin1String("$packagePath"), mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName()));
+            input->Description->setMarkdown(plainText);
+            #endif
             return false;
         }
     }
