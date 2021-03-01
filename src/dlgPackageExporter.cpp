@@ -48,22 +48,6 @@
 #error Mudlet requires a version of libzip of at least 0.11
 #endif
 
-void appendToConfigFile(QString& comment, const QString& what, const QString& value)
-{
-    if (value.isEmpty()) {
-        return;
-    }
-    comment.append(QStringLiteral("%1 = [[%2]]\n").arg(what).arg(value));
-}
-
-void appendVersionToConfigFile(QString& comment, const QString& Major, const QString& Minor, const QString& Patch)
-{
-    if (Major == QLatin1String("0") && Minor == QLatin1String("0") && Patch == QLatin1String("0")) {
-        return;
-    }
-    comment.append(QStringLiteral("version = \"%1.%2.%3\"\n").arg(Major).arg(Minor).arg(Patch));
-}
-
 dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
 : QDialog(parent)
 , inputDialog (new QDialog)
@@ -113,6 +97,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     inputDialog->installEventFilter(this);
     input->Dependencies->installEventFilter(this);
     input->Dependencies->view()->installEventFilter(this);
+    input->Description->installEventFilter(this);
     inputDialog->exec();
     mPackageName = input->PackageName->text();
     if (mPackageName.isEmpty()) {
@@ -145,7 +130,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
 
     appendToConfigFile(mPackageConfig, QStringLiteral("mpackage"), mPackageName);
     appendToConfigFile(mPackageConfig, QStringLiteral("author"), input->Author->text());
-    appendToConfigFile(mPackageConfig, QStringLiteral("description"), input->Description->toPlainText());
+    appendToConfigFile(mPackageConfig, QStringLiteral("description"), mPlainDescription);
     appendVersionToConfigFile(mPackageConfig, input->Major->text(), input->Minor->text(), input->Patch->text());
     appendToConfigFile(mPackageConfig, QStringLiteral("dependencies"), dependencies->stringList().join(","));
     mPackageConfig.append(QStringLiteral("created = \"%1\"\n").arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss"))));
@@ -176,6 +161,22 @@ dlgPackageExporter::~dlgPackageExporter()
     delete inputDialog;
     delete input;
     delete ui;
+}
+
+void dlgPackageExporter::appendToConfigFile(QString& comment, const QString& what, const QString& value)
+{
+    if (value.isEmpty()) {
+        return;
+    }
+    comment.append(QStringLiteral("%1 = [[%2]]\n").arg(what).arg(value));
+}
+
+void dlgPackageExporter::appendVersionToConfigFile(QString& comment, const QString& Major, const QString& Minor, const QString& Patch)
+{
+    if (Major == QLatin1String("0") && Minor == QLatin1String("0") && Patch == QLatin1String("0")) {
+        return;
+    }
+    comment.append(QStringLiteral("version = \"%1.%2.%3\"\n").arg(Major).arg(Minor).arg(Patch));
 }
 
 void dlgPackageExporter::recurseTree(QTreeWidgetItem* pItem, QList<QTreeWidgetItem*>& treeList)
@@ -273,6 +274,11 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
                 return true;
             }
         }
+
+        if (obj == inputDialog && keyEvent->key() == Qt::Key_Escape) {
+            inputDialog->close();
+            return true;
+        }
     }
 
     //if the dialog window is closed clear the packagename so that it doesn't proceed package creation
@@ -281,12 +287,27 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
         return true;
     }
 
+    //Focus handling returns false so that underlying class functions still work and the cursor is visible for example
+
+    //description focus handling
+    if (obj == input->Description) {
+        if (evt->type() == QEvent::FocusIn) {
+            input->Description->setPlainText(mPlainDescription);
+            return false;
+        }
+
+        if (evt->type() == QEvent::FocusOut) {
+            mPlainDescription = input->Description->toPlainText();
+            input->Description->setMarkdown(mPlainDescription);
+            return false;
+        }
+    }
     //dependencies focus handling
     if (obj == input->Dependencies) {
         if (evt->type() == QEvent::FocusIn) {
             input->Dependencies->lineEdit()->grabKeyboard();
             input->Dependencies->lineEdit()->selectAll();
-            return true;
+            return false;
         }
 
         if (evt->type() == QEvent::FocusOut) {
@@ -296,7 +317,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             if (focusEvent->reason() == Qt::TabFocusReason) {
                 input->Dependencies->hidePopup();
             }
-            return true;
+            return false;
         }
     }
     return false;

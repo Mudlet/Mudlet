@@ -84,10 +84,14 @@ private slots:
     void slot_removeDependency();
     void slot_checkInput();
 
+protected:
+    bool eventFilter(QObject*, QEvent*) override;
+
 private:
     bool writeFileToZip(const QString&, const QString&, zip*);
+    void appendToConfigFile(QString&, const QString&, const QString&);
+    void appendVersionToConfigFile(QString&, const QString&, const QString&, const QString&);
     void displayResultMessage(const QString&, const bool isSuccessMessage = true);
-    bool eventFilter(QObject*, QEvent*);
 
     QDialog* inputDialog;
     Ui::dlgPackageExporterInput* input;
@@ -107,6 +111,7 @@ private:
     QString mPackagePath;
     QString mPackagePathFileName;
     QString mPackageConfig;
+    QString mPlainDescription;
 };
 
 #endif // MUDLET_DLGPACKAGEEXPORTER_H
