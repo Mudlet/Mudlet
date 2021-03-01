@@ -6210,10 +6210,10 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
     int expiryCount = -1;
     if (lua_isnumber(L, ++s)) {
         expiryCount = lua_tonumber(L, s);
-        if (expiryCount < 1)
+        if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, QStringLiteral(
                 "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
-        
+        }
     } else if (!lua_isnoneornil(L, ++s)) {
         lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d value (trigger expiration count must be a number, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
