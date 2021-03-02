@@ -39,14 +39,19 @@ public:
     Q_DISABLE_COPY(dlgModuleManager)
     explicit dlgModuleManager(QWidget* parent, Host*);
     ~dlgModuleManager();
+     void layoutModules();
+     QTableWidget* mModuleTable;
 
 private slots:
-
+    void slot_install_module();
+    void slot_uninstall_module();
+    void slot_help_module();
+    void slot_module_clicked(QTableWidgetItem*);
+    void slot_module_changed(QTableWidgetItem*);
 
 private:
     Ui::module_manager* ui;
     Host* mpHost;
-    QTableWidget* mModuleTable;
     QPushButton* mModuleUninstallButton;
     QPushButton* mModuleInstallButton;
     QPushButton* mModuleHelpButton;
