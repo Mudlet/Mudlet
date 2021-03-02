@@ -65,17 +65,28 @@ void TDockWidget::moveEvent(QMoveEvent* event)
 
 void TDockWidget::setVisible(bool visible)
 {
+    if (!mpHost || !mpHost->mpConsole) {
+        // During shutdown / profile closure TDockWidgets will get a hide event
+        // as part of the underlying Qt class's built in handling of a close
+        // event as the base class QDockWidget::setVisible(bool) method is being
+        // overridden - at this point it seems there is not a Main Console left
+        // to be used to look some stuff up in - so in that case - just hide
+        // this widget and bail out:
+        if (!visible) {
+            QWidget::setVisible(false);
+        }
+        return;
+    }
     auto pC = mpHost->mpConsole->mSubConsoleMap.value(widgetConsoleName);
-    auto pW = mpHost->mpConsole->mDockWidgetMap.value(widgetConsoleName);
-    if (!pC || !pW) {
+    if (!pC) {
         return;
     }
     //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
     if (visible) {
         pC->show();
-        pW->QWidget::setVisible(true);
+        QWidget::setVisible(true);
         mpHost->mpConsole->showWindow(widgetConsoleName);
     } else {
-        pW->QWidget::setVisible(false);
+        QWidget::setVisible(false);
     }
 }
