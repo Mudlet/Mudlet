@@ -107,7 +107,7 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
-    auto labelParent = dynamic_cast<TConsole*>(parent());
+    auto labelParent = qobject_cast<TConsole*>(parent());
     if (labelParent && labelParent->mpDockWidget && labelParent->mpDockWidget->isFloating()) {
         mpHost->mpConsole->activateWindow();
         mpHost->mpConsole->setFocus();

@@ -1724,7 +1724,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 
     if (mpConsole->getType() == TConsole::SubConsole) {
         qApp->sendEvent(mpConsole->parentWidget(), &newEvent);
-        auto subConsoleParent = dynamic_cast<TConsole*>(mpConsole->parent());
+        auto subConsoleParent = qobject_cast<TConsole*>(mpConsole->parent());
         if (subConsoleParent && subConsoleParent->mpDockWidget && subConsoleParent->mpDockWidget->isFloating()) {
             mpHost->mpConsole->activateWindow();
             mpHost->mpConsole->setFocus();
