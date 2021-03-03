@@ -8901,13 +8901,13 @@ QString dlgTriggerEditor::generateButtonStyleSheet(const QColor& color, const bo
     if (color != QColor("transparent") && color.isValid()) {
 #endif
         if (isEnabled) {
-            return mudlet::self()->mFG_BG_BUTTON_SSHEET
+            return mudlet::self()->mTEXT_ON_BG_STYLESHEET
                     .arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"),
                          color.name());
         }
 
         QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness());
-        return mudlet::self()->mFG_BG_BUTTON_SSHEET
+        return mudlet::self()->mTEXT_ON_BG_STYLESHEET
                 .arg(QLatin1String("darkGray"), disabledColor.name());
     } else {
         return QString();

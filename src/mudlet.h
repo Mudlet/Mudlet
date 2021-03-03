@@ -321,8 +321,8 @@ public:
 
     bool firstLaunch = false;
     // Needed to work around a (likely only Windows) issue:
-    QString mBG_ONLY_BUTTON_SSHEET;
-    QString mFG_BG_BUTTON_SSHEET;
+    QString mBG_ONLY_STYLESHEET;
+    QString mTEXT_ON_BG_STYLESHEET;
 
     FontManager mFontManager;
     Discord mDiscord;
