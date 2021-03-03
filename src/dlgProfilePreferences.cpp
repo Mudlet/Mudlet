@@ -1988,7 +1988,7 @@ void dlgProfilePreferences::downloadMap()
     }
     if (!pHost->mpMap->mpMapper) {
         // CHECK: What happens if we are NOT the current profile anymore?
-        pHost->createMapper(false);
+        pHost->showHideOrCreateMapper(false);
     }
 
     pHost->mpMap->downloadMap();

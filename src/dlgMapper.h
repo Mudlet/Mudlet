@@ -51,6 +51,7 @@ public:
     void setDefaultAreaShown(bool);
     bool getDefaultAreaShown() { return mShowDefaultArea; }
     void resetAreaComboBoxToPlayerRoomArea();
+    bool isFloatAndDockable() const;
 
 public slots:
     void slot_toggleRoundRooms(const bool);

@@ -370,7 +370,7 @@ public:
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setBackgroundImage(const QString& name, QString& path, int mode);
     bool resetBackgroundImage(const QString& name);
-    void createMapper(bool loadDefaultMap);
+    void showHideOrCreateMapper(const bool loadDefaultMap);
     bool setProfileStyleSheet(const QString& styleSheet);
     void check_for_mappingscript();
 
@@ -633,6 +633,8 @@ private:
     void removeAllNonPersistentStopWatches();
     void updateConsolesFont();
     void thankForUsingPTB();
+    void toggleMapperVisibility();
+    void createMapper(const bool);
 
     QFont mDisplayFont;
     QStringList mModulesToSync;
