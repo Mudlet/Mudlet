@@ -41,6 +41,7 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
     connect(mModuleHelpButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_help_module);
     connect(mModuleTable, &QTableWidget::itemClicked, this, &dlgModuleManager::slot_module_clicked);
     connect(mModuleTable, &QTableWidget::itemChanged, this, &dlgModuleManager::slot_module_changed);
+    connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgModuleManager::close);
     setWindowTitle(tr("Module Manager - %1").arg(mpHost->getName()));
     setAttribute(Qt::WA_DeleteOnClose);
 }

@@ -35,6 +35,7 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     mPackageList->addItems(mpHost->mInstalledPackages);
     connect(mUninstallButton, &QAbstractButton::clicked, this, &dlgPackageManager::slot_uninstall_package);
     connect(mInstallButton, &QAbstractButton::clicked, this, &dlgPackageManager::slot_install_package);
+    connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgPackageManager::close);
     setWindowTitle(tr("Package Manager - %1").arg(mpHost->getName()));
     setAttribute(Qt::WA_DeleteOnClose);
 }
