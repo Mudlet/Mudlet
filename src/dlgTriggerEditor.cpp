@@ -821,6 +821,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpScrollArea->setMinimumHeight(triggerWidgetItemMinHeight);
 
     showHiddenVars = false;
+    mIdLabelBlankText = tr("ID: ?");
+    mIdLabelText = tr("ID: %1");
     widget_searchTerm->updateGeometry();
 
     if (mAutosaveInterval > 0) {
@@ -2574,6 +2576,7 @@ void dlgTriggerEditor::delete_alias()
     }
     delete pT;
     mpCurrentAliasItem = nullptr;
+    mpAliasMainArea->label_id->setText(mIdLabelBlankText);
 }
 
 void dlgTriggerEditor::delete_action()
@@ -2603,6 +2606,7 @@ void dlgTriggerEditor::delete_action()
     }
     delete pT;
     mpCurrentActionItem = nullptr;
+    mpActionsMainArea->label_id->setText(mIdLabelBlankText);
     mpHost->getActionUnit()->updateToolbar();
 }
 
@@ -2652,6 +2656,7 @@ void dlgTriggerEditor::delete_script()
     }
     delete pT;
     mpCurrentScriptItem = nullptr;
+    mpScriptsMainArea->label_id->setText(mIdLabelBlankText);
 }
 
 void dlgTriggerEditor::delete_key()
@@ -2674,6 +2679,7 @@ void dlgTriggerEditor::delete_key()
     }
     delete pT;
     mpCurrentKeyItem = nullptr;
+    mpKeysMainArea->label_id->setText(mIdLabelBlankText);
 }
 
 void dlgTriggerEditor::delete_trigger()
@@ -2696,6 +2702,7 @@ void dlgTriggerEditor::delete_trigger()
     }
     delete pT;
     mpCurrentTriggerItem = nullptr;
+    mpTriggersMainArea->label_id->setText(mIdLabelBlankText);
 }
 
 void dlgTriggerEditor::delete_timer()
@@ -2718,6 +2725,7 @@ void dlgTriggerEditor::delete_timer()
     }
     delete pT;
     mpCurrentTimerItem = nullptr;
+    mpTimersMainArea->label_id->setText(mIdLabelBlankText);
 }
 
 
@@ -3339,6 +3347,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
         pParent->setExpanded(true);
     }
     mpTriggersMainArea->lineEdit_trigger_name->clear();
+    mpTriggersMainArea->label_id->setText(mIdLabelBlankText);
     mpTriggersMainArea->groupBox_perlSlashGOption->setChecked(false);
 
     clearDocument(mpSourceEditorEdbee); // New Trigger
@@ -3435,8 +3444,6 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     if (pParent) {
         pParent->setExpanded(true);
     }
-    //FIXME
-    //mpOptionsAreaTriggers->lineEdit_trigger_name->clear();
     mpTimersMainArea->lineEdit_timer_command->clear();
     clearDocument(mpSourceEditorEdbee); // New Timer
     mpCurrentTimerItem = pNewItem;
@@ -3454,14 +3461,14 @@ void dlgTriggerEditor::addVar(bool isFolder)
         mpSourceEditorEdbee->setEnabled(false);
         mpVarsMainArea->comboBox_variable_value_type->setDisabled(true);
         mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(4);
-        mpVarsMainArea->lineEdit_var_name->setText(QString());
+        mpVarsMainArea->lineEdit_var_name->clear();
         mpVarsMainArea->lineEdit_var_name->setPlaceholderText(tr("Table name..."));
 
         clearDocument(mpSourceEditorEdbee, QLatin1String("NewTable"));
     } else {
         // in lieu of readonly
         mpSourceEditorEdbee->setEnabled(true);
-        mpVarsMainArea->lineEdit_var_name->setText(QString());
+        mpVarsMainArea->lineEdit_var_name->clear();
         mpVarsMainArea->lineEdit_var_name->setPlaceholderText(tr("Variable name..."));
         mpVarsMainArea->comboBox_variable_value_type->setDisabled(false);
         mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(0);
@@ -3679,6 +3686,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->lineEdit_alias_pattern->clear();
     mpAliasMainArea->lineEdit_alias_command->clear();
+    mpAliasMainArea->label_id->setText(mIdLabelBlankText);
     clearDocument(mpSourceEditorEdbee); // New Alias
 
     mpAliasMainArea->lineEdit_alias_name->setText(name);
@@ -3849,6 +3857,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
         pParent->setExpanded(true);
     }
     mpScriptsMainArea->lineEdit_script_name->clear();
+    mpScriptsMainArea->label_id->setText(mIdLabelBlankText);
     //FIXME mpScriptsMainArea->pattern_textedit->clear();
 
     clearDocument(mpSourceEditorEdbee, script);
@@ -5009,7 +5018,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
     mpTriggersMainArea->show();
     mpSourceEditorArea->show();
     clearEditorNotification();
-    mpTriggersMainArea->lineEdit_trigger_name->setText("");
+    mpTriggersMainArea->lineEdit_trigger_name->clear();
+    mpTriggersMainArea->label_id->setText(mIdLabelBlankText);
     clearDocument(mpSourceEditorEdbee); // Trigger Select
     mpTriggersMainArea->groupBox_multiLineTrigger->setChecked(false);
     mpTriggersMainArea->groupBox_perlSlashGOption->setChecked(false);
@@ -5121,6 +5131,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
         mpScrollArea->ensureWidgetVisible(mTriggerPatternEdit.at(qBound(0, patternList.size(), 49)));
         QString command = pT->getCommand();
         mpTriggersMainArea->lineEdit_trigger_name->setText(pItem->text(0));
+        mpTriggersMainArea->label_id->setText(mIdLabelText.arg(QString::number(pT->getID())));
         mpTriggersMainArea->lineEdit_trigger_command->setText(command);
         mpTriggersMainArea->groupBox_multiLineTrigger->setChecked(pT->isMultiline());
         mpTriggersMainArea->groupBox_perlSlashGOption->setChecked(pT->mPerlSlashGOption);
@@ -5191,6 +5202,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem* pItem)
     mpAliasMainArea->lineEdit_alias_name->clear();
     mpAliasMainArea->lineEdit_alias_pattern->clear();
     mpAliasMainArea->lineEdit_alias_command->clear();
+    mpAliasMainArea->label_id->setText(mIdLabelBlankText);
     clearDocument(mpSourceEditorEdbee); // Alias Select
 
     mpAliasMainArea->lineEdit_alias_name->setText(pItem->text(0));
@@ -5204,6 +5216,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem* pItem)
         mpAliasMainArea->lineEdit_alias_pattern->setText(pattern);
         mpAliasMainArea->lineEdit_alias_command->setText(command);
         mpAliasMainArea->lineEdit_alias_name->setText(name);
+        mpAliasMainArea->label_id->setText(mIdLabelText.arg(QString::number(ID)));
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
 
@@ -5242,6 +5255,7 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem* pItem)
     mpKeysMainArea->lineEdit_key_command->clear();
     mpKeysMainArea->lineEdit_key_binding->clear();
     mpKeysMainArea->lineEdit_key_name->clear();
+    mpKeysMainArea->label_id->setText(mIdLabelBlankText);
     clearDocument(mpSourceEditorEdbee); // Key Select
 
     mpKeysMainArea->lineEdit_key_binding->setText(pItem->text(0));
@@ -5250,9 +5264,9 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem* pItem)
     if (pT) {
         QString command = pT->getCommand();
         QString name = pT->getName();
-        mpKeysMainArea->lineEdit_key_command->clear();
         mpKeysMainArea->lineEdit_key_command->setText(command);
         mpKeysMainArea->lineEdit_key_name->setText(name);
+        mpKeysMainArea->label_id->setText(mIdLabelText.arg(QString::number(pT->getID())));
         QString keyName = mpHost->getKeyUnit()->getKeyName(pT->getKeyCode(), pT->getKeyModifiers());
         mpKeysMainArea->lineEdit_key_binding->setText(keyName);
 
@@ -5586,6 +5600,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem* pItem)
 
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->lineEdit_action_name->clear();
+    mpActionsMainArea->label_id->setText(mIdLabelBlankText);
     mpActionsMainArea->checkBox_action_button_isPushDown->setChecked(false);
     mpActionsMainArea->lineEdit_action_button_command_down->clear();
     mpActionsMainArea->lineEdit_action_button_command_up->clear();
@@ -5603,6 +5618,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem* pItem)
     TAction* pT = mpHost->getActionUnit()->getAction(ID);
     if (pT) {
         mpActionsMainArea->lineEdit_action_name->setText(pT->getName());
+        mpActionsMainArea->label_id->setText(mIdLabelText.arg(QString::number(ID)));
         mpActionsMainArea->checkBox_action_button_isPushDown->setChecked(pT->isPushDownButton());
         mpActionsMainArea->label_action_button_command_up->hide();
         mpActionsMainArea->label_action_button_command_down->hide();
@@ -5734,6 +5750,7 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem* pItem)
     mpScriptsMainArea->lineEdit_script_name->clear();
     mpScriptsMainArea->listWidget_script_registered_event_handlers->clear();
     mpScriptsMainArea->lineEdit_script_name->setText(pItem->text(0));
+    mpScriptsMainArea->label_id->setText(mIdLabelBlankText);
     int ID = pItem->data(0, Qt::UserRole).toInt();
     TScript* pT = mpHost->getScriptUnit()->getScript(ID);
     if (pT) {
@@ -5749,6 +5766,7 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem* pItem)
         clearDocument(mpSourceEditorEdbee, script);
 
         mpScriptsMainArea->lineEdit_script_name->setText(name);
+        mpScriptsMainArea->label_id->setText(mIdLabelText.arg(QString::number(ID)));
         if (!pT->state()) {
             showError(pT->getError());
         }
@@ -5789,6 +5807,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
     mpTimersMainArea->timeEdit_timer_seconds->setTime(QTime(0, 0, 0, 0));
     mpTimersMainArea->timeEdit_timer_msecs->setTime(QTime(0, 0, 0, 0));
     mpTimersMainArea->lineEdit_timer_name->setText(pItem->text(0));
+    mpTimersMainArea->label_id->setText(mIdLabelBlankText);
 
     int ID = pItem->data(0, Qt::UserRole).toInt();
     TTimer* pT = mpHost->getTimerUnit()->getTimer(ID);
@@ -5803,6 +5822,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
         QString name = pT->getName();
         mpTimersMainArea->lineEdit_timer_command->setText(command);
         mpTimersMainArea->lineEdit_timer_name->setText(name);
+        mpTimersMainArea->label_id->setText(mIdLabelText.arg(QString::number(pT->getID())));
         QTime time = pT->getTime();
         mpTimersMainArea->timeEdit_timer_hours->setTime(QTime(time.hour(), 0, 0, 0));
         mpTimersMainArea->timeEdit_timer_minutes->setTime(QTime(0, time.minute(), 0, 0));

@@ -58,6 +58,16 @@
      </property>
     </widget>
    </item>
+   <item row="0" column="4">
+    <widget class="QLabel" name="label_id">
+     <property name="frameShape">
+      <enum>QFrame::Box</enum>
+     </property>
+     <property name="text">
+      <string>ID: ?</string>
+     </property>
+    </widget>
+   </item>
    <item row="1" column="0">
     <widget class="QLabel" name="label_alias_pattern">
      <property name="sizePolicy">
@@ -114,7 +124,7 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="3">
+   <item row="1" column="3" colspan="2">
     <widget class="QComboBox" name="comboBox_alias_regex">
      <property name="enabled">
       <bool>false</bool>
@@ -153,7 +163,7 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="1" colspan="3">
+   <item row="2" column="1" colspan="4">
     <widget class="QLineEdit" name="lineEdit_alias_command">
      <property name="minimumSize">
       <size>

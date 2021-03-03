@@ -73,6 +73,16 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QLabel" name="label_id">
+        <property name="frameShape">
+         <enum>QFrame::Box</enum>
+        </property>
+        <property name="text">
+         <string>ID: ?</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
