@@ -2582,7 +2582,7 @@ void mudlet::slot_mapper()
     if (!pHost) {
         return;
     }
-    pHost->toggleVisibilityOfOrCreateMapper(true);
+    pHost->showHideOrCreateMapper(true);
 }
 
 void mudlet::slot_open_mappingscripts_page()
