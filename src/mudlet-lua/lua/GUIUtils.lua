@@ -1115,6 +1115,8 @@ if rex then
     local args = { ... }
     local n = #args
 
+    assert(type(args[1]) == 'string', style:sub(1,1):lower() .. func .. ': bad argument #1, string expected, got '..type(args[1])..'!)')
+
     if string.find(func, "Link") then
       if n < 3 then
         error 'Insufficient arguments, usage: ([window, ] string, command, hint)'
@@ -1156,10 +1158,8 @@ if rex then
     end
 
     local t = _Echos.Process(str, style)
-
     deselect(win)
     resetFormat(win)
-    if not str then error(style:sub(1,1):lower() .. func .. ": bad argument #1, string expected, got nil",3) end
     for _, v in ipairs(t) do
       if type(v) == 'table' then
         if v.fg then
