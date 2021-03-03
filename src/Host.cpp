@@ -3156,7 +3156,7 @@ std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, 
     auto pM = mpDockableMapWidget;
     auto pMapper = mpMap.data()->mpMapper;
     if (!pM && !pMapper) {
-        createMapper(true);
+        showHideOrCreateMapper(true);
         pM = mpDockableMapWidget;
     }
     if (!pM) {
@@ -3529,22 +3529,40 @@ bool Host::resetBackgroundImage(const QString &name)
     return false;
 }
 
-// Needed to extract into a separate method from slot_mapper() so that we can
-// use it WITHOUT loading a file - at least for the TConsole::importMap(...)
-// case that may need to create a map widget before it loads/imports a
-// non-default (last saved map in profile's map directory.
-void Host::createMapper(bool loadDefaultMap)
+// Needed to extract into a separate method from mudlet::slot_mapper() so that
+// we can use it WITHOUT loading a file - at least for the
+// TConsole::importMap(...) case that may need to create a map widget before it
+// loads/imports a non-default (last saved map in profile's map directory).
+void Host::showHideOrCreateMapper(const bool loadDefaultMap)
 {
     auto pMap = mpMap.data();
     if (pMap->mpMapper) {
-        bool visStatus = mpMap->mpMapper->isVisible();
-        if (pMap->mpMapper->parentWidget()->inherits("QDockWidget")) {
-            pMap->mpMapper->parentWidget()->setVisible(!visStatus);
-        }
-        pMap->mpMapper->setVisible(!visStatus);
+        toggleMapperVisibility();
         return;
     }
 
+    createMapper(loadDefaultMap);
+}
+
+void Host::toggleMapperVisibility()
+{
+    auto pMap = mpMap.data();
+    bool visStatus = mpMap->mpMapper->isVisible();
+    if (pMap->mpMapper->isFloatAndDockable()) {
+        // If we are using a floating/dockable widget we must show/hide that
+        // only and not the mapper widget (otherwise it messes up {shrinks
+        // to a minimal size} the mapper inside the container QDockWidget). This
+        // is the same as the case for a TConsole inside a TDockWidget in
+        // (void) TDockWidget::setVisible(bool).
+        pMap->mpMapper->parentWidget()->setVisible(!visStatus);
+    } else {
+        pMap->mpMapper->setVisible(!visStatus);
+    }
+}
+
+void Host::createMapper(const bool loadDefaultMap)
+{
+    auto pMap = mpMap.data();
     auto hostName(getName());
     mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
     mpDockableMapWidget->setObjectName(QStringLiteral("dockMap_%1").arg(hostName));
