@@ -260,14 +260,14 @@ mudlet::mudlet()
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
 
-    qDebug().nospace().noquote() << "mudlet::mudlet() INFO - styles available: \n" << QStyleFactory::keys().join(QStringLiteral(", "));
-    qDebug().nospace().noquote() << "                         style in use is: " << qApp->style()->objectName();
-    if (QString stylefactory = qApp->style()->objectName(); QStringList{"windowsvista", "macintosh"}.contains(stylefactory)) {
-        qDebug() << "mudlet::mudlet() INFO - '" << stylefactory << "' has been detected as the style factory in use - QPushButton styling fix applied!";
+    qDebug().nospace().noquote() << "mudlet::mudlet() INFO - styles available: '" << QStyleFactory::keys().join(QStringLiteral("', '")) << "'.";
+    qDebug().nospace().noquote() << "                         style in use is: '" << qApp->style()->objectName() << "'.";
+    if (QString stylefactory = qApp->style()->objectName(); QStringList{"windowsvista", "macintosh"}.contains(stylefactory, Qt::CaseInsensitive)) {
+        qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << stylefactory << "' has been detected as the style factory in use - QPushButton styling fix applied!";
         mBG_ONLY_BUTTON_SSHEET = QStringLiteral("QPushButton {background-color: %1; border: 1px solid #8f8f91;}");
         mFG_BG_BUTTON_SSHEET = QStringLiteral("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}");
     } else {
-        qDebug() << "mudlet::mudlet() INFO - " << stylefactory << " is an OK style factory, not applying workarounds";
+        qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << stylefactory << "' is believed to not need any workarounds.";
         mBG_ONLY_BUTTON_SSHEET = QStringLiteral("QPushButton {background-color: %1;}");
         mFG_BG_BUTTON_SSHEET = QStringLiteral("QPushButton {color: %1; background-color: %2;}");
     }
