@@ -64,6 +64,8 @@ class TMainConsole;
 class dlgNotepad;
 class TMap;
 class dlgIRC;
+class dlgPackageManager;
+class dlgModuleManager;
 class dlgProfilePreferences;
 
 class stopWatch {
@@ -380,6 +382,8 @@ public:
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
+    dlgPackageManager* mpPackageManager;
+    dlgModuleManager* mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
 
     int commandLineMinimumHeight;

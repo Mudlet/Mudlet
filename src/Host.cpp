@@ -41,6 +41,7 @@
 #include "VarUnit.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
+#include "dlgModuleManager.h"
 #include "dlgNotepad.h"
 #include "dlgProfilePreferences.h"
 #include "dlgIRC.h"
@@ -197,6 +198,8 @@ QString stopWatch::getElapsedDayTimeString() const
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
 : mTelnet(this, hostname)
 , mpConsole(nullptr)
+, mpPackageManager(nullptr)
+, mpModuleManager(nullptr)
 , mLuaInterpreter(this, hostname, id)
 , commandLineMinimumHeight(30)
 , mAlertOnNewData(true)
