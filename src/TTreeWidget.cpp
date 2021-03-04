@@ -203,7 +203,7 @@ void TTreeWidget::rowsAboutToBeRemoved(const QModelIndex& parent, int start, int
     }
 
     if (parent.isValid()) {
-        QModelIndex child = parent.model()->index(start, 0);
+        QModelIndex child = parent.model()->index(start, 0, parent);
         mChildID = child.data(Qt::UserRole).toInt();
         if (mChildID == 0) {
             if (parent.isValid()) {
@@ -224,7 +224,7 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
     // determine position in parent list
 
     if (mIsDropAction) {
-        QModelIndex child = parent.model()->index(start, 0);
+        QModelIndex child = parent.model()->index(start, 0, parent);
         int parentPosition = parent.row();
         int childPosition = child.row();
         if (mChildID == 0) {
