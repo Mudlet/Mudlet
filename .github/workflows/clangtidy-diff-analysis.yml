@@ -1,6 +1,6 @@
 name: 🔍 Check improvements with Mudlet's C++ style guide
 
-on: [pull_request]
+on: pull_request_target
 
 jobs:
   compile-mudlet:
@@ -28,6 +28,8 @@ jobs:
         fetch-depth: 0
         # https://github.com/ZedThree/clang-tidy-review/issues/10
         ref: ${{ github.event.pull_request.head.sha }}
+        # https://github.community/t/github-actions-are-severely-limited-on-prs/18179/17?u=vadi2
+        repository: ${{github.event.pull_request.head.repo.full_name}}
 
     - name: Restore Qt cache
       uses: actions/cache@v2.1.4
