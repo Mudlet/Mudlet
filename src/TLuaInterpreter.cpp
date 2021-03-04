@@ -44,6 +44,7 @@
 #include "dlgComposer.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
+#include "dlgModuleManager.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
@@ -10290,10 +10291,17 @@ int TLuaInterpreter::installModule(lua_State* L)
     QString modName = getVerifiedString(L, __func__, 1, "module location");
     Host& host = getHostFromLua(L);
     QString module = QDir::fromNativeSeparators(modName);
-    if (host.installPackage(module, 3) && mudlet::self()->moduleTableVisible()) {
-        mudlet::self()->layoutModules();
+
+    if (!host.installPackage(module, 3)) {
+        lua_pushboolean(L, false);
+        return 1;
     }
-    return 0;
+    auto moduleManager = host.mpModuleManager;
+    if (moduleManager && moduleManager->mModuleTable->isVisible()) {
+        moduleManager->layoutModules();
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#uninstallModule
@@ -10301,9 +10309,15 @@ int TLuaInterpreter::uninstallModule(lua_State* L)
 {
     QString module = getVerifiedString(L, __func__, 1, "module name");
     Host& host = getHostFromLua(L);
-    if (host.uninstallPackage(module, 3) && mudlet::self()->moduleTableVisible()) {
-        mudlet::self()->layoutModules();
+    if (!host.uninstallPackage(module, 3)) {
+        lua_pushboolean(L, false);
+        return 1;
     }
+    auto moduleManager = host.mpModuleManager;
+    if (moduleManager && moduleManager->mModuleTable->isVisible()) {
+        moduleManager->layoutModules();
+    }
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -10325,10 +10339,10 @@ int TLuaInterpreter::enableModuleSync(lua_State* L)
         return warnArgumentValue(L, __func__, message);
     }
 
-    auto moduleTable = mudlet::self()->moduleTable;
-    if (moduleTable && !moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
-        int row = moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
-        auto checkItem = moduleTable->item(row, 2);
+    auto moduleManager = host.mpModuleManager;
+    if (moduleManager && !moduleManager->mModuleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
+        int row = moduleManager->mModuleTable->findItems(module, Qt::MatchExactly)[0]->row();
+        auto checkItem = moduleManager->mModuleTable->item(row, 2);
         checkItem->setCheckState(Qt::Checked);
     }
 
@@ -10345,10 +10359,10 @@ int TLuaInterpreter::disableModuleSync(lua_State* L)
         return warnArgumentValue(L, __func__, message);
     }
 
-    auto moduleTable = mudlet::self()->moduleTable;
-    if (moduleTable && !moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
-        int row = moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
-        auto checkItem = moduleTable->item(row, 2);
+    auto moduleManager = host.mpModuleManager;
+    if (moduleManager && !moduleManager->mModuleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
+        int row = moduleManager->mModuleTable->findItems(module, Qt::MatchExactly)[0]->row();
+        auto checkItem = moduleManager->mModuleTable->item(row, 2);
         checkItem->setCheckState(Qt::Unchecked);
     }
 
