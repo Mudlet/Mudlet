@@ -232,7 +232,7 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
         QModelIndex child = parent.model()->index(start, 0, parent);
         int parentPosition = parent.row();
         int childPosition = child.row();
-        if (! mChildID) {
+        if (!mChildID) {
             if (!parent.model()) {
                 QTreeWidget::rowsInserted(parent, start, end);
                 return;
