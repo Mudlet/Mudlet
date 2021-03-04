@@ -47,6 +47,8 @@ public:
     void rowsInserted(const QModelIndex& parent, int start, int end) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    // TODO: replace these eight methods with a single one to "characterise"
+    // the TTreeWidget instance after creation:
     void setHost(Host* pH);
     void setIsScriptTree();
     void setIsTimerTree();
@@ -63,6 +65,7 @@ private:
     QPointer<Host> mpHost;
     int mOldParentID;
     int mChildID;
+    // TODO: replace these seven booleans with a single enum:
     bool mIsTriggerTree;
     bool mIsAliasTree;
     bool mIsScriptTree;
@@ -70,6 +73,7 @@ private:
     bool mIsKeyTree;
     bool mIsVarTree;
     bool mIsActionTree;
+    // CHECK: Should this actually be a: QPersistentModelIndex ?
     QModelIndex mClickedItem;
 };
 
