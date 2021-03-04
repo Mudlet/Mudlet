@@ -57,8 +57,10 @@ set(mudlet_SRCS
     dlgIRC.cpp
     dlgKeysMainArea.cpp
     dlgMapper.cpp
+    dlgModuleManager.cpp
     dlgNotepad.cpp
     dlgPackageExporter.cpp
+    dlgPackageManager.cpp
     dlgProfilePreferences.cpp
     dlgRoomExits.cpp
     dlgRoomSymbol.cpp
@@ -161,8 +163,10 @@ set(mudlet_UIS
     ui/irc.ui
     ui/keybindings_main_area.ui
     ui/main_window.ui
+    ui/module_manager.ui
     ui/mapper.ui
     ui/notes_editor.ui
+    ui/package_manager.ui
     ui/profile_preferences.ui
     ui/room_exits.ui
     ui/room_symbol.ui
@@ -191,8 +195,10 @@ set(mudlet_HDRS
     dlgIRC.h
     dlgKeysMainArea.h
     dlgMapper.h
+    dlgModuleManager.h
     dlgNotepad.h
     dlgPackageExporter.h
+    dlgPackageManager.h
     dlgProfilePreferences.h
     dlgRoomExits.h
     dlgRoomSymbol.h
@@ -357,11 +363,10 @@ add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS}
                       ${mudlet_UIS})
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
-set_target_properties(
-  mudlet
-  PROPERTIES AUTOMOC ON AUTOUIC ON AUTOUIC_SEARCH_PATHS
-                                   "${CMAKE_CURRENT_SOURCE_DIR}/ui" AUTORCC ON
-             POSITION_INDEPENDENT_CODE ON)
+set_target_properties(mudlet PROPERTIES
+  AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
+  AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
+  AUTOGEN_ORIGIN_DEPENDS OFF)
 
 if(USE_FONTS)
   target_compile_definitions(mudlet PRIVATE INCLUDE_FONTS)
@@ -451,7 +456,7 @@ if(APPLE)
   set_target_properties(mudlet PROPERTIES
     MACOSX_BUNDLE ON
     MACOSX_BUNDLE_BUNDLE_NAME Mudlet
-    MACOSX_BUNDLE_BUNDLE_VERSION ${APP_VERSION}
+    MACOSX_BUNDLE_BUNDLE_VERSION ${APP_VERSION}${APP_BUILD}
     MACOSX_BUNDLE_GUI_IDENTIFIER org.mudlet.mudlet
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${APP_VERSION}
   )

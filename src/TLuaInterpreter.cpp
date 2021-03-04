@@ -44,6 +44,7 @@
 #include "dlgComposer.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
+#include "dlgModuleManager.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
@@ -4037,21 +4038,21 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     int func = luaL_ref(L, LUA_REGISTRYINDEX);
 
     bool lua_result = false;
-    if (funcName == QStringLiteral("setLabelClickCallback"))
+    if (funcName == QStringLiteral("setLabelClickCallback")) {
         lua_result = host.setLabelClickCallback(labelName, func);
-    else if (funcName == QStringLiteral("setLabelDoubleClickCallback"))
+    } else if (funcName == QStringLiteral("setLabelDoubleClickCallback")) {
         lua_result = host.setLabelDoubleClickCallback(labelName, func);
-    else if (funcName == QStringLiteral("setLabelReleaseCallback"))
+    } else if (funcName == QStringLiteral("setLabelReleaseCallback")) {
         lua_result = host.setLabelReleaseCallback(labelName, func);
-    else if (funcName == QStringLiteral("setLabelMoveCallback"))
+    } else if (funcName == QStringLiteral("setLabelMoveCallback")) {
         lua_result = host.setLabelMoveCallback(labelName, func);
-    else if (funcName == QStringLiteral("setLabelWheelCallback"))
+    } else if (funcName == QStringLiteral("setLabelWheelCallback")) {
         lua_result = host.setLabelWheelCallback(labelName, func);
-    else if (funcName == QStringLiteral("setLabelOnEnter"))
+    } else if (funcName == QStringLiteral("setLabelOnEnter")) {
         lua_result = host.setLabelOnEnter(labelName, func);
-    else if (funcName == QStringLiteral("setLabelOnLeave"))
+    } else if (funcName == QStringLiteral("setLabelOnLeave")) {
         lua_result = host.setLabelOnLeave(labelName, func);
-    else {
+    } else {
         return warnArgumentValue(L, __func__, QStringLiteral("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));
     }
 
@@ -7109,11 +7110,8 @@ int TLuaInterpreter::setBorderColor(lua_State* L)
     int luaGreen = getVerifiedInt(L, __func__, 2, "green");
     int luaBlue = getVerifiedInt(L, __func__, 3, "blue");
     Host& host = getHostFromLua(L);
-    QPalette framePalette;
-    framePalette.setColor(QPalette::Text, QColor(Qt::black));
-    framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-    framePalette.setColor(QPalette::Window, QColor(luaRed, luaGreen, luaBlue, 255));
-    host.mpConsole->mpMainFrame->setPalette(framePalette);
+    auto styleSheet = QStringLiteral("QWidget#MainFrame{ background-color: rgba(%1,%2,%3,255) }").arg(luaRed).arg(luaGreen).arg(luaBlue);
+    host.mpConsole->mpMainFrame->setStyleSheet(styleSheet);
     return 0;
 }
 
@@ -10293,10 +10291,17 @@ int TLuaInterpreter::installModule(lua_State* L)
     QString modName = getVerifiedString(L, __func__, 1, "module location");
     Host& host = getHostFromLua(L);
     QString module = QDir::fromNativeSeparators(modName);
-    if (host.installPackage(module, 3) && mudlet::self()->moduleTableVisible()) {
-        mudlet::self()->layoutModules();
+
+    if (!host.installPackage(module, 3)) {
+        lua_pushboolean(L, false);
+        return 1;
     }
-    return 0;
+    auto moduleManager = host.mpModuleManager;
+    if (moduleManager && moduleManager->mModuleTable->isVisible()) {
+        moduleManager->layoutModules();
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#uninstallModule
@@ -10304,9 +10309,15 @@ int TLuaInterpreter::uninstallModule(lua_State* L)
 {
     QString module = getVerifiedString(L, __func__, 1, "module name");
     Host& host = getHostFromLua(L);
-    if (host.uninstallPackage(module, 3) && mudlet::self()->moduleTableVisible()) {
-        mudlet::self()->layoutModules();
+    if (!host.uninstallPackage(module, 3)) {
+        lua_pushboolean(L, false);
+        return 1;
     }
+    auto moduleManager = host.mpModuleManager;
+    if (moduleManager && moduleManager->mModuleTable->isVisible()) {
+        moduleManager->layoutModules();
+    }
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -10328,10 +10339,10 @@ int TLuaInterpreter::enableModuleSync(lua_State* L)
         return warnArgumentValue(L, __func__, message);
     }
 
-    auto moduleTable = mudlet::self()->moduleTable;
-    if (moduleTable && !moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
-        int row = moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
-        auto checkItem = moduleTable->item(row, 2);
+    auto moduleManager = host.mpModuleManager;
+    if (moduleManager && !moduleManager->mModuleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
+        int row = moduleManager->mModuleTable->findItems(module, Qt::MatchExactly)[0]->row();
+        auto checkItem = moduleManager->mModuleTable->item(row, 2);
         checkItem->setCheckState(Qt::Checked);
     }
 
@@ -10348,10 +10359,10 @@ int TLuaInterpreter::disableModuleSync(lua_State* L)
         return warnArgumentValue(L, __func__, message);
     }
 
-    auto moduleTable = mudlet::self()->moduleTable;
-    if (moduleTable && !moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
-        int row = moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
-        auto checkItem = moduleTable->item(row, 2);
+    auto moduleManager = host.mpModuleManager;
+    if (moduleManager && !moduleManager->mModuleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
+        int row = moduleManager->mModuleTable->findItems(module, Qt::MatchExactly)[0]->row();
+        auto checkItem = moduleManager->mModuleTable->item(row, 2);
         checkItem->setCheckState(Qt::Unchecked);
     }
 
@@ -12216,6 +12227,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
         if (error == 0) {
             return {true, returnValue};
         }
+
         return {false, returnValue};
     } else {
         QString _n = "error in anonymous Lua function";
@@ -13775,8 +13787,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
     lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
-    lua_register(pGlobalLua, "exportJsonMap", TLuaInterpreter::exportJsonMap);
-    lua_register(pGlobalLua, "importJsonMap", TLuaInterpreter::importJsonMap);
+    lua_register(pGlobalLua, "saveJsonMap", TLuaInterpreter::saveJsonMap);
+    lua_register(pGlobalLua, "loadJsonMap", TLuaInterpreter::loadJsonMap);
     lua_register(pGlobalLua, "registerMapInfo", TLuaInterpreter::registerMapInfo);
     lua_register(pGlobalLua, "killMapInfo", TLuaInterpreter::killMapInfo);
     lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
@@ -15415,8 +15427,8 @@ int TLuaInterpreter::showNotification(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exportJsonMap
-int TLuaInterpreter::exportJsonMap(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#saveJsonMap
+int TLuaInterpreter::saveJsonMap(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
@@ -15428,6 +15440,7 @@ int TLuaInterpreter::exportJsonMap(lua_State* L)
         return warnArgumentValue(L, __func__, "a non-empty path and file name to write to must be provided");
     }
 
+
     if (auto [result, message] = pHost->mpMap->writeJsonMapFile(dest); !result) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -15436,8 +15449,8 @@ int TLuaInterpreter::exportJsonMap(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#importJsonMap
-int TLuaInterpreter::importJsonMap(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadJsonMap
+int TLuaInterpreter::loadJsonMap(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
@@ -15470,6 +15483,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
 
     auto& host = getHostFromLua(L);
     host.mpMap->mMapInfoContributorManager->registerContributor(name, [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+        Q_UNUSED(infoColor);
         lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
         if (roomID > 0) {
             lua_pushinteger(L, roomID);
@@ -15556,6 +15570,7 @@ int TLuaInterpreter::disableMapInfo(lua_State* L)
     if (!host.mpMap->mMapInfoContributorManager->disableContributor(name)) {
         return warnArgumentValue(L, __func__, QStringLiteral("map info '%1' does not exist").arg(name));
     }
+
     lua_pushboolean(L, true);
     return 1;
 }
