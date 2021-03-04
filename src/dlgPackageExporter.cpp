@@ -92,9 +92,9 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     QStringListModel* dependencies = new QStringListModel();
     input->Dependencies->setModel(dependencies);
     input->Dependencies->lineEdit()->setPlaceholderText(tr("Dependencies (optional)"));
-    connect(input->buttonBox->button(QDialogButtonBox::Cancel), &QAbstractButton::clicked, [this]() {input->PackageName->clear(); inputDialog->reject();});
+    connect(input->buttonBox->button(QDialogButtonBox::Cancel), &QAbstractButton::clicked, inputDialog, &QDialog::reject);
     connect(input->buttonBox->button(QDialogButtonBox::Ok), &QAbstractButton::clicked, this, &dlgPackageExporter::slot_checkInput);
-    inputDialog->installEventFilter(this);
+    connect(inputDialog, &QDialog::rejected, [this]() {input->PackageName->clear();});
     input->Dependencies->installEventFilter(this);
     input->Dependencies->view()->installEventFilter(this);
     input->Description->installEventFilter(this);
@@ -211,10 +211,13 @@ bool dlgPackageExporter::writeFileToZip(const QString& archiveFileName, const QS
 
 void dlgPackageExporter::slot_addDependency()
 {
-    if (input->Dependencies->currentText().isEmpty()) {
+    QString text = input->Dependencies->currentText();
+    if (text.isEmpty()) {
         return;
     }
-    input->Dependencies->addItem(input->Dependencies->currentText());
+    if (input->Dependencies->findText(text) == -1) {
+        input->Dependencies->addItem(text);
+    }
     input->Dependencies->showPopup();
     input->Dependencies->setFocus();
 }
@@ -230,6 +233,9 @@ void dlgPackageExporter::slot_removeDependency()
 void dlgPackageExporter::slot_checkInput()
 {
     if (!input->PackageName->text().isEmpty()) {
+        if (input->Dependencies->findText(input->Dependencies->currentText()) == -1) {
+            input->Dependencies->addItem(input->Dependencies->currentText());
+        }
         inputDialog->accept();
         return;
     }
@@ -275,16 +281,6 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             }
         }
 
-        if (obj == inputDialog && keyEvent->key() == Qt::Key_Escape) {
-            inputDialog->close();
-            return true;
-        }
-    }
-
-    //if the dialog window is closed clear the packagename so that it doesn't proceed package creation
-    if (obj == inputDialog && evt->type() == QEvent::Close) {
-        input->PackageName->clear();
-        return true;
     }
 
     //Focus handling returns false so that underlying class functions still work and the cursor is visible for example
@@ -298,14 +294,14 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
 
         if (evt->type() == QEvent::FocusOut) {
             mPlainDescription = input->Description->toPlainText();
-            #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
             //$packagePath allows to put images in a package which will then be displayed in the description
             //during package creation it uses the profile folder. But once the package is created it will use
             //profile folder/packagename
             QString plainText{mPlainDescription};
             plainText.replace(QLatin1String("$packagePath"), mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName()));
             input->Description->setMarkdown(plainText);
-            #endif
+#endif
             return false;
         }
     }

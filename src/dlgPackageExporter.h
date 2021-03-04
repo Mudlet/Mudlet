@@ -89,8 +89,8 @@ protected:
 
 private:
     bool writeFileToZip(const QString&, const QString&, zip*);
-    void appendToConfigFile(QString&, const QString&, const QString&);
-    void appendVersionToConfigFile(QString&, const QString&, const QString&, const QString&);
+    static void appendToConfigFile(QString&, const QString&, const QString&);
+    static void appendVersionToConfigFile(QString&, const QString&, const QString&, const QString&);
     void displayResultMessage(const QString&, const bool isSuccessMessage = true);
 
     QDialog* inputDialog;
