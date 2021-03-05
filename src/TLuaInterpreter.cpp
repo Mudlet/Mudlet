@@ -13122,13 +13122,16 @@ QString TLuaInterpreter::getPackageInfo(const QString& packageName, const QStrin
     }
     lua_getfield(L, -1, packageName.toUtf8().constData());
     if (!lua_istable(L, -1)) {
+        lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
         return QString();
     }
     lua_getfield(L, -1, what.toUtf8().constData());
     if (!lua_isstring(L, -1)) {
+        lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
         return QString();
     }
     QString result = QString(lua_tostring(L, -1));
+    lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
     return result;
 }
 

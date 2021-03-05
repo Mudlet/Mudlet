@@ -92,6 +92,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     QStringListModel* dependencies = new QStringListModel();
     input->Dependencies->setModel(dependencies);
     input->Dependencies->lineEdit()->setPlaceholderText(tr("Dependencies (optional)"));
+    connect(input->addIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_import_icon);
     connect(input->buttonBox->button(QDialogButtonBox::Cancel), &QAbstractButton::clicked, inputDialog, &QDialog::reject);
     connect(input->buttonBox->button(QDialogButtonBox::Ok), &QAbstractButton::clicked, this, &dlgPackageExporter::slot_checkInput);
     connect(inputDialog, &QDialog::rejected, [this]() {input->PackageName->clear();});
@@ -118,10 +119,23 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     mPackagePath.replace(QLatin1String(R"(\)"), QLatin1String("/"));
 
     mStagingDirName = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, QStringLiteral("tmp/%1").arg(mPackageName));
+
     QDir packageDir = QDir(mStagingDirName);
     if (!packageDir.exists()) {
         packageDir.mkpath(mStagingDirName);
     }
+
+    QFileInfo iconFile(mPackageIconPath);
+    if (iconFile.exists()) {
+        QString iconDirName = mStagingDirName + QStringLiteral("/Icon/");
+        QDir iconDir = QDir(iconDirName);
+        if (!iconDir.exists()) {
+            iconDir.mkpath(iconDirName);
+        }
+        iconDirName.append(iconFile.fileName());
+        QFile::copy(mPackageIconPath, iconDirName);
+    }
+
     mPackagePathFileName = QStringLiteral("%1/%2.mpackage").arg(mPackagePath, mPackageName);
     ui->label_exportFilePath->show();
     ui->filePath->setText(mPackagePathFileName);
@@ -130,6 +144,8 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
 
     appendToConfigFile(mPackageConfig, QStringLiteral("mpackage"), mPackageName);
     appendToConfigFile(mPackageConfig, QStringLiteral("author"), input->Author->text());
+    appendToConfigFile(mPackageConfig, QStringLiteral("icon"), iconFile.fileName());
+    appendToConfigFile(mPackageConfig, QStringLiteral("titel"), input->Titel->text());
     appendToConfigFile(mPackageConfig, QStringLiteral("description"), mPlainDescription);
     appendVersionToConfigFile(mPackageConfig, input->Major->text(), input->Minor->text(), input->Patch->text());
     appendToConfigFile(mPackageConfig, QStringLiteral("dependencies"), dependencies->stringList().join(","));
@@ -244,6 +260,16 @@ void dlgPackageExporter::slot_checkInput()
     connect(input->PackageName, &QLineEdit::textChanged, [=] { style()->polish(input->PackageName); });
 }
 
+void dlgPackageExporter::slot_import_icon()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open Icon"), QDir::currentPath(), tr("Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)"));
+    if (fileName.isEmpty()) {
+        return;
+    }
+    mPackageIconPath = fileName;
+    input->Icon->setStyleSheet(QStringLiteral("QWidget { border-image: url(%1); }").arg(fileName));
+}
+
 bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
 {
     if (evt->type() == QEvent::KeyPress) {
@@ -300,7 +326,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             //profile folder/packagename
             QString plainText{mPlainDescription};
             plainText.replace(QLatin1String("$packagePath"), mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName()));
-            input->Description->setMarkdown(plainText);
+            input->Description->setText(plainText);
 #endif
             return false;
         }

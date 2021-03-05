@@ -83,6 +83,7 @@ private slots:
     void slot_addDependency();
     void slot_removeDependency();
     void slot_checkInput();
+    void slot_import_icon();
 
 protected:
     bool eventFilter(QObject*, QEvent*) override;
@@ -110,6 +111,7 @@ private:
     QString mPackageName;
     QString mPackagePath;
     QString mPackagePathFileName;
+    QString mPackageIconPath;
     QString mPackageConfig;
     QString mPlainDescription;
 };
