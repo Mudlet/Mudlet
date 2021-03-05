@@ -12195,7 +12195,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
             }
         }
         lua_pop(L, lua_gettop(L));
-        return std::make_pair {!error , returnValue};
+        return {!error , returnValue};
     }
 
     QString _n = "error in anonymous Lua function";
