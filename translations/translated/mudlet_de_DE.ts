@@ -5709,7 +5709,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="42"/>
       <source>Package Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Pakete - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="54"/>
