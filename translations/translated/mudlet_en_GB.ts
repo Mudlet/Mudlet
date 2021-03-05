@@ -5472,32 +5472,32 @@ Count</translation>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="48"/>
       <source>Module Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Module Manager - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Module Name</source>
-      <translation type="unfinished"/>
+      <translation>Module Name</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Priority</source>
-      <translation type="unfinished"/>
+      <translation>Priority</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Sync</source>
-      <translation type="unfinished"/>
+      <translation>Sync</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Module Location</source>
-      <translation type="unfinished"/>
+      <translation>Module Location</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="105"/>
       <source>Checking this box will cause the module to be saved and &lt;i&gt;resynchronised&lt;/i&gt; across all sessions that share it when the &lt;i&gt;Save Profile&lt;/i&gt; button is clicked in the Editor or if it is saved at the end of the session.</source>
-      <translation type="unfinished"/>
+      <translation>Checking this box will cause the module to be saved and &lt;i&gt;resynchronised&lt;/i&gt; across all sessions that share it when the &lt;i&gt;Save Profile&lt;/i&gt; button is clicked in the Editor or if it is saved at the end of the session.</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="111"/>
@@ -5507,18 +5507,19 @@ Count</translation>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="149"/>
       <source>Load Mudlet Module</source>
-      <translation type="unfinished"/>
+      <translation>Load Mudlet Module</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="156"/>
       <source>Load Mudlet Module:</source>
-      <translation type="unfinished"/>
+      <translation>Load Mudlet Module:</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="156"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Cannot read file %1:
+%2.</translation>
     </message>
   </context>
   <context>
@@ -5661,7 +5662,7 @@ Count</translation>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="42"/>
       <source>Package Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Package Manager - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="54"/>
@@ -5677,7 +5678,8 @@ Count</translation>
       <location filename="../src/dlgPackageManager.cpp" line="61"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Cannot read file %1:
+%2.</translation>
     </message>
   </context>
   <context>
