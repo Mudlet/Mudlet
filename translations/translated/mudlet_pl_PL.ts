@@ -5481,27 +5481,27 @@ Count</source>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="48"/>
       <source>Module Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Menedżer modułów - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Module Name</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa modułu</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Priority</source>
-      <translation type="unfinished"/>
+      <translation>Priorytet</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Sync</source>
-      <translation type="unfinished"/>
+      <translation>Synchronizuj</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Module Location</source>
-      <translation type="unfinished"/>
+      <translation>Lokalizacja modułu</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="105"/>
@@ -5516,18 +5516,19 @@ Count</source>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="149"/>
       <source>Load Mudlet Module</source>
-      <translation type="unfinished"/>
+      <translation>Załaduj moduł Mudleta</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="156"/>
       <source>Load Mudlet Module:</source>
-      <translation type="unfinished"/>
+      <translation>Załaduj moduł Mudleta:</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="156"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Nie można odczytać pliku %1:
+%2.</translation>
     </message>
   </context>
   <context>
@@ -5675,18 +5676,19 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="54"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Importuj pakiet Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="61"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Importuj pakiet Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="61"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Nie można odczytać pliku %1:
+%2.</translation>
     </message>
   </context>
   <context>
