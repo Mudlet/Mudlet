@@ -5502,7 +5502,7 @@ Count</translation>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="111"/>
       <source>&lt;b&gt;Note:&lt;/b&gt; &lt;i&gt;.zip&lt;/i&gt; and &lt;i&gt;.mpackage&lt;/i&gt; modules are currently unable to be synced&lt;br&gt; only &lt;i&gt;.xml&lt;/i&gt; packages are able to be synchronized across profiles at the moment. </source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;Note:&lt;/b&gt; &lt;i&gt;.zip&lt;/i&gt; and &lt;i&gt;.mpackage&lt;/i&gt; modules are currently unable to be synced&lt;br&gt; only &lt;i&gt;.xml&lt;/i&gt; packages are able to be synchronised across profiles at the moment. </translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="149"/>
@@ -5666,12 +5666,12 @@ Count</translation>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="54"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Import Mudlet Package</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="61"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Import Mudlet Package:</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="61"/>
