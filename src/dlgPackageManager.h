@@ -26,6 +26,7 @@
 
 #include "pre_guard.h"
 #include <QDialog>
+#include <QTableWidget>
 #include "post_guard.h"
 
 class Host;
@@ -44,14 +45,15 @@ public:
 
 private slots:
     void slot_install_package();
-    void slot_uninstall_package();
+    void slot_uninstall_package(int index);
+    void slot_item_clicked(QTableWidgetItem*);
 
 private:
     Ui::package_manager* ui;
     Host* mpHost;
-    QListWidget* mPackageList;
-    QPushButton* mUninstallButton;
+    QTableWidget* mPackageTable;
     QPushButton* mInstallButton;
+    void fillItems();
 };
 
 #endif

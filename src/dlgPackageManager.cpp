@@ -1,4 +1,4 @@
-/***************************************************************************
+﻿/***************************************************************************
  *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *   Copyright (C) 2011 by Heiko Koehn - KoehnHeiko@googlemail.com         *
  *                                                                         *
@@ -21,6 +21,8 @@
 
 #include "dlgPackageManager.h"
 #include "ui_package_manager.h"
+#include "TLuaInterpreter.h"
+#include "mudlet.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -32,13 +34,13 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
 , mpHost(pHost)
 {
     ui->setupUi(this);
-    mPackageList = ui->packageList;
-    mUninstallButton = ui->uninstallButton;
+    mPackageTable = ui->packageTable;
     mInstallButton = ui->installButton;
-    mPackageList->addItems(mpHost->mInstalledPackages);
-    connect(mUninstallButton, &QAbstractButton::clicked, this, &dlgPackageManager::slot_uninstall_package);
+    fillItems();
+    connect(mPackageTable, &QTableWidget::itemClicked, this, &dlgPackageManager::slot_item_clicked);
     connect(mInstallButton, &QAbstractButton::clicked, this, &dlgPackageManager::slot_install_package);
     connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgPackageManager::close);
+    connect(mPackageTable, &QTableWidget::currentItemChanged, this, &dlgPackageManager::slot_item_clicked);
     setWindowTitle(tr("Package Manager - %1").arg(mpHost->getName()));
     setAttribute(Qt::WA_DeleteOnClose);
 }
@@ -47,6 +49,39 @@ dlgPackageManager::~dlgPackageManager()
 {
     mpHost->mpPackageManager = nullptr;
     delete ui;
+}
+
+void dlgPackageManager::fillItems()
+{
+    for (int i =  mPackageTable->rowCount() - 1; i >= 0; --i) {
+        mPackageTable->removeRow(i);
+    }
+    const QString& iconPath = QStringLiteral(":/icons/mudlet.png");
+    mPackageTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    for (int i = 0; i < mpHost->mInstalledPackages.size(); i++) {
+        QPushButton* remove_btn = new QPushButton();
+        connect(remove_btn, &QPushButton::clicked, [=] {slot_uninstall_package(i);});
+        remove_btn ->setText(QStringLiteral("Remove"));
+        remove_btn ->setStyleSheet(QStringLiteral("QPushButton {padding: 10px; }"));
+        mPackageTable->insertRow(i);
+        auto packageName = new QTableWidgetItem();
+        auto shortDescription = new QTableWidgetItem();
+        packageName->setTextAlignment(Qt::AlignCenter);
+        QFont nameFont;
+        nameFont.setBold(true);
+        packageName->setFont(nameFont);
+        shortDescription->setTextAlignment(Qt::AlignCenter);
+        packageName->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+        shortDescription->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+        packageName->setIcon(QIcon(iconPath));
+        packageName->setText(mpHost->mInstalledPackages.at(i));
+        auto description = mpHost->mLuaInterpreter.getPackageInfo(packageName->text(), QStringLiteral("description"));
+        shortDescription->setText(description);
+        mPackageTable->setItem(i, 0, packageName);
+        mPackageTable->setItem(i, 1, shortDescription);
+        mPackageTable->setCellWidget(i, 2, remove_btn);
+    }
+    mPackageTable->resizeColumnsToContents();
 }
 
 void dlgPackageManager::slot_install_package()
@@ -63,18 +98,28 @@ void dlgPackageManager::slot_install_package()
     }
 
     mpHost->installPackage(fileName, 0);
-    mPackageList->clear();
-    mPackageList->addItems(mpHost->mInstalledPackages);
+    fillItems();
 }
 
-void dlgPackageManager::slot_uninstall_package()
+void dlgPackageManager::slot_uninstall_package(int index)
 {
-    auto selectedPackages = mPackageList->selectedItems();
-    if (!selectedPackages.empty()) {
-        for (auto package : selectedPackages) {
-            mpHost->uninstallPackage(package->text(), 0);
-        }
+    auto package = mPackageTable->item(index, 0);
+    mpHost->uninstallPackage(package->text(), 0);
+    fillItems();
+}
+
+void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
+{
+    if (!pItem) {
+        return;
     }
-    mPackageList->clear();
-    mPackageList->addItems(mpHost->mInstalledPackages);
+    QString packageName = ui->packageTable->item(pItem->row(), 0)->text();
+    QString description = mpHost->mLuaInterpreter.getPackageInfo(packageName, QStringLiteral("description"));
+    QString packageDir = mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName(), QStringLiteral("/%1").arg(packageName));
+    description.replace(QLatin1String("$packagePath"), packageDir);
+    ui->packageDescription->setText(description);
+    ui->Author->setText(mpHost->mLuaInterpreter.getPackageInfo(packageName, QStringLiteral("author")));
+    ui->Version->setText(mpHost->mLuaInterpreter.getPackageInfo(packageName, QStringLiteral("version")));
+    ui->Created->setText(mpHost->mLuaInterpreter.getPackageInfo(packageName, QStringLiteral("created")));
+    ui->Dependencies->setText(mpHost->mLuaInterpreter.getPackageInfo(packageName, QStringLiteral("dependencies")));
 }
