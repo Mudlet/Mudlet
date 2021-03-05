@@ -5476,27 +5476,27 @@ Count</source>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="48"/>
       <source>Module Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>模块管理器 - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Module Name</source>
-      <translation type="unfinished"/>
+      <translation>模块名称</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Priority</source>
-      <translation type="unfinished"/>
+      <translation>优先级</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Sync</source>
-      <translation type="unfinished"/>
+      <translation>同步</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Module Location</source>
-      <translation type="unfinished"/>
+      <translation>模块位置</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="105"/>
@@ -5511,18 +5511,19 @@ Count</source>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="149"/>
       <source>Load Mudlet Module</source>
-      <translation type="unfinished"/>
+      <translation>加载 Mudlet 模块</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="156"/>
       <source>Load Mudlet Module:</source>
-      <translation type="unfinished"/>
+      <translation>加载 Mudlet 模块:</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="156"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>无法读取文件 %1：
+%2。</translation>
     </message>
   </context>
   <context>
@@ -5670,18 +5671,19 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="54"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>导入Mudlet包</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="61"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>导入Mudlet包:</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="61"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>无法读取文件 %1：
+%2。</translation>
     </message>
   </context>
   <context>
