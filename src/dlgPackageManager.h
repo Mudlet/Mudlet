@@ -42,6 +42,7 @@ public:
     Q_DISABLE_COPY(dlgPackageManager)
     explicit dlgPackageManager(QWidget* parent, Host*);
     ~dlgPackageManager();
+    void resetPackageTable();
 
 private slots:
     void slot_install_package();
@@ -53,7 +54,6 @@ private:
     Host* mpHost;
     QTableWidget* mPackageTable;
     QPushButton* mInstallButton;
-    void fillItems();
 };
 
 #endif

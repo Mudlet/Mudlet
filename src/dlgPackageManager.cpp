@@ -36,7 +36,7 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     ui->setupUi(this);
     mPackageTable = ui->packageTable;
     mInstallButton = ui->installButton;
-    fillItems();
+    resetPackageTable();
     connect(mPackageTable, &QTableWidget::itemClicked, this, &dlgPackageManager::slot_item_clicked);
     connect(mInstallButton, &QAbstractButton::clicked, this, &dlgPackageManager::slot_install_package);
     connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgPackageManager::close);
@@ -51,18 +51,21 @@ dlgPackageManager::~dlgPackageManager()
     delete ui;
 }
 
-void dlgPackageManager::fillItems()
+void dlgPackageManager::resetPackageTable()
 {
+    if (!mpHost) {
+        return;
+    }
     for (int i =  mPackageTable->rowCount() - 1; i >= 0; --i) {
         mPackageTable->removeRow(i);
     }
-    const QString& iconPath = QStringLiteral(":/icons/mudlet.png");
+
     mPackageTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
     for (int i = 0; i < mpHost->mInstalledPackages.size(); i++) {
         QPushButton* remove_btn = new QPushButton();
-        connect(remove_btn, &QPushButton::clicked, [=] {slot_uninstall_package(i);});
-        remove_btn ->setText(QStringLiteral("Remove"));
-        remove_btn ->setStyleSheet(QStringLiteral("QPushButton {padding: 10px; }"));
+        connect(remove_btn, &QPushButton::clicked, [=] { slot_uninstall_package(i); });
+        remove_btn->setText(QStringLiteral("Remove"));
+        remove_btn->setStyleSheet(QStringLiteral("QPushButton {padding: 5px; }"));
         mPackageTable->insertRow(i);
         auto packageName = new QTableWidgetItem();
         auto shortDescription = new QTableWidgetItem();
@@ -73,10 +76,13 @@ void dlgPackageManager::fillItems()
         shortDescription->setTextAlignment(Qt::AlignCenter);
         packageName->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
         shortDescription->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
-        packageName->setIcon(QIcon(iconPath));
         packageName->setText(mpHost->mInstalledPackages.at(i));
-        auto description = mpHost->mLuaInterpreter.getPackageInfo(packageName->text(), QStringLiteral("description"));
-        shortDescription->setText(description);
+        auto iconName = mpHost->mLuaInterpreter.getPackageInfo(packageName->text(), QStringLiteral("icon"));
+        auto iconDir = iconName.isEmpty() ? QStringLiteral(":/icons/mudlet.png")
+                                          : mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("%1/Icon/%2").arg(packageName->text(), iconName));
+        packageName->setIcon(QIcon(iconDir));
+        auto titel = mpHost->mLuaInterpreter.getPackageInfo(packageName->text(), QStringLiteral("titel"));
+        shortDescription->setText(titel);
         mPackageTable->setItem(i, 0, packageName);
         mPackageTable->setItem(i, 1, shortDescription);
         mPackageTable->setCellWidget(i, 2, remove_btn);
@@ -98,14 +104,14 @@ void dlgPackageManager::slot_install_package()
     }
 
     mpHost->installPackage(fileName, 0);
-    fillItems();
+    //resetPackageTable();
 }
 
 void dlgPackageManager::slot_uninstall_package(int index)
 {
     auto package = mPackageTable->item(index, 0);
     mpHost->uninstallPackage(package->text(), 0);
-    fillItems();
+    //resetPackageTable();
 }
 
 void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
@@ -115,7 +121,7 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
     }
     QString packageName = ui->packageTable->item(pItem->row(), 0)->text();
     QString description = mpHost->mLuaInterpreter.getPackageInfo(packageName, QStringLiteral("description"));
-    QString packageDir = mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName(), QStringLiteral("/%1").arg(packageName));
+    QString packageDir = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), packageName);
     description.replace(QLatin1String("$packagePath"), packageDir);
     ui->packageDescription->setText(description);
     ui->Author->setText(mpHost->mLuaInterpreter.getPackageInfo(packageName, QStringLiteral("author")));

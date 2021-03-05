@@ -216,7 +216,7 @@
             </layout>
            </item>
            <item>
-            <widget class="QTextEdit" name="packageDescription">
+            <widget class="QTextBrowser" name="packageDescription">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
                <horstretch>0</horstretch>
@@ -224,6 +224,12 @@
               </sizepolicy>
              </property>
              <property name="readOnly">
+              <bool>true</bool>
+             </property>
+             <property name="openExternalLinks">
+              <bool>true</bool>
+             </property>
+             <property name="openLinks">
               <bool>true</bool>
              </property>
             </widget>
@@ -251,7 +257,7 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Install</string>
+            <string>Install new Package</string>
            </property>
           </widget>
          </item>
