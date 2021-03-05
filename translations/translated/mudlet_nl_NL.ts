@@ -32,12 +32,15 @@
     <message>
       <location filename="../src/glwidget.cpp" line="286"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Je hebt nog geen kaart geladen. Laad een kaart of begin van vooraf aan met toewijzen.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="285"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Je hebt een kaart geladen (%n kamer(s)), maar Mudlet weet momenteel niet waar je bent.</numerusform>
+        <numerusform>Je hebt een kaart geladen (%n kamer(s)), maar Mudlet weet momenteel niet waar je bent.</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -45,19 +48,19 @@
     <message>
       <location filename="../src/Host.cpp" line="459"/>
       <source>Text to send to the game</source>
-      <translation type="unfinished"/>
+      <translation>De naar het spel te sturen tekst</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="840"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[ OKÉ ] - %1 Bedankt voor het gebruik van de openbare testversie!</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="841"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[ OKÉ ] - %1 Help ons Mudlet te verbeteren door eventuele problemen te melden.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1640"/>
@@ -98,12 +101,12 @@ wacht aub...</translation>
       <location filename="../src/Host.cpp" line="2638"/>
       <location filename="../src/Host.cpp" line="3570"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Kaart - %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3586"/>
       <source>Pre-Map loading(3) report</source>
-      <translation type="unfinished"/>
+      <translation>Rapport voorafgaand aan het toewijzen (3)</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3596"/>
