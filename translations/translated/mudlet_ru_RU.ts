@@ -5544,53 +5544,54 @@ Count</source>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="48"/>
       <source>Module Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Менеджер модулей - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Module Name</source>
-      <translation type="unfinished"/>
+      <translation>Имя модуля</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Priority</source>
-      <translation type="unfinished"/>
+      <translation>Приоритет</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Sync</source>
-      <translation type="unfinished"/>
+      <translation>Синхр.</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Module Location</source>
-      <translation type="unfinished"/>
+      <translation>Расположение модуля</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="105"/>
       <source>Checking this box will cause the module to be saved and &lt;i&gt;resynchronised&lt;/i&gt; across all sessions that share it when the &lt;i&gt;Save Profile&lt;/i&gt; button is clicked in the Editor or if it is saved at the end of the session.</source>
-      <translation type="unfinished"/>
+      <translation>Установка этого флажка приведет к тому, что модуль будет сохранен и &lt;bi&gt;будет ресинхронизирован&lt;b/i&gt; во всех сеансах, которые совместно используют его, когда кнопка &lt;bi&gt;Сохранить профиль&lt;b/i&gt; нажата в редакторе или когда профиль будет сохранен в конце сеанса.</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="111"/>
       <source>&lt;b&gt;Note:&lt;/b&gt; &lt;i&gt;.zip&lt;/i&gt; and &lt;i&gt;.mpackage&lt;/i&gt; modules are currently unable to be synced&lt;br&gt; only &lt;i&gt;.xml&lt;/i&gt; packages are able to be synchronized across profiles at the moment. </source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;Примечание:&lt;/b&gt; &lt;i&gt;.zip&lt;/i&gt; и &lt;i&gt;.mpackage&lt;/i&gt; модули в настоящее время не могут быть синхронизированы&lt;br&gt; только &lt;i&gt;.xml&lt;/i&gt; пакеты в данный момент могут быть синхронизированы между профилями. </translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="149"/>
       <source>Load Mudlet Module</source>
-      <translation type="unfinished"/>
+      <translation>Загрузить Mudlet модуль</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="156"/>
       <source>Load Mudlet Module:</source>
-      <translation type="unfinished"/>
+      <translation>Загрузить Mudlet Модуль:</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="156"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Файл не может бытс прочитан %1:
+%2.</translation>
     </message>
   </context>
   <context>
@@ -5733,23 +5734,24 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="42"/>
       <source>Package Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Менеджер пакетов - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="54"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Импортировать пакет</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="61"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Импортировать пакет:</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="61"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Файл не может бытс прочитан %1:
+%2.</translation>
     </message>
   </context>
   <context>
