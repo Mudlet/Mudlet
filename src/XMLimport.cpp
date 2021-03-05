@@ -582,7 +582,7 @@ std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
             }
         }
     }
-    return std::make_pair(objectType, rootItemID);
+    return {objectType, rootItemID};
 }
 
 void XMLimport::readHelpPackage()

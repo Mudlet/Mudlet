@@ -120,6 +120,7 @@ public:
     void clearCaptureGroups();
     bool callEventHandler(const QString& function, const TEvent& pE);
     bool callCmdLineAction(const int func, QString);
+    bool callAnonymousFunction(const int func, QString name);
     bool callLabelCallbackEvent(const int func, const QEvent* qE = nullptr);
     static QString dirToString(lua_State*, int);
     static int dirToNumber(lua_State*, int);
@@ -174,6 +175,8 @@ public:
     static int enableModuleSync(lua_State* L);
     static int disableModuleSync(lua_State* L);
     static int getModuleSync(lua_State* L);
+    static int getPackages(lua_State* L);
+    static int getModules(lua_State* L);
     static int lockExit(lua_State*);
     static int lockSpecialExit(lua_State*);
     static int hasExitLock(lua_State*);
@@ -575,6 +578,7 @@ public:
     static int getTextFormat(lua_State*);
     static int getWindowsCodepage(lua_State*);
     static int getHTTP(lua_State* L);
+    static int customHTTP(lua_State* L);
     static int putHTTP(lua_State* L);
     static int postHTTP(lua_State* L);
     static int deleteHTTP(lua_State* L);
@@ -587,8 +591,8 @@ public:
     static int getMapRoomExitsColor(lua_State*);
     static int setMapRoomExitsColor(lua_State*);
     static int showNotification(lua_State*);
-    static int exportJsonMap(lua_State*);
-    static int importJsonMap(lua_State*);
+    static int saveJsonMap(lua_State*);
+    static int loadJsonMap(lua_State*);
     static int registerMapInfo(lua_State*);
     static int killMapInfo(lua_State*);
     static int enableMapInfo(lua_State*);
@@ -607,6 +611,7 @@ public slots:
     void slotDeleteSender(int, QProcess::ExitStatus);
 
 private:
+    bool callReference(lua_State *L, QString name, int parameters);
     static bool getVerifiedBool(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static QString getVerifiedString(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static int getVerifiedInt(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
@@ -626,6 +631,7 @@ private:
     void setupLanguageData();
     QString readScriptFile(const QString& path) const;
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
+    static int performHttpRequest(lua_State *L, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb);
     void handleHttpOK(QNetworkReply*);
     static void raiseDownloadProgressEvent(lua_State*, QString, qint64, qint64);
 #if defined(Q_OS_WIN32)

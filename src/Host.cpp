@@ -42,6 +42,7 @@
 #include "VarUnit.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
+#include "dlgModuleManager.h"
 #include "dlgNotepad.h"
 #include "dlgProfilePreferences.h"
 #include "dlgIRC.h"
@@ -198,6 +199,8 @@ QString stopWatch::getElapsedDayTimeString() const
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
 : mTelnet(this, hostname)
 , mpConsole(nullptr)
+, mpPackageManager(nullptr)
+, mpModuleManager(nullptr)
 , mLuaInterpreter(this, hostname, id)
 , commandLineMinimumHeight(30)
 , mAlertOnNewData(true)
@@ -344,6 +347,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mDiscordAccessFlags(DiscordLuaAccessEnabled | DiscordSetSubMask)
 , mLineSize(10.0)
 , mRoomSize(0.5)
+, mMapInfoContributors(QSet<QString>{"Short"})
 , mBubbleMode(false)
 , mShowRoomID(false)
 , mShowPanel(true)
@@ -395,7 +399,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerDiameterPercentage(70)
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
-, mMapInfoContributors(QSet<QString>{"Short"})
 {
     TDebug::addHost(this);
 
@@ -452,6 +455,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     if (mudlet::scmIsPublicTestVersion) {
         thankForUsingPTB();
+    }
+
+    if (mudlet::self()->firstLaunch) {
+        QTimer::singleShot(0, this, [this]() {
+            mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game"));
+        });
     }
 
     connect(&mTelnet, &cTelnet::signal_disconnected, this, [this](){ purgeTimer.start(1min); });
@@ -872,12 +881,12 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
 {
     const QFontMetrics metrics(font);
     if (metrics.averageCharWidth() == 0) {
-        return std::make_pair(false, QStringLiteral("specified font is invalid (its letters have 0 width)"));
+        return {false, QStringLiteral("specified font is invalid (its letters have 0 width)")};
     }
 
     mDisplayFont = font;
     updateConsolesFont();
-    return std::make_pair(true, QString());
+    return {true, QString()};
 }
 
 std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
@@ -1006,10 +1015,11 @@ void Host::reenableAllTriggers()
 
 QPair<QString, QString> Host::getSearchEngine()
 {
-    if (mSearchEngineData.contains(mSearchEngineName))
+    if (mSearchEngineData.contains(mSearchEngineName)) {
         return qMakePair(mSearchEngineName, mSearchEngineData.value(mSearchEngineName));
-    else
+    } else {
         return qMakePair(QStringLiteral("Google"), mSearchEngineData.value(QStringLiteral("Google")));
+    }
 }
 
 // cmd is UTF-16BE encoded here, but will be transcoded to Server's one by
@@ -3154,7 +3164,7 @@ std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, 
     auto pM = mpDockableMapWidget;
     auto pMapper = mpMap.data()->mpMapper;
     if (!pM && !pMapper) {
-        createMapper(true);
+        showHideOrCreateMapper(true);
         pM = mpDockableMapWidget;
     }
     if (!pM) {
@@ -3527,22 +3537,40 @@ bool Host::resetBackgroundImage(const QString &name)
     return false;
 }
 
-// Needed to extract into a separate method from slot_mapper() so that we can
-// use it WITHOUT loading a file - at least for the TConsole::importMap(...)
-// case that may need to create a map widget before it loads/imports a
-// non-default (last saved map in profile's map directory.
-void Host::createMapper(bool loadDefaultMap)
+// Needed to extract into a separate method from mudlet::slot_mapper() so that
+// we can use it WITHOUT loading a file - at least for the
+// TConsole::importMap(...) case that may need to create a map widget before it
+// loads/imports a non-default (last saved map in profile's map directory).
+void Host::showHideOrCreateMapper(const bool loadDefaultMap)
 {
     auto pMap = mpMap.data();
     if (pMap->mpMapper) {
-        bool visStatus = mpMap->mpMapper->isVisible();
-        if (pMap->mpMapper->parentWidget()->inherits("QDockWidget")) {
-            pMap->mpMapper->parentWidget()->setVisible(!visStatus);
-        }
-        pMap->mpMapper->setVisible(!visStatus);
+        toggleMapperVisibility();
         return;
     }
 
+    createMapper(loadDefaultMap);
+}
+
+void Host::toggleMapperVisibility()
+{
+    auto pMap = mpMap.data();
+    bool visStatus = mpMap->mpMapper->isVisible();
+    if (pMap->mpMapper->isFloatAndDockable()) {
+        // If we are using a floating/dockable widget we must show/hide that
+        // only and not the mapper widget (otherwise it messes up {shrinks
+        // to a minimal size} the mapper inside the container QDockWidget). This
+        // is the same as the case for a TConsole inside a TDockWidget in
+        // (void) TDockWidget::setVisible(bool).
+        pMap->mpMapper->parentWidget()->setVisible(!visStatus);
+    } else {
+        pMap->mpMapper->setVisible(!visStatus);
+    }
+}
+
+void Host::createMapper(const bool loadDefaultMap)
+{
+    auto pMap = mpMap.data();
     auto hostName(getName());
     mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
     mpDockableMapWidget->setObjectName(QStringLiteral("dockMap_%1").arg(hostName));
@@ -3558,7 +3586,7 @@ void Host::createMapper(bool loadDefaultMap)
     pMap->mpMapper->setStyleSheet(mProfileStyleSheet);
     mpDockableMapWidget->setWidget(pMap->mpMapper);
 
-    if (loadDefaultMap && pMap->mpRoomDB->getRoomIDList().isEmpty()) {
+    if (loadDefaultMap && pMap->mpRoomDB->isEmpty()) {
         qDebug() << "Host::create_mapper() - restore map case 3.";
         pMap->pushErrorMessagesToFile(tr("Pre-Map loading(3) report"), true);
         QDateTime now(QDateTime::currentDateTime());

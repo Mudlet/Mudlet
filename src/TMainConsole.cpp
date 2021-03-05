@@ -608,6 +608,9 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
     return {false, QStringLiteral("label name '%1' not found").arg(name)};
 }
 
+// Called from TLuaInterpreter::createMapper(...) to create a map in a TConsole,
+// Host::showHideOrCreateMapper(...) {formerly also called
+// createMapper(...)} is used in other cases to make a map in a QDockWidget:
 std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
 {
     auto pW = mDockWidgetMap.value(windowname);
@@ -707,6 +710,7 @@ bool TMainConsole::setBackgroundImage(const QString& name, const QString& path)
     }
 }
 
+// Does NOT act on the TMainConsole itself:
 bool TMainConsole::setBackgroundColor(const QString& name, int r, int g, int b, int alpha)
 {
     auto pC = mSubConsoleMap.value(name);
@@ -772,25 +776,21 @@ bool TMainConsole::lowerWindow(const QString& name)
 
     if (pC) {
         pC->lower();
-        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
     if (pL) {
         pL->lower();
-        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->lower();
-        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
     if (pN) {
         pN->lower();
-        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
@@ -1185,7 +1185,7 @@ bool TMainConsole::loadMap(const QString& location)
         // No map or map currently loaded - so try and created mapper
         // but don't load a map here by default, we do that below and it may not
         // be the default map anyhow
-        pHost->createMapper(false);
+        pHost->showHideOrCreateMapper(false);
     }
 
     if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
@@ -1246,7 +1246,7 @@ bool TMainConsole::importMap(const QString& location, QString* errMsg)
 
     if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
         // No map or mapper currently loaded/present - so try and create mapper
-        pHost->createMapper(false);
+        pHost->showHideOrCreateMapper(false);
     }
 
     if (!pHost->mpMap || !pHost->mpMap->mpMapper) {

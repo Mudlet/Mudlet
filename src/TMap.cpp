@@ -1074,7 +1074,6 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     ofs << mpRoomDB->getAreaMap().size();
     // serialize area table
     QMapIterator<int, TArea*> itAreaList(mpRoomDB->getAreaMap());
-    QList<int> areasWithData; // TODO: Remove when versions < 17 are not an option
     while (itAreaList.hasNext()) {
         itAreaList.next();
         int areaID = itAreaList.key();
@@ -2890,7 +2889,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     mProgressDialogRoomsCount = 0;
     mProgressDialogLabelsTotal = qRound(mapObj[QLatin1String("labelCount")].toDouble());
     mProgressDialogLabelsCount = 0;
-    mpProgressDialog = new QProgressDialog(tr("Import JSON map data to %1\n"
+    mpProgressDialog = new QProgressDialog(tr("Importing JSON map data to %1\n"
                                               "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
                                                    .arg(mProfileName,
                                                         QLatin1String("0"),
@@ -3171,8 +3170,8 @@ void TMap::update()
     }
 #endif
     if (mpMapper) {
-        mpMapper->showRoomNames->setVisible(getRoomNamesPresent());
-        mpMapper->showRoomNames->setChecked(getRoomNamesShown());
+        mpMapper->checkBox_showRoomNames->setVisible(getRoomNamesPresent());
+        mpMapper->checkBox_showRoomNames->setChecked(getRoomNamesShown());
 
         if (mpMapper->mp2dMap) {
             mpMapper->mp2dMap->mNewMoveAction = true;

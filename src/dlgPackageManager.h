@@ -1,5 +1,9 @@
+#ifndef MUDLET_DLGPACKAGEMANAGER_H
+#define MUDLET_DLGPACKAGEMANAGER_H
+
 /***************************************************************************
- *   Copyright (C) 2020 by Mike Conley - sousesider[at]gmail.com           *
+ *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
+ *   Copyright (C) 2011 by Heiko Koehn - KoehnHeiko@googlemail.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,24 +21,37 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_TMXPMUSICTAGHANDLER_H
-#define MUDLET_TMXPMUSICTAGHANDLER_H
 
-#include "TMxpTagHandler.h"
+#include "Host.h"
 
-// <music FName="never_gonna_give_you_up.mp3" [V=100] [L=1] [C=1] [T="misc"] [U="https://www.example.com/sounds/"]>
-class TMxpMusicTagHandler : public TMxpSingleTagHandler
+#include "pre_guard.h"
+#include <QDialog>
+#include "post_guard.h"
+
+class Host;
+namespace Ui {
+class package_manager;
+}
+
+class dlgPackageManager : public QDialog
 {
+    Q_OBJECT
+
 public:
-    TMxpMusicTagHandler() : TMxpSingleTagHandler("MUSIC") {}
+    Q_DISABLE_COPY(dlgPackageManager)
+    explicit dlgPackageManager(QWidget* parent, Host*);
+    ~dlgPackageManager();
 
-    static QString extractFileName(MxpStartTag* tag);
-    static QString extractVolume(MxpStartTag* tag);
-    static QString extractLoops(MxpStartTag* tag);
-    static QString extractMusicContinue(MxpStartTag* tag);
-    static QString extractType(MxpStartTag* tag);
-    static QString extractUrl(MxpStartTag* tag);
+private slots:
+    void slot_install_package();
+    void slot_uninstall_package();
 
-    TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
+private:
+    Ui::package_manager* ui;
+    Host* mpHost;
+    QListWidget* mPackageList;
+    QPushButton* mUninstallButton;
+    QPushButton* mInstallButton;
 };
-#endif //MUDLET_TMXPMUSICTAGHANDLER_H
+
+#endif
