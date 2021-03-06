@@ -35,7 +35,6 @@ class QTreeWidgetItem;
 
 namespace Ui {
 class dlgPackageExporter;
-class dlgPackageExporterInput;
 }
 
 class dlgPackageExporter : public QDialog
@@ -84,6 +83,9 @@ private slots:
     void slot_removeDependency();
     void slot_checkInput();
     void slot_import_icon();
+    void slot_openPackageLocation();
+    void slot_openInfoDialog();
+    void slot_packageChanged(int);
 
 protected:
     bool eventFilter(QObject*, QEvent*) override;
@@ -93,9 +95,8 @@ private:
     static void appendToConfigFile(QString&, const QString&, const QString&);
     static void appendVersionToConfigFile(QString&, const QString&, const QString&, const QString&);
     void displayResultMessage(const QString&, const bool isSuccessMessage = true);
+    void uncheckAllChildren();
 
-    QDialog* inputDialog;
-    Ui::dlgPackageExporterInput* input;
     Ui::dlgPackageExporter* ui;
     QPointer<Host> mpHost;
     QTreeWidget* treeWidget;
