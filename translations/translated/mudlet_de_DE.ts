@@ -10225,7 +10225,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
       <translation>
-        <numerusform>Update vorhanden...</numerusform>
+        <numerusform>1 Update vorhanden...</numerusform>
         <numerusform>%n Updates vorhanden...</numerusform>
       </translation>
     </message>
