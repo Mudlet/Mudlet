@@ -7335,6 +7335,7 @@ void dlgTriggerEditor::slot_debug_mode()
         // enqueued messages to be painted onto the central debug console:
         TDebug::flushMessageQueue();
     }
+    mudlet::self()->refreshTabBar();
 }
 
 void dlgTriggerEditor::slot_next_section()

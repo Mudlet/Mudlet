@@ -271,8 +271,6 @@ mudlet::mudlet()
     menuHelp->setToolTipsVisible(true);
     menuAbout->setToolTipsVisible(true);
 
-    // FIXME: add a command line option to change this?
-    mudlet::debugMode = false;
     setAttribute(Qt::WA_DeleteOnClose);
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(version);
@@ -4329,4 +4327,16 @@ void mudlet::setupTrayIcon()
     connect(exitAction, &QAction::triggered, this, &mudlet::close);
     menu->addAction(exitAction);
     mTrayIcon.setContextMenu(menu);
+}
+
+void mudlet::refreshTabBar()
+{
+    for (auto pHost : mHostManager) {
+        QString hostName = pHost->getName();
+        if (debugMode) {
+            mpTabBar->applyPrefixToDisplayedText(hostName, TDebug::getTag(pHost.data()));
+        } else {
+            mpTabBar->applyPrefixToDisplayedText(hostName);
+        }
+    }
 }

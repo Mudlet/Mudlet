@@ -23,14 +23,15 @@
 #include "TDebug.h"
 
 #include "TConsole.h"
+#include "TTabBar.h"
 #include "mudlet.h"
 
 // This is a Unicode NON-character code which is explicitly undisplayable but
 // can be embedded for our own internal purposes:
 const QChar TDebug::csmContinue = QChar(0xFFFF);
 
-QMap<const Host*, QPair<QString, QChar>> TDebug::smIdentifierMap;
-QQueue<QChar> TDebug::smAvailableIdentifiers;
+QMap<const Host*, QPair<QString, QString>> TDebug::smIdentifierMap;
+QQueue<QString> TDebug::smAvailableIdentifiers;
 bool TDebug::initialised = false;
 QQueue<TDebugMessage> TDebug::smMessageQueue;
 
@@ -49,7 +50,7 @@ TDebug& TDebug::operator>>(Host* pHost)
     if (Q_UNLIKELY(!mudlet::mpDebugConsole)) {
         if (Q_LIKELY(!msg.isEmpty())) {
             // Don't enqueue empty messages
-            QChar tag = deduceProfileTag(msg, pHost);
+            auto tag = deduceProfileTag(msg, pHost);
             TDebugMessage newMessage(msg, tag, fgColor, bgColor);
             smMessageQueue.enqueue(newMessage);
         }
@@ -63,12 +64,12 @@ TDebug& TDebug::operator>>(Host* pHost)
                 if (message.mTag.isNull()) {
                     mudlet::mpDebugConsole->print(message.mMessage, message.mForeground, message.mBackground);
                 } else {
-                    mudlet::mpDebugConsole->print(QStringLiteral("[%1] %2").arg(message.mTag, message.mMessage), message.mForeground, message.mBackground);
+                    mudlet::mpDebugConsole->print(message.mTag % message.mMessage, message.mForeground, message.mBackground);
                 }
             }
         }
 
-        QChar tag = deduceProfileTag(msg, pHost);
+        auto tag = deduceProfileTag(msg, pHost);
         if (tag.isNull()) {
             // We use an empty message with no host pointer to flush out the
             // enqueued messages the first time the CDC is shown - so in that
@@ -77,9 +78,9 @@ TDebug& TDebug::operator>>(Host* pHost)
             if (!msg.isEmpty()) {
                 mudlet::mpDebugConsole->print(msg, fgColor, bgColor);
             }
-        } else if (tag == QLatin1Char('*') || Q_UNLIKELY(tag == QLatin1Char('!')) || TDebug::smIdentifierMap.count() > 1) {
-            // More than one profile active or this is a system message or something went wrong in identifying the profile:
-            mudlet::mpDebugConsole->print(QStringLiteral("[%1] %2").arg(tag, msg), fgColor, bgColor);
+        } else if (tag == csmTagSystemMessage || Q_UNLIKELY(tag == csmTagFault) || TDebug::smIdentifierMap.count() > 1) {
+            // This is a system message or something went wrong in identifying the profile or more than one profile is active
+            mudlet::mpDebugConsole->print(tag % msg, fgColor, bgColor);
         } else {
             // Only one profile active - so don't print the tag:
             mudlet::mpDebugConsole->print(msg, fgColor, bgColor);
@@ -163,18 +164,21 @@ TDebug& TDebug::operator<<(const QList<int>& list)
 void TDebug::changeHostName(const Host* pHost, const QString& newName)
 {
     if (pHost) {
-        QPair<QString, QChar>& pair = TDebug::smIdentifierMap[pHost];
+        QPair<QString, QString>& pair = TDebug::smIdentifierMap[pHost];
         pair.first = newName;
+        mudlet::self()->mpTabBar->applyPrefixToDisplayedText(newName, pair.second);
     }
 }
 
 /* static */ void TDebug::addHost(Host* pHost)
 {
     if (!initialised) {
-        smAvailableIdentifiers << QLatin1Char('A') << QLatin1Char('B') << QLatin1Char('C') << QLatin1Char('D') << QLatin1Char('E') << QLatin1Char('F') << QLatin1Char('G') << QLatin1Char('H')
-                               << QLatin1Char('I') << QLatin1Char('J') << QLatin1Char('K') << QLatin1Char('L') << QLatin1Char('M') << QLatin1Char('N') << QLatin1Char('O') << QLatin1Char('P')
-                               << QLatin1Char('Q') << QLatin1Char('R') << QLatin1Char('S') << QLatin1Char('T') << QLatin1Char('U') << QLatin1Char('V') << QLatin1Char('X') << QLatin1Char('Y')
-                               << QLatin1Char('Z');
+        smAvailableIdentifiers << QStringLiteral("[A] ") << QStringLiteral("[B] ") << QStringLiteral("[C] ") << QStringLiteral("[D] ") << QStringLiteral("[E] ")
+                               << QStringLiteral("[F] ") << QStringLiteral("[G] ") << QStringLiteral("[H] ") << QStringLiteral("[I] ") << QStringLiteral("[J] ")
+                               << QStringLiteral("[K] ") << QStringLiteral("[L] ") << QStringLiteral("[M] ") << QStringLiteral("[N] ") << QStringLiteral("[O] ")
+                               << QStringLiteral("[P] ") << QStringLiteral("[Q] ") << QStringLiteral("[R] ") << QStringLiteral("[S] ") << QStringLiteral("[T] ")
+                               << QStringLiteral("[U] ") << QStringLiteral("[V] ") << QStringLiteral("[W] ") << QStringLiteral("[X] ") << QStringLiteral("[Y] ")
+                               << QStringLiteral("[Z] ");
         initialised = true;
     }
 
@@ -188,24 +192,35 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     // - so this copy can persist independently of the original when the latter
     // goes away:
     hostName.detach();
+    QPair<QString, QString> newIdentifier;
     if (TDebug::smAvailableIdentifiers.isEmpty()) {
-        // Run out of identifers - fall back to '?'
-        QPair<QString, QChar> newIdentifier = qMakePair(hostName, QLatin1Char('?'));
+        // Run out of identifers - use fall-back one:
+        newIdentifier = qMakePair(hostName, csmTagOverflow);
         TDebug::smIdentifierMap.insert(pHost, newIdentifier);
     } else {
-        QPair<QString, QChar> newIdentifier = qMakePair(hostName, smAvailableIdentifiers.dequeue());
+        newIdentifier = qMakePair(hostName, smAvailableIdentifiers.dequeue());
         TDebug::smIdentifierMap.insert(pHost, newIdentifier);
     }
     TDebug localMessage(Qt::blue, Qt::white);
     localMessage << QStringLiteral("Profile '%1' started.\n").arg(hostName) >> nullptr;
     TDebug tableMessage(Qt::white, Qt::black);
     tableMessage << TDebug::displayNewTable() >> nullptr;
+    if (mudlet::debugMode) {
+        // Can't use TTabBar::applyPrefixToDisplayedText(hostName, newIdentifier.second)
+        // here as the profile's tab has not been added to the tabbar yet.
+        // Instead arrange for all the tabs to be refreshed when we are next
+        // idle:
+        QTimer::singleShot(0, mudlet::self(), []() {
+            mudlet::self()->refreshTabBar();
+        });
+    }
 }
 
 /* static */ void TDebug::removeHost(Host* pHost)
 {
     auto identifier = TDebug::smIdentifierMap.take(pHost);
-    if (identifier.second != QLatin1Char('?') && identifier.second != QLatin1Char('*') && identifier.second != QLatin1Char('!')) {
+    // Check for the use of non-profile specific tags:
+    if (identifier.second != csmTagOverflow && identifier.second != csmTagSystemMessage && identifier.second != csmTagFault) {
         // is a normal identifier so push it in at the back of the queue for reuse:
         smAvailableIdentifiers.enqueue(identifier.second);
     }
@@ -220,11 +235,13 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     // We do not translate this currently as the Central Debug Console does not
     // get translated content - yet?
     QStringList messageLines;
-    QMapIterator<const Host*, QPair<QString, QChar>> itIdentifier(TDebug::smIdentifierMap);
+    QMapIterator<const Host*, QPair<QString, QString>> itIdentifier(TDebug::smIdentifierMap);
     while (itIdentifier.hasNext()) {
         itIdentifier.next();
         if (itIdentifier.key()) {
-            messageLines.append(QStringLiteral(" [%1] = \"%2\"").arg(itIdentifier.value().second, itIdentifier.value().first));
+            // Each identifier includes spaces, so no need to include one before
+            // the '=' sign:
+            messageLines.append(QStringLiteral(" %1= \"%2\"").arg(itIdentifier.value().second, itIdentifier.value().first));
         }
     }
     if (messageLines.count() > 1) {
@@ -232,12 +249,16 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     }
     messageLines.prepend(QStringLiteral(" [*] = System message, not belonging to a specific profile"));
     if (TDebug::smIdentifierMap.count() > 1) {
-        messageLines.prepend(QStringLiteral("%1 profiles active now. Each message from a profile will be prefixed as follows:")
-                                     .arg(TDebug::smIdentifierMap.count()));
+        // The line wrapping of these texts is a bit less than one might expect
+        // because the default size will clip the text otherwise, unless the
+        // user resizes the CDC:
+        messageLines.prepend(QStringLiteral("%1 profiles active now. Each message from a profile \n"
+                                            "will be prefixed as follows:")
+                             .arg(TDebug::smIdentifierMap.count()));
     } else {
-        messageLines.prepend(QStringLiteral("Only 1 profile active now. Only non-profile messages will be prefixed until "
-                                            "another profile is started but then its will be marked as follows:"));
-    }
+        messageLines.prepend(QStringLiteral("Only 1 profile active now. Only non-profile messages \n"
+                                            "will be prefixed until another profile is started but \n"
+                                            "then its will be marked as follows:"));    }
 
     return messageLines.join(QChar::LineFeed).append(QChar::LineFeed);
 }
@@ -248,12 +269,11 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     localMessage << QString() >> nullptr;
 }
 
-// This will strip the TDebug::csmContinue QChar from the start of text:
-/* static */ QChar TDebug::deduceProfileTag(QString& text, Host* pHost)
+// This will strip a TDebug::csmContinue QChar if present from the start of text:
+/* static */ QString TDebug::deduceProfileTag(QString& text, Host* pHost)
 {
     if (text.startsWith(csmContinue)) {
         text.remove(0, 1);
-        return QChar();
     }
     if (pHost) {
         if (!smIdentifierMap.contains(pHost)) {
@@ -264,14 +284,20 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
             addHost(pHost);
         }
         // By now smIdentifierMap WILL contain something for pHost - but use '!'
-        // if something is really screwy and it does not:
-        return smIdentifierMap.value(pHost, qMakePair(QString(), QLatin1Char('!'))).second;
+        // if something is really screwy and it does not, ah, we have a method
+        // for that:
+        return getTag(pHost);
     }
     // Must be a system message - or the dummy one to flush the queue.
     if (!text.isEmpty()) {
         // A system message:
-        return QLatin1Char('*');
+        return csmTagSystemMessage;
     }
     // The dummy one:
-    return QChar();
+    return QString();
+}
+
+/* static */ QString TDebug::getTag(Host* pHost)
+{
+    return smIdentifierMap.value(pHost, qMakePair(QString(), csmTagFault)).second;
 }

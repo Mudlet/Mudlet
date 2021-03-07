@@ -35,7 +35,7 @@ class Host;
 
 struct TDebugMessage
 {
-    TDebugMessage(const QString& text, const QChar& tag, const QColor& fg, const QColor& bg)
+    TDebugMessage(const QString& text, const QString& tag, const QColor& fg, const QColor& bg)
     : mMessage(text)
     , mTag(tag)
     , mForeground(fg)
@@ -43,7 +43,7 @@ struct TDebugMessage
     {}
 
     QString mMessage;
-    QChar mTag;
+    QString mTag;
     QColor mForeground;
     QColor mBackground;
 
@@ -51,18 +51,26 @@ struct TDebugMessage
 
 class TDebug
 {
-    // A shared map that is uses to put a single character identifier on each
-    // debug message - the first value is used to create a table to display on
-    // changes and the second value is what short identifier is used:
-    static QMap<const Host*, QPair<QString, QChar>> smIdentifierMap;
+    // A shared map that is uses to put a short identifier on each debug message
+    // - the first value is used to create a table to display on changes and the
+    // second value is the short identifier is used:
+    static QMap<const Host*, QPair<QString, QString>> smIdentifierMap;
     // Used to order identifier in the same application run:
-    static QQueue<QChar> smAvailableIdentifiers;
+    static QQueue<QString> smAvailableIdentifiers;
     static bool initialised;
     // This is a temporary bodge until we can decouple the Central Debug
     // Console from having to be associated with a Host (Profile) instance,
     // as that prevents it from being created until a profile has - which makes
     // displaying details from that first profile being loaded harder:
     static QQueue<TDebugMessage> smMessageQueue;
+
+    // Used as a tag for system (non-profile) messages:
+    inline static const QString csmTagSystemMessage = QStringLiteral("[*] ");
+    // Used as a tag for messages where something has gone wrong and it is not
+    // possible to work out which profile it is from:
+    inline static const QString csmTagFault = QStringLiteral("[!] ");
+    // Used as a tag for messages on the 27th and above currently active profiles:
+    inline static const QString csmTagOverflow  = QStringLiteral("[?] ");
 
     QString msg;
     QColor fgColor;
@@ -76,6 +84,7 @@ public:
     static void removeHost(Host*);
     static void changeHostName(const Host*, const QString&);
     static void flushMessageQueue();
+    static QString getTag(Host*);
 
     // Used to flush/print out the accumulated message:
     TDebug& operator>>(Host*);
@@ -103,7 +112,7 @@ private:
     TDebug() = default;
 
     static QString displayNewTable();
-    static QChar deduceProfileTag(QString&, Host*);
+    static QString deduceProfileTag(QString&, Host*);
 };
 
 #endif // MUDLET_TDEBUG_H
