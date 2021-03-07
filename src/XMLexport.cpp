@@ -404,7 +404,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     mpHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     host.append_attribute("mEnableUserDictionary") = enableUserDictionary ? "yes" : "no";
     host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
-    host.append_attribute("mShowInfo") = pHost->mShowInfo ? "yes" : "no";
+    if (pHost->mMapInfoContributors.isEmpty()) {
+        host.append_attribute("mShowInfo") = "no";
+    }
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
     host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
@@ -415,6 +417,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mRoomSize") = QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mLineSize") = QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mBubbleMode") = pHost->mBubbleMode ? "yes" : "no";
+    host.append_attribute("mMapViewOnly") = pHost->mMapViewOnly ? "yes" : "no";
     host.append_attribute("mShowRoomIDs") = pHost->mShowRoomID ? "yes" : "no";
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
@@ -551,6 +554,14 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         // with older version of Mudlet
         host.append_child("mLineSize").text().set(QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData());
         host.append_child("mRoomSize").text().set(QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData());
+    }
+    {
+        auto mapInfoContributors = host.append_child("mMapInfoContributors");
+        QSetIterator<QString> iterator(pHost->mMapInfoContributors);
+        while (iterator.hasNext()) {
+            auto mapInfoContributor = mapInfoContributors.append_child("mapInfoContributor");
+            mapInfoContributor.text().set(iterator.next().toUtf8().constData());
+        }
     }
 
     {

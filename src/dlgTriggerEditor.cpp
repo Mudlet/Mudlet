@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016-2020 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
@@ -811,6 +811,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         pItem->spinBox_lineSpacer->hide();
         pItem->label_patternNumber->setText(QString::number(i+1));
         pItem->label_patternNumber->show();
+        if (i == 0) {
+            pItem->lineEdit_pattern->setPlaceholderText(tr("Text to find (trigger pattern)"));
+        }
     }
     // force the minimum size of the scroll area for the trigger items to be one
     // and a half trigger item widgets:
@@ -8898,13 +8901,13 @@ QString dlgTriggerEditor::generateButtonStyleSheet(const QColor& color, const bo
     if (color != QColor("transparent") && color.isValid()) {
 #endif
         if (isEnabled) {
-            return QStringLiteral("QPushButton {color: %1; background-color: %2; }")
+            return mudlet::self()->mTEXT_ON_BG_STYLESHEET
                     .arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"),
                          color.name());
         }
 
         QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness());
-        return QStringLiteral("QPushButton {color: %1; background-color: %2; }")
+        return mudlet::self()->mTEXT_ON_BG_STYLESHEET
                 .arg(QLatin1String("darkGray"), disabledColor.name());
     } else {
         return QString();

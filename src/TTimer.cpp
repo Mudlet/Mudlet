@@ -76,11 +76,12 @@ TTimer::~TTimer()
             if (mScript.isEmpty()) {
                 mpHost->mLuaInterpreter.delete_luafunction(this);
             } else {
-                mpHost->mLuaInterpreter.delete_luafunction(QStringLiteral("Timer%1").arg(mName));
+                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
             }
         }
     }
 
+    mpHost->getTimerUnit()->mQTimerSet.remove(mpQTimer);
     mpQTimer->deleteLater();
 }
 

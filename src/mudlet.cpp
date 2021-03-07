@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -45,8 +45,10 @@
 #include "dlgConnectionProfiles.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
+#include "dlgModuleManager.h"
 #include "dlgNotepad.h"
 #include "dlgPackageExporter.h"
+#include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
 #include "VarUnit.h"
@@ -66,6 +68,7 @@
 #include <QNetworkDiskCache>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QStyleFactory>
 #include <QTableWidget>
 #include <QTextStream>
 #include <QTimer>
@@ -75,6 +78,8 @@
 #include <QRandomGenerator>
 #include <zip.h>
 #include "post_guard.h"
+
+using namespace std::chrono_literals;
 
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
@@ -164,13 +169,10 @@ mudlet::mudlet()
 , mIsLoadingLayout(false)
 , mHasSavedLayout(false)
 , mpAboutDlg(nullptr)
-, mpModuleDlg(nullptr)
-, mpPackageManagerDlg(nullptr)
 , mConnectionDialog(nullptr)
 , mShowIconsOnDialogs(true)
 , mShowIconsOnMenuCheckedState(Qt::PartiallyChecked)
 , mEditorTextOptions()
-, moduleTable(nullptr)
 #if defined(INCLUDE_UPDATER)
 , updater(nullptr)
 #endif
@@ -229,13 +231,6 @@ mudlet::mudlet()
 , mpActionTimers(nullptr)
 , mpActionTriggers(nullptr)
 , mpActionVariables(nullptr)
-, packageList(nullptr)
-, uninstallButton(nullptr)
-, installButton(nullptr)
-, mpModuleTableHost(nullptr)
-, moduleUninstallButton(nullptr)
-, moduleInstallButton(nullptr)
-, moduleHelpButton(nullptr)
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
@@ -256,6 +251,16 @@ mudlet::mudlet()
     scanForMudletTranslations(QStringLiteral(":/lang"));
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
+
+    if (QString stylefactory = qApp->style()->objectName(); QStringList{"windowsvista", "macintosh"}.contains(stylefactory, Qt::CaseInsensitive)) {
+        qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << stylefactory << "' has been detected as the style factory in use - QPushButton styling fix applied!";
+        mBG_ONLY_STYLESHEET = QStringLiteral("QPushButton {background-color: %1; border: 1px solid #8f8f91;}");
+        mTEXT_ON_BG_STYLESHEET = QStringLiteral("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}");
+    } else {
+        qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << stylefactory << "' has been detected as the style factory in use - no styling fixes applied.";
+        mBG_ONLY_STYLESHEET = QStringLiteral("QPushButton {background-color: %1;}");
+        mTEXT_ON_BG_STYLESHEET = QStringLiteral("QPushButton {color: %1; background-color: %2;}");
+    }
 
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
@@ -293,8 +298,7 @@ mudlet::mudlet()
     mpTabBar->setAutoHide(true);
     connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_close_profile_requested);
     // TODO: Do not enable this option currently - although the user can drag
-    // the tabs the underlying main TConsoles do not move and then it means that
-    // the wrong title can be shown over the wrong window.
+    // the tabs, the underlying main TConsoles do not move with multiview enabled
     mpTabBar->setMovable(false);
     connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
     auto layoutTopLevel = new QVBoxLayout(frame);
@@ -319,6 +323,8 @@ mudlet::mudlet()
     } else {
         mAutolog = false;
     }
+
+    firstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
 
     mpButtonConnect = new QToolButton(this);
     mpButtonConnect->setText(tr("Connect"));
@@ -1015,12 +1021,6 @@ void mudlet::migrateDebugConsole(Host* currentHost)
     mpDebugArea->close();
 }
 
-// returns true if this is the first launch of Mudlet on this machine
-bool mudlet::firstLaunch()
-{
-    return !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
-}
-
 // As we are currently only using files from a resource file we only need to
 // analyse them once per application run - if we were loading from a user
 // selectable location, or even from a read-only part of their computer's
@@ -1189,104 +1189,12 @@ void mudlet::loadTranslators(const QString& languageCode)
     if (!mudletTranslatorFileName.isEmpty()) {
         pMudletTranslator->load(mudletTranslatorFileName, mMudletTranslationsPathName);
         if (!pMudletTranslator->isEmpty()) {
-            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translation from: \"" << mMudletTranslationsPathName << "/" << mudletTranslatorFileName << "\"...";
+            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translation from: \"" << mMudletTranslationsPathName << "/"
+                                         << mudletTranslatorFileName << "\"...";
             qApp->installTranslator(pMudletTranslator);
             mTranslatorsLoadedList.append(pMudletTranslator);
         }
     }
-}
-
-bool mudlet::moduleTableVisible()
-{
-    if (moduleTable) {
-        return moduleTable->isVisible();
-    }
-    return false;
-}
-
-void mudlet::layoutModules()
-{
-    if (!mpModuleTableHost) {
-        return;
-    }
-
-    QMapIterator<QString, QStringList> it(mpModuleTableHost->mInstalledModules);
-    QStringList sl;
-    sl << tr("Module Name") << tr("Priority") << tr("Sync") << tr("Module Location");
-    moduleTable->setHorizontalHeaderLabels(sl);
-    moduleTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    moduleTable->verticalHeader()->hide();
-    moduleTable->setShowGrid(true);
-    //clear everything
-    for (int i = 0; i <= moduleTable->rowCount(); i++) {
-        moduleTable->removeRow(i);
-    }
-    //order modules by priority and then alphabetically
-    QMap<int, QStringList> mOrder;
-    while (it.hasNext()) {
-        it.next();
-        int priority = mpModuleTableHost->mModulePriorities[it.key()];
-        if (mOrder.contains(priority)) {
-            mOrder[priority].append(it.key());
-        } else {
-            mOrder[priority] = QStringList(it.key());
-        }
-    }
-    QMapIterator<int, QStringList> it2(mOrder);
-    while (it2.hasNext()) {
-        it2.next();
-        QStringList pModules = it2.value();
-        pModules.sort();
-        for (int i = 0; i < pModules.size(); i++) {
-            int row = moduleTable->rowCount();
-            moduleTable->insertRow(row);
-            auto masterModule = new QTableWidgetItem();
-            auto itemEntry = new QTableWidgetItem();
-            auto itemLocation = new QTableWidgetItem();
-            auto itemPriority = new QTableWidgetItem();
-            QStringList moduleInfo = mpModuleTableHost->mInstalledModules[pModules[i]];
-            QFileInfo moduleFile = moduleInfo[0];
-            QStringList accepted_suffix;
-            accepted_suffix << "xml" << "trigger";
-            if (accepted_suffix.contains(moduleFile.suffix().trimmed(), Qt::CaseInsensitive)) {
-                masterModule->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-                masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                                                 .arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
-                                                         "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
-                                                         "is saved at the end of the session.")));
-            } else {
-                masterModule->setFlags(Qt::NoItemFlags);
-                masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                                                 .arg(tr("<b>Note:</b> <i>.zip</i> and <i>.mpackage</i> modules are currently unable to be synced<br> "
-                                                         "only <i>.xml</i> packages are able to be synchronized across profiles at the moment. ")));
-            }
-
-
-            if (moduleInfo.at(1).toInt()) {
-                masterModule->setCheckState(Qt::Checked);
-            } else {
-                masterModule->setCheckState(Qt::Unchecked);
-            }
-            masterModule->setText(QString());
-
-            // Although there is now no text used here this may help to make the
-            // checkbox more central in the column
-            masterModule->setTextAlignment(Qt::AlignCenter);
-
-            QString moduleName = pModules[i];
-            itemEntry->setText(moduleName);
-            itemEntry->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
-            itemLocation->setText(moduleInfo[0]);
-            itemLocation->setToolTip(moduleInfo[0]);                          // show the full path in a tooltip, in case it doesn't fit in the table
-            itemLocation->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled); // disallow editing of module path, because that is not saved
-            itemPriority->setData(Qt::EditRole, mpModuleTableHost->mModulePriorities[moduleName]);
-            moduleTable->setItem(row, 0, itemEntry);
-            moduleTable->setItem(row, 1, itemPriority);
-            moduleTable->setItem(row, 2, masterModule);
-            moduleTable->setItem(row, 3, itemLocation);
-        }
-    }
-    moduleTable->resizeColumnsToContents();
 }
 
 void mudlet::slot_module_manager()
@@ -1295,43 +1203,13 @@ void mudlet::slot_module_manager()
     if (!pH) {
         return;
     }
-
-    if (!mpModuleDlg) {
-        // No dialog open, note the profile concerned
-        mpModuleTableHost = pH;
-
-        QUiLoader loader;
-        QFile file(":/ui/module_manager.ui");
-        file.open(QFile::ReadOnly);
-        mpModuleDlg = dynamic_cast<QDialog*>(loader.load(&file, this));
-        file.close();
-
-        if (!mpModuleDlg) {
-            return;
-        }
-
-        moduleTable = mpModuleDlg->findChild<QTableWidget*>("moduleTable");
-        moduleUninstallButton = mpModuleDlg->findChild<QPushButton*>("uninstallButton");
-        moduleInstallButton = mpModuleDlg->findChild<QPushButton*>("installButton");
-        moduleHelpButton = mpModuleDlg->findChild<QPushButton*>("helpButton");
-
-        if (!moduleTable || !moduleUninstallButton || !moduleHelpButton) {
-            return;
-        }
-
-        layoutModules();
-        connect(moduleUninstallButton.data(), &QAbstractButton::clicked, this, &mudlet::slot_uninstall_module);
-        connect(moduleInstallButton.data(), &QAbstractButton::clicked, this, &mudlet::slot_install_module);
-        connect(moduleHelpButton.data(), &QAbstractButton::clicked, this, &mudlet::slot_help_module);
-        connect(moduleTable.data(), &QTableWidget::itemClicked, this, &mudlet::slot_module_clicked);
-        connect(moduleTable.data(), &QTableWidget::itemChanged, this, &mudlet::slot_module_changed);
-        connect(mpModuleDlg.data(), &QObject::destroyed, this, &mudlet::slot_module_manager_destroyed);
-        mpModuleDlg->setWindowTitle(tr("Module Manager - %1").arg(mpModuleTableHost->getName()));
-        mpModuleDlg->setAttribute(Qt::WA_DeleteOnClose);
+    auto moduleManager = pH->mpModuleManager;
+    if (!moduleManager){
+        moduleManager = new dlgModuleManager(this, pH);
+        pH->mpModuleManager = moduleManager;
     }
-
-    mpModuleDlg->raise();
-    mpModuleDlg->show();
+    moduleManager->raise();
+    moduleManager->show();
 }
 
 bool mudlet::openWebPage(const QString& path)
@@ -1346,131 +1224,6 @@ bool mudlet::openWebPage(const QString& path)
     return QDesktopServices::openUrl(url);
 }
 
-void mudlet::slot_help_module()
-{
-    if (!mpModuleTableHost) {
-        return;
-    }
-    int cRow = moduleTable->currentRow();
-    QTableWidgetItem* pI = moduleTable->item(cRow, 0);
-    if (!pI) {
-        return;
-    }
-    if (mpModuleTableHost->moduleHelp.value(pI->text()).contains(QLatin1String("helpURL")) && !mpModuleTableHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")).isEmpty()) {
-        if (!openWebPage(mpModuleTableHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")))) {
-            //failed first open, try for a module related path
-            QTableWidgetItem* item = moduleTable->item(cRow, 3);
-            QString itemPath = item->text();
-            QStringList path = itemPath.split(QDir::separator());
-            path.pop_back();
-            path.append(QDir::separator());
-            path.append(mpModuleTableHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")));
-            QString path2 = path.join(QString());
-            if (!openWebPage(path2)) {
-                moduleHelpButton->setDisabled(true);
-            }
-        }
-    }
-}
-
-
-void mudlet::slot_module_clicked(QTableWidgetItem* pItem)
-{
-    if (!mpModuleTableHost) {
-        return;
-    }
-
-    int i = pItem->row();
-
-    QTableWidgetItem* entry = moduleTable->item(i, 0);
-    QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
-    QTableWidgetItem* itemPriority = moduleTable->item(i, 1);
-    QTableWidgetItem* itemPath = moduleTable->item(i, 3);
-    qDebug() << itemPath->text();
-    if (!entry || !checkStatus || !itemPriority || !mpModuleTableHost->mInstalledModules.contains(entry->text())) {
-        moduleHelpButton->setDisabled(true);
-        if (checkStatus) {
-            checkStatus->setCheckState(Qt::Unchecked);
-            checkStatus->setFlags(Qt::NoItemFlags);
-        }
-        return;
-    }
-
-    if (mpModuleTableHost->moduleHelp.contains(entry->text())) {
-        moduleHelpButton->setDisabled((!mpModuleTableHost->moduleHelp.value(entry->text()).contains(QStringLiteral("helpURL"))
-                                       || mpModuleTableHost->moduleHelp.value(entry->text()).value(QStringLiteral("helpURL")).isEmpty()));
-    } else {
-        moduleHelpButton->setDisabled(true);
-    }
-}
-
-void mudlet::slot_module_changed(QTableWidgetItem* pItem)
-{
-    if (!mpModuleTableHost) {
-        return;
-    }
-
-    int i = pItem->row();
-
-    QStringList moduleStringList;
-    QTableWidgetItem* entry = moduleTable->item(i, 0);
-    QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
-    QTableWidgetItem* itemPriority = moduleTable->item(i, 1);
-    if (!entry || !checkStatus || !itemPriority || !mpModuleTableHost->mInstalledModules.contains(entry->text())) {
-        return;
-    }
-    moduleStringList = mpModuleTableHost->mInstalledModules.value(entry->text());
-    if (checkStatus->checkState() == Qt::Checked) {
-        moduleStringList[1] = QLatin1String("1");
-    } else {
-        moduleStringList[1] = QLatin1String("0");
-    }
-    mpModuleTableHost->mInstalledModules[entry->text()] = moduleStringList;
-    mpModuleTableHost->mModulePriorities[entry->text()] = itemPriority->text().toInt();
-}
-
-void mudlet::slot_install_module()
-{
-    if (!mpModuleTableHost) {
-        return;
-    }
-
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet Module"), QDir::currentPath());
-    if (fileName.isEmpty()) {
-        return;
-    }
-
-    QFile file(fileName);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Load Mudlet Module:"), tr("Cannot read file %1:\n%2.").arg(fileName, file.errorString()));
-        return;
-    }
-
-    mpModuleTableHost->installPackage(fileName, 1);
-    for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
-        moduleTable->removeRow(i);
-    }
-
-    layoutModules();
-}
-
-void mudlet::slot_uninstall_module()
-{
-    if (!mpModuleTableHost) {
-        return;
-    }
-
-    int cRow = moduleTable->currentRow();
-    QTableWidgetItem* pI = moduleTable->item(cRow, 0);
-    if (pI) {
-        mpModuleTableHost->uninstallPackage(pI->text(), 1);
-    }
-    for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
-        moduleTable->removeRow(i);
-    }
-    layoutModules();
-}
-
 void mudlet::slot_package_manager()
 {
     Host* pH = getActiveHost();
@@ -1478,73 +1231,14 @@ void mudlet::slot_package_manager()
         return;
     }
 
-    if (!mpPackageManagerDlg) {
-        QUiLoader loader;
-        QFile file(":/ui/package_manager.ui");
-        file.open(QFile::ReadOnly);
-        mpPackageManagerDlg = dynamic_cast<QDialog*>(loader.load(&file, this));
-        file.close();
-
-        if (!mpPackageManagerDlg) {
-            return;
-        }
-
-        packageList = mpPackageManagerDlg->findChild<QListWidget*>("packageList");
-        uninstallButton = mpPackageManagerDlg->findChild<QPushButton*>("uninstallButton");
-        installButton = mpPackageManagerDlg->findChild<QPushButton*>("installButton");
-
-        if (!packageList || !uninstallButton) {
-            return;
-        }
-
-        packageList->addItems(pH->mInstalledPackages);
-        connect(uninstallButton.data(), &QAbstractButton::clicked, this, &mudlet::slot_uninstall_package);
-        connect(installButton.data(), &QAbstractButton::clicked, this, &mudlet::slot_install_package);
-        mpPackageManagerDlg->setWindowTitle(tr("Package Manager"));
-        mpPackageManagerDlg->setAttribute(Qt::WA_DeleteOnClose);
+    auto packageManager = pH->mpPackageManager;
+    if (!packageManager) {
+        packageManager = new dlgPackageManager(this, pH);
+        pH->mpPackageManager = packageManager;
     }
-
-    mpPackageManagerDlg->raise();
-    mpPackageManagerDlg->show();
-}
-
-void mudlet::slot_install_package()
-{
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), QDir::currentPath());
-    if (fileName.isEmpty()) {
-        return;
-    }
-
-    QFile file(fileName);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Import Mudlet Package:"), tr("Cannot read file %1:\n%2.").arg(fileName, file.errorString()));
-        return;
-    }
-
-    Host* pH = getActiveHost();
-    if (!pH) {
-        return;
-    }
-
-    pH->installPackage(fileName, 0);
-    packageList->clear();
-    packageList->addItems(pH->mInstalledPackages);
-}
-
-void mudlet::slot_uninstall_package()
-{
-    Host* pH = getActiveHost();
-    if (!pH) {
-        return;
-    }
-    auto selectedPackages = packageList->selectedItems();
-    if (!selectedPackages.empty()) {
-        for (auto package : selectedPackages) {
-            pH->uninstallPackage(package->text(), 0);
-        }
-    }
-    packageList->clear();
-    packageList->addItems(pH->mInstalledPackages);
+    packageManager->raise();
+    packageManager->showNormal();
+    packageManager->activateWindow();
 }
 
 void mudlet::slot_package_exporter()
@@ -2496,7 +2190,7 @@ void mudlet::slot_update_shortcuts()
         dactionNotepad->setShortcut(QKeySequence());
 
         packagesShortcut = new QShortcut(packagesKeySequence, this);
-        connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_options_dialog);
+        connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_package_manager);
         dactionPackageManager->setShortcut(QKeySequence());
 
         modulesShortcut = new QShortcut(packagesKeySequence, this);
@@ -2585,7 +2279,7 @@ void mudlet::slot_mapper()
     if (!pHost) {
         return;
     }
-    pHost->createMapper(true);
+    pHost->showHideOrCreateMapper(true);
 }
 
 void mudlet::slot_open_mappingscripts_page()
@@ -2644,60 +2338,6 @@ void mudlet::slot_irc()
 void mudlet::slot_discord()
 {
     openWebPage(mMudletDiscordInvite);
-}
-
-void mudlet::updateMudletDiscordInvite()
-{
-    QDir dir;
-    QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
-    if (!dir.mkpath(cacheDir)) {
-        qWarning() << "Couldn't create cache directory for Mudlet's Discord JSON file: " << cacheDir;
-        return;
-    }
-
-    auto manager = new QNetworkAccessManager(this);
-    auto diskCache = new QNetworkDiskCache(this);
-    diskCache->setCacheDirectory(cacheDir);
-    manager->setCache(diskCache);
-
-
-    QUrl url(QStringLiteral("https://discord.com/api/guilds/283581582550237184/widget.json"));
-    QNetworkRequest request(url);
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-    request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
-
-    QNetworkReply* getReply = manager->get(request);
-
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
-    connect(getReply, &QNetworkReply::errorOccurred, this, [=](QNetworkReply::NetworkError) {
-#else
-    connect(getReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
-#endif
-        qWarning() << "mudlet::updateMudletDiscordInvite() WARNING - couldn't download " << url.url() << " to update Mudlet's Discord invite link";
-        getReply->deleteLater();
-    });
-
-    connect(getReply,
-            &QNetworkReply::finished,
-            this,
-            std::bind(
-                    [=](QNetworkReply* reply) {
-                        if (reply->error() != QNetworkReply::NoError) {
-                            return;
-                        }
-
-                        auto widgetJson = QJsonDocument::fromJson(reply->readAll()).object();
-                        auto inviteKey = widgetJson.value(QStringLiteral("instant_invite"));
-                        if (inviteKey == QJsonValue::Undefined) {
-                            qWarning() << "mudlet::updateMudletDiscordInvite() WARNING - no 'instant_invite' key available in Discord's JSON";
-                            return;
-                        }
-
-                        mMudletDiscordInvite = inviteKey.toString();
-                        reply->deleteLater();
-                    },
-                    getReply));
 }
 
 void mudlet::slot_reconnect()
@@ -2911,7 +2551,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
 void mudlet::processEventLoopHack()
 {
-    QTimer::singleShot(1, this, &mudlet::processEventLoopHack_timerRun);
+    QTimer::singleShot(1ms, this, &mudlet::processEventLoopHack_timerRun);
 }
 
 void mudlet::processEventLoopHack_timerRun()
@@ -3571,13 +3211,6 @@ void mudlet::slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis ax
 }
 
 #endif // #ifdef QT_GAMEPAD_LIB
-
-void mudlet::slot_module_manager_destroyed()
-{
-    // Clear the record of the profile that had the module manager open so
-    // another profile can use it...
-    mpModuleTableHost = nullptr;
-}
 
 // Convenience helper - may aide things if we want to put files in a different
 // place...!
@@ -4564,15 +4197,15 @@ std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QS
     auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, QStringLiteral("profileicon"));
     if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
         qWarning() << "mudlet::setProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
-        return std::make_pair(false, QStringLiteral("couldn't remove existing icon file"));
+        return {false, QStringLiteral("couldn't remove existing icon file")};
     }
 
     if (!QFile::copy(newIconPath, profileIconPath)) {
         qWarning() << "mudlet::setProfileIcon() ERROR: couldn't copy new icon" << newIconPath<< " to" << profileIconPath;
-        return std::make_pair(false, QStringLiteral("couldn't copy icon file into new location"));
+        return {false, QStringLiteral("couldn't copy icon file into new location")};
     }
 
-    return std::make_pair(true, QString());
+    return {true, QString()};
 }
 
 std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
@@ -4581,10 +4214,10 @@ std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
     auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, QStringLiteral("profileicon"));
     if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
         qWarning() << "mudlet::resetProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
-        return std::make_pair(false, QStringLiteral("couldn't remove existing icon file"));
+        return {false, QStringLiteral("couldn't remove existing icon file")};
     }
 
-    return std::make_pair(true, QString());
+    return {true, QString()};
 }
 
 #if defined(Q_OS_WIN32)

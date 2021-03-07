@@ -1,11 +1,11 @@
-name: Build Mudlet
+name: 🔨 Build Mudlet
 on:
   push:
     branches: [master, development]
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: '0 1 * * *'
+    - cron: '0 2 * * *'
 
 jobs:
   compile-mudlet:
@@ -45,13 +45,24 @@ jobs:
             qt: '5.14.1'
             deploy: 'deploy'
 
+    env:
+      BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
+      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
+
+
     steps:
+    - name: Checkout Mudlet source code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+
     - name: Restore Qt cache
-      uses: actions/cache@v2
+      uses: actions/cache@v2.1.4
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
-        key: ${{matrix.os}}-qt-${{matrix.qt}}
+        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
@@ -60,16 +71,34 @@ jobs:
         dir: ${{runner.workspace}}
         arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
+        aqtversion: '==1.1.2'
 
-    - name: Checkout Mudlet source code
-      uses: actions/checkout@v2
+
+    - name: Restore Boost cache
+      uses: actions/cache@v2.1.4
+      id: cache-boost
       with:
-        submodules: true
-        fetch-depth: 0
+        path: ${{env.BOOST_ROOT}}
+        key: boost
+
+    - name: Install Boost
+      if: steps.cache-boost.outputs.cache-hit != 'true'
+      run: |
+        if [ "$OS" == "Windows_NT" ]; then
+          # fix up paths to be forward slashes consistently
+          BOOST_ROOT=$(echo $BOOST_ROOT | sed 's/\\/\//g')
+        fi
+        mkdir -p $BOOST_ROOT
+        curl --progress-bar --location --output $BOOST_ROOT/download.tar.bz2 $BOOST_URL
+        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar.bz2 -y -bd
+        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar -y -bd
+        cd $BOOST_ROOT && cp -r boost_*/* .
+        rm -rf boost_*/* download.tar.bz2 download.tar
+      shell: bash
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
-      uses: lukka/run-vcpkg@v5
+      uses: lukka/run-vcpkg@v7
       env:
         vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
       with:
@@ -86,7 +115,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip ccache luarocks
+        brew install pkg-config libzzip libzip ccache luarocks expect
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
@@ -108,18 +137,21 @@ jobs:
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
+        # Use latest available XCode
+        echo "DEVELOPER_DIR=/Applications/Xcode_12.4.app/Contents/Developer" >> $GITHUB_ENV
+
     - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
       run: |
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
-        sudo apt-get install ccache pkg-config pcregrep luarocks libzip-dev libglu1-mesa-dev libpulse-dev -y
+        sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev -y
 
-        # multiple versions of GCC available in Actions - update to latest
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 9
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 9
-        sudo update-alternatives --set gcc /usr/bin/gcc-9
-        sudo update-alternatives --set g++ /usr/bin/g++-9
+        # switch to GCC that supports C++17 while retaining support for older OS's
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 7
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 7
+        sudo update-alternatives --set gcc /usr/bin/gcc-7
+        sudo update-alternatives --set g++ /usr/bin/g++-7
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
@@ -142,9 +174,6 @@ jobs:
       if: runner.os == 'Windows'
       shell: powershell
       run: |
-        # Use pre-installed Boost
-        echo "BOOST_ROOT=$env:BOOST_ROOT_1_72_0" >> $env:GITHUB_ENV
-
         # Install dependencies not available on machine
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
         $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
@@ -176,11 +205,11 @@ jobs:
         echo "WITH_FONTS=no" >> $GITHUB_ENV
 
     - name: (Linux/macOS) restore ccache
-      uses: actions/cache@v2
+      uses: pat-s/always-upload-cache@v2.1.3
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{github.sha}}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-
+        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
+        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
       if: matrix.os != 'windows-latest'
 
     - name: (Linux/macOS) Set build info
@@ -188,6 +217,10 @@ jobs:
       run: |
         ${{github.workspace}}/CI/travis.validate_deployment.sh
         ${{github.workspace}}/CI/travis.set-build-info.sh
+
+    - name: (Linux/macOS) check ccache stats prior to build
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      run: ccache --show-stats
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
@@ -204,7 +237,11 @@ jobs:
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
-    - name: Run C++ tests (macOS)
+    - name: (Linux/macOS) check ccache stats post build
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      run: ccache --show-stats
+
+    - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
@@ -249,6 +286,10 @@ jobs:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+        MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v2

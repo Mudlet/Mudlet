@@ -64,6 +64,8 @@ class TMainConsole;
 class dlgNotepad;
 class TMap;
 class dlgIRC;
+class dlgPackageManager;
+class dlgModuleManager;
 class dlgProfilePreferences;
 
 class stopWatch {
@@ -370,7 +372,7 @@ public:
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setBackgroundImage(const QString& name, QString& path, int mode);
     bool resetBackgroundImage(const QString& name);
-    void createMapper(bool loadDefaultMap);
+    void showHideOrCreateMapper(const bool loadDefaultMap);
     bool setProfileStyleSheet(const QString& styleSheet);
     void check_for_mappingscript();
 
@@ -380,6 +382,8 @@ public:
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
+    dlgPackageManager* mpPackageManager;
+    dlgModuleManager* mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
 
     int commandLineMinimumHeight;
@@ -576,8 +580,9 @@ public:
 
     double mLineSize;
     double mRoomSize;
-    bool mShowInfo;
+    QSet<QString> mMapInfoContributors;
     bool mBubbleMode;
+    bool mMapViewOnly = true;
     bool mShowRoomID;
     bool mShowPanel;
     QString mServerGUI_Package_version;
@@ -621,7 +626,7 @@ signals:
 
 private slots:
     void slot_reloadModules();
-    void slot_purgeTimers();
+    void slot_purgeTemps();
 
 private:
     void installPackageFonts(const QString &packageName);
@@ -632,6 +637,8 @@ private:
     void removeAllNonPersistentStopWatches();
     void updateConsolesFont();
     void thankForUsingPTB();
+    void toggleMapperVisibility();
+    void createMapper(const bool);
 
     QFont mDisplayFont;
     QStringList mModulesToSync;
