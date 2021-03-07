@@ -26,7 +26,127 @@ This version will be the first to use this changelog file for gathering notes
 
  # [Unreleased] 4.11 - to be released soon
 
-This release is currently prepared outside of this changelog file
+## Even easier package install, drag URL into Mudlet
+
+## Named regex capture support
+
+## "wrong argument type" errors are gone
+
+## Profile save enabled by default
+
+## Delwing new core team member
+
+## Room borders + room selection
+
+## Debug console now shows warnings
+
+## Functions are now accepted everywhere, alongside [[code as text]]
+
+## Changelog
+
+**added:**
+
+- 'look' command in generic_mapper can now be translated
+- custom HTTP method requests are now supported (ie PATCH)
+- debug console now shows warnings from functions (which are returned as nil+message normally)
+- f() function for string interpolation, ie send(f("My target is {target}"))
+- functions are now accepted everywhere [[code here]] is as well
+- generic mapper: new 'lazy' map mode to match room names only, ignoring exits
+- getProfileTabNumber() to return the # of the current tab
+- getWindowWrap() so you can make echo's that don't wrap
+- launching Mudlet for the first time ever? The input line will now have a placeholder text saying where to type the text
+- map info box is now customizable
+- modules can now be loaded before scripts in a profile with the -1 module priority
+- named captures are now supported in regex triggers (matches.<capture name>)
+- placeholder text for command fields to explain what are they for
+- room characters can now be custom-coloured
+- rooms now have borders in the 2D view
+- saveJsonMap() and loadJsonMap() now support the Mudlet map format in JSON
+- showNotification() to show an OS (computer) notification
+- sysDownloadFileProgress event to monitor download progress
+- view-only mode in the mapper, which is on by default
+- X11 (Linux middle-click) selection is now supported
+- you can now install a package by dragging the URL onto Mudlet
+
+**improved:**
+
+- 'deleteOldProfiles' now deletes old modules as well
+- 'no map loaded' will now differentiate between actually no map loaded, and not knowing where you are
+- Adjustable.Container now deals with corrupted save files and table for save slots
+- all "wrong argument type" errors are now gone, will give an actual explanation instead
+- c/d/hecho text formatting can do italics and bold
+- connection dialog now looks better in dark themes
+- default background color is now transparent, not black, in c/d/hecho
+- default, unused profiles no longer require a confirmation to delete
+- event engine can now pass large numbers through OK
+- exists() function will now error on a wrong input type
+- expired timers are now periodically deleted when you're offline, instead of in bulk when you reconnected (which made Mudlet freeze for a while)
+- getMapLabel() now returns foreground/background colors and the image as base64
+- GMCP package names are now parsed in a case-insensitive way, per spec
+- installing a package by dragging it into Mudlet will now give a notification
+- installPackage will now return true/false indicating if it worked
+- internal: history code is now a single code path, not duplicated
+- italics and emojis won't overlap each other anymore
+- line spacer pattern now uses a spinbox instead of a free-text line edit
+- loading a map will now choose a better folder to start in
+- more functions will now validate their arguments instead of throwing an error
+- name search function can now be customised in the generic mapper
+- new profiles are not preinstalled the "send text to all games" script anymore. There's a better package available now https://forums.mudlet.org/viewtopic.php?f=6&t=23023
+- newline is now its own entry in the history buffer
+- profile save is enabled by default on new profiles
+- permGroup can now be used for keys
+- removed all QPalettes from forms/dialogues, enabling stylesheets to cover more aspects of Mudlet
+- response size limit is removed in HTTP calls
+- right-clicking on a room will select it for the pop-up
+- room selection now looks better
+- scrolling is now smoother in general
+- scrolling transition is smoother when screen splits using scrollwheel 
+- setFont() won't work with unknown fonts
+- settings dialog will now close when the button is released, and not pressed, as expected
+- simplified unknown text for given encoding message
+- small text under icons in the connection dialog is gone
+- telnet options within subnegotiations are now ignored, instead of breaking output
+- timestamps are now copied as well when they're visible
+- trigger patterns now have an explanation of where the text goes for newbies
+- TTS won't try to speak out <, >, and no text
+- typing in the connection dialog will now highlight the relevant icons
+- using Alt+O will now re-focus on the package manager if it was open
+- you can drag left/right to increase selection after double or triple-clicking on a word
+- you can now copy text from the update dialog
+- you can now multi-select in the package manager
+
+**fixed:**
+
+- Adjustable container attached menu shows elements now on hover (or similar)
+- crash with reloadModule()
+- Discord link in Mudlet will now always work
+- display() won't freeze on Geyser labels for a while
+- export action isn't enabled anymore in Variables view, as those weren't exportable
+- flyout labels will close when leaving the parent item
+- generic mapper script: correctly handle 'set player location'
+- IRC '/quit' no longer crashes Mudlet
+- just one 'about' button will now be on screen, instead of many if Mudlet was left running for a while and an update was available
+- Lua trigger conditions are now properly deleted when the profile is closed, fixing a small memory leak
+- map labels for an area are now deleted with the area
+- MXP playing MSP handles with no attribute names won't crash anymore
+- MXP tags with UTF8 strings are now shown correctly
+- pressing Alt won't steal focus from the input line anymore
+- room exits that go off the map are now drawn
+- some games appeared twice in the connection dialog
+- speedwalk() in reverse mode won't reverse the numbers as well
+- tempTimer() won't have a small memory leak anymore
+- Unhighlighting during control-selection now works OK.
+
+**infrastructure:**
+
+- a lot of depricated Qt methods removed & replaced with modern ones
+- Lua translations are now generated with CMake builds
+- main console-only methods moved to TMainConsole class
+- migrated from Travis to Github Actions
+- migrated release builds from qmake to cmake
+- removed all unnecessary locks from Mudlet
+
+
 
 # 4.10 – extra command lines, background images, and more
 
