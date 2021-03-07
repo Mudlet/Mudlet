@@ -4092,7 +4092,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     int n = lua_gettop(L);
-    QString windowName {getVerifiedWindowName(L, __func__, 1);}
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     QVector<int> colorComponents(6); // 0-2 RGB background, 3-5 RGB foreground
     colorComponents[0] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 2, "red background color component"), 255.0));
     colorComponents[1] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 3, "green background color component"), 255.0));
