@@ -381,7 +381,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
 
         if (evt->type() == QEvent::Drop) {
             QDropEvent* dropEvent = static_cast<QDropEvent*>(evt);
-            foreach (const QUrl& url, dropEvent->mimeData()->urls()) {
+            for (const auto& url : dropEvent->mimeData()->urls()) {
                 QString fname = url.toLocalFile();
                 QFileInfo info(fname);
                 if (info.exists()) {
