@@ -468,12 +468,12 @@ void dlgPackageExporter::slot_export_package()
         if (!itemFile.exists()) {
             continue;
         }
-        if(itemFile.isFile()) {
+        if (itemFile.isFile()) {
             QFile::remove(filePath);
             QFile::copy(itemFile.absoluteFilePath(), filePath);
             continue;
         }
-        if(itemFile.isDir()) {
+        if (itemFile.isDir()) {
             copy_directory(itemFile.absoluteFilePath(), filePath, true);
         }
     }
