@@ -38,6 +38,7 @@
 #include <QDirIterator>
 #include <QFileDialog>
 #include <QInputDialog>
+#include <QMimeData>
 #include "post_guard.h"
 
 // We are now using code that won't work with really old versions of libzip:
