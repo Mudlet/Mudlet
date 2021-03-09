@@ -163,7 +163,6 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.move(0, 0);
     mMultiSelectionListWidget.hide();
     connect(&mMultiSelectionListWidget, &QTreeWidget::itemSelectionChanged, this, &T2DMap::slot_roomSelectionChanged);
-    setCursor(Qt::OpenHandCursor);
 }
 
 void T2DMap::init()
@@ -2399,11 +2398,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* e)
     //move map with left mouse button + ALT (->
     if (mpMap->mLeftDown) {
         mpMap->mLeftDown = false;
-        if (mMapViewOnly) {
-            setCursor(Qt::OpenHandCursor);
-        } else {
-            unsetCursor();
-        }
+        unsetCursor();
     }
 
     if (e->button() & Qt::LeftButton) {
@@ -3422,11 +3417,6 @@ void T2DMap::slot_toggleMapViewOnly()
         // In the init() case this is a no-op, otherwise it ensures the profile
         // state matches the local copy (so it gets saved with the profile):
         mpHost->mMapViewOnly = mMapViewOnly;
-        if (mMapViewOnly) {
-            setCursor(Qt::OpenHandCursor);
-        } else {
-            unsetCursor();
-        }
         TEvent mapModeEvent{};
         mapModeEvent.mArgumentList.append(QLatin1String("mapModeChangeEvent"));
         mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
