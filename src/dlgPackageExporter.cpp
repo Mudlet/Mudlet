@@ -267,7 +267,6 @@ void dlgPackageExporter::slot_packageChanged(int index)
     ui->Description->setMarkdown(mPlainDescription);
 #endif
     QStringList version = mpHost->mLuaInterpreter.getPackageInfo(packageName, "version").split(QLatin1Char('.'));
-    qDebug() << version;
     if (version.size() > 2) {
         ui->Major->setValue(version.at(0).toInt());
         ui->Minor->setValue(version.at(1).toInt());
@@ -881,10 +880,35 @@ void dlgPackageExporter::slot_export_package()
 
 void dlgPackageExporter::slot_addFiles()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Add files to your package"), QDir::currentPath());
-    if (!fileName.isEmpty()){
-        ui->addedFiles->addItem(fileName);
+    QFileDialog* fDialog = new QFileDialog;
+    fDialog->setFileMode(QFileDialog::Directory);
+    fDialog->setOption(QFileDialog::DontUseNativeDialog);
+
+    QStringList selectedFiles;
+    //change file dialog children functions to support multiple folder+file selection
+    //as qt doesn't seem to support that out of the box
+    QDialogButtonBox* dialogBox = fDialog->findChild<QDialogButtonBox*>();
+    QPushButton* button = dialogBox->button(QDialogButtonBox::Open);
+    QListView* dialogListView = fDialog->findChild<QListView*>("listView");
+
+    if (dialogListView) {
+        dialogListView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+        //button would be disabled if no folder is selected
+        connect(dialogListView, &QListView::clicked, [=] { button->setEnabled(true); });
     }
+    QTreeView* dialogTreeView = fDialog->findChild<QTreeView*>();
+    if (dialogTreeView) {
+        dialogTreeView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+        connect(dialogTreeView, &QTreeView::clicked, [=] { button->setEnabled(true); });
+    }
+    connect(button, &QPushButton::clicked, [=] { fDialog->QDialog::accept(); });
+    if (fDialog->exec()) {
+        selectedFiles = fDialog->selectedFiles();
+    }
+    if (!selectedFiles.isEmpty()) {
+        ui->addedFiles->addItems(selectedFiles);
+    }
+    fDialog->deleteLater();
 }
 
 void dlgPackageExporter::slot_openInfoDialog()
@@ -902,7 +926,7 @@ void dlgPackageExporter::slot_openPackageLocation()
         return;
     }
     mPackagePath =
-            QFileDialog::getExistingDirectory(nullptr, tr("Where do you want to save the package?"), mudlet::getMudletPath(mudlet::profileHomePath, profileName), QFileDialog::DontUseNativeDialog);
+            QFileDialog::getExistingDirectory(nullptr, tr("Where do you want to save the package?"), mudlet::getMudletPath(mudlet::profileHomePath, profileName), QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly);
 
     if (mPackagePath.isEmpty()) {
         return;
