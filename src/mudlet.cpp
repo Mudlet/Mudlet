@@ -4324,7 +4324,7 @@ void mudlet::setupTrayIcon()
        mTrayIcon.hide();
     });
     menu->addAction(hideTrayAction);
-    auto exitAction = new QAction(tr("Exit"), this);
+    auto exitAction = new QAction(tr("Quit Mudlet"), this);
     connect(exitAction, &QAction::triggered, this, &mudlet::close);
     menu->addAction(exitAction);
     mTrayIcon.setContextMenu(menu);
