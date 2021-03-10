@@ -674,7 +674,7 @@ void TConsole::refresh()
     QApplication::sendEvent(this, &event);
 }
 
-void TConsole::clearSelection(bool yes)
+void TConsole::clearSelection(bool yes) const
 {
     if (yes) {
         mLowerPane->unHighlight();
