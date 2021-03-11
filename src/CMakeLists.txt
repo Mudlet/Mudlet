@@ -159,7 +159,6 @@ set(mudlet_UIS
     ui/composer.ui
     ui/connection_profiles.ui
     ui/dlgPackageExporter.ui
-    ui/dlgPackageExporterInput.ui
     ui/irc.ui
     ui/keybindings_main_area.ui
     ui/main_window.ui

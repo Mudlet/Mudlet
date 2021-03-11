@@ -5446,7 +5446,7 @@ mmp.lagtable = {
         time = 10
     }
 }
-local newversion = "21.1.2"
+local newversion = "21.2.1"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo(
@@ -5477,7 +5477,7 @@ function mmp.startup()
   private_settings["crowdmap"] =
     createOption(
       false,
-      mmp.chageMapSource,
+      mmp.changeMapSource,
       {"boolean"},
       "Use a crowd-sourced map instead of IREs default?",
       nil,
@@ -8608,7 +8608,7 @@ function mmp.setGare()
   else mmp.echo("Won't use Gare anymore.") end
 end
 
-function mmp.chageMapSource()
+function mmp.changeMapSource()
   local use = mmp.settings.crowdmap and true or false
   if use and not (mmp.game == "achaea" or mmp.game == "starmourn" or mmp.game == "lusternia" or mmp.game == "stickmud") then
     mmp.echo("Sorry - the crowdsourced map is only available for use in Achaea, Starmourn, Lusternia and StickMUD. If you'd like to help start one for your game, please post at http://forums.mudlet.org/viewtopic.php?f=13&amp;t=1696. If you are playing one of the games, then it is likely that you just downloaded the script - and it doesn't know what you are playing. Reconnect and it'll know.")

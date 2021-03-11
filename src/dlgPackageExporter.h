@@ -27,6 +27,7 @@
 
 #include "pre_guard.h"
 #include <QDialog>
+#include <QStringListModel>
 #include <zip.h>
 #include "post_guard.h"
 
@@ -35,7 +36,6 @@ class QTreeWidgetItem;
 
 namespace Ui {
 class dlgPackageExporter;
-class dlgPackageExporterInput;
 }
 
 class dlgPackageExporter : public QDialog
@@ -59,6 +59,7 @@ public:
     void recurseActions(TAction*, QTreeWidgetItem*);
     void listTimers();
     void recurseTimers(TTimer*, QTreeWidgetItem*);
+    void copy_directory(const QString &fromDir, const QString &toDir, bool coverFileIfExist);
     QMap<QTreeWidgetItem*, TTrigger*> triggerMap;
     QMap<QTreeWidgetItem*, TTrigger*> modTriggerMap;
     QMap<QTreeWidgetItem*, TAlias*> aliasMap;
@@ -82,20 +83,20 @@ public slots:
 private slots:
     void slot_addDependency();
     void slot_removeDependency();
-    void slot_checkInput();
     void slot_import_icon();
+    void slot_openPackageLocation();
+    void slot_openInfoDialog();
+    void slot_packageChanged(int);
 
 protected:
-    bool eventFilter(QObject*, QEvent*) override;
+    bool eventFilter(QObject* obj, QEvent* evt) override;
 
 private:
     bool writeFileToZip(const QString&, const QString&, zip*);
     static void appendToConfigFile(QString&, const QString&, const QString&);
-    static void appendVersionToConfigFile(QString&, const QString&, const QString&, const QString&);
     void displayResultMessage(const QString&, const bool isSuccessMessage = true);
+    void uncheckAllChildren();
 
-    QDialog* inputDialog;
-    Ui::dlgPackageExporterInput* input;
     Ui::dlgPackageExporter* ui;
     QPointer<Host> mpHost;
     QTreeWidget* treeWidget;
@@ -107,10 +108,10 @@ private:
     QTreeWidgetItem* mpScripts;
     QTreeWidgetItem* mpKeys;
     QTreeWidgetItem* mpButtons;
-    QString mStagingDirName;
     QString mPackageName;
     QString mPackagePath;
     QString mPackagePathFileName;
+    QStringListModel* mDependencies;
     QString mPackageIconPath;
     QString mPackageConfig;
     QString mPlainDescription;

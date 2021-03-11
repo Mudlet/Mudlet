@@ -13111,10 +13111,11 @@ void TLuaInterpreter::removePackageInfo(const QString& packageName, bool isModul
 }
 
 // No documentation available in wiki - internal function
-QString TLuaInterpreter::getPackageInfo(const QString& packageName, const QString& what, bool isModule)
+QMap<QString, QString> TLuaInterpreter::getPackageInfo(const QString& packageName, bool isModule)
 {
     lua_State* L = pGlobalLua;
     lua_getglobal(L, "mudlet");
+    QMap<QString, QString> result;
     if (isModule) {
         lua_getfield(L, -1, "moduleInfo");
     } else {
@@ -13123,14 +13124,16 @@ QString TLuaInterpreter::getPackageInfo(const QString& packageName, const QStrin
     lua_getfield(L, -1, packageName.toUtf8().constData());
     if (!lua_istable(L, -1)) {
         lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
-        return QString();
+        return result;
     }
-    lua_getfield(L, -1, what.toUtf8().constData());
-    if (!lua_isstring(L, -1)) {
-        lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
-        return QString();
+
+    lua_pushnil(L);
+    while (lua_next(L, -2) != 0) {
+        if (lua_isstring(L, -1) && lua_isstring(L, -2)) {
+            result[lua_tostring(L, -2)] = lua_tostring(L, -1);
+        }
+        lua_pop(L, 1);
     }
-    QString result = QString(lua_tostring(L, -1));
     lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
     return result;
 }
