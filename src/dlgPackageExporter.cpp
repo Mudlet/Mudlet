@@ -131,18 +131,6 @@ void dlgPackageExporter::appendToConfigFile(QString& comment, const QString& wha
     comment.append(QStringLiteral("%1 = [[%2]]\n").arg(what, value));
 }
 
-void dlgPackageExporter::appendVersionToConfigFile(QString& comment, const QString& Major, const QString& Minor, const QString& Patch)
-{
-    if (Major == QLatin1String("0") && Minor == QLatin1String("0") && Patch == QLatin1String("0")) {
-        return;
-    }
-    if (Major.isEmpty() || Minor.isEmpty() || Patch.isEmpty()) {
-        return;
-    }
-
-    comment.append(QStringLiteral("version = \"%1.%2.%3\"\n").arg(Major, Minor, Patch));
-}
-
 void dlgPackageExporter::recurseTree(QTreeWidgetItem* pItem, QList<QTreeWidgetItem*>& treeList)
 {
     treeList.append(pItem);
@@ -255,26 +243,45 @@ void dlgPackageExporter::slot_packageChanged(int index)
         }
     }
 
-    //fill package metadata
-    ui->Author->setText(mpHost->mLuaInterpreter.getPackageInfo(packageName, "author"));
     QString packagePath{mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())};
-    QString icon{mpHost->mLuaInterpreter.getPackageInfo(packageName, "icon")};
-    mPackageIconPath = QStringLiteral("%1/%2/Icon/%3").arg(packagePath, packageName, icon);
-    ui->Icon->setStyleSheet(QStringLiteral("QWidget { border-image: url(%1); }").arg(mPackageIconPath));
-    ui->Titel->setText(mpHost->mLuaInterpreter.getPackageInfo(packageName, "titel"));
-    mPlainDescription = mpHost->mLuaInterpreter.getPackageInfo(packageName, "description");
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
-    ui->Description->setMarkdown(mPlainDescription);
-#endif
-    QStringList version = mpHost->mLuaInterpreter.getPackageInfo(packageName, "version").split(QLatin1Char('.'));
-    if (version.size() > 2) {
-        ui->Major->setValue(version.at(0).toInt());
-        ui->Minor->setValue(version.at(1).toInt());
-        ui->Patch->setValue(version.at(2).toInt());
+    //fill package metadata
+    mPackageIconPath.clear();
+    QMap<QString, QString> packageInfo = mpHost->mLuaInterpreter.getPackageInfo(packageName);
+    ui->Author->setText(packageInfo.value(QStringLiteral("author")));
+    QString icon{packageInfo.value(QStringLiteral("icon"))};
+    if (!icon.isEmpty()) {
+        mPackageIconPath = QStringLiteral("%1/%2/Icon/%3").arg(packagePath, packageName, icon);
     }
-    QStringList dependencies = mpHost->mLuaInterpreter.getPackageInfo(packageName, "dependencies").split(QLatin1Char(','));
+    ui->Icon->setStyleSheet(QStringLiteral("QWidget { border-image: url(%1); }").arg(mPackageIconPath));
+    ui->Titel->setText(packageInfo.value(QStringLiteral("titel")));
+    mPlainDescription = packageInfo.value(QStringLiteral("description"));
+    QString description{mPlainDescription};
+    description.replace(QLatin1String("$packagePath"), QStringLiteral("%1/%2").arg(packagePath, packageName));
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+    ui->Description->setMarkdown(description);
+#endif
+    QString version = packageInfo.value(QStringLiteral("version"));
+    ui->Version->setText(version);
+    QStringList dependencies = packageInfo.value(QStringLiteral("dependencies")).split(QLatin1Char(','));
     ui->Dependencies->clear();
     ui->Dependencies->addItems(dependencies);
+
+    //get files and folders from package
+    ui->addedFiles->clear();
+    QFileInfo info(QStringLiteral("%1/%2/").arg(packagePath, packageName));
+    if (!info.exists()) {
+        return;
+    }
+    QDirIterator it(info.absoluteFilePath());
+    QStringList ignore;
+    ignore << QLatin1String("config.lua") << QStringLiteral("%1.xml").arg(packageName) << QLatin1String(".") << QLatin1String("..");
+    while (it.hasNext()) {
+        QFileInfo f(it.next());
+        if (ignore.contains(f.fileName(), Qt::CaseInsensitive)) {
+            continue;
+        }
+        ui->addedFiles->addItem(f.absoluteFilePath());
+    }
 }
 
 void dlgPackageExporter::slot_import_icon()
@@ -411,7 +418,7 @@ void dlgPackageExporter::copy_directory(const QString& fromDir, const QString& t
     targetDir.mkdir(toDir);
     while (it.hasNext()) {
         QFileInfo f(it.next());
-        if (f.fileName() == "." || f.fileName() == ".." || f.isSymLink()) {
+        if (f.fileName() == QLatin1String(".") || f.fileName() == QLatin1String("..") || f.isSymLink()) {
             continue;
         }
         if (f.isDir()) {
@@ -485,7 +492,7 @@ void dlgPackageExporter::slot_export_package()
     appendToConfigFile(mPackageConfig, QStringLiteral("icon"), iconFile.fileName());
     appendToConfigFile(mPackageConfig, QStringLiteral("titel"), ui->Titel->text());
     appendToConfigFile(mPackageConfig, QStringLiteral("description"), mPlainDescription);
-    appendVersionToConfigFile(mPackageConfig, ui->Major->text(), ui->Minor->text(), ui->Patch->text());
+    appendToConfigFile(mPackageConfig, QStringLiteral("version"), ui->Version->text());
     appendToConfigFile(mPackageConfig, QStringLiteral("dependencies"), mDependencies->stringList().join(","));
     mPackageConfig.append(QStringLiteral("created = \"%1\"\n").arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss"))));
 

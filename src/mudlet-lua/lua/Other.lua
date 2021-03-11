@@ -1107,6 +1107,80 @@ function packageUrlDrop(event, url, schema)
 end
 registerAnonymousEventHandler("sysDropUrlEvent", "packageUrlDrop")
 
+-- internal function used by getPackageInfo and getModuleInfo
+local function getInfo(packageType, args)
+  local errorType = string.format("%s%s", "get", packageType:title())
+  local name = args[1]
+  local info = args[2]
+  if type(name) ~= "string" then
+    error(string.format('%s: bad argument #2 type (name as string expected, got %s!)', errorType, type(name)))
+  end
+  if info and type(info) ~= "string" then
+    error(string.format('%s: bad argument #2 type (info as string expected, got %s!)', errorType, type(info)))
+  end
+  if not mudlet[packageType][name] then
+    return nil, string.format("no %s for '%s' found", packageType:title(),name)
+  end
+  if not info then 
+    return mudlet[packageType][name] 
+  end
+  return mudlet[packageType][name][info]
+end
+
+-- internal function used by setPackageInfo and setModuleInfo
+local function setInfo(packageType, args)
+  local errorType = string.format("%s%s", "set", packageType:title())
+  local name = args[1]
+  local info = args[2]
+  local value = args[3]
+  if type(name) ~= "string" then
+    error(string.format('%s: bad argument #2 type (name as string expected, got %s!)', errorType, type(name)))
+  end
+  if type(info) ~= "string" then
+    error(string.format('%s: bad argument #2 type (info as string expected, got %s!)', errorType, type(info)))
+  end
+  if type(value) ~= "string" then
+    error(string.format('%s: bad argument #3 type (value as string expected, got %s!)', errorType, type(value)))
+  end
+  mudlet[packageType][name]  = mudlet["packageInfo"][name] or {}
+  mudlet[packageType][name][info] = value
+  return true
+end
+
+--- gets meta-informations for a package and returns them as table
+-- @param name package name
+-- @param info (optional) the information you want to find (for example author) if not given all the package informations are returned
+function getPackageInfo(...)
+  local args = {...}
+  return getInfo("packageInfo", args)
+end
+
+--- gets meta-informations for a module and returns them as table
+-- @param name module name
+-- @param info (optional) the information you want to find (for example author) if not given all the module informations are returned
+function getModuleInfo(...)
+  local args = {...}
+  return getInfo("moduleInfo", args)
+end
+
+--- sets meta-informations for a package and returns true if successful
+-- @param name package name
+-- @param info information set (for example version)
+-- @param value set for the information (for example 1.0.0)
+function setPackageInfo(...)
+  local args = {...}
+  return setInfo("packageInfo", args)
+end
+
+--- sets meta-informations for a module and returns true if successful
+-- @param name module name
+-- @param info information set (for example version)
+-- @param value set for the information (for example 1.0.0)
+function setModuleInfo(...)
+  local args = {...}
+  return setInfo("moduleInfo", args)
+end
+
 -- Add dummy functions for the TTS functions if Mudlet has been compiled without them
 -- This is to prevent scripts erroring if they've been written with TTS capabilities
 -- then loaded into a Mudlet without them.

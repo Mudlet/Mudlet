@@ -324,73 +324,6 @@
            </property>
           </widget>
          </item>
-         <item row="4" column="1">
-          <layout class="QHBoxLayout" name="horizontalLayout_3">
-           <property name="spacing">
-            <number>6</number>
-           </property>
-           <item>
-            <widget class="QSpinBox" name="Major">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="focusPolicy">
-              <enum>Qt::StrongFocus</enum>
-             </property>
-             <property name="frame">
-              <bool>false</bool>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-             <property name="suffix">
-              <string/>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QSpinBox" name="Minor">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="focusPolicy">
-              <enum>Qt::StrongFocus</enum>
-             </property>
-             <property name="frame">
-              <bool>false</bool>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QSpinBox" name="Patch">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="focusPolicy">
-              <enum>Qt::StrongFocus</enum>
-             </property>
-             <property name="frame">
-              <bool>false</bool>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
          <item row="5" column="0">
           <widget class="QLabel" name="label_9">
            <property name="sizePolicy">
@@ -442,6 +375,13 @@
            </property>
            <property name="alignment">
             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QLineEdit" name="Version">
+           <property name="placeholderText">
+            <string>Version (optional)</string>
            </property>
           </widget>
          </item>
@@ -641,9 +581,6 @@
   <tabstop>addIcon</tabstop>
   <tabstop>Titel</tabstop>
   <tabstop>Description</tabstop>
-  <tabstop>Major</tabstop>
-  <tabstop>Minor</tabstop>
-  <tabstop>Patch</tabstop>
   <tabstop>Dependencies</tabstop>
   <tabstop>treeWidget</tabstop>
   <tabstop>addedFiles</tabstop>
