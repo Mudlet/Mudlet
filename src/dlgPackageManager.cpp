@@ -65,7 +65,7 @@ void dlgPackageManager::resetPackageTable()
         QPushButton* remove_btn = new QPushButton();
         connect(remove_btn, &QPushButton::clicked, [=] { slot_uninstall_package(i); });
         remove_btn->setText(QStringLiteral("Remove"));
-        remove_btn->setStyleSheet(QStringLiteral("QPushButton {padding: 5px; }"));
+        remove_btn->setSizePolicy(QSizePolicy (QSizePolicy::Fixed, QSizePolicy::Fixed));
         mPackageTable->insertRow(i);
         auto packageName = new QTableWidgetItem();
         auto shortDescription = new QTableWidgetItem();
@@ -77,11 +77,12 @@ void dlgPackageManager::resetPackageTable()
         packageName->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
         shortDescription->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
         packageName->setText(mpHost->mInstalledPackages.at(i));
-        auto iconName = mpHost->mLuaInterpreter.getPackageInfo(packageName->text(), QStringLiteral("icon"));
+        auto packageInfo{mpHost->mLuaInterpreter.getPackageInfo(packageName->text())};
+        auto iconName = packageInfo.value(QStringLiteral("icon"));
         auto iconDir = iconName.isEmpty() ? QStringLiteral(":/icons/mudlet.png")
                                           : mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("%1/Icon/%2").arg(packageName->text(), iconName));
         packageName->setIcon(QIcon(iconDir));
-        auto titel = mpHost->mLuaInterpreter.getPackageInfo(packageName->text(), QStringLiteral("titel"));
+        auto titel = packageInfo.value(QStringLiteral("titel"));
         shortDescription->setText(titel);
         mPackageTable->setItem(i, 0, packageName);
         mPackageTable->setItem(i, 1, shortDescription);
@@ -120,12 +121,48 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
         return;
     }
     QString packageName = ui->packageTable->item(pItem->row(), 0)->text();
-    QString description = mpHost->mLuaInterpreter.getPackageInfo(packageName, QStringLiteral("description"));
+    auto packageInfo{mpHost->mLuaInterpreter.getPackageInfo(packageName)};
+    QString description = packageInfo.take(QStringLiteral("description"));
     QString packageDir = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), packageName);
     description.replace(QLatin1String("$packagePath"), packageDir);
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+    ui->packageDescription->setMarkdown(description);
+#else
     ui->packageDescription->setText(description);
-    ui->Author->setText(mpHost->mLuaInterpreter.getPackageInfo(packageName, QStringLiteral("author")));
-    ui->Version->setText(mpHost->mLuaInterpreter.getPackageInfo(packageName, QStringLiteral("version")));
-    ui->Created->setText(mpHost->mLuaInterpreter.getPackageInfo(packageName, QStringLiteral("created")));
-    ui->Dependencies->setText(mpHost->mLuaInterpreter.getPackageInfo(packageName, QStringLiteral("dependencies")));
+#endif
+    ui->Author->setText(packageInfo.take(QStringLiteral("author")));
+    ui->Version->setText(packageInfo.take(QStringLiteral("version")));
+    ui->Created->setText(packageInfo.take(QStringLiteral("created")));
+    ui->Dependencies->setText(packageInfo.take(QStringLiteral("dependencies")));
+    //clear details Table
+    for (int i =  ui->additionalDetails->rowCount() - 1; i >= 0; --i) {
+        ui->additionalDetails->removeRow(i);
+    }
+    if (!packageInfo.isEmpty()) {
+        fillAdditionalDetails(packageInfo);
+    }
+}
+
+
+void dlgPackageManager::fillAdditionalDetails(QMap<QString, QString> packageInfo)
+{
+    QMap<QString, QString>::const_iterator iter = packageInfo.constBegin();
+    QStringList ignore;
+    ignore << QStringLiteral("mpackage") << QStringLiteral("titel") << QStringLiteral("icon");
+    int counter = 0;
+    while (iter != packageInfo.constEnd()) {
+        if (ignore.contains(iter.key())) {
+            ++iter;
+            continue;
+        }
+        QLabel* info = new QLabel();
+        QLabel* value = new QLabel();
+        info->setEnabled(false);
+        ui->additionalDetails->insertRow(counter);
+        ui->additionalDetails->setCellWidget(counter, 0, info);
+        ui->additionalDetails->setCellWidget(counter++, 1, value);
+        info->setText(iter.key());
+        value->setText(iter.value());
+        ++iter;
+    }
 }
