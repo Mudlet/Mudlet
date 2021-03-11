@@ -89,7 +89,7 @@ private slots:
     void slot_packageChanged(int);
 
 protected:
-    bool eventFilter(QObject*, QEvent*) override;
+    bool eventFilter(QObject* obj, QEvent* evt) override;
 
 private:
     bool writeFileToZip(const QString&, const QString&, zip*);
@@ -108,7 +108,6 @@ private:
     QTreeWidgetItem* mpScripts;
     QTreeWidgetItem* mpKeys;
     QTreeWidgetItem* mpButtons;
-    QString mStagingDirName;
     QString mPackageName;
     QString mPackagePath;
     QString mPackagePathFileName;

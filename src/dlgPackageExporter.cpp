@@ -444,16 +444,17 @@ void dlgPackageExporter::slot_export_package()
         return;
     }
 
-    if (mStagingDirName.isEmpty()) {
-        mStagingDirName = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, QStringLiteral("tmp/%1").arg(mPackageName));
+    // if packageName changed allow to create a new package in the same path
+    mPackagePathFileName = QStringLiteral("%1/%2.mpackage").arg(mPackagePath, mPackageName);
+    ui->filePath->setText(mPackagePathFileName);
 
-        QDir packageDir = QDir(mStagingDirName);
-        if (!packageDir.exists()) {
-            packageDir.mkpath(mStagingDirName);
-        }
+    QString StagingDirName = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, QStringLiteral("tmp/%1").arg(mPackageName));
+    QDir packageDir = QDir(StagingDirName);
+    if (!packageDir.exists()) {
+        packageDir.mkpath(StagingDirName);
     }
 
-    QString tempPath = mStagingDirName;
+    QString tempPath = StagingDirName;
     tempPath.append("/");
 
     QFileInfo iconFile(mPackageIconPath);
@@ -485,7 +486,7 @@ void dlgPackageExporter::slot_export_package()
         }
     }
 
-    mXmlPathFileName = QStringLiteral("%1/%2.xml").arg(mStagingDirName, mPackageName);
+    mXmlPathFileName = QStringLiteral("%1/%2.xml").arg(StagingDirName, mPackageName);
 
     appendToConfigFile(mPackageConfig, QStringLiteral("mpackage"), mPackageName);
     appendToConfigFile(mPackageConfig, QStringLiteral("author"), ui->Author->text());
@@ -496,7 +497,7 @@ void dlgPackageExporter::slot_export_package()
     appendToConfigFile(mPackageConfig, QStringLiteral("dependencies"), mDependencies->stringList().join(","));
     mPackageConfig.append(QStringLiteral("created = \"%1\"\n").arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss"))));
 
-    QString luaConfig = QStringLiteral("%1/config.lua").arg(mStagingDirName);
+    QString luaConfig = QStringLiteral("%1/config.lua").arg(StagingDirName);
     QFile configFile(luaConfig);
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out(&configFile);
@@ -513,11 +514,6 @@ void dlgPackageExporter::slot_export_package()
         return;
     }
     checkWriteability.close();
-
-    // Prevent a second call by removing this button:
-    ui->buttonBox->removeButton(mExportButton);
-    // Also disable the addFiles button:
-    ui->addFiles->setEnabled(false);
 
     // This gets reset anytime that something goes wrong so that the export gets
     // aborted and shows an error message rather than an okay one:
@@ -709,7 +705,7 @@ void dlgPackageExporter::slot_export_package()
  */
             qt_ntfs_permission_lookup++;
 #endif // defined(Q_OS_WIN32)
-            QDirIterator itDir(mStagingDirName, QDir::NoDotAndDotDot|QDir::AllDirs|QDir::Files, QDirIterator::Subdirectories);
+            QDirIterator itDir(StagingDirName, QDir::NoDotAndDotDot|QDir::AllDirs|QDir::Files, QDirIterator::Subdirectories);
             // relative names to use in archive:
             QStringList directoryEntries;
             // Key is relative name to use in archive
@@ -747,7 +743,7 @@ void dlgPackageExporter::slot_export_package()
                 }
 
                 QString nameInArchive = itDir.filePath();
-                nameInArchive.remove(QStringLiteral("%1/").arg(mStagingDirName));
+                nameInArchive.remove(QStringLiteral("%1/").arg(StagingDirName));
 
                 if       (entryInfo.isDir()) {
                     directoryEntries.append(nameInArchive);
@@ -832,7 +828,7 @@ void dlgPackageExporter::slot_export_package()
                                             "This suggests there may be a problem with that directory: "
                                             "\"%2\" - "
                                             "Do you have the necessary permissions and free disk-space?")
-                                            .arg(mXmlPathFileName, QDir(mStagingDirName).canonicalPath()), false);
+                                            .arg(mXmlPathFileName, QDir(StagingDirName).canonicalPath()), false);
                     isOk = false;
                 }
             }
@@ -872,11 +868,6 @@ void dlgPackageExporter::slot_export_package()
         displayResultMessage(tr("Package \"%1\" exported to: %2")
                              .arg(mPackageName, QStringLiteral("<a href=\"file:///%1\">%2</a>"))
                              .arg(mPackagePath.toHtmlEscaped(), mPackagePath.toHtmlEscaped()), true);
-        // Remove the cancel button and replace it with an ok one
-        ui->buttonBox->removeButton(mCancelButton);
-        ui->buttonBox->addButton(QDialogButtonBox::Ok);
-        connect(ui->buttonBox->button(QDialogButtonBox::Ok), &QAbstractButton::clicked, this, &dlgPackageExporter::close);
-        ui->filePath->hide();
     } else {
         // Failed - convert cancel to a close button
         ui->buttonBox->removeButton(mCancelButton);
