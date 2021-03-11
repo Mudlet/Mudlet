@@ -4794,7 +4794,7 @@ void dlgTriggerEditor::saveKey()
     }
 
     QString name = mpKeysMainArea->lineEdit_key_name->text();
-    if (name.isEmpty()) {
+    if (name.isEmpty() || name == tr("New key")) {
         name = mpKeysMainArea->lineEdit_key_binding->text();
     }
     QString command = mpKeysMainArea->lineEdit_key_command->text();
