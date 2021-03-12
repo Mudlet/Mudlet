@@ -42,6 +42,11 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgPackageManager::close);
     connect(mPackageTable, &QTableWidget::currentItemChanged, this, &dlgPackageManager::slot_item_clicked);
     setWindowTitle(tr("Package Manager - %1").arg(mpHost->getName()));
+    ui->additionalDetails->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->additionalDetails->setFocusPolicy(Qt::NoFocus);
+    ui->additionalDetails->setSelectionMode(QAbstractItemView::NoSelection);
+    mPackageTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    mPackageTable->setFocusPolicy(Qt::NoFocus);
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
@@ -64,8 +69,8 @@ void dlgPackageManager::resetPackageTable()
     for (int i = 0; i < mpHost->mInstalledPackages.size(); i++) {
         QPushButton* remove_btn = new QPushButton();
         connect(remove_btn, &QPushButton::clicked, [=] { slot_uninstall_package(i); });
-        remove_btn->setText(QStringLiteral("Remove"));
-        remove_btn->setSizePolicy(QSizePolicy (QSizePolicy::Fixed, QSizePolicy::Fixed));
+        remove_btn->setText(QStringLiteral("  Remove  "));
+        remove_btn->setStyleSheet( "text-align: center; margin-top:10%; margin-bottom:10%;" );
         mPackageTable->insertRow(i);
         auto packageName = new QTableWidgetItem();
         auto shortDescription = new QTableWidgetItem();
@@ -87,6 +92,7 @@ void dlgPackageManager::resetPackageTable()
         mPackageTable->setItem(i, 0, packageName);
         mPackageTable->setItem(i, 1, shortDescription);
         mPackageTable->setCellWidget(i, 2, remove_btn);
+        mPackageTable->cellWidget(i, 2)->setFocusPolicy(Qt::NoFocus);
     }
     mPackageTable->resizeColumnsToContents();
 }
@@ -120,8 +126,21 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
     if (!pItem) {
         return;
     }
+
+    //clear details Table
+    for (int i = ui->additionalDetails->rowCount() - 1; i >= 0; --i) {
+        ui->additionalDetails->removeRow(i);
+    }
     QString packageName = ui->packageTable->item(pItem->row(), 0)->text();
     auto packageInfo{mpHost->mLuaInterpreter.getPackageInfo(packageName)};
+    if (packageInfo.isEmpty()) {
+        ui->packageDescription->clear();
+        return;
+    }
+    packageInfo.remove(QStringLiteral("mpackage"));
+    packageInfo.remove(QStringLiteral("icon"));
+    packageInfo.remove(QStringLiteral("titel"));
+
     QString description = packageInfo.take(QStringLiteral("description"));
     QString packageDir = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), packageName);
     description.replace(QLatin1String("$packagePath"), packageDir);
@@ -130,29 +149,14 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
 #else
     ui->packageDescription->setText(description);
 #endif
-    ui->Author->setText(packageInfo.take(QStringLiteral("author")));
-    ui->Version->setText(packageInfo.take(QStringLiteral("version")));
-    ui->Created->setText(packageInfo.take(QStringLiteral("created")));
-    ui->Dependencies->setText(packageInfo.take(QStringLiteral("dependencies")));
-    //clear details Table
-    for (int i =  ui->additionalDetails->rowCount() - 1; i >= 0; --i) {
-        ui->additionalDetails->removeRow(i);
-    }
-    if (!packageInfo.isEmpty()) {
-        fillAdditionalDetails(packageInfo);
-    }
-}
 
-
-void dlgPackageManager::fillAdditionalDetails(QMap<QString, QString> packageInfo)
-{
-    QMap<QString, QString>::const_iterator iter = packageInfo.constBegin();
-    QStringList ignore;
-    ignore << QStringLiteral("mpackage") << QStringLiteral("titel") << QStringLiteral("icon");
+    QStringList labelText, details;
+    labelText << tr("Author") << tr("Version") << tr("Created") << tr("Dependencies");
+    details << QStringLiteral("author") << QStringLiteral("version") << QStringLiteral("created") << QStringLiteral("dependencies");
     int counter = 0;
-    while (iter != packageInfo.constEnd()) {
-        if (ignore.contains(iter.key())) {
-            ++iter;
+    for (int i = 0; i < details.size(); i++) {
+        QString valueText{packageInfo.take(details.at(i))};
+        if (valueText.isEmpty()) {
             continue;
         }
         QLabel* info = new QLabel();
@@ -161,8 +165,35 @@ void dlgPackageManager::fillAdditionalDetails(QMap<QString, QString> packageInfo
         ui->additionalDetails->insertRow(counter);
         ui->additionalDetails->setCellWidget(counter, 0, info);
         ui->additionalDetails->setCellWidget(counter++, 1, value);
+        info->setText(labelText.at(i));
+        value->setText(valueText);
+        value->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        value->setAlignment(Qt::AlignCenter);
+    }
+
+    if (!packageInfo.isEmpty()) {
+        fillAdditionalDetails(packageInfo);
+    }
+    ui->additionalDetails->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+}
+
+
+void dlgPackageManager::fillAdditionalDetails(QMap<QString, QString> packageInfo)
+{
+    QMap<QString, QString>::const_iterator iter = packageInfo.constBegin();
+    int counter = ui->additionalDetails->rowCount();
+    while (iter != packageInfo.constEnd()) {
+        QLabel* info = new QLabel();
+        QLabel* value = new QLabel();
+        info->setEnabled(false);
+        ui->additionalDetails->insertRow(counter);
+        ui->additionalDetails->setCellWidget(counter, 0, info);
+        ui->additionalDetails->setCellWidget(counter++, 1, value);
         info->setText(iter.key());
         value->setText(iter.value());
+        value->setOpenExternalLinks(true);
+        value->setTextInteractionFlags(Qt::TextSelectableByMouse|Qt::LinksAccessibleByMouse);
+        value->setAlignment(Qt::AlignCenter);
         ++iter;
     }
 }
