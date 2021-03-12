@@ -9688,7 +9688,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/mudlet.cpp" line="4327"/>
       <source>Quit Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet beenden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="235"/>
