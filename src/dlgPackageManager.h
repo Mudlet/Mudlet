@@ -54,7 +54,7 @@ private:
     Host* mpHost;
     QTableWidget* mPackageTable;
     QPushButton* mInstallButton;
-    void fillAdditionalDetails(QMap<QString, QString>);
+    void fillAdditionalDetails(const QMap<QString, QString>);
 };
 
 #endif

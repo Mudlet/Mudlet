@@ -178,7 +178,7 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
 }
 
 
-void dlgPackageManager::fillAdditionalDetails(QMap<QString, QString> packageInfo)
+void dlgPackageManager::fillAdditionalDetails(const QMap<QString, QString> packageInfo)
 {
     QMap<QString, QString>::const_iterator iter = packageInfo.constBegin();
     int counter = ui->additionalDetails->rowCount();
