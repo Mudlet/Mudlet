@@ -7340,7 +7340,8 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8178"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Cannot read file %1:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8192"/>
