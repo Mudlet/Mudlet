@@ -631,12 +631,15 @@ wacht aub...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="1253"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Je hebt nog geen kaart geladen. Laad een kaart of begin van vooraf aan met toewijzen.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="1252"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Je hebt een kaart geladen (%n kamer(s)), maar Mudlet weet momenteel niet waar je bent.</numerusform>
+        <numerusform>Je hebt een kaart geladen (%n kamer(s)), maar Mudlet weet momenteel niet waar je bent.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2244"/>
@@ -1553,7 +1556,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="637"/>
       <source>Pre-Map loading(2) report</source>
-      <translation type="unfinished"/>
+      <translation>Rapport voorafgaand aan het toewijzen (2)</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="647"/>
@@ -1580,7 +1583,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1199"/>
       <source>Pre-Map loading(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Rapport voorafgaand aan het toewijzen (1)</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1217"/>
