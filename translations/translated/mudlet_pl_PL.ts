@@ -56,7 +56,7 @@
       <location filename="../src/Host.cpp" line="840"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation>[ OK ] - %1 Wielkie dzięki za korzystanie z kompilacji do testów publicznych!</translation>
+      <translation>[  OK  ] - %1 Wielkie dzięki za korzystanie z kompilacji do testów publicznych!</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="841"/>
@@ -1442,7 +1442,7 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="13246"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name (may specify which variant) of the module.</comment>
-      <translation>[ OK ] - Moduł Lua %1 załadowany.</translation>
+      <translation>[  OK  ] - Moduł Lua %1 załadowany.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13791"/>
@@ -1506,7 +1506,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14122"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation>[ OK ] - Wczytano Mudlet-lua API i Geyser menedżer układu.</translation>
+      <translation>[  OK  ] - Wczytano Mudlet-lua API i Geyser menedżer układu.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14129"/>
@@ -3817,7 +3817,7 @@ Odinstalowywanie starej wersji &apos;%2&apos;.</translation>
       <location filename="../src/ctelnet.cpp" line="1658"/>
       <location filename="../src/ctelnet.cpp" line="2025"/>
       <source>[  OK  ]  - Package is already installed.</source>
-      <translation>[ OK ] - Pakiet jest już zainstalowany.</translation>
+      <translation>[  OK  ] - Pakiet jest już zainstalowany.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1667"/>
