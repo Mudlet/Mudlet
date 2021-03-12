@@ -253,7 +253,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
         mPackageIconPath = QStringLiteral("%1/%2/Icon/%3").arg(packagePath, packageName, icon);
     }
     ui->Icon->setStyleSheet(QStringLiteral("QWidget { border-image: url(%1); }").arg(mPackageIconPath));
-    ui->Titel->setText(packageInfo.value(QStringLiteral("titel")));
+    ui->Title->setText(packageInfo.value(QStringLiteral("title")));
     mPlainDescription = packageInfo.value(QStringLiteral("description"));
     QString description{mPlainDescription};
     description.replace(QLatin1String("$packagePath"), QStringLiteral("%1/%2").arg(packagePath, packageName));
@@ -491,7 +491,7 @@ void dlgPackageExporter::slot_export_package()
     appendToConfigFile(mPackageConfig, QStringLiteral("mpackage"), mPackageName);
     appendToConfigFile(mPackageConfig, QStringLiteral("author"), ui->Author->text());
     appendToConfigFile(mPackageConfig, QStringLiteral("icon"), iconFile.fileName());
-    appendToConfigFile(mPackageConfig, QStringLiteral("titel"), ui->Titel->text());
+    appendToConfigFile(mPackageConfig, QStringLiteral("title"), ui->Title->text());
     appendToConfigFile(mPackageConfig, QStringLiteral("description"), mPlainDescription);
     appendToConfigFile(mPackageConfig, QStringLiteral("version"), ui->Version->text());
     appendToConfigFile(mPackageConfig, QStringLiteral("dependencies"), mDependencies->stringList().join(","));
