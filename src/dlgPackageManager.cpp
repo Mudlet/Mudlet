@@ -46,7 +46,8 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     ui->additionalDetails->setFocusPolicy(Qt::NoFocus);
     ui->additionalDetails->setSelectionMode(QAbstractItemView::NoSelection);
     mPackageTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    mPackageTable->setFocusPolicy(Qt::NoFocus);
+    mPackageTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    mPackageTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
@@ -79,8 +80,6 @@ void dlgPackageManager::resetPackageTable()
         nameFont.setBold(true);
         packageName->setFont(nameFont);
         shortDescription->setTextAlignment(Qt::AlignCenter);
-        packageName->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
-        shortDescription->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
         packageName->setText(mpHost->mInstalledPackages.at(i));
         auto packageInfo{mpHost->mLuaInterpreter.getPackageInfo(packageName->text())};
         auto iconName = packageInfo.value(QStringLiteral("icon"));
@@ -92,7 +91,6 @@ void dlgPackageManager::resetPackageTable()
         mPackageTable->setItem(i, 0, packageName);
         mPackageTable->setItem(i, 1, shortDescription);
         mPackageTable->setCellWidget(i, 2, remove_btn);
-        mPackageTable->cellWidget(i, 2)->setFocusPolicy(Qt::NoFocus);
     }
     mPackageTable->resizeColumnsToContents();
 }
