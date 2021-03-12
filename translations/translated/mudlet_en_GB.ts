@@ -9611,7 +9611,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="4327"/>
       <source>Quit Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Quit Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="235"/>
