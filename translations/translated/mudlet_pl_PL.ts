@@ -3953,7 +3953,7 @@ komunikat o błędzie to: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="2615"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation>[ OK ] - Powtórka została zakończona.</translation>
+      <translation>[  OK  ] - Powtórka została zakończona.</translation>
     </message>
   </context>
   <context>
