@@ -70,7 +70,8 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
     setCenterOnScroll(false);
     setWordWrapMode(QTextOption::WrapAnywhere);
     setContentsMargins(0, 0, 0, 0);
-
+    // clear console selection if selection in command line changes
+    connect(this, &QPlainTextEdit::copyAvailable, [this](bool yes){mpConsole->clearSelection(yes);});
     // We do NOT want the standard context menu to happen as we generate it
     // ourself:
     setContextMenuPolicy(Qt::PreventContextMenu);
