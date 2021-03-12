@@ -9714,7 +9714,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/mudlet.cpp" line="4327"/>
       <source>Quit Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Esci da Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="235"/>
