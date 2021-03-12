@@ -87,8 +87,8 @@ void dlgPackageManager::resetPackageTable()
         auto iconDir = iconName.isEmpty() ? QStringLiteral(":/icons/mudlet.png")
                                           : mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("%1/Icon/%2").arg(packageName->text(), iconName));
         packageName->setIcon(QIcon(iconDir));
-        auto titel = packageInfo.value(QStringLiteral("titel"));
-        shortDescription->setText(titel);
+        auto title = packageInfo.value(QStringLiteral("title"));
+        shortDescription->setText(title);
         mPackageTable->setItem(i, 0, packageName);
         mPackageTable->setItem(i, 1, shortDescription);
         mPackageTable->setCellWidget(i, 2, remove_btn);
@@ -139,7 +139,7 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
     }
     packageInfo.remove(QStringLiteral("mpackage"));
     packageInfo.remove(QStringLiteral("icon"));
-    packageInfo.remove(QStringLiteral("titel"));
+    packageInfo.remove(QStringLiteral("title"));
 
     QString description = packageInfo.take(QStringLiteral("description"));
     QString packageDir = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), packageName);
