@@ -1343,7 +1343,8 @@ void mudlet::slot_tab_changed(int tabID)
     if (!pHost || !pHost->mpConsole) {
         mpCurrentActiveHost = nullptr;
         return;
-    } else if (mpCurrentActiveHost && (mpCurrentActiveHost.data() == pHost)) {
+    }
+    if (mpCurrentActiveHost && (mpCurrentActiveHost.data() == pHost)) {
         // Actually we HAVEN'T changed tabs so nothing to do:
         return;
     }
