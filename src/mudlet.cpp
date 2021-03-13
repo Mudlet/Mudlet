@@ -1343,6 +1343,9 @@ void mudlet::slot_tab_changed(int tabID)
     if (!pHost || !pHost->mpConsole) {
         mpCurrentActiveHost = nullptr;
         return;
+    } else if (mpCurrentActiveHost && (mpCurrentActiveHost.data() == pHost)) {
+        // Actually we HAVEN'T changed tabs so nothing to do:
+        return;
     }
 
     // Reset the tab back to "normal" to undo the effect of it having its style
@@ -1352,25 +1355,38 @@ void mudlet::slot_tab_changed(int tabID)
     mpTabBar->setTabUnderline(tabID, false);
 
     if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
-        mpCurrentActiveHost->mpConsole->hide();
+        // We do have a currently active profile but it is NOT the one indicated
+        // by the passed argument - so we must change the view:
+        if (!mMultiView) {
+            // We only have to hide the current tab if we are NOT in multi-view mode:
+            mpCurrentActiveHost->mpConsole->hide();
+        }
         mpCurrentActiveHost = &*pHost;
     } else {
+        // Though mpCurrentActiveHost might be valid there is no TMainConsole
+        // instance (still?) around - so it is probably being destroyed or
+        // something like that, it cannot be valid so we'll forget it being the
+        // "current" profile in focus:
         mpCurrentActiveHost = nullptr;
         for (auto pH : mHostManager) {
             if (pH->mpConsole) {
+                // Okay, now we do have a valid profile to use:
                 mpCurrentActiveHost = &*pH;
                 break;
             }
         }
         if (!mpCurrentActiveHost) {
+            // No profiles (Host instances) left - so bail out:
             return;
         }
     }
 
+    // This *seems* to be redundent:
     if (!mpCurrentActiveHost->mpConsole) {
         mpCurrentActiveHost = nullptr;
         return;
     }
+
     mpCurrentActiveHost->mpConsole->show();
     mpCurrentActiveHost->mpConsole->repaint();
     mpCurrentActiveHost->mpConsole->refresh();
@@ -1399,7 +1415,9 @@ void mudlet::slot_tab_changed(int tabID)
         }
         if (mMultiView) {
             for (auto pHost: mHostManager) {
-                if (pHost->mpConsole) {
+                if (pHost->mpConsole && (pHost != mpCurrentActiveHost.data())) {
+                    // We skip showing the current tab as we have already done
+                    // a more thorough refreshment of that one...
                     pHost->mpConsole->show();
                 }
             }
