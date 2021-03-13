@@ -284,7 +284,6 @@ protected:
     void dropEvent(QDropEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
-    bool eventFilter(QObject*, QEvent*) override;
 
 
 private:
