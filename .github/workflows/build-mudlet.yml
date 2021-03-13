@@ -2,6 +2,7 @@ name: Build Mudlet
 on:
   push:
     branches: [master, development, release-*]
+    tags: [Mudlet-*]
   pull_request:
   workflow_dispatch:
   schedule:
