@@ -59,6 +59,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , buffer(pH)
 , emergencyStop(new QToolButton)
 , layerCommandLine(nullptr)
+, mBorderColor(Qt::black)
 , mBgColor(Qt::black)
 , mCommandBgColor(Qt::black)
 , mCommandFgColor(QColor(213, 195, 0))
@@ -138,6 +139,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
             Q_ASSERT_X(false, "TConsole::TConsole(...)", "invalid TConsole type detected");
         }
     }
+    mpMainFrame->installEventFilter(this);
     setContentsMargins(0, 0, 0, 0);
     mFormatSystemMessage.setBackground(mBgColor);
     mFormatSystemMessage.setForeground(Qt::red);
@@ -540,7 +542,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         setAcceptDrops(true);
         setMouseTracking(true);
     }
-    mpMainFrame->setStyleSheet(QStringLiteral("QWidget#MainFrame{ background-color: rgba(0,0,0,255) }"));
     if (mType & MainConsole) {
         mpButtonMainLayer->setVisible(!mpHost->getCompactInputLine());
     }
@@ -564,6 +565,25 @@ void TConsole::resizeConsole()
     QSize s = QSize(width(), height());
     QResizeEvent event(s, s);
     QApplication::sendEvent(this, &event);
+}
+
+// mpMainFrame uses this to paint it's colour to avoid stylesheet and or palette propagation to it's children
+bool TConsole::eventFilter(QObject* object, QEvent* event)
+{
+    Q_UNUSED(object);
+    if (event->type() == QEvent::Paint) {
+        QPaintEvent* paintEvent = static_cast<QPaintEvent*>(event);
+        const QRect& rect = paintEvent->rect();
+        QPainter painter(mpMainFrame);
+        if (!painter.isActive()) {
+            return false;
+        }
+        QPixmap pixmap(rect.width(), rect.height());
+        pixmap.fill(mBorderColor);
+        painter.drawPixmap(0, 0, pixmap);
+        return true;
+    }
+    return false;
 }
 
 void TConsole::resizeEvent(QResizeEvent* event)

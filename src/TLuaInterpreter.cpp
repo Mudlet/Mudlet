@@ -7110,8 +7110,8 @@ int TLuaInterpreter::setBorderColor(lua_State* L)
     int luaGreen = getVerifiedInt(L, __func__, 2, "green");
     int luaBlue = getVerifiedInt(L, __func__, 3, "blue");
     Host& host = getHostFromLua(L);
-    auto styleSheet = QStringLiteral("QWidget#MainFrame{ background-color: rgba(%1,%2,%3,255) }").arg(luaRed).arg(luaGreen).arg(luaBlue);
-    host.mpConsole->mpMainFrame->setStyleSheet(styleSheet);
+    host.mpConsole->mBorderColor.setRgb(luaRed, luaGreen, luaBlue);
+    host.mpConsole->mpMainFrame->update();
     return 0;
 }
 
