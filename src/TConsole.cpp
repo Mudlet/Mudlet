@@ -542,6 +542,17 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         setAcceptDrops(true);
         setMouseTracking(true);
     }
+<<<<<<< Updated upstream
+=======
+
+    QPalette framePalette;
+    framePalette.setColor(QPalette::Text, QColor(Qt::black));
+    framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
+    framePalette.setColor(QPalette::Window, QColor(0, 0, 0, 255));
+    mpMainFrame->setPalette(framePalette);
+    mpMainFrame->setAutoFillBackground(true);
+
+>>>>>>> Stashed changes
     if (mType & MainConsole) {
         mpButtonMainLayer->setVisible(!mpHost->getCompactInputLine());
     }
