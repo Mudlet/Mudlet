@@ -199,7 +199,6 @@ public:
     QWidget* layerCommandLine;
     QHBoxLayout* layoutLayer2;
     QWidget* layerEdit;
-    QColor mBorderColor;
     QColor mBgColor;
     int mButtonState;
     QColor mCommandBgColor;
