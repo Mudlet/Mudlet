@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2020 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2021 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -848,9 +848,16 @@ void TTextEdit::highlightSelection()
     mSelectedRegion = newRegion;
 
     QClipboard* clipboard = QApplication::clipboard();
+    bool padFirstLine = false;
+    if (mShowTimeStamps) {
+        // Must pad if there is a time stamp:
+        padFirstLine = true;
+    } else {
+        padFirstLine = mpConsole->mPadCopiedText;
+    }
     if (clipboard->supportsSelection()) {
         // X11 has a second clipboard that's updated on any selection
-        clipboard->setText(getSelectedText(QChar::LineFeed, mShowTimeStamps), QClipboard::Selection);
+        clipboard->setText(getSelectedText(QChar::LineFeed, mShowTimeStamps, padFirstLine), QClipboard::Selection);
     }
 }
 
@@ -1326,6 +1333,23 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             action4->setIcon(QIcon::fromTheme(QStringLiteral("edit-web-search"), QIcon(QStringLiteral(":/icons/edit-web-search.png"))));
         }
 
+        QAction* pAction_togglePaddingCopy = new QAction(tr("Pad copied text"), this);
+        pAction_togglePaddingCopy->setCheckable(true);
+        if (mShowTimeStamps) {
+            pAction_togglePaddingCopy->setChecked(true);
+            pAction_togglePaddingCopy->setEnabled(false);
+            pAction_togglePaddingCopy->setToolTip(QStringLiteral("<p><i>%1</i></p>")
+                                                          .arg(tr("Forced on when timestamps present: copies of more than one line of text will "
+                                                                  "include padding spaces in the first line if the selection does not start at "
+                                                                  "the left margin.")));
+        } else {
+            pAction_togglePaddingCopy->setChecked(mpConsole->mPadCopiedText);
+            pAction_togglePaddingCopy->setToolTip(QStringLiteral("<p>%1</p>")
+                                                          .arg(tr("When checked: copies of more than one line of text will include padding spaces "
+                                                                  "in the first line if the selection does not start at the left margin.")));
+            connect(pAction_togglePaddingCopy, &QAction::triggered, this, &TTextEdit::slot_togglePaddingCopy);
+        }
+
         auto popup = new QMenu(this);
         popup->setToolTipsVisible(true); // Not the default...
         popup->addAction(action);
@@ -1333,6 +1357,8 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         popup->addAction(actionCopyImage);
         popup->addSeparator();
         popup->addAction(action3);
+        popup->addSeparator();
+        popup->addAction(pAction_togglePaddingCopy);
 
         if (mDragStart != mDragSelectionEnd && mpHost->mEnableTextAnalyzer) {
             mpContextMenuAnalyser = new QAction(tr("Analyse characters"), this);
@@ -1422,7 +1448,14 @@ void TTextEdit::slot_copySelectionToClipboard()
         return;
     }
 
-    QString selectedText = getSelectedText(QChar::LineFeed, mShowTimeStamps);
+    bool padFirstLine = false;
+    if (mShowTimeStamps) {
+        // Must pad if there is a time stamp:
+        padFirstLine = true;
+    } else {
+        padFirstLine = mpConsole->mPadCopiedText;
+    }
+    QString selectedText = getSelectedText(QChar::LineFeed, mShowTimeStamps, padFirstLine);
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(selectedText);
 }
@@ -1666,7 +1699,7 @@ void TTextEdit::searchSelectionOnline()
     QDesktopServices::openUrl(QUrl(url));
 }
 
-QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTimestamps)
+QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTimestamps, const bool padFirstLine)
 {
     // mPA QPoint where selection started
     // mPB QPoint where selection ended
@@ -1689,12 +1722,14 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
             textLines[0] = textLines.at(0).mid(startPos, endPos - startPos + 1);
         }
     } else {
-        // replace a number of QChars at the front with a corresponding
-        // number of spaces to push the first line to the right so it lines up
-        // with the following lines:
         if (!textLines.at(0).isEmpty()) {
             textLines[0] = textLines.at(0).mid(startPos);
-            textLines[0] = QString(QChar::Space).repeated(startPos) % textLines.at(0);
+            if (padFirstLine) {
+                // if required replace a number of QChars at the front with a
+                // corresponding number of spaces to push the first line to the
+                // right so it lines up with the following lines:
+                textLines[0] = QString(QChar::Space).repeated(startPos) % textLines.at(0);
+            }
         }
         // and chop off the required number of QChars from the end of the last
         // line:
@@ -1703,7 +1738,7 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
         }
     }
 
-     if (showTimestamps) {
+    if (showTimestamps) {
         QStringList timestamps = mpBuffer->timeBuffer.mid(startLine, endLine - startLine + 1);
         QStringList result;
         std::transform(textLines.cbegin(), textLines.cend(), timestamps.cbegin(), std::back_inserter(result),
@@ -2437,4 +2472,9 @@ void TTextEdit::reportCodepointErrors()
         // Needed to put a blank line after the last entry:
         qDebug().nospace().noquote() << " ";
     }
+}
+
+void TTextEdit::slot_togglePaddingCopy(const bool state)
+{
+    mpConsole->mPadCopiedText = state;
 }

@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2018, 2020 by Stephen Lyons                       *
+ *   Copyright (C) 2015, 2018, 2020-2021 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -129,10 +129,11 @@ public slots:
 
 private slots:
     void slot_copySelectionToClipboardImage();
+    void slot_togglePaddingCopy(const bool);
 
 private:
     void initDefaultSettings();
-    QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);
+    QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false, const bool padFirstLine = false);
     static QString htmlCenter(const QString&);
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
