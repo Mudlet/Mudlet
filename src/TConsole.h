@@ -199,7 +199,6 @@ public:
     QWidget* layerCommandLine;
     QHBoxLayout* layoutLayer2;
     QWidget* layerEdit;
-    QColor mBorderColor;
     QColor mBgColor;
     int mButtonState;
     QColor mCommandBgColor;
@@ -284,7 +283,6 @@ protected:
     void dropEvent(QDropEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
-    bool eventFilter(QObject*, QEvent*) override;
 
 
 private:
