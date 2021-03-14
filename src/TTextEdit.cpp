@@ -1338,7 +1338,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
         QAction* pAction_toggleCopyTimeStamps = nullptr;
         if (mShowTimeStamps) {
-            pAction_toggleCopyTimeStamps= new QAction(tr("Timestamps in copy"), this);
+            pAction_toggleCopyTimeStamps = new QAction(tr("Timestamps in copy"), this);
             pAction_toggleCopyTimeStamps->setCheckable(true);
             pAction_toggleCopyTimeStamps->setChecked(mpConsole->mCopyTimeStamps);
             pAction_toggleCopyTimeStamps->setToolTip(QStringLiteral("<p>%1</p>")
