@@ -269,7 +269,8 @@ public:
     int mBgImageMode;
     QString mBgImagePath;
     bool mHScrollBarEnabled;
-    bool mPadCopiedText = true;
+    bool mPadCopiedText = false;
+    bool mCopyTimeStamps = true;
 
 
 public slots:

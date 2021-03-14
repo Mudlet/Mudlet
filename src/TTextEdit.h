@@ -130,6 +130,7 @@ public slots:
 private slots:
     void slot_copySelectionToClipboardImage();
     void slot_togglePaddingCopy(const bool);
+    void slot_toggleCopyTimeStamps(const bool);
 
 private:
     void initDefaultSettings();
