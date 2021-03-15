@@ -548,7 +548,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         setMouseTracking(true);
     }
 
-    mpMainFrame->setAutoFillBackground(true);
 
     if (mType & MainConsole) {
         mpButtonMainLayer->setVisible(!mpHost->getCompactInputLine());
