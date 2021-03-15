@@ -1171,6 +1171,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
         if (mCtrlSelecting) {
             expandSelectionToLine(y);
+            highlightSelection();
             event->accept();
             return;
         }
