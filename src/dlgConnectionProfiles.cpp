@@ -2009,7 +2009,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
                 {QStringLiteral(":/CF-loader.xml"), {QStringLiteral("carrionfields.net")}},
                 {QStringLiteral(":/run-tests.xml"), {QStringLiteral("mudlet.org")}},
                 {QStringLiteral(":/mudlet-mapper.xml"),
-                 {QStringLiteral("aetolia.com"), QStringLiteral("achaea.com"), QStringLiteral("lusternia.com"), QStringLiteral("imperian.com"), QStringLiteral("starmourn.com")}},
+                 {QStringLiteral("aetolia.com"), QStringLiteral("achaea.com"), QStringLiteral("lusternia.com"), QStringLiteral("imperian.com"), QStringLiteral("starmourn.com"), QStringLiteral("stickmud.com")}},
         };
 
         QHashIterator<QString, QStringList> i(defaultScripts);
