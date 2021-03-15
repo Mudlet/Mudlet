@@ -1284,7 +1284,9 @@ void mudlet::slot_close_profile_requested(int tab)
     }
 
     pH->stopAllTriggers();
+    pH->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
     pH->mpEditorDialog->close();
+    pH->mpEditorDialog = nullptr;
 
     for (auto consoleName : hostConsoleMap.keys()) {
         if (dockWindowMap.contains(consoleName)) {
