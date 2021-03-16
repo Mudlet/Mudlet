@@ -279,10 +279,11 @@ unix:!macx {
     contains( DEFINES, INCLUDE_MAIN_BUILD_SYSTEM ) {
         # For CI builds or users/developers using the setup-windows-sdk.ps1 method:
         isEmpty( MINGW_BASE_DIR_TEST ) {
-            MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw730_32"
+            MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw810_32"
         }
         LIBS +=  \
             -L"$${MINGW_BASE_DIR_TEST}\\bin" \
+            -L"$${MINGW_BASE_DIR_TEST}\\lib" \
             -llua51 \
             -llibhunspell-1.6
 
