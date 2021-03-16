@@ -48,6 +48,9 @@
 #include <QPainter>
 #include "post_guard.h"
 
+
+const char* TMainConsole::scmProperty_HostName = "HostName";
+
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 : TConsole(pH, TConsole::MainConsole, parent)
 , mClipboard(pH)
@@ -74,6 +77,13 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     // absence of files for the first run in a new profile or from an older
     // Mudlet version:
     setProfileSpellDictionary();
+
+    // Ensure the QWidget has the profile name embedded into it - since
+    // TMainConsole is derived from TConsole which is derived from QWidget which
+    // is derived from QObject then adding something to the
+    // (QList<QByteArray>) QObject::dynamicPropertyNames should be visible from
+    // the QWidget:
+    setProperty(TMainConsole::scmProperty_HostName, pH->getName());
 }
 
 TMainConsole::~TMainConsole()
