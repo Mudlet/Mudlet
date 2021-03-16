@@ -929,12 +929,15 @@ QString cTelnet::decodeOption(const unsigned char ch) const
     }
 }
 
-std::pair<QString, int> cTelnet::getConnectionInfo() const
+std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
 {
+    // intentionally simplify connection state to a boolean
+    const bool connected = socket.state() == QAbstractSocket::ConnectedState;
+
     if (hostName.isEmpty() && hostPort == 0) {
-        return {mpHost->getUrl(), mpHost->getPort()};
+        return {mpHost->getUrl(), mpHost->getPort(), connected};
     } else {
-        return {hostName, hostPort};
+        return {hostName, hostPort, connected};
     }
 }
 
