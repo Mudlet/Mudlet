@@ -69,7 +69,7 @@ jobs:
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
-        arch: win64_mingw73 # this key is relevant only for windows
+        arch: win64_mingw81 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
         aqtversion: '==1.1.2'
 
