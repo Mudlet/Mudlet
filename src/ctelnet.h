@@ -186,7 +186,7 @@ public:
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
     QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
-    std::pair<QString, int> getConnectionInfo() const;
+    std::tuple<QString, int, bool> getConnectionInfo() const;
 
 
     QMap<int, bool> supportedTelnetOptions;

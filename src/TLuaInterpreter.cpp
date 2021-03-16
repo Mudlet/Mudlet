@@ -13020,10 +13020,11 @@ int TLuaInterpreter::getConnectionInfo(lua_State *L)
 {
     Host& host = getHostFromLua(L);
 
-    auto [hostName, hostPort] = host.mTelnet.getConnectionInfo();
+    auto [hostName, hostPort, connected] = host.mTelnet.getConnectionInfo();
     lua_pushstring(L, hostName.toUtf8().constData());
     lua_pushnumber(L, hostPort);
-    return 2;
+    lua_pushboolean(L, connected);
+    return 3;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Networking_Functions#unzipAsync
