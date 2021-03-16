@@ -206,7 +206,6 @@ public:
     static void start();
     HostManager& getHostManager() { return mHostManager; }
     void attachDebugArea(const QString& hostname);
-    void addSubWindow(TConsole* p);
     void addConsoleForNewHost(Host* pH);
     void disableToolbarButtons();
     void enableToolbarButtons();
