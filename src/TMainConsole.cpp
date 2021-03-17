@@ -78,11 +78,7 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     // Mudlet version:
     setProfileSpellDictionary();
 
-    // Ensure the QWidget has the profile name embedded into it - since
-    // TMainConsole is derived from TConsole which is derived from QWidget which
-    // is derived from QObject then adding something to the
-    // (QList<QByteArray>) QObject::dynamicPropertyNames should be visible from
-    // the QWidget:
+    // Ensure the QWidget has the profile name embedded into it
     setProperty(TMainConsole::scmProperty_HostName, pH->getName());
 }
 
