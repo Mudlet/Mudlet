@@ -159,7 +159,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         disableHostDetails();
         clearHostDetails();
     }
-
+    enableDarkTheme->setEnabled(true);
 #if defined(INCLUDE_UPDATER)
     if (mudlet::scmIsDevelopmentVersion) {
         // tick the box and make it be "un-untickable" as automatic updates are
@@ -252,6 +252,11 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // have to state which one we want to use for these two:
     connect(comboBox_menuBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowMenuBar);
     connect(comboBox_toolBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowToolBar);
+    connect(enableDarkTheme, &QCheckBox::stateChanged, pMudlet, &mudlet::setDarkTheme);
+
+    if(pMudlet->mDarkTheme){
+        enableDarkTheme->setChecked(true);
+    }
 
     // This group of signal/slot connections handles updating *this* instance of
     // the "Profile preferences" form/dialog when a *different* profile saves
@@ -267,6 +272,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
     connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
     connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
+    connect(pMudlet, &mudlet::signal_enableDarkThemeChanged, this, &dlgProfilePreferences::slot_changeEnableDarkTheme);
 
     generateDiscordTooltips();
 
@@ -3734,6 +3740,15 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
     auto languageCode = comboBox_guiLanguage->currentData().toString();
     mudlet::self()->setInterfaceLanguage(languageCode);
     label_languageChangeWarning->show();
+}
+
+// This slot is called when the QComboBox for enabling DarkTheme
+// is changed by the user.
+void dlgProfilePreferences::slot_changeEnableDarkTheme(const bool state)
+{
+    if (enableDarkTheme->isChecked() != state) {
+        enableDarkTheme->setChecked(state);
+    }
 }
 
 // This slot is called when the mudlet singleton tells everything that the

@@ -74,6 +74,7 @@
 #include <QTimer>
 #include <QToolBar>
 #include <QToolButton>
+#include <QToolTip>
 #include <QVariantHash>
 #include <QRandomGenerator>
 #include <zip.h>
@@ -251,6 +252,7 @@ mudlet::mudlet()
     scanForMudletTranslations(QStringLiteral(":/lang"));
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
+    setDarkTheme(mDarkTheme);
 
     if (QString stylefactory = qApp->style()->objectName(); QStringList{"windowsvista", "macintosh"}.contains(stylefactory, Qt::CaseInsensitive)) {
         qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << stylefactory << "' has been detected as the style factory in use - QPushButton styling fix applied!";
@@ -1821,7 +1823,7 @@ void mudlet::readEarlySettings(const QSettings& settings)
         QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
         mEnableFullScreenMode = file_use_smallscreen.exists();
     }
-
+    mDarkTheme = settings.value(QStringLiteral("darkTheme"), QVariant(false)).toBool();
     mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
     mUserLocale = QLocale(mInterfaceLanguage);
     if (mUserLocale == QLocale::c()) {
@@ -1994,6 +1996,7 @@ void mudlet::writeSettings()
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
     settings.setValue("interfaceLanguage", mInterfaceLanguage);
+    settings.setValue("darkTheme", mDarkTheme);
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -3725,7 +3728,6 @@ void mudlet::setShowMapAuditErrors(const bool state)
 
         emit signal_showMapAuditErrorsChanged(state);
     }
-
 }
 
 void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
@@ -3746,6 +3748,42 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
 
         emit signal_showIconsOnMenusChanged(state);
     }
+}
+void mudlet::setDarkTheme(const bool& state)
+{
+    if (state) {
+        QPalette mPalette;
+        mPalette.setColor(QPalette::Window, QColor(53, 53, 53));
+        mPalette.setColor(QPalette::WindowText, Qt::white);
+        mPalette.setColor(QPalette::Base, QColor(25, 25, 25));
+        mPalette.setColor(QPalette::AlternateBase, QColor(53, 53, 53));
+        mPalette.setColor(QPalette::ToolTipBase, QColor(53, 53, 53));
+        mPalette.setColor(QPalette::ToolTipText, Qt::white);
+        mPalette.setColor(QPalette::Text, Qt::white);
+        mPalette.setColor(QPalette::Button, QColor(53, 53, 53));
+        mPalette.setColor(QPalette::ButtonText, Qt::white);
+        mPalette.setColor(QPalette::BrightText, Qt::red);
+        mPalette.setColor(QPalette::Link, QColor(42, 130, 218));
+        mPalette.setColor(QPalette::Highlight, QColor(42, 130, 218));
+        mPalette.setColor(QPalette::HighlightedText, Qt::black);
+        mPalette.setColor(QPalette::Disabled, QPalette::Text, QColor(164, 166, 168));
+        mPalette.setColor(QPalette::Disabled, QPalette::WindowText, QColor(164, 166, 168));
+        mPalette.setColor(QPalette::Disabled, QPalette::ButtonText, QColor(164, 166, 168));
+        mPalette.setColor(QPalette::Disabled, QPalette::HighlightedText, QColor(164, 166, 168));
+        mPalette.setColor(QPalette::Disabled, QPalette::Base, QColor(68, 68, 68));
+        mPalette.setColor(QPalette::Disabled, QPalette::Window, QColor(68, 68, 68));
+        mPalette.setColor(QPalette::Disabled, QPalette::Highlight, QColor(68, 68, 68));
+        QToolTip::setPalette(mPalette);
+        qApp->setPalette(mPalette);
+        getHostManager().changeHostConsoleColour(getActiveHost());
+    } else {
+        QPalette mPalette = qApp->style()->standardPalette();
+        QToolTip::setPalette(mPalette);
+        qApp->setPalette(mPalette);
+        getHostManager().changeHostConsoleColour(getActiveHost());
+    }
+    mDarkTheme = state;
+    emit signal_enableDarkThemeChanged(state);
 }
 
 void mudlet::setInterfaceLanguage(const QString& languageCode)

@@ -201,8 +201,6 @@ public:
     static int restartIrc(lua_State*);
     static int showUnzipProgress(lua_State*);
     static int setAppStyleSheet(lua_State*);
-    static int DarkTheme(lua_State*);
-    static int resetTheme(lua_State*);
     static int setProfileStyleSheet(lua_State*);
     static int setMainWindowSize(lua_State* L);
     static int registerAnonymousEventHandler(lua_State* L);

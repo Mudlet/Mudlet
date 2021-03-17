@@ -122,6 +122,23 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event, con
     }
 }
 
+void HostManager::changeHostConsoleColour(const Host* pHost)
+{
+    if (!pHost) {
+        return;
+    }
+    //change all main and subconsoles color
+    const QList<QSharedPointer<Host>> hostList = mHostPool.values();
+    for (int i = 0; i < hostList.size(); i++) {
+        hostList.at(i)->mpConsole->changeColors();
+        QMutableMapIterator<QString, TConsole*> itSubConsole(hostList.at(i)->mpConsole->mSubConsoleMap);
+        while (itSubConsole.hasNext()) {
+            itSubConsole.next();
+            itSubConsole.value()->changeColors();
+        }
+    }
+}
+
 Host* HostManager::getHost(const QString& hostname)
 {
     Host* pHost = mHostPool.value(hostname).data();

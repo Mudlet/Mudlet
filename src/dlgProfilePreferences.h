@@ -143,6 +143,7 @@ private slots:
     void slot_changeShowToolBar(int);
     void slot_changeEditorTextOptions(const QTextOption::Flags);
     void slot_changeEnableFullScreenMode(const bool);
+    void slot_changeEnableDarkTheme(const bool);
     void slot_changeShowMapAuditErrors(const bool);
     void slot_changeAutomaticUpdates(const bool);
     void slot_setToolBarIconSize(const int);
