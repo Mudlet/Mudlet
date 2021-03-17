@@ -7,7 +7,4 @@
 2. 
 3. 
 
-#### Error output / Expected result of feature
-
-
 #### Extra information, such as Mudlet version, operating system and ideas for how to solve / implement:
