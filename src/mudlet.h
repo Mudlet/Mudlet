@@ -610,6 +610,8 @@ private:
     // on the mpToolBarReplay:
     QString mTimeFormat;
 
+    QString mDefaultStyle;
+
     // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
     // file for GUI translation

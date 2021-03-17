@@ -248,18 +248,18 @@ mudlet::mudlet()
     }
 
     qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
+    mDefaultStyle = qApp->style()->objectName();
 
     scanForMudletTranslations(QStringLiteral(":/lang"));
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
     setDarkTheme(mDarkTheme);
-
-    if (QString stylefactory = qApp->style()->objectName(); QStringList{"windowsvista", "macintosh"}.contains(stylefactory, Qt::CaseInsensitive)) {
-        qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << stylefactory << "' has been detected as the style factory in use - QPushButton styling fix applied!";
+    if (QStringList{"windowsvista", "macintosh"}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
+        qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - QPushButton styling fix applied!";
         mBG_ONLY_STYLESHEET = QStringLiteral("QPushButton {background-color: %1; border: 1px solid #8f8f91;}");
         mTEXT_ON_BG_STYLESHEET = QStringLiteral("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}");
     } else {
-        qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << stylefactory << "' has been detected as the style factory in use - no styling fixes applied.";
+        qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - no styling fixes applied.";
         mBG_ONLY_STYLESHEET = QStringLiteral("QPushButton {background-color: %1;}");
         mTEXT_ON_BG_STYLESHEET = QStringLiteral("QPushButton {color: %1; background-color: %2;}");
     }
@@ -3752,6 +3752,7 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
 void mudlet::setDarkTheme(const bool& state)
 {
     if (state) {
+        qApp->setStyle(QStyleFactory::create("Fusion"));
         QPalette mPalette;
         mPalette.setColor(QPalette::Window, QColor(53, 53, 53));
         mPalette.setColor(QPalette::WindowText, Qt::white);
@@ -3777,6 +3778,7 @@ void mudlet::setDarkTheme(const bool& state)
         qApp->setPalette(mPalette);
         getHostManager().changeHostConsoleColour(getActiveHost());
     } else {
+        qApp->setStyle(QStyleFactory::create(mDefaultStyle));
         QPalette mPalette = qApp->style()->standardPalette();
         QToolTip::setPalette(mPalette);
         qApp->setPalette(mPalette);
