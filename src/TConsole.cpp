@@ -480,8 +480,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     splitter->setSizes(sizeList);
 
     mUpperPane->show();
-    // There is never a need to have the lower pane showing from this
-    // constructor as the associated TBuffer must always be empty at this point:
     mLowerPane->hide();
 
     connect(mpScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_scrollBarMoved);
