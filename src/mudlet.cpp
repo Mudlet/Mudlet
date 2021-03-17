@@ -4347,7 +4347,7 @@ void mudlet::slot_tabMoved(const int oldPos, const int newPos)
     // gone through them all it will mean that they are in the same order as the
     // tabs:
     for (int index = 0; index < itemsCount; ++index) {
-        auto wantedTabName = tabNamesInOrder.at(index);
+        const auto& wantedTabName = tabNamesInOrder.at(index);
         auto pLayoutItem = layoutItemMap.value(wantedTabName);
         // This will remove the item from whereever it is in the layout:
         mpHBoxLayout_profileContainer->removeItem(pLayoutItem);
