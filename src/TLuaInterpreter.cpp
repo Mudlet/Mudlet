@@ -60,6 +60,7 @@
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QTableWidget>
+#include <QToolTip>
 #include <QFileInfo>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
@@ -5198,6 +5199,49 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     mudlet::self()->getHostManager().postInterHostEvent(nullptr, event, true);
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAppStyleSheet
+int TLuaInterpreter::DarkTheme(lua_State* L)
+{
+    QPalette mPalette;
+    mPalette.setColor(QPalette::Window, QColor(53, 53, 53));
+    mPalette.setColor(QPalette::WindowText, Qt::white);
+    mPalette.setColor(QPalette::Base, QColor(25, 25, 25));
+    mPalette.setColor(QPalette::AlternateBase, QColor(53, 53, 53));
+    mPalette.setColor(QPalette::ToolTipBase, QColor(53, 53, 53));
+    mPalette.setColor(QPalette::ToolTipText, Qt::white);
+    mPalette.setColor(QPalette::Text, Qt::white);
+    mPalette.setColor(QPalette::Button, QColor(53, 53, 53));
+    mPalette.setColor(QPalette::ButtonText, Qt::white);
+    mPalette.setColor(QPalette::BrightText, Qt::red);
+    mPalette.setColor(QPalette::Link, QColor(42, 130, 218));
+    mPalette.setColor(QPalette::Highlight, QColor(42, 130, 218));
+    mPalette.setColor(QPalette::HighlightedText, Qt::black);
+    mPalette.setColor(QPalette::Disabled, QPalette::Text,
+                      QColor(164, 166, 168));
+    mPalette.setColor(QPalette::Disabled, QPalette::WindowText,
+                      QColor(164, 166, 168));
+    mPalette.setColor(QPalette::Disabled, QPalette::ButtonText,
+                      QColor(164, 166, 168));
+    mPalette.setColor(QPalette::Disabled, QPalette::HighlightedText,
+                      QColor(164, 166, 168));
+    mPalette.setColor(QPalette::Disabled, QPalette::Base, QColor(68, 68, 68));
+    mPalette.setColor(QPalette::Disabled, QPalette::Window, QColor(68, 68, 68));
+    mPalette.setColor(QPalette::Disabled, QPalette::Highlight,
+                      QColor(68, 68, 68));
+    QToolTip::setPalette(mPalette);
+    qApp->setPalette(mPalette);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAppStyleSheet
+int TLuaInterpreter::resetTheme(lua_State* L)
+{
+    QPalette mPalette = qApp->style()->standardPalette();
+    QToolTip::setPalette(mPalette);
+    qApp->setPalette(mPalette);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAppStyleSheet
@@ -13566,6 +13610,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "loadMap", TLuaInterpreter::loadMap);
     lua_register(pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize);
     lua_register(pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet);
+    lua_register(pGlobalLua, "DarkTheme", TLuaInterpreter::DarkTheme);
+    lua_register(pGlobalLua, "resetTheme", TLuaInterpreter::resetTheme);
     lua_register(pGlobalLua, "setProfileStyleSheet", TLuaInterpreter::setProfileStyleSheet);
     lua_register(pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc);
     lua_register(pGlobalLua, "getIrcNick", TLuaInterpreter::getIrcNick);
