@@ -1345,7 +1345,6 @@ void mudlet::slot_tab_changed(int tabID)
         return;
     }
     if (mpCurrentActiveHost && (mpCurrentActiveHost.data() == pHost)) {
-        // Actually we HAVEN'T changed tabs so nothing to do:
         return;
     }
 
@@ -1356,22 +1355,19 @@ void mudlet::slot_tab_changed(int tabID)
     mpTabBar->setTabUnderline(tabID, false);
 
     if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
-        // We do have a currently active profile but it is NOT the one indicated
-        // by the passed argument - so we must change the view:
         if (!mMultiView) {
-            // We only have to hide the current tab if we are NOT in multi-view mode:
+            // We only have to hide the current tab if NOT in multi-view mode:
             mpCurrentActiveHost->mpConsole->hide();
         }
         mpCurrentActiveHost = &*pHost;
+
     } else {
-        // Though mpCurrentActiveHost might be valid there is no TMainConsole
-        // instance (still?) around - so it is probably being destroyed or
-        // something like that, it cannot be valid so we'll forget it being the
-        // "current" profile in focus:
+        // no Host or it's TMainConsole instance - so it is maybe being
+        // destroyed or something like that, it cannot be valid so forget it
+        // being the "current" profile in focus:
         mpCurrentActiveHost = nullptr;
         for (auto pH : mHostManager) {
             if (pH->mpConsole) {
-                // Okay, now we do have a valid profile to use:
                 mpCurrentActiveHost = &*pH;
                 break;
             }
@@ -1382,7 +1378,7 @@ void mudlet::slot_tab_changed(int tabID)
         }
     }
 
-    // This *seems* to be redundent:
+    // CHECK: This *seems* to be redundent - further investigation needed to be sure:
     if (!mpCurrentActiveHost->mpConsole) {
         mpCurrentActiveHost = nullptr;
         return;
