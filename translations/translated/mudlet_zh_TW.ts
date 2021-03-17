@@ -32,12 +32,14 @@
     <message>
       <location filename="../src/glwidget.cpp" line="286"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>您還沒有地圖 - 加載一個地圖，或從頭開始創建地圖。</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="285"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>您已載入地圖（共 %n 個房間），但 Mudlet 不知道您現在的位置。</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -45,7 +47,7 @@
     <message>
       <location filename="../src/Host.cpp" line="459"/>
       <source>Text to send to the game</source>
-      <translation type="unfinished"/>
+      <translation>要傳送至遊戲的文字</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="840"/>
