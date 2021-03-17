@@ -20,6 +20,12 @@
 #include "AltFocusMenuBarDisable.h"
 #include <QProxyStyle>
 
+
+AltFocusMenuBarDisable::AltFocusMenuBarDisable(QStyle *style)
+{
+    setBaseStyle(style);
+}
+
 int AltFocusMenuBarDisable::styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const
 {
     if (styleHint == QStyle::SH_MenuBar_AltKeyNavigation) {

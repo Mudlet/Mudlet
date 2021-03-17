@@ -23,6 +23,7 @@ class AltFocusMenuBarDisable : public QProxyStyle
 {
 
 public:
+    AltFocusMenuBarDisable(QStyle *style);
     int styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const;
 
 };

@@ -26,6 +26,7 @@
 
 #include "mudlet.h"
 
+#include "AltFocusMenuBarDisable.h"
 #include "EAction.h"
 #include "LuaInterface.h"
 #include "TCommandLine.h"
@@ -3752,7 +3753,7 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
 void mudlet::setDarkTheme(const bool& state)
 {
     if (state) {
-        qApp->setStyle(QStyleFactory::create("Fusion"));
+        qApp->setStyle(new AltFocusMenuBarDisable(QStyleFactory::create("Fusion")));
         QPalette mPalette;
         mPalette.setColor(QPalette::Window, QColor(53, 53, 53));
         mPalette.setColor(QPalette::WindowText, Qt::white);
@@ -3778,7 +3779,7 @@ void mudlet::setDarkTheme(const bool& state)
         qApp->setPalette(mPalette);
         getHostManager().changeHostConsoleColour(getActiveHost());
     } else {
-        qApp->setStyle(QStyleFactory::create(mDefaultStyle));
+        qApp->setStyle(new AltFocusMenuBarDisable(QStyleFactory::create(mDefaultStyle)));
         QPalette mPalette = qApp->style()->standardPalette();
         QToolTip::setPalette(mPalette);
         qApp->setPalette(mPalette);
