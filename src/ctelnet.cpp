@@ -2188,7 +2188,8 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
                 } else if (mspVAR == "U") {
                     mediaData.setMediaUrl(mspVAL);
                 } else {
-                    return; // Invalid MSP.
+                    qDebug() << "MSP: tag" << mspVAR << "isn't one we understand";
+                    continue; // robustness principle: ignore anything we don't understand
                 }
             }
         }
