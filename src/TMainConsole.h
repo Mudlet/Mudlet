@@ -103,7 +103,6 @@ public:
     bool loadMap(const QString&);
     bool importMap(const QString&, QString* errMsg = Q_NULLPTR);
 
-    static const char* scmProperty_HostName;
 
     QMap<QString, TConsole*> mSubConsoleMap;
     QMap<QString, TDockWidget*> mDockWidgetMap;

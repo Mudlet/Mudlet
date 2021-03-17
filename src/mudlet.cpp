@@ -4338,7 +4338,7 @@ void mudlet::slot_tabMoved(const int oldPos, const int newPos)
         auto pLayoutItem = mpHBoxLayout_profileContainer->itemAt(profileIndex);
         auto pWidget = pLayoutItem->widget();
         if (pWidget) {
-            auto name = pWidget->property(TMainConsole::scmProperty_HostName).toString();
+            auto name = pWidget->property("HostName").toString();
             layoutItemMap.insert(name, pLayoutItem);
         }
     }

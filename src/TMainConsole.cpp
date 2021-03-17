@@ -49,8 +49,6 @@
 #include "post_guard.h"
 
 
-const char* TMainConsole::scmProperty_HostName = "HostName";
-
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 : TConsole(pH, TConsole::MainConsole, parent)
 , mClipboard(pH)
@@ -79,7 +77,7 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     setProfileSpellDictionary();
 
     // Ensure the QWidget has the profile name embedded into it
-    setProperty(TMainConsole::scmProperty_HostName, pH->getName());
+    setProperty("HostName", pH->getName());
 }
 
 TMainConsole::~TMainConsole()

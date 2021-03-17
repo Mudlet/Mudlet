@@ -2493,7 +2493,7 @@ void Host::setName(const QString& newName)
     }
 
     mHostName = newName;
-    mpConsole->setProperty(TMainConsole::scmProperty_HostName, newName);
+    mpConsole->setProperty("HostName", newName);
 
     mTelnet.mProfileName = newName;
     if (mpMap) {
