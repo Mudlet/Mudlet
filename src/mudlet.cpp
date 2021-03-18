@@ -3754,11 +3754,11 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
 void mudlet::setDarkTheme(const bool& state)
 {
     if (state) {
-        qApp->setStyle(new DarkTheme(new AltFocusMenuBarDisable));
-        getHostManager().changeHostConsoleColour(getActiveHost());
+        qApp->setStyle(new DarkTheme);
+        getHostManager().changeAllHostColour(getActiveHost());
     } else {
-        qApp->setStyle(new AltFocusMenuBarDisable);
-        getHostManager().changeHostConsoleColour(getActiveHost());
+        qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+        getHostManager().changeAllHostColour(getActiveHost());
     }
     mDarkTheme = state;
     emit signal_enableDarkThemeChanged(state);

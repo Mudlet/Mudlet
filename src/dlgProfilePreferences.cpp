@@ -381,7 +381,10 @@ void dlgProfilePreferences::disableHostDetails()
     // groupBox_iconsAndToolbars is NOT dependent on pHost - so leave it alone
     label_encoding->setEnabled(false);
     comboBox_encoding->setEnabled(false);
-    groupBox_miscellaneous->setEnabled(false);
+    mAlertOnNewData->setEnabled(false);
+    acceptServerGUI->setEnabled(false);
+    mFORCE_SAVE_ON_EXIT->setEnabled(false);
+    acceptServerMedia->setEnabled(false);
     groupBox_protocols->setEnabled(false);
     need_reconnect_for_data_protocol->hide();
 
@@ -463,7 +466,10 @@ void dlgProfilePreferences::enableHostDetails()
     // on tab_general:
     label_encoding->setEnabled(true);
     comboBox_encoding->setEnabled(true);
-    groupBox_miscellaneous->setEnabled(true);
+    mAlertOnNewData->setEnabled(true);
+    acceptServerGUI->setEnabled(true);
+    mFORCE_SAVE_ON_EXIT->setEnabled(true);
+    acceptServerMedia->setEnabled(true);
     groupBox_protocols->setEnabled(true);
 
     // on tab_inputLine:

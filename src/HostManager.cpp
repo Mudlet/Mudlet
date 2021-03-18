@@ -123,7 +123,7 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event, con
     }
 }
 
-void HostManager::changeHostConsoleColour(const Host* pHost)
+void HostManager::changeAllHostColour(const Host* pHost)
 {
     if (!pHost) {
         return;

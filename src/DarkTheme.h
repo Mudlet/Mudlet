@@ -17,10 +17,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef DARKTHEME_HPP
-#define DARKTHEME_HPP
+#ifndef MUDLET_DARKTHEME_H
+#define MUDLET_DARKTHEME_H
 
-#include <QApplication>
 #include <QProxyStyle>
 #include <QStyleFactory>
 
@@ -34,4 +33,4 @@ public:
     void polish(QPalette& palette) override;
 };
 
-#endif // DarkTheme_HPP
+#endif // end MUDLET_DARKTHEME_H
