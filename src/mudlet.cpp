@@ -1346,6 +1346,9 @@ void mudlet::slot_tab_changed(int tabID)
         mpCurrentActiveHost = nullptr;
         return;
     }
+    if (mpCurrentActiveHost && (mpCurrentActiveHost.data() == pHost)) {
+        return;
+    }
 
     // Reset the tab back to "normal" to undo the effect of it having its style
     // changed on new data:
@@ -1354,9 +1357,16 @@ void mudlet::slot_tab_changed(int tabID)
     mpTabBar->setTabUnderline(tabID, false);
 
     if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
-        mpCurrentActiveHost->mpConsole->hide();
+        if (!mMultiView) {
+            // We only have to hide the current tab if NOT in multi-view mode:
+            mpCurrentActiveHost->mpConsole->hide();
+        }
         mpCurrentActiveHost = &*pHost;
+
     } else {
+        // no Host or it's TMainConsole instance - so it is maybe being
+        // destroyed or something like that, it cannot be valid so forget it
+        // being the "current" profile in focus:
         mpCurrentActiveHost = nullptr;
         for (auto pH : mHostManager) {
             if (pH->mpConsole) {
@@ -1365,14 +1375,17 @@ void mudlet::slot_tab_changed(int tabID)
             }
         }
         if (!mpCurrentActiveHost) {
+            // No profiles (Host instances) left - so bail out:
             return;
         }
     }
 
+    // CHECK: This *seems* to be redundant - further investigation needed to be sure:
     if (!mpCurrentActiveHost->mpConsole) {
         mpCurrentActiveHost = nullptr;
         return;
     }
+
     mpCurrentActiveHost->mpConsole->show();
     mpCurrentActiveHost->mpConsole->repaint();
     mpCurrentActiveHost->mpConsole->refresh();
@@ -1401,7 +1414,9 @@ void mudlet::slot_tab_changed(int tabID)
         }
         if (mMultiView) {
             for (auto pHost: mHostManager) {
-                if (pHost->mpConsole) {
+                if (pHost->mpConsole && (pHost != mpCurrentActiveHost.data())) {
+                    // We skip showing the current tab as we have already done
+                    // a more thorough refreshment of that one...
                     pHost->mpConsole->show();
                 }
             }
