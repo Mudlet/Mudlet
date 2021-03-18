@@ -1378,7 +1378,7 @@ void mudlet::slot_tab_changed(int tabID)
         }
     }
 
-    // CHECK: This *seems* to be redundent - further investigation needed to be sure:
+    // CHECK: This *seems* to be redundant - further investigation needed to be sure:
     if (!mpCurrentActiveHost->mpConsole) {
         mpCurrentActiveHost = nullptr;
         return;
