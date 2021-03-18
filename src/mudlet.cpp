@@ -255,7 +255,9 @@ mudlet::mudlet()
     scanForMudletTranslations(QStringLiteral(":/lang"));
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
-    setDarkTheme(mDarkTheme);
+    if (mDarkTheme) {
+        setDarkTheme(mDarkTheme);
+    }
     if (QStringList{"windowsvista", "macintosh"}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
         qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - QPushButton styling fix applied!";
         mBG_ONLY_STYLESHEET = QStringLiteral("QPushButton {background-color: %1; border: 1px solid #8f8f91;}");
