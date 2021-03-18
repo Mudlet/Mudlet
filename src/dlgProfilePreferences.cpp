@@ -252,7 +252,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // have to state which one we want to use for these two:
     connect(comboBox_menuBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowMenuBar);
     connect(comboBox_toolBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowToolBar);
-    connect(enableDarkTheme, &QCheckBox::stateChanged, pMudlet, &mudlet::setDarkTheme);
 
     if(pMudlet->mDarkTheme){
         enableDarkTheme->setChecked(true);
@@ -2706,6 +2705,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
+    pMudlet->setDarkTheme(enableDarkTheme->isChecked());
 
     mudlet::self()->mDiscord.UpdatePresence();
 

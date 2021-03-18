@@ -21,11 +21,6 @@
 #include <QProxyStyle>
 
 
-AltFocusMenuBarDisable::AltFocusMenuBarDisable(QStyle *style)
-{
-    setBaseStyle(style);
-}
-
 int AltFocusMenuBarDisable::styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const
 {
     if (styleHint == QStyle::SH_MenuBar_AltKeyNavigation) {
@@ -33,4 +28,9 @@ int AltFocusMenuBarDisable::styleHint(StyleHint styleHint, const QStyleOption *o
     }
 
     return QProxyStyle::styleHint(styleHint, opt, widget, returnData);
+}
+
+void AltFocusMenuBarDisable::polish(QPalette &palette) {
+    QPalette defaultPalette = standardPalette();
+    palette = defaultPalette;
 }

@@ -456,7 +456,7 @@ int main(int argc, char* argv[])
         QFile::link(homeDirectory, homeLink);
     }
 #endif
-
+    app->setStyle(new AltFocusMenuBarDisable);
     mudlet::start();
 
     if (first_launch) {
@@ -499,7 +499,6 @@ int main(int argc, char* argv[])
     });
 
     app->restoreOverrideCursor();
-    app->setStyle(new AltFocusMenuBarDisable(qApp->style()));
 
     // NOTE: Must restore cursor - BEWARE DEBUGGERS if you terminate application
     // without doing/reaching this restore - it can be quite hard to accurately

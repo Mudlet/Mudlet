@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2020 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,13 +17,21 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QProxyStyle>
+#ifndef DARKTHEME_HPP
+#define DARKTHEME_HPP
 
-class AltFocusMenuBarDisable : public QProxyStyle
+#include <QApplication>
+#include <QProxyStyle>
+#include <QStyleFactory>
+
+class DarkTheme : public QProxyStyle
 {
+    Q_OBJECT
 
 public:
-    int styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const;
-    void polish(QPalette &palette) override;
-
+    DarkTheme();
+    explicit DarkTheme(QStyle* style);
+    void polish(QPalette& palette) override;
 };
+
+#endif // DarkTheme_HPP
