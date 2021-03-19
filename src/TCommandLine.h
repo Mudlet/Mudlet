@@ -79,6 +79,7 @@ public slots:
     void slot_popupMenu();
     void slot_addWord();
     void slot_removeWord();
+    void slot_clearSelection(bool yes);
 
 private:
     bool event(QEvent*) override;
@@ -93,6 +94,7 @@ private:
     bool keybindingMatched(QKeyEvent*);
     void spellCheckWord(QTextCursor& c);
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
+    bool mSpellChecking = false;
 
     QPointer<Host> mpHost;
     CommandLineType mType;
