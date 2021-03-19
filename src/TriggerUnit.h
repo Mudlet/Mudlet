@@ -24,7 +24,6 @@
 
 #include "pre_guard.h"
 #include <QMultiMap>
-#include <QMutex>
 #include <QPointer>
 #include <QString>
 #include "post_guard.h"
@@ -41,11 +40,10 @@ class TriggerUnit
     friend class XMLimport;
 
 public:
-    TriggerUnit(Host* pHost) : mpHost(pHost), mMaxID(0), statsPatterns(), mModuleMember() { initStats(); }
+    TriggerUnit(Host* pHost) : statsPatterns(), mpHost(pHost), mMaxID(0), mModuleMember() { initStats(); }
 
     std::list<TTrigger*> getTriggerRootNodeList()
     {
-        QMutexLocker locker(&mTriggerUnitLock);
         return mTriggerRootNodeList;
     }
 
@@ -68,7 +66,6 @@ public:
     std::list<TTrigger*> mCleanupList;
     int getNewID();
     QMultiMap<QString, TTrigger*> mLookupTable;
-    QMutex mTriggerUnitLock;
     void markCleanup(TTrigger* pT);
     void doCleanup();
     void uninstall(const QString&);

@@ -36,10 +36,10 @@
 cmake_minimum_required(VERSION 3.3)
 
 if(APPLE)
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13") # Qt 5.11.2 with which we build on OS
-                                           # X supports 10.11 and up, but some
-                                           # tools are not provided as bottles
-                                           # for that anymore.
+  # needed for fetching Sparkle
+  cmake_minimum_required(VERSION 3.18)
+  # minimum supported version by Apple
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "")
 endif()
 
 project(mudlet)
@@ -83,7 +83,7 @@ endif()
 # IMPORTANT: To insure consistency please ensure the SAME of the first two
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 4.9.1)
+set(APP_VERSION 4.11.1)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
                                          STREQUAL "")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
@@ -102,16 +102,22 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_UPDATER
                                           "Windows"
                                           "Darwin")
 
-include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS OPTION_VARIABLE
-                        USE_FONTS READABLE_NAME "fonts")
-include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER OPTION_VARIABLE
-                        USE_3DMAPPER READABLE_NAME "3D mapper")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS
+                        OPTION_VARIABLE USE_FONTS
+                        READABLE_NAME "fonts")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER
+                        OPTION_VARIABLE USE_3DMAPPER
+                        READABLE_NAME "3D mapper")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
                         OPTION_VARIABLE USE_OWN_QT5KEYCHAIN
                         READABLE_NAME "own QKeychain (Qt5) library")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_MAIN_BUILD_SYSTEM
+                        OPTION_VARIABLE USE_MAIN_BUILD_SYSTEM
+                        READABLE_NAME "original CI (setup-windows-sdk.ps1) windows build system"
+                        SUPPORTED_SYSTEMS "Windows")
 
 include(InitGitSubmodule)
 
@@ -144,12 +150,15 @@ if(APPLE)
 
     if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
       message(
-        STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it..."
+        STATUS "Sparkle is missing, fetching it..."
       )
-      execute_process(
-        TIMEOUT 30
-        WORKING_DIRECTORY "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods"
-        COMMAND pod install)
+      file(DOWNLOAD "https://github.com/sparkle-project/Sparkle/releases/download/1.25.0/Sparkle-1.25.0.tar.xz" "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0.tar.xz"
+        TIMEOUT 60  # seconds
+        TLS_VERIFY ON
+      )
+      file(ARCHIVE_EXTRACT INPUT "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0.tar.xz"
+        DESTINATION "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
+      file(REMOVE "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0.tar.xz")
     endif()
   endif()
 endif()

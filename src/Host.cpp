@@ -27,24 +27,36 @@
 
 #include "LuaInterface.h"
 #include "TConsole.h"
+#include "TMainConsole.h"
 #include "TCommandLine.h"
+#include "TDockWidget.h"
 #include "TEvent.h"
+#include "TLabel.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
+#include "TTextEdit.h"
+#include "TToolBar.h"
+#include "VarUnit.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
+#include "dlgModuleManager.h"
+#include "dlgNotepad.h"
+#include "dlgProfilePreferences.h"
+#include "dlgIRC.h"
 #include "mudlet.h"
-
 
 #include "pre_guard.h"
 #include <chrono>
+#include <QDialog>
 #include <QtUiTools>
 #include <QNetworkProxy>
 #include <zip.h>
 #include <memory>
 #include "post_guard.h"
+
+using namespace std::chrono;
 
 stopWatch::stopWatch()
 : mIsInitialised(false)
@@ -186,11 +198,14 @@ QString stopWatch::getElapsedDayTimeString() const
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
 : mTelnet(this, hostname)
 , mpConsole(nullptr)
+, mpPackageManager(nullptr)
+, mpModuleManager(nullptr)
 , mLuaInterpreter(this, hostname, id)
 , commandLineMinimumHeight(30)
 , mAlertOnNewData(true)
 , mAllowToSendCommand(true)
 , mAutoClearCommandLineAfterSend(false)
+, mHighlightHistory(true)
 , mBlockScriptCompile(true)
 , mBlockStopWatchCreation(true)
 , mEchoLuaErrors(false)
@@ -200,7 +215,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBorderTopHeight(0)
 , mCommandLineFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mCommandSeparator(QStringLiteral(";;"))
-, mDisplayFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mEnableGMCP(true)
 , mEnableMSSP(true)
 , mEnableMSP(true)
@@ -208,17 +222,15 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mServerMXPenabled(true)
 , mMxpClient(this)
 , mMxpProcessor(&mMxpClient)
-, mMediaLocationGMCP(QString())
-, mMediaLocationMSP(QString())
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
-, mFORCE_SAVE_ON_EXIT(false)
+, mFORCE_SAVE_ON_EXIT(true)
 , mSslTsl(false)
+, mSslIgnoreExpired(false)
+, mSslIgnoreSelfSigned(false)
+, mSslIgnoreAll(false)
 , mUseProxy(false)
-, mProxyAddress(QString())
 , mProxyPort(0)
-, mProxyUsername(QString())
-, mProxyPassword(QString())
 , mIsGoingDown(false)
 , mIsProfileLoadingSequence(false)
 , mNoAntiAlias(false)
@@ -231,8 +243,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mIsCurrentLogFileInHtmlFormat(false)
 , mIsNextLogFileInHtmlFormat(false)
 , mIsLoggingTimestamps(false)
-, mLogDir(QString())
-, mLogFileName(QString())
 , mLogFileNameFormat(QLatin1String("yyyy-MM-dd#HH-mm-ss")) // In the past we have used "yyyy-MM-dd#hh-mm-ss" but we always want a 24-hour clock
 , mResetProfile(false)
 , mScreenHeight(25)
@@ -287,6 +297,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mWhite_2(QColorConstants::LightGray)
 , mFgColor_2(QColorConstants::LightGray)
 , mBgColor_2(QColorConstants::Black)
+, mRoomBorderColor(QColorConstants::LightGray)
 #else
 , mBlack(Qt::black)
 , mLightBlack(Qt::darkGray)
@@ -326,6 +337,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mWhite_2(Qt::lightGray)
 , mFgColor_2(Qt::lightGray)
 , mBgColor_2(Qt::black)
+, mRoomBorderColor(Qt::lightGray)
 #endif
 , mMapStrongHighlight(false)
 , mLogStatus(false)
@@ -334,7 +346,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mDiscordAccessFlags(DiscordLuaAccessEnabled | DiscordSetSubMask)
 , mLineSize(10.0)
 , mRoomSize(0.5)
-, mShowInfo(true)
+, mMapInfoContributors(QSet<QString>{"Short"})
 , mBubbleMode(false)
 , mShowRoomID(false)
 , mShowPanel(true)
@@ -345,11 +357,17 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mCommandLineFgColor(Qt::darkGray)
 , mCommandLineBgColor(Qt::black)
 , mMapperUseAntiAlias(true)
+, mMapperShowRoomBorders(true)
 , mFORCE_MXP_NEGOTIATION_OFF(false)
 , mFORCE_CHARSET_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
 , mEnableTextAnalyzer(false)
 , mTimerDebugOutputSuppressionInterval(QTime())
+, mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
+, mpDlgIRC(nullptr)
+, mpDlgProfilePreferences(nullptr)
+, mDisplayFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
+, mLuaInterface(nullptr)
 , mTriggerUnit(this)
 , mTimerUnit(this)
 , mScriptUnit(this)
@@ -378,8 +396,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerColor(Qt::white)
 , mPlayerRoomOuterDiameterPercentage(120)
 , mPlayerRoomInnerDiameterPercentage(70)
-, mProfileStyleSheet(QString())
-, mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
+, mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
@@ -436,6 +453,19 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     if (mudlet::scmIsPublicTestVersion) {
         thankForUsingPTB();
     }
+
+    if (mudlet::self()->firstLaunch) {
+        QTimer::singleShot(0, this, [this]() {
+            mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game"));
+        });
+    }
+
+    connect(&mTelnet, &cTelnet::signal_disconnected, this, [this](){ purgeTimer.start(1min); });
+    connect(&mTelnet, &cTelnet::signal_connected, this, [this](){ purgeTimer.stop(); });
+    connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTemps);
+
+    // enable by default in case of offline connection; if the profile connects - timer will be disabled
+    purgeTimer.start(1min);
 }
 
 Host::~Host()
@@ -465,8 +495,7 @@ void Host::saveModules(int sync, bool backup)
         QString filename_xml = entry[0];
 
         if (backup) {
-            // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (1 of 6)
-            QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
+            QString time = QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss");
             savePathDir.rename(filename_xml, savePath + moduleName + time); //move the old file, use the key (module name) as the file
         }
 
@@ -491,15 +520,11 @@ void Host::slot_reloadModules()
     updateModuleZips();
 
     //synchronize modules across sessions
-    QMap<Host*, TConsole*> activeSessions = mudlet::self()->mConsoleMap;
-    QMapIterator<Host*, TConsole*> sessionIterator(activeSessions);
-    while (sessionIterator.hasNext()) {
-        sessionIterator.next();
-        Host* otherHost = sessionIterator.key();
-        if (otherHost->getName() == mHostName) {
+    for (auto otherHost : mudlet::self()->getHostManager()) {
+        if (otherHost == this || !otherHost->mpConsole) {
             continue;
         }
-        QMap<QString, int> modulePri = otherHost->mModulePriorities;
+        QMap<QString, int>& modulePri = otherHost->mModulePriorities;
         QMap<int, QStringList> moduleOrder;
 
         auto modulePrioritiesIt = modulePri.constBegin();
@@ -602,7 +627,7 @@ std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const
         mInstalledModules[moduleName] = moduleStringList;
         return {true, QString()};
     }
-    return {false, QStringLiteral("module name \"%1\" not found").arg(moduleName)};
+    return {false, QStringLiteral("module name '%1' not found").arg(moduleName)};
 }
 
 std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
@@ -615,7 +640,7 @@ std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
         QStringList moduleStringList = mInstalledModules[moduleName];
         return {true, moduleStringList[1]};
     }
-    return {false, QStringLiteral("module name \"%1\" not found").arg(moduleName)};
+    return {false, QStringLiteral("module name '%1' not found").arg(moduleName)};
 }
 
 void Host::resetProfile_phase1()
@@ -691,12 +716,17 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         directory_xml = saveFolder;
     }
 
-    // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (2 of 6)
     QString filename_xml;
     if (saveName.isEmpty()) {
-        filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
+        filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
     } else {
         filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, saveName);
+    }
+
+
+    if (mIsProfileLoadingSequence) {
+        //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidetnally clear their contents
+        return std::make_tuple(false, filename_xml, QStringLiteral("profile loading is in progress"));
     }
 
     QDir dir_xml;
@@ -784,18 +814,21 @@ QString Host::getMmpMapLocation() const
 {
     return mpMap->getMmpMapLocation();
 }
+
 // error and debug consoles inherit font of the main console
 void Host::updateConsolesFont()
 {
-    if (mpEditorDialog) {
-        if (mpEditorDialog->mpErrorConsole) {
-            mpEditorDialog->mpErrorConsole->setMiniConsoleFont(mDisplayFont.family());
-            mpEditorDialog->mpErrorConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
-        }
-        if (mudlet::self()->mpDebugArea) {
-            mudlet::self()->mpDebugConsole->setMiniConsoleFont(mDisplayFont.family());
-            mudlet::self()->mpDebugConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
-        }
+    if (mpConsole) {
+        mpConsole->refreshView();
+    }
+
+    if (mpEditorDialog && mpEditorDialog->mpErrorConsole) {
+        mpEditorDialog->mpErrorConsole->setFont(mDisplayFont.family());
+        mpEditorDialog->mpErrorConsole->setFontSize(mDisplayFont.pointSize());
+    }
+    if (mudlet::self()->mpDebugArea) {
+        mudlet::self()->mpDebugConsole->setFont(mDisplayFont.family());
+        mudlet::self()->mpDebugConsole->setFontSize(mDisplayFont.pointSize());
     }
 }
 
@@ -844,12 +877,12 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
 {
     const QFontMetrics metrics(font);
     if (metrics.averageCharWidth() == 0) {
-        return std::make_pair(false, QStringLiteral("specified font is invalid (its letters have 0 width)"));
+        return {false, QStringLiteral("specified font is invalid (its letters have 0 width)")};
     }
 
     mDisplayFont = font;
     updateConsolesFont();
-    return std::make_pair(true, QString());
+    return {true, QString()};
 }
 
 std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
@@ -906,10 +939,50 @@ bool Host::checkForMappingScript()
     return ret;
 }
 
+void Host::check_for_mappingscript()
+{
+    if (!checkForMappingScript()) {
+        QUiLoader loader;
+
+        QFile file(":/ui/lacking_mapper_script.ui");
+        file.open(QFile::ReadOnly);
+
+        auto dialog = dynamic_cast<QDialog*>(loader.load(&file, mudlet::self()));
+        file.close();
+        if (!dialog) {
+            // could not load / not a QDialog
+            return;
+        }
+
+        connect(dialog, &QDialog::accepted, mudlet::self(), &mudlet::slot_open_mappingscripts_page);
+
+        dialog->show();
+        dialog->raise();
+        dialog->activateWindow();
+    }
+}
+
+bool Host::checkForCustomSpeedwalk()
+{
+    bool ret = mLuaInterpreter.check_for_custom_speedwalk();
+    return ret;
+}
+
 void Host::startSpeedWalk()
 {
     int totalWeight = assemblePath();
     Q_UNUSED(totalWeight);
+    QString f = QStringLiteral("doSpeedWalk");
+    QString n = QString();
+    mLuaInterpreter.call(f, n);
+}
+
+void Host::startSpeedWalk(int sourceRoom, int targetRoom)
+{
+    QString sourceName = QStringLiteral("speedWalkFrom");
+    mLuaInterpreter.set_lua_integer(sourceName, sourceRoom);
+    QString targetName = QStringLiteral("speedWalkTo");
+    mLuaInterpreter.set_lua_integer(targetName, targetRoom);
     QString f = QStringLiteral("doSpeedWalk");
     QString n = QString();
     mLuaInterpreter.call(f, n);
@@ -938,10 +1011,11 @@ void Host::reenableAllTriggers()
 
 QPair<QString, QString> Host::getSearchEngine()
 {
-    if (mSearchEngineData.contains(mSearchEngineName))
+    if (mSearchEngineData.contains(mSearchEngineName)) {
         return qMakePair(mSearchEngineName, mSearchEngineData.value(mSearchEngineName));
-    else
+    } else {
         return qMakePair(QStringLiteral("Google"), mSearchEngineData.value(QStringLiteral("Google")));
+    }
 }
 
 // cmd is UTF-16BE encoded here, but will be transcoded to Server's one by
@@ -965,7 +1039,11 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
     }
     QStringList commandList;
     if (!mCommandSeparator.isEmpty()) {
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+        commandList = cmd.split(QString(mCommandSeparator), Qt::SkipEmptyParts);
+#else
         commandList = cmd.split(QString(mCommandSeparator), QString::SkipEmptyParts);
+#endif
     } else {
         // don't split command if the command separator is blank
         commandList << cmd;
@@ -1009,7 +1087,7 @@ QPair<int, QString> Host::createStopWatch(const QString& name)
         while (itStopWatch.hasNext()) {
             itStopWatch.next();
             if (itStopWatch.value()->name() == name) {
-                return qMakePair(0, QStringLiteral("a stopwatch with id %1 called \"%2\" already exists").arg(QString::number(itStopWatch.key()), name));
+                return qMakePair(0, QStringLiteral("stopwatch with id %1 called '%2' already exists").arg(QString::number(itStopWatch.key()), name));
             }
         }
     }
@@ -1100,7 +1178,7 @@ QPair<bool, QString> Host::startStopWatch(const QString& name)
         if (name.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" not found").arg(name));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' not found").arg(name));
         }
     }
 
@@ -1110,12 +1188,12 @@ QPair<bool, QString> Host::startStopWatch(const QString& name)
             return qMakePair(true, QString());
         }
 
-        return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) was already running").arg(name, QString::number(watchId)));
+        return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) was already running").arg(name, QString::number(watchId)));
     }
 
     // This should, indeed, be:
     Q_UNREACHABLE();
-    return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) not found").arg(name, QString::number(watchId)));
+    return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) not found").arg(name, QString::number(watchId)));
 }
 
 QPair<bool, QString> Host::startStopWatch(int id)
@@ -1139,7 +1217,7 @@ QPair<bool, QString> Host::stopStopWatch(const QString& name)
         if (name.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" not found").arg(name));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' not found").arg(name));
         }
     }
 
@@ -1149,12 +1227,12 @@ QPair<bool, QString> Host::stopStopWatch(const QString& name)
             return qMakePair(true, QString());
         }
 
-        return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) was already stopped").arg(name, QString::number(watchId)));
+        return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) was already stopped").arg(name, QString::number(watchId)));
     }
 
     // This should, indeed, be:
     Q_UNREACHABLE();
-    return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) not found").arg(name, QString::number(watchId)));
+    return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) not found").arg(name, QString::number(watchId)));
 }
 
 QPair<bool, QString> Host::stopStopWatch(const int id)
@@ -1178,7 +1256,7 @@ QPair<bool, QString> Host::resetStopWatch(const QString& name)
         if (name.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" not found").arg(name));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' not found").arg(name));
         }
     }
 
@@ -1191,13 +1269,13 @@ QPair<bool, QString> Host::resetStopWatch(const QString& name)
         if (name.isEmpty()) {
             return qMakePair(false, QStringLiteral("the first unnamed stopwatch (id:%1) was already reset").arg(watchId));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) was already reset").arg(name, QString::number(watchId)));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) was already reset").arg(name, QString::number(watchId)));
         }
     }
 
     // This should, indeed, be:
     Q_UNREACHABLE();
-    return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) not found").arg(name, QString::number(watchId)));
+    return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) not found").arg(name, QString::number(watchId)));
 }
 
 QPair<bool, QString> Host::resetStopWatch(const int id)
@@ -1251,7 +1329,7 @@ QPair<bool, QString> Host::setStopWatchName(const int id, const QString& newName
             itStopWatch.next();
             if (itStopWatch.value()->name() == newName) {
                 if (itStopWatch.key() != id) {
-                    return qMakePair(false, QStringLiteral("the name \"%1\" is already in use for another stopwatch (id:%2)").arg(newName, QString::number(itStopWatch.key())));
+                    return qMakePair(false, QStringLiteral("the name '%1' is already in use for another stopwatch (id:%2)").arg(newName, QString::number(itStopWatch.key())));
                 } else {
                     // Trivial case - the stopwatch is already called by the NEW name:
                     return qMakePair(true, QString());
@@ -1311,12 +1389,12 @@ QPair<bool, QString> Host::setStopWatchName(const QString& currentName, const QS
         if (currentName.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" not found").arg(currentName));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' not found").arg(currentName));
         }
     }
 
     if (isAlreadyUsed) {
-        return qMakePair(false, QStringLiteral("the name \"%1\" is already in use for another stopwatch (id:%2)").arg(newName, QString::number(alreadyUsedId)));
+        return qMakePair(false, QStringLiteral("the name '%1' is already in use for another stopwatch (id:%2)").arg(newName, QString::number(alreadyUsedId)));
     }
 
     if (currentName == newName) {
@@ -1337,7 +1415,21 @@ void Host::incomingStreamProcessor(const QString& data, int line)
 {
     mTriggerUnit.processDataStream(data, line);
 
+    mAliasUnit.doCleanup();
     mTimerUnit.doCleanup();
+    mTriggerUnit.doCleanup();
+    mKeyUnit.doCleanup();
+}
+
+// When Mudlet is running in online mode, deleted temp* objects are cleaned up in bulk
+// on every new line. When in offline mode, new lines don't come - so they are
+// cleaned up in bulk periodically.
+void Host::slot_purgeTemps()
+{
+    mAliasUnit.doCleanup();
+    mTimerUnit.doCleanup();
+    mTriggerUnit.doCleanup();
+    mKeyUnit.doCleanup();
 }
 
 void Host::registerEventHandler(const QString& name, TScript* pScript)
@@ -1378,8 +1470,16 @@ void Host::raiseEvent(const TEvent& pE)
         return;
     }
 
+    static QString star = QStringLiteral("*");
+
     if (mEventHandlerMap.contains(pE.mArgumentList.at(0))) {
         QList<TScript*> scriptList = mEventHandlerMap.value(pE.mArgumentList.at(0));
+        for (auto& script : scriptList) {
+            script->callEventHandler(pE);
+        }
+    }
+    if (mEventHandlerMap.contains(star)) {
+        QList<TScript*> scriptList = mEventHandlerMap.value(star);
         for (auto& script : scriptList) {
             script->callEventHandler(pE);
         }
@@ -1387,6 +1487,12 @@ void Host::raiseEvent(const TEvent& pE)
 
     if (mAnonymousEventHandlerFunctions.contains(pE.mArgumentList.at(0))) {
         QStringList functionsList = mAnonymousEventHandlerFunctions.value(pE.mArgumentList.at(0));
+        for (int i = 0, total = functionsList.size(); i < total; ++i) {
+            mLuaInterpreter.callEventHandler(functionsList.at(i), pE);
+        }
+    }
+    if (mAnonymousEventHandlerFunctions.contains(star)) {
+        QStringList functionsList = mAnonymousEventHandlerFunctions.value(star);
         for (int i = 0, total = functionsList.size(); i < total; ++i) {
             mLuaInterpreter.callEventHandler(functionsList.at(i), pE);
         }
@@ -1455,13 +1561,11 @@ void Host::connectToServer()
 
 void Host::closingDown()
 {
-    QMutexLocker locker(&mLock);
     mIsClosingDown = true;
 }
 
 bool Host::isClosingDown()
 {
-    QMutexLocker locker(&mLock);
     return mIsClosingDown;
 }
 
@@ -1951,17 +2055,16 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
 {
     bool localState = false;
     bool needToEmit = false;
-    const QString encoding(mTelnet.getEncoding());
+    const QByteArray encoding(mTelnet.getEncoding());
 
-    QMutexLocker locker(& mLock);
     if (state == Qt::PartiallyChecked) {
         // Set things automatically
         mAutoAmbigousWidthGlyphsSetting = true;
 
-        if (encoding == QLatin1String("GBK")
-            || encoding == QLatin1String("GB18030")
-            || encoding == QLatin1String("Big5")
-            || encoding == QLatin1String("Big5-HKSCS")) {
+        if (encoding == "GBK"
+            || encoding == "GB18030"
+            || encoding == "BIG5"
+            || encoding == "BIG5-HKSCS") {
 
             // Need to use wide width for ambiguous characters
             if (!mWideAmbigousWidthGlyphs) {
@@ -1995,9 +2098,6 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
 
     }
 
-    locker.unlock();
-    // We do not need to keep the mutex any longer as we have a local copy to
-    // work with whilst the connected methods react to the signal:
     if (needToEmit) {
         emit signal_changeIsAmbigousWidthGlyphsToBeWide(localState);
     }
@@ -2064,7 +2164,7 @@ QColor Host::getAnsiColor(const int ansiCode, const bool isBackground) const
             // changes already made in TBuffer::translateToPlainText a while ago:
             return QColor(r * 51, g * 51, b * 51);
         } else {
-            return QColor(); // Noop
+            return QColor(); // No-op
         }
     }
     // clang-format on
@@ -2296,16 +2396,12 @@ void Host::processDiscordMSDP(const QString& variable, QString value)
 
 void Host::setDiscordApplicationID(const QString& s)
 {
-    QMutexLocker locker(& mLock);
     mDiscordApplicationID = s;
-    locker.unlock();
-
     writeProfileData(QStringLiteral("discordApplicationId"), s);
 }
 
 const QString& Host::getDiscordApplicationID()
 {
-    QMutexLocker locker(&mLock);
     return mDiscordApplicationID;
 }
 
@@ -2326,13 +2422,11 @@ bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscri
 
 void Host::setSpellDic(const QString& newDict)
 {
-    QMutexLocker locker(& mLock);
     bool isChanged = false;
     if (!newDict.isEmpty() && mSpellDic != newDict) {
         mSpellDic = newDict;
         isChanged = true;
     }
-    locker.unlock();
     if (isChanged && mpConsole) {
         mpConsole->setSystemSpellDictionary(newDict);
     }
@@ -2345,7 +2439,6 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
 {
     Q_UNUSED(_useDictionary);
     bool useDictionary = true;
-    QMutexLocker locker(&mLock);
     bool dictionaryChanged {};
     // Copy the value while we have the lock:
     bool isSpellCheckingEnabled = mEnableSpellCheck;
@@ -2358,7 +2451,6 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
         mUseSharedDictionary = useShared;
         dictionaryChanged = true;
     }
-    locker.unlock();
 
     if (!mpConsole) {
         return;
@@ -2400,11 +2492,8 @@ void Host::setName(const QString& newName)
         currentPlayerRoom = mpMap->mRoomIdHash.take(mHostName);
     }
 
-    QMutexLocker locker(& mLock);
     // Now we have the exclusive lock on this class's protected members
     mHostName = newName;
-    // We have made the change to the protected aspects of this class so can unlock the mutex locker and proceed:
-    locker.unlock();
 
     mTelnet.mProfileName = newName;
     if (mpMap) {
@@ -2511,21 +2600,15 @@ void Host::updateAnsi16ColorsInTable()
 
 void Host::setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter, const quint8 innerDiameter, const QColor& outerColor, const QColor& innerColor)
 {
-    QMutexLocker locker(& mLock);
-    // Now we have the exclusive lock on this class's protected members
-
     mPlayerRoomStyle = styleCode;
     mPlayerRoomOuterDiameterPercentage = outerDiameter;
     mPlayerRoomInnerDiameterPercentage = innerDiameter;
     mPlayerRoomOuterColor = outerColor;
     mPlayerRoomInnerColor = innerColor;
-    // We have made the change to the protected aspects of this class so can unlock the mutex locker and proceed:
-    locker.unlock();
 }
 
 void Host::getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& primaryColor, QColor& secondaryColor)
 {
-    QMutexLocker locker(& mLock);
     // Now we have the exclusive lock on this class's protected members
 
     styleCode = mPlayerRoomStyle;
@@ -2533,8 +2616,6 @@ void Host::getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, q
     innerDiameter = mPlayerRoomInnerDiameterPercentage;
     primaryColor = mPlayerRoomOuterColor;
     secondaryColor = mPlayerRoomInnerColor;
-    // We have accessed the protected aspects of this class so can unlock the mutex locker and proceed:
-    locker.unlock();
 }
 
 // Used to set the searchOptions here and the one in the editor if present, for
@@ -2562,6 +2643,14 @@ std::pair<bool, QString> Host::setMapperTitle(const QString& title)
     return {true, QString()};
 }
 
+void Host::setDebugShowAllProblemCodepoints(const bool state)
+{
+    if (mDebugShowAllProblemCodepoints != state) {
+        mDebugShowAllProblemCodepoints = state;
+        emit signal_changeDebugShowAllProblemCodepoints(state);
+    }
+}
+
 void Host::setCompactInputLine(const bool state)
 {
     if (mCompactInputLine != state) {
@@ -2574,4 +2663,1007 @@ void Host::setCompactInputLine(const bool state)
             mpConsole->mpButtonMainLayer->setVisible(!state);
         }
     }
+}
+
+QPointer<TConsole> Host::findConsole(QString name)
+{
+    if (name.isEmpty() or name == QStringLiteral("main")) {
+        // Reason for the deref-plus-ref in the next line: `QPointer`s do not
+        // follow inheritance. See https://bugreports.qt.io/browse/QTBUG-2258
+        return &*mpConsole;
+    } else {
+        return mpConsole->mSubConsoleMap.value(name);
+    }
+}
+
+QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lineFrom, const int lineTo)
+{
+    if (!mpConsole) {
+        QStringList failMessage;
+        failMessage << QStringLiteral("internal error: no main TConsole - please report").arg(windowName);
+        return qMakePair(false, failMessage);
+    }
+
+    if (windowName.isEmpty() || windowName == QLatin1String("main")) {
+        return qMakePair(true, mpConsole->getLines(lineFrom, lineTo));
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(windowName);
+    if (!pC) {
+        QStringList failMessage;
+        failMessage << QStringLiteral("mini console, user window or buffer '%1' not found").arg(windowName);
+        return qMakePair(false, failMessage);
+    }
+    return qMakePair(true, pC->getLines(lineFrom, lineTo));
+}
+
+std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    if (name.isEmpty()) {
+        return {false, QLatin1String("an userwindow cannot have an empty string as its name")};
+    }
+
+    //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        return {false, QStringLiteral("label with the name '%1' already exists").arg(name)};
+    }
+
+    auto hostName(getName());
+    auto console = mpConsole->mSubConsoleMap.value(name);
+    auto dockwidget = mpConsole->mDockWidgetMap.value(name);
+
+    if (!console && !dockwidget) {
+        // The name is not used in either the QMaps of all user created TConsole
+        // or TDockWidget instances - so we can make a NEW one:
+        dockwidget = new TDockWidget(this, name);
+        dockwidget->setObjectName(QStringLiteral("dockWindow_%1_%2").arg(hostName, name));
+        dockwidget->setContentsMargins(0, 0, 0, 0);
+        dockwidget->setFeatures(QDockWidget::DockWidgetClosable|QDockWidget::DockWidgetMovable|QDockWidget::DockWidgetFloatable);
+        dockwidget->setWindowTitle(name);
+        mpConsole->mDockWidgetMap.insert(name, dockwidget);
+        // It wasn't obvious but the parent passed to the TConsole constructor
+        // is sliced down to a QWidget and is NOT a TDockWidget pointer:
+        console = new TConsole(this, TConsole::UserWindow, dockwidget->widget());
+        console->setObjectName(QStringLiteral("dockWindowConsole_%1_%2").arg(hostName, name));
+        // Without this the TConsole instance inside the TDockWidget will be
+        // left being called the default value of "main":
+        console->mConsoleName = name;
+        console->setContentsMargins(0, 0, 0, 0);
+        dockwidget->setTConsole(console);
+        console->layerCommandLine->hide();
+        console->mpScrollBar->hide();
+        mpConsole->mSubConsoleMap.insert(name, console);
+        dockwidget->setStyleSheet(mProfileStyleSheet);
+        mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
+        console->setFontSize(10);
+    }
+    if (!console || !dockwidget) {
+        return {false, QStringLiteral("userwindow '%1' already exists").arg(name)};
+    }
+
+    // The name is used in BOTH the QMaps of all user created TConsole
+    // and TDockWidget instances - so we HAVE an existing user window,
+    // Lets confirm this:
+    Q_ASSERT_X(console->getType() == TConsole::UserWindow, "host::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
+    dockwidget->update();
+
+    if (loadLayout && !dockwidget->hasLayoutAlready) {
+        mudlet::self()->loadWindowLayout();
+        dockwidget->hasLayoutAlready = true;
+    }
+    dockwidget->show();
+    dockwidget->setAllowedAreas(autoDock ? Qt::AllDockWidgetAreas : Qt::NoDockWidgetArea);
+
+    if (area.isEmpty()) {
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
+        if (!dockwidget->isFloating()) {
+            dockwidget->setFloating(true);
+        }
+        return {true, QString()};
+    } else {
+        if (area == QLatin1String("r") || area == QLatin1String("right")) {
+            dockwidget->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
+            return {true, QString()};
+        } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
+            dockwidget->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, dockwidget);
+            return {true, QString()};
+        } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
+            dockwidget->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, dockwidget);
+            return {true, QString()};
+        } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+            dockwidget->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, dockwidget);
+            return {true, QString()};
+        } else {
+            return {false, QStringLiteral(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
+        }
+    }
+}
+
+std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    auto pW = mpConsole->mDockWidgetMap.value(name);
+    if (!pC) {
+        pC = mpConsole->createMiniConsole(windowname, name, x, y, width, height);
+        if (pC) {
+            pC->setFontSize(12);
+            return {true, QString()};
+        }
+    } else if (pC) {
+        // CHECK: The absence of an explict return statement in this block means that
+        // reusing an existing mini console causes the lua function to seem to
+        // fail - is this as per Wiki?
+        // This part was causing problems with UserWindows
+        if (!pW) {
+            pC->resize(width, height);
+            pC->move(x, y);
+            return {false, QStringLiteral("miniconsole '%1' already exists, moving/resizing '%1'").arg(name)};
+        }
+    }
+    return {false, QStringLiteral("miniconsole/userwindow '%1' already exists").arg(name)};
+}
+
+std::pair<bool, QString> Host::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (!pL && !pC) {
+        pL = mpConsole->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough);
+        if (pL) {
+            return {true, QString()};
+        }
+    } else if (pL) {
+        return {false, QStringLiteral("label '%1' already exists").arg(name)};
+    } else if (pC) {
+        return {false, QStringLiteral("a miniconsole/userwindow with the name '%1' already exists").arg(name)};
+    }
+    return {false, QString()};
+
+}
+
+bool Host::setClickthrough(const QString& name, bool clickthrough)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setClickThrough(clickthrough);
+        return true;
+    }
+
+    return false;
+}
+
+void Host::hideMudletsVariables()
+{
+    auto varUnit = getLuaInterface()->getVarUnit();
+
+    // remember which users' saved variables shouldn't be hidden
+    QVector<QString> unhideSavedVars;
+    for (const auto& variable : qAsConst(varUnit->savedVars)) {
+        if (!varUnit->isHidden(variable)) {
+            unhideSavedVars.append(variable);
+        }
+    }
+
+    // mark all currently loaded Lua variables as hidden
+    // this covers entirety of Mudlets API (good!) and but unfortunately
+    // user's saved variables as well
+    LuaInterface* lI = getLuaInterface();
+    lI->getVars(true);
+
+    // unhide user's saved variables
+    for (const auto& variable : qAsConst(unhideSavedVars)) {
+        varUnit->removeHidden(variable);
+    }
+}
+
+void Host::close()
+{
+    // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+    if (mSslTsl) {
+        mTelnet.abortConnection();
+    } else {
+        mTelnet.disconnectIt();
+    }
+
+    // close script editor
+    if (mpEditorDialog) {
+        mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
+        mpEditorDialog->close();
+        mpEditorDialog = nullptr;
+    }
+    // close notepad
+    if (mpNotePad) {
+        mpNotePad->save();
+        mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+        mpNotePad->close();
+        mpNotePad = nullptr;
+    }
+    // close IRC client window
+    if (mpDlgIRC) {
+        mpDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
+        mpDlgIRC->deleteLater();
+        mpDlgIRC = nullptr;
+    }
+    if (mpConsole) {
+        mpConsole->close();
+        mpConsole = nullptr;
+    }
+}
+
+bool Host::createBuffer(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (!pC) {
+        pC = mpConsole->createBuffer(name);
+        if (pC) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+bool Host::clearWindow(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->mUpperPane->resetHScrollbar();
+        pC->buffer.clear();
+        pC->mUpperPane->update();
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool Host::showWindow(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    auto pL = mpConsole->mLabelMap.value(name);
+    auto pN = mpConsole->mSubCommandLineMap.value(name);
+    // check labels first as they are shown/hidden more often
+    if (pL) {
+        pL->show();
+        return true;
+    } else if (pC) {
+        auto pD = mpConsole->mDockWidgetMap.value(name);
+        if (pD) {
+            pD->update();
+            pD->show();
+            // TODO: conside refactoring TConsole::showWindow(name) so that there is a TConsole::showWindow() that can be called directly on the TConsole concerned?
+            return mpConsole->showWindow(name);
+        } else {
+            return mpConsole->showWindow(name);
+        }
+    }
+
+    if (pN) {
+        pN->show();
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::hideWindow(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    auto pL = mpConsole->mLabelMap.value(name);
+    auto pN = mpConsole->mSubCommandLineMap.value(name);
+
+    // check labels first as they are shown/hidden more often
+    if (pL) {
+        pL->hide();
+        return true;
+    } else if (pC) {
+        auto pD = mpConsole->mDockWidgetMap.value(name);
+        if (pD) {
+            pD->hide();
+            pD->update();
+        }
+        return mpConsole->hideWindow(name);
+    }
+
+    if (pN) {
+        pN->hide();
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::resizeWindow(const QString& name, int x1, int y1)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    auto pD = mpConsole->mDockWidgetMap.value(name);
+    auto pN = mpConsole->mSubCommandLineMap.value(name);
+
+    if (pL) {
+        pL->resize(x1, y1);
+        return true;
+    }
+
+    if (pC && !pD) {
+        // NOT a floatable/dockable "user window"
+        pC->resize(x1, y1);
+        return true;
+    }
+
+    if (pC && pD) {
+        if (!pD->isFloating()) {
+            // Undock a docked window
+            pD->setFloating(true);
+        }
+
+        pD->resize(x1, y1);
+        return true;
+    }
+
+    if (pN) {
+        pN->resize(x1, y1);
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::moveWindow(const QString& name, int x1, int y1)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    auto pD = mpConsole->mDockWidgetMap.value(name);
+    auto pN = mpConsole->mSubCommandLineMap.value(name);
+
+    if (pL) {
+        pL->move(x1, y1);
+        return true;
+    }
+
+    if (pC && !pD) {
+        // NOT a floatable/dockable "user window"
+        pC->move(x1, y1);
+        pC->mOldX = x1;
+        pC->mOldY = y1;
+        return true;
+    }
+
+    if (pC && pD) {
+        if (!pD->isFloating()) {
+            // Undock a docked window
+            pD->setFloating(true);
+        }
+
+        pD->move(x1, y1);
+        return true;
+    }
+
+    if (pN) {
+        pN->move(x1, y1);
+        return true;
+    }
+
+    return false;
+}
+
+std::pair<bool, QString> Host::setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show)
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    auto pD = mpConsole->mDockWidgetMap.value(windowname);
+    auto pW = mpConsole->mpMainFrame;
+    auto pM = mpConsole->mpMapper;
+    auto pN = mpConsole->mSubCommandLineMap.value(name);
+
+    if (!pD && windowname.toLower() != QLatin1String("main")) {
+        return {false, QStringLiteral("window '%1' not found").arg(windowname)};
+    }
+
+    if (pD) {
+        pW = pD->widget();
+    }
+
+    if (pL) {
+        pL->setParent(pW);
+        pL->move(x1, y1);
+        if (show) {
+            pL->show();
+        }
+        return {true, QString()};
+    } else if (pC) {
+        pC->setParent(pW);
+        pC->move(x1, y1);
+        pC->mOldX = x1;
+        pC->mOldY = y1;
+        if (show) {
+            pC->show();
+        }
+        return {true, QString()};
+    } else if (pN) {
+        pN->setParent(pW);
+        pN->move(x1, y1);
+        if (show) {
+            pN->show();
+        }
+        return {true, QString()};
+    } else if (pM && name.toLower() == QLatin1String("mapper")) {
+        pM->setParent(pW);
+        pM->move(x1, y1);
+        if (show) {
+            pM->show();
+        }
+        return {true, QString()};
+    }
+
+    return {false, QStringLiteral("element '%1' not found").arg(name)};
+}
+
+std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, int width, int height)
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pM = mpDockableMapWidget;
+    auto pMapper = mpMap.data()->mpMapper;
+    if (!pM && !pMapper) {
+        showHideOrCreateMapper(true);
+        pM = mpDockableMapWidget;
+    }
+    if (!pM) {
+        return {false, QStringLiteral("cannot create map widget. Do you already use an embedded mapper?")};
+    }
+    pM->show();
+    if (area.isEmpty()) {
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
+        if (!pM->isFloating()) {
+            // Undock a docked window
+            // Change of position or size is only possible when floating
+            pM->setFloating(true);
+        }
+        if ((x != -1) && (y != -1)) {
+            pM->move(x, y);
+        }
+        if ((width != -1) && (height != -1)) {
+            pM->resize(width, height);
+        }
+        return {true, QString()};
+    } else {
+        if (area == QLatin1String("r") || area == QLatin1String("right")) {
+            pM->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
+            pM->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
+            pM->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+            pM->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, pM);
+            return {true, QString()};
+        } else {
+            return {false, QStringLiteral(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
+        }
+    }
+}
+
+std::pair<bool, QString> Host::closeMapWidget()
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pM = mpDockableMapWidget;
+    if (!pM) {
+        return {false, QStringLiteral("no map widget found to close")};
+    }
+    if (!pM->isVisible()) {
+        return {false, QStringLiteral("map widget already closed")};
+    }
+    pM->hide();
+    return {true, QString()};
+}
+
+bool Host::closeWindow(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        auto pD = mpConsole->mDockWidgetMap.value(name);
+        if (pD) {
+            pD->hide();
+            pD->update();
+        }
+        return mpConsole->hideWindow(name);
+    }
+    return false;
+}
+
+bool Host::echoWindow(const QString& name, const QString& text)
+{
+    if (!mpConsole) {
+        return -1;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->print(text);
+        return true;
+    } else if (pL) {
+        pL->setText(text);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool Host::pasteWindow(const QString& name)
+{
+    if (!mpConsole) {
+        return -1;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->pasteWindow(mpConsole->mClipboard);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool Host::setCmdLineAction(const QString& name, const int func)
+{
+    if (!mpConsole) {
+        return false;
+    }
+    auto pN = mpConsole->mSubCommandLineMap.value(name);
+    if (pN) {
+        pN->setAction(func);
+        return true;
+    }
+    return false;
+}
+
+bool Host::resetCmdLineAction(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+    auto pN = mpConsole->mSubCommandLineMap.value(name);
+    if (pN) {
+        pN->resetAction();
+        return true;
+    }
+    return false;
+}
+
+bool Host::setLabelClickCallback(const QString& name, const int func)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setClick(func);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setLabelDoubleClickCallback(const QString& name, const int func)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setDoubleClick(func);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setLabelReleaseCallback(const QString& name, const int func)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setRelease(func);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setLabelMoveCallback(const QString& name, const int func)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setMove(func);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setLabelWheelCallback(const QString& name, const int func)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setWheel(func);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setLabelOnEnter(const QString& name, const int func)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setEnter(func);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setLabelOnLeave(const QString& name, const int func)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setLeave(func);
+        return true;
+    }
+    return false;
+}
+
+QSize Host::calcFontSize(const QString& windowName)
+{
+    if (!mpConsole) {
+        return QSize(-1, -1);
+    }
+
+    QFont font;
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        font = mDisplayFont;
+    } else {
+        auto pC = mpConsole->mSubConsoleMap.value(windowName);
+        if (pC) {
+            Q_ASSERT_X(pC->mUpperPane, "calcFontSize", "located console does not have the upper pane available");
+            font = pC->mUpperPane->mDisplayFont;
+        } else {
+            return QSize(-1, -1);
+        }
+    }
+
+    auto fontMetrics = QFontMetrics(font);
+    return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
+}
+
+bool Host::setProfileStyleSheet(const QString& styleSheet)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    mProfileStyleSheet = styleSheet;
+    mpConsole->setStyleSheet(styleSheet);
+    mpEditorDialog->setStyleSheet(styleSheet);
+
+    if (mpDlgProfilePreferences) {
+        mpDlgProfilePreferences->setStyleSheet(styleSheet);
+    }
+    if (mpNotePad) {
+        mpNotePad->setStyleSheet(styleSheet);
+        mpNotePad->notesEdit->setStyleSheet(styleSheet);
+    }
+    if (mpDockableMapWidget) {
+        mpDockableMapWidget->setStyleSheet(styleSheet);
+    }
+
+    for (auto& dockWidget : mpConsole->mDockWidgetMap) {
+        dockWidget->setStyleSheet(styleSheet);
+    }
+    if (this == mudlet::self()->mpCurrentActiveHost) {
+        mudlet::self()->setGlobalStyleSheet(styleSheet);
+    }
+    return true;
+}
+
+
+bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alpha)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pC) {
+        pC->setConsoleBgColor(r, g, b, alpha);
+        return true;
+    } else if (pL) {
+        QPalette mainPalette;
+        mainPalette.setColor(QPalette::Window, QColor(r, g, b, alpha));
+        pL->setPalette(mainPalette);
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (QDir::homePath().contains('\\')) {
+        imgPath.replace('/', R"(\)");
+    } else {
+        imgPath.replace('\\', "/");
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        mpConsole->setConsoleBackgroundImage(imgPath, mode);
+        return true;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        QPixmap bgPixmap(imgPath);
+        pL->setPixmap(bgPixmap);
+        return true;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setConsoleBackgroundImage(imgPath, mode);
+        return true;
+    }
+    return false;
+}
+
+bool Host::resetBackgroundImage(const QString &name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        mpConsole->resetConsoleBackgroundImage();
+        return true;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->clear();
+        return true;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->resetConsoleBackgroundImage();
+        return true;
+    }
+
+    return false;
+}
+
+// Needed to extract into a separate method from mudlet::slot_mapper() so that
+// we can use it WITHOUT loading a file - at least for the
+// TConsole::importMap(...) case that may need to create a map widget before it
+// loads/imports a non-default (last saved map in profile's map directory).
+void Host::showHideOrCreateMapper(const bool loadDefaultMap)
+{
+    auto pMap = mpMap.data();
+    if (pMap->mpMapper) {
+        toggleMapperVisibility();
+        return;
+    }
+
+    createMapper(loadDefaultMap);
+}
+
+void Host::toggleMapperVisibility()
+{
+    auto pMap = mpMap.data();
+    bool visStatus = mpMap->mpMapper->isVisible();
+    if (pMap->mpMapper->isFloatAndDockable()) {
+        // If we are using a floating/dockable widget we must show/hide that
+        // only and not the mapper widget (otherwise it messes up {shrinks
+        // to a minimal size} the mapper inside the container QDockWidget). This
+        // is the same as the case for a TConsole inside a TDockWidget in
+        // (void) TDockWidget::setVisible(bool).
+        pMap->mpMapper->parentWidget()->setVisible(!visStatus);
+    } else {
+        pMap->mpMapper->setVisible(!visStatus);
+    }
+}
+
+void Host::createMapper(const bool loadDefaultMap)
+{
+    auto pMap = mpMap.data();
+    auto hostName(getName());
+    mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
+    mpDockableMapWidget->setObjectName(QStringLiteral("dockMap_%1").arg(hostName));
+    // Arrange for TMap member values to be copied from the Host masters so they
+    // are in place when the 2D mapper is created:
+    getPlayerRoomStyleDetails(pMap->mPlayerRoomStyle,
+                                     pMap->mPlayerRoomOuterDiameterPercentage,
+                                     pMap->mPlayerRoomInnerDiameterPercentage,
+                                     pMap->mPlayerRoomOuterColor,
+                                     pMap->mPlayerRoomInnerColor);
+
+    pMap->mpMapper = new dlgMapper(mpDockableMapWidget, this, pMap); //FIXME: mpHost definieren
+    pMap->mpMapper->setStyleSheet(mProfileStyleSheet);
+    mpDockableMapWidget->setWidget(pMap->mpMapper);
+
+    if (loadDefaultMap && pMap->mpRoomDB->isEmpty()) {
+        qDebug() << "Host::create_mapper() - restore map case 3.";
+        pMap->pushErrorMessagesToFile(tr("Pre-Map loading(3) report"), true);
+        QDateTime now(QDateTime::currentDateTime());
+        if (pMap->restore(QString())) {
+            pMap->audit();
+            pMap->mpMapper->mp2dMap->init();
+            pMap->mpMapper->updateAreaComboBox();
+            pMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+            pMap->mpMapper->show();
+        }
+
+        pMap->pushErrorMessagesToFile(tr("Loading map(3) at %1 report").arg(now.toString(Qt::ISODate)), true);
+
+    } else {
+        if (pMap->mpMapper) {
+            pMap->mpMapper->show();
+        }
+    }
+    mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, mpDockableMapWidget);
+
+    // XXX: should this be called multiple times?
+    mudlet::self()->loadWindowLayout();
+
+    check_for_mappingscript();
+    TEvent mapOpenEvent {};
+    mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
+    mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(mapOpenEvent);
+}
+
+void Host::setDockLayoutUpdated(const QString& name)
+{
+    if (!mpConsole) {
+        return;
+    }
+
+    auto pD = mpConsole->mDockWidgetMap.value(name);
+    if (Q_LIKELY(pD) && !mDockLayoutChanges.contains(name)) {
+        pD->setProperty("layoutChanged", QVariant(true));
+        mDockLayoutChanges.append(name);
+    }
+}
+
+void Host::setToolbarLayoutUpdated(TToolBar* pTB)
+{
+    if (!mToolbarLayoutChanges.contains(pTB)) {
+        pTB->setProperty("layoutChanged", QVariant(true));
+        mToolbarLayoutChanges.append(pTB);
+    }
+}
+
+bool Host::commitLayoutUpdates(bool flush)
+{
+    bool updated = false;
+    if (mpConsole && !flush) {
+        // commit changes (or rather clear the layout changed flags) for dockwidget
+        // consoles (user windows)
+        for (auto dockedConsoleName : mDockLayoutChanges) {
+            auto pD = mpConsole->mDockWidgetMap.value(dockedConsoleName);
+            if (Q_LIKELY(pD) && pD->property("layoutChanged").toBool()) {
+                pD->setProperty("layoutChanged", QVariant(false));
+                updated = true;
+            }
+        }
+    }
+    mDockLayoutChanges.clear();
+
+    // commit changes (or rather clear the layout changed flags) for
+    // dockable/floating toolbars across all profiles:
+    if (!flush) {
+        for (auto pToolBar : mToolbarLayoutChanges) {
+            // Under some circumstances there is NOT a
+            // pToolBar->property("layoutChanged") and examining that
+            // non-existant variant to see if it was true or false causes seg. faults!
+            if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
+                qWarning().nospace().noquote() << "host::commitLayoutUpdates() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
+            } else if (pToolBar->property("layoutChanged").toBool()) {
+                pToolBar->setProperty("layoutChanged", QVariant(false));
+                updated = true;
+            }
+        }
+    }
+    mToolbarLayoutChanges.clear();
+    return updated;
 }

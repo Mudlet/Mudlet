@@ -27,6 +27,7 @@
 
 
 #include "pre_guard.h"
+#include <QElapsedTimer>
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
@@ -151,6 +152,7 @@ public:
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
     void setMSPVariables(const QByteArray&);
+    bool purgeMediaCache();
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void setDisplayDimensions();
@@ -184,13 +186,13 @@ public:
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
     QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
-    std::pair<QString, int> getConnectionInfo() const;
+    std::tuple<QString, int, bool> getConnectionInfo() const;
 
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
-    double networkLatency;
-    QTime networkLatencyTime;
+    double networkLatencyTime;
+    QElapsedTimer networkLatencyTimer;
     bool mAlertOnNewData;
     bool mGA_Driver;
     bool mFORCE_GA_OFF;
@@ -290,9 +292,9 @@ private:
     bool mIsTimerPosting;
     QTimer* mTimerLogin;
     QTimer* mTimerPass;
-    QTime timeOffset;
-    QTime mConnectionTime;
-    int lastTimeOffset;
+    QElapsedTimer mRecordingChunkTimer;
+    QElapsedTimer mConnectionTimer;
+    int mRecordLastChunkMSecTimeOffset;
     bool enableCHARSET;
     bool enableATCP;
     bool enableGMCP;
@@ -318,6 +320,8 @@ private:
     // Set if the current connection is via a proxy
     bool mConnectViaProxy;
 
+    // server problem w/ not terminating IAC SB: only warn once
+    bool mIncompleteSB;
 private slots:
 #if !defined(QT_NO_SSL)
     void handle_socket_signal_sslError(const QList<QSslError> &errors);

@@ -3,7 +3,16 @@ if ("$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet") {
 }
 
 cd "$Env:APPVEYOR_BUILD_FOLDER\src\release"
-windeployqt.exe --release mudlet.exe
+
+$Script:QtVersionRegex = [regex]'\\([\d\.]+)\\mingw'
+$Script:QtVersion = $QtVersionRegex.Match($Env:QT_BASE_DIR).Groups[1].Value
+if ([version]$Script:QtVersion -ge [version]'5.14.0') {
+  windeployqt.exe mudlet.exe
+}
+else {
+  windeployqt.exe --release mudlet.exe
+}
+
 . "$Env:APPVEYOR_BUILD_FOLDER\CI\copy-non-qt-win-dependencies.ps1"
 
 Remove-Item * -include *.cpp, *.o
@@ -15,8 +24,6 @@ if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
 } else {
   $Script:Commit = git rev-parse --short HEAD
 }
-# ensure sha part always starts with a character due to https://github.com/Squirrel/Squirrel.Windows/issues/1394
-$Script:VersionAndSha = "$Env:VERSION-ptb$Script:Commit"
 
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating a snapshot build ==="
@@ -33,9 +40,9 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
 } else {
   if ($Script:PublicTestBuild) {
 
-    $commitDate = Get-Date -date $(git show -s --format=%as)
-    $yesterdaysDate = $(Get-Date).AddDays(-1).Date
-    if ($commitDate -lt $yesterdaysDate) {
+    $COMMIT_DATE = Get-Date -date $(git show -s --format="%cs")
+    $YESTERDAY_DATE = $(Get-Date).AddDays(-1).Date
+    if ($COMMIT_DATE -lt $YESTERDAY_DATE) {
       Write-Output "=== No new commits, aborting public test build generation ==="
       exit 0
     }
@@ -43,9 +50,12 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     Write-Output "=== Creating a public test build ==="
     # Squirrel takes Start menu name from the binary
     Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet PTB.exe"
+    # ensure sha part always starts with a character due to https://github.com/Squirrel/Squirrel.Windows/issues/1394
+    $Script:VersionAndSha = "$Env:VERSION-ptb$Script:Commit"
   } else {
     Write-Output "=== Creating a release build ==="
     Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet.exe"
+    $Script:VersionAndSha = "$Env:VERSION"
   }
 
   Write-Output "=== Cloning installer project ==="
@@ -81,8 +91,10 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating installers from Nuget package ==="
   if ($Script:PublicTestBuild) {
     $TestBuildString = "-PublicTestBuild"
+    $InstallerIconFile = "${Env:APPVEYOR_BUILD_FOLDER}\src\icons\mudlet_ptb.ico"
   } else {
     $TestBuildString = ""
+    $InstallerIconFile = "${Env:APPVEYOR_BUILD_FOLDER}\src\icons\mudlet.ico"
   }
 
   $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet$TestBuildString.$Script:VersionAndSha.nupkg"
@@ -92,8 +104,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   }
 
   # fails silently if the nupkg file is not found
-  .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon C:\projects\installers\windows\mudlet_main_48px.ico -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
-
+  .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon $InstallerIconFile -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
   Write-Output "=== Removing old directory content of release folder ==="
   Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release\*
   Write-Output "=== Copying installer over for appveyor ==="
@@ -155,9 +166,10 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     $Script:DownloadedFeed = [System.IO.Path]::GetTempFileName()
     Invoke-WebRequest "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86" -OutFile $Script:DownloadedFeed
     Write-Output "=== Generating a changelog ==="
-    pushd "$Env:APPVEYOR_BUILD_FOLDER\CI\"
+    Push-Location "$Env:APPVEYOR_BUILD_FOLDER\CI\"
     $Script:Changelog = lua "$Env:APPVEYOR_BUILD_FOLDER\CI\generate-ptb-changelog.lua" --releasefile $Script:DownloadedFeed
-    popd
+    Pop-Location
+    Write-Output $Script:Changelog
     Write-Output "=== Creating release in Dblsqd ==="
     dblsqd release -a mudlet -c public-test-build -m $Script:Changelog "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower()
 

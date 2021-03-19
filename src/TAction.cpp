@@ -39,25 +39,25 @@ TAction::TAction(TAction* parent, Host* pHost)
 , mButtonState(false)
 , mPosX(0)
 , mPosY(0)
+, mOrientation()
+, mLocation()
+, mIsPushDownButton()
 , mNeedsToBeCompiled(true)
+, mButtonRotation()
 , mButtonColumns(1)
+, mButtonFlat()
+, mSizeX()
+, mSizeY()
 , mIsLabel(false)
 , mUseCustomLayout(false)
 , mButtonColor(QColor(Qt::white))
 , mpHost(pHost)
 , exportItem(true)
 , mModuleMasterFolder(false)
-, mModuleMember(false)
-, mOrientation()
-, mLocation()
-, mIsPushDownButton()
-, mButtonRotation()
-, mButtonFlat()
-, mSizeX()
-, mSizeY()
-, mDataChanged(true)
 , mToolbarLastDockArea(Qt::LeftDockWidgetArea)
 , mToolbarLastFloatingState(true)
+, mModuleMember(false)
+, mDataChanged(true)
 {
 }
 
@@ -68,26 +68,26 @@ TAction::TAction(const QString& name, Host* pHost)
 , mButtonState(false)
 , mPosX(0)
 , mPosY(0)
+, mOrientation()
+, mLocation()
 , mName(name)
+, mIsPushDownButton()
 , mNeedsToBeCompiled(true)
+, mButtonRotation()
 , mButtonColumns(1)
+, mButtonFlat()
+, mSizeX()
+, mSizeY()
 , mIsLabel(false)
 , mUseCustomLayout(false)
 , mButtonColor(QColor(Qt::white))
 , mpHost(pHost)
 , exportItem(true)
 , mModuleMasterFolder(false)
-, mModuleMember(false)
-, mOrientation()
-, mLocation()
-, mIsPushDownButton()
-, mButtonRotation()
-, mButtonFlat()
-, mSizeX()
-, mSizeY()
-, mDataChanged(true)
 , mToolbarLastDockArea(Qt::LeftDockWidgetArea)
 , mToolbarLastFloatingState(true)
+, mModuleMember(false)
+, mDataChanged(true)
 {
 }
 
@@ -95,6 +95,14 @@ TAction::~TAction()
 {
     if (mpHost) {
         mpHost->getActionUnit()->unregisterAction(this);
+
+        if (isTemporary()) {
+            if (mScript.isEmpty()) {
+                mpHost->mLuaInterpreter.delete_luafunction(this);
+            } else {
+                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+            }
+        }
     }
 
     if (mpToolBar) {
@@ -237,15 +245,15 @@ void TAction::expandToolbar(TToolBar* pT)
         button->setStyleSheet(css);
 
         /*
-		 * CHECK: The other expandToolbar(...) has the following in this position:
-		 *       //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
-		 *       if( action->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )
-		 *       {
-		 *          qDebug()<<"expandToolBar() name="<<action->mName<<" executing script";
-		 *          action->execute();
-		 *       }
-		 * Why does it have this and we do not? - Slysven
-		 */
+         * CHECK: The other expandToolbar(...) has the following in this position:
+         *       //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
+         *       if( action->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )
+         *       {
+         *          qDebug()<<"expandToolBar() name="<<action->mName<<" executing script";
+         *          action->execute();
+         *       }
+         * Why does it have this and we do not? - Slysven
+         */
 
         if (action->isFolder()) {
             auto newMenu = new QMenu(pT);
@@ -396,7 +404,7 @@ void TAction::fillMenu(TEasyButtonBar* pT, QMenu* menu)
             action->fillMenu(pT, newMenu);
         }
 
-        // Menu is PARENT'S menu newAction, this line moved to be AFTER child builds it's own menu if it is a folder
+        // Menu is PARENT'S menu newAction, this line moved to be AFTER child builds its own menu if it is a folder
         menu->addAction(newAction);
     }
 }

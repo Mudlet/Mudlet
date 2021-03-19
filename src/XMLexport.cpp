@@ -371,6 +371,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     // that can be expressed solely with the Latin1 character encoding so that
     // can be used compared to the more complex Utf8 one needed otherwise:
     host.append_attribute("autoClearCommandLineAfterSend") = pHost->mAutoClearCommandLineAfterSend ? "yes" : "no";
+    host.append_attribute("HighlightHistory") = pHost->mHighlightHistory ? "yes" : "no";
     host.append_attribute("printCommand") = pHost->mPrintCommand ? "yes" : "no";
     host.append_attribute("USE_IRE_DRIVER_BUGFIX") = pHost->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no";
     host.append_attribute("mUSE_FORCE_LF_AFTER_PROMPT") = pHost->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no";
@@ -403,16 +404,20 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     mpHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     host.append_attribute("mEnableUserDictionary") = enableUserDictionary ? "yes" : "no";
     host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
-    host.append_attribute("mShowInfo") = pHost->mShowInfo ? "yes" : "no";
+    if (pHost->mMapInfoContributors.isEmpty()) {
+        host.append_attribute("mShowInfo") = "no";
+    }
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
     host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
+    host.append_attribute("mMapperShowRoomBorders") = pHost->mMapperShowRoomBorders ? "yes" : "no";
     host.append_attribute("mFORCE_MXP_NEGOTIATION_OFF") = pHost->mFORCE_MXP_NEGOTIATION_OFF ? "yes" : "no";
     host.append_attribute("mFORCE_CHARSET_NEGOTIATION_OFF") = pHost->mFORCE_CHARSET_NEGOTIATION_OFF ? "yes" : "no";
     host.append_attribute("enableTextAnalyzer") = pHost->mEnableTextAnalyzer ? "yes" : "no";
     host.append_attribute("mRoomSize") = QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mLineSize") = QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mBubbleMode") = pHost->mBubbleMode ? "yes" : "no";
+    host.append_attribute("mMapViewOnly") = pHost->mMapViewOnly ? "yes" : "no";
     host.append_attribute("mShowRoomIDs") = pHost->mShowRoomID ? "yes" : "no";
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
@@ -428,7 +433,6 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mProxyPort") = QString::number(pHost->mProxyPort).toUtf8().constData();
     host.append_attribute("mProxyUsername") = pHost->mProxyUsername.toUtf8().constData();
     host.append_attribute("mProxyPassword") = pHost->mProxyPassword.toUtf8().constData();
-    host.append_attribute("mAutoReconnect") = pHost->mAutoReconnect ? "yes" : "no";
     host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
     host.append_attribute("mSslIgnoreExpired") = pHost->mSslIgnoreExpired ? "yes" : "no";
     host.append_attribute("mSslIgnoreSelfSigned") = pHost->mSslIgnoreSelfSigned ? "yes" : "no";
@@ -444,11 +448,11 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     QColor outerColor;
     QColor innerColor;
     pHost->getPlayerRoomStyleDetails(styleCode, outerDiameterPercentage, innerDiameterPercentage, outerColor, innerColor);
-    host.append_attribute("playerRoomPrimaryColor") = outerColor.name(QColor::HexArgb).toLatin1().constData();
-    host.append_attribute("playerRoomSecondaryColor") = innerColor.name(QColor::HexArgb).toLatin1().constData();
-    host.append_attribute("playerRoomStyle") = QString::number(styleCode).toLatin1().constData();
-    host.append_attribute("playerRoomOuterDiameter") = QString::number(outerDiameterPercentage).toLatin1().constData();
-    host.append_attribute("playerRoomInnerDiameter") = QString::number(innerDiameterPercentage).toLatin1().constData();
+    host.append_attribute("playerRoomPrimaryColor") = outerColor.name(QColor::HexArgb).toUtf8().constData();
+    host.append_attribute("playerRoomSecondaryColor") = innerColor.name(QColor::HexArgb).toUtf8().constData();
+    host.append_attribute("playerRoomStyle") = QString::number(styleCode).toUtf8().constData();
+    host.append_attribute("playerRoomOuterDiameter") = QString::number(outerDiameterPercentage).toUtf8().constData();
+    host.append_attribute("playerRoomInnerDiameter") = QString::number(innerDiameterPercentage).toUtf8().constData();
     host.append_attribute("CompactInputLine") = pHost->getCompactInputLine() ? "yes" : "no";
 
     QString ignore;
@@ -457,7 +461,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         ignore = ignore.append(it.next());
     }
     host.append_attribute("mDoubleClickIgnore") = ignore.toUtf8().constData();
-    host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toLatin1().constData();
+    host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toUtf8().constData();
+    host.append_attribute("DebugShowAllProblemCodepoints") = pHost->debugShowAllProblemCodepoints() ? "yes" : "no";
 
     { // Blocked so that indentation reflects that of the XML file
         host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());
@@ -525,6 +530,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
 
         host.append_child("mFgColor2").text().set(pHost->mFgColor_2.name().toUtf8().constData());
         host.append_child("mBgColor2").text().set(pHost->mBgColor_2.name().toUtf8().constData());
+        host.append_child("mRoomBorderColor").text().set(pHost->mRoomBorderColor.name().toUtf8().constData());
         host.append_child("mBlack2").text().set(pHost->mBlack_2.name().toUtf8().constData());
         host.append_child("mLightBlack2").text().set(pHost->mLightBlack_2.name().toUtf8().constData());
         host.append_child("mRed2").text().set(pHost->mRed_2.name().toUtf8().constData());
@@ -549,6 +555,14 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mLineSize").text().set(QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData());
         host.append_child("mRoomSize").text().set(QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData());
     }
+    {
+        auto mapInfoContributors = host.append_child("mMapInfoContributors");
+        QSetIterator<QString> iterator(pHost->mMapInfoContributors);
+        while (iterator.hasNext()) {
+            auto mapInfoContributor = mapInfoContributors.append_child("mapInfoContributor");
+            mapInfoContributor.text().set(iterator.next().toUtf8().constData());
+        }
+    }
 
     {
         auto stopwatches = host.append_child("stopwatches");
@@ -559,13 +573,13 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             if (pStopWatch->persistent()) {
                 auto stopwatch = stopwatches.append_child("stopwatch");
                 // Three QStrings used here are purely numeric so can be expressed in Latin1 encoding:
-                stopwatch.append_attribute("id") = QString::number(stopWatchId).toLatin1().constData();
+                stopwatch.append_attribute("id") = QString::number(stopWatchId).toUtf8().constData();
                 if (pStopWatch->running()) {
                     stopwatch.append_attribute("running") = "yes";
-                    stopwatch.append_attribute("effectiveStartDateTimeEpochMSecs") = QString::number(QDateTime::currentMSecsSinceEpoch() - pStopWatch->getElapsedMilliSeconds()).toLatin1().constData();
+                    stopwatch.append_attribute("effectiveStartDateTimeEpochMSecs") = QString::number(QDateTime::currentMSecsSinceEpoch() - pStopWatch->getElapsedMilliSeconds()).toUtf8().constData();
                 } else {
                     stopwatch.append_attribute("running") = "no";
-                    stopwatch.append_attribute("elapsedDateTimeMSecs") = QString::number(pStopWatch->getElapsedMilliSeconds()).toLatin1().constData();
+                    stopwatch.append_attribute("elapsedDateTimeMSecs") = QString::number(pStopWatch->getElapsedMilliSeconds()).toUtf8().constData();
                 }
                 stopwatch.append_attribute("name") = pStopWatch->name().toUtf8().constData();
             }
@@ -1149,7 +1163,7 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, c
 {
 
     QStringList results;
-    QRegularExpression regex = QRegularExpression(QStringLiteral("(^ANSI_COLORS_F{(\\d+|IGNORE|DEFAULT)}_B{(\\d+|IGNORE|DEFAULT)}$"));
+    QRegularExpression regex = QRegularExpression(QStringLiteral("^ANSI_COLORS_F{(\\d+|IGNORE|DEFAULT)}_B{(\\d+|IGNORE|DEFAULT)}$"));
     QStringListIterator itPattern(patternList);
     QListIterator<int> itType(typeList);
     while (itPattern.hasNext() && itType.hasNext()) {

@@ -48,10 +48,13 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mSoundTrigger( false )
 , mStayOpen( 0 )
 , mColorTrigger( false )
+, mColorTriggerFgAnsi(scmIgnored)
+, mColorTriggerBgAnsi(scmIgnored)
 , mKeepFiring( 0 )
 , mpHost( pHost )
 , exportItem(true)
 , mModuleMasterFolder(false)
+, mRegisteredAnonymousLuaFunction(false)
 , mNeedsToBeCompiled(true)
 , mTriggerType(REGEX_SUBSTRING)
 , mIsLineTrigger(false)
@@ -64,9 +67,6 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mBgColor(QColor(Qt::yellow))
 , mIsColorizerTrigger(false)
 , mModuleMember(false)
-, mColorTriggerFgAnsi(scmIgnored)
-, mColorTriggerBgAnsi(scmIgnored)
-, mRegisteredAnonymousLuaFunction(false)
 , mExpiryCount(-1)
 {
 }
@@ -79,12 +79,15 @@ TTrigger::TTrigger(const QString& name, const QStringList& regexList, const QLis
 , mSoundTrigger( false )
 , mStayOpen( 0 )
 , mColorTrigger( false )
+, mColorTriggerFgAnsi(scmIgnored)
+, mColorTriggerBgAnsi(scmIgnored)
 , mKeepFiring( 0 )
 , mpHost( pHost )
 , mName( name )
 , mRegexCodeList( regexList )
 , exportItem(true)
 , mModuleMasterFolder(false)
+, mRegisteredAnonymousLuaFunction(false)
 , mRegexCodePropertyList(regexProperyList)
 , mNeedsToBeCompiled(true)
 , mTriggerType(REGEX_SUBSTRING)
@@ -98,9 +101,6 @@ TTrigger::TTrigger(const QString& name, const QStringList& regexList, const QLis
 , mBgColor(QColor(Qt::yellow))
 , mIsColorizerTrigger(false)
 , mModuleMember(false)
-, mColorTriggerFgAnsi(scmIgnored)
-, mColorTriggerBgAnsi(scmIgnored)
-, mRegisteredAnonymousLuaFunction(false)
 , mExpiryCount(-1)
 {
     setRegexCodeList(regexList, regexProperyList);
@@ -122,10 +122,23 @@ TTrigger::~TTrigger()
         }
         itColorTable.remove();
     }
+
+    for (auto && [key, value] : mConditionMap) {
+        delete value;
+    }
+
     if (!mpHost) {
         return;
     }
     mpHost->getTriggerUnit()->unregisterTrigger(this);
+
+    if (isTemporary()) {
+        if (mScript.isEmpty()) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        } else {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        }
+    }
 }
 
 void TTrigger::setName(const QString& name)
@@ -134,7 +147,7 @@ void TTrigger::setName(const QString& name)
         mpHost->getTriggerUnit()->mLookupTable.remove( mName, this );
     }
     mName = name;
-    mpHost->getTriggerUnit()->mLookupTable.insertMulti(name, this);
+    mpHost->getTriggerUnit()->mLookupTable.insert(name, this);
 }
 
 static void pcre_deleter(pcre* pointer)
@@ -142,7 +155,7 @@ static void pcre_deleter(pcre* pointer)
     pcre_free(pointer);
 }
 
-//FIXME: sperren, wenn code nicht compiliert werden kann *ODER* regex falsch
+//FIXME: lock if code *OR* regex doesn't compile
 bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
 {
     regexList.replaceInStrings("\n", "");
@@ -169,7 +182,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
     mTriggerContainsPerlRegex = false;
 
     if (propertyList.size() != regexList.size()) {
-        //FIXME: ronny hat das irgendwie geschafft
+        //FIXME: ronny managed to trigger this somehow
         qDebug() << "[CRITICAL ERROR (plz report):] Trigger name=" << mName << " aborting reason: propertyList.size() != regexList.size()";
     }
 
@@ -294,14 +307,18 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     int rc, i;
     std::list<std::string> captureList;
     std::list<int> posList;
-    int ovector[300]; // 100 capture groups max (can be increase nbGroups=1/3 ovector
+    NameGroupMatches nameGroups;
+    int ovector[MAX_CAPTURE_GROUPS * 3];
 
-    rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, 100);
+    rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, MAX_CAPTURE_GROUPS * 3);
 
     if (rc < 0) {
         return false;
     } else if (rc == 0) {
-        qDebug() << "CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
+        if (mpHost->mpEditorDialog) {
+            mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
+        }
+        qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
     } else {
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::blue), QColor(Qt::black)) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> 0;
@@ -329,20 +346,20 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     }
     pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMECOUNT, &namecount);
 
-    if (namecount <= 0) {
-        ;// Do something?
-    } else {
-        unsigned char* tabptr;
+    if (namecount > 0) {
+        // Based on snippet https://github.com/vmg/pcre/blob/master/pcredemo.c#L216
+        // Retrieves char table end entry size and extracts name of group  and captures from
         pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &name_table);
-
         pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
-
-        tabptr = name_table;
+        char* tabptr = reinterpret_cast<char*>(name_table);
         for (i = 0; i < namecount; i++) {
+            int n = (tabptr[0] << 8) | tabptr[1];
+            auto name = QString::fromUtf8( tabptr + 2, name_entry_size - 3).trimmed();
+            auto capture = QString::fromUtf8(subject + ovector[2*n], ovector[2*n+1] - ovector[2*n]);
+            nameGroups << qMakePair(name, capture);
             tabptr += name_entry_size;
         }
     }
-    //TODO: add named groups seperately later as Lua::namedGroups
     if (mIsColorizerTrigger || mFilterTrigger) {
         numberOfCaptureGroups = captureList.size();
     }
@@ -357,7 +374,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
             options = PCRE_NOTEMPTY | PCRE_ANCHORED;
         }
 
-        rc = pcre_exec(re.data(), nullptr, subject, subject_length, start_offset, options, ovector, 30);
+        rc = pcre_exec(re.data(), nullptr, subject, subject_length, start_offset, options, ovector, MAX_CAPTURE_GROUPS * 3);
 
         if (rc == PCRE_ERROR_NOMATCH) {
             if (options == 0) {
@@ -368,7 +385,10 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
         } else if (rc < 0) {
             goto END;
         } else if (rc == 0) {
-            qDebug() << "CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
+            if (mpHost->mpEditorDialog) {
+                mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
+            }
+            qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
         }
 
         for (i = 0; i < rc; i++) {
@@ -423,7 +443,7 @@ END : {
 #else
                     if (mBgColor != QColor("transparent")) {
 #endif
-                        pC->setBgColor(r1, g1, b1);
+                        pC->setBgColor(r1, g1, b1, 255);
                     }
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                     if (mFgColor != QColorConstants::Transparent) {
@@ -435,18 +455,19 @@ END : {
                 }
             } else {
                 pC->selectSection(begin, length);
-                pC->setBgColor(r1, g1, b1);
+                pC->setBgColor(r1, g1, b1, 255);
                 pC->setFgColor(r2, g2, b2);
             }
         }
         pC->reset();
     }
     if (mIsMultiline) {
-        updateMultistates(regexNumber, captureList, posList);
+        updateMultistates(regexNumber, captureList, posList, &nameGroups);
         return true;
     } else {
         TLuaInterpreter* pL = mpHost->getLuaInterpreter();
         pL->setCaptureGroups(captureList, posList);
+        pL->setCaptureNameGroups(nameGroups);
         execute();
         pL->clearCaptureGroups();
         if (mFilterTrigger) {
@@ -508,7 +529,7 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
 #else
                 if (mBgColor != QColor("transparent")) {
 #endif
-                    pC->setBgColor(r1, g1, b1);
+                    pC->setBgColor(r1, g1, b1, 255);
                 }
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                 if (mFgColor != QColorConstants::Transparent) {
@@ -541,14 +562,17 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
     return false;
 }
 
-inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList)
+inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches)
 {
     if (regexNumber == 0) {
-        // wird automatisch auf #1 gesetzt
+        // automatically set to #1
         auto pCondition = new TMatchState(mRegexCodeList.size(), mConditionLineDelta);
         mConditionMap[pCondition] = pCondition;
         pCondition->multiCaptureList.push_back(captureList);
         pCondition->multiCapturePosList.push_back(posList);
+        if (nameMatches != nullptr) {
+            pCondition->nameCaptures.push_back(*nameMatches);
+        }
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::darkYellow), QColor(Qt::black)) << "match state " << mConditionMap.size() << "/" << mConditionMap.size() << " condition #" << regexNumber << "=true (" << regexNumber
                                                               << "/" << mRegexCodeList.size() << ") regex=" << mRegexCodeList[regexNumber] << "\n"
@@ -567,6 +591,9 @@ inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>&
                 matchStatePair.second->conditionMatched();
                 matchStatePair.second->multiCaptureList.push_back(captureList);
                 matchStatePair.second->multiCapturePosList.push_back(posList);
+                if (nameMatches != nullptr) {
+                    matchStatePair.second->nameCaptures.push_back(*nameMatches);
+                }
             }
         }
     }
@@ -640,7 +667,7 @@ bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int
 #else
                 if (mBgColor != QColor("transparent")) {
 #endif
-                    pC->setBgColor(r1, g1, b1);
+                    pC->setBgColor(r1, g1, b1, 255);
                 }
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                 if (mFgColor != QColorConstants::Transparent) {
@@ -763,7 +790,7 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
 #else
                 if (mBgColor != QColor("transparent")) {
 #endif
-                    pC->setBgColor(r1, g1, b1);
+                    pC->setBgColor(r1, g1, b1, 255);
                 }
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                 if (mFgColor != QColorConstants::Transparent) {
@@ -903,7 +930,7 @@ bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, in
 #else
                 if (mBgColor != QColor("transparent")) {
 #endif
-                    pC->setBgColor(r1, g1, b1);
+                    pC->setBgColor(r1, g1, b1, 255);
                 }
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                 if (mFgColor != QColorConstants::Transparent) {
@@ -1038,7 +1065,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
                     removeList.push_back(matchStatePair.first);
                     conditionMet = true;
                     TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-                    pL->setMultiCaptureGroups(matchStatePair.second->multiCaptureList, matchStatePair.second->multiCapturePosList);
+                    pL->setMultiCaptureGroups(matchStatePair.second->multiCaptureList, matchStatePair.second->multiCapturePosList, matchStatePair.second->nameCaptures);
                     execute();
                     pL->clearCaptureGroups();
                     if (mFilterTrigger) {
@@ -1131,7 +1158,6 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
 }
 
 
-// Die Musternummer wird ID im color-pattern lookup table
 // This NOW uses proper ANSI numbers
 // A TColorTable is a simple struct that stores four values, the two given ANSI
 // colors for foreground and background (proper ANSI indexes) and what they look

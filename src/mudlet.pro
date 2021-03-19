@@ -45,10 +45,6 @@ include(../3rdparty/communi/communi.pri)
     include(../translations/translated/updateqm.pri)
 }
 
-# disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-*
-# after for some warnings that we wish to ignore:
-!msvc:CONFIG += warn_off
-!msvc:QMAKE_CXXFLAGS += -Wall -Wno-deprecated
 # Before we impose OUR idea about the optimisation levels to use, remove any
 # that Qt tries to put in automatically for us for release builds, only the
 # last, ours, is supposed to apply but it can be confusing to see multiple
@@ -93,7 +89,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.9.1
+VERSION = 4.11.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -181,7 +177,7 @@ linux|macx|win32 {
 # don't include it either
 
 
-######################### 3D mapper toggle #######################
+############################### 3D mapper toggle ###############################
 # To remove the 3D mapper, set the environment WITH_3DMAPPER variable to "NO"
 # ie: export WITH_3DMAPPER="NO" qmake
 #
@@ -190,7 +186,7 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
     DEFINES += INCLUDE_3DMAPPER
 }
 
-######################## System QtKeyChain library ###############
+######################## System QtKeyChain library #############################
 # To use a system provided QtKeyChain library set the environmental variable
 # WITH_OWN_QTKEYCHAIN variable to "NO". Note that this is only likely to be
 # useful on \*nix OSes (not MacOS nor Windows). If NOT specified, (or set to
@@ -202,6 +198,16 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
 OWN_QTKEYCHAIN_TEST = $$upper($$(WITH_OWN_QTKEYCHAIN))
 isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
   DEFINES += INCLUDE_OWN_QT5_KEYCHAIN
+}
+
+################ Alternative Windows build environment support #################
+# Developers using a full MSYS2/Mingw-w64 system, as documented at:
+# https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_Windows_7.2B_.28MSYS2_Alternative.29
+# will need some tweaks to names/paths for some libraries/header files, do this
+# by setting an environment variable WITH_MAIN_BUILD_SYSTEM variable to "NO".
+MAIN_BUILD_SYSTEM_TEST = $$upper($$(WITH_MAIN_BUILD_SYSTEM))
+isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
+  DEFINES += INCLUDE_MAIN_BUILD_SYSTEM
 }
 
 ###################### Platform Specific Paths and related #####################
@@ -259,7 +265,6 @@ unix:!macx {
     }
     LIBS += -lpcre \
         -L/usr/local/lib/ \
-        -lyajl \
         -lzip \
         -lz \
         -lpugixml
@@ -271,23 +276,49 @@ unix:!macx {
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
     MINGW_BASE_DIR_TEST = $$(MINGW_BASE_DIR)
-    isEmpty( MINGW_BASE_DIR_TEST ) {
-        MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw730_32"
+    contains( DEFINES, INCLUDE_MAIN_BUILD_SYSTEM ) {
+        # For CI builds or users/developers using the setup-windows-sdk.ps1 method:
+        isEmpty( MINGW_BASE_DIR_TEST ) {
+            MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw810_32"
+        }
+        LIBS +=  \
+            -L"$${MINGW_BASE_DIR_TEST}\\bin" \
+            -L"$${MINGW_BASE_DIR_TEST}\\lib" \
+            -llua51 \
+            -llibhunspell-1.6
+
+        INCLUDEPATH += \
+             "C:\\Libraries\\boost_1_71_0" \
+             "$${MINGW_BASE_DIR_TEST}\\include" \
+             "$${MINGW_BASE_DIR_TEST}\\lib\\include"
+
+    } else {
+        # For users/developers building with MSYS2 on Windows:
+        isEmpty( MINGW_BASE_DIR_TEST ) {
+            error($$escape_expand("Build aborted as environmental variable MINGW_BASE_DIR not set to the root of \\n"\
+"the Mingw32 or Mingw64 part (depending on the number of bits in your desired\\n"\
+"application build) typically this is one of:\\n"\
+"'C:\msys32\mingw32' {32 Bit Mudlet built on a 32 Bit Host}\\n"\
+"'C:\msys64\mingw32' {32 Bit Mudlet built on a 64 Bit Host}\\n"\
+"'C:\msys64\mingw32' {64 Bit Mudlet built on a 64 Bit Host}\\n"))
+        }
+        LIBS +=  \
+            -L$${MINGW_BASE_DIR_TEST}/bin \
+            -llua5.1 \
+            -llibhunspell-1.7
+
+        INCLUDEPATH += \
+             $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
+             $${MINGW_BASE_DIR_TEST}/include/pugixml
     }
-    LIBS +=  \
-        -L"$${MINGW_BASE_DIR_TEST}\\bin" \
-        -llua51 \
+
+    LIBS += \
         -lpcre-1 \
-        -llibhunspell-1.6 \
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
-        -lyajl \
         -lpugixml \
         -lWs2_32
-    INCLUDEPATH += \
-         "C:\\Libraries\\boost_1_71_0" \
-         "$${MINGW_BASE_DIR_TEST}\\include" \
-         "$${MINGW_BASE_DIR_TEST}\\lib\include"
+
     # Leave this unset - we do not need it on Windows:
     # LUA_DEFAULT_DIR =
 }
@@ -320,7 +351,7 @@ macx {
     # http://stackoverflow.com/a/16972067
     QT_CONFIG -= no-pkg-config
     CONFIG += link_pkgconfig
-    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip pugixml
+    PKGCONFIG += hunspell lua5.1 libpcre libzip pugixml
     INCLUDEPATH += /usr/local/include
 }
 
@@ -471,7 +502,7 @@ contains( DEFINES, INCLUDE_UPDATER ) {
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
-    TTextCodec.cpp \
+    AltFocusMenuBarDisable.cpp \
     ctelnet.cpp \
     discord.cpp \
     dlgAboutDialog.cpp \
@@ -482,11 +513,14 @@ SOURCES += \
     dlgConnectionProfiles.cpp \
     dlgIRC.cpp \
     dlgKeysMainArea.cpp \
+    dlgModuleManager.cpp \
     dlgMapper.cpp \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
+    dlgPackageManager.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
+    dlgRoomSymbol.cpp \
     dlgScriptsMainArea.cpp \
     dlgSourceEditorArea.cpp \
     dlgSourceEditorFindArea.cpp \
@@ -505,7 +539,9 @@ SOURCES += \
     KeyUnit.cpp \
     LuaInterface.cpp \
     main.cpp \
+    mapInfoContributorManager.cpp \
     mudlet.cpp \
+    MxpTag.cpp \
     ScriptUnit.cpp \
     T2DMap.cpp \
     TAction.cpp \
@@ -527,13 +563,15 @@ SOURCES += \
     TLabel.cpp \
     TLinkStore.cpp \
     TLuaInterpreter.cpp \
+    TMainConsole.cpp \
     TMap.cpp \
+    TMapLabel.cpp \
     TMedia.cpp \
+    TMxpBRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
     TMxpFormattingTagsHandler.cpp \
-    TMxpBRTagHandler.cpp \
     TMxpColorTagHandler.cpp \
     TMxpCustomElementTagHandler.cpp \
     TMxpFontTagHandler.cpp \
@@ -545,19 +583,20 @@ SOURCES += \
     TMxpProcessor.cpp \
     TMxpSendTagHandler.cpp \
     TMxpSupportTagHandler.cpp \
-    MxpTag.cpp \
     TMxpTagHandler.cpp \
     TMxpTagParser.cpp \
     TMxpTagProcessor.cpp \
-    TMxpVarTagHandler.cpp \
     TMxpVersionTagHandler.cpp \
+    TMxpVarTagHandler.cpp \
     TriggerUnit.cpp \
     TRoom.cpp \
     TRoomDB.cpp \
     TScript.cpp \
     TSplitter.cpp \
     TSplitterHandle.cpp \
+    TStringUtils.cpp \
     TTabBar.cpp \
+    TTextCodec.cpp \
     TTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
@@ -566,13 +605,12 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    TStringUtils.cpp
+    XMLimport.cpp
 
 HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
-    TTextCodec.h \
+    AltFocusMenuBarDisable.h \
     ctelnet.h \
     discord.h \
     dlgAboutDialog.h \
@@ -584,10 +622,13 @@ HEADERS += \
     dlgIRC.h \
     dlgKeysMainArea.h \
     dlgMapper.h \
+    dlgModuleManager.h \
     dlgNotepad.h \
     dlgPackageExporter.h \
+    dlgPackageManager.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
+    dlgRoomSymbol.h \
     dlgScriptsMainArea.h \
     dlgSourceEditorArea.h \
     dlgSourceEditorFindArea.h \
@@ -604,7 +645,9 @@ HEADERS += \
     ircmessageformatter.h \
     KeyUnit.h \
     LuaInterface.h \
+    mapInfoContributorManager.h \
     mudlet.h \
+    MxpTag.h \
     pre_guard.h \
     post_guard.h \
     ScriptUnit.h \
@@ -631,7 +674,9 @@ HEADERS += \
     TLabel.h \
     TLinkStore.h \
     TLuaInterpreter.h \
+    TMainConsole.h \
     TMap.h \
+    TMapLabel.h \
     TMatchState.h \
     TMedia.h \
     TMxpBRTagHandler.h \
@@ -651,7 +696,6 @@ HEADERS += \
     TMxpNodeBuilder.h \
     TMxpProcessor.h \
     TMxpSendTagHandler.h \
-    MxpTag.h \
     TMxpTagHandler.h \
     TMxpTagParser.h \
     TMxpTagProcessor.h \
@@ -665,7 +709,9 @@ HEADERS += \
     TScript.h \
     TSplitter.h \
     TSplitterHandle.h \
+    TStringUtils.h \
     TTabBar.h \
+    TTextCodec.h \
     TTextEdit.h \
     TTimer.h \
     TToolBar.h \
@@ -677,8 +723,7 @@ HEADERS += \
     XMLimport.h \
     widechar_width.h \
     ../3rdparty/discord/rpc/include/discord_register.h \
-    ../3rdparty/discord/rpc/include/discord_rpc.h \
-    TStringUtils.h
+    ../3rdparty/discord/rpc/include/discord_rpc.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
@@ -694,10 +739,13 @@ FORMS += \
     ui/irc.ui \
     ui/keybindings_main_area.ui \
     ui/main_window.ui \
+    ui/module_manager.ui \
     ui/mapper.ui \
     ui/notes_editor.ui \
+    ui/package_manager.ui \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
+    ui/room_symbol.ui \
     ui/scripts_main_area.ui \
     ui/source_editor_area.ui \
     ui/source_editor_find_area.ui \
@@ -833,6 +881,7 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/Geyser.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserAdjustableContainer.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserColor.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserCommandLine.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserContainer.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserGauge.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserGeyser.lua \
@@ -1346,12 +1395,12 @@ macx {
 
     APP_MUDLET_LUA_TRANSLATION.path = Contents/Resources/translations
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_TRANSLATION
-    
+
     # Set the macOS application's icon
     contains(BUILD, "-ptb.+") {
         ICON = icons/mudlet_ptb.icns
     } else {
-        contains(BUILD, "-dev.+") {
+        contains(BUILD, "-dev.+")|contains(BUILD, "-test.+") {
             ICON = icons/mudlet_dev.icns
         } else {
             ICON = icons/mudlet.icns
@@ -1396,14 +1445,15 @@ macx {
 }
 
 win32 {
-    # set the Windows binary icon
+    # set the Windows binary icon, a proper .ico file will contains several
+    # images/layers in specific formats and is used in MORE than one way!
     contains(BUILD, "-ptb.+") {
         RC_ICONS = icons/mudlet_ptb.ico
     } else {
         contains(BUILD, "-dev.+")|contains(BUILD, "-test.+") {
             RC_ICONS = icons/mudlet_dev.ico
         } else {
-            RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
+            RC_ICONS = icons/mudlet.ico
         }
     }
 

@@ -30,16 +30,18 @@
 #include <QRegularExpression>
 #include "post_guard.h"
 
+const QString ROOM_UI_SHOWNAME = QStringLiteral("room.ui_showName");
+const QString ROOM_UI_NAMEPOS = QStringLiteral("room.ui_nameOffset");
+const QString ROOM_UI_NAMEFONT = QStringLiteral("room.ui_nameFont");
+const QString ROOM_UI_NAMESIZE = QStringLiteral("room.ui_nameSize");
 
 TRoomDB::TRoomDB(TMap* pMap)
 : mpMap(pMap)
 , mpTempRoomDeletionSet(nullptr)
-, mUnnamedAreaName(tr("Unnamed Area"))
-, mDefaultAreaName(tr("Default Area"))
 {
     // Ensure the default area is created, the area/areaName items that get
     // created here will get blown away when a map is loaded but that is expected...
-    addArea(-1, mDefaultAreaName);
+    addArea(-1, mpMap->getDefaultAreaName());
 }
 
 TRoom* TRoomDB::getRoom(int id)
@@ -206,7 +208,7 @@ bool TRoomDB::__removeRoom(int id)
         // it is unsafe to modify (use copy operations on) something that an STL
         // iterator is active on - see "Implicit sharing iterator problem" in
         // "Container Class | Qt 5.x Core" - this is now avoid by taking a deep
-        // copy and iterating through that instead whilst modifying the original
+        // copy and iterating through that instead while modifying the original
         while (i != _entranceMap.cend() && i.key() == id) {
             if (i.value() == id || (mpTempRoomDeletionSet && mpTempRoomDeletionSet->size() > 1 && mpTempRoomDeletionSet->contains(i.value()))) {
                 ++i;
@@ -487,19 +489,19 @@ bool TRoomDB::addArea(int id)
         areas[id] = new TArea(mpMap, this);
         if (!areaNamesMap.contains(id)) {
             // Must provide a name for this new area
-            QString newAreaName = mUnnamedAreaName;
+            QString newAreaName = mpMap->getUnnamedAreaName();
             if (areaNamesMap.values().contains(newAreaName)) {
                 // We already have an "unnamed area"
                 uint deduplicateSuffix = 0;
                 do {
-                    newAreaName = QStringLiteral("%1_%2").arg(mUnnamedAreaName).arg(++deduplicateSuffix, 3, 10, QLatin1Char('0'));
+                    newAreaName = QStringLiteral("%1_%2").arg(mpMap->getUnnamedAreaName()).arg(++deduplicateSuffix, 3, 10, QLatin1Char('0'));
                 } while (areaNamesMap.values().contains(newAreaName));
             }
             areaNamesMap.insert(id, newAreaName);
         }
         return true;
     } else {
-        QString error = tr("Area with ID=%1 already exists!").arg(id);
+        QString error = tr("Area with ID %1 already exists!").arg(id);
         mpMap->logError(error);
         return false;
     }
@@ -556,6 +558,20 @@ bool TRoomDB::addArea(int id, QString name)
     } else {
         return false;
     }
+}
+
+// Used by TMap::readJsonMapFile(...) to insert an already populated area in:
+bool TRoomDB::addArea(TArea* pA, const int id, const QString& name)
+{
+    if (name.isEmpty()) {
+        return false;
+    }
+
+    areas.insert(id, pA);
+    areaNamesMap.insert(id, name);
+    // Need to force recalculation of limits:
+    pA->mIsDirty = true;
+    return true;
 }
 
 const QList<TArea*> TRoomDB::getAreaPtrList() const
@@ -649,13 +665,6 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         QSet<int> areaIdsFromAreaNamesSet{areaIdsFromAreaNamesList.begin(), areaIdsFromAreaNamesList.end()};
         areaIdSet.unite(areaIdsFromAreaNamesSet);
     }
-
-    // And the area Ids used by the map labels:
-    if (!mpMap->mapLabels.isEmpty()) {
-        QList<int> areaIdsFromLabelsList{mpMap->mapLabels.keys()};
-        QSet<int> areaIdsFromLabelsSet{areaIdsFromLabelsList.begin(), areaIdsFromLabelsList.end()};
-        areaIdSet.unite(areaIdsFromLabelsSet);
-    }
 #else
     // Check for existance of all areas needed by rooms
     QSet<int> areaIdSet = areaRoomMultiHash.keys().toSet();
@@ -663,9 +672,6 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     // START OF TASK 3
     // Throw in the area Ids from the areaNamesMap:
     areaIdSet.unite(areaNamesMap.keys().toSet());
-
-    // And the area Ids used by the map labels:
-    areaIdSet.unite(mpMap->mapLabels.keys().toSet());
 #endif
 
     // Check the set of area Ids against the ones we actually have:
@@ -813,12 +819,12 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                 // I think this is unlikely but better provide code to cover it
                 // if it does arise that we need a new area but do not have a
                 // provided name
-                QString newAreaName = mUnnamedAreaName;
+                QString newAreaName = mpMap->getUnnamedAreaName();
                 if (areaNamesMap.values().contains(newAreaName)) {
                     // We already have an "unnamed area"
                     uint deduplicateSuffix = 0;
                     do {
-                        newAreaName = QStringLiteral("%1_%2").arg(mUnnamedAreaName).arg(++deduplicateSuffix, 3, 10, QLatin1Char('0'));
+                        newAreaName = QStringLiteral("%1_%2").arg(mpMap->getUnnamedAreaName()).arg(++deduplicateSuffix, 3, 10, QLatin1Char('0'));
                     } while (areaNamesMap.values().contains(newAreaName));
                 }
                 areaNamesMap.insert(replacementAreaId, newAreaName);
@@ -826,12 +832,6 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             pA->mUserData.insert(QStringLiteral("audit.remapped_id"), QString::number(faultyAreaId));
             validUsedAreaIds.insert(replacementAreaId);
             areas.insert(replacementAreaId, pA);
-
-            // Fixup map labels as well
-            if (mpMap->mapLabels.contains(faultyAreaId)) {
-                QMap<qint32, TMapLabel> areaMapLabels = mpMap->mapLabels.take(faultyAreaId);
-                mpMap->mapLabels.insert(replacementAreaId, areaMapLabels);
-            }
 
             pA->mIsDirty = true;
         }
@@ -846,7 +846,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         mpMap->appendErrorMsg(tr("[ INFO ]  - Area id numbering is satisfactory."), false);
     }
     // END OF TASK 2,3,4,5 - all needed areas exist and remap details are in
-    // areaRemapping - still need to update rooms and areaNames and mapLabels
+    // areaRemapping - still need to update rooms and areaNames
 
     // Now complete TASK 1 - find the new room Ids to use
     if (!roomRemapping.isEmpty()) {
@@ -870,7 +870,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             itRenumberedRoomId.next();
             unsigned int newRoomId = 0;
             do {
-                ; // Noop - needed increment is done in test condition!
+                ; // No-op - needed increment is done in test condition!
             } while (validUsedRoomIds.contains(++newRoomId));
 
             itRenumberedRoomId.setValue(newRoomId); // Update the QHash
@@ -932,7 +932,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
 
             // Purges any duplicates that a QList structure DOES permit, but a QSet does NOT:
             // Exit stubs:
-            unsigned int _listCount = pR->exitStubs.count();
+            int _listCount = pR->exitStubs.count();
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             // These next few constuction of a QSet from a QList or vice versa
             // are probably safe as both iterators refer to the SAME instance
@@ -1146,7 +1146,7 @@ void TRoomDB::clearMapDB()
     }
     assert(areas.empty());
     // Must now reinsert areaId -1 name = "Default Area"
-    addArea(-1, mDefaultAreaName);
+    addArea(-1, mpMap->getDefaultAreaName());
     qDebug() << "TRoomDB::clearMapDB() run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
 
@@ -1167,7 +1167,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
         QString nonEmptyAreaName;
         if (itArea.value().isEmpty()) {
             isEmptyAreaNamePresent = true;
-            nonEmptyAreaName = mUnnamedAreaName;
+            nonEmptyAreaName = mpMap->getUnnamedAreaName();
             // Will trip following if more than one
         } else {
             nonEmptyAreaName = itArea.value();
@@ -1246,7 +1246,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
                                  "another that exists at the time.\n"
                                  "  If there were more than one area without a name then all but the\n"
                                  "first will also gain a suffix in this manner.\n"
-                                 "%2").arg(mUnnamedAreaName, extraTextForMatchingSuffixAlreadyUsed);
+                                 "%2").arg(mpMap->getUnnamedAreaName(), extraTextForMatchingSuffixAlreadyUsed);
         } else if (!renamedMap.empty()) {
             // Duplicates but no unnnamed area
             alertText = tr("[ ALERT ] - Duplicate area names detected in the Map file!");
@@ -1279,7 +1279,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
                                  "change these, perhaps by adding more meaningful area names but it is\n"
                                  "entirely up to you what is used, other then you will not be able to\n"
                                  "set one area's name to that of another that exists at the time.")
-                                      .arg(mUnnamedAreaName);
+                                      .arg(mpMap->getUnnamedAreaName());
         }
         mpMap->mpHost->postMessage(alertText);
         mpMap->appendErrorMsgWithNoLf(alertText, true);
@@ -1291,10 +1291,10 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
     }
 
     if (!areaNamesMap.contains(-1)) {
-        areaNamesMap.insert(-1, mDefaultAreaName);
+        areaNamesMap.insert(-1, mpMap->getDefaultAreaName());
         QString defaultAreaNameInsertionMsg = tr("[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an\n"
                                                  "area) not found, adding \"%1\" against the reserved -1 id.")
-                                                      .arg(mDefaultAreaName);
+                                                      .arg(mpMap->getDefaultAreaName());
         mpMap->mpHost->postMessage(defaultAreaNameInsertionMsg);
         mpMap->appendErrorMsgWithNoLf(defaultAreaNameInsertionMsg, false);
     }
@@ -1326,3 +1326,27 @@ void TRoomDB::setAreaRooms(const int areaId, const QSet<int>& roomIds)
 
     pA->calcSpan(); // The area extents will need recalculation after adding the rooms
 }
+
+bool getUserDataBool(const QMap<QString, QString>& userData, const QString& key, bool defaultValue)
+{
+    if (!userData.contains(key)) {
+        return defaultValue;
+    }
+    QString value = userData.value(key);
+    if (value.isEmpty()) {
+        return defaultValue;
+    }
+    switch (value[0].unicode()) {
+      case 'y': case 'Y':
+      case 't': case 'T':
+      case '1':
+        return true;
+      case 'n': case 'N':
+      case 'f': case 'F':
+      case '0':
+        return false;
+      default:
+        return defaultValue;
+    }
+}
+
