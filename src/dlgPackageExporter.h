@@ -27,7 +27,6 @@
 
 #include "pre_guard.h"
 #include <QDialog>
-#include <QStringListModel>
 #include <zip.h>
 #include "post_guard.h"
 
@@ -117,7 +116,6 @@ private:
     QString mPackageName;
     QString mPackagePath;
     QString mPackagePathFileName;
-    QStringListModel* mDependencies;
     QString mPackageIconPath;
     QString mPackageConfig;
     QString mPlainDescription;

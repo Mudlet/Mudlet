@@ -111,9 +111,6 @@ public:
     QString getLuaString(const QString& stringName);
     int check_for_mappingscript();
     int check_for_custom_speedwalk();
-    void fillPackageInfo(const QString& packageName, bool isModule, lua_State* packageLua);
-    void removePackageInfo(const QString& packageName, bool isModule);
-    QMap<QString, QString> getPackageInfo(const QString& packageName, bool isModule = false);
     void set_lua_integer(const QString& varName, int varValue);
     void set_lua_string(const QString& varName, const QString& varValue);
     void set_lua_table(const QString& tableName, QStringList& variableList);
@@ -181,6 +178,10 @@ public:
     static int getModuleSync(lua_State* L);
     static int getPackages(lua_State* L);
     static int getModules(lua_State* L);
+    static int getPackageInfo(lua_State* L);
+    static int getModuleInfo(lua_State* L);
+    static int setPackageInfo(lua_State* L);
+    static int setModuleInfo(lua_State* L);
     static int lockExit(lua_State*);
     static int lockSpecialExit(lua_State*);
     static int hasExitLock(lua_State*);

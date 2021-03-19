@@ -10418,6 +10418,82 @@ int TLuaInterpreter::getModules(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getModuleInfo
+int TLuaInterpreter::getModuleInfo(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    auto infoMap = host.mModuleInfo;
+    int n = lua_gettop(L);
+    QString name = getVerifiedString(L, __func__, 1, "module name");
+    QString info;
+    if (n > 1) {
+        info = getVerifiedString(L, __func__, 2, "info", true);
+    }
+    if (info.isEmpty()) {
+        QMap<QString, QString>::const_iterator iter = infoMap.value(name).constBegin();
+        lua_newtable(L);
+        while (iter != infoMap.value(name).constEnd()) {
+            lua_pushstring(L, iter.key().toUtf8().constData());
+            lua_pushstring(L, iter.value().toUtf8().constData());
+            lua_settable(L, -3);
+            ++iter;
+        }
+    } else {
+        lua_pushstring(L, infoMap.value(name).value(info).toUtf8().constData());
+    }
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPackageInfo
+int TLuaInterpreter::getPackageInfo(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    auto infoMap = host.mPackageInfo;
+    int n = lua_gettop(L);
+    QString name = getVerifiedString(L, __func__, 1, "package name");
+    QString info;
+    if (n > 1) {
+        info = getVerifiedString(L, __func__, 2, "info", true);
+    }
+    if (info.isEmpty()) {
+        QMap<QString, QString>::const_iterator iter = infoMap.value(name).constBegin();
+        lua_newtable(L);
+        while (iter != infoMap.value(name).constEnd()) {
+            lua_pushstring(L, iter.key().toUtf8().constData());
+            lua_pushstring(L, iter.value().toUtf8().constData());
+            lua_settable(L, -3);
+            ++iter;
+        }
+    } else {
+        lua_pushstring(L, infoMap.value(name).value(info).toUtf8().constData());
+    }
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setModuleInfo
+int TLuaInterpreter::setModuleInfo(lua_State* L)
+{
+  Host& host = getHostFromLua(L);
+  QString moduleName = getVerifiedString(L, __func__, 1, "module name");
+  QString info = getVerifiedString(L, __func__, 2, "info");
+  QString value = getVerifiedString(L, __func__, 3, "value");
+  host.mModuleInfo[moduleName][info] = value;
+  lua_pushboolean(L, true);
+  return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setPackageInfo
+int TLuaInterpreter::setPackageInfo(lua_State* L)
+{
+  Host& host = getHostFromLua(L);
+  QString packageName = getVerifiedString(L, __func__, 1, "package name");
+  QString info = getVerifiedString(L, __func__, 2, "info");
+  QString value = getVerifiedString(L, __func__, 3, "value");
+  host.mPackageInfo[packageName][info] = value;
+  lua_pushboolean(L, true);
+  return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDefaultAreaVisible
 int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 {
@@ -13071,75 +13147,6 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::fillPackageInfo(const QString& packageName, bool isModule, lua_State* packageLua)
-{
-    lua_State* L = pGlobalLua;
-    lua_getglobal(L, "mudlet");
-    if (isModule) {
-        lua_getfield(L, -1, "moduleInfo");
-    } else {
-        lua_getfield(L, -1, "packageInfo");
-    }
-    lua_newtable(L);
-    lua_getglobal(packageLua, "_G");
-    lua_pushnil(packageLua);
-    while (lua_next(packageLua, -2) != 0) {
-        if (lua_isstring(packageLua, -1)) {
-            lua_pushstring(L, lua_tostring(packageLua, -2));
-            lua_pushstring(L, lua_tostring(packageLua, -1));
-            lua_settable(L, -3);
-        }
-        lua_pop(packageLua, 1);
-    }
-    lua_setfield(L, -2, packageName.toUtf8().constData());
-    lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
-}
-
-// No documentation available in wiki - internal function
-void TLuaInterpreter::removePackageInfo(const QString& packageName, bool isModule)
-{
-    lua_State* L = pGlobalLua;
-    lua_getglobal(L, "mudlet");
-    if (isModule) {
-        lua_getfield(L, -1, "moduleInfo");
-    } else {
-        lua_getfield(L, -1, "packageInfo");
-    }
-    lua_pushnil(L);
-    lua_setfield(L, -2, packageName.toUtf8().constData());
-    lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
-}
-
-// No documentation available in wiki - internal function
-QMap<QString, QString> TLuaInterpreter::getPackageInfo(const QString& packageName, bool isModule)
-{
-    lua_State* L = pGlobalLua;
-    lua_getglobal(L, "mudlet");
-    QMap<QString, QString> result;
-    if (isModule) {
-        lua_getfield(L, -1, "moduleInfo");
-    } else {
-        lua_getfield(L, -1, "packageInfo");
-    }
-    lua_getfield(L, -1, packageName.toUtf8().constData());
-    if (!lua_istable(L, -1)) {
-        lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
-        return result;
-    }
-
-    lua_pushnil(L);
-    while (lua_next(L, -2) != 0) {
-        if (lua_isstring(L, -1) && lua_isstring(L, -2)) {
-            result[lua_tostring(L, -2)] = lua_tostring(L, -1);
-        }
-        lua_pop(L, 1);
-    }
-    lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
-    return result;
-}
-
-
-// No documentation available in wiki - internal function
 void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& variableList)
 {
     lua_State* L = pGlobalLua;
@@ -13673,8 +13680,12 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "enableModuleSync", TLuaInterpreter::enableModuleSync);
     lua_register(pGlobalLua, "disableModuleSync", TLuaInterpreter::disableModuleSync);
     lua_register(pGlobalLua, "getModuleSync", TLuaInterpreter::getModuleSync);
-    lua_register(pGlobalLua, "getPackages", TLuaInterpreter::getPackages);
     lua_register(pGlobalLua, "getModules", TLuaInterpreter::getModules);
+    lua_register(pGlobalLua, "getPackages", TLuaInterpreter::getPackages);
+    lua_register(pGlobalLua, "getModuleInfo", TLuaInterpreter::getModuleInfo);
+    lua_register(pGlobalLua, "getPackageInfo", TLuaInterpreter::getPackageInfo);
+    lua_register(pGlobalLua, "setModuleInfo", TLuaInterpreter::setModuleInfo);
+    lua_register(pGlobalLua, "setPackageInfo", TLuaInterpreter::setPackageInfo);
     lua_register(pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel);
     lua_register(pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom);
     lua_register(pGlobalLua, "uninstallPackage", TLuaInterpreter::uninstallPackage);
@@ -13980,29 +13991,6 @@ void TLuaInterpreter::setupLanguageData()
 }
 
 // No documentation available in wiki - internal function
-// loads package informations from installed packages (if a config.lua is found in the profile folder) on a profile start (or restart)
-// doesn't load module informations as they work differently but the field "moduleInfo" is created here
-void TLuaInterpreter::loadPackageInfos()
-{
-    lua_State* L = pGlobalLua;
-    lua_getglobal(L, "mudlet");
-    lua_newtable(L);
-    lua_setfield(L, -2, "packageInfo");
-    lua_newtable(L);
-    lua_setfield(L, -2, "moduleInfo");
-
-    QStringList packages = mpHost->mInstalledPackages;
-    for (int i = 0; i < packages.size(); i++) {
-        QString packagePath{mudlet::self()->getMudletPath(mudlet::profilePackagePath, mpHost->getName(), packages.at(i))};
-        QDir dir(packagePath);
-        if (dir.exists(QStringLiteral("config.lua"))) {
-            mpHost->getPackageConfig(dir.absoluteFilePath(QStringLiteral("config.lua")));
-        }
-    }
-    lua_pop(L, lua_gettop(L));
-}
-
-// No documentation available in wiki - internal function
 // Initialised a slimmed-down Lua state just to run the indenter in a separate sandbox.
 // The indenter by default pollutes the global environment with some utility functions
 // and we don't want to tie ourselves to it by exposing them for scripting.
@@ -14114,7 +14102,6 @@ void TLuaInterpreter::loadGlobal()
 #endif
 
     setupLanguageData();
-    loadPackageInfos();
 
     const QString executablePath{QCoreApplication::applicationDirPath()};
     // Initialise the list of path and file names so that
