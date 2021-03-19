@@ -1,5 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2018, 2020 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2018, 2020-2021 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -181,4 +182,14 @@ void TTabBar::removeTab(const QString& name)
         setTabUnderline(index, false);
         QTabBar::removeTab(index);
     }
+}
+
+QStringList TTabBar::tabNames() const
+{
+    QStringList results;
+    for (int i = 0, total = count(); i < total; ++i) {
+        results << tabData(i).toString();
+    }
+
+    return results;
 }

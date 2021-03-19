@@ -206,7 +206,6 @@ public:
     static void start();
     HostManager& getHostManager() { return mHostManager; }
     void attachDebugArea(const QString& hostname);
-    void addSubWindow(TConsole* p);
     void addConsoleForNewHost(Host* pH);
     void disableToolbarButtons();
     void enableToolbarButtons();
@@ -509,6 +508,7 @@ private slots:
     void slot_compact_input_line(const bool);
     void slot_password_migrated_to_secure(QKeychain::Job *job);
     void slot_password_migrated_to_profile(QKeychain::Job *job);
+    void slot_tabMoved(const int oldPos, const int newPos);
 
 
 private:
@@ -527,7 +527,8 @@ private:
     void installModulesList(Host*, QStringList);
     void setupTrayIcon();
 
-    QWidget* mainPane;
+    QWidget* mpWidget_profileContainer;
+    QHBoxLayout* mpHBoxLayout_profileContainer;
 
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
