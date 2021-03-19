@@ -85,8 +85,10 @@ private slots:
     void slot_removeDependency();
     void slot_import_icon();
     void slot_openPackageLocation();
-    void slot_openInfoDialog();
     void slot_packageChanged(int);
+    void slot_updateLocationPlaceholder();
+    void slot_enableExportButton(const QString &text);
+    void slot_recountItems();
 
 protected:
     bool eventFilter(QObject* obj, QEvent* evt) override;
@@ -96,6 +98,9 @@ private:
     static void appendToConfigFile(QString&, const QString&, const QString&);
     void displayResultMessage(const QString&, const bool isSuccessMessage = true);
     void uncheckAllChildren();
+    int countRecursive(QTreeWidgetItem* item, int count) const;
+    int countCheckedItems() const;
+    QString getActualPath() const;
 
     Ui::dlgPackageExporter* ui;
     QPointer<Host> mpHost;
@@ -108,6 +113,7 @@ private:
     QTreeWidgetItem* mpScripts;
     QTreeWidgetItem* mpKeys;
     QTreeWidgetItem* mpButtons;
+    QGroupBox* mtextSelection;
     QString mPackageName;
     QString mPackagePath;
     QString mPackagePathFileName;
@@ -115,6 +121,9 @@ private:
     QString mPackageIconPath;
     QString mPackageConfig;
     QString mPlainDescription;
+
+signals:
+    void signal_exportLocationChanged(const QString& location);
 };
 
 #endif // MUDLET_DLGPACKAGEEXPORTER_H
