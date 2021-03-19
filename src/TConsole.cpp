@@ -682,12 +682,12 @@ void TConsole::refresh()
 
 void TConsole::clearSelection() const
 {
-        mLowerPane->unHighlight();
-        mUpperPane->unHighlight();
-        mLowerPane->mSelectedRegion = QRegion(0, 0, 0, 0);
-        mUpperPane->mSelectedRegion = QRegion(0, 0, 0, 0);
-        mUpperPane->forceUpdate();
-        mLowerPane->forceUpdate();
+    mLowerPane->unHighlight();
+    mUpperPane->unHighlight();
+    mLowerPane->mSelectedRegion = QRegion(0, 0, 0, 0);
+    mUpperPane->mSelectedRegion = QRegion(0, 0, 0, 0);
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 

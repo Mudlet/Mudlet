@@ -94,7 +94,6 @@ private:
     bool keybindingMatched(QKeyEvent*);
     void spellCheckWord(QTextCursor& c);
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
-    bool mSpellChecking = false;
 
     QPointer<Host> mpHost;
     CommandLineType mType;
@@ -112,6 +111,7 @@ private:
     QString mTabCompletionOld;
     QPoint mPopupPosition;
     QString mSpellCheckedWord;
+    bool mSpellChecking = false;
     int mSystemDictionarySuggestionsCount;
     int mUserDictionarySuggestionsCount;
     char** mpSystemSuggestionsList;
