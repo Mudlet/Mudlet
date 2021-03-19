@@ -512,8 +512,8 @@ public:
 
     // search engine URL prefix to search query
     QMap<QString, QString> mSearchEngineData;
-    QMap<QString, QMap<QString,QString>> mPackageInfo;
-    QMap<QString, QMap<QString,QString>> mModuleInfo;
+    QMap<QString, QMap<QString, QString>> mPackageInfo;
+    QMap<QString, QMap<QString, QString>> mModuleInfo;
     QString mSearchEngineName;
 
     // trigger/alias/script/etc ID whose Lua code to show when previewing a theme
@@ -643,7 +643,7 @@ private:
     void thankForUsingPTB();
     void toggleMapperVisibility();
     void createMapper(const bool);
-    void removePackageInfo(QString packageName, const bool);
+    void removePackageInfo(const QString &packageName, const bool);
 
     QFont mDisplayFont;
     QStringList mModulesToSync;

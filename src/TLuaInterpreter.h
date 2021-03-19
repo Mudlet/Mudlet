@@ -634,7 +634,6 @@ private:
     void setMatches(lua_State* L);
     static std::pair<bool, QString> discordApiEnabled(lua_State* L, bool writeAccess = false);
     void setupLanguageData();
-    void loadPackageInfos();
     QString readScriptFile(const QString& path) const;
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
     static int performHttpRequest(lua_State *L, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb);

@@ -1823,7 +1823,7 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     return result;
 }
 
-void Host::removePackageInfo(QString packageName, const bool isModule) {
+void Host::removePackageInfo(const QString &packageName, const bool isModule) {
     if (isModule) {
         mModuleInfo.remove(packageName);
     } else {
