@@ -187,6 +187,7 @@
     "getPath": "getPath(roomID from, roomID to)",
     "getPlayerRoom": "getPlayerRoom()",
     "getProfileName": "getProfileName()",
+    "getProfileTabNumber": "getProfileTabNumber()",
     "getRoomArea": "getRoomArea(roomID)",
     "getRoomAreaName": "getRoomAreaName(areaID or areaName)",
     "getRoomChar": "getRoomChar(roomID)",
