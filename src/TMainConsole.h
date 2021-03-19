@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2020 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2021 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -102,6 +102,7 @@ public:
     bool saveMap(const QString&, int saveVersion = 0);
     bool loadMap(const QString&);
     bool importMap(const QString&, QString* errMsg = Q_NULLPTR);
+
 
     QMap<QString, TConsole*> mSubConsoleMap;
     QMap<QString, TDockWidget*> mDockWidgetMap;

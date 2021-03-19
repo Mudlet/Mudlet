@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -2492,8 +2492,8 @@ void Host::setName(const QString& newName)
         currentPlayerRoom = mpMap->mRoomIdHash.take(mHostName);
     }
 
-    // Now we have the exclusive lock on this class's protected members
     mHostName = newName;
+    mpConsole->setProperty("HostName", newName);
 
     mTelnet.mProfileName = newName;
     if (mpMap) {
