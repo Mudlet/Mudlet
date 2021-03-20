@@ -23,7 +23,7 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_5">
      <item>
-      <widget class="QLineEdit" name="packageName">
+      <widget class="QLineEdit" name="lineEdit_packageName">
        <property name="placeholderText">
         <string>Package name here</string>
        </property>
@@ -55,7 +55,7 @@
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
-       <widget class="QTreeWidget" name="treeWidget">
+       <widget class="QTreeWidget" name="treeWidget_exportSelection">
         <attribute name="headerVisible">
          <bool>false</bool>
         </attribute>
@@ -118,12 +118,12 @@
             <string>Author</string>
            </property>
            <property name="buddy">
-            <cstring>Author</cstring>
+            <cstring>lineEdit_author</cstring>
            </property>
           </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QLineEdit" name="Author">
+          <widget class="QLineEdit" name="lineEdit_author">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
              <horstretch>0</horstretch>
@@ -144,14 +144,14 @@
             <string>Icon</string>
            </property>
            <property name="buddy">
-            <cstring>addIcon</cstring>
+            <cstring>pushButton_addIcon</cstring>
            </property>
           </widget>
          </item>
          <item row="1" column="1">
           <layout class="QHBoxLayout" name="horizontalLayout_2">
            <item>
-            <widget class="QPushButton" name="addIcon">
+            <widget class="QPushButton" name="pushButton_addIcon">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -196,12 +196,12 @@
             <string>Short description</string>
            </property>
            <property name="buddy">
-            <cstring>Title</cstring>
+            <cstring>lineEdit_title</cstring>
            </property>
           </widget>
          </item>
          <item row="2" column="1">
-          <widget class="QLineEdit" name="Title">
+          <widget class="QLineEdit" name="lineEdit_title">
            <property name="maxLength">
             <number>140</number>
            </property>
@@ -222,12 +222,12 @@
             <string>Description</string>
            </property>
            <property name="buddy">
-            <cstring>Description</cstring>
+            <cstring>textEdit_description</cstring>
            </property>
           </widget>
          </item>
          <item row="3" column="1">
-          <widget class="QTextEdit" name="Description">
+          <widget class="QTextEdit" name="textEdit_description">
            <property name="tabChangesFocus">
             <bool>true</bool>
            </property>
@@ -248,12 +248,12 @@
             <string>Version</string>
            </property>
            <property name="buddy">
-            <cstring>Version</cstring>
+            <cstring>lineEdit_version</cstring>
            </property>
           </widget>
          </item>
          <item row="4" column="1">
-          <widget class="QLineEdit" name="Version">
+          <widget class="QLineEdit" name="lineEdit_version">
            <property name="placeholderText">
             <string>optional</string>
            </property>
@@ -288,7 +288,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QListWidget" name="addedFiles">
+            <widget class="QListWidget" name="listWidget_addedFiles">
              <property name="sizePolicy">
               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
                <horstretch>0</horstretch>
@@ -399,7 +399,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="Dependencies">
+            <widget class="QComboBox" name="comboBox_dependencies">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -471,10 +471,10 @@
  </widget>
  <tabstops>
   <tabstop>pushBotton_openInfos</tabstop>
-  <tabstop>Author</tabstop>
-  <tabstop>addIcon</tabstop>
-  <tabstop>Title</tabstop>
-  <tabstop>Description</tabstop>
+  <tabstop>lineEdit_author</tabstop>
+  <tabstop>pushButton_addIcon</tabstop>
+  <tabstop>lineEdit_title</tabstop>
+  <tabstop>textEdit_description</tabstop>
   <tabstop>lineEdit_filePath</tabstop>
  </tabstops>
  <resources/>

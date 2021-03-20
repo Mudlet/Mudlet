@@ -103,7 +103,7 @@ private:
 
     Ui::dlgPackageExporter* ui;
     QPointer<Host> mpHost;
-    QTreeWidget* treeWidget;
+    QTreeWidget* mpExportSelection;
     QPointer<QPushButton> mExportButton;
     QPointer<QPushButton> mCancelButton;
     QTreeWidgetItem* mpTriggers;
@@ -112,7 +112,7 @@ private:
     QTreeWidgetItem* mpScripts;
     QTreeWidgetItem* mpKeys;
     QTreeWidgetItem* mpButtons;
-    QGroupBox* mtextSelection;
+    QGroupBox* mpSelectionText;
     QString mPackageName;
     QString mPackagePath;
     QString mPackagePathFileName;
