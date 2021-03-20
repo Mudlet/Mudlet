@@ -493,9 +493,12 @@ void dlgPackageExporter::slot_export_package()
     appendToConfigFile(mPackageConfig, QStringLiteral("description"), mPlainDescription);
     appendToConfigFile(mPackageConfig, QStringLiteral("version"), ui->Version->text());
     appendToConfigFile(mPackageConfig, QStringLiteral("dependencies"), dependencies.join(","));
+    QDateTime iso8601timestamp = QDateTime::currentDateTime();
+    int offset = iso8601timestamp.offsetFromUtc();
+    iso8601timestamp.setOffsetFromUtc(offset);
     QDateTime iso8601time(QDateTime::currentDateTime());
     iso8601time.setTimeSpec(Qt::OffsetFromUTC);
-    mPackageConfig.append(QStringLiteral("created = \"%1%2\"\n").arg(iso8601time.toString(Qt::ISODate), iso8601time.timeZoneAbbreviation()));
+    mPackageConfig.append(QStringLiteral("created = \"%1\"\n").arg(iso8601timestamp.toString(Qt::ISODate)));
 
     QString luaConfig = QStringLiteral("%1/config.lua").arg(StagingDirName);
     QFile configFile(luaConfig);
