@@ -295,6 +295,12 @@
              <property name="toolTip">
               <string>Drag and drop files and folders, or use the browse button below</string>
              </property>
+             <property name="styleSheet">
+              <string notr="true">
+    border-style: dashed;
+    border-width: 2px;
+    border-color: grey;</string>
+             </property>
             </widget>
            </item>
            <item>
