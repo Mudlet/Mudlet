@@ -302,10 +302,11 @@
               <string>Drag and drop files and folders, or use the browse button below</string>
              </property>
              <property name="styleSheet">
-              <string notr="true">
+              <string notr="true">QListWidget {
     border-style: dashed;
     border-width: 2px;
-    border-color: grey;</string>
+    border-color: grey;
+}</string>
              </property>
             </widget>
            </item>
