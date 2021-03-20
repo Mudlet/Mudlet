@@ -481,7 +481,7 @@ void dlgPackageExporter::slot_export_package()
     mXmlPathFileName = QStringLiteral("%1/%2.xml").arg(StagingDirName, mPackageName);
 
     QStringList dependencies;
-    for (int index = 1; index < ui->Dependencies->count(); index++) {
+    for (int index = 0; index < ui->Dependencies->count(); index++) {
         dependencies<< ui->Dependencies->itemText(index);
     }
 
