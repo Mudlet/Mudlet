@@ -257,7 +257,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     ui->Author->setText(packageInfo.value(QStringLiteral("author")));
     QString icon{packageInfo.value(QStringLiteral("icon"))};
     if (!icon.isEmpty()) {
-        mPackageIconPath = QStringLiteral("%1/%2/Icon/%3").arg(packagePath, packageName, icon);
+        mPackageIconPath = QStringLiteral("%1/%2/.mudlet/Icon/%3").arg(packagePath, packageName, icon);
     }
     ui->Icon->setStyleSheet(QStringLiteral("QWidget { border-image: url(%1); }").arg(mPackageIconPath));
     ui->Title->setText(packageInfo.value(QStringLiteral("title")));
@@ -448,10 +448,10 @@ void dlgPackageExporter::slot_export_package()
     tempPath.append("/");
 
     //prevent duplicate of copying the Icon file as that will fail
-    bool noIconDir = ui->addedFiles->findItems(QStringLiteral("/%1/Icon").arg(mPackageName), Qt::MatchEndsWith).isEmpty();
+    bool noIconDir = ui->addedFiles->findItems(QStringLiteral("/%1/.mudlet/Icon").arg(mPackageName), Qt::MatchEndsWith).isEmpty();
     QFileInfo iconFile(mPackageIconPath);
     if (noIconDir && iconFile.exists()) {
-        QString iconDirName = QStringLiteral("%1Icon/").arg(tempPath);
+        QString iconDirName = QStringLiteral("%1.mudlet/Icon/").arg(tempPath);
         QDir iconDir = QDir(iconDirName);
         if (!iconDir.exists()) {
             iconDir.mkpath(iconDirName);
