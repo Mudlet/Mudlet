@@ -2,7 +2,8 @@
 #define TTABBAR_H
 
 /***************************************************************************
- *   Copyright (C) 2018, 2020 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2018, 2020-2021 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -88,6 +89,7 @@ public:
     int tabIndex(const QString&) const;
     void removeTab(const QString&);
     void removeTab(int);
+    QStringList tabNames() const;
 
 private:
     // This instance of TStyle needs a pointer to a QTabBar on instantiation:

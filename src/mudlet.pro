@@ -89,7 +89,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.10.1
+VERSION = 4.11.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -279,10 +279,11 @@ unix:!macx {
     contains( DEFINES, INCLUDE_MAIN_BUILD_SYSTEM ) {
         # For CI builds or users/developers using the setup-windows-sdk.ps1 method:
         isEmpty( MINGW_BASE_DIR_TEST ) {
-            MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw730_32"
+            MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw810_32"
         }
         LIBS +=  \
             -L"$${MINGW_BASE_DIR_TEST}\\bin" \
+            -L"$${MINGW_BASE_DIR_TEST}\\lib" \
             -llua51 \
             -llibhunspell-1.6
 

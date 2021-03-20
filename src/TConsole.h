@@ -106,6 +106,7 @@ public:
     int getLineNumber();
     int getLineCount();
     bool deleteLine(int);
+    void clearSelection(bool) const;
 
     int getColumnNumber();
 

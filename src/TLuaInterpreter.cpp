@@ -2852,7 +2852,7 @@ int TLuaInterpreter::killTimer(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killTrigger
 int TLuaInterpreter::killTrigger(lua_State* L)
 {
-    QString text = getVerifiedString(L, __func__, 1, "name");
+    QString text = getVerifiedString(L, __func__, 1, "ID");
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.killTrigger(text));
     return 1;
@@ -7110,8 +7110,11 @@ int TLuaInterpreter::setBorderColor(lua_State* L)
     int luaGreen = getVerifiedInt(L, __func__, 2, "green");
     int luaBlue = getVerifiedInt(L, __func__, 3, "blue");
     Host& host = getHostFromLua(L);
-    auto styleSheet = QStringLiteral("QWidget#MainFrame{ background-color: rgba(%1,%2,%3,255) }").arg(luaRed).arg(luaGreen).arg(luaBlue);
-    host.mpConsole->mpMainFrame->setStyleSheet(styleSheet);
+    QPalette framePalette;
+    framePalette.setColor(QPalette::Text, QColor(Qt::black));
+    framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
+    framePalette.setColor(QPalette::Window, QColor(luaRed, luaGreen, luaBlue, 255));
+    host.mpConsole->mpMainFrame->setPalette(framePalette);
     return 0;
 }
 
@@ -13093,10 +13096,11 @@ int TLuaInterpreter::getConnectionInfo(lua_State *L)
 {
     Host& host = getHostFromLua(L);
 
-    auto [hostName, hostPort] = host.mTelnet.getConnectionInfo();
+    auto [hostName, hostPort, connected] = host.mTelnet.getConnectionInfo();
     lua_pushstring(L, hostName.toUtf8().constData());
     lua_pushnumber(L, hostPort);
-    return 2;
+    lua_pushboolean(L, connected);
+    return 3;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Networking_Functions#unzipAsync
@@ -13838,7 +13842,7 @@ void TLuaInterpreter::initLuaGlobals()
     additionalLuaPaths << QStringLiteral("%1/?.lua").arg(appPath);
 #elif defined(Q_OS_WIN32) && defined(INCLUDE_MAIN_BUILD_SYSTEM)
     // For CI builds or users/developers using the setup-windows-sdk.ps1 method:
-    additionalCPaths << QStringLiteral("C:\\Qt\\Tools\\mingw730_32\\lib\\lua\\5.1\\?.dll");
+    additionalCPaths << QStringLiteral("C:\\Qt\\Tools\\mingw810_32\\lib\\lua\\5.1\\?.dll");
 #endif
 
     insertNativeSeparatorsFunction(pGlobalLua);

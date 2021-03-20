@@ -65,12 +65,19 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
     mRegularPalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
 
     setPalette(mRegularPalette);
+    //style subCommandLines by stylesheet
+    if (mType != MainCommandLine) {
+        QColor c = mpHost->mCommandLineBgColor;
+        QString styleSheet{QStringLiteral("QPlainTextEdit{background-color: rgb(%1, %2, %3);}").arg(c.red()).arg(c.green()).arg(c.blue())};
+        setStyleSheet(styleSheet);
+    }
 
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setCenterOnScroll(false);
     setWordWrapMode(QTextOption::WrapAnywhere);
     setContentsMargins(0, 0, 0, 0);
-
+    // clear console selection if selection in command line changes
+    connect(this, &QPlainTextEdit::copyAvailable, [this](bool yes){mpConsole->clearSelection(yes);});
     // We do NOT want the standard context menu to happen as we generate it
     // ourself:
     setContextMenuPolicy(Qt::PreventContextMenu);
