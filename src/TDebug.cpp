@@ -247,7 +247,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     if (messageLines.count() > 1) {
         std::sort(messageLines.begin(), messageLines.end());
     }
-    messageLines.prepend(QStringLiteral(" [*] = System message, not belonging to a specific profile"));
+    messageLines.prepend(QStringLiteral(" %1= System message, not belonging to a specific profile").arg(csmTagSystemMessage));
     if (TDebug::smIdentifierMap.count() > 1) {
         // The line wrapping of these texts is a bit less than one might expect
         // because the default size will clip the text otherwise, unless the
@@ -283,9 +283,10 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
             // completed:
             addHost(pHost);
         }
-        // By now smIdentifierMap WILL contain something for pHost - but use '!'
-        // if something is really screwy and it does not, ah, we have a method
-        // for that:
+        // By now smIdentifierMap WILL contain something for pHost - but use an
+        // the "fault" mark (a bang/exclaimation point) if something is really
+        // screwy and it does not, as it happens we have a method that will do
+        // that already:
         return getTag(pHost);
     }
     // Must be a system message - or the dummy one to flush the queue.

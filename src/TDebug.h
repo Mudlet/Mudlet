@@ -65,7 +65,8 @@ class TDebug
     static QQueue<TDebugMessage> smMessageQueue;
 
     // Used as a tag for system (non-profile) messages:
-    inline static const QString csmTagSystemMessage = QStringLiteral("[*] ");
+    // Change to use U+2731 {HEAVY ASTERIX} instead of an asterix:
+    inline static const QString csmTagSystemMessage = QStringLiteral("[\u2731] ");
     // Used as a tag for messages where something has gone wrong and it is not
     // possible to work out which profile it is from:
     inline static const QString csmTagFault = QStringLiteral("[!] ");
