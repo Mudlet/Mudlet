@@ -184,6 +184,16 @@ void TTabBar::removeTab(const QString& tabName)
     }
 }
 
+QStringList TTabBar::tabNames() const
+{
+    QStringList results;
+    for (int i = 0, total = count(); i < total; ++i) {
+        results << tabData(i).toString();
+    }
+
+    return results;
+}
+
 void TTabBar::applyPrefixToDisplayedText(const QString& tabName, const QString& prefix)
 {
     int index = tabIndex(tabName);

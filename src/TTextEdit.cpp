@@ -850,7 +850,7 @@ void TTextEdit::highlightSelection()
     QClipboard* clipboard = QApplication::clipboard();
     if (clipboard->supportsSelection()) {
         // X11 has a second clipboard that's updated on any selection
-        clipboard->setText(getSelectedText(QChar::LineFeed, mShowTimeStamps), QClipboard::Selection);
+        clipboard->setText(getSelectedText(QChar::LineFeed), QClipboard::Selection);
     }
 }
 
@@ -1171,6 +1171,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
         if (mCtrlSelecting) {
             expandSelectionToLine(y);
+            highlightSelection();
             event->accept();
             return;
         }
@@ -1422,7 +1423,7 @@ void TTextEdit::slot_copySelectionToClipboard()
         return;
     }
 
-    QString selectedText = getSelectedText(QChar::LineFeed, mShowTimeStamps);
+    QString selectedText = getSelectedText(QChar::LineFeed);
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(selectedText);
 }

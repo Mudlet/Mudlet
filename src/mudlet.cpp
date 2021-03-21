@@ -180,7 +180,7 @@ mudlet::mudlet()
 , mCopyAsImageTimeout{3}
 , mUsingMudletDictionaries(false)
 , mpDlgProfilePreferences(nullptr)
-, mainPane(nullptr)
+, mpWidget_profileContainer(nullptr)
 , mIsGoingDown(false)
 , mMenuBarVisibility(visibleAlways)
 , mToolbarVisibility(visibleAlways)
@@ -296,25 +296,23 @@ mudlet::mudlet()
     mpTabBar->setTabsClosable(true);
     mpTabBar->setAutoHide(true);
     connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_close_profile_requested);
-    // TODO: Do not enable this option currently - although the user can drag
-    // the tabs, the underlying main TConsoles do not move with multiview enabled
-    mpTabBar->setMovable(false);
+    mpTabBar->setMovable(true);
     connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
+    connect(mpTabBar, &QTabBar::tabMoved, this, &mudlet::slot_tabMoved);
     auto layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0, 0, 0, 0);
     layoutTopLevel->addWidget(mpTabBar);
-    mainPane = new QWidget(frame);
+    mpWidget_profileContainer = new QWidget(frame);
     QPalette mainPalette;
-    mainPane->setPalette(mainPalette);
-    mainPane->setAutoFillBackground(true);
-    mainPane->setFocusPolicy(Qt::NoFocus);
-    layoutTopLevel->addWidget(mainPane);
-    auto layout = new QHBoxLayout(mainPane);
-    layout->setContentsMargins(0, 0, 0, 0);
+    mpWidget_profileContainer->setPalette(mainPalette);
+    mpWidget_profileContainer->setContentsMargins(0, 0, 0, 0);
+    mpWidget_profileContainer->setSizePolicy(sizePolicy);
+    mpWidget_profileContainer->setFocusPolicy(Qt::NoFocus);
+    mpWidget_profileContainer->setAutoFillBackground(true);
+    layoutTopLevel->addWidget(mpWidget_profileContainer);
+    mpHBoxLayout_profileContainer = new QHBoxLayout(mpWidget_profileContainer);
+    mpHBoxLayout_profileContainer->setContentsMargins(0, 0, 0, 0);
 
-    mainPane->setContentsMargins(0, 0, 0, 0);
-    mainPane->setSizePolicy(sizePolicy);
-    mainPane->setFocusPolicy(Qt::NoFocus);
 
     QFile file_autolog(getMudletPath(mainDataItemPath, QStringLiteral("autolog")));
     if (file_autolog.exists()) {
@@ -509,7 +507,6 @@ mudlet::mudlet()
 
     disableToolbarButtons();
 
-    QFont mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     if (mEnableFullScreenMode) {
         showFullScreen();
         QAction* actionFullScreeniew = new QAction(QIcon(QStringLiteral(":/icons/dialog-cancel.png")), tr("Toggle Full Screen View"), this);
@@ -525,11 +522,12 @@ mudlet::mudlet()
     // the related profile - make the font size a little larger that the 6 it
     // once was so that it is a bit more obvious when it changes:
     QFont mdiFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
-    setFont(mainFont);
-    mainPane->setFont(mainFont);
     mpTabBar->setFont(mdiFont);
 
-    mainPane->show();
+    QFont mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
+    setFont(mainFont);
+    mpWidget_profileContainer->setFont(mainFont);
+    mpWidget_profileContainer->show();
 
     connect(mpActionConnect.data(), &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
     connect(mpActionHelp.data(), &QAction::triggered, this, &mudlet::show_help_dialog);
@@ -1283,7 +1281,9 @@ void mudlet::slot_close_profile_requested(int tab)
     }
 
     pH->stopAllTriggers();
+    pH->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
     pH->mpEditorDialog->close();
+    pH->mpEditorDialog = nullptr;
 
     for (auto consoleName : hostConsoleMap.keys()) {
         if (dockWindowMap.contains(consoleName)) {
@@ -1343,6 +1343,9 @@ void mudlet::slot_tab_changed(int tabID)
         mpCurrentActiveHost = nullptr;
         return;
     }
+    if (mpCurrentActiveHost && (mpCurrentActiveHost.data() == pHost)) {
+        return;
+    }
 
     // Reset the tab back to "normal" to undo the effect of it having its style
     // changed on new data:
@@ -1351,9 +1354,16 @@ void mudlet::slot_tab_changed(int tabID)
     mpTabBar->setTabUnderline(tabID, false);
 
     if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
-        mpCurrentActiveHost->mpConsole->hide();
+        if (!mMultiView) {
+            // We only have to hide the current tab if NOT in multi-view mode:
+            mpCurrentActiveHost->mpConsole->hide();
+        }
         mpCurrentActiveHost = &*pHost;
+
     } else {
+        // no Host or it's TMainConsole instance - so it is maybe being
+        // destroyed or something like that, it cannot be valid so forget it
+        // being the "current" profile in focus:
         mpCurrentActiveHost = nullptr;
         for (auto pH : mHostManager) {
             if (pH->mpConsole) {
@@ -1362,14 +1372,17 @@ void mudlet::slot_tab_changed(int tabID)
             }
         }
         if (!mpCurrentActiveHost) {
+            // No profiles (Host instances) left - so bail out:
             return;
         }
     }
 
+    // CHECK: This *seems* to be redundant - further investigation needed to be sure:
     if (!mpCurrentActiveHost->mpConsole) {
         mpCurrentActiveHost = nullptr;
         return;
     }
+
     mpCurrentActiveHost->mpConsole->show();
     mpCurrentActiveHost->mpConsole->repaint();
     mpCurrentActiveHost->mpConsole->refresh();
@@ -1398,7 +1411,9 @@ void mudlet::slot_tab_changed(int tabID)
         }
         if (mMultiView) {
             for (auto pHost: mHostManager) {
-                if (pHost->mpConsole) {
+                if (pHost->mpConsole && (pHost != mpCurrentActiveHost.data())) {
+                    // We skip showing the current tab as we have already done
+                    // a more thorough refreshment of that one...
                     pHost->mpConsole->show();
                 }
             }
@@ -1449,7 +1464,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     //update the main window title when we spawn a new tab
     setWindowTitle(pH->getName() + " - " + version);
 
-    mainPane->layout()->addWidget(pConsole);
+    mpHBoxLayout_profileContainer->addWidget(pConsole);
     if (mpCurrentActiveHost) {
         mpCurrentActiveHost->mpConsole->hide();
     }
@@ -1701,12 +1716,6 @@ Host* mudlet::getActiveHost()
     } else {
         return nullptr;
     }
-}
-
-void mudlet::addSubWindow(TConsole* pConsole)
-{
-    mainPane->layout()->addWidget(pConsole);
-    pConsole->show(); //NOTE: this is important for Apple OSX otherwise the console isnt displayed
 }
 
 void mudlet::closeEvent(QCloseEvent* event)
@@ -4323,10 +4332,42 @@ void mudlet::setupTrayIcon()
        mTrayIcon.hide();
     });
     menu->addAction(hideTrayAction);
-    auto exitAction = new QAction(tr("Exit"), this);
+    auto exitAction = new QAction(tr("Quit Mudlet"), this);
     connect(exitAction, &QAction::triggered, this, &mudlet::close);
     menu->addAction(exitAction);
     mTrayIcon.setContextMenu(menu);
+}
+
+void mudlet::slot_tabMoved(const int oldPos, const int newPos)
+{
+    Q_UNUSED(newPos)
+    Q_UNUSED(oldPos)
+    const QStringList& tabNamesInOrder = mpTabBar->tabNames();
+    int itemsCount = mpHBoxLayout_profileContainer->count();
+    Q_ASSERT_X(itemsCount == tabNamesInOrder.count(), "mudlet::slot_tabMoved(...)", "missmatch in count of tabs and TMainConsoles");
+    QMap<QString, QLayoutItem*> layoutItemMap;
+    // Gather the QLayoutItem pointers for each TMainConsole and store them
+    // against their profile name:
+    for (int profileIndex = 0, total = mpHBoxLayout_profileContainer->count(); profileIndex < total; ++profileIndex) {
+        auto pLayoutItem = mpHBoxLayout_profileContainer->itemAt(profileIndex);
+        auto pWidget = pLayoutItem->widget();
+        if (pWidget) {
+            auto name = pWidget->property("HostName").toString();
+            layoutItemMap.insert(name, pLayoutItem);
+        }
+    }
+    // Now go through all the names, pull the associated QLayoutItem from the
+    // layout and then re-add each of them at the end in turn - once we have
+    // gone through them all it will mean that they are in the same order as the
+    // tabs:
+    for (int index = 0; index < itemsCount; ++index) {
+        const auto& wantedTabName = tabNamesInOrder.at(index);
+        auto pLayoutItem = layoutItemMap.value(wantedTabName);
+        // This will remove the item from whereever it is in the layout:
+        mpHBoxLayout_profileContainer->removeItem(pLayoutItem);
+        // This will readd the item to the end of the layout:
+        mpHBoxLayout_profileContainer->addItem(pLayoutItem);
+    }
 }
 
 void mudlet::refreshTabBar()

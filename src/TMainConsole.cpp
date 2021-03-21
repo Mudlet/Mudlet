@@ -48,6 +48,7 @@
 #include <QPainter>
 #include "post_guard.h"
 
+
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 : TConsole(pH, TConsole::MainConsole, parent)
 , mClipboard(pH)
@@ -74,6 +75,9 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     // absence of files for the first run in a new profile or from an older
     // Mudlet version:
     setProfileSpellDictionary();
+
+    // Ensure the QWidget has the profile name embedded into it
+    setProperty("HostName", pH->getName());
 }
 
 TMainConsole::~TMainConsole()
@@ -512,6 +516,7 @@ TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name
         pL->setContentsMargins(0, 0, 0, 0);
         pL->move(x, y);
         pL->show();
+        mpHost->setBackgroundColor(name, 32, 32, 32, 255);
         return pL;
     } else {
         return nullptr;

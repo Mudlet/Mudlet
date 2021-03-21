@@ -99,6 +99,7 @@ public:
     int tabIndex(const QString& tabName) const;
     void removeTab(const QString& tabName);
     void removeTab(int);
+    QStringList tabNames() const;
 
 private:
     // This instance of TStyle needs a pointer to a QTabBar on instantiation:
