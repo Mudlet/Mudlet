@@ -11501,7 +11501,7 @@ std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString &code)
             e += "No error message available from Lua";
         }
     }
-    lua_pop(L, topElementIndex);
+    lua_pop(L, 1);
     return {!error, e};
 }
 
