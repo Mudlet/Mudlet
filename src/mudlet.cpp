@@ -85,6 +85,7 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::Close) {
         mudlet::debugMode = false;
+        mudlet::self()->refreshTabBar();
         return QObject::eventFilter(obj, event);
     } else {
         return QObject::eventFilter(obj, event);
