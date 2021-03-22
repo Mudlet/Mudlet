@@ -255,10 +255,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
         messageLines.prepend(QStringLiteral("%1 profiles active now. Each message from a profile \n"
                                             "will be prefixed as follows:")
                              .arg(TDebug::smIdentifierMap.count()));
-    } else {
-        messageLines.prepend(QStringLiteral("Only 1 profile active now. Only non-profile messages \n"
-                                            "will be prefixed until another profile is started but \n"
-                                            "then its will be marked as follows:"));    }
+    }
 
     return messageLines.join(QChar::LineFeed).append(QChar::LineFeed);
 }
