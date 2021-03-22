@@ -10421,6 +10421,82 @@ int TLuaInterpreter::getModules(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getModuleInfo
+int TLuaInterpreter::getModuleInfo(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    auto infoMap = host.mModuleInfo;
+    int n = lua_gettop(L);
+    QString name = getVerifiedString(L, __func__, 1, "module name");
+    QString info;
+    if (n > 1) {
+        info = getVerifiedString(L, __func__, 2, "info", true);
+    }
+    if (info.isEmpty()) {
+        QMap<QString, QString>::const_iterator iter = infoMap.value(name).constBegin();
+        lua_newtable(L);
+        while (iter != infoMap.value(name).constEnd()) {
+            lua_pushstring(L, iter.key().toUtf8().constData());
+            lua_pushstring(L, iter.value().toUtf8().constData());
+            lua_settable(L, -3);
+            ++iter;
+        }
+    } else {
+        lua_pushstring(L, infoMap.value(name).value(info).toUtf8().constData());
+    }
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPackageInfo
+int TLuaInterpreter::getPackageInfo(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    auto infoMap = host.mPackageInfo;
+    int n = lua_gettop(L);
+    QString name = getVerifiedString(L, __func__, 1, "package name");
+    QString info;
+    if (n > 1) {
+        info = getVerifiedString(L, __func__, 2, "info", true);
+    }
+    if (info.isEmpty()) {
+        QMap<QString, QString>::const_iterator iter = infoMap.value(name).constBegin();
+        lua_newtable(L);
+        while (iter != infoMap.value(name).constEnd()) {
+            lua_pushstring(L, iter.key().toUtf8().constData());
+            lua_pushstring(L, iter.value().toUtf8().constData());
+            lua_settable(L, -3);
+            ++iter;
+        }
+    } else {
+        lua_pushstring(L, infoMap.value(name).value(info).toUtf8().constData());
+    }
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setModuleInfo
+int TLuaInterpreter::setModuleInfo(lua_State* L)
+{
+  Host& host = getHostFromLua(L);
+  QString moduleName = getVerifiedString(L, __func__, 1, "module name");
+  QString info = getVerifiedString(L, __func__, 2, "info");
+  QString value = getVerifiedString(L, __func__, 3, "value");
+  host.mModuleInfo[moduleName][info] = value;
+  lua_pushboolean(L, true);
+  return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setPackageInfo
+int TLuaInterpreter::setPackageInfo(lua_State* L)
+{
+  Host& host = getHostFromLua(L);
+  QString packageName = getVerifiedString(L, __func__, 1, "package name");
+  QString info = getVerifiedString(L, __func__, 2, "info");
+  QString value = getVerifiedString(L, __func__, 3, "value");
+  host.mPackageInfo[packageName][info] = value;
+  lua_pushboolean(L, true);
+  return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDefaultAreaVisible
 int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 {
@@ -13608,8 +13684,12 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "enableModuleSync", TLuaInterpreter::enableModuleSync);
     lua_register(pGlobalLua, "disableModuleSync", TLuaInterpreter::disableModuleSync);
     lua_register(pGlobalLua, "getModuleSync", TLuaInterpreter::getModuleSync);
-    lua_register(pGlobalLua, "getPackages", TLuaInterpreter::getPackages);
     lua_register(pGlobalLua, "getModules", TLuaInterpreter::getModules);
+    lua_register(pGlobalLua, "getPackages", TLuaInterpreter::getPackages);
+    lua_register(pGlobalLua, "getModuleInfo", TLuaInterpreter::getModuleInfo);
+    lua_register(pGlobalLua, "getPackageInfo", TLuaInterpreter::getPackageInfo);
+    lua_register(pGlobalLua, "setModuleInfo", TLuaInterpreter::setModuleInfo);
+    lua_register(pGlobalLua, "setPackageInfo", TLuaInterpreter::setPackageInfo);
     lua_register(pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel);
     lua_register(pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom);
     lua_register(pGlobalLua, "uninstallPackage", TLuaInterpreter::uninstallPackage);

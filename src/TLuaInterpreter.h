@@ -178,6 +178,10 @@ public:
     static int getModuleSync(lua_State* L);
     static int getPackages(lua_State* L);
     static int getModules(lua_State* L);
+    static int getPackageInfo(lua_State* L);
+    static int getModuleInfo(lua_State* L);
+    static int setPackageInfo(lua_State* L);
+    static int setModuleInfo(lua_State* L);
     static int lockExit(lua_State*);
     static int lockSpecialExit(lua_State*);
     static int hasExitLock(lua_State*);

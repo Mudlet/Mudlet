@@ -27,6 +27,7 @@
 
 #include "LuaInterface.h"
 #include "TConsole.h"
+#include "TDebug.h"
 #include "TMainConsole.h"
 #include "TCommandLine.h"
 #include "TDockWidget.h"
@@ -477,6 +478,18 @@ Host::~Host()
     mIsClosingDown = true;
     mErrorLogStream.flush();
     mErrorLogFile.close();
+}
+
+void Host::loadPackageInfo()
+{
+    QStringList packages = mInstalledPackages;
+    for (int i = 0; i < packages.size(); i++) {
+        QString packagePath{mudlet::self()->getMudletPath(mudlet::profilePackagePath, getName(), packages.at(i))};
+        QDir dir(packagePath);
+        if (dir.exists(QStringLiteral("config.lua"))) {
+            getPackageConfig(dir.absoluteFilePath(QStringLiteral("config.lua")));
+        }
+    }
 }
 
 void Host::saveModules(int sync, bool backup)
@@ -1669,7 +1682,7 @@ bool Host::installPackage(const QString& fileName, int module)
         // - if it does, update the packageName from it
         if (_dir.exists(QStringLiteral("config.lua"))) {
             // read in the new packageName from Lua. Should be expanded in future to whatever else config.lua will have
-            readPackageConfig(_dir.absoluteFilePath(QStringLiteral("config.lua")), packageName);
+            readPackageConfig(_dir.absoluteFilePath(QStringLiteral("config.lua")), packageName, module > 0);
             // now that the packageName changed, redo relevant checks to make sure it's still valid
             if (module) {
                 if (mActiveModules.contains(packageName)) {
@@ -1810,6 +1823,14 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     return result;
 }
 
+void Host::removePackageInfo(const QString &packageName, const bool isModule) {
+    if (isModule) {
+        mModuleInfo.remove(packageName);
+    } else {
+        mPackageInfo.remove(packageName);
+    }
+}
+
 // This may be called by installPackage(...) in that case however it will have
 // module == 2 and in THAT situation it will NOT RE-invoke installPackage(...)
 // again - Slysven
@@ -1828,7 +1849,11 @@ bool Host::uninstallPackage(const QString& packageName, int module)
             return false;
         }
     }
-
+    //module == 2 seems to be only used for reloading/syncing, which doesn't work for mpackages anyway
+    //No need to remove package info as it can cause the info to be lost
+    if (module != 2) {
+        removePackageInfo(packageName, module > 0);
+    }
     // raise 2 events - a generic one and a more detailed one to serve both
     // a simple need ("I just want the uninstall event") and a more specific need
     // ("I specifically need to know when the module was uninstalled via Lua")
@@ -1917,8 +1942,19 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     return true;
 }
 
-void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
+void Host::readPackageConfig(const QString& luaConfig, QString& packageName, bool isModule)
 {
+    QString newName = getPackageConfig(luaConfig, isModule);
+    if (!newName.isEmpty()){
+        packageName = newName;
+    }
+}
+
+QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
+{
+    QString packageName;
+    // We don't use luaL_loadfile here because that breaks on Windows as it won't work if there are accented characters in the path or file name -
+    // QFile which can work with whatever local8Bit encoding is used for file names - the luaL_loadfile(...) uses std::iostream which doesn't...
     QFile configFile(luaConfig);
     QStringList strings;
     if (configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -1936,54 +1972,68 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
     if (!error) {
         error = lua_pcall(L, 0, 0, 0);
     }
-
     if (!error) {
-        // for now, only read the mpackage parameter
-        // would be nice to read author, save & version too later
         lua_getglobal(L, "mpackage");
         if (lua_isstring(L, -1)) {
             packageName = QString(lua_tostring(L, -1));
         }
         lua_pop(L, -1);
+        if (!packageName.isEmpty()) {
+            //get rid of lua version
+            lua_getglobal(L, "_G");
+            lua_pushnil(L);
+            lua_setfield(L, -2, "_VERSION");
+            QMap<QString, QString> packageInfo;
+            lua_pushnil(L);
+            while (lua_next(L, -2) != 0) {
+                if (lua_isstring(L, -1) && lua_isstring(L, -2)) {
+                    packageInfo[lua_tostring(L, -2)] = lua_tostring(L, -1);
+                }
+                lua_pop(L, 1);
+            }
+
+            if (isModule) {
+                mModuleInfo[packageName] = packageInfo;
+            } else {
+                mPackageInfo[packageName] = packageInfo;
+            }
+        }
         lua_close(L);
-        return;
-    } else {
-        // error
-        std::string e = lua_tostring(L, -1);
-        if (e.empty()) {
-            e = "no error message available from Lua";
-        }
-
-        std::string reason;
-        switch (error) {
-        case 4:
-            reason = "Out of memory";
-            break;
-        case 3:
-            reason = "Syntax error";
-            break;
-        case 2:
-            reason = "Runtime error";
-            break;
-        case 1:
-            reason = "Yield error";
-            break;
-        default:
-            reason = "Unknown error";
-            break;
-        }
-
-        if (mudlet::debugMode) {
-            qDebug() << reason.c_str() << " in config.lua: " << e.c_str();
-        }
-        // should print error to main display
-        QString msg = QStringLiteral("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
-        mpConsole->printSystemMessage(msg);
-
-
-        lua_pop(L, -1);
-        lua_close(L);
+        return packageName;
     }
+
+    // error
+    std::string e = lua_tostring(L, -1);
+    if (e.empty()) {
+        e = "no error message available from Lua";
+    }
+
+    std::string reason;
+    switch (error) {
+    case 4:
+        reason = "Out of memory";
+        break;
+    case 3:
+        reason = "Syntax error";
+        break;
+    case 2:
+        reason = "Runtime error";
+        break;
+    case 1:
+        reason = "Yield error";
+        break;
+    default:
+        reason = "Unknown error";
+        break;
+    }
+
+    if (mudlet::debugMode) {
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: " << reason.c_str() << " in " << luaConfig << " ERROR:" << e.c_str() << "\n" >> 0;
+    }
+
+    lua_pop(L, -1);
+    lua_close(L);
+    return QString();
 }
 
 // Derived from the one in dlgConnectionProfile class - but it does not need a

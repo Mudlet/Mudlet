@@ -300,7 +300,8 @@ public:
     bool installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);
     bool removeDir(const QString&, const QString&);
-    void readPackageConfig(const QString&, QString&);
+    void readPackageConfig(const QString&, QString&, bool);
+    QString getPackageConfig(const QString&, bool isModule = false);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
@@ -360,6 +361,7 @@ public:
     bool closeWindow(const QString&);
     bool echoWindow(const QString&, const QString&);
     bool pasteWindow(const QString& name);
+    void loadPackageInfo();
     bool setCmdLineAction(const QString&, const int);
     bool resetCmdLineAction(const QString&);
     bool setLabelClickCallback(const QString&, const int);
@@ -510,6 +512,8 @@ public:
 
     // search engine URL prefix to search query
     QMap<QString, QString> mSearchEngineData;
+    QMap<QString, QMap<QString, QString>> mPackageInfo;
+    QMap<QString, QMap<QString, QString>> mModuleInfo;
     QString mSearchEngineName;
 
     // trigger/alias/script/etc ID whose Lua code to show when previewing a theme
@@ -639,6 +643,7 @@ private:
     void thankForUsingPTB();
     void toggleMapperVisibility();
     void createMapper(const bool);
+    void removePackageInfo(const QString &packageName, const bool);
 
     QFont mDisplayFont;
     QStringList mModulesToSync;

@@ -8138,8 +8138,6 @@ void dlgTriggerEditor::slot_paste_xml()
     }
 }
 
-// CHECKME: This seems to largely duplicate the actions of Host::installPackage(...)
-// Do we really need two different sets of code to import packages?
 void dlgTriggerEditor::slot_import()
 {
     switch (mCurrentView) {
@@ -8173,58 +8171,7 @@ void dlgTriggerEditor::slot_import()
         return;
     }
 
-    QFile file(fileName);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Import Mudlet Package:"), tr("Cannot read file %1:\n%2.").arg(fileName, file.errorString()));
-        return;
-    }
-
-    QString packageName = fileName.section(QChar('/'), -1);
-    packageName.remove(QStringLiteral(".zip"), Qt::CaseInsensitive);
-    packageName.remove(QStringLiteral(".trigger"), Qt::CaseInsensitive);
-    packageName.remove(QStringLiteral(".xml"), Qt::CaseInsensitive);
-    packageName.remove(QStringLiteral(".mpackage"), Qt::CaseInsensitive);
-    packageName.remove(QChar('/'));
-    packageName.remove(QChar('\\'));
-    packageName.remove(QChar('.'));
-
-    if (mpHost->mInstalledPackages.contains(packageName)) {
-        QMessageBox::information(this, tr("Import Mudlet Package:"), tr("Package %1 is already installed.").arg(packageName));
-        file.close();
-        return;
-    }
-
-    QFile file2;
-    if (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)) {
-        QString _dest = mudlet::getMudletPath(mudlet::profilePackagePath, mpHost->getName(), packageName);
-        QDir _tmpDir;
-        _tmpDir.mkpath(_dest);
-        QString _script = QStringLiteral("unzip([[%1]], [[%2]])").arg(fileName, _dest);
-        mpHost->mLuaInterpreter.compileAndExecuteScript(_script);
-
-        // requirements for zip packages:
-        // - packages must be compressed in zip format
-        // - file extension should be .mpackage (though .zip is accepted)
-        // - there can only be a single xml file per package
-        // - the xml file must be located in the root directory of the zip package. example: myPack.zip contains: the folder images and the file myPack.xml
-
-        QDir _dir(_dest);
-        QStringList _filterList;
-        _filterList << "*.xml"
-                    << "*.trigger";
-        QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
-        if (!entries.empty()) {
-            file2.setFileName(entries[0].absoluteFilePath());
-        }
-    } else {
-        file2.setFileName(fileName);
-    }
-    file2.open(QFile::ReadOnly | QFile::Text);
-
-    mpHost->mInstalledPackages.append(packageName);
-    QString profileName = mpHost->getName();
-    QString login = mpHost->getLogin();
-    QString pass = mpHost->getPass();
+    mpHost->installPackage(fileName, 0);
 
     treeWidget_triggers->clear();
     treeWidget_aliases->clear();
@@ -8232,13 +8179,6 @@ void dlgTriggerEditor::slot_import()
     treeWidget_timers->clear();
     treeWidget_keys->clear();
     treeWidget_scripts->clear();
-
-    XMLimport reader(mpHost);
-    reader.importPackage(&file2, packageName); // TODO: Missing false return value handler
-
-    mpHost->setName(profileName);
-    mpHost->setLogin(login);
-    mpHost->setPass(pass);
 
     slot_profileSaveAction();
 
