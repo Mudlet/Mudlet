@@ -85,6 +85,9 @@ void TScript::setEventHandlerList(QStringList handlerList)
 
 void TScript::compileAll()
 {
+    if (mpHost->mResetProfile) {
+        mNeedsToBeCompiled = true;
+    }
     compile();
     for (auto script : *mpMyChildrenList) {
         script->compileAll();
@@ -101,7 +104,7 @@ void TScript::callEventHandler(const TEvent& pE)
 
 void TScript::compile()
 {
-    if (mNeedsToBeCompiled || mpHost->mResetProfile) {
+    if (mNeedsToBeCompiled) {
         if (!compileScript()) {
             if (mudlet::debugMode) {
                 TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> 0;

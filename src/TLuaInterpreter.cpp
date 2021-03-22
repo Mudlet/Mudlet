@@ -14301,7 +14301,6 @@ std::pair<int, QString> TLuaInterpreter::setScriptCode(QString& name, const QStr
         pS->setScript(oldCode);
         return {-1, QStringLiteral("unable to compile \"%1\" at position \"%2\", reason: %3").arg(luaCode).arg(++pos).arg(errMsg)};
     }
-    pS->setScript(luaCode);
     int id = pS->getID();
     mpHost->mpEditorDialog->writeScript(id);
     return {id, QString()};
