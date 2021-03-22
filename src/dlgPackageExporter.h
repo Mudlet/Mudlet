@@ -58,6 +58,7 @@ public:
     void recurseActions(TAction*, QTreeWidgetItem*);
     void listTimers();
     void recurseTimers(TTimer*, QTreeWidgetItem*);
+    void copy_directory(const QString &fromDir, const QString &toDir, bool coverFileIfExist);
     QMap<QTreeWidgetItem*, TTrigger*> triggerMap;
     QMap<QTreeWidgetItem*, TTrigger*> modTriggerMap;
     QMap<QTreeWidgetItem*, TAlias*> aliasMap;
@@ -78,13 +79,31 @@ public slots:
     void slot_addFiles();
     void slot_export_package();
 
+private slots:
+    void slot_addDependency();
+    void slot_removeDependency();
+    void slot_import_icon();
+    void slot_openPackageLocation();
+    void slot_packageChanged(int);
+    void slot_updateLocationPlaceholder();
+    void slot_enableExportButton(const QString &text);
+    void slot_recountItems();
+
+protected:
+    bool eventFilter(QObject* obj, QEvent* evt) override;
+
 private:
     bool writeFileToZip(const QString&, const QString&, zip*);
+    static void appendToConfigFile(QString&, const QString&, const QString&);
     void displayResultMessage(const QString&, const bool isSuccessMessage = true);
+    void uncheckAllChildren();
+    int countRecursive(QTreeWidgetItem* item, int count) const;
+    int countCheckedItems() const;
+    QString getActualPath() const;
 
     Ui::dlgPackageExporter* ui;
     QPointer<Host> mpHost;
-    QTreeWidget* treeWidget;
+    QTreeWidget* mpExportSelection;
     QPointer<QPushButton> mExportButton;
     QPointer<QPushButton> mCancelButton;
     QTreeWidgetItem* mpTriggers;
@@ -93,10 +112,16 @@ private:
     QTreeWidgetItem* mpScripts;
     QTreeWidgetItem* mpKeys;
     QTreeWidgetItem* mpButtons;
-    QString mStagingDirName;
+    QGroupBox* mpSelectionText;
     QString mPackageName;
     QString mPackagePath;
     QString mPackagePathFileName;
+    QString mPackageIconPath;
+    QString mPackageConfig;
+    QString mPlainDescription;
+
+signals:
+    void signal_exportLocationChanged(const QString& location);
 };
 
 #endif // MUDLET_DLGPACKAGEEXPORTER_H

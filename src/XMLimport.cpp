@@ -1093,6 +1093,7 @@ void XMLimport::readHostPackage(Host* pHost)
             }
         }
     }
+    mpHost->loadPackageInfo();
 }
 
 bool XMLimport::readDefaultTrueBool(QString name) {
