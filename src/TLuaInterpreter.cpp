@@ -11986,9 +11986,11 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
 
     if (packageList.size() > 0) {
         Host& host = getHostFromLua(L);
-        lua_getglobal(L, "mssp");
 
         for (int i = 1; i < packageList.size(); i++) {
+            //clear the stack to avoid it getting to big
+            lua_settop(L, 0);
+
             QStringList payloadList = packageList[i].split(MSSP_VAL);
 
             if (payloadList.size() != 2) {
@@ -11998,6 +12000,7 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
             QString msspVAR = payloadList[0];
             QString msspVAL = payloadList[1];
 
+            lua_getglobal(L, "mssp");
             lua_pushstring(L, msspVAR.toUtf8().constData());
             lua_pushlstring(L, msspVAL.toUtf8().constData(), msspVAL.toUtf8().length());
 
@@ -12009,7 +12012,7 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
             token.append(".");
             token.append(msspVAR);
 
-            TEvent event {};
+            TEvent event{};
             event.mArgumentList.append(token);
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             event.mArgumentList.append(token);
@@ -12018,8 +12021,8 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
                 QString msg = QStringLiteral("\n%1 event <%2> display(%1) to see the full content\n").arg(protocol, token);
                 host.mpConsole->printSystemMessage(msg);
             }
+            //this potentially clears the stack if an eventhandler is set
             host.raiseEvent(event);
-            lua_settop (L, 1);
         }
 
         lua_pop(L, lua_gettop(L));
