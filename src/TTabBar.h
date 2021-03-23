@@ -31,7 +31,7 @@
 class TStyle : public QProxyStyle
 {
 public:
-    TStyle(QTabBar* bar)
+    explicit TStyle(QTabBar* bar)
     : mpTabBar(bar)
     {}
 
