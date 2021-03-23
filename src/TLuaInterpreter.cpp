@@ -11988,7 +11988,7 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
         Host& host = getHostFromLua(L);
 
         for (int i = 1; i < packageList.size(); i++) {
-            //clear the stack to avoid it getting to big
+            // clear the stack to avoid it getting to big
             lua_settop(L, 0);
 
             QStringList payloadList = packageList[i].split(MSSP_VAL);
@@ -12021,7 +12021,6 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
                 QString msg = QStringLiteral("\n%1 event <%2> display(%1) to see the full content\n").arg(protocol, token);
                 host.mpConsole->printSystemMessage(msg);
             }
-            //this potentially clears the stack if an eventhandler is set
             host.raiseEvent(event);
         }
 
