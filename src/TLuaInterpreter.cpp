@@ -8073,7 +8073,7 @@ int TLuaInterpreter::getMapLabels(lua_State* L)
     Host& host = getHostFromLua(L);
     lua_newtable(L);
     auto pA = host.mpMap->mpRoomDB->getArea(area);
-    if (!pA->mMapLabels.isEmpty()) {
+    if (pA && !pA->mMapLabels.isEmpty()) {
         QMapIterator<int, TMapLabel> it(pA->mMapLabels);
         while (it.hasNext()) {
             it.next();
