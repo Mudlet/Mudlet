@@ -4373,7 +4373,7 @@ void mudlet::slot_tabMoved(const int oldPos, const int newPos)
 
 void mudlet::refreshTabBar()
 {
-    for (const &auto pHost : mHostManager) {
+    for (const auto& pHost : mHostManager) {
         QString hostName = pHost->getName();
         if (debugMode) {
             mpTabBar->applyPrefixToDisplayedText(hostName, TDebug::getTag(pHost.data()));
