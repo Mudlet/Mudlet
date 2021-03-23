@@ -77,7 +77,7 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
     setWordWrapMode(QTextOption::WrapAnywhere);
     setContentsMargins(0, 0, 0, 0);
     // clear console selection if selection in command line changes
-    connect(this, &QPlainTextEdit::copyAvailable, [this](bool yes){mpConsole->clearSelection(yes);});
+    connect(this, &QPlainTextEdit::copyAvailable, this, &TCommandLine::slot_clearSelection);
     // We do NOT want the standard context menu to happen as we generate it
     // ourself:
     setContextMenuPolicy(Qt::PreventContextMenu);
@@ -1044,6 +1044,13 @@ void TCommandLine::historyMove(MoveDirection direction)
     }
 }
 
+void TCommandLine::slot_clearSelection(bool yes)
+{
+    if (yes && !mSpellChecking) {
+        mpConsole->clearSelection();
+    }
+}
+
 void TCommandLine::slot_removeWord()
 {
     if (mSpellCheckedWord.isEmpty()) {
@@ -1078,6 +1085,7 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     }
 
     QTextCharFormat f;
+    mSpellChecking = true;
     c.select(QTextCursor::WordUnderCursor);
     QByteArray encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(c.selectedText());
     if (!Hunspell_spell(systemDictionaryHandle, encodedText.constData())) {
@@ -1107,6 +1115,7 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     }
     c.setCharFormat(f);
     setTextCursor(c);
+    mSpellChecking = false;
 }
 
 bool TCommandLine::handleCtrlTabChange(QKeyEvent* ke, int tabNumber)
