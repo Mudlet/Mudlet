@@ -1401,6 +1401,10 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             return false;
         }
 
+        if (file.fileName().endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
+            return readJsonMapFile(file.fileName()).first;
+        }
+
         QDataStream ifs(&file);
         // Is the RUN-TIME version of the Qt libraries equal to or more than
         // Qt 5.13.0? Then force things to use the backwards compatible format
