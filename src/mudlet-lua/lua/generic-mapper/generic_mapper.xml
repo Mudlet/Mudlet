@@ -3010,7 +3010,7 @@ function map.eventHandler(event, ...)
     elseif event == "sysManualLocationSetEvent" then
       set_room(arg[1])
     elseif event == "sysUninstallPackage" and not map.updatingMapper and arg[1] == "generic_mapper" then
-        for id in ipairs(map.registeredEvents) do
+        for _,id in ipairs(map.registeredEvents) do
             killAnonymousEventHandler(id)
         end
     end
