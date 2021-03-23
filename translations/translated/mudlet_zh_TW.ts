@@ -10382,7 +10382,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1024"/>
       <source>Indent wrapped lines by:</source>
-      <translation>缩进换行于：</translation>
+      <translation>縮進換行位置：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1057"/>
@@ -10407,7 +10407,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1095"/>
       <source>Fix unnecessary linebreaks on GA servers</source>
-      <translation>修复GA服务器上非必要的换行符</translation>
+      <translation>修正 GA 伺服器上非必要的換行符號</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1105"/>
