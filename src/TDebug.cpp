@@ -232,6 +232,10 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
 
 /* static */ QString TDebug::displayNewTable()
 {
+    if (TDebug::smIdentifierMap.count() <= 1) {
+        return QString();
+    }
+
     // We do not translate this currently as the Central Debug Console does not
     // get translated content - yet?
     QStringList messageLines;
@@ -248,17 +252,12 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
         std::sort(messageLines.begin(), messageLines.end());
     }
     messageLines.prepend(QStringLiteral(" %1= System message, not belonging to a specific profile").arg(csmTagSystemMessage));
-    if (TDebug::smIdentifierMap.count() > 1) {
-        // The line wrapping of these texts is a bit less than one might expect
-        // because the default size will clip the text otherwise, unless the
-        // user resizes the CDC:
-        messageLines.prepend(QStringLiteral("%1 profiles active now. Each message from a profile \n"
-                                            "will be prefixed as follows:")
-                             .arg(TDebug::smIdentifierMap.count()));
-    } else {
-        messageLines.prepend(QStringLiteral("Only 1 profile active now. Only non-profile messages \n"
-                                            "will be prefixed until another profile is started but \n"
-                                            "then its will be marked as follows:"));    }
+    // The line wrapping of these texts is a bit less than one might expect
+    // because the default size will clip the text otherwise, unless the
+    // user resizes the CDC:
+    messageLines.prepend(QStringLiteral("%1 profiles active now. Each message from a profile \n"
+                                        "will be prefixed as follows:")
+                                 .arg(TDebug::smIdentifierMap.count()));
 
     return messageLines.join(QChar::LineFeed).append(QChar::LineFeed);
 }

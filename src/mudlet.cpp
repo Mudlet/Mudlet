@@ -85,6 +85,7 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::Close) {
         mudlet::debugMode = false;
+        mudlet::self()->refreshTabBar();
         return QObject::eventFilter(obj, event);
     } else {
         return QObject::eventFilter(obj, event);
@@ -4372,7 +4373,7 @@ void mudlet::slot_tabMoved(const int oldPos, const int newPos)
 
 void mudlet::refreshTabBar()
 {
-    for (auto pHost : mHostManager) {
+    for (const &auto pHost : mHostManager) {
         QString hostName = pHost->getName();
         if (debugMode) {
             mpTabBar->applyPrefixToDisplayedText(hostName, TDebug::getTag(pHost.data()));

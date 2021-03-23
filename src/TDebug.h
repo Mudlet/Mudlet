@@ -67,9 +67,9 @@ class TDebug
     // Used as a tag for system (non-profile) messages:
     // Change to use U+2731 {HEAVY ASTERIX} instead of an asterix:
     inline static const QString csmTagSystemMessage = QStringLiteral("[\u2731] ");
-    // Used as a tag for messages where something has gone wrong and it is not
-    // possible to work out which profile it is from:
-    inline static const QString csmTagFault = QStringLiteral("[!] ");
+    // If something has gone wrong and it is not possible to work out which profile it is from,
+    // don't use a tag. No need to expose the player to Mudlet internal details: fail gracefully
+    inline static const QString csmTagFault = QStringLiteral("");
     // Used as a tag for messages on the 27th and above currently active profiles:
     inline static const QString csmTagOverflow  = QStringLiteral("[?] ");
 
