@@ -287,7 +287,7 @@ protected:
 
 private:
     ConsoleType mType;
-    QSize oldSize;
+    QSize mOldSize;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
