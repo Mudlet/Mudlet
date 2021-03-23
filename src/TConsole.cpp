@@ -680,16 +680,14 @@ void TConsole::refresh()
     QApplication::sendEvent(this, &event);
 }
 
-void TConsole::clearSelection(bool yes) const
+void TConsole::clearSelection() const
 {
-    if (yes) {
-        mLowerPane->unHighlight();
-        mUpperPane->unHighlight();
-        mLowerPane->mSelectedRegion = QRegion(0, 0, 0, 0);
-        mUpperPane->mSelectedRegion = QRegion(0, 0, 0, 0);
-        mUpperPane->forceUpdate();
-        mLowerPane->forceUpdate();
-    }
+    mLowerPane->unHighlight();
+    mUpperPane->unHighlight();
+    mLowerPane->mSelectedRegion = QRegion(0, 0, 0, 0);
+    mUpperPane->mSelectedRegion = QRegion(0, 0, 0, 0);
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 
