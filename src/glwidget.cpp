@@ -281,9 +281,15 @@ void GLWidget::paintGL()
 #endif
             painter.setFont(QFont("Bitstream Vera Sans Mono", 30));
             painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
-            auto message = (mpMap->mpRoomDB && mpMap->mpRoomDB->size() > 0)
-                                   ? tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size())
-                                   : tr("You do not have a map yet - load one, or start mapping from scratch to begin.");
+
+            QString message;
+            if (mpMap->mpRoomDB && mpMap->mpRoomDB->isEmpty()) {
+                message = tr("No rooms in the map - load another one, or start mapping from scratch to begin.");
+            } else if (mpMap->mpRoomDB && !mpMap->mpRoomDB->isEmpty()) {
+                message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size());
+            } else {
+                message = tr("You do not have a map yet - load one, or start mapping from scratch to begin.");
+            }
             painter.drawText(0, 0, (width() -1), (height() -1), Qt::AlignCenter | Qt::TextWordWrap, message);
             painter.end();
 
