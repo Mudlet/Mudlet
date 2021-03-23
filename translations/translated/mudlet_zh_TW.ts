@@ -1319,7 +1319,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="372"/>
       <source>Start logging game output to log file.</source>
-      <translation>开始向日志文件写入游戏输出.</translation>
+      <translation>開始將遊戲輸出記錄到日誌檔案。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="383"/>
@@ -2766,7 +2766,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1308"/>
       <source>Copy HTML</source>
-      <translation>复制 HTML</translation>
+      <translation>複製 HTML</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1312"/>
@@ -5764,7 +5764,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="1012"/>
       <location filename="../src/dlgProfilePreferences.cpp" line="3769"/>
       <source>Profile preferences - %1</source>
-      <translation>配置设定-%1</translation>
+      <translation>配置設定 - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1288"/>
@@ -8652,7 +8652,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="781"/>
       <source>English (Australia, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>英語（澳大利亞）</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="785"/>
@@ -8663,7 +8663,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="786"/>
       <source>English (Canada, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>英語（加拿大）</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="787"/>
@@ -8679,7 +8679,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="789"/>
       <source>English (United Kingdom, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>英語（英國）</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="790"/>
@@ -8751,7 +8751,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="803"/>
       <source>English (United States, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>英語（美國）</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="804"/>
@@ -10190,7 +10190,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="266"/>
       <source>Game protocols</source>
-      <translation>游戏协议</translation>
+      <translation>遊戲協議</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="323"/>
@@ -10206,7 +10206,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="348"/>
       <source>Save log files in HTML format instead of plain text</source>
-      <translation>用HTML格式来代替纯文本保存日志文件</translation>
+      <translation>使用 HTML 格式儲存紀錄檔案，而非純文字格式</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="355"/>
@@ -10371,7 +10371,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="976"/>
       <source>Wrap lines at:</source>
-      <translation>换行于：</translation>
+      <translation>換行位置：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="996"/>
@@ -10577,7 +10577,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="611"/>
       <source>User dictionary:</source>
-      <translation>用户词典：</translation>
+      <translation>使用者字典</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="617"/>
@@ -10682,7 +10682,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="229"/>
       <source>Notify on new data</source>
-      <translation type="unfinished"/>
+      <translation>有新資料時進行通知</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="232"/>
@@ -10692,7 +10692,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="246"/>
       <source>Auto save on exit</source>
-      <translation type="unfinished"/>
+      <translation>結束時自動儲存</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
