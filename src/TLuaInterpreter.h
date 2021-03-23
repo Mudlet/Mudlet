@@ -600,8 +600,8 @@ public:
     static int enableMapInfo(lua_State*);
     static int disableMapInfo(lua_State*);
     static int getProfileTabNumber(lua_State*);
-    static int addFileWatchPath(lua_State*);
-    static int removeFileWatchPath(lua_State*);
+    static int addFileWatch(lua_State*);
+    static int removeFileWatch(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 

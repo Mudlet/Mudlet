@@ -588,7 +588,7 @@ void TLuaInterpreter::slot_pathChanged(const QString& path)
     }
 
     TEvent event {};
-    event.mArgumentList << QLatin1String("pathChanged");
+    event.mArgumentList << QLatin1String("sysPathChanged");
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
     event.mArgumentList << path;
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -13752,8 +13752,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
     lua_register(pGlobalLua, "disableMapInfo", TLuaInterpreter::disableMapInfo);
     lua_register(pGlobalLua, "getProfileTabNumber", TLuaInterpreter::getProfileTabNumber);
-    lua_register(pGlobalLua, "addFileWatchPath", TLuaInterpreter::addFileWatchPath);
-    lua_register(pGlobalLua, "removeFileWatchPath", TLuaInterpreter::removeFileWatchPath);
+    lua_register(pGlobalLua, "addFileWatch", TLuaInterpreter::addFileWatch);
+    lua_register(pGlobalLua, "removeFileWatch", TLuaInterpreter::removeFileWatch);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -15511,8 +15511,8 @@ int TLuaInterpreter::disableMapInfo(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addFileWatchPath
-int TLuaInterpreter::addFileWatchPath(lua_State * L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addFileWatch
+int TLuaInterpreter::addFileWatch(lua_State * L)
 {
     auto path = getVerifiedString(L, __func__, 1, "path");
     auto& host = getHostFromLua(L);
@@ -15526,8 +15526,8 @@ int TLuaInterpreter::addFileWatchPath(lua_State * L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeFileWatchPath
-int TLuaInterpreter::removeFileWatchPath(lua_State * L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeFileWatch
+int TLuaInterpreter::removeFileWatch(lua_State * L)
 {
     auto path = getVerifiedString(L, __func__, 1, "path");
     auto& host = getHostFromLua(L);
