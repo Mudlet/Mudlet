@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -44,7 +44,6 @@
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
 #include "dlgNotepad.h"
-#include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgIRC.h"
 #include "mudlet.h"
@@ -479,6 +478,18 @@ Host::~Host()
     mIsClosingDown = true;
     mErrorLogStream.flush();
     mErrorLogFile.close();
+}
+
+void Host::loadPackageInfo()
+{
+    QStringList packages = mInstalledPackages;
+    for (int i = 0; i < packages.size(); i++) {
+        QString packagePath{mudlet::self()->getMudletPath(mudlet::profilePackagePath, getName(), packages.at(i))};
+        QDir dir(packagePath);
+        if (dir.exists(QStringLiteral("config.lua"))) {
+            getPackageConfig(dir.absoluteFilePath(QStringLiteral("config.lua")));
+        }
+    }
 }
 
 void Host::saveModules(int sync, bool backup)
@@ -1784,9 +1795,7 @@ bool Host::installPackage(const QString& fileName, int module)
     detailedInstallEvent.mArgumentList.append(fileName);
     detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(detailedInstallEvent);
-    if (mpPackageManager) {
-        mpPackageManager->resetPackageTable();
-    }
+
     return true;
 }
 
@@ -1814,6 +1823,14 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     return result;
 }
 
+void Host::removePackageInfo(const QString &packageName, const bool isModule) {
+    if (isModule) {
+        mModuleInfo.remove(packageName);
+    } else {
+        mPackageInfo.remove(packageName);
+    }
+}
+
 // This may be called by installPackage(...) in that case however it will have
 // module == 2 and in THAT situation it will NOT RE-invoke installPackage(...)
 // again - Slysven
@@ -1835,7 +1852,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     //module == 2 seems to be only used for reloading/syncing, which doesn't work for mpackages anyway
     //No need to remove package info as it can cause the info to be lost
     if (module != 2) {
-        mLuaInterpreter.removePackageInfo(packageName, module > 0);
+        removePackageInfo(packageName, module > 0);
     }
     // raise 2 events - a generic one and a more detailed one to serve both
     // a simple need ("I just want the uninstall event") and a more specific need
@@ -1922,9 +1939,6 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     if (mpEditorDialog && module == 3) {
         mpEditorDialog->doCleanReset();
     }
-    if (mpPackageManager) {
-        mpPackageManager->resetPackageTable();
-    }
     return true;
 }
 
@@ -1969,7 +1983,20 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
             lua_getglobal(L, "_G");
             lua_pushnil(L);
             lua_setfield(L, -2, "_VERSION");
-            mLuaInterpreter.fillPackageInfo(packageName, isModule, L);
+            QMap<QString, QString> packageInfo;
+            lua_pushnil(L);
+            while (lua_next(L, -2) != 0) {
+                if (lua_isstring(L, -1) && lua_isstring(L, -2)) {
+                    packageInfo[lua_tostring(L, -2)] = lua_tostring(L, -1);
+                }
+                lua_pop(L, 1);
+            }
+
+            if (isModule) {
+                mModuleInfo[packageName] = packageInfo;
+            } else {
+                mPackageInfo[packageName] = packageInfo;
+            }
         }
         lua_close(L);
         return packageName;
@@ -2515,8 +2542,8 @@ void Host::setName(const QString& newName)
         currentPlayerRoom = mpMap->mRoomIdHash.take(mHostName);
     }
 
-    // Now we have the exclusive lock on this class's protected members
     mHostName = newName;
+    mpConsole->setProperty("HostName", newName);
 
     mTelnet.mProfileName = newName;
     if (mpMap) {

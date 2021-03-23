@@ -913,7 +913,7 @@ bool TMap::findPath(int from, int to)
         // No available normal exits from this room so check the special ones
         QStringList specialExitCommands = pFrom->getSpecialExits().keys();
         while (!specialExitCommands.isEmpty()) {
-            if (pFrom->hasSpecialExitLock(specialExitCommands.at(0))) {
+            if (!pFrom->hasSpecialExitLock(specialExitCommands.at(0))) {
                 hasUsableExit = true;
                 break;
             }

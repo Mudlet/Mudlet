@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -151,6 +151,13 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     QSizePolicy sizePolicy5(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
+
+    QPalette framePalette;
+    framePalette.setColor(QPalette::Text, QColor(Qt::black));
+    framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
+    framePalette.setColor(QPalette::Window, QColor(0, 0, 0, 255));
+    mpMainFrame->setPalette(framePalette);
+    mpMainFrame->setAutoFillBackground(true);
     mpMainFrame->setObjectName(QStringLiteral("MainFrame"));
 
     auto centralLayout = new QVBoxLayout;
@@ -478,10 +485,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     splitter->setSizes(sizeList);
 
     mUpperPane->show();
-    mLowerPane->show();
-    mLowerPane->updateScreenView();
-    // timer needed as updateScreenView doesn't seem to finish in time
-    QTimer::singleShot(0, [this]() { mLowerPane->hide(); });
+    mLowerPane->hide();
 
     connect(mpScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_scrollBarMoved);
     connect(mpHScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_hScrollBarMoved);
@@ -540,7 +544,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         setAcceptDrops(true);
         setMouseTracking(true);
     }
-    mpMainFrame->setStyleSheet(QStringLiteral("QWidget#MainFrame{ background-color: rgba(0,0,0,255) }"));
+
+
     if (mType & MainConsole) {
         mpButtonMainLayer->setVisible(!mpHost->getCompactInputLine());
     }
@@ -565,6 +570,7 @@ void TConsole::resizeConsole()
     QResizeEvent event(s, s);
     QApplication::sendEvent(this, &event);
 }
+
 
 void TConsole::resizeEvent(QResizeEvent* event)
 {
@@ -672,6 +678,18 @@ void TConsole::refresh()
     QSize s = QSize(x, y);
     QResizeEvent event(s, s);
     QApplication::sendEvent(this, &event);
+}
+
+void TConsole::clearSelection(bool yes) const
+{
+    if (yes) {
+        mLowerPane->unHighlight();
+        mUpperPane->unHighlight();
+        mLowerPane->mSelectedRegion = QRegion(0, 0, 0, 0);
+        mUpperPane->mSelectedRegion = QRegion(0, 0, 0, 0);
+        mUpperPane->forceUpdate();
+        mLowerPane->forceUpdate();
+    }
 }
 
 
