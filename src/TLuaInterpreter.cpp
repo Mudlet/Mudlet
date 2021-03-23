@@ -8073,7 +8073,7 @@ int TLuaInterpreter::getMapLabels(lua_State* L)
     Host& host = getHostFromLua(L);
     lua_newtable(L);
     auto pA = host.mpMap->mpRoomDB->getArea(area);
-    if (!pA->mMapLabels.isEmpty()) {
+    if (pA && !pA->mMapLabels.isEmpty()) {
         QMapIterator<int, TMapLabel> it(pA->mMapLabels);
         while (it.hasNext()) {
             it.next();
@@ -13151,75 +13151,6 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::fillPackageInfo(const QString& packageName, bool isModule, lua_State* packageLua)
-{
-    lua_State* L = pGlobalLua;
-    lua_getglobal(L, "mudlet");
-    if (isModule) {
-        lua_getfield(L, -1, "moduleInfo");
-    } else {
-        lua_getfield(L, -1, "packageInfo");
-    }
-    lua_newtable(L);
-    lua_getglobal(packageLua, "_G");
-    lua_pushnil(packageLua);
-    while (lua_next(packageLua, -2) != 0) {
-        if (lua_isstring(packageLua, -1)) {
-            lua_pushstring(L, lua_tostring(packageLua, -2));
-            lua_pushstring(L, lua_tostring(packageLua, -1));
-            lua_settable(L, -3);
-        }
-        lua_pop(packageLua, 1);
-    }
-    lua_setfield(L, -2, packageName.toUtf8().constData());
-    lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
-}
-
-// No documentation available in wiki - internal function
-void TLuaInterpreter::removePackageInfo(const QString& packageName, bool isModule)
-{
-    lua_State* L = pGlobalLua;
-    lua_getglobal(L, "mudlet");
-    if (isModule) {
-        lua_getfield(L, -1, "moduleInfo");
-    } else {
-        lua_getfield(L, -1, "packageInfo");
-    }
-    lua_pushnil(L);
-    lua_setfield(L, -2, packageName.toUtf8().constData());
-    lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
-}
-
-// No documentation available in wiki - internal function
-QMap<QString, QString> TLuaInterpreter::getPackageInfo(const QString& packageName, bool isModule)
-{
-    lua_State* L = pGlobalLua;
-    lua_getglobal(L, "mudlet");
-    QMap<QString, QString> result;
-    if (isModule) {
-        lua_getfield(L, -1, "moduleInfo");
-    } else {
-        lua_getfield(L, -1, "packageInfo");
-    }
-    lua_getfield(L, -1, packageName.toUtf8().constData());
-    if (!lua_istable(L, -1)) {
-        lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
-        return result;
-    }
-
-    lua_pushnil(L);
-    while (lua_next(L, -2) != 0) {
-        if (lua_isstring(L, -1) && lua_isstring(L, -2)) {
-            result[lua_tostring(L, -2)] = lua_tostring(L, -1);
-        }
-        lua_pop(L, 1);
-    }
-    lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
-    return result;
-}
-
-
-// No documentation available in wiki - internal function
 void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& variableList)
 {
     lua_State* L = pGlobalLua;
@@ -14064,29 +13995,6 @@ void TLuaInterpreter::setupLanguageData()
 }
 
 // No documentation available in wiki - internal function
-// loads package informations from installed packages (if a config.lua is found in the profile folder) on a profile start (or restart)
-// doesn't load module informations as they work differently but the field "moduleInfo" is created here
-void TLuaInterpreter::loadPackageInfos()
-{
-    lua_State* L = pGlobalLua;
-    lua_getglobal(L, "mudlet");
-    lua_newtable(L);
-    lua_setfield(L, -2, "packageInfo");
-    lua_newtable(L);
-    lua_setfield(L, -2, "moduleInfo");
-
-    QStringList packages = mpHost->mInstalledPackages;
-    for (int i = 0; i < packages.size(); i++) {
-        QString packagePath{mudlet::self()->getMudletPath(mudlet::profilePackagePath, mpHost->getName(), packages.at(i))};
-        QDir dir(packagePath);
-        if (dir.exists(QStringLiteral("config.lua"))) {
-            mpHost->getPackageConfig(dir.absoluteFilePath(QStringLiteral("config.lua")));
-        }
-    }
-    lua_pop(L, lua_gettop(L));
-}
-
-// No documentation available in wiki - internal function
 // Initialised a slimmed-down Lua state just to run the indenter in a separate sandbox.
 // The indenter by default pollutes the global environment with some utility functions
 // and we don't want to tie ourselves to it by exposing them for scripting.
@@ -14198,7 +14106,6 @@ void TLuaInterpreter::loadGlobal()
 #endif
 
     setupLanguageData();
-    loadPackageInfos();
 
     const QString executablePath{QCoreApplication::applicationDirPath()};
     // Initialise the list of path and file names so that

@@ -21,7 +21,6 @@
 
 #include "dlgPackageManager.h"
 #include "ui_package_manager.h"
-#include "TLuaInterpreter.h"
 #include "mudlet.h"
 
 #include <QFileDialog>
@@ -81,10 +80,10 @@ void dlgPackageManager::resetPackageTable()
         packageName->setFont(nameFont);
         shortDescription->setTextAlignment(Qt::AlignCenter);
         packageName->setText(mpHost->mInstalledPackages.at(i));
-        auto packageInfo{mpHost->mLuaInterpreter.getPackageInfo(packageName->text())};
+        auto packageInfo{mpHost->mPackageInfo.value(packageName->text())};
         auto iconName = packageInfo.value(QStringLiteral("icon"));
         auto iconDir = iconName.isEmpty() ? QStringLiteral(":/icons/mudlet.png")
-                                          : mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("%1/Icon/%2").arg(packageName->text(), iconName));
+                                          : mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("%1/.mudlet/Icon/%2").arg(packageName->text(), iconName));
         packageName->setIcon(QIcon(iconDir));
         auto title = packageInfo.value(QStringLiteral("title"));
         shortDescription->setText(title);
@@ -130,7 +129,7 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
         ui->additionalDetails->removeRow(i);
     }
     QString packageName = ui->packageTable->item(pItem->row(), 0)->text();
-    auto packageInfo{mpHost->mLuaInterpreter.getPackageInfo(packageName)};
+    auto packageInfo{mpHost->mPackageInfo.value(packageName)};
     if (packageInfo.isEmpty()) {
         ui->packageDescription->clear();
         return;

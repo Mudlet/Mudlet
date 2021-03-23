@@ -111,9 +111,6 @@ public:
     QString getLuaString(const QString& stringName);
     int check_for_mappingscript();
     int check_for_custom_speedwalk();
-    void fillPackageInfo(const QString& packageName, bool isModule, lua_State* packageLua);
-    void removePackageInfo(const QString& packageName, bool isModule);
-    QMap<QString, QString> getPackageInfo(const QString& packageName, bool isModule = false);
     void set_lua_integer(const QString& varName, int varValue);
     void set_lua_string(const QString& varName, const QString& varValue);
     void set_lua_table(const QString& tableName, QStringList& variableList);
@@ -637,7 +634,6 @@ private:
     void setMatches(lua_State* L);
     static std::pair<bool, QString> discordApiEnabled(lua_State* L, bool writeAccess = false);
     void setupLanguageData();
-    void loadPackageInfos();
     QString readScriptFile(const QString& path) const;
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
     static int performHttpRequest(lua_State *L, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb);
