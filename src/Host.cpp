@@ -509,13 +509,15 @@ void Host::saveModules(int sync, bool backup)
 
         if (backup) {
             QString time = QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss");
-            savePathDir.rename(filename_xml, savePath + moduleName + time); //move the old file, use the key (module name) as the file
+            QFile::copy(filename_xml, savePath + moduleName + time);
         }
-
-        auto writer = new XMLexport(this);
-        writers.insert(filename_xml, writer);
-        writer->writeModuleXML(moduleName, filename_xml);
-
+        if (filename_xml.endsWith(QStringLiteral("xml"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("trigger"), Qt::CaseInsensitive)) {
+            auto writer = new XMLexport(this);
+            writers.insert(filename_xml, writer);
+            writer->writeModuleXML(moduleName, filename_xml);
+        } else {
+            updateModuleZips();
+        }
         if (entry[1].toInt()) {
             mModulesToSync << moduleName;
         }
@@ -564,7 +566,7 @@ void Host::slot_reloadModules()
     QObject::disconnect(this, &Host::profileSaveFinished, this, &Host::slot_reloadModules);
 }
 
-void Host::updateModuleZips() const
+void Host::updateModuleZips()
 {
     QMapIterator<QString, QStringList> it(modulesToWrite);
     while (it.hasNext()) {
@@ -576,22 +578,32 @@ void Host::updateModuleZips() const
         QString zipName;
         zip* zipFile = nullptr;
         if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
+            zipName = filename_xml;
             QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
             filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
             int err;
-            zipFile = zip_open(entry[0].toStdString().c_str(), ZIP_CREATE, &err);
-            zipName = filename_xml;
+            zipFile = zip_open(zipName.toStdString().c_str(), ZIP_CREATE, &err);
             QDir packageDir = QDir(packagePathName);
             if (!packageDir.exists()) {
                 packageDir.mkpath(packagePathName);
             }
 
+            auto writer = new XMLexport(this);
+            writers.insert(filename_xml, writer);
+            writer->writeModuleXML(moduleName, filename_xml);
+
             struct zip_source* s = zip_source_file(zipFile, filename_xml.toStdString().c_str(), 0, 0);
-            err = zip_add(zipFile, QString(moduleName + ".xml").toStdString().c_str(), s);
-            //FIXME: error checking
+            err = zip_file_add(zipFile, QString(moduleName + ".xml").toStdString().c_str(), s, ZIP_FL_ENC_UTF_8|ZIP_FL_OVERWRITE);
+
             if (zipFile) {
                 err = zip_close(zipFile);
-                //FIXME: error checking
+            }
+
+            if (mudlet::debugMode && err == -1) {
+                TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to save \"%1\" to module \"%2\". Error message was: \"%3\".",
+                                                                 // Intentional comment to separate arguments
+                                                                 "This error message will appear when a module is saved as package but cannot be done for some reason.")
+                                                                      .arg(moduleName, zipName, zip_strerror(zipFile));
             }
         }
     }
