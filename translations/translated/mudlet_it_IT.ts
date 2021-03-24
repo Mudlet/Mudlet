@@ -5640,7 +5640,7 @@ Utilizzi</translation>
       <location filename="../src/ui/dlgPackageExporter.ui" line="235"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="258"/>
       <source>optional</source>
-      <translation type="unfinished"/>
+      <translation>opzionale</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="144"/>
@@ -5665,7 +5665,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="248"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>Versione</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="271"/>
