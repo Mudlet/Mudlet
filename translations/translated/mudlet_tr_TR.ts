@@ -5427,7 +5427,7 @@ Count</source>
       <location filename="../src/ui/dlgPackageExporter.ui" line="235"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="258"/>
       <source>optional</source>
-      <translation type="unfinished"/>
+      <translation>isteğe Bağlı</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="144"/>
