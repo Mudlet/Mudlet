@@ -5579,12 +5579,12 @@ Nutzungen</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="28"/>
       <source>Package name here</source>
-      <translation type="unfinished"/>
+      <translation>Paketname hier</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="35"/>
       <source>or</source>
-      <translation type="unfinished"/>
+      <translation>oder</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="54"/>
