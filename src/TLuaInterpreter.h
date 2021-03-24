@@ -591,6 +591,8 @@ public:
     static int unzipAsync(lua_State* L);
     static int setMapWindowTitle(lua_State*);
     static int getMudletInfo(lua_State*);
+    static int setupMapSymbolFont(lua_State*);
+    static int mapSymbolFontInfo(lua_State*);
     static int getMapBackgroundColor(lua_State*);
     static int setMapBackgroundColor(lua_State*);
     static int getMapRoomExitsColor(lua_State*);

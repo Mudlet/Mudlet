@@ -68,6 +68,7 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mMaxVersion(20)
 // minimum version this instance of Mudlet will allow the user to save maps in
 , mMinVersion(17)
+// If this is changed then adjust TLuaInterpreter::setupMapSymbolFont(...) to have same:
 , mMapSymbolFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal))
 {
     mSaveVersion = mDefaultVersion; // Can not be set initialiser list because of ordering issues (?)
