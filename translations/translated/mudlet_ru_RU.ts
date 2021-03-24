@@ -5673,37 +5673,37 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="274"/>
       <source>Required packages</source>
-      <translation type="unfinished"/>
+      <translation>Требуемые пакеты</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="286"/>
       <source>Include assets (images, sounds, fonts)</source>
-      <translation type="unfinished"/>
+      <translation>Добавить ресурсы (изображения, звуки, шрифты)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="302"/>
       <source>Drag and drop files and folders, or use the browse button below</source>
-      <translation type="unfinished"/>
+      <translation>Перетащите файлы и папки, или используйте кнопку "Обзор" ниже</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="340"/>
       <source>Select files to include in package</source>
-      <translation type="unfinished"/>
+      <translation>Выберите файлы для включения в пакет</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="397"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="410"/>
       <source>Does this package make use of other packages? List them here as requirements. Press &apos;Delete&apos; to remove a package</source>
-      <translation type="unfinished"/>
+      <translation>Использует ли этот пакет другие пакеты? Перечислите их здесь в качестве требований. Нажмите &apos;Удалить&apos; для удаления пакета</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="438"/>
       <source>Select export location</source>
-      <translation type="unfinished"/>
+      <translation>Куда записать результат</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="61"/>
@@ -5744,12 +5744,12 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="105"/>
       <source>update installed package</source>
-      <translation type="unfinished"/>
+      <translation>обновить установленный пакет</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="106"/>
       <source>add dependencies</source>
-      <translation type="unfinished"/>
+      <translation>добавить зависимости</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="151"/>
@@ -5766,27 +5766,27 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="300"/>
       <source>Export to %1</source>
-      <translation type="unfinished"/>
+      <translation>Экспорт в %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="304"/>
       <source>Export to %1/%2.mpackage</source>
-      <translation type="unfinished"/>
+      <translation>Экспорт в %1/%2.mpackage</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="319"/>
       <source>Open Icon</source>
-      <translation type="unfinished"/>
+      <translation>Открыть иконку</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="319"/>
       <source>Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</source>
-      <translation type="unfinished"/>
+      <translation>Файлы изображений (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="429"/>
       <source>Please enter the package name.</source>
-      <translation type="unfinished"/>
+      <translation>Пожалуйста, введите имя пакета.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="514"/>
@@ -5836,7 +5836,12 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="1256"/>
       <source>Select what to export (%1 items)</source>
       <comment>Package exporter selection</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Выберите, что экспортировать (%1 элемент)</numerusform>
+        <numerusform>Выберите, что экспортировать (%1 элементов)</numerusform>
+        <numerusform>Выберите, что экспортировать (%1 элементов)</numerusform>
+        <numerusform>Выберите, что экспортировать (%1 элементов)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="920"/>
