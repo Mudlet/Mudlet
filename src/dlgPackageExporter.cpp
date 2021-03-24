@@ -259,7 +259,9 @@ void dlgPackageExporter::slot_packageChanged(int index)
     if (!icon.isEmpty()) {
         mPackageIconPath = QStringLiteral("%1/%2/.mudlet/Icon/%3").arg(packagePath, packageName, icon);
     }
-    ui->Icon->setStyleSheet(QStringLiteral("QWidget { border-image: url(%1); }").arg(mPackageIconPath));
+    QIcon myIcon(mPackageIconPath);
+    ui->Icon->clear();
+    ui->Icon->setPixmap(myIcon.pixmap(ui->Icon->size()));
     ui->lineEdit_title->setText(packageInfo.value(QStringLiteral("title")));
     mPlainDescription = packageInfo.value(QStringLiteral("description"));
     QString description{mPlainDescription};
@@ -321,7 +323,9 @@ void dlgPackageExporter::slot_import_icon()
         return;
     }
     mPackageIconPath = fileName;
-    ui->Icon->setStyleSheet(QStringLiteral("QWidget { border-image: url(%1); }").arg(fileName));
+    QIcon myIcon(mPackageIconPath);
+    ui->Icon->clear();
+    ui->Icon->setPixmap(myIcon.pixmap(ui->Icon->size()));
 }
 
 bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)

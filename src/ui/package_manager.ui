@@ -36,8 +36,8 @@
         </property>
         <property name="iconSize">
          <size>
-          <width>40</width>
-          <height>40</height>
+          <width>48</width>
+          <height>48</height>
          </size>
         </property>
         <property name="textElideMode">
