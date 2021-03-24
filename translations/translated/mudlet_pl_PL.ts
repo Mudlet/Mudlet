@@ -5575,7 +5575,7 @@ Count</source>
       <location filename="../src/ui/dlgPackageExporter.ui" line="235"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="258"/>
       <source>optional</source>
-      <translation type="unfinished"/>
+      <translation>opcjonalne</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="144"/>
@@ -5600,7 +5600,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="248"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>Wersja</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="271"/>
