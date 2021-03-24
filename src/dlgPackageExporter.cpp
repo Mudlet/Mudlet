@@ -54,7 +54,6 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
 {
     ui->setupUi(this);
     ui->input->hide();
-    ui->Icon->hide();
 
     mpExportSelection = ui->treeWidget_exportSelection;
     mpSelectionText = ui->groupBox_exportSelection;
@@ -259,13 +258,8 @@ void dlgPackageExporter::slot_packageChanged(int index)
     QString icon{packageInfo.value(QStringLiteral("icon"))};
     if (!icon.isEmpty()) {
         mPackageIconPath = QStringLiteral("%1/%2/.mudlet/Icon/%3").arg(packagePath, packageName, icon);
-        ui->Icon->show();
-    } else {
-        ui->Icon->hide();
     }
-    QIcon myIcon(mPackageIconPath);
-    ui->Icon->clear();
-    ui->Icon->setPixmap(myIcon.pixmap(ui->Icon->size()));
+    ui->Icon->setStyleSheet(QStringLiteral("QWidget { border-image: url(%1); }").arg(mPackageIconPath));
     ui->lineEdit_title->setText(packageInfo.value(QStringLiteral("title")));
     mPlainDescription = packageInfo.value(QStringLiteral("description"));
     QString description{mPlainDescription};
@@ -327,10 +321,7 @@ void dlgPackageExporter::slot_import_icon()
         return;
     }
     mPackageIconPath = fileName;
-    QIcon myIcon(mPackageIconPath);
-    ui->Icon->clear();
-    ui->Icon->setPixmap(myIcon.pixmap(ui->Icon->size()));
-    ui->Icon->show();
+    ui->Icon->setStyleSheet(QStringLiteral("QWidget { border-image: url(%1); }").arg(fileName));
 }
 
 bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
@@ -456,6 +447,19 @@ void dlgPackageExporter::slot_export_package()
     QString tempPath = StagingDirName;
     tempPath.append("/");
 
+    //prevent duplicate of copying the Icon file as that will fail
+    bool noIconDir = ui->listWidget_addedFiles->findItems(QStringLiteral("/%1/.mudlet/Icon").arg(mPackageName), Qt::MatchEndsWith).isEmpty();
+    QFileInfo iconFile(mPackageIconPath);
+    if (noIconDir && iconFile.exists()) {
+        QString iconDirName = QStringLiteral("%1.mudlet/Icon/").arg(tempPath);
+        QDir iconDir = QDir(iconDirName);
+        if (!iconDir.exists()) {
+            iconDir.mkpath(iconDirName);
+        }
+        iconDirName.append(iconFile.fileName());
+        QFile::copy(mPackageIconPath, iconDirName);
+    }
+
     for (int i = 0; i < ui->listWidget_addedFiles->count(); ++i) {
         QListWidgetItem* item = ui->listWidget_addedFiles->item(i);
         QFileInfo itemFile(item->text());
@@ -472,17 +476,6 @@ void dlgPackageExporter::slot_export_package()
         if (itemFile.isDir()) {
             copy_directory(itemFile.absoluteFilePath(), filePath, true);
         }
-    }
-
-    QFileInfo iconFile(mPackageIconPath);
-    if (iconFile.exists()) {
-        QString iconDirName = QStringLiteral("%1.mudlet/Icon/").arg(tempPath);
-        QDir iconDir = QDir(iconDirName);
-        if (!iconDir.exists()) {
-            iconDir.mkpath(iconDirName);
-        }
-        iconDirName.append(iconFile.fileName());
-        QFile::copy(mPackageIconPath, iconDirName);
     }
 
     mXmlPathFileName = QStringLiteral("%1/%2.xml").arg(StagingDirName, mPackageName);
