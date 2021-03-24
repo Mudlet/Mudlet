@@ -2885,8 +2885,10 @@ local function update_version()
     downloading = false
     local path = profilePath .. "/map downloads/generic_mapper.xml"
     disableAlias("Map Update Alias")
+    map.updatingMapper = true
     uninstallPackage("generic_mapper")
     installPackage(path)
+    map.updatingMapper = nil
     map.echo("Generic Mapping Script updated successfully.")
 end
 
@@ -3007,24 +3009,31 @@ function map.eventHandler(event, ...)
         map.echo("Mapping and speedwalking stopped.")
     elseif event == "sysManualLocationSetEvent" then
       set_room(arg[1])
+    elseif event == "sysUninstallPackage" and not map.updatingMapper and arg[1] == "generic_mapper" then
+        for _,id in ipairs(map.registeredEvents) do
+            killAnonymousEventHandler(id)
+        end
     end
 end
-
-registerAnonymousEventHandler("sysDownloadDone", "map.eventHandler")
-registerAnonymousEventHandler("sysLoadEvent", "map.eventHandler")
-registerAnonymousEventHandler("sysConnectionEvent", "map.eventHandler")
-registerAnonymousEventHandler("sysInstall", "map.eventHandler")
-registerAnonymousEventHandler("sysDataSendRequest", "map.eventHandler")
-registerAnonymousEventHandler("onMoveFail", "map.eventHandler")
-registerAnonymousEventHandler("onVisionFail", "map.eventHandler")
-registerAnonymousEventHandler("onRandomMove", "map.eventHandler")
-registerAnonymousEventHandler("onForcedMove", "map.eventHandler")
-registerAnonymousEventHandler("onNewRoom", "map.eventHandler")
-registerAnonymousEventHandler("onNewLine", "map.eventHandler")
-registerAnonymousEventHandler("mapOpenEvent", "map.eventHandler")
-registerAnonymousEventHandler("mapStop", "map.eventHandler")
-registerAnonymousEventHandler("onPrompt", "map.eventHandler")
-registerAnonymousEventHandler("sysManualLocationSetEvent", "map.eventHandler")
+				
+map.registeredEvents = {
+registerAnonymousEventHandler("sysDownloadDone", "map.eventHandler"),
+registerAnonymousEventHandler("sysLoadEvent", "map.eventHandler"),
+registerAnonymousEventHandler("sysConnectionEvent", "map.eventHandler"),
+registerAnonymousEventHandler("sysInstall", "map.eventHandler"),
+registerAnonymousEventHandler("sysDataSendRequest", "map.eventHandler"),
+registerAnonymousEventHandler("onMoveFail", "map.eventHandler"),
+registerAnonymousEventHandler("onVisionFail", "map.eventHandler"),
+registerAnonymousEventHandler("onRandomMove", "map.eventHandler"),
+registerAnonymousEventHandler("onForcedMove", "map.eventHandler"),
+registerAnonymousEventHandler("onNewRoom", "map.eventHandler"),
+registerAnonymousEventHandler("onNewLine", "map.eventHandler"),
+registerAnonymousEventHandler("mapOpenEvent", "map.eventHandler"),
+registerAnonymousEventHandler("mapStop", "map.eventHandler"),
+registerAnonymousEventHandler("onPrompt", "map.eventHandler"),
+registerAnonymousEventHandler("sysManualLocationSetEvent", "map.eventHandler"),
+registerAnonymousEventHandler("sysUninstallPackage", "map.eventHandler")
+}
 </script>
 			<eventHandlerList />
 		</Script>
