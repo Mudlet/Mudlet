@@ -630,12 +630,14 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="1253"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>您還沒有地圖 - 加載一個地圖，或從頭開始創建地圖。</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="1252"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>您已載入地圖（共 %n 個房間），但 Mudlet 不知道您現在的位置。</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2244"/>
@@ -5533,7 +5535,7 @@ Count</source>
       <location filename="../src/ui/dlgPackageExporter.ui" line="235"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="258"/>
       <source>optional</source>
-      <translation type="unfinished"/>
+      <translation>可选项</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="144"/>
@@ -5558,7 +5560,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="248"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>版本</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="271"/>
