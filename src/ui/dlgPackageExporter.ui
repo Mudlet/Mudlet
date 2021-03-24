@@ -109,7 +109,7 @@
          <item row="0" column="0">
           <widget class="QLabel" name="label_4">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+            <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -141,7 +141,7 @@
          <item row="1" column="0">
           <widget class="QLabel" name="label_6">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
+            <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -159,7 +159,7 @@
            <item>
             <widget class="QPushButton" name="pushButton_addIcon">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
@@ -193,7 +193,7 @@
          <item row="2" column="0">
           <widget class="QLabel" name="label_7">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+            <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -208,6 +208,12 @@
          </item>
          <item row="2" column="1">
           <widget class="QLineEdit" name="lineEdit_title">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="maxLength">
             <number>140</number>
            </property>
@@ -219,7 +225,7 @@
          <item row="3" column="0">
           <widget class="QLabel" name="label_5">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+            <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -234,6 +240,12 @@
          </item>
          <item row="3" column="1">
           <widget class="QTextEdit" name="textEdit_description">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="tabChangesFocus">
             <bool>true</bool>
            </property>
@@ -244,6 +256,12 @@
          </item>
          <item row="4" column="1">
           <widget class="QLineEdit" name="lineEdit_version">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="placeholderText">
             <string>optional</string>
            </property>
@@ -252,7 +270,7 @@
          <item row="7" column="0">
           <widget class="QLabel" name="label_9">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
+            <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -385,7 +403,7 @@
            <item>
             <widget class="QComboBox" name="comboBox_dependencies">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
@@ -400,7 +418,7 @@
          <item row="4" column="0">
           <widget class="QLabel" name="label_8">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
+            <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
