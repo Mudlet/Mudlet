@@ -109,7 +109,7 @@
          <item row="0" column="0">
           <widget class="QLabel" name="label_4">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -140,6 +140,12 @@
          </item>
          <item row="1" column="0">
           <widget class="QLabel" name="label_6">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="text">
             <string>Icon</string>
            </property>
@@ -186,6 +192,12 @@
          </item>
          <item row="2" column="0">
           <widget class="QLabel" name="label_7">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="text">
             <string>Short description</string>
            </property>
@@ -207,7 +219,7 @@
          <item row="3" column="0">
           <widget class="QLabel" name="label_5">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -230,22 +242,6 @@
            </property>
           </widget>
          </item>
-         <item row="4" column="0">
-          <widget class="QLabel" name="label_8">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Version</string>
-           </property>
-           <property name="buddy">
-            <cstring>lineEdit_version</cstring>
-           </property>
-          </widget>
-         </item>
          <item row="4" column="1">
           <widget class="QLineEdit" name="lineEdit_version">
            <property name="placeholderText">
@@ -253,10 +249,10 @@
            </property>
           </widget>
          </item>
-         <item row="5" column="0">
+         <item row="7" column="0">
           <widget class="QLabel" name="label_9">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
+            <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -272,7 +268,7 @@
            </property>
           </widget>
          </item>
-         <item row="6" column="0" colspan="2">
+         <item row="8" column="0" colspan="2">
           <layout class="QVBoxLayout" name="verticalLayout_4">
            <item>
             <widget class="QLabel" name="label_assets">
@@ -352,7 +348,7 @@
            </item>
           </layout>
          </item>
-         <item row="5" column="1">
+         <item row="7" column="1">
           <layout class="QHBoxLayout" name="horizontalLayout_dependencies">
            <item>
             <widget class="QComboBox" name="DependencyList">
@@ -376,16 +372,10 @@
               <bool>true</bool>
              </property>
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>25</width>
-               <height>16777215</height>
-              </size>
              </property>
              <property name="text">
               <string>+</string>
@@ -406,6 +396,22 @@
             </widget>
            </item>
           </layout>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="label_8">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Version</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_version</cstring>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
