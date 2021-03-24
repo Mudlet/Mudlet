@@ -164,27 +164,21 @@
             </widget>
            </item>
            <item>
-            <widget class="QWidget" name="Icon" native="true">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
+            <widget class="QLabel" name="Icon">
              <property name="minimumSize">
               <size>
-               <width>40</width>
-               <height>40</height>
+               <width>48</width>
+               <height>48</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>40</width>
-               <height>40</height>
+               <width>48</width>
+               <height>48</height>
               </size>
+             </property>
+             <property name="text">
+              <string/>
              </property>
             </widget>
            </item>
@@ -472,7 +466,6 @@
  <tabstops>
   <tabstop>pushBotton_openInfos</tabstop>
   <tabstop>lineEdit_author</tabstop>
-  <tabstop>pushButton_addIcon</tabstop>
   <tabstop>lineEdit_title</tabstop>
   <tabstop>textEdit_description</tabstop>
   <tabstop>lineEdit_filePath</tabstop>
