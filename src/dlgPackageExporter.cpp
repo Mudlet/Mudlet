@@ -662,6 +662,23 @@ void dlgPackageExporter::slot_export_package()
         }
     }
 
+    isOk = zipPackage(StagingDirName, isOk);
+
+    if (isOk) {
+        // Success!
+        displayResultMessage(tr("Package \"%1\" exported to: %2")
+                             .arg(mPackageName, QStringLiteral("<a href=\"file:///%1\">%2</a>"))
+                             .arg(getActualPath().toHtmlEscaped(), getActualPath().toHtmlEscaped()), true);
+    } else {
+        // Failed - convert cancel to a close button
+        ui->buttonBox->removeButton(mCancelButton);
+        ui->buttonBox->addButton(QDialogButtonBox::Close);
+        connect(ui->buttonBox->button(QDialogButtonBox::Close), &QAbstractButton::clicked, this, &dlgPackageExporter::close);
+    }
+}
+
+bool dlgPackageExporter::zipPackage(const QString& stagingDirName, bool isOk)
+{
     if (isOk) {
         // zip error code:
         int ze = 0;
@@ -704,7 +721,7 @@ void dlgPackageExporter::slot_export_package()
  */
             qt_ntfs_permission_lookup++;
 #endif // defined(Q_OS_WIN32)
-            QDirIterator itDir(StagingDirName, QDir::NoDotAndDotDot|QDir::AllDirs|QDir::Files, QDirIterator::Subdirectories);
+            QDirIterator itDir(stagingDirName, QDir::NoDotAndDotDot|QDir::AllDirs|QDir::Files, QDirIterator::Subdirectories);
             // relative names to use in archive:
             QStringList directoryEntries;
             // Key is relative name to use in archive
@@ -742,7 +759,7 @@ void dlgPackageExporter::slot_export_package()
                 }
 
                 QString nameInArchive = itDir.filePath();
-                nameInArchive.remove(QStringLiteral("%1/").arg(StagingDirName));
+                nameInArchive.remove(QStringLiteral("%1/").arg(stagingDirName));
 
                 if       (entryInfo.isDir()) {
                     directoryEntries.append(nameInArchive);
@@ -827,7 +844,7 @@ void dlgPackageExporter::slot_export_package()
                                             "This suggests there may be a problem with that directory: "
                                             "\"%2\" - "
                                             "Do you have the necessary permissions and free disk-space?")
-                                            .arg(mXmlPathFileName, QDir(StagingDirName).canonicalPath()), false);
+                                            .arg(mXmlPathFileName, QDir(stagingDirName).canonicalPath()), false);
                     isOk = false;
                 }
             }
@@ -861,18 +878,7 @@ void dlgPackageExporter::slot_export_package()
             }
         }
     }
-
-    if (isOk) {
-        // Success!
-        displayResultMessage(tr("Package \"%1\" exported to: %2")
-                             .arg(mPackageName, QStringLiteral("<a href=\"file:///%1\">%2</a>"))
-                             .arg(getActualPath().toHtmlEscaped(), getActualPath().toHtmlEscaped()), true);
-    } else {
-        // Failed - convert cancel to a close button
-        ui->buttonBox->removeButton(mCancelButton);
-        ui->buttonBox->addButton(QDialogButtonBox::Close);
-        connect(ui->buttonBox->button(QDialogButtonBox::Close), &QAbstractButton::clicked, this, &dlgPackageExporter::close);
-    }
+    return isOk;
 }
 
 void dlgPackageExporter::slot_addFiles()

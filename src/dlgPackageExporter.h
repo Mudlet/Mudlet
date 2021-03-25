@@ -100,6 +100,7 @@ private:
     int countRecursive(QTreeWidgetItem* item, int count) const;
     int countCheckedItems() const;
     QString getActualPath() const;
+    bool zipPackage(const QString& stagingDirName, bool isOk);
 
     Ui::dlgPackageExporter* ui;
     QPointer<Host> mpHost;
