@@ -5653,17 +5653,17 @@ Nutzungen</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="286"/>
       <source>Include assets (images, sounds, fonts)</source>
-      <translation type="unfinished"/>
+      <translation>Medien hinzufügen (Bilder, Töne, Schriftarten)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="302"/>
       <source>Drag and drop files and folders, or use the browse button below</source>
-      <translation type="unfinished"/>
+      <translation>Füge hier Dateien und Ordner per Drag &amp; Drop ein, oder benutze die Schaltfläche unten</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="340"/>
       <source>Select files to include in package</source>
-      <translation type="unfinished"/>
+      <translation>Wähle Dateien, die in das Paket aufgenommen werden sollen</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="397"/>
