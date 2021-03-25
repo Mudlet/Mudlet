@@ -5590,7 +5590,7 @@ Nutzungen</translation>
       <location filename="../src/ui/dlgPackageExporter.ui" line="54"/>
       <location filename="../src/dlgPackageExporter.cpp" line="1254"/>
       <source>Select what to export</source>
-      <translation type="unfinished"/>
+      <translation>Wähle, was exportiert wird</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="64"/>
@@ -5600,12 +5600,12 @@ Nutzungen</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="93"/>
       <source>(optional) add icon, description, and more</source>
-      <translation type="unfinished"/>
+      <translation>(optional) Symbol, Beschreibung, usw. ergänzen</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="118"/>
       <source>Author</source>
-      <translation type="unfinished"/>
+      <translation>Autor</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="137"/>
@@ -5618,22 +5618,22 @@ Nutzungen</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="144"/>
       <source>Icon</source>
-      <translation type="unfinished"/>
+      <translation>Symbol</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="162"/>
       <source>Add icon</source>
-      <translation type="unfinished"/>
+      <translation>Symbol hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="196"/>
       <source>Short description</source>
-      <translation type="unfinished"/>
+      <translation>Kurze Beschreibung</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="222"/>
       <source>Description</source>
-      <translation type="unfinished"/>
+      <translation>Beschreibung</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="248"/>
@@ -5643,12 +5643,12 @@ Nutzungen</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="271"/>
       <source>Does this package make use of other packages? List them here as requirements</source>
-      <translation type="unfinished"/>
+      <translation>Verwendet dieses Paket andere Pakete? Liste sie hier als Voraussetzung auf</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="274"/>
       <source>Required packages</source>
-      <translation type="unfinished"/>
+      <translation>Benötigte Pakete</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="286"/>
