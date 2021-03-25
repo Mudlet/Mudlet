@@ -93,14 +93,14 @@ protected:
     bool eventFilter(QObject* obj, QEvent* evt) override;
 
 private:
-    bool writeFileToZip(const QString&, const QString&, zip*);
     static void appendToConfigFile(QString&, const QString&, const QString&);
     void displayResultMessage(const QString&, const bool isSuccessMessage = true);
     void uncheckAllChildren();
     int countRecursive(QTreeWidgetItem* item, int count) const;
     int countCheckedItems() const;
     QString getActualPath() const;
-    bool zipPackage(const QString& stagingDirName, bool isOk);
+    static bool writeFileToZip(const QString&, const QString&, zip*);
+    static std::pair<bool, QString> zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig, bool isOk);
 
     Ui::dlgPackageExporter* ui;
     QPointer<Host> mpHost;
