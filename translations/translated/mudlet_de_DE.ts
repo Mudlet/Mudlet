@@ -5751,17 +5751,17 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="319"/>
       <source>Open Icon</source>
-      <translation type="unfinished"/>
+      <translation>Symbol öffnen</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="319"/>
       <source>Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</source>
-      <translation type="unfinished"/>
+      <translation>Bilddateien (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="429"/>
       <source>Please enter the package name.</source>
-      <translation type="unfinished"/>
+      <translation>Bitte einen Paketnamen eingeben.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="514"/>
