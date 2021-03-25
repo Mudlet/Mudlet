@@ -5724,7 +5724,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="106"/>
       <source>add dependencies</source>
-      <translation type="unfinished"/>
+      <translation>wähle Abhängigkeit</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="151"/>
@@ -5741,7 +5741,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="300"/>
       <source>Export to %1</source>
-      <translation type="unfinished"/>
+      <translation>Exportiere nach %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="304"/>
