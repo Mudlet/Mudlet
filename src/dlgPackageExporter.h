@@ -100,7 +100,7 @@ private:
     int countCheckedItems() const;
     QString getActualPath() const;
     static bool writeFileToZip(const QString&, const QString&, zip*);
-    static std::pair<bool, QString> zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig, bool isOk);
+    static std::pair<bool, QString> zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig);
 
     Ui::dlgPackageExporter* ui;
     QPointer<Host> mpHost;
