@@ -5673,12 +5673,12 @@ Nutzungen</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="410"/>
       <source>Does this package make use of other packages? List them here as requirements. Press &apos;Delete&apos; to remove a package</source>
-      <translation type="unfinished"/>
+      <translation>Verwendet dieses Paket andere Pakete? Liste sie hier als Voraussetzung auf. Drücke &apos;Löschen&apos;, um ein Paket zu entfernen</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="438"/>
       <source>Select export location</source>
-      <translation type="unfinished"/>
+      <translation>Wähle das Ziel des Exports</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="61"/>
@@ -5719,7 +5719,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="105"/>
       <source>update installed package</source>
-      <translation type="unfinished"/>
+      <translation>aktualisiere ein installiertes Paket</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="106"/>
