@@ -5606,18 +5606,18 @@ Utilizzi</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="28"/>
       <source>Package name here</source>
-      <translation type="unfinished"/>
+      <translation>Nome package</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="35"/>
       <source>or</source>
-      <translation type="unfinished"/>
+      <translation>oppure</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="54"/>
       <location filename="../src/dlgPackageExporter.cpp" line="1254"/>
       <source>Select what to export</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona cosa esportare</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="64"/>
@@ -5627,12 +5627,12 @@ Utilizzi</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="93"/>
       <source>(optional) add icon, description, and more</source>
-      <translation type="unfinished"/>
+      <translation>(opzionale) aggiungi icona, descrizione e altro</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="118"/>
       <source>Author</source>
-      <translation type="unfinished"/>
+      <translation>Autore</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="137"/>
@@ -5645,22 +5645,22 @@ Utilizzi</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="144"/>
       <source>Icon</source>
-      <translation type="unfinished"/>
+      <translation>Icona</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="162"/>
       <source>Add icon</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi Icona</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="196"/>
       <source>Short description</source>
-      <translation type="unfinished"/>
+      <translation>Descrizione breve</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="222"/>
       <source>Description</source>
-      <translation type="unfinished"/>
+      <translation>Descrizione</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="248"/>
@@ -5670,42 +5670,42 @@ Utilizzi</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="271"/>
       <source>Does this package make use of other packages? List them here as requirements</source>
-      <translation type="unfinished"/>
+      <translation>Questo package fa uso di altri package? Impostali come requisiti</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="274"/>
       <source>Required packages</source>
-      <translation type="unfinished"/>
+      <translation>Package richiesti</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="286"/>
       <source>Include assets (images, sounds, fonts)</source>
-      <translation type="unfinished"/>
+      <translation>Includi risorse (immagini, suoni, font)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="302"/>
       <source>Drag and drop files and folders, or use the browse button below</source>
-      <translation type="unfinished"/>
+      <translation>Trascina file e cartelle oppure utilizza il pulsante sfoglia</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="340"/>
       <source>Select files to include in package</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona i file da includere nel package</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="397"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="410"/>
       <source>Does this package make use of other packages? List them here as requirements. Press &apos;Delete&apos; to remove a package</source>
-      <translation type="unfinished"/>
+      <translation>Questo package fa uso di altri package? Elencali qui come requisiti. Premi &apos;Elimina&apos; per rimuovere un package</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="438"/>
       <source>Select export location</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona cartella di esportazione</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="61"/>
@@ -5746,12 +5746,12 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="105"/>
       <source>update installed package</source>
-      <translation type="unfinished"/>
+      <translation>aggiorna package installato</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="106"/>
       <source>add dependencies</source>
-      <translation type="unfinished"/>
+      <translation>aggiungi dipendenze</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="151"/>
@@ -5768,27 +5768,27 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="300"/>
       <source>Export to %1</source>
-      <translation type="unfinished"/>
+      <translation>Esporta in %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="304"/>
       <source>Export to %1/%2.mpackage</source>
-      <translation type="unfinished"/>
+      <translation>Esporta in %1/%2.mpackage</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="319"/>
       <source>Open Icon</source>
-      <translation type="unfinished"/>
+      <translation>Apri Icona</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="319"/>
       <source>Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</source>
-      <translation type="unfinished"/>
+      <translation>File immagine (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="429"/>
       <source>Please enter the package name.</source>
-      <translation type="unfinished"/>
+      <translation>Inserisci il nome del package.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="514"/>
