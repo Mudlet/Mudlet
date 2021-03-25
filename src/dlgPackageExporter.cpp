@@ -665,13 +665,10 @@ void dlgPackageExporter::slot_export_package()
     if (isOk) {
         // zip error code:
         int ze = 0;
-/*
-* Relevant options:
-* * ZIP_CREATE creates the archive if it does not exist.
-* * ZIP_TRUNCATE zaps any contents in a previously existing file.
-*/
-        // The pre-libzip 0.11 with the now obsolete zip_add() lacked the option
-        // of the later zip_file_add() which DOES have an overwrite option:
+
+
+        // ZIP_CREATE creates the archive if it does not exist.
+        // ZIP_TRUNCATE zaps any contents in a previously existing file.
         zip* archive = zip_open(mPackagePathFileName.toUtf8().constData(), ZIP_CREATE|ZIP_TRUNCATE, &ze);
 
         if (!archive) {
@@ -694,14 +691,6 @@ void dlgPackageExporter::slot_export_package()
 
         } else {
             // Opened/created archive file successfully
-/*
- * Previous code here failed if the user included sub-directories in the
- * temporary directory where the contents for the package/module was assembled -
- * as sub-directories are now correctly handled by the installer code we have
- * revised the code here to also work should the user use them. NB This is
- * typically the case where they have collections of images or sound files
- * which they wish to store in a heirarchical manner...! - Slysven
- */
 #if defined(Q_OS_WIN32)
 /*
  * From Qt Docs:
