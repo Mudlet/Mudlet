@@ -306,12 +306,14 @@ void dlgPackageExporter::slot_packageChanged(int index)
 void dlgPackageExporter::slot_updateLocationPlaceholder()
 {
     const auto packageName = ui->lineEdit_packageName->text();
+    QString path;
     if (packageName.isEmpty()) {
-        ui->lineEdit_filePath->setPlaceholderText(tr("Export to %1").arg(getActualPath()));
-        return;
+        path = tr("Export to %1").arg(getActualPath());
+    } else {
+        path = tr("Export to %1").arg(QStringLiteral("%1/%2.mpackage").arg(getActualPath(), packageName));
     }
 
-    ui->lineEdit_filePath->setPlaceholderText(tr("Export to %1/%2.mpackage").arg(getActualPath(), packageName));
+    ui->lineEdit_filePath->setPlaceholderText(path);
 }
 
 void dlgPackageExporter::slot_enableExportButton(const QString& text)
