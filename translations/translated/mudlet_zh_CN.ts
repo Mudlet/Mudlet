@@ -32,12 +32,14 @@
     <message>
       <location filename="../src/glwidget.cpp" line="286"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>您还没有地图 - 你可以加载一个现有地图，或新建一个地图。</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="285"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>你已加载地图（%n 房间），但 Mudlet 不知道你当前在哪个房间。</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -45,7 +47,7 @@
     <message>
       <location filename="../src/Host.cpp" line="460"/>
       <source>Text to send to the game</source>
-      <translation type="unfinished"/>
+      <translation>要发送到游戏的文本</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="853"/>
@@ -117,7 +119,7 @@ please wait...</source>
       <location filename="../src/KeyUnit.cpp" line="333"/>
       <source>%1undefined key (code: 0x%2)</source>
       <comment>%1 is a string describing the modifier keys (e.g. &quot;shift&quot; or &quot;control&quot;) used with the key, whose &apos;code&apos; number, in %2 is not one that we have a name for. This is probably one of those extra keys around the edge of the keyboard that some people have.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 未定义的键（代码：0x%2)</translation>
     </message>
   </context>
   <context>
@@ -636,12 +638,14 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="1253"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>您还没有地图 - 你可以加载一个现有地图，或新建一个地图。</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="1252"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>你已加载地图（%n 房间），但 Mudlet 不知道你当前在哪个房间。</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2244"/>
@@ -971,13 +975,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2886"/>
       <source>Switch to editing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>切换到编辑模式</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2887"/>
       <source>Switch to viewing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>切换到视图模式</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2897"/>
