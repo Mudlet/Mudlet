@@ -1360,12 +1360,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="884"/>
       <source>Replay recording has started. File: %1</source>
-      <translation type="unfinished"/>
+      <translation>回放录制已经开始。文件: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="887"/>
       <source>Replay recording has been stopped. File: %1</source>
-      <translation type="unfinished"/>
+      <translation>回放录制已停止。文件: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1866"/>
@@ -1584,13 +1584,13 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1100"/>
       <source>N:%1 S:%2</source>
       <comment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</comment>
-      <translation type="unfinished"/>
+      <translation>N:%1 S:%2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1107"/>
       <source>&lt;no GA&gt; S:%1</source>
       <comment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;no GA&gt; S:%1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1204"/>
@@ -1999,32 +1999,35 @@ and there is enough space. The download operation has failed.</source>
       <location filename="../src/TMap.cpp" line="3141"/>
       <source>Exporting JSON map data from %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>从 %1 中导出 JSON 地图数据
+%3的 区域： %2    %5 的房间：%4    %7的标签： %6...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2685"/>
       <source>Map JSON export</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>地图 JSON 导出</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2820"/>
       <source>Exporting JSON map file from %1 - writing data to file:
 %2 ...</source>
-      <translation type="unfinished"/>
+      <translation>正在从 %1 导出JSON 地图文件 - 将数据写入文件：
+%2...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2907"/>
       <source>Map JSON import</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>地图 JSON 导入</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2892"/>
       <location filename="../src/TMap.cpp" line="3151"/>
       <source>Importing JSON map data to %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>从 %1 中导入 JSON 地图数据
+%3的 区域： %2    %5 的房间：%4    %7的标签： %6...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2306"/>
@@ -2452,7 +2455,7 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="504"/>
       <source>Area with ID %1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>已存在ID为%1的区域！</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="523"/>
@@ -3676,7 +3679,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
       <location filename="../src/ui/actions_main_area.ui" line="269"/>
       <location filename="../src/ui/actions_main_area.ui" line="289"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>发送到游戏的文本 (可选)</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="286"/>
@@ -3749,7 +3752,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="174"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>发送到游戏的文本 (可选)</translation>
     </message>
   </context>
   <context>
@@ -3847,7 +3850,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="516"/>
       <source>hh:mm:ss.zzz</source>
       <comment>This is the format to be used to show the profile connection time, it follows the rules of the &quot;QDateTime::toString(...)&quot; function and may need modification for some locales, e.g. France, Spain.</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss.zzz</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="547"/>
@@ -4733,7 +4736,12 @@ Count</source>
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#7289DA;&quot;&gt;&lt;b&gt;Discord&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://www.mudlet.org/chat&quot;&gt;discord.gg&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Source code&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet&quot;&gt;github.com/Mudlet/Mudlet&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Features/bugs&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;github.com/Mudlet/Mudlet/issues&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Homepage&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://www.mudlet.org/&quot;&gt;www.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Forums&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://forums.mudlet.org/&quot;&gt;forums.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Documentation&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://wiki.mudlet.org/w/Main_Page&quot;&gt;wiki.mudlet.org/w/Main_Page&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#7289DA;&quot;&gt;&lt;b&gt;Discord&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://www.mudlet.org/chat&quot;&gt;discord.gg&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Source code&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet&quot;&gt;github.com/Mudlet/Mudlet&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Features/bugs&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;github.com/Mudlet/Mudlet/issues&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="155"/>
@@ -4993,22 +5001,22 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1068"/>
       <source>Technical information:</source>
-      <translation type="unfinished"/>
+      <translation>技术信息:</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1069"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>版本</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1070"/>
       <source>OS</source>
-      <translation type="unfinished"/>
+      <translation>操作系统</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1071"/>
       <source>CPU</source>
-      <translation type="unfinished"/>
+      <translation>CPU</translation>
     </message>
   </context>
   <context>
@@ -5472,7 +5480,7 @@ Count</source>
       <location filename="../src/dlgMapper.cpp" line="347"/>
       <source>None</source>
       <comment>Don&apos;t show the map overlay, &apos;none&apos; meaning no map overlay styled are enabled</comment>
-      <translation type="unfinished"/>
+      <translation>无</translation>
     </message>
   </context>
   <context>
@@ -5540,18 +5548,18 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="28"/>
       <source>Package name here</source>
-      <translation type="unfinished"/>
+      <translation>包名称</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="35"/>
       <source>or</source>
-      <translation type="unfinished"/>
+      <translation>或</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="54"/>
       <location filename="../src/dlgPackageExporter.cpp" line="1254"/>
       <source>Select what to export</source>
-      <translation type="unfinished"/>
+      <translation>选择要导入的内容：</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="64"/>
@@ -5561,12 +5569,12 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="93"/>
       <source>(optional) add icon, description, and more</source>
-      <translation type="unfinished"/>
+      <translation>(可选) 添加图标，描述等</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="118"/>
       <source>Author</source>
-      <translation type="unfinished"/>
+      <translation>作者</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="137"/>
@@ -5579,32 +5587,32 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="144"/>
       <source>Icon</source>
-      <translation type="unfinished"/>
+      <translation>图标</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="162"/>
       <source>Add icon</source>
-      <translation type="unfinished"/>
+      <translation>添加图标</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="196"/>
       <source>Short description</source>
-      <translation type="unfinished"/>
+      <translation>简短描述</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="222"/>
       <source>Description</source>
-      <translation type="unfinished"/>
+      <translation>描述</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="248"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>版本</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="271"/>
       <source>Does this package make use of other packages? List them here as requirements</source>
-      <translation type="unfinished"/>
+      <translation>此软件包是否依赖其他软件包支持？请在此列出它们作为需求</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="274"/>
@@ -8424,7 +8432,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/mapper.ui" line="427"/>
       <source>3D</source>
-      <translation type="unfinished"/>
+      <translation>3D</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="680"/>
@@ -9716,12 +9724,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="4326"/>
       <source>Hide tray icon</source>
-      <translation type="unfinished"/>
+      <translation>隐藏托盘图标</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4331"/>
       <source>Quit Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>退出 Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="235"/>
@@ -10179,7 +10187,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="1560"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Disabled until a profile is loaded.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;加载 Mudlet 回放。&lt;/p&gt;&lt;p&gt;&lt;i&gt;在加载配置文件之前禁用。&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1596"/>
@@ -10868,7 +10876,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="246"/>
       <source>Auto save on exit</source>
-      <translation type="unfinished"/>
+      <translation>退出时自动保存</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
@@ -11258,12 +11266,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2162"/>
       <source>Show room borders</source>
-      <translation type="unfinished"/>
+      <translation>显示房间边框</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2238"/>
       <source>Room border color:</source>
-      <translation type="unfinished"/>
+      <translation>房间边框颜色:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2558"/>
@@ -12189,17 +12197,17 @@ or LUA script</source>
       <location filename="../src/ui/room_symbol.ui" line="14"/>
       <location filename="../src/ui/room_symbol.ui" line="112"/>
       <source>Room symbol</source>
-      <translation type="unfinished"/>
+      <translation>房间符号</translation>
     </message>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="141"/>
       <source>Color of to use for the room symbol(s)</source>
-      <translation type="unfinished"/>
+      <translation>用于房间符号的颜色</translation>
     </message>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="147"/>
       <source>Symbol color</source>
-      <translation type="unfinished"/>
+      <translation>符号颜色</translation>
     </message>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="154"/>
@@ -12301,7 +12309,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="77"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>发送到游戏的文本 (可选)</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="89"/>
@@ -12394,7 +12402,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="127"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>发送到游戏的文本 (可选)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="201"/>
