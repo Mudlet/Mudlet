@@ -27,6 +27,7 @@
 #include "pre_guard.h"
 #include <QDialog>
 #include <QTableWidget>
+#include <QTextBrowser>
 #include "post_guard.h"
 
 class Host;
@@ -53,6 +54,8 @@ private:
     Ui::package_manager* ui;
     Host* mpHost;
     QTableWidget* mPackageTable;
+    QTableWidget* mDetailsTable;
+    QTextBrowser* mDescription;
     QPushButton* mInstallButton;
     void fillAdditionalDetails(const QMap<QString, QString>&);
 };

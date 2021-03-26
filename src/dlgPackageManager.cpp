@@ -24,6 +24,7 @@
 #include "mudlet.h"
 
 #include <QFileDialog>
+#include <QScrollBar>
 #include <QMessageBox>
 
 
@@ -35,18 +36,23 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     ui->setupUi(this);
     mPackageTable = ui->packageTable;
     mInstallButton = ui->installButton;
+    mDetailsTable = ui->additionalDetails;
+    mDescription = ui->packageDescription;
     resetPackageTable();
     connect(mPackageTable, &QTableWidget::itemClicked, this, &dlgPackageManager::slot_item_clicked);
     connect(mInstallButton, &QAbstractButton::clicked, this, &dlgPackageManager::slot_install_package);
     connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgPackageManager::close);
     connect(mPackageTable, &QTableWidget::currentItemChanged, this, &dlgPackageManager::slot_item_clicked);
     setWindowTitle(tr("Package Manager - %1").arg(mpHost->getName()));
-    ui->additionalDetails->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    ui->additionalDetails->setFocusPolicy(Qt::NoFocus);
-    ui->additionalDetails->setSelectionMode(QAbstractItemView::NoSelection);
+    mDetailsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    mDetailsTable->setFocusPolicy(Qt::NoFocus);
+    mDetailsTable->setSelectionMode(QAbstractItemView::NoSelection);
     mPackageTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     mPackageTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     mPackageTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    mDetailsTable->hide();
+    ui->detailsLabel->hide();
+    mDescription->hide();
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
@@ -108,14 +114,12 @@ void dlgPackageManager::slot_install_package()
     }
 
     mpHost->installPackage(fileName, 0);
-    //resetPackageTable();
 }
 
 void dlgPackageManager::slot_uninstall_package(int index)
 {
     auto package = mPackageTable->item(index, 0);
     mpHost->uninstallPackage(package->text(), 0);
-    //resetPackageTable();
 }
 
 void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
@@ -125,13 +129,16 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
     }
 
     //clear details Table
-    for (int i = ui->additionalDetails->rowCount() - 1; i >= 0; --i) {
-        ui->additionalDetails->removeRow(i);
+    for (int i = mDetailsTable->rowCount() - 1; i >= 0; --i) {
+        mDetailsTable->removeRow(i);
     }
     QString packageName = ui->packageTable->item(pItem->row(), 0)->text();
     auto packageInfo{mpHost->mPackageInfo.value(packageName)};
     if (packageInfo.isEmpty()) {
-        ui->packageDescription->clear();
+        mDescription->clear();
+        mDetailsTable->hide();
+        ui->detailsLabel->hide();
+        mDescription->hide();
         return;
     }
     packageInfo.remove(QStringLiteral("mpackage"));
@@ -139,13 +146,18 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
     packageInfo.remove(QStringLiteral("title"));
 
     QString description = packageInfo.take(QStringLiteral("description"));
-    QString packageDir = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), packageName);
-    description.replace(QLatin1String("$packagePath"), packageDir);
+    if (description.isEmpty()) {
+        mDescription->hide();
+    } else {
+        mDescription->show();
+        QString packageDir = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), packageName);
+        description.replace(QLatin1String("$packagePath"), packageDir);
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
-    ui->packageDescription->setMarkdown(description);
+        mDescription->setMarkdown(description);
 #else
-    ui->packageDescription->setText(description);
+        mDescription->setText(description);
 #endif
+    }
 
     QStringList labelText, details;
     labelText << tr("Author") << tr("Version") << tr("Created") << tr("Dependencies");
@@ -159,38 +171,53 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
         QLabel* info = new QLabel();
         QLabel* value = new QLabel();
         info->setEnabled(false);
-        ui->additionalDetails->insertRow(counter);
-        ui->additionalDetails->setCellWidget(counter, 0, info);
-        ui->additionalDetails->setCellWidget(counter++, 1, value);
+        mDetailsTable->insertRow(counter);
+        mDetailsTable->setCellWidget(counter, 0, info);
+        mDetailsTable->setCellWidget(counter++, 1, value);
         info->setText(labelText.at(i));
+        info->setAlignment(Qt::AlignLeft);
         value->setText(valueText);
         value->setTextInteractionFlags(Qt::TextSelectableByMouse);
-        value->setAlignment(Qt::AlignCenter);
+        value->setAlignment(Qt::AlignLeft);
     }
 
     if (!packageInfo.isEmpty()) {
         fillAdditionalDetails(packageInfo);
     }
-    ui->additionalDetails->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    mDetailsTable->resizeColumnsToContents();
+    mDetailsTable->resizeRowsToContents();
+    mDetailsTable->horizontalHeader()->resizeSection(0, mDetailsTable->horizontalHeader()->sectionSize(0) + 10);
+    if (mDetailsTable->rowCount() == 0) {
+        mDetailsTable->hide();
+        ui->detailsLabel->hide();
+    } else {
+        mDetailsTable->show();
+        ui->detailsLabel->show();
+    }
+    int maxHeight = mDetailsTable->rowCount() * mDetailsTable->rowHeight(0);
+    mDetailsTable->setMaximumHeight(maxHeight);
+    mDetailsTable->verticalScrollBar()->hide();
+    mPackageTable->scrollToItem(pItem);
+    mPackageTable->selectRow(pItem->row());
 }
-
 
 void dlgPackageManager::fillAdditionalDetails(const QMap<QString, QString>& packageInfo)
 {
     QMap<QString, QString>::const_iterator iter = packageInfo.constBegin();
-    int counter = ui->additionalDetails->rowCount();
+    int counter = mDetailsTable->rowCount();
     while (iter != packageInfo.constEnd()) {
         QLabel* info = new QLabel();
         QLabel* value = new QLabel();
         info->setEnabled(false);
-        ui->additionalDetails->insertRow(counter);
-        ui->additionalDetails->setCellWidget(counter, 0, info);
-        ui->additionalDetails->setCellWidget(counter++, 1, value);
+        mDetailsTable->insertRow(counter);
+        mDetailsTable->setCellWidget(counter, 0, info);
+        mDetailsTable->setCellWidget(counter++, 1, value);
         info->setText(iter.key());
+        info->setAlignment(Qt::AlignLeft);
         value->setText(iter.value());
         value->setOpenExternalLinks(true);
         value->setTextInteractionFlags(Qt::TextSelectableByMouse|Qt::LinksAccessibleByMouse);
-        value->setAlignment(Qt::AlignCenter);
+        value->setAlignment(Qt::AlignLeft);
         ++iter;
     }
 }
