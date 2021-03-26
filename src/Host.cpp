@@ -1477,6 +1477,7 @@ void Host::unregisterEventHandler(const QString& name, TScript* pScript)
     }
 }
 
+// If a handler matches the event, the Lua stack will be cleared after this function
 void Host::raiseEvent(const TEvent& pE)
 {
     if (pE.mArgumentList.isEmpty()) {
