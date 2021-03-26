@@ -76,7 +76,7 @@ void dlgPackageManager::resetPackageTable()
         QPushButton* remove_btn = new QPushButton();
         connect(remove_btn, &QPushButton::clicked, [=] { slot_uninstall_package(i); });
         remove_btn->setText(QStringLiteral("  Remove  "));
-        remove_btn->setStyleSheet("text-align: center; margin-top:10%; margin-bottom:10%;");
+        remove_btn->setStyleSheet("text-align: center; margin-top:10%; margin-bottom:10%; margin-left:10%; margin-right:10%;");
         mPackageTable->insertRow(i);
         auto packageName = new QTableWidgetItem();
         auto shortDescription = new QTableWidgetItem();
