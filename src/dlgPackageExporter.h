@@ -120,7 +120,7 @@ private:
     QString mPackageIconPath;
     QString mPackageConfig;
     QString mPlainDescription;
-    static bool mWritingZip;
+    inline static bool mWritingZip;
 
 signals:
     void signal_exportLocationChanged(const QString& location);
