@@ -1,0 +1,13 @@
+services:
+  mudlet: &base-settings
+    image: mudlet:dev
+    build:
+      dockerfile: docker/Dockerfile
+      context: ..
+
+  dev:
+    <<: *base-settings
+    volumes:
+      - ../src:/mudlet/src
+      - ../test:/mudlet/test
+    command: qtcreator src/mudlet.pro

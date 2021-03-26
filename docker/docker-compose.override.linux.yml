@@ -1,0 +1,14 @@
+services:
+  mudlet:
+    environment:
+      - DISPLAY=:1
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    devices:
+      - "/dev/dri"
+
+  dev:
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ../src:/mudlet/src
+      - ../test:/mudlet/test

@@ -24,3 +24,6 @@ cmake-build-debug
 
 #VS Code
 .vscode/*.code-workspace
+
+#Docker
+docker/docker-compose.override.yml
