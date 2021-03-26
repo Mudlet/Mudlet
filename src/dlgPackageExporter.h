@@ -86,7 +86,7 @@ private slots:
     void slot_openPackageLocation();
     void slot_packageChanged(int);
     void slot_updateLocationPlaceholder();
-    void slot_enableExportButton(const QString &text);
+    void slot_enableExportButton(const QString& text);
     void slot_recountItems();
 
 protected:
@@ -120,6 +120,7 @@ private:
     QString mPackageIconPath;
     QString mPackageConfig;
     QString mPlainDescription;
+    static bool mWritingZip;
 
 signals:
     void signal_exportLocationChanged(const QString& location);

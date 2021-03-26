@@ -313,9 +313,11 @@ void dlgPackageExporter::slot_updateLocationPlaceholder()
     ui->lineEdit_filePath->setPlaceholderText(tr("Export to %1/%2.mpackage").arg(getActualPath(), packageName));
 }
 
-void dlgPackageExporter::slot_enableExportButton(const QString &text)
+void dlgPackageExporter::slot_enableExportButton(const QString& text)
 {
-    if (text.isEmpty()) {
+    Q_UNUSED(text);
+
+    if (ui->lineEdit_packageName->text().isEmpty() || mWritingZip) {
         mExportButton->setEnabled(false);
         return;
     }
@@ -668,9 +670,14 @@ void dlgPackageExporter::slot_export_package()
     qDebug() << stagingDirName << mPackagePathFileName << mXmlPathFileName << mPackageName << mPackageConfig << isOk;
 
     if (isOk) {
+        mWritingZip = true;
+        slot_enableExportButton({});
         auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageConfig);
         auto watcher = new QFutureWatcher<std::pair<bool, QString>>;
         QObject::connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, [=]() {
+            mWritingZip = false;
+            slot_enableExportButton({});
+
             if (auto [isOk, errorMsg] = future.result(); !isOk) {
                 qDebug() << "exported NOT OK";
                 // Failed - convert cancel to a close button
