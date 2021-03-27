@@ -732,174 +732,175 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         // the method and set up a means to close the dialogue after the user
         // has seen the error message...
 
-    } else {
-        // Opened/created archive file successfully
+    }
+    
+    // Opened/created archive file successfully
 #if defined(Q_OS_WIN32)
 /*
 * From Qt Docs:
 * Note: On NTFS file systems, ownership and permissions checking is disabled by
 * default for performance reasons. To enable it, include the following line:
 */
-        extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
+    extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
 /*
 * Permission checking is then turned on and off by incrementing and
 * decrementing qt_ntfs_permission_lookup by 1:
 */
-        qt_ntfs_permission_lookup++;
+    qt_ntfs_permission_lookup++;
 #endif // defined(Q_OS_WIN32)
-        QDirIterator itDir(stagingDirName, QDir::NoDotAndDotDot|QDir::AllDirs|QDir::Files, QDirIterator::Subdirectories);
-        // relative names to use in archive:
-        QStringList directoryEntries;
-        // Key is relative name to use in archive
-        // Value is fullName in file-system:
-        QMap<QString, QString> fileEntries;
-        while (itDir.hasNext() && isOk) {
-            QString itEntry = itDir.next();
-            Q_UNUSED(itEntry);
+    QDirIterator itDir(stagingDirName, QDir::NoDotAndDotDot|QDir::AllDirs|QDir::Files, QDirIterator::Subdirectories);
+    // relative names to use in archive:
+    QStringList directoryEntries;
+    // Key is relative name to use in archive
+    // Value is fullName in file-system:
+    QMap<QString, QString> fileEntries;
+    while (itDir.hasNext() && isOk) {
+        QString itEntry = itDir.next();
+        Q_UNUSED(itEntry);
 //              Comment out the preceding line if the following is uncommented!
 //              qDebug() << " parsing entry:" << itEntry << " fileName() is:" << itDir.fileName() << " filePath() is:" << itDir.filePath();
-            // QString::compare(...) returns 0 (false) if the two arguments
-            // MATCH and non-0 (true) otherwise and De Morgans' Laws means
-            // that the if branch should be taken if the fileName IS a Dot
-            // OR IS a DotDot file...!
-            if (!(  itDir.fileName().compare(QStringLiteral("."))
-                 && itDir.fileName().compare(QStringLiteral("..")))) {
+        // QString::compare(...) returns 0 (false) if the two arguments
+        // MATCH and non-0 (true) otherwise and De Morgans' Laws means
+        // that the if branch should be taken if the fileName IS a Dot
+        // OR IS a DotDot file...!
+        if (!(  itDir.fileName().compare(QStringLiteral("."))
+             && itDir.fileName().compare(QStringLiteral("..")))) {
 
-                 // Dot and DotDot entries are no use to us so skip them
-                 continue;
-            }
-
-            QFileInfo entryInfo(itDir.fileInfo());
-            if (!entryInfo.isReadable()) {
-                qWarning() << "dlgPackageExporter::slot_export_package() skipping file: "
-                           << itDir.fileName()
-                           << "it is NOT readable!";
-                continue;
-            }
-
-            if (entryInfo.isSymLink()) {
-                qWarning() << "dlgPackageExporter::slot_export_package() skipping file: "
-                           << itDir.fileName()
-                           << "it is a Symlink - avoided to prevent file-system loops!";
-                continue;
-            }
-
-            QString nameInArchive = itDir.filePath();
-            nameInArchive.remove(QStringLiteral("%1/").arg(stagingDirName));
-
-            if       (entryInfo.isDir()) {
-                directoryEntries.append(nameInArchive);
-            } else if(entryInfo.isFile()) {
-                fileEntries.insert(nameInArchive, itDir.filePath());
-            }
+             // Dot and DotDot entries are no use to us so skip them
+             continue;
         }
 
-#if defined(Q_OS_WIN32)
-        qt_ntfs_permission_lookup--;
-#endif
-
-        if (directoryEntries.count() > 1) {
-            std::sort(directoryEntries.begin(), directoryEntries.end());
+        QFileInfo entryInfo(itDir.fileInfo());
+        if (!entryInfo.isReadable()) {
+            qWarning() << "dlgPackageExporter::slot_export_package() skipping file: "
+                       << itDir.fileName()
+                       << "it is NOT readable!";
+            continue;
         }
 
-        QStringListIterator itDirectoryName(directoryEntries);
-        while (itDirectoryName.hasNext() && isOk) {
-            QString directoryName = itDirectoryName.next();
-            // zip_dir_add(...) returns the index of the
-            // added directory item in the archive or -1 on error:
-            if (zip_dir_add(archive, directoryName.toStdString().c_str(), ZIP_FL_ENC_UTF_8) == -1) {
-                return {false, (tr("Failed to add directory \"%1\" to package. Error is: \"%2\".")
-                                     .arg(directoryName, zip_strerror(archive)))};
-                zip_close(archive);
-                isOk = false;
-            }
+        if (entryInfo.isSymLink()) {
+            qWarning() << "dlgPackageExporter::slot_export_package() skipping file: "
+                       << itDir.fileName()
+                       << "it is a Symlink - avoided to prevent file-system loops!";
+            continue;
         }
 
-        // Process the config and the file containing the Mudlet triggers,
-        // etc. specially so they are inserted first and last respectively:
-        if (isOk) {
-            // Apparently it is permissible for there NOT to be a config.lua
-            // file in the manufactured module (i.e. the user is allowed to
-            // manually remove it even though we now request they do not).
-            // If we enhance modules in the future to store more data in
-            // that file I think this will no longer be permissible and the
-            // two commented out bits of code can be restored
-            if (fileEntries.contains(QStringLiteral("config.lua"))) {
-                if (!writeFileToZip(QStringLiteral("config.lua"), fileEntries.value(QStringLiteral("config.lua")), archive).first) {
-                    /* isOk = false; */
-                } else {
-                    fileEntries.remove(QStringLiteral("config.lua"));
-                }
-            }/* else {
-                displayResultMessage(tr("Required \"config.lua\" file not found to include in the package. Did you remove or rename it?"), false);
-                zip_close(archive);
-                isOk = false;
-            }*/
-        }
+        QString nameInArchive = itDir.filePath();
+        nameInArchive.remove(QStringLiteral("%1/").arg(stagingDirName));
 
-        QString xmlFileName = packageName;
-        xmlFileName.append(QLatin1String(".xml"));
-        if (isOk) {
-            QMapIterator<QString, QString> itFileName(fileEntries);
-            while (itFileName.hasNext() && isOk) {
-                itFileName.next();
-                if (itFileName.key() == xmlFileName) {
-                    continue;
-                }
-
-                if (std::tie(isOk, error) = writeFileToZip(itFileName.key(), itFileName.value(), archive); !isOk) {
-                    zip_close(archive);
-                    break;
-                }
-            }
-        }
-
-        if (isOk) {
-            if (fileEntries.contains(xmlFileName) && fileEntries.value(xmlFileName) == xmlPathFileName) {
-                std::tie(isOk, error) = writeFileToZip(xmlFileName, xmlPathFileName, archive);
-
-                // If successful will get to HERE...
-
-            } else {
-                return {false, tr("Required file \"%1\" was not found in the staging area. "
-                                        "This area contains the Mudlet items chosen for the package, "
-                                        "which you selected to be included in the package file. "
-                                        "This suggests there may be a problem with that directory: "
-                                        "\"%2\" - "
-                                        "Do you have the necessary permissions and free disk-space?")
-                                        .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
-                isOk = false;
-            }
-        }
-
-        if (isOk) {
-            // THIS is the point that the archive gets created from the
-            // source materials - it may take a short while!
-            // If it fails to write out the new file 'archive' is left
-            // unchanged (and we can still access it to get the error
-            // details):
-            // Change the cursor to a system busy one while we are working:
-            QApplication::setOverrideCursor(Qt::BusyCursor);
-            zip_set_archive_comment(archive, packageConfig.toUtf8().constData(), packageConfig.length());
-            ze = zip_close(archive);
-            QApplication::restoreOverrideCursor();
-            if (ze) {
-                return {false, (tr("Failed to write files into and then close the package. Error is: \"%1\".",
-                                        // Intentional comment to separate arguments
-                                        "This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...")
-                                     .arg(zip_strerror(archive)))};
-                // In libzip 0.11 a function was added to clean up
-                // (deallocate) the memory associated with an archive
-                // - which would normally occur upon a successful close
-                // - before that version the memory just leaked away...
-                zip_discard(archive);
-                isOk = false;
-            }
-
-        } else {
-            zip_discard(archive);
+        if       (entryInfo.isDir()) {
+            directoryEntries.append(nameInArchive);
+        } else if(entryInfo.isFile()) {
+            fileEntries.insert(nameInArchive, itDir.filePath());
         }
     }
+
+#if defined(Q_OS_WIN32)
+    qt_ntfs_permission_lookup--;
+#endif
+
+    if (directoryEntries.count() > 1) {
+        std::sort(directoryEntries.begin(), directoryEntries.end());
+    }
+
+    QStringListIterator itDirectoryName(directoryEntries);
+    while (itDirectoryName.hasNext() && isOk) {
+        QString directoryName = itDirectoryName.next();
+        // zip_dir_add(...) returns the index of the
+        // added directory item in the archive or -1 on error:
+        if (zip_dir_add(archive, directoryName.toStdString().c_str(), ZIP_FL_ENC_UTF_8) == -1) {
+            return {false, (tr("Failed to add directory \"%1\" to package. Error is: \"%2\".")
+                                 .arg(directoryName, zip_strerror(archive)))};
+            zip_close(archive);
+            isOk = false;
+        }
+    }
+
+    // Process the config and the file containing the Mudlet triggers,
+    // etc. specially so they are inserted first and last respectively:
+    if (isOk) {
+        // Apparently it is permissible for there NOT to be a config.lua
+        // file in the manufactured module (i.e. the user is allowed to
+        // manually remove it even though we now request they do not).
+        // If we enhance modules in the future to store more data in
+        // that file I think this will no longer be permissible and the
+        // two commented out bits of code can be restored
+        if (fileEntries.contains(QStringLiteral("config.lua"))) {
+            if (!writeFileToZip(QStringLiteral("config.lua"), fileEntries.value(QStringLiteral("config.lua")), archive).first) {
+                /* isOk = false; */
+            } else {
+                fileEntries.remove(QStringLiteral("config.lua"));
+            }
+        }/* else {
+            displayResultMessage(tr("Required \"config.lua\" file not found to include in the package. Did you remove or rename it?"), false);
+            zip_close(archive);
+            isOk = false;
+        }*/
+    }
+
+    QString xmlFileName = packageName;
+    xmlFileName.append(QLatin1String(".xml"));
+    if (isOk) {
+        QMapIterator<QString, QString> itFileName(fileEntries);
+        while (itFileName.hasNext() && isOk) {
+            itFileName.next();
+            if (itFileName.key() == xmlFileName) {
+                continue;
+            }
+
+            if (std::tie(isOk, error) = writeFileToZip(itFileName.key(), itFileName.value(), archive); !isOk) {
+                zip_close(archive);
+                break;
+            }
+        }
+    }
+
+    if (isOk) {
+        if (fileEntries.contains(xmlFileName) && fileEntries.value(xmlFileName) == xmlPathFileName) {
+            std::tie(isOk, error) = writeFileToZip(xmlFileName, xmlPathFileName, archive);
+
+            // If successful will get to HERE...
+
+        } else {
+            return {false, tr("Required file \"%1\" was not found in the staging area. "
+                                    "This area contains the Mudlet items chosen for the package, "
+                                    "which you selected to be included in the package file. "
+                                    "This suggests there may be a problem with that directory: "
+                                    "\"%2\" - "
+                                    "Do you have the necessary permissions and free disk-space?")
+                                    .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
+            isOk = false;
+        }
+    }
+
+    if (isOk) {
+        // THIS is the point that the archive gets created from the
+        // source materials - it may take a short while!
+        // If it fails to write out the new file 'archive' is left
+        // unchanged (and we can still access it to get the error
+        // details):
+        // Change the cursor to a system busy one while we are working:
+        QApplication::setOverrideCursor(Qt::BusyCursor);
+        zip_set_archive_comment(archive, packageConfig.toUtf8().constData(), packageConfig.length());
+        ze = zip_close(archive);
+        QApplication::restoreOverrideCursor();
+        if (ze) {
+            return {false, (tr("Failed to write files into and then close the package. Error is: \"%1\".",
+                                    // Intentional comment to separate arguments
+                                    "This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...")
+                                 .arg(zip_strerror(archive)))};
+            // In libzip 0.11 a function was added to clean up
+            // (deallocate) the memory associated with an archive
+            // - which would normally occur upon a successful close
+            // - before that version the memory just leaked away...
+            zip_discard(archive);
+            isOk = false;
+        }
+
+    } else {
+        zip_discard(archive);
+    }
+
 
     return {isOk, error};
 }
