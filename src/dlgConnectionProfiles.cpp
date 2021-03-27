@@ -31,6 +31,7 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QtConcurrent>
 #include <QtUiTools>
 #include <QDir>
 #include <QRandomGenerator>
@@ -132,7 +133,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     auto pWelcome_document = new QTextDocument(this);
 
-    auto copyProfile = new QAction(tr("Copy"), this);
+    copyProfile = new QAction(tr("Copy"), this);
     copyProfile->setObjectName(QStringLiteral("copyProfile"));
     auto copyProfileSettings = new QAction(tr("Copy settings only"), this);
     copyProfileSettings->setObjectName(QStringLiteral("copyProfileSettingsOnly"));
@@ -1736,21 +1737,31 @@ void dlgConnectionProfiles::slot_copy_profile()
         return;
     }
 
-    copyFolder(mudlet::getMudletPath(mudlet::profileHomePath, oldname),
-               mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
-    mProfileList << profile_name;
-    slot_item_clicked(pItem);
-    // Clear the Discord optin on the copied profile - just because the source
-    // one may have had it enabled does not mean we can assume the new one would
-    // want it set:
-    discord_optin_checkBox->setChecked(false);
 
-    // restore the password, which won't be copied by the disk copy if stored in the credential manager
-    character_password_entry->setText(oldPassword);
-    if (mudlet::self()->storingPasswordsSecurely()) {
-        writeSecurePassword(profile_name, oldPassword);
-    }
-    mCopyingProfile = false;
+    QApplication::setOverrideCursor(Qt::BusyCursor);
+    copyProfile->setText(tr("Copying..."));
+    copyProfile->setEnabled(false);
+    auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(mudlet::profileHomePath, oldname), mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
+    auto watcher = new QFutureWatcher<bool>;
+    QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
+        mProfileList << profile_name;
+        slot_item_clicked(pItem);
+        // Clear the Discord optin on the copied profile - just because the source
+        // one may have had it enabled does not mean we can assume the new one would
+        // want it set:
+        discord_optin_checkBox->setChecked(false);
+
+        // restore the password, which won't be copied by the disk copy if stored in the credential manager
+        character_password_entry->setText(oldPassword);
+        if (mudlet::self()->storingPasswordsSecurely()) {
+            writeSecurePassword(profile_name, oldPassword);
+        }
+        mCopyingProfile = false;
+        copyProfile->setText(tr("Copy"));
+        copyProfile->setEnabled(true);
+        QApplication::restoreOverrideCursor();
+    });
+    watcher->setFuture(future);
 }
 
 void dlgConnectionProfiles::slot_copy_profilesettings_only()
@@ -2202,11 +2213,11 @@ bool dlgConnectionProfiles::validateProfile()
 }
 
 // credit: http://www.qtcentre.org/archive/index.php/t-23469.html
-void dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QString& destFolder)
+bool dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QString& destFolder)
 {
     QDir sourceDir(sourceFolder);
     if (!sourceDir.exists()) {
-        return;
+        return false;
     }
 
     QDir destDir(destFolder);
@@ -2226,6 +2237,7 @@ void dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QStrin
         QString destName = destFolder + QDir::separator() + files[i];
         copyFolder(srcName, destName);
     }
+    return true;
 }
 
 // As it is wired to the triggered() signal it is only called that way when
