@@ -177,8 +177,18 @@
                <height>48</height>
               </size>
              </property>
+             <property name="toolTip">
+              <string>512x512 recommended</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="label">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="text">
-              <string/>
+              <string>512x512 recommended</string>
              </property>
             </widget>
            </item>
