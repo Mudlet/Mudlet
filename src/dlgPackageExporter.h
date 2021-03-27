@@ -99,7 +99,7 @@ private:
     int countRecursive(QTreeWidgetItem* item, int count) const;
     int countCheckedItems() const;
     QString getActualPath() const;
-    static bool writeFileToZip(const QString&, const QString&, zip*);
+    static std::pair<bool, QString> writeFileToZip(const QString& archiveFileName, const QString& fileSystemFileName, zip* archive);
     static std::pair<bool, QString> zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig);
 
     Ui::dlgPackageExporter* ui;

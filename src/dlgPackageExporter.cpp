@@ -146,28 +146,26 @@ void dlgPackageExporter::recurseTree(QTreeWidgetItem* pItem, QList<QTreeWidgetIt
     }
 }
 
-bool dlgPackageExporter::writeFileToZip(const QString& archiveFileName, const QString& fileSystemFileName, zip* archive)
+std::pair<bool, QString> dlgPackageExporter::writeFileToZip(const QString& archiveFileName, const QString& fileSystemFileName, zip* archive)
 {
     struct zip_source* s = zip_source_file(archive, fileSystemFileName.toUtf8().constData(), 0, -1);
     if (s == nullptr) {
-        // TODO
-//        displayResultMessage(tr("Failed to open file \"%1\" to place into package. Error message was: \"%2\".",
-//                                // Intentional comment to separate arguments
-//                                "This error message will appear when a file is to be placed into the package but the code cannot open it.")
-//                             .arg(fileSystemFileName, zip_strerror(archive)), false);
-        return false;
+        return {false,
+                tr("Failed to open file \"%1\" to place into package. Error message was: \"%2\".",
+                   // Intentional comment to separate arguments
+                   "This error message will appear when a file is to be placed into the package but the code cannot open it.")
+                        .arg(fileSystemFileName, zip_strerror(archive))};
     }
 
-    if (zip_file_add(archive, archiveFileName.toUtf8().constData(), s, ZIP_FL_ENC_UTF_8|ZIP_FL_OVERWRITE) == -1) {
-        // TODO
-//        displayResultMessage(tr("Failed to add file \"%1\" to package \"%2\". Error message was: \"%3\".",
-//                                // Intentional comment to separate arguments
-//                                "This error message will appear when a file is to be placed into the package but cannot be done for some reason.")
-//                             .arg(archiveFileName, mPackagePathFileName, zip_strerror(archive)), false);
-        return false;
+    if (zip_file_add(archive, archiveFileName.toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE) == -1) {
+        return {false,
+                tr("Failed to add file \"%1\" to package. Error message was: \"%3\".",
+                   // Intentional comment to separate arguments
+                   "This error message will appear when a file is to be placed into the package but cannot be done for some reason.")
+                        .arg(archiveFileName, zip_strerror(archive))};
     }
 
-    return true;
+    return {true, QString()};
 }
 
 void dlgPackageExporter::slot_addDependency()
@@ -680,6 +678,7 @@ void dlgPackageExporter::slot_export_package()
 
             if (auto [isOk, errorMsg] = future.result(); !isOk) {
                 qDebug() << "exported NOT OK";
+                displayResultMessage(errorMsg);
                 // Failed - convert cancel to a close button
                 ui->buttonBox->removeButton(mCancelButton);
                 ui->buttonBox->addButton(QDialogButtonBox::Close);
@@ -706,6 +705,7 @@ void dlgPackageExporter::slot_export_package()
 std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig)
 {
     bool isOk = true;
+    QString error;
     // zip error code:
     int ze = 0;
 
@@ -825,7 +825,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
             // that file I think this will no longer be permissible and the
             // two commented out bits of code can be restored
             if (fileEntries.contains(QStringLiteral("config.lua"))) {
-                if (!writeFileToZip(QStringLiteral("config.lua"), fileEntries.value(QStringLiteral("config.lua")), archive)) {
+                if (!writeFileToZip(QStringLiteral("config.lua"), fileEntries.value(QStringLiteral("config.lua")), archive).first) {
                     /* isOk = false; */
                 } else {
                     fileEntries.remove(QStringLiteral("config.lua"));
@@ -847,9 +847,8 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
                     continue;
                 }
 
-                if (!writeFileToZip(itFileName.key(), itFileName.value(), archive)) {
+                if (std::tie(isOk, error) = writeFileToZip(itFileName.key(), itFileName.value(), archive); !isOk) {
                     zip_close(archive);
-                    isOk = false;
                     break;
                 }
             }
@@ -857,9 +856,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
 
         if (isOk) {
             if (fileEntries.contains(xmlFileName) && fileEntries.value(xmlFileName) == xmlPathFileName) {
-                if (!writeFileToZip(xmlFileName, xmlPathFileName, archive)) {
-                    isOk = false;
-                }
+                std::tie(isOk, error) = writeFileToZip(xmlFileName, xmlPathFileName, archive);
 
                 // If successful will get to HERE...
 
@@ -903,7 +900,8 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
             zip_discard(archive);
         }
     }
-        return {isOk, QString()};
+
+    return {isOk, error};
 }
 
 void dlgPackageExporter::slot_addFiles()
