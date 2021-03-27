@@ -315,6 +315,7 @@ public:
     void startAutoLogin(const QString&);
     int64_t getPhysicalMemoryTotal();
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
+    void refreshTabBar();
 
     bool firstLaunch = false;
     // Needed to work around a (likely only Windows) issue:
