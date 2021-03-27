@@ -159,7 +159,7 @@
               </sizepolicy>
              </property>
              <property name="toolTip">
-              <string>512x512 recommended</string>
+              <string>Icon size of 512x512 recommended</string>
              </property>
              <property name="text">
               <string>Add icon</string>
@@ -181,10 +181,17 @@
               </size>
              </property>
              <property name="toolTip">
-              <string>512x512 recommended</string>
+              <string>Icon size of 512x512 recommended</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="label">
+             <property name="enabled">
+              <bool>false</bool>
              </property>
              <property name="text">
-              <string/>
+              <string>512x512 recommended</string>
              </property>
             </widget>
            </item>
