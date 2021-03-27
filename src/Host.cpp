@@ -1807,12 +1807,17 @@ bool Host::unzipSyncModule(const QString& archivePath, const QString& destinatio
 {
   zip* zipFile = nullptr;
   struct zip_stat fileStat;
-  struct zip_file* xmlFile;
+  zip_file* xmlFile = nullptr;
   zip_uint64_t bytesRead = 0;
+  zip_int64_t xmlIndex = -1;
   char buf[256];
-  int err;
+  int err = 0;
+
   zipFile = zip_open(archivePath.toStdString().c_str(), ZIP_RDONLY, &err);
-  zip_int64_t xmlIndex;
+  if (!zipFile) {
+      return false;
+  }
+
   for (zip_int64_t i = 0, total = zip_get_num_entries(zipFile, 0); i < total; ++i) {
       QString fileName = zip_get_name(zipFile, i, ZIP_FL_ENC_RAW);
       if (fileName.endsWith("xml", Qt::CaseInsensitive))
@@ -1821,6 +1826,12 @@ bool Host::unzipSyncModule(const QString& archivePath, const QString& destinatio
           break;
       }
   }
+
+  if (xmlIndex == -1) {
+      zip_close(zipFile);
+      return false;
+  }
+
   zip_stat_index(zipFile, xmlIndex, 0, &fileStat);
   QString entryInArchive(fileStat.name);
   xmlFile = zip_fopen_index(zipFile, xmlIndex, 0);
@@ -1855,6 +1866,7 @@ bool Host::unzipSyncModule(const QString& archivePath, const QString& destinatio
       }
       bytesRead += len;
   }
+
   fd.close();
   zip_fclose(xmlFile);
   err = zip_close(zipFile);
