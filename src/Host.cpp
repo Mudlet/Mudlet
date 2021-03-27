@@ -531,9 +531,6 @@ void Host::saveModules(int sync, bool backup)
 
 void Host::slot_reloadModules()
 {
-    // update the module zips
-    updateModuleZips();
-
     //synchronize modules across sessions
     for (auto otherHost : mudlet::self()->getHostManager()) {
         if (otherHost == this || !otherHost->mpConsole) {
@@ -642,12 +639,6 @@ std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const
 
     if (mInstalledModules.contains(moduleName)) {
         QStringList moduleStringList = mInstalledModules[moduleName];
-        QFileInfo moduleFile = moduleStringList[0];
-        QStringList accepted_suffix;
-        accepted_suffix << "xml" << "trigger";
-        if (!accepted_suffix.contains(moduleFile.suffix().trimmed(), Qt::CaseInsensitive)) {
-            return {false, QStringLiteral("module has to be a .xml file")};
-        }
         moduleStringList[1] = value;
         mInstalledModules[moduleName] = moduleStringList;
         return {true, QString()};
@@ -1676,7 +1667,7 @@ bool Host::installPackage(const QString& fileName, int module)
         pUnzipDialog->repaint(); // Force a redraw
         qApp->processEvents();   // Try to ensure we are on top of any other dialogs and freshly drawn
 
-        auto successful = mudlet::unzip(fileName, _dest, _tmpDir);
+        auto successful = module == 2 ? unzipSyncModule(fileName, _dest) : mudlet::unzip(fileName, _dest, _tmpDir);
         pUnzipDialog->deleteLater();
         pUnzipDialog = Q_NULLPTR;
         if (!successful) {
@@ -1809,6 +1800,68 @@ bool Host::installPackage(const QString& fileName, int module)
     raiseEvent(detailedInstallEvent);
 
     return true;
+}
+
+
+bool Host::unzipSyncModule(const QString& archivePath, const QString& destination)
+{
+  zip* zipFile = nullptr;
+  struct zip_stat fileStat;
+  struct zip_file* xmlFile;
+  zip_uint64_t bytesRead = 0;
+  char buf[256];
+  int err;
+  zipFile = zip_open(archivePath.toStdString().c_str(), ZIP_RDONLY, &err);
+  zip_int64_t xmlIndex;
+  for (zip_int64_t i = 0, total = zip_get_num_entries(zipFile, 0); i < total; ++i) {
+      QString fileName = zip_get_name(zipFile, i, ZIP_FL_ENC_RAW);
+      if (fileName.endsWith("xml", Qt::CaseInsensitive))
+      {
+          xmlIndex = i;
+          break;
+      }
+  }
+  zip_stat_index(zipFile, xmlIndex, 0, &fileStat);
+  QString entryInArchive(fileStat.name);
+  xmlFile = zip_fopen_index(zipFile, xmlIndex, 0);
+
+  if (!xmlFile) {
+      zip_close(zipFile);
+      return false;
+  }
+  QFile fd(QStringLiteral("%1%2").arg(destination, entryInArchive));
+  if (!fd.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
+      zip_fclose(xmlFile);
+      zip_close(zipFile);
+      return false;
+  }
+
+  bytesRead = 0;
+  zip_uint64_t bytesExpected = fileStat.size;
+  while (bytesRead < bytesExpected && fd.error() == QFileDevice::NoError) {
+      zip_int64_t len = zip_fread(xmlFile, buf, sizeof(buf));
+      if (len < 0) {
+          fd.close();
+          zip_fclose(xmlFile);
+          zip_close(zipFile);
+          return false;
+      }
+
+      if (fd.write(buf, len) == -1) {
+          fd.close();
+          zip_fclose(xmlFile);
+          zip_close(zipFile);
+          return false;
+      }
+      bytesRead += len;
+  }
+  fd.close();
+  zip_fclose(xmlFile);
+  err = zip_close(zipFile);
+  if (err) {
+      return false;
+  }
+  return true;
 }
 
 // credit: http://john.nachtimwald.com/2010/06/08/qt-remove-directory-and-its-contents/

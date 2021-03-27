@@ -299,6 +299,7 @@ public:
 
     bool installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);
+    bool unzipSyncModule(const QString& archivePath, const QString& destination);
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&, bool);
     QString getPackageConfig(const QString&, bool isModule = false);
