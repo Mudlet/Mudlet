@@ -45,7 +45,7 @@ class HostManager
         bool operator== (const Iter& other);
         Iter& operator++();
         QSharedPointer<Host> operator*();
-        
+
     private:
         HostMap::iterator it;
     };

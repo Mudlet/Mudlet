@@ -28,6 +28,7 @@
 #include "Host.h"
 #include "LuaInterface.h"
 #include "TConsole.h"
+#include "TDebug.h"
 #include "TEasyButtonBar.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
@@ -7329,6 +7330,12 @@ void dlgTriggerEditor::slot_debug_mode()
     mudlet::mpDebugArea->setVisible(!mudlet::debugMode);
     mudlet::debugMode = !mudlet::debugMode;
     mudlet::mpDebugArea->setWindowTitle("Central Debug Console");
+    if (mudlet::debugMode) {
+        // If this is the first time the window is shown we want any previously
+        // enqueued messages to be painted onto the central debug console:
+        TDebug::flushMessageQueue();
+    }
+    mudlet::self()->refreshTabBar();
 }
 
 void dlgTriggerEditor::slot_next_section()

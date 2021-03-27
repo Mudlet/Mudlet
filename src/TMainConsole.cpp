@@ -1129,8 +1129,8 @@ void TMainConsole::runTriggers(int line)
     mCurrentLine.append('\n');
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::darkGreen), QColor(Qt::black)) << "new line arrived:" >> 0;
-        TDebug(QColor(Qt::lightGray), QColor(Qt::black)) << mCurrentLine << "\n" >> 0;
+        TDebug(Qt::darkGreen, Qt::black) << "new line arrived:" >> mpHost;
+        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << mCurrentLine << "\n" >> mpHost;
     }
     mpHost->incomingStreamProcessor(mCurrentLine, line);
     mIsPromptLine = false;
