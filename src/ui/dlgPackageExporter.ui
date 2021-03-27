@@ -158,6 +158,9 @@
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
+             <property name="toolTip">
+              <string>512x512 recommended</string>
+             </property>
              <property name="text">
               <string>Add icon</string>
              </property>
@@ -176,6 +179,9 @@
                <width>48</width>
                <height>48</height>
               </size>
+             </property>
+             <property name="toolTip">
+              <string>512x512 recommended</string>
              </property>
              <property name="text">
               <string/>
