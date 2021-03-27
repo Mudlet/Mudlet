@@ -47,7 +47,7 @@ public:
 
 private slots:
     void slot_install_package();
-    void slot_uninstall_package(int index);
+    void slot_remove_packages();
     void slot_item_clicked(QTableWidgetItem*);
 
 private:
@@ -57,6 +57,7 @@ private:
     QTableWidget* mDetailsTable;
     QTextBrowser* mDescription;
     QPushButton* mInstallButton;
+    QPushButton* mRemoveButton;
     void fillAdditionalDetails(const QMap<QString, QString>&);
 };
 

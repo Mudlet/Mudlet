@@ -34,11 +34,17 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
+        <property name="focusPolicy">
+         <enum>Qt::TabFocus</enum>
+        </property>
         <property name="autoFillBackground">
          <bool>false</bool>
         </property>
         <property name="frameShape">
          <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="tabKeyNavigation">
+         <bool>false</bool>
         </property>
         <property name="selectionMode">
          <enum>QAbstractItemView::ExtendedSelection</enum>
@@ -59,7 +65,7 @@
          <bool>false</bool>
         </property>
         <property name="columnCount">
-         <number>3</number>
+         <number>2</number>
         </property>
         <attribute name="horizontalHeaderVisible">
          <bool>false</bool>
@@ -73,7 +79,6 @@
         <attribute name="verticalHeaderDefaultSectionSize">
          <number>50</number>
         </attribute>
-        <column/>
         <column/>
         <column/>
        </widget>
@@ -135,6 +140,9 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
+        <property name="focusPolicy">
+         <enum>Qt::NoFocus</enum>
+        </property>
         <property name="styleSheet">
          <string notr="true">QWidget { background-color: rgba(0, 0, 0, 0);}
 </string>
@@ -177,6 +185,22 @@
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout">
          <item>
+          <widget class="QPushButton" name="removeButton">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::TabFocus</enum>
+           </property>
+           <property name="text">
+            <string>remove Packages</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="installButton">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -184,8 +208,14 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="focusPolicy">
+            <enum>Qt::TabFocus</enum>
+           </property>
            <property name="text">
             <string>Install new Package</string>
+           </property>
+           <property name="default">
+            <bool>false</bool>
            </property>
           </widget>
          </item>
@@ -197,6 +227,11 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>installButton</tabstop>
+  <tabstop>removeButton</tabstop>
+  <tabstop>packageTable</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
