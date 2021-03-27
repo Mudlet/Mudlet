@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     build-essential \
     ccache \
     cmake \
+    gdb \
     git \
     libboost-all-dev \
     libboost-dev \
@@ -40,8 +41,7 @@ RUN luarocks install lcf && \
     luarocks install lua-yajl
 
 RUN useradd -ms /bin/bash mudlet
-RUN mkdir /mudlet && chown mudlet:mudlet /mudlet
-WORKDIR /mudlet
+WORKDIR /home/mudlet
 
 COPY --chown=mudlet:mudlet CMakeLists.txt CPPLINT.cfg mudlet.desktop mudlet.png mudlet.svg ./
 COPY --chown=mudlet:mudlet 3rdparty 3rdparty
@@ -52,6 +52,11 @@ COPY --chown=mudlet:mudlet test test
 COPY --chown=mudlet:mudlet src src
 
 USER mudlet
-RUN mkdir build && cd build && cmake .. && make -j
+
+ARG BUILD_CORES=4
+RUN mkdir build && cd build && cmake .. && cmake --build . --parallel ${BUILD_CORES}
+RUN mkdir /home/mudlet/settings
+
+VOLUME /home/mudlet/settings
 
 CMD ["build/src/mudlet"]

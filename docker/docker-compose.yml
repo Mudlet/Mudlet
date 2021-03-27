@@ -8,6 +8,11 @@ services:
   dev:
     <<: *base-settings
     volumes:
-      - ../src:/mudlet/src
-      - ../test:/mudlet/test
-    command: qtcreator src/mudlet.pro
+      - settings:/home/mudlet/settings
+      - ../src:/home/mudlet/src
+      - ../translations:/home/mudlet/translations
+      - ../test:/home/mudlet/test
+    command: qtcreator src/mudlet.pro -settingspath /home/mudlet/settings/
+
+volumes:
+  settings:
