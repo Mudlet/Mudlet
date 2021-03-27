@@ -1760,6 +1760,7 @@ void dlgConnectionProfiles::slot_copy_profile()
         copyProfile->setText(tr("Copy"));
         copyProfile->setEnabled(true);
         QApplication::restoreOverrideCursor();
+        validateProfile();
     });
     watcher->setFuture(future);
 }
@@ -1826,7 +1827,9 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
     setItemName(pItem, profile_name);
 
     // add the new widget in
+    qDebug() << "before" << profiles_tree_widget->count();
     profiles_tree_widget->addItem(pItem);
+    qDebug() << "after" << profiles_tree_widget->count();
     profiles_tree_widget->setCurrentItem(pItem);
 
     profile_name_entry->setText(profile_name);
@@ -2044,172 +2047,161 @@ bool dlgConnectionProfiles::validateProfile()
 {
     bool valid = true;
 
+    // don't validate url duplication during copy, as information will already exist when we try to set it
+    if (mCopyingProfile) {
+        return true;
+    }
+
     clearNotificationArea();
 
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
 
-    if (pItem) {
-        QString name = profile_name_entry->text().trimmed();
-        const QString allowedChars = QStringLiteral(". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
+    if (!pItem) {
+        return false;
+    }
 
-        for (int i = 0; i < name.size(); ++i) {
-            if (!allowedChars.contains(name.at(i))) {
-                notificationAreaIconLabelWarning->show();
-                notificationAreaMessageBox->setText(
-                    QStringLiteral("%1\n%2\n%3\n").arg(
-                        notificationAreaMessageBox->text(),
-                        tr("The %1 character is not permitted. Use one of the following:").arg(name.at(i)),
-                        allowedChars));
-                name.replace(name.at(i--), QString());
-                profile_name_entry->setText(name);
-                validName = false;
-                valid = false;
-                break;
-            }
-        }
+    QString name = profile_name_entry->text().trimmed();
+    const QString allowedChars = QStringLiteral(". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
 
-        // see if there is an edit that already uses a similar name
-        if (pItem->data(csmNameRole).toString() != name && mProfileList.contains(name)) {
-            notificationAreaIconLabelError->show();
+    for (int i = 0; i < name.size(); ++i) {
+        if (!allowedChars.contains(name.at(i))) {
+            notificationAreaIconLabelWarning->show();
             notificationAreaMessageBox->setText(
-                QStringLiteral("%1\n%2").arg(
-                    notificationAreaMessageBox->text(),
-                    tr("This profile name is already in use.")));
+                    QStringLiteral("%1\n%2\n%3\n").arg(notificationAreaMessageBox->text(), tr("The %1 character is not permitted. Use one of the following:").arg(name.at(i)), allowedChars));
+            name.replace(name.at(i--), QString());
+            profile_name_entry->setText(name);
             validName = false;
             valid = false;
-        }
-
-        QString port = port_entry->text().trimmed();
-        if (!port.isEmpty() && (port.indexOf(QRegularExpression(QStringLiteral("^\\d+$")), 0) == -1)) {
-            QString val = port;
-            val.chop(1);
-            port_entry->setText(val);
-            notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(
-                QStringLiteral("%1\n%2").arg(
-                    notificationAreaMessageBox->text(),
-                    tr("You have to enter a number. Other characters are not permitted.")));
-            port_entry->setPalette(mErrorPalette);
-            validPort = false;
-            valid = false;
-        }
-
-        bool ok;
-        int num = port.trimmed().toInt(&ok);
-        if (!port.isEmpty() && (num > 65536 && ok)) {
-            notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(
-                QStringLiteral("%1\n%2\n\n").arg(
-                    notificationAreaMessageBox->text(),
-                    tr("Port number must be above zero and below 65535.")));
-            port_entry->setPalette(mErrorPalette);
-            validPort = false;
-            valid = false;
-        }
-
-#if defined(QT_NO_SSL)
-        port_ssl_tsl->setEnabled(false);
-        port_ssl_tsl->setToolTip(tr("Mudlet is not configured for secure connections."));
-        if (port_ssl_tsl->isChecked()) {
-            notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(
-                QStringLiteral("%1\n%2\n\n").arg(
-                    notificationAreaMessageBox->text(),
-                    tr("Mudlet is not configured for secure connections.")));
-            port_ssl_tsl->setEnabled(true);
-            validPort = false;
-            valid = false;
-        }
-#else
-        if (!QSslSocket::supportsSsl()) {
-            if (port_ssl_tsl->isChecked()) {
-                notificationAreaIconLabelError->show();
-                notificationAreaMessageBox->setText(
-                    QStringLiteral("%1\n%2\n\n").arg(
-                        notificationAreaMessageBox->text(),
-                        tr("Mudlet can not load support for secure connections.")));
-                validPort = false;
-                valid = false;
-            }
-        } else {
-            port_ssl_tsl->setEnabled(true);
-            port_ssl_tsl->setToolTip(QString());
-        }
-#endif
-        QUrl check;
-        QString url = host_name_entry->text().trimmed();
-        check.setHost(url);
-
-        if (url.isEmpty()) {
-            host_name_entry->setPalette(mErrorPalette);
-            validUrl = false;
-            valid = false;
-        }
-
-        if (!check.isValid()) {
-            notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(
-                QStringLiteral("%1\n%2\n\n%3").arg(
-                    notificationAreaMessageBox->text(),
-                    tr("Please enter the URL or IP address of the Game server."),
-                    check.errorString()));
-            host_name_entry->setPalette(mErrorPalette);
-            validUrl = false;
-            valid = false;
-        }
-
-        if (url.indexOf(QRegularExpression(QStringLiteral("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
-            if (port_ssl_tsl->isChecked()) {
-                notificationAreaIconLabelError->show();
-                notificationAreaMessageBox->setText(
-                    QStringLiteral("%1\n%2\n\n%3").arg(
-                        notificationAreaMessageBox->text(),
-                        tr("SSL connections require the URL of the Game server."),
-                        check.errorString()));
-                host_name_entry->setPalette(mErrorPalette);
-                validUrl = false;
-                valid = false;
-            }
-        }
-
-        if (valid) {
-            port_entry->setPalette(mOKPalette);
-            host_name_entry->setPalette(mOKPalette);
-            clearNotificationArea();
-            validName = true;
-            validPort = true;
-            validUrl = true;
-
-            if (offline_button) {
-                offline_button->setEnabled(true);
-                offline_button->setToolTip(tr("<p>Load profile without connecting.</p>"));
-                offline_button->setAccessibleDescription(btn_load_enabled_accessDesc);
-            }
-            if (connect_button) {
-                connect_button->setEnabled(true);
-                connect_button->setToolTip(QString());
-                connect_button->setAccessibleDescription(btn_connect_enabled_accessDesc);
-            }
-            return true;
-        } else {
-            if (!notificationAreaMessageBox->text().isEmpty()) {
-                notificationArea->show();
-                notificationAreaMessageBox->show();
-            }
-            if (offline_button) {
-                offline_button->setEnabled(false);
-                offline_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before loading.</p>"));
-                offline_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
-            }
-            if (connect_button) {
-                connect_button->setEnabled(false);
-                connect_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before connecting.</p>"));
-                connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
-            }
-            return false;
+            break;
         }
     }
-    return false;
+
+    // see if there is an edit that already uses a similar name
+    if (pItem->data(csmNameRole).toString() != name && mProfileList.contains(name)) {
+        notificationAreaIconLabelError->show();
+        notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), tr("This profile name is already in use.")));
+        validName = false;
+        valid = false;
+    }
+
+    QString port = port_entry->text().trimmed();
+    if (!port.isEmpty() && (port.indexOf(QRegularExpression(QStringLiteral("^\\d+$")), 0) == -1)) {
+        QString val = port;
+        val.chop(1);
+        port_entry->setText(val);
+        notificationAreaIconLabelError->show();
+        notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), tr("You have to enter a number. Other characters are not permitted.")));
+        port_entry->setPalette(mErrorPalette);
+        validPort = false;
+        valid = false;
+    }
+
+    bool ok;
+    int num = port.trimmed().toInt(&ok);
+    if (!port.isEmpty() && (num > 65536 && ok)) {
+        notificationAreaIconLabelError->show();
+        notificationAreaMessageBox->setText(QStringLiteral("%1\n%2\n\n").arg(notificationAreaMessageBox->text(), tr("Port number must be above zero and below 65535.")));
+        port_entry->setPalette(mErrorPalette);
+        validPort = false;
+        valid = false;
+    }
+
+#if defined(QT_NO_SSL)
+    port_ssl_tsl->setEnabled(false);
+    port_ssl_tsl->setToolTip(tr("Mudlet is not configured for secure connections."));
+    if (port_ssl_tsl->isChecked()) {
+        notificationAreaIconLabelError->show();
+        notificationAreaMessageBox->setText(QStringLiteral("%1\n%2\n\n").arg(notificationAreaMessageBox->text(), tr("Mudlet is not configured for secure connections.")));
+        port_ssl_tsl->setEnabled(true);
+        validPort = false;
+        valid = false;
+    }
+#else
+    if (!QSslSocket::supportsSsl()) {
+        if (port_ssl_tsl->isChecked()) {
+            notificationAreaIconLabelError->show();
+            notificationAreaMessageBox->setText(QStringLiteral("%1\n%2\n\n").arg(notificationAreaMessageBox->text(), tr("Mudlet can not load support for secure connections.")));
+            validPort = false;
+            valid = false;
+        }
+    } else {
+        port_ssl_tsl->setEnabled(true);
+        port_ssl_tsl->setToolTip(QString());
+    }
+#endif
+    QUrl check;
+    QString url = host_name_entry->text().trimmed();
+    check.setHost(url);
+
+    if (url.isEmpty()) {
+        host_name_entry->setPalette(mErrorPalette);
+        validUrl = false;
+        valid = false;
+    }
+
+    if (!check.isValid()) {
+        notificationAreaIconLabelError->show();
+        notificationAreaMessageBox->setText(QStringLiteral("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server."), check.errorString()));
+        host_name_entry->setPalette(mErrorPalette);
+        validUrl = false;
+        valid = false;
+    }
+
+    if (url.indexOf(QRegularExpression(QStringLiteral("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
+        if (port_ssl_tsl->isChecked()) {
+            notificationAreaIconLabelError->show();
+            notificationAreaMessageBox->setText(QStringLiteral("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("SSL connections require the URL of the Game server."), check.errorString()));
+            host_name_entry->setPalette(mErrorPalette);
+            validUrl = false;
+            valid = false;
+        }
+    }
+
+    if (valid) {
+        enableConnectionButtons();
+        return true;
+    } else {
+        disableConnectionButtons();
+        return false;
+    }
+}
+
+void dlgConnectionProfiles::disableConnectionButtons()
+{
+    if (!notificationAreaMessageBox->text().isEmpty()) {
+        notificationArea->show();
+        notificationAreaMessageBox->show();
+    }
+    if (offline_button) {
+        offline_button->setEnabled(false);
+        offline_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before loading.</p>"));
+        offline_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
+    }
+    if (connect_button) {
+        connect_button->setEnabled(false);
+        connect_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before connecting.</p>"));
+        connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
+    }
+}
+void dlgConnectionProfiles::enableConnectionButtons()
+{
+    port_entry->setPalette(mOKPalette);
+    host_name_entry->setPalette(mOKPalette);
+    clearNotificationArea();
+    validName = true;
+    validPort = true;
+    validUrl = true;
+
+    if (offline_button) {
+        offline_button->setEnabled(true);
+        offline_button->setToolTip(tr("<p>Load profile without connecting.</p>"));
+        offline_button->setAccessibleDescription(btn_load_enabled_accessDesc);
+    }
+    if (connect_button) {
+        connect_button->setEnabled(true);
+        connect_button->setToolTip(QString());
+        connect_button->setAccessibleDescription(btn_connect_enabled_accessDesc);
+    }
 }
 
 // credit: http://www.qtcentre.org/archive/index.php/t-23469.html
