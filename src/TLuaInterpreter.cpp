@@ -4912,7 +4912,7 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
         }
 
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-        QList<int> areaIds{areaIdsSet.begin(), areaIdsSet.begin()};
+        QList<int> areaIds{areaIdsSet.begin(), areaIdsSet.end()};
 #else
         QList<int> areaIds{areaIdsSet.toList()};
 #endif
