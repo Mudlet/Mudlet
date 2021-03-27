@@ -1,5 +1,5 @@
 services:
-  mudlet:
+  mudlet: &base-settings
     environment:
       - DISPLAY=:1
     volumes:
@@ -8,6 +8,7 @@ services:
       - "/dev/dri"
 
   dev:
+    <<: *base-settings
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ../src:/mudlet/src
