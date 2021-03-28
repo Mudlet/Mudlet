@@ -30,6 +30,7 @@
 
 #include "pre_guard.h"
 #include <QEvent>
+#include <QFileSystemWatcher>
 #include <QNetworkAccessManager>
 #include <QNetworkCookieJar>
 #include <QNetworkCookie>
@@ -602,6 +603,8 @@ public:
     static int enableMapInfo(lua_State*);
     static int disableMapInfo(lua_State*);
     static int getProfileTabNumber(lua_State*);
+    static int addFileWatch(lua_State*);
+    static int removeFileWatch(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
@@ -611,6 +614,7 @@ public:
 
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);
+    void slot_pathChanged(const QString& path);
     void slotPurge();
     void slotDeleteSender(int, QProcess::ExitStatus);
 
@@ -652,6 +656,7 @@ private:
 
 
     QNetworkAccessManager* mpFileDownloader;
+    QFileSystemWatcher* mpFileSystemWatcher;
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
