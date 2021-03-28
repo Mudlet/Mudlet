@@ -119,6 +119,7 @@ private:
     QString mPackageIconPath;
     QString mPackageConfig;
     QString mPlainDescription;
+    QVector<QString> mDescriptionImages;
 
 signals:
     void signal_exportLocationChanged(const QString& location);

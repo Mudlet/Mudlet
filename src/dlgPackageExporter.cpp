@@ -363,10 +363,53 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             //during package creation it uses the profile folder. But once the package is created it will use
             //profile folder/packagename
             QString plainText{mPlainDescription};
-            plainText.replace(QLatin1String("$packagePath"), mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName()));
+            QString packagePath{mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())};
+            //replace packagePath with real packagePath if package exists, for a new package the packagePath is the profilePath
+            if (ui->packageList->currentIndex() != 0) {
+                QString packageName = ui->packageList->currentText();
+                plainText.replace(QLatin1String("$packagePath"), QStringLiteral("%1/%2").arg(packagePath, packageName));
+            } else {
+                plainText.replace(QLatin1String("$packagePath"), packagePath);
+            }
+            for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
+                plainText.replace(QStringLiteral("$Image%1").arg(i), mDescriptionImages.at(i));
+            }
             ui->textEdit_description->setMarkdown(plainText);
 #endif
             return false;
+        }
+        if (evt->type() == QEvent::DragEnter) {
+            QDragEnterEvent* enterEvent = static_cast<QDragEnterEvent*>(evt);
+
+            if (enterEvent->mimeData()->hasUrls()) {
+                enterEvent->acceptProposedAction();
+            }
+            return true;
+        }
+
+        if (evt->type() == QEvent::Drop) {
+            QDropEvent* dropEvent = static_cast<QDropEvent*>(evt);
+            QStringList accepted_types;
+            accepted_types << "jpeg"
+                           << "jpg"
+                           << "png";
+            for (const auto& url : dropEvent->mimeData()->urls()) {
+                QString fname = url.toLocalFile();
+                QFileInfo info(fname);
+                if (info.exists() && accepted_types.contains(info.suffix().trimmed(), Qt::CaseInsensitive)) {
+                    QString imgSrc = QStringLiteral("<img src = \"$Image%1\" />").arg(mDescriptionImages.size());
+                    mPlainDescription.append(imgSrc);
+                    mDescriptionImages.append(fname);
+                }
+            }
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+            //setMarkdown so images can seen as they will appear in the description
+            QString plainText = mPlainDescription;
+            for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
+                plainText.replace(QStringLiteral("$Image%1").arg(i), mDescriptionImages.at(i));
+            }
+            ui->textEdit_description->setMarkdown(plainText);
+#endif
         }
     }
 
@@ -374,7 +417,6 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
     if (obj == ui->listWidget_addedFiles) {
         if (evt->type() == QEvent::DragEnter) {
             QDragEnterEvent* enterEvent = static_cast<QDragEnterEvent*>(evt);
-
             if (enterEvent->mimeData()->hasUrls()) {
                 enterEvent->acceptProposedAction();
             }
@@ -483,6 +525,34 @@ void dlgPackageExporter::slot_export_package()
         }
         iconDirName.append(iconFile.fileName());
         QFile::copy(mPackageIconPath, iconDirName);
+    }
+
+    //copy description image files
+    QRegExp rx("\\$Image(\\d+)");
+    QList<int> imageList;
+    int pos = 0;
+    while ((pos = rx.indexIn(mPlainDescription, pos)) != -1) {
+        imageList << rx.cap(1).toInt();
+        pos += rx.matchedLength();
+    }
+    std::sort(imageList.begin(), imageList.end());
+    if (!imageList.isEmpty()) {
+        QString descriptionImageDirName = QStringLiteral("%1.mudlet/description_images/").arg(tempPath);
+        QDir descriptionImageDir = QDir(descriptionImageDirName);
+        if (!descriptionImageDir.exists()) {
+            descriptionImageDir.mkpath(descriptionImageDirName);
+        }
+        for (int i = imageList.size() - 1; i >= 0; i--) {
+            int imageIndex = imageList.at(i);
+            QFileInfo imageFile(mDescriptionImages.at(imageIndex));
+            if (imageFile.exists()) {
+                QString imageDir = descriptionImageDirName;
+                imageDir.append(imageFile.fileName());
+                QFile::copy(imageFile.absoluteFilePath(), imageDir);
+            }
+            //replace $Imageindex with $packagePath in description file
+            mPlainDescription.replace(QStringLiteral("$Image%1").arg(imageIndex), QStringLiteral("$packagePath/.mudlet/description_images/%1").arg(imageFile.fileName()));
+        }
     }
 
     mXmlPathFileName = QStringLiteral("%1/%2.xml").arg(StagingDirName, mPackageName);
