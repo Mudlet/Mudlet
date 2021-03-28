@@ -66,21 +66,26 @@
 #include <hunspell/hunspell.h>
 
 // for system physical memory info
-#ifdef WIN32
+#if defined(Q_OS_WIN32)
 #include <Windows.h>
 #include <Psapi.h>
-#elif defined(__APPLE__)
+#elif defined(Q_OS_MACOS)
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <array>
-#else
+#elif defined(Q_OS_HURD)
+#include <errno.h>
+#include <unistd.h>
+#elif defined(Q_OS_UNIX)
+// Including both GNU/Linux and FreeBSD
 #include <sys/resource.h>
 #include <sys/sysinfo.h>
 #include <sys/types.h>
 #include <unistd.h>
-
+#else
+// Any other OS?
 #endif
 
 class QAction;
