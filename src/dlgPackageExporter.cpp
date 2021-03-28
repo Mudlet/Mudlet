@@ -1311,14 +1311,14 @@ QString dlgPackageExporter::getActualPath() const
 
 //Description Class TextEdit
 dlgPackageExporterDescription::dlgPackageExporterDescription(QWidget* pW) : QTextEdit(pW) {}
+dlgPackageExporterDescription::~dlgPackageExporterDescription() {}
 
 bool dlgPackageExporterDescription::canInsertFromMimeData(const QMimeData* source) const
 {
     if (source->hasUrls()) {
         return true;
-    } else {
-        return QTextEdit::canInsertFromMimeData(source);
     }
+    return QTextEdit::canInsertFromMimeData(source);
 }
 
 
