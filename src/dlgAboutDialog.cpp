@@ -184,7 +184,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                         tr("Contributions to the Travis integration, CMake and Visual C++ build, "
                            "a lot of code quality and memory management improvements.",
                            "about:ahmedcharles")});
-    aboutMakers.append({false, QStringLiteral("Chris Mitchell"), QString(), QStringLiteral("Chris7"), QStringLiteral("chrismudlet@gmail.com"),
+    aboutMakers.append({false, QStringLiteral("Chris Mitchell"), QString("Chris7#6113"), QStringLiteral("Chris7"), QStringLiteral("chris.mit7@gmail.com"),
                         tr("Developed a shared module system that allows script packages to be shared among profiles, "
                            "a UI for viewing Lua variables, improvements in the mapper and all around.",
                            "about:Chris7")});
