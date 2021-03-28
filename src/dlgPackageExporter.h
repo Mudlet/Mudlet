@@ -134,7 +134,7 @@ class dlgPackageExporterDescription : public QTextEdit
 
 public:
     Q_DISABLE_COPY(dlgPackageExporterDescription)
-    dlgPackageExporterDescription(QWidget* pW = nullptr);
+    explicit dlgPackageExporterDescription(QWidget* pW = nullptr);
     explicit bool canInsertFromMimeData(const QMimeData* source) const;
     explicit void insertFromMimeData(const QMimeData* source);
 };
