@@ -410,6 +410,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             }
             ui->textEdit_description->setMarkdown(plainText);
 #endif
+            return true;
         }
     }
 
