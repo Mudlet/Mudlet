@@ -27,8 +27,10 @@
 
 #include "pre_guard.h"
 #include <QDialog>
+#include <QTextEdit>
 #include <zip.h>
 #include "post_guard.h"
+
 
 class QTreeWidget;
 class QTreeWidgetItem;
@@ -74,6 +76,8 @@ public:
     // This will hold the absolute pathFileName for the XML file that will
     // contain the Mudlet items to go into the package:
     QString mXmlPathFileName;
+    QString mPlainDescription;
+    QVector<QString> mDescriptionImages;
 
 public slots:
     void slot_addFiles();
@@ -118,11 +122,21 @@ private:
     QString mPackagePathFileName;
     QString mPackageIconPath;
     QString mPackageConfig;
-    QString mPlainDescription;
-    QVector<QString> mDescriptionImages;
 
 signals:
     void signal_exportLocationChanged(const QString& location);
+};
+
+
+class dlgPackageExporterDescription : public QTextEdit
+{
+    Q_OBJECT
+
+public:
+    Q_DISABLE_COPY(dlgPackageExporterDescription)
+    dlgPackageExporterDescription(QWidget* pW = nullptr);
+    bool canInsertFromMimeData( const QMimeData *source ) const;
+    void insertFromMimeData( const QMimeData *source );
 };
 
 #endif // MUDLET_DLGPACKAGEEXPORTER_H

@@ -101,13 +101,12 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     connect(ui->pushButton_addIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_import_icon);
 
     ui->listWidget_addedFiles->installEventFilter(this);
-    ui->textEdit_description->installEventFilter(this);
     ui->comboBox_dependencies->installEventFilter(this);
+    ui->textEdit_description->installEventFilter(this);
     ui->packageList->addItem(tr("update installed package"));
     ui->DependencyList->addItem(tr("add dependencies"));
     ui->packageList->addItems(mpHost->mInstalledPackages);
     ui->DependencyList->addItems(mpHost->mInstalledPackages);
-
     auto modules = mpHost -> mInstalledModules;
     QMap<QString, QStringList>::const_iterator iter = modules.constBegin();
     while (iter != modules.constEnd()) {
@@ -377,40 +376,6 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             ui->textEdit_description->setMarkdown(plainText);
 #endif
             return false;
-        }
-        if (evt->type() == QEvent::DragEnter) {
-            QDragEnterEvent* enterEvent = static_cast<QDragEnterEvent*>(evt);
-
-            if (enterEvent->mimeData()->hasUrls()) {
-                enterEvent->acceptProposedAction();
-            }
-            return true;
-        }
-
-        if (evt->type() == QEvent::Drop) {
-            QDropEvent* dropEvent = static_cast<QDropEvent*>(evt);
-            QStringList accepted_types;
-            accepted_types << "jpeg"
-                           << "jpg"
-                           << "png";
-            for (const auto& url : dropEvent->mimeData()->urls()) {
-                QString fname = url.toLocalFile();
-                QFileInfo info(fname);
-                if (info.exists() && accepted_types.contains(info.suffix().trimmed(), Qt::CaseInsensitive)) {
-                    QString imgSrc = QStringLiteral("<img src = \"$Image%1\" />").arg(mDescriptionImages.size());
-                    mPlainDescription.append(imgSrc);
-                    mDescriptionImages.append(fname);
-                }
-            }
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
-            //setMarkdown so images can seen as they will appear in the description
-            QString plainText = mPlainDescription;
-            for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
-                plainText.replace(QStringLiteral("$Image%1").arg(i), mDescriptionImages.at(i));
-            }
-            ui->textEdit_description->setMarkdown(plainText);
-#endif
-            return true;
         }
     }
 
@@ -1341,4 +1306,55 @@ void dlgPackageExporter::slot_recountItems()
 QString dlgPackageExporter::getActualPath() const
 {
     return mPackagePath.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::DesktopLocation) : mPackagePath;
+}
+
+
+//Description Class TextEdit
+dlgPackageExporterDescription::dlgPackageExporterDescription(QWidget* pW) : QTextEdit(pW) {}
+
+bool dlgPackageExporterDescription::canInsertFromMimeData(const QMimeData* source) const
+{
+    if (source->hasUrls()) {
+        return true;
+    } else {
+        return QTextEdit::canInsertFromMimeData(source);
+    }
+}
+
+
+void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
+{
+    dlgPackageExporter* my_parent = static_cast<dlgPackageExporter*>(topLevelWidget());
+    if (source->hasUrls()) {
+        if (hasFocus()) {
+            my_parent->mPlainDescription = toPlainText();
+        }
+        QStringList accepted_types;
+        accepted_types << "jpeg"
+                       << "jpg"
+                       << "png";
+        for (const auto& url : source->urls()) {
+            QString fname = url.toLocalFile();
+            QFileInfo info(fname);
+            if (info.exists() && accepted_types.contains(info.suffix().trimmed(), Qt::CaseInsensitive)) {
+                QString imgSrc = QStringLiteral("<img src = \"$Image%1\" />").arg(my_parent->mDescriptionImages.size());
+                my_parent->mPlainDescription.append(imgSrc);
+                my_parent->mDescriptionImages.append(fname);
+            }
+        }
+        //setMarkdown so images can seen as they will appear in the description
+        if (!hasFocus()) {
+            QString plainText = my_parent->mPlainDescription;
+            for (int i = my_parent->mDescriptionImages.size() - 1; i >= 0; i--) {
+                plainText.replace(QStringLiteral("$Image%1").arg(i), my_parent->mDescriptionImages.at(i));
+            }
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+            setMarkdown(plainText);
+#endif
+        } else {
+            setPlainText(my_parent->mPlainDescription);
+        }
+    } else {
+        QTextEdit::insertFromMimeData(source);
+    }
 }
