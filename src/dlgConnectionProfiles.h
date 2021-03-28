@@ -95,7 +95,7 @@ protected:
 
 
 private:
-    void copyFolder(const QString& sourceFolder, const QString& destFolder);
+    static bool copyFolder(const QString& sourceFolder, const QString& destFolder);
     QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name) const;
     bool validateConnect();
     void updateDiscordStatus();
@@ -138,6 +138,7 @@ private:
     QPushButton* connect_button;
     QLineEdit* delete_profile_lineedit;
     QPushButton* delete_button;
+    QAction* copyProfile;
     QString mDiscordApplicationId;
     const QStringList mDefaultGames;
     QAction* mpAction_revealPassword;
@@ -157,6 +158,8 @@ private slots:
     void slot_password_saved(QKeychain::Job* job);
     void slot_password_deleted(QKeychain::Job* job);
     void slot_reenableAllProfileItems();
+    void enableConnectionButtons();
+    void disableConnectionButtons();
 };
 
 
