@@ -187,6 +187,10 @@ TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id) : mp
     mpFileDownloader = new QNetworkAccessManager(this);
     connect(mpFileDownloader, &QNetworkAccessManager::finished, this, &TLuaInterpreter::slot_httpRequestFinished);
 
+    mpFileSystemWatcher = new QFileSystemWatcher(this);
+    connect(mpFileSystemWatcher, &QFileSystemWatcher::fileChanged, this, &TLuaInterpreter::slot_pathChanged);
+    connect(mpFileSystemWatcher, &QFileSystemWatcher::directoryChanged, this, &TLuaInterpreter::slot_pathChanged);
+
     initLuaGlobals();
 
     purgeTimer.start(2s);
@@ -576,6 +580,23 @@ void TLuaInterpreter::raiseDownloadProgressEvent(lua_State* L, QString fileUrl, 
     }
 
     host.raiseEvent(event);
+}
+
+void TLuaInterpreter::slot_pathChanged(const QString& path)
+{
+    // According to QtDocs it is possible that some editors will delete old file and create new one on edits
+    // Therefore it is required to add file to watches again
+    if (!mpFileSystemWatcher->files().contains(path) && QFile::exists(path)) {
+        mpFileSystemWatcher->addPath(path);
+    }
+
+    TEvent event {};
+    event.mArgumentList << QLatin1String("sysPathChanged");
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+    event.mArgumentList << path;
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+
+    mpHost->raiseEvent(event);
 }
 
 // No documentation available in wiki - internal function
@@ -13783,6 +13804,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
     lua_register(pGlobalLua, "disableMapInfo", TLuaInterpreter::disableMapInfo);
     lua_register(pGlobalLua, "getProfileTabNumber", TLuaInterpreter::getProfileTabNumber);
+    lua_register(pGlobalLua, "addFileWatch", TLuaInterpreter::addFileWatch);
+    lua_register(pGlobalLua, "removeFileWatch", TLuaInterpreter::removeFileWatch);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -15536,5 +15559,30 @@ int TLuaInterpreter::disableMapInfo(lua_State* L)
     }
 
     lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addFileWatch
+int TLuaInterpreter::addFileWatch(lua_State * L)
+{
+    auto path = getVerifiedString(L, __func__, 1, "path");
+    auto& host = getHostFromLua(L);
+
+    QFileInfo fileInfo(path);
+    if (!fileInfo.exists()) {
+        return warnArgumentValue(L, __func__, QStringLiteral("path '%1' does not exist").arg(path));
+    }
+
+    lua_pushboolean(L, host.getLuaInterpreter()->mpFileSystemWatcher->addPath(path));
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeFileWatch
+int TLuaInterpreter::removeFileWatch(lua_State * L)
+{
+    auto path = getVerifiedString(L, __func__, 1, "path");
+    auto& host = getHostFromLua(L);
+
+    lua_pushboolean(L, host.getLuaInterpreter()->mpFileSystemWatcher->removePath(path));
     return 1;
 }
