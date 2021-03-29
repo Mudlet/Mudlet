@@ -15,7 +15,7 @@ on:
 
 jobs:
   analyze:
-    name: Analyze
+    name: ${{matrix.buildname}}
     runs-on: ubuntu-latest
 
     strategy:
