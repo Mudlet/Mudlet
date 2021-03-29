@@ -223,37 +223,44 @@
           <string>Miscellaneous</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_miscellaneous">
-          <item row="0" column="0">
+          <item row="1" column="0">
            <widget class="QCheckBox" name="mAlertOnNewData">
-            <property name="text">
-             <string>Notify on new data</string>
-            </property>
             <property name="toolTip">
              <string>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</string>
             </property>
+            <property name="text">
+             <string>Notify on new data</string>
+            </property>
            </widget>
           </item>
-          <item row="0" column="1">
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="acceptServerMedia">
+            <property name="toolTip">
+             <string>&lt;p&gt;This also needs GMCP to be enabled in the next group below.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Allow server to download and play media</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
            <widget class="QCheckBox" name="acceptServerGUI">
             <property name="text">
              <string>Allow server to install script packages</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="2" column="0">
            <widget class="QCheckBox" name="mFORCE_SAVE_ON_EXIT">
             <property name="text">
              <string>Auto save on exit</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
-           <widget class="QCheckBox" name="acceptServerMedia">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="enableDarkTheme">
             <property name="text">
-             <string>Allow server to download and play media</string>
-            </property>
-            <property name="toolTip">
-             <string>&lt;p&gt;This also needs GMCP to be enabled in the next group below.&lt;/p&gt;</string>
+             <string>Enable DarkTheme</string>
             </property>
            </widget>
           </item>
@@ -3083,6 +3090,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <font>
                  <family>Arial</family>
                  <pointsize>8</pointsize>
+                 <stylestrategy>PreferAntialias</stylestrategy>
                 </font>
                </property>
                <property name="autoFillBackground">
@@ -3432,14 +3440,14 @@ you can use it but there could be issues with aligning columns of text</string>
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
+               <property name="toolTip">
+                <string comment="The term in '...' refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.">&lt;p&gt;Show 'LUA OK' messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</string>
+               </property>
                <property name="text">
                 <string>Show debug messages for timers not smaller than:</string>
                </property>
                <property name="buddy">
                 <cstring>timeEdit_timerDebugOutputMinimumInterval</cstring>
-               </property>
-               <property name="toolTip">
-                <string comment="The term in '...' refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.">&lt;p&gt;Show 'LUA OK' messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</string>
                </property>
               </widget>
              </item>
@@ -3479,11 +3487,11 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="5" column="0">
            <widget class="QCheckBox" name="checkBox_debugShowAllCodepointProblems">
-            <property name="text">
-             <string>Report all Codepoint problems immediately</string>
-            </property>
             <property name="toolTip">
              <string>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summarized in as a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Report all Codepoint problems immediately</string>
             </property>
            </widget>
           </item>
@@ -3568,6 +3576,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>comboBox_toolBarVisibility</tabstop>
   <tabstop>comboBox_guiLanguage</tabstop>
   <tabstop>comboBox_encoding</tabstop>
+  <tabstop>enableDarkTheme</tabstop>
   <tabstop>mAlertOnNewData</tabstop>
   <tabstop>mFORCE_SAVE_ON_EXIT</tabstop>
   <tabstop>acceptServerGUI</tabstop>
@@ -3583,7 +3592,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>mIsLoggingTimestamps</tabstop>
   <tabstop>pushButton_whereToLog</tabstop>
   <tabstop>pushButton_resetLogDir</tabstop>
-  <tabstop>USE_UNIX_EOL</tabstop>
   <tabstop>auto_clear_input_line_checkbox</tabstop>
   <tabstop>show_sent_text_checkbox</tabstop>
   <tabstop>checkBox_highlightHistory</tabstop>
@@ -3708,6 +3716,9 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_expectCSpaceIdInColonLessMColorCode</tabstop>
   <tabstop>comboBox_store_passwords_in</tabstop>
   <tabstop>timeEdit_timerDebugOutputMinimumInterval</tabstop>
+  <tabstop>checkbox_mMapperShowRoomBorders</tabstop>
+  <tabstop>pushButton_roomBorderColor</tabstop>
+  <tabstop>USE_UNIX_EOL</tabstop>
  </tabstops>
  <resources>
   <include location="../mudlet.qrc"/>
