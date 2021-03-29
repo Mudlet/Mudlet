@@ -1326,23 +1326,33 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
 {
     dlgPackageExporter* my_parent = static_cast<dlgPackageExporter*>(topLevelWidget());
     if (source->hasUrls()) {
+        QTextCursor myCursor = textCursor();
+        int oldPos = myCursor.position();
+        // Allows to insert image at cursor position if using copy/paste
         if (hasFocus()) {
-            my_parent->mPlainDescription = toPlainText();
+            myCursor.setPosition(oldPos);
+        } else {
+            setPlainText(my_parent->mPlainDescription);
         }
         QStringList accepted_types;
         accepted_types << "jpeg"
                        << "jpg"
-                       << "png";
+                       << "png"
+                       << "gif"
+                       << "bmp";
         for (const auto& url : source->urls()) {
             QString fname = url.toLocalFile();
             QFileInfo info(fname);
             if (info.exists() && accepted_types.contains(info.suffix().trimmed(), Qt::CaseInsensitive)) {
-                QString imgSrc = QStringLiteral("<img src = \"$Image%1\" />").arg(my_parent->mDescriptionImages.size());
-                my_parent->mPlainDescription.append(imgSrc);
-                my_parent->mDescriptionImages.append(fname);
+                if (!my_parent->mDescriptionImages.contains(fname)) {
+                    my_parent->mDescriptionImages.append(fname);
+                }
+                QString imgSrc = QStringLiteral("<img src = \"$Image%1\" />").arg(my_parent->mDescriptionImages.indexOf(fname));
+                myCursor.insertText(imgSrc);
             }
         }
-        //setMarkdown so images can seen as they will appear in the description
+        my_parent->mPlainDescription = toPlainText();
+        //setMarkdown so images can be seen as they will appear in the description
         if (!hasFocus()) {
             QString plainText = my_parent->mPlainDescription;
             for (int i = my_parent->mDescriptionImages.size() - 1; i >= 0; i--) {
@@ -1351,8 +1361,6 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
             setMarkdown(plainText);
 #endif
-        } else {
-            setPlainText(my_parent->mPlainDescription);
         }
     } else {
         QTextEdit::insertFromMimeData(source);
