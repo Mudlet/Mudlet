@@ -210,7 +210,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                         tr("Developed the Vyzor GUI Manager for Mudlet.",
                            "about:Oneymus")});
     aboutMakers.append({false, QStringLiteral("ItsTheFae"), QStringLiteral("TheFae#9971"), QStringLiteral("Kae"), QString(),
-                        tr("Worked wonders in rejuventating our Website in 2017 but who prefers a little anonymity - "
+                        tr("Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - "
                            "if you are a <i>SpamBot</i> you will not get onto our Fora now. They have also made some useful "
                            "C++ core code contributions and we look forward to future reviews on and work in that area.",
                            "about:TheFae")});
