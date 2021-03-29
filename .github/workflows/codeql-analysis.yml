@@ -8,8 +8,6 @@ name: "CodeQL"
 on:
   push:
     branches: [development, main]
-  # FIXME temporary for testing
-  pull_request:
   schedule:
     - cron: '0 7 * * 3'
 
@@ -136,9 +134,6 @@ jobs:
       run: |
         ${{github.workspace}}/CI/travis.validate_deployment.sh
         ${{github.workspace}}/CI/travis.set-build-info.sh
-
-        # FIXME temporary
-        ls ${{env.BOOST_ROOT}}
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
