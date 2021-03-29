@@ -1575,12 +1575,12 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                                                                               |QFont::PreferNoShaping
                                                                               ));
             if (mVersion >= 14) {
-                int areaSize;
+                int areaSize = 0;
                 ifs >> areaSize;
                 // restore area table
                 for (int i = 0; i < areaSize; i++) {
                     auto pA = new TArea(this, mpRoomDB);
-                    int areaID;
+                    int areaID = 0;
                     ifs >> areaID;
                     if (mVersion >= 18) {
                         // In version 18 changed from QList<int> to QSet<int> as the later is
@@ -1666,7 +1666,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 // with each other's saved value
                 ifs >> mRoomIdHash;
             } else if (mVersion >= 12) {
-                int oldRoomId;
+                int oldRoomId = 0;
                 ifs >> oldRoomId;
                 mRoomIdHash[mProfileName] = oldRoomId;
             }
@@ -1685,7 +1685,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                     int areaLabelCounter = 0;
                     auto pA = mpRoomDB->getArea(areaID);
                     while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
-                        int labelID;
+                        int labelID = 0;
                         ifs >> labelID;
                         TMapLabel label;
                         if (mVersion >= 12) {
@@ -1722,7 +1722,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             }
 
             while (!ifs.atEnd()) {
-                int i;
+                int i = 0;
                 ifs >> i;
                 auto pT = new TRoom(mpRoomDB);
                 pT->restore(ifs, i, mVersion);
