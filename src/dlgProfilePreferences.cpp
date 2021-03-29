@@ -3225,7 +3225,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         auto * pSymbolInFont = new QTableWidgetItem();
         pSymbolInFont->setTextAlignment(Qt::AlignCenter);
         pSymbolInFont->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                  .arg(tr("<p>The room symbol will appear like this if only symbols (glyphs) from the specfic font are used.</p>")));
+                                  .arg(tr("<p>The room symbol will appear like this if only symbols (glyphs) from the specific font are used.</p>")));
         pSymbolInFont->setFont(selectedFont);
 
         auto * pSymbolAnyFont = new QTableWidgetItem();
