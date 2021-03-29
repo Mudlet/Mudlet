@@ -931,7 +931,7 @@ void XMLimport::readHostPackage(Host* pHost)
             break;
         } else if (isStartElement()) {
             if (name() == "name") {
-                pHost->mHostName = readElementText();
+                // name is intentionally ignored as it is already populated from the profile folder
             } else if (name() == "mInstalledModules") {
                 QMap<QString, QStringList> entry;
 
