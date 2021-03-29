@@ -3756,9 +3756,11 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
 void mudlet::setDarkTheme(const bool& state)
 {
     if (state) {
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         qApp->setStyle(new DarkTheme);
         getHostManager().changeAllHostColour(getActiveHost());
     } else {
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
         getHostManager().changeAllHostColour(getActiveHost());
     }
