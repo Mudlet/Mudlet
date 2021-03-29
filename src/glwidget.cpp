@@ -283,10 +283,12 @@ void GLWidget::paintGL()
             painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
 
             QString message;
-            if (mpMap->mpRoomDB && mpMap->mpRoomDB->isEmpty()) {
-                message = tr("No rooms in the map - load another one, or start mapping from scratch to begin.");
-            } else if (mpMap->mpRoomDB && !mpMap->mpRoomDB->isEmpty()) {
-                message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size());
+            if (mpMap->mpRoomDB) {
+                if (mpMap->mpRoomDB->isEmpty() {
+                    message = tr("No rooms in the map - load another one, or start mapping from scratch to begin.");
+                } else {
+                    message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size());
+                }
             } else {
                 message = tr("You do not have a map yet - load one, or start mapping from scratch to begin.");
             }
