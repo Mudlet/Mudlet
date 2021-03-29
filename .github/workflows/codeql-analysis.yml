@@ -21,26 +21,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Override automatic language detection by changing the below list
-        # Supported options are ['csharp', 'cpp', 'go', 'java', 'javascript', 'python']
-        language: ['cpp']
-        # Learn more...
-        # https://docs.github.com/en/github/finding-security-vulnerabilities-and-errors-in-your-code/configuring-code-scanning#overriding-automatic-language-detection
+        include:
+          - language: ['cpp']
+            qt: '5.14.1'
+            triplet: x64-linux
+            compiler: gcc_64
+            os: ubuntu-latest
+
     env:
-      qt: "5.14.1"
+      BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
+      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
+
 
     steps:
     - name: Restore Qt cache
       uses: actions/cache@v2.1.4
       id: cache-qt
       with:
-        path: ${{runner.workspace}}/Qt/${{env.qt}}
-        key: ${{matrix.os}}-qt-${{env.qt}}-cache
+        path: ${{runner.workspace}}/Qt/${{matrix.qt}}
+        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
       with:
-        version: ${{env.qt}}
+        version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         arch: win64_mingw81 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
