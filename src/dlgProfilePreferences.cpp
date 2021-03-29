@@ -194,7 +194,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                           "<p><u>Any timer script that has errors will still have its error messages reported whatever the setting.</u></p>"));
 
     pushButton_showGlyphUsage->setToolTip(tr("<p>This will bring up a display showing all the symbols used in the current "
-                                             "map and whether they can be drawn using just the specifed font, any other "
+                                             "map and whether they can be drawn using just the specified font, any other "
                                              "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
                                              "that make up that symbol, so that they can be identified even if they "
                                              "cannot be displayed; also, up to the first thirty two rooms that are using "
