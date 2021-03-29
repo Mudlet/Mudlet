@@ -8404,7 +8404,7 @@ void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardMo
 
 void dlgTriggerEditor::slot_chose_action_icon()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Seclect Icon"), QDir::homePath(), tr("Images (*.png *.xpm *.jpg)"));
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Icon"), QDir::homePath(), tr("Images (*.png *.xpm *.jpg)"));
     mpActionsMainArea->lineEdit_action_icon->setText(fileName);
 }
 

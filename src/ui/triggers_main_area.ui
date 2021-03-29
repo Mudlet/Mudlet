@@ -357,7 +357,7 @@
             <item alignment="Qt::AlignTop">
              <widget class="QLabel" name="label_perlSlashGOption">
               <property name="text">
-               <string>Match all occurences of the pattern in the line.</string>
+               <string>Match all occurrences of the pattern in the line.</string>
               </property>
               <property name="scaledContents">
                <bool>true</bool>

@@ -131,7 +131,7 @@
       </font>
      </property>
      <property name="text">
-      <string>&lt;p&gt;miliseconds&lt;/p&gt;</string>
+      <string>&lt;p&gt;milliseconds&lt;/p&gt;</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignBottom|Qt::AlignHCenter</set>
