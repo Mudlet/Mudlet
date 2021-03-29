@@ -23,6 +23,7 @@ jobs:
       matrix:
         include:
           - language: cpp
+            buildname: 'CodeQL'
             qt: '5.14.1'
             triplet: x64-linux
             compiler: gcc_64
