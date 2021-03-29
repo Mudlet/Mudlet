@@ -2131,7 +2131,7 @@ void TTextEdit::slot_analyseSelection()
                 // just for that number (and not the rest of the resultant String):
                 // &#8232; is the Unicode Line Separator
                 utf16Vals.append(
-                        QStringLiteral("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</centre>&#8232;<center>(0x%3:0x%4)</center></td>")
+                        QStringLiteral("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
                                 .arg(QString::number(columnsToUse))
                                 .arg(QStringLiteral("%1").arg(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1)), 4, 16, zero).toUpper())
                                 .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, zero)
