@@ -34,13 +34,13 @@ jobs:
       uses: actions/cache@v2.1.4
       id: cache-qt
       with:
-        path: ${{runner.workspace}}/Qt/${{matrix.qt}}
-        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
+        path: ${{runner.workspace}}/Qt/${{env.qt}}
+        key: ${{matrix.os}}-qt-${{env.qt}}-cache
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
       with:
-        version: ${{matrix.qt}}
+        version: ${{env.qt}}
         dir: ${{runner.workspace}}
         arch: win64_mingw81 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
