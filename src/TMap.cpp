@@ -1374,9 +1374,98 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     return true;
 }
 
+// file is expected to be linked to a file name but not be opened; ifs is not
+// expected to be linked to any IODevice. On success file will be opened and
+// ifs will be part way through it (has read the first 4 bytes which encode the
+// map file version). On failure both will be in the same states as initial one:
+bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
+{
+    int version = 0;
+    if (!file.open(QFile::ReadOnly)) {
+        QString errMsg = tr(R"([ ERROR ] - Unable to open (for reading) map file: "%1"!)").arg(file.fileName());
+        appendErrorMsg(errMsg, false);
+        postMessage(errMsg);
+        return false;
+    }
+
+    ifs.setDevice(&file);
+    // Is the RUN-TIME version of the Qt libraries equal to or more than
+    // Qt 5.13.0? Then force things to use the backwards compatible format
+    // - for us - of Qt 5.12.0 - this is needed because the way that the
+    // QFont class is stored in a binary format has changed at 5.13 and it
+    // causes crashes when a new version of the Qt libraries tries to read
+    // the older format:
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        // 18 is the enum value corresponding to QDataStream::Qt_5_12 which
+        // we want to force to be used but we cannot use the enum directly
+        // because it will not be defined in older versions of the Qt
+        // library when the code is compilated:
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
+    ifs >> version;
+    if ((version < 1) || (version > 127)) {
+        QString errMsg = tr("[ ALERT ] - File does not seem to be a Mudlet Map file, the part that indicates\n"
+                            "its format version number seems to be (%1) and that doesn't make sense, the file is:\n"
+                            "\"%2\".")
+                                 .arg(version)
+                                 .arg(file.fileName());
+        appendErrorMsgWithNoLf(errMsg);
+        postMessage(errMsg);
+        QString infoMsg = tr("[ INFO ]  - Ignoring this unlikely map file;\n"
+                             "continuing to find the next newest file that could be a Mudlet map file...");
+        appendErrorMsgWithNoLf(infoMsg);
+        postMessage(infoMsg);
+        ifs.setDevice(nullptr);
+        file.close();
+        return false;
+    }
+    if (version > mMaxVersion) {
+        QString errMsg = tr("[ ALERT ] - Map file is too new, its file format (%1) is higher than this version of\n"
+                            "Mudlet can handle (%2)!  The file is:\n\"%3\".")
+                                 .arg(version)
+                                 .arg(mMaxVersion)
+                                 .arg(file.fileName());
+        appendErrorMsgWithNoLf(errMsg);
+        postMessage(errMsg);
+        QString infoMsg = tr("[ INFO ]  - You will need to upgrade your Mudlet to read it;\n"
+                             "continuing to find the next newest map file saved in an older format...");
+        appendErrorMsgWithNoLf(infoMsg);
+        postMessage(infoMsg);
+        ifs.setDevice(nullptr);
+        file.close();
+        return false;
+    }
+
+    if (version < 4) {
+        QString alertMsg = tr("[ ALERT ] - Map file is really old, its file format (%1) is so ancient that\n"
+                              "this version of Mudlet may not gain enough information from\n"
+                              "it but it will try!  The file is: \"%2\".")
+                                   .arg(version)
+                                   .arg(file.fileName());
+        appendErrorMsgWithNoLf(alertMsg, false);
+        postMessage(alertMsg);
+        QString infoMsg = tr("[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!\n"
+                             "There is so much data that it DOES NOT have that you could be\n"
+                             "better off starting again...");
+        appendErrorMsgWithNoLf(infoMsg, false);
+        postMessage(infoMsg);
+    } else {
+        // Less than (but not less than 4) or equal to default version
+        QString infoMsg = tr("[ INFO ]  - Reading map (format version:%1) file:\n"
+                             "\"%2\",\n"
+                             "please wait...").arg(version).arg(file.fileName());
+        appendErrorMsg(tr(R"([ INFO ]  - Reading map (format version:%1) file: "%2".)").arg(version).arg(file.fileName()), false);
+        postMessage(infoMsg);
+    }
+    mVersion = version;
+    mSaveVersion = mDefaultVersion; // Make the save version the default one - unless the user intervenes
+
+    return true;
+}
+
 bool TMap::restore(QString location, bool downloadIfNotFound)
 {
-    qDebug() << "TMap::restore(" << location << ") INFO: restoring map of Profile:" << mProfileName << " URL:" << mpHost->getUrl();
+    qDebug().noquote().nospace() << "TMap::restore(\"" << location << "\") INFO: restoring map of Profile: \"" << mProfileName << "\" URL: " << mpHost->getUrl();
 
     QElapsedTimer _time;
     _time.start();
@@ -1386,319 +1475,286 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
     if (location.isEmpty()) {
         folder = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
         QDir dir(folder);
-        dir.setSorting(QDir::Time);
-        entries = dir.entryList(QDir::Files, QDir::Time);
+        QStringList filters{QStringLiteral("*.[dD][aA][tT]")};
+        entries = dir.entryList(filters, QDir::Files, QDir::Time);
     }
 
     bool canRestore = true;
+    QDataStream ifs;
     if (!entries.empty() || !location.isEmpty()) {
-        QFile file(location.isEmpty() ? QStringLiteral("%1/%2").arg(folder, entries.at(0)) : location);
-
-        if (!file.open(QFile::ReadOnly)) {
-            QString errMsg = tr(R"([ ERROR ] - Unable to open (for reading) map file: "%1"!)").arg(file.fileName());
-            appendErrorMsg(errMsg, false);
-            postMessage(errMsg);
-            return false;
-        }
-
-        QDataStream ifs(&file);
-        // Is the RUN-TIME version of the Qt libraries equal to or more than
-        // Qt 5.13.0? Then force things to use the backwards compatible format
-        // - for us - of Qt 5.12.0 - this is needed because the way that the
-        // QFont class is stored in a binary format has changed at 5.13 and it
-        // causes crashes when a new version of the Qt libraries tries to read
-        // the older format:
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            // 18 is the enum value corresponding to QDataStream::Qt_5_12 which
-            // we want to force to be used but we cannot use the enum directly
-            // because it will not be defined in older versions of the Qt
-            // library when the code is compilated:
-            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
-        ifs >> mVersion;
-        if (mVersion > mMaxVersion) {
-            QString errMsg = tr("[ ERROR ] - Map file is too new, its file format (%1) is higher than this version of\n"
-                                "Mudlet can handle (%2)!  The file is:\n\"%3\".")
-                                     .arg(mVersion)
-                                     .arg(mMaxVersion)
-                                     .arg(file.fileName());
-            appendErrorMsgWithNoLf(errMsg);
-            postMessage(errMsg);
-            QString infoMsg = tr("[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an\n"
-                                 "older format.");
-            appendErrorMsgWithNoLf(infoMsg);
-            postMessage(infoMsg);
-            file.close();
-            return false;
-        } else if (mVersion < 4) {
-            QString alertMsg = tr("[ ALERT ] - Map file is really old, its file format (%1) is so ancient that\n"
-                                  "this version of Mudlet may not gain enough information from\n"
-                                  "it but it will try!  The file is: \"%2\".")
-                                       .arg(mVersion)
-                                       .arg(file.fileName());
-            appendErrorMsgWithNoLf(alertMsg, false);
-            postMessage(alertMsg);
-            QString infoMsg = tr("[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!\n"
-                                 "There is so much data that it DOES NOT have that you could be\n"
-                                 "better off starting again...");
-            appendErrorMsgWithNoLf(infoMsg, false);
-            postMessage(infoMsg);
-            canRestore = false;
-            mSaveVersion = mDefaultVersion; // Make the save version the default one - unless the user intervenes
+        // We get to here if there is one or more entries OR location is
+        // supplied - if the latter then there is only one file to consider but
+        // if the former we may have to check more than one to find a valid
+        // map file:
+        QFile file;
+        if (location.isEmpty()) {
+            // Look through the entries:
+            QStringListIterator itFileName(entries);
+            bool foundValidFile = false;
+            while (itFileName.hasNext()) {
+                auto fileName = QStringLiteral("%1/%2").arg(folder, itFileName.next());
+                file.setFileName(fileName);
+                if (validatePotentialMapFile(file, ifs)) {
+                    foundValidFile = true;
+                    break;
+                }
+            }
+            if (!foundValidFile) {
+                canRestore = false;
+            }
         } else {
-            // Less than (but not less than 4) or equal to default version
-            QString infoMsg = tr("[ INFO ]  - Reading map (format version:%1) file:\n\"%2\",\nplease wait...").arg(mVersion).arg(file.fileName());
-            appendErrorMsg(tr(R"([ INFO ]  - Reading map (format version:%1) file: "%2".)").arg(mVersion).arg(file.fileName()), false);
-            postMessage(infoMsg);
-            mSaveVersion = mDefaultVersion; // Make the save version the default one - unless the user intervenes
+            file.setFileName(location);
+            canRestore = validatePotentialMapFile(file, ifs);
         }
 
-        // As all but the room reading have version checks the fact that sub-4
-        // files will still be parsed despite canRestore being false is probably OK
-        if (mVersion >= 4) {
-            ifs >> mEnvColors;
-            mpRoomDB->restoreAreaMap(ifs);
-        }
-        if (mVersion >= 5) {
-            ifs >> mCustomEnvColors;
-        }
-        if (mVersion >= 7) {
-            ifs >> mpRoomDB->hashToRoomID;
-            QMap<QString, int>::const_iterator i;
-            for (i = mpRoomDB->hashToRoomID.constBegin(); i != mpRoomDB->hashToRoomID.constEnd(); ++i) {
-                mpRoomDB->roomIDToHash.insert(i.value(), i.key());
+        if (canRestore) {
+            // As all but the room reading have version checks the fact that sub-4
+            // files will still be parsed despite canRestore being false is probably OK
+            if (mVersion >= 4) {
+                ifs >> mEnvColors;
+                mpRoomDB->restoreAreaMap(ifs);
             }
-        }
-
-        if (mVersion >= 17) {
-            ifs >> mUserData;
-            if (mVersion >= 19) {
-                // Read the data from the file directly in version 19 or later
-                ifs >> mMapSymbolFont;
-                if ((mVersion < 21) && mMapSymbolFont.toString().split(QLatin1String(",")).size() > 15) {
-                    // We need to clean up the effects of using QFont(string)
-                    // for a format 17 or 18 below - as this fix went in before
-                    // 21 was used it only has to be used for map formats 19 and
-                    // 20:
-                    mMapSymbolFont.fromString(mMapSymbolFont.toString().split(QLatin1String(",")).mid(0, 10).join(QLatin1String(",")));
-                }
-                ifs >> mMapSymbolFontFudgeFactor;
-                ifs >> mIsOnlyMapSymbolFontToBeUsed;
-            } else {
-                // Fallback to reading the data from the map user data - and
-                // remove it from the data the user will see:
-                // BUGFIX: Using QFont::toString() and then using that to
-                // construct a font again afterwards via a QFont(string) was
-                // incorrect as it seemed to cause the last to duplicated the
-                // last nine elements each time. The details of the ::toString()
-                // ::fromString() methods are not currently documented so the
-                // only details are documented in the source:
-                // https://code.qt.io/cgit/qt/qtbase.git/tree/src/gui/text/qfont.cpp?h=5.15#n2070
-                // and:
-                // https://code.qt.io/cgit/qt/qtbase.git/tree/src/gui/text/qfont.cpp?h=5.15#n2128
-                // this suggests that only one or ten elements are accepted so
-                // we CAN fix past mistakes by only considering the first ten
-                // elements:
-                QStringList fontStrings{mUserData.take(QStringLiteral("system.fallback_mapSymbolFont")).split(QLatin1Char(','))};
-                QString fontString{fontStrings.mid(0, 10).join(QLatin1Char(','))};
-                QString fontFudgeFactorString = mUserData.take(QStringLiteral("system.fallback_mapSymbolFontFudgeFactor"));
-                QString onlyUseSymbolFontString = mUserData.take(QStringLiteral("system.fallback_onlyUseMapSymbolFont"));
-                if (!fontString.isEmpty()) {
-                    mMapSymbolFont.fromString(fontString);
-                }
-                if (!fontFudgeFactorString.isEmpty()) {
-                    mMapSymbolFontFudgeFactor = fontFudgeFactorString.toDouble();
-                }
-                if (!onlyUseSymbolFontString.isEmpty()) {
-                    mIsOnlyMapSymbolFontToBeUsed = (onlyUseSymbolFontString != QLatin1String("false"));
+            if (mVersion >= 5) {
+                ifs >> mCustomEnvColors;
+            }
+            if (mVersion >= 7) {
+                ifs >> mpRoomDB->hashToRoomID;
+                QMap<QString, int>::const_iterator i;
+                for (i = mpRoomDB->hashToRoomID.constBegin(); i != mpRoomDB->hashToRoomID.constEnd(); ++i) {
+                    mpRoomDB->roomIDToHash.insert(i.value(), i.key());
                 }
             }
-        }
 
-        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0)
-                                                                          |QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
-                                                                          |QFont::PreferNoShaping
-                                                                          ));
-        if (mVersion >= 14) {
-            int areaSize;
-            ifs >> areaSize;
-            // restore area table
-            for (int i = 0; i < areaSize; i++) {
-                auto pA = new TArea(this, mpRoomDB);
-                int areaID;
-                ifs >> areaID;
-                if (mVersion >= 18) {
-                    // In version 18 changed from QList<int> to QSet<int> as the later is
-                    // faster in many of the cases where we use it.
-                    ifs >> pA->rooms;
+            if (mVersion >= 17) {
+                ifs >> mUserData;
+                if (mVersion >= 19) {
+                    // Read the data from the file directly in version 19 or later
+                    ifs >> mMapSymbolFont;
+                    if ((mVersion < 21) && mMapSymbolFont.toString().split(QLatin1String(",")).size() > 15) {
+                        // We need to clean up the effects of using QFont(string)
+                        // for a format 17 or 18 below - as this fix went in before
+                        // 21 was used it only has to be used for map formats 19 and
+                        // 20:
+                        mMapSymbolFont.fromString(mMapSymbolFont.toString().split(QLatin1String(",")).mid(0, 10).join(QLatin1String(",")));
+                    }
+                    ifs >> mMapSymbolFontFudgeFactor;
+                    ifs >> mIsOnlyMapSymbolFontToBeUsed;
                 } else {
-                    QList<int> oldRoomsList;
-                    ifs >> oldRoomsList;
+                    // Fallback to reading the data from the map user data - and
+                    // remove it from the data the user will see:
+                    // BUGFIX: Using QFont::toString() and then using that to
+                    // construct a font again afterwards via a QFont(string) was
+                    // incorrect as it seemed to cause the last to duplicated the
+                    // last nine elements each time. The details of the ::toString()
+                    // ::fromString() methods are not currently documented so the
+                    // only details are documented in the source:
+                    // https://code.qt.io/cgit/qt/qtbase.git/tree/src/gui/text/qfont.cpp?h=5.15#n2070
+                    // and:
+                    // https://code.qt.io/cgit/qt/qtbase.git/tree/src/gui/text/qfont.cpp?h=5.15#n2128
+                    // this suggests that only one or ten elements are accepted so
+                    // we CAN fix past mistakes by only considering the first ten
+                    // elements:
+                    QStringList fontStrings{mUserData.take(QStringLiteral("system.fallback_mapSymbolFont")).split(QLatin1Char(','))};
+                    QString fontString{fontStrings.mid(0, 10).join(QLatin1Char(','))};
+                    QString fontFudgeFactorString = mUserData.take(QStringLiteral("system.fallback_mapSymbolFontFudgeFactor"));
+                    QString onlyUseSymbolFontString = mUserData.take(QStringLiteral("system.fallback_onlyUseMapSymbolFont"));
+                    if (!fontString.isEmpty()) {
+                        mMapSymbolFont.fromString(fontString);
+                    }
+                    if (!fontFudgeFactorString.isEmpty()) {
+                        mMapSymbolFontFudgeFactor = fontFudgeFactorString.toDouble();
+                    }
+                    if (!onlyUseSymbolFontString.isEmpty()) {
+                        mIsOnlyMapSymbolFontToBeUsed = (onlyUseSymbolFontString != QLatin1String("false"));
+                    }
+                }
+            }
+
+            mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0)
+                                                                              |QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
+                                                                              |QFont::PreferNoShaping
+                                                                              ));
+            if (mVersion >= 14) {
+                int areaSize;
+                ifs >> areaSize;
+                // restore area table
+                for (int i = 0; i < areaSize; i++) {
+                    auto pA = new TArea(this, mpRoomDB);
+                    int areaID;
+                    ifs >> areaID;
+                    if (mVersion >= 18) {
+                        // In version 18 changed from QList<int> to QSet<int> as the later is
+                        // faster in many of the cases where we use it.
+                        ifs >> pA->rooms;
+                    } else {
+                        QList<int> oldRoomsList;
+                        ifs >> oldRoomsList;
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-                    pA->rooms = QSet<int>{oldRoomsList.begin(), oldRoomsList.end()};
+                        pA->rooms = QSet<int>{oldRoomsList.begin(), oldRoomsList.end()};
 #else
-                    pA->rooms = oldRoomsList.toSet();
+                        pA->rooms = oldRoomsList.toSet();
 #endif
+                    }
+                    // Can be useful when analysing suspect map files!
+                    //                qDebug() << "TMap::restore(...)" << "Area:" << areaID;
+                    //                qDebug() << "Rooms:" << pA->rooms;
+                    ifs >> pA->zLevels;
+                    ifs >> pA->mAreaExits;
+                    ifs >> pA->gridMode;
+                    ifs >> pA->max_x;
+                    ifs >> pA->max_y;
+                    ifs >> pA->max_z;
+                    ifs >> pA->min_x;
+                    ifs >> pA->min_y;
+                    ifs >> pA->min_z;
+                    ifs >> pA->span;
+                    if (mVersion >= 17) {
+                        ifs >> pA->xmaxForZ;
+                        ifs >> pA->ymaxForZ;
+                        ifs >> pA->xminForZ;
+                        ifs >> pA->yminForZ;
+                    } else {
+                        QMap<int, int> dummyMinMaxForZ;
+                        ifs >> pA->xmaxForZ;
+                        ifs >> pA->ymaxForZ;
+                        ifs >> dummyMinMaxForZ;
+                        ifs >> pA->xminForZ;
+                        ifs >> pA->yminForZ;
+                        ifs >> dummyMinMaxForZ;
+                    }
+                    ifs >> pA->pos;
+                    ifs >> pA->isZone;
+                    ifs >> pA->zoneAreaRef;
+                    if (mVersion >= 17) {
+                        ifs >> pA->mUserData;
+                    }
+                    if (mVersion >= 21) {
+                        int mapLabelsCount = -1;
+                        ifs >> mapLabelsCount;
+                        for (int i = 0; i < mapLabelsCount; ++i) {
+                            int labelId = -1;
+                            ifs >> labelId;
+                            TMapLabel label;
+                            ifs >> label.size;
+                            ifs >> label.text;
+                            ifs >> label.fgColor;
+                            ifs >> label.bgColor;
+                            ifs >> label.pix;
+                            ifs >> label.noScaling;
+                            ifs >> label.showOnTop;
+                            pA->mMapLabels.insert(labelId, label);
+                        }
+                    }
+                    mpRoomDB->restoreSingleArea(areaID, pA);
                 }
-                // Can be useful when analysing suspect map files!
-                //                qDebug() << "TMap::restore(...)" << "Area:" << areaID;
-                //                qDebug() << "Rooms:" << pA->rooms;
-                ifs >> pA->zLevels;
-                ifs >> pA->mAreaExits;
-                ifs >> pA->gridMode;
-                ifs >> pA->max_x;
-                ifs >> pA->max_y;
-                ifs >> pA->max_z;
-                ifs >> pA->min_x;
-                ifs >> pA->min_y;
-                ifs >> pA->min_z;
-                ifs >> pA->span;
-                if (mVersion >= 17) {
-                    ifs >> pA->xmaxForZ;
-                    ifs >> pA->ymaxForZ;
-                    ifs >> pA->xminForZ;
-                    ifs >> pA->yminForZ;
-                } else {
-                    QMap<int, int> dummyMinMaxForZ;
-                    ifs >> pA->xmaxForZ;
-                    ifs >> pA->ymaxForZ;
-                    ifs >> dummyMinMaxForZ;
-                    ifs >> pA->xminForZ;
-                    ifs >> pA->yminForZ;
-                    ifs >> dummyMinMaxForZ;
+            }
+
+            if (!mpRoomDB->getAreaMap().keys().contains(-1)) {
+                auto pDefaultA = new TArea(this, mpRoomDB);
+                mpRoomDB->restoreSingleArea(-1, pDefaultA);
+                QString defaultAreaInsertionMsg = tr("[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an\n"
+                                                     "area) not found, adding reserved -1 id.");
+                appendErrorMsgWithNoLf(defaultAreaInsertionMsg, false);
+                if (mudlet::self()->showMapAuditErrors()) {
+                    postMessage(defaultAreaInsertionMsg);
                 }
-                ifs >> pA->pos;
-                ifs >> pA->isZone;
-                ifs >> pA->zoneAreaRef;
-                if (mVersion >= 17) {
-                    ifs >> pA->mUserData;
-                }
-                if (mVersion >= 21) {
-                    int mapLabelsCount = -1;
-                    ifs >> mapLabelsCount;
-                    for (int i = 0; i < mapLabelsCount; ++i) {
-                        int labelId = -1;
-                        ifs >> labelId;
+            }
+
+            if (mVersion >= 18) {
+                // In version 18 we changed to store the "userRoom" for each profile
+                // so that when copied/shared between profiles they do not interfere
+                // with each other's saved value
+                ifs >> mRoomIdHash;
+            } else if (mVersion >= 12) {
+                int oldRoomId;
+                ifs >> oldRoomId;
+                mRoomIdHash[mProfileName] = oldRoomId;
+            }
+
+            if (mVersion >= 11 && mVersion <= 20) {
+                // After version 20 the map labels have been moved to each area
+                int areasWithLabelsTotal = 0;
+                ifs >> areasWithLabelsTotal;
+                int areasWithLabelsCounter = 0;
+                while (!ifs.atEnd() && areasWithLabelsCounter < areasWithLabelsTotal) {
+                    int areaID = -1;
+                    int areaLabelsTotal = 0;
+                    ifs >> areaLabelsTotal;
+                    // Only used to identify the area for this batch of labels:
+                    ifs >> areaID;
+                    int areaLabelCounter = 0;
+                    auto pA = mpRoomDB->getArea(areaID);
+                    while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
+                        int labelID;
+                        ifs >> labelID;
                         TMapLabel label;
+                        if (mVersion >= 12) {
+                            // From version 12 labels could be placed on any level,
+                            // so they have a z coordinate:
+                            ifs >> label.pos;
+                        } else {
+                            QPointF labelPos2D;
+                            ifs >> labelPos2D;
+                            label.pos = QVector3D(labelPos2D);
+                        }
+                        // There was an unused QPointF in versions prior to 21
+                        QPointF dummyPointF;
+                        ifs >> dummyPointF;
                         ifs >> label.size;
                         ifs >> label.text;
                         ifs >> label.fgColor;
                         ifs >> label.bgColor;
                         ifs >> label.pix;
-                        ifs >> label.noScaling;
-                        ifs >> label.showOnTop;
-                        pA->mMapLabels.insert(labelId, label);
+                        if (mVersion >= 15) {
+                            ifs >> label.noScaling;
+                            ifs >> label.showOnTop;
+                        }
+                        if (pA) {
+                            pA->mMapLabels.insert(labelID, label);
+                        }
+                        ++areaLabelCounter;
+                        // Else: we dump labels for areas not in map - this should
+                        // not be happening nowadays but did in the past - see
+                        // PR #4369
                     }
+                    ++areasWithLabelsCounter;
                 }
-                mpRoomDB->restoreSingleArea(areaID, pA);
             }
-        }
 
-        if (!mpRoomDB->getAreaMap().keys().contains(-1)) {
-            auto pDefaultA = new TArea(this, mpRoomDB);
-            mpRoomDB->restoreSingleArea(-1, pDefaultA);
-            QString defaultAreaInsertionMsg = tr("[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an\n"
-                                                 "area) not found, adding reserved -1 id.");
-            appendErrorMsgWithNoLf(defaultAreaInsertionMsg, false);
-            if (mudlet::self()->showMapAuditErrors()) {
-                postMessage(defaultAreaInsertionMsg);
+            while (!ifs.atEnd()) {
+                int i;
+                ifs >> i;
+                auto pT = new TRoom(mpRoomDB);
+                pT->restore(ifs, i, mVersion);
+                mpRoomDB->restoreSingleRoom(i, pT);
             }
-        }
 
-        if (mVersion >= 18) {
-            // In version 18 we changed to store the "userRoom" for each profile
-            // so that when copied/shared between profiles they do not interfere
-            // with each other's saved value
-            ifs >> mRoomIdHash;
-        } else if (mVersion >= 12) {
-            int oldRoomId;
-            ifs >> oldRoomId;
-            mRoomIdHash[mProfileName] = oldRoomId;
-        }
+            mCustomEnvColors[257] = mpHost->mRed_2;
+            mCustomEnvColors[258] = mpHost->mGreen_2;
+            mCustomEnvColors[259] = mpHost->mYellow_2;
+            mCustomEnvColors[260] = mpHost->mBlue_2;
+            mCustomEnvColors[261] = mpHost->mMagenta_2;
+            mCustomEnvColors[262] = mpHost->mCyan_2;
+            mCustomEnvColors[263] = mpHost->mWhite_2;
+            mCustomEnvColors[264] = mpHost->mBlack_2;
+            mCustomEnvColors[265] = mpHost->mLightRed_2;
+            mCustomEnvColors[266] = mpHost->mLightGreen_2;
+            mCustomEnvColors[267] = mpHost->mLightYellow_2;
+            mCustomEnvColors[268] = mpHost->mLightBlue_2;
+            mCustomEnvColors[269] = mpHost->mLightMagenta_2;
+            mCustomEnvColors[270] = mpHost->mLightCyan_2;
+            mCustomEnvColors[271] = mpHost->mLightWhite_2;
+            mCustomEnvColors[272] = mpHost->mLightBlack_2;
 
-        if (mVersion >= 11 && mVersion <= 20) {
-            // After version 20 the map labels have been moved to each area
-            int areasWithLabelsTotal = 0;
-            ifs >> areasWithLabelsTotal;
-            int areasWithLabelsCounter = 0;
-            while (!ifs.atEnd() && areasWithLabelsCounter < areasWithLabelsTotal) {
-                int areaID = -1;
-                int areaLabelsTotal = 0;
-                ifs >> areaLabelsTotal;
-                // Only used to identify the area for this batch of labels:
-                ifs >> areaID;
-                int areaLabelCounter = 0;
-                auto pA = mpRoomDB->getArea(areaID);
-                while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
-                    int labelID;
-                    ifs >> labelID;
-                    TMapLabel label;
-                    if (mVersion >= 12) {
-                        // From version 12 labels could be placed on any level,
-                        // so they have a z coordinate:
-                        ifs >> label.pos;
-                    } else {
-                        QPointF labelPos2D;
-                        ifs >> labelPos2D;
-                        label.pos = QVector3D(labelPos2D);
-                    }
-                    // There was an unused QPointF in versions prior to 21
-                    QPointF dummyPointF;
-                    ifs >> dummyPointF;
-                    ifs >> label.size;
-                    ifs >> label.text;
-                    ifs >> label.fgColor;
-                    ifs >> label.bgColor;
-                    ifs >> label.pix;
-                    if (mVersion >= 15) {
-                        ifs >> label.noScaling;
-                        ifs >> label.showOnTop;
-                    }
-                    if (pA) {
-                        pA->mMapLabels.insert(labelID, label);
-                    }
-                    ++areaLabelCounter;
-                    // Else: we dump labels for areas not in map - this should
-                    // not be happening nowadays but did in the past - see
-                    // PR #4369
-                }
-                ++areasWithLabelsCounter;
+            QString okMsg = tr("[ INFO ]  - Successfully read the map file (%1s), checking some\n"
+                               "consistency details..." )
+                                    .arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
+
+            postMessage(okMsg);
+            appendErrorMsgWithNoLf(okMsg);
+            if (canRestore) {
+                return true;
             }
-        }
-
-        while (!ifs.atEnd()) {
-            int i;
-            ifs >> i;
-            auto pT = new TRoom(mpRoomDB);
-            pT->restore(ifs, i, mVersion);
-            mpRoomDB->restoreSingleRoom(i, pT);
-        }
-
-        mCustomEnvColors[257] = mpHost->mRed_2;
-        mCustomEnvColors[258] = mpHost->mGreen_2;
-        mCustomEnvColors[259] = mpHost->mYellow_2;
-        mCustomEnvColors[260] = mpHost->mBlue_2;
-        mCustomEnvColors[261] = mpHost->mMagenta_2;
-        mCustomEnvColors[262] = mpHost->mCyan_2;
-        mCustomEnvColors[263] = mpHost->mWhite_2;
-        mCustomEnvColors[264] = mpHost->mBlack_2;
-        mCustomEnvColors[265] = mpHost->mLightRed_2;
-        mCustomEnvColors[266] = mpHost->mLightGreen_2;
-        mCustomEnvColors[267] = mpHost->mLightYellow_2;
-        mCustomEnvColors[268] = mpHost->mLightBlue_2;
-        mCustomEnvColors[269] = mpHost->mLightMagenta_2;
-        mCustomEnvColors[270] = mpHost->mLightCyan_2;
-        mCustomEnvColors[271] = mpHost->mLightWhite_2;
-        mCustomEnvColors[272] = mpHost->mLightBlack_2;
-
-        QString okMsg = tr("[ INFO ]  - Successfully read the map file (%1s), checking some\n"
-                                        "consistency details..." )
-                            .arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
-
-        postMessage(okMsg);
-        appendErrorMsgWithNoLf(okMsg);
-        if (canRestore) {
-            return true;
         }
     }
 

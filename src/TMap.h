@@ -268,6 +268,7 @@ private:
     const QString createFileHeaderLine(QString, QChar);
     void writeJsonUserData(QJsonObject&) const;
     void readJsonUserData(const QJsonObject&);
+    bool validatePotentialMapFile(QFile&, QDataStream&);
 
     QStringList mStoredMessages;
 
@@ -281,7 +282,7 @@ private:
     QList<QString> mMapAuditErrors;
 
     // Are things so bad the user needs to check the log (ignored if messages ARE already sent to screen)
-    bool mIsFileViewingRecommended = false;;
+    bool mIsFileViewingRecommended = false;
 
     // Moved and revised from dlgMapper:
     QNetworkAccessManager* mpNetworkAccessManager = nullptr;
