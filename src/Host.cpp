@@ -552,7 +552,7 @@ void Host::slot_reloadModules()
             for (int i = 0, total = moduleList.size(); i < total; ++i) {
                 QString moduleName = moduleList[i];
                 if (mModulesToSync.contains(moduleName)) {
-                    otherHost->reloadModule(moduleName);
+                    otherHost->syncModule(moduleName, mHostName);
                 }
             }
         }
@@ -580,6 +580,9 @@ void Host::updateModuleZips()
             filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
             int err;
             zipFile = zip_open(zipName.toStdString().c_str(), ZIP_CREATE, &err);
+            if (!zipFile) {
+                return;
+            }
             QDir packageDir = QDir(packagePathName);
             if (!packageDir.exists()) {
                 packageDir.mkpath(packagePathName);
@@ -619,6 +622,72 @@ void Host::reloadModule(const QString& reloadModuleName)
         if (moduleName == reloadModuleName) {
             uninstallPackage(moduleName, 2);
             installPackage(moduleLocation, 2);
+        }
+    }
+    //iterate through mInstalledModules again and reset the entry flag to be correct.
+    //both the installedModules and mInstalled should be in the same order now as well
+    moduleIterator.toFront();
+    while (moduleIterator.hasNext()) {
+        moduleIterator.next();
+        QStringList entry = installedModules[moduleIterator.key()];
+        mInstalledModules[moduleIterator.key()] = entry;
+    }
+}
+
+
+void Host::syncModule(const QString& syncModuleName, const QString& syncHostName)
+{
+    QMap<QString, QStringList> installedModules = mInstalledModules;
+    QMapIterator<QString, QStringList> moduleIterator(installedModules);
+    while (moduleIterator.hasNext()) {
+        moduleIterator.next();
+        const auto& moduleName = moduleIterator.key();
+        const auto& moduleLocation = moduleIterator.value()[0];
+        QString fileName = moduleLocation;
+        if (moduleName == syncModuleName) {
+            if (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)) {
+                fileName = mudlet::getMudletPath(mudlet::profilePackagePathFileName, syncHostName, moduleName);
+            }
+            uninstallPackage(moduleName, 2);
+            QFile file2;
+            file2.setFileName(fileName);
+            file2.open(QFile::ReadOnly | QFile::Text);
+            QString profileName = getName();
+            QString login = getLogin();
+            QString pass = getPass();
+            XMLimport reader(this);
+            QStringList moduleEntry;
+            moduleEntry << moduleLocation;
+            moduleEntry << QStringLiteral("0");
+            mInstalledModules[moduleName] = moduleEntry;
+            mActiveModules.append(moduleName);
+            reader.importPackage(&file2, moduleName, 2); // TODO: Missing false return value handler
+            setName(profileName);
+            setLogin(login);
+            setPass(pass);
+            file2.close();
+            if (mpEditorDialog) {
+                mpEditorDialog->doCleanReset();
+            }
+            // reorder permanent and temporary triggers: perm first, temp second
+            mTriggerUnit.reorderTriggersAfterPackageImport();
+
+            // raise 2 events - a generic one and a more detailed one to serve both
+            TEvent genericInstallEvent{};
+            genericInstallEvent.mArgumentList.append(QLatin1String("sysInstall"));
+            genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            genericInstallEvent.mArgumentList.append(moduleName);
+            genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            raiseEvent(genericInstallEvent);
+
+            TEvent detailedInstallEvent{};
+            detailedInstallEvent.mArgumentList.append(QLatin1String("sysSyncInstallModule"));
+            detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            detailedInstallEvent.mArgumentList.append(moduleName);
+            detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            detailedInstallEvent.mArgumentList.append(moduleLocation);
+            detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            raiseEvent(detailedInstallEvent);
         }
     }
     //iterate through mInstalledModules again and reset the entry flag to be correct.
@@ -1667,7 +1736,7 @@ bool Host::installPackage(const QString& fileName, int module)
         pUnzipDialog->repaint(); // Force a redraw
         qApp->processEvents();   // Try to ensure we are on top of any other dialogs and freshly drawn
 
-        auto successful = module == 2 ? unzipSyncModule(fileName, _dest) : mudlet::unzip(fileName, _dest, _tmpDir);
+        auto successful = mudlet::unzip(fileName, _dest, _tmpDir);
         pUnzipDialog->deleteLater();
         pUnzipDialog = Q_NULLPTR;
         if (!successful) {
@@ -1802,80 +1871,6 @@ bool Host::installPackage(const QString& fileName, int module)
     return true;
 }
 
-
-bool Host::unzipSyncModule(const QString& archivePath, const QString& destination)
-{
-  zip* zipFile = nullptr;
-  struct zip_stat fileStat;
-  zip_file* xmlFile = nullptr;
-  zip_uint64_t bytesRead = 0;
-  zip_int64_t xmlIndex = -1;
-  char buf[256];
-  int err = 0;
-
-  zipFile = zip_open(archivePath.toStdString().c_str(), ZIP_RDONLY, &err);
-  if (!zipFile) {
-      return false;
-  }
-
-  for (zip_int64_t i = 0, total = zip_get_num_entries(zipFile, 0); i < total; ++i) {
-      QString fileName = zip_get_name(zipFile, i, ZIP_FL_ENC_RAW);
-      if (fileName.endsWith("xml", Qt::CaseInsensitive))
-      {
-          xmlIndex = i;
-          break;
-      }
-  }
-
-  if (xmlIndex == -1) {
-      zip_close(zipFile);
-      return false;
-  }
-
-  zip_stat_index(zipFile, xmlIndex, 0, &fileStat);
-  QString entryInArchive(fileStat.name);
-  xmlFile = zip_fopen_index(zipFile, xmlIndex, 0);
-
-  if (!xmlFile) {
-      zip_close(zipFile);
-      return false;
-  }
-  QFile fd(QStringLiteral("%1%2").arg(destination, entryInArchive));
-  if (!fd.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
-      zip_fclose(xmlFile);
-      zip_close(zipFile);
-      return false;
-  }
-
-  bytesRead = 0;
-  zip_uint64_t bytesExpected = fileStat.size;
-  while (bytesRead < bytesExpected && fd.error() == QFileDevice::NoError) {
-      zip_int64_t len = zip_fread(xmlFile, buf, sizeof(buf));
-      if (len < 0) {
-          fd.close();
-          zip_fclose(xmlFile);
-          zip_close(zipFile);
-          return false;
-      }
-
-      if (fd.write(buf, len) == -1) {
-          fd.close();
-          zip_fclose(xmlFile);
-          zip_close(zipFile);
-          return false;
-      }
-      bytesRead += len;
-  }
-
-  fd.close();
-  zip_fclose(xmlFile);
-  err = zip_close(zipFile);
-  if (err) {
-      return false;
-  }
-  return true;
-}
-
 // credit: http://john.nachtimwald.com/2010/06/08/qt-remove-directory-and-its-contents/
 bool Host::removeDir(const QString& dirName, const QString& originalPath)
 {
@@ -1889,7 +1884,6 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
             } else {
                 result = QFile::remove(info.absoluteFilePath());
             }
-
             if (!result) {
                 return result;
             }

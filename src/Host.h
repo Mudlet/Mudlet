@@ -262,6 +262,7 @@ public:
     void startSpeedWalk(int sourceRoom, int targetRoom);
     void saveModules(int sync, bool backup = true);
     void reloadModule(const QString& reloadModuleName);
+    void syncModule(const QString& reloadModuleName, const QString& syncHostName);
     std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String &value);
     std::pair<bool, QString> getModuleSync(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
@@ -299,7 +300,6 @@ public:
 
     bool installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);
-    static bool unzipSyncModule(const QString& archivePath, const QString& destination);
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&, bool);
     QString getPackageConfig(const QString&, bool isModule = false);
