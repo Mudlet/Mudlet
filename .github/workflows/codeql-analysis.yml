@@ -35,6 +35,14 @@ jobs:
 
 
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        # We must fetch at least the immediate parents so that if this is
+        # a pull request then we can checkout the head.
+        fetch-depth: 2
+        submodules: true
+
     - name: Restore Qt cache
       uses: actions/cache@v2.1.4
       id: cache-qt
@@ -72,14 +80,6 @@ jobs:
         cd $BOOST_ROOT && cp -r boost_*/* .
         rm -rf boost_*/* download.tar.bz2 download.tar
       shell: bash
-
-    - name: Checkout repository
-      uses: actions/checkout@v2
-      with:
-        # We must fetch at least the immediate parents so that if this is
-        # a pull request then we can checkout the head.
-        fetch-depth: 2
-        submodules: true
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
