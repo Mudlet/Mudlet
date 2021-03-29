@@ -513,13 +513,15 @@ void Host::saveModules(int sync, bool backup)
 
         if (backup) {
             QString time = QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss");
-            savePathDir.rename(filename_xml, savePath + moduleName + time); //move the old file, use the key (module name) as the file
+            QFile::copy(filename_xml, savePath + moduleName + time);
         }
-
-        auto writer = new XMLexport(this);
-        writers.insert(filename_xml, writer);
-        writer->writeModuleXML(moduleName, filename_xml);
-
+        if (filename_xml.endsWith(QStringLiteral("xml"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("trigger"), Qt::CaseInsensitive)) {
+            auto writer = new XMLexport(this);
+            writers.insert(filename_xml, writer);
+            writer->writeModuleXML(moduleName, filename_xml);
+        } else {
+            updateModuleZips();
+        }
         if (entry[1].toInt()) {
             mModulesToSync << moduleName;
         }
@@ -533,9 +535,6 @@ void Host::saveModules(int sync, bool backup)
 
 void Host::slot_reloadModules()
 {
-    // update the module zips
-    updateModuleZips();
-
     //synchronize modules across sessions
     for (auto otherHost : mudlet::self()->getHostManager()) {
         if (otherHost == this || !otherHost->mpConsole) {
@@ -557,7 +556,7 @@ void Host::slot_reloadModules()
             for (int i = 0, total = moduleList.size(); i < total; ++i) {
                 QString moduleName = moduleList[i];
                 if (mModulesToSync.contains(moduleName)) {
-                    otherHost->reloadModule(moduleName);
+                    otherHost->syncModule(moduleName, mHostName);
                 }
             }
         }
@@ -568,7 +567,7 @@ void Host::slot_reloadModules()
     QObject::disconnect(this, &Host::profileSaveFinished, this, &Host::slot_reloadModules);
 }
 
-void Host::updateModuleZips() const
+void Host::updateModuleZips()
 {
     QMapIterator<QString, QStringList> it(modulesToWrite);
     while (it.hasNext()) {
@@ -580,22 +579,35 @@ void Host::updateModuleZips() const
         QString zipName;
         zip* zipFile = nullptr;
         if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
+            zipName = filename_xml;
             QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
             filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
             int err;
-            zipFile = zip_open(entry[0].toStdString().c_str(), ZIP_CREATE, &err);
-            zipName = filename_xml;
+            zipFile = zip_open(zipName.toStdString().c_str(), ZIP_CREATE, &err);
+            if (!zipFile) {
+                return;
+            }
             QDir packageDir = QDir(packagePathName);
             if (!packageDir.exists()) {
                 packageDir.mkpath(packagePathName);
             }
 
+            auto writer = new XMLexport(this);
+            writers.insert(filename_xml, writer);
+            writer->writeModuleXML(moduleName, filename_xml);
+
             struct zip_source* s = zip_source_file(zipFile, filename_xml.toStdString().c_str(), 0, 0);
-            err = zip_add(zipFile, QString(moduleName + ".xml").toStdString().c_str(), s);
-            //FIXME: error checking
+            err = zip_file_add(zipFile, QString(moduleName + ".xml").toStdString().c_str(), s, ZIP_FL_ENC_UTF_8|ZIP_FL_OVERWRITE);
+
             if (zipFile) {
                 err = zip_close(zipFile);
-                //FIXME: error checking
+            }
+
+            if (mudlet::debugMode && err == -1) {
+                TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to save \"%1\" to module \"%2\". Error message was: \"%3\".",
+                                                                 // Intentional comment to separate arguments
+                                                                 "This error message will appear when a module is saved as package but cannot be done for some reason.")
+                                                                      .arg(moduleName, zipName, zip_strerror(zipFile));
             }
         }
     }
@@ -626,6 +638,72 @@ void Host::reloadModule(const QString& reloadModuleName)
     }
 }
 
+
+void Host::syncModule(const QString& syncModuleName, const QString& syncHostName)
+{
+    QMap<QString, QStringList> installedModules = mInstalledModules;
+    QMapIterator<QString, QStringList> moduleIterator(installedModules);
+    while (moduleIterator.hasNext()) {
+        moduleIterator.next();
+        const auto& moduleName = moduleIterator.key();
+        const auto& moduleLocation = moduleIterator.value()[0];
+        QString fileName = moduleLocation;
+        if (moduleName == syncModuleName) {
+            if (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)) {
+                fileName = mudlet::getMudletPath(mudlet::profilePackagePathFileName, syncHostName, moduleName);
+            }
+            uninstallPackage(moduleName, 2);
+            QFile file2;
+            file2.setFileName(fileName);
+            file2.open(QFile::ReadOnly | QFile::Text);
+            QString profileName = getName();
+            QString login = getLogin();
+            QString pass = getPass();
+            XMLimport reader(this);
+            QStringList moduleEntry;
+            moduleEntry << moduleLocation;
+            moduleEntry << QStringLiteral("0");
+            mInstalledModules[moduleName] = moduleEntry;
+            mActiveModules.append(moduleName);
+            reader.importPackage(&file2, moduleName, 2); // TODO: Missing false return value handler
+            setName(profileName);
+            setLogin(login);
+            setPass(pass);
+            file2.close();
+            if (mpEditorDialog) {
+                mpEditorDialog->doCleanReset();
+            }
+            // reorder permanent and temporary triggers: perm first, temp second
+            mTriggerUnit.reorderTriggersAfterPackageImport();
+
+            // raise 2 events - a generic one and a more detailed one to serve both
+            TEvent genericInstallEvent{};
+            genericInstallEvent.mArgumentList.append(QLatin1String("sysInstall"));
+            genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            genericInstallEvent.mArgumentList.append(moduleName);
+            genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            raiseEvent(genericInstallEvent);
+
+            TEvent detailedInstallEvent{};
+            detailedInstallEvent.mArgumentList.append(QLatin1String("sysSyncInstallModule"));
+            detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            detailedInstallEvent.mArgumentList.append(moduleName);
+            detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            detailedInstallEvent.mArgumentList.append(moduleLocation);
+            detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            raiseEvent(detailedInstallEvent);
+        }
+    }
+    //iterate through mInstalledModules again and reset the entry flag to be correct.
+    //both the installedModules and mInstalled should be in the same order now as well
+    moduleIterator.toFront();
+    while (moduleIterator.hasNext()) {
+        moduleIterator.next();
+        QStringList entry = installedModules[moduleIterator.key()];
+        mInstalledModules[moduleIterator.key()] = entry;
+    }
+}
+
 std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const QLatin1String& value)
 {
     if (moduleName.isEmpty()) {
@@ -634,12 +712,6 @@ std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const
 
     if (mInstalledModules.contains(moduleName)) {
         QStringList moduleStringList = mInstalledModules[moduleName];
-        QFileInfo moduleFile = moduleStringList[0];
-        QStringList accepted_suffix;
-        accepted_suffix << "xml" << "trigger";
-        if (!accepted_suffix.contains(moduleFile.suffix().trimmed(), Qt::CaseInsensitive)) {
-            return {false, QStringLiteral("module has to be a .xml file")};
-        }
         moduleStringList[1] = value;
         mInstalledModules[moduleName] = moduleStringList;
         return {true, QString()};
@@ -1817,7 +1889,6 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
             } else {
                 result = QFile::remove(info.absoluteFilePath());
             }
-
             if (!result) {
                 return result;
             }
