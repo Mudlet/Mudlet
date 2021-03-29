@@ -25,26 +25,15 @@
 #include "MxpTag.h"
 
 #include "pre_guard.h"
-#include <QString>
 #include <QList>
 #include <QSharedPointer>
+#include <QString>
 #include "post_guard.h"
 
 class TMxpTagParser
 {
-    static int readTextBlock(QStringView str, const int start, const int end, const QChar terminatingChar);
-
 public:
-    static QStringList parseToList(const QStringView tagText);
-    static QStringList parseToList(const QString& tagText);
-
-    QList<QSharedPointer<MxpNode>> parseToMxpNodeList(const QString& tagText, bool ignoreText = false) const;
-
-    MxpTag* parseTag(const QString& tagText) const;
-    MxpStartTag* parseStartTag(const QString& tagText) const;
-    MxpEndTag* parseEndTag(const QString& tagText) const;
-
-    MxpTagAttribute parseAttribute(const QString& attr) const;
+    static QList<QSharedPointer<MxpNode>> parseToMxpNodeList(const QString& tagText, bool ignoreText = false);
 };
 
 #endif //MUDLET_TMXPTAGPARSER_H

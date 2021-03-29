@@ -49,7 +49,6 @@ class TMxpTagProcessor : public TMxpContext
 
 public:
     TMxpTagProcessor();
-    TMxpTagHandlerResult process(TMxpContext& ctx, TMxpClient& client, const std::string& currentToken);
 
     TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override;
     void handleContent(char ch) override;

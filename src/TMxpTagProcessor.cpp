@@ -39,14 +39,6 @@
 #include "TMxpVarTagHandler.h"
 #include "TMxpVersionTagHandler.h"
 
-TMxpTagHandlerResult TMxpTagProcessor::process(TMxpContext& ctx, TMxpClient& client, const std::string& currentToken)
-{
-    TMxpTagParser parser;
-    QScopedPointer<MxpTag> tag(parser.parseTag(currentToken.c_str()));
-
-    return handleTag(ctx, client, tag.get());
-}
-
 TMxpTagHandlerResult TMxpTagProcessor::handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag)
 {
     if (!client.tagReceived(tag)) {
