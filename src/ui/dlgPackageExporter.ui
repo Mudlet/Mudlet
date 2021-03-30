@@ -148,6 +148,22 @@
          <item row="1" column="1">
           <layout class="QHBoxLayout" name="horizontalLayout_2">
            <item>
+            <widget class="QPushButton" name="pushButton_addIcon">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="toolTip">
+              <string>Icon size of 512x512 recommended</string>
+             </property>
+             <property name="text">
+              <string>Add icon</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QLabel" name="Icon">
              <property name="minimumSize">
               <size>
@@ -161,8 +177,18 @@
                <height>48</height>
               </size>
              </property>
+             <property name="toolTip">
+              <string>Icon size of 512x512 recommended</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="label">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="text">
-              <string/>
+              <string>512x512 recommended</string>
              </property>
             </widget>
            </item>
