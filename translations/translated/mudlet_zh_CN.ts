@@ -7871,12 +7871,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="61"/>
       <source>Exact line to match</source>
-      <translation type="unfinished"/>
+      <translation>精确行匹配</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="64"/>
       <source>Lua code to run (return true to match)</source>
-      <translation type="unfinished"/>
+      <translation>要运行的 lua 代码 ( 返回 true 以匹配)</translation>
     </message>
   </context>
   <context>
