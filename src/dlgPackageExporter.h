@@ -77,7 +77,7 @@ public:
     // contain the Mudlet items to go into the package:
     QString mXmlPathFileName;
     QString mPlainDescription;
-    QVector<QString> mDescriptionImages;
+    QStringList mDescriptionImages;
 
 public slots:
     void slot_addFiles();
@@ -133,7 +133,10 @@ class dlgPackageExporterDescription : public QTextEdit
     Q_OBJECT
 
 public:
-    Q_DISABLE_COPY_MOVE(dlgPackageExporterDescription)
+    Q_DISABLE_COPY(dlgPackageExporterDescription)
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 13, 0))
+    Q_DISABLE_MOVE(dlgPackageExporterDescription)
+#endif
     explicit dlgPackageExporterDescription(QWidget* pW = nullptr);
     ~dlgPackageExporterDescription();
     bool canInsertFromMimeData(const QMimeData* source) const override;

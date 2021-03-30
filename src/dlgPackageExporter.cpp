@@ -371,7 +371,9 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
                 plainText.replace(QLatin1String("$packagePath"), packagePath);
             }
             for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
-                plainText.replace(QStringLiteral("$Image%1").arg(i), mDescriptionImages.at(i));
+                QString fname = mDescriptionImages.at(i);
+                QFileInfo info(fname);
+                plainText.replace(QStringLiteral("$%1").arg(info.fileName()), fname);
             }
             ui->textEdit_description->setMarkdown(plainText);
 #endif
@@ -494,30 +496,33 @@ void dlgPackageExporter::slot_export_package()
     }
 
     //copy description image files
-    QRegExp rx("\\$Image(\\d+)");
-    QList<int> imageList;
-    int pos = 0;
-    while ((pos = rx.indexIn(mPlainDescription, pos)) != -1) {
-        imageList << rx.cap(1).toInt();
-        pos += rx.matchedLength();
+    QStringList imageList;
+    //don't change the original plain description here as it may still be needed, for example if creating another package
+    QString plainDescription = mPlainDescription;
+    for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
+        QString fname = mDescriptionImages.at(i);
+        QFileInfo info(fname);
+        if (plainDescription.contains(QStringLiteral("$%1").arg(info.fileName()))) {
+            imageList.append(fname);
+        }
     }
-    std::sort(imageList.begin(), imageList.end());
+
     if (!imageList.isEmpty()) {
+        //Create description image dir
         QString descriptionImageDirName = QStringLiteral("%1.mudlet/description_images/").arg(tempPath);
         QDir descriptionImageDir = QDir(descriptionImageDirName);
         if (!descriptionImageDir.exists()) {
             descriptionImageDir.mkpath(descriptionImageDirName);
         }
         for (int i = imageList.size() - 1; i >= 0; i--) {
-            int imageIndex = imageList.at(i);
-            QFileInfo imageFile(mDescriptionImages.at(imageIndex));
+            QFileInfo imageFile(imageList.at(i));
             if (imageFile.exists()) {
                 QString imageDir = descriptionImageDirName;
                 imageDir.append(imageFile.fileName());
                 QFile::copy(imageFile.absoluteFilePath(), imageDir);
             }
             //replace $Imageindex with $packagePath in description file
-            mPlainDescription.replace(QStringLiteral("$Image%1").arg(imageIndex), QStringLiteral("$packagePath/.mudlet/description_images/%1").arg(imageFile.fileName()));
+            plainDescription.replace(QStringLiteral("$%1").arg(imageFile.fileName()), QStringLiteral("$packagePath/.mudlet/description_images/%1").arg(imageFile.fileName()));
         }
     }
 
@@ -533,7 +538,7 @@ void dlgPackageExporter::slot_export_package()
     appendToConfigFile(mPackageConfig, QStringLiteral("author"), ui->lineEdit_author->text());
     appendToConfigFile(mPackageConfig, QStringLiteral("icon"), iconFile.fileName());
     appendToConfigFile(mPackageConfig, QStringLiteral("title"), ui->lineEdit_title->text());
-    appendToConfigFile(mPackageConfig, QStringLiteral("description"), mPlainDescription);
+    appendToConfigFile(mPackageConfig, QStringLiteral("description"), plainDescription);
     appendToConfigFile(mPackageConfig, QStringLiteral("version"), ui->lineEdit_version->text());
     appendToConfigFile(mPackageConfig, QStringLiteral("dependencies"), dependencies.join(","));
     QDateTime iso8601timestamp = QDateTime::currentDateTime();
@@ -1339,7 +1344,8 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
                        << "jpg"
                        << "png"
                        << "gif"
-                       << "bmp";
+                       << "bmp"
+                       << "svg";
         for (const auto& url : source->urls()) {
             QString fname = url.toLocalFile();
             QFileInfo info(fname);
@@ -1347,7 +1353,7 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
                 if (!my_parent->mDescriptionImages.contains(fname)) {
                     my_parent->mDescriptionImages.append(fname);
                 }
-                QString imgSrc = QStringLiteral("<img src = \"$Image%1\" />").arg(my_parent->mDescriptionImages.indexOf(fname));
+                QString imgSrc = QStringLiteral("<img src = \"$%1\" />").arg(info.fileName());
                 myCursor.insertText(imgSrc);
             }
         }
@@ -1356,7 +1362,9 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
         if (!hasFocus()) {
             QString plainText = my_parent->mPlainDescription;
             for (int i = my_parent->mDescriptionImages.size() - 1; i >= 0; i--) {
-                plainText.replace(QStringLiteral("$Image%1").arg(i), my_parent->mDescriptionImages.at(i));
+                QString fname = my_parent->mDescriptionImages.at(i);
+                QFileInfo info(fname);
+                plainText.replace(QStringLiteral("$%1").arg(info.fileName()), fname);
             }
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
             setMarkdown(plainText);
