@@ -1501,8 +1501,9 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                         foundValidFile = true;
                         break;
                     }
+
                 } else {
-                    if (auto [isOk, message] = readJsonMapFile(fileName, true); !isOk) {
+                    if (auto [isOk, message] = readJsonMapFile(fileName, true, false); !isOk) {
                         // Failed to read the JSON file
                         QString errMsg = tr("[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:\n"
                                             "%1; the file is:\n"
@@ -1519,6 +1520,9 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                         return true;
                     }
                 }
+
+                // Allow for somethings to be updated - especially on Windows?
+                qApp->processEvents();
             }
             if (!foundValidFile) {
                 canRestore = false;
@@ -2913,7 +2917,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 // The translatable messages are used within this file and do not need to
 // mention the file concerned whereas the untranslated messages are used by the
 // Lua sub-system and do need to report the file:
-std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool translatableTexts)
+std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool translatableTexts, const bool allowUserCancellation)
 {
     const QString oldDefaultAreaName{mDefaultAreaName};
     const QString oldUnnamedName{mUnnamedAreaName};
@@ -2993,7 +2997,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
                                                         QString::number(mProgressDialogRoomsTotal),
                                                         QLatin1String("0"),
                                                         QString::number(mProgressDialogLabelsTotal)),
-                                           tr("Abort"),
+                                           (allowUserCancellation ? tr("Abort") : QString()),
                                            0,
                                            mProgressDialogRoomsTotal,
                                            mpHost->mpConsole);
@@ -3079,7 +3083,9 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i);
         ++mProgressDialogAreasCount;
         if (incrementJsonProgressDialog(false, true, 0)) {
-            abort = true;
+            if (allowUserCancellation) {
+                abort = true;
+            }
             break;
         }
         // This will populate the TRoomDB::areas and TRoomDB::areaNameMap:
