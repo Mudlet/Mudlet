@@ -5627,7 +5627,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="302"/>
       <source>Drag and drop files and folders, or use the browse button below</source>
-      <translation type="unfinished"/>
+      <translation>拖放文件和文件夹，或使用下面的浏览按钮</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="340"/>
@@ -7866,7 +7866,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="58"/>
       <source>Text to find (from beginning of the line)</source>
-      <translation type="unfinished"/>
+      <translation>要查找的文本（从行开头开始）</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="61"/>
