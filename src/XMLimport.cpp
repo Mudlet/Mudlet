@@ -421,10 +421,12 @@ void XMLimport::readAreas()
 
 void XMLimport::readArea()
 {
-    int id = attributes().value(QStringLiteral("id")).toString().toInt();
-    QString name = attributes().value(QStringLiteral("name")).toString();
+    if (attributes().hasAttribute(QStringLiteral("id"))) {
+        int id = attributes().value(QStringLiteral("id")).toString().toInt();
+        QString name = attributes().value(QStringLiteral("name")).toString();
 
-    mpHost->mpMap->mpRoomDB->addArea(id, name);
+        mpHost->mpMap->mpRoomDB->addArea(id, name);
+    }
 }
 
 void XMLimport::readRooms(QMultiHash<int, int>& areaRoomsHash)
