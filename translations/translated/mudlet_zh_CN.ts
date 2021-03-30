@@ -5617,12 +5617,12 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="274"/>
       <source>Required packages</source>
-      <translation type="unfinished"/>
+      <translation>必需的包</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="286"/>
       <source>Include assets (images, sounds, fonts)</source>
-      <translation type="unfinished"/>
+      <translation>包含素材 (图像，声音，字体)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="302"/>
