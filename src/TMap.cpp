@@ -1475,7 +1475,9 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
     if (location.isEmpty()) {
         folder = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
         QDir dir(folder);
-        QStringList filters{QStringLiteral("*.[dD][aA][tT]")};
+        QStringList filters;
+        filters << QStringLiteral("*.[dD][aA][tT]");
+        filters << QStringLiteral("*.[jJ][sS][oO][nN]");
         entries = dir.entryList(filters, QDir::Files, QDir::Time);
     }
 
@@ -1493,10 +1495,29 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             bool foundValidFile = false;
             while (itFileName.hasNext()) {
                 auto fileName = QStringLiteral("%1/%2").arg(folder, itFileName.next());
-                file.setFileName(fileName);
-                if (validatePotentialMapFile(file, ifs)) {
-                    foundValidFile = true;
-                    break;
+                if (!fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
+                    file.setFileName(fileName);
+                    if (validatePotentialMapFile(file, ifs)) {
+                        foundValidFile = true;
+                        break;
+                    }
+                } else {
+                    if (auto [isOk, message] = readJsonMapFile(fileName, true); !isOk) {
+                        // Failed to read the JSON file
+                        QString errMsg = tr("[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:\n"
+                                            "%1; the file is:\n"
+                                            "\"%2\".").arg(message, fileName);
+                        appendErrorMsgWithNoLf(errMsg);
+                        postMessage(errMsg);
+                        QString infoMsg = tr("[ INFO ]  - Ignoring this map file;\n"
+                                             "continuing to find the next newest file that could be a Mudlet map file...");
+                        appendErrorMsgWithNoLf(infoMsg);
+                        postMessage(infoMsg);
+
+                    } else {
+                        // immediately leave on success:
+                        return true;
+                    }
                 }
             }
             if (!foundValidFile) {
@@ -2889,19 +2910,26 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
                 ((file.error() == QFileDevice::NoError) ? QString() : QStringLiteral("could not export file, reason: %1").arg(file.errorString()))};
 }
 
-std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
+// The translatable messages are used within this file and do not need to
+// mention the file concerned whereas the untranslated messages are used by the
+// Lua sub-system and do need to report the file:
+std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool translatableTexts)
 {
     const QString oldDefaultAreaName{mDefaultAreaName};
     const QString oldUnnamedName{mUnnamedAreaName};
 
     if (mpProgressDialog) {
-        return {false, QStringLiteral("import or export already in progress")};
+        return {false, (translatableTexts
+                    ? tr("import or export already in progress")
+                    : QStringLiteral("import or export already in progress"))};
     }
 
     QFile file(source);
     if (!file.open(QFile::ReadOnly)) {
         qWarning().noquote().nospace() << "TMap::readJsonMapFile(...) WARNING - Could not open JSON file \"" << source << "\".";
-        return {false, QStringLiteral("could not open file \"%1\"").arg(source)};
+        return {false, (translatableTexts
+                    ? tr("could not open file")
+                    : QStringLiteral("could not open file \"%1\"").arg(source))};
     }
 
     QByteArray mapData = file.readAll();
@@ -2909,13 +2937,18 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     QJsonParseError jsonErr;
     QJsonDocument doc(QJsonDocument::fromJson(mapData, &jsonErr));
     if (jsonErr.error != QJsonParseError::NoError) {
-        return {false, QStringLiteral("could not parse file \"%1\", reason: \"%2\" at offset %3")
-                    .arg(source, jsonErr.errorString(), QString::number(jsonErr.offset))};
+        return {false, (translatableTexts
+                    ? tr("could not parse file, reason: \"%2\" at offset %3")
+                      .arg(jsonErr.errorString(), QString::number(jsonErr.offset))
+                    : QStringLiteral("could not parse file \"%1\", reason: \"%2\" at offset %3")
+                      .arg(source, jsonErr.errorString(), QString::number(jsonErr.offset)))};
     }
 
     if (doc.isEmpty()) {
         qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - no Json file data detected, this is not a Mudlet JSON map file.";
-        return {false, QStringLiteral("empty Json file, no map data detected")};
+        return {false, (translatableTexts
+                    ? tr("empty Json file, no map data detected")
+                    : QStringLiteral("empty Json file, no map data detected"))};
     }
 
     // Read all the base level stuff:
@@ -2928,15 +2961,21 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
             // didn't include room symbol color, 0.003 is the same as 1.000
             // but the numbered was changed for release into the wild):
             qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was found: " << formatVersion << "and it is not okay.";
-            return {false, QStringLiteral("invalid version: %1 detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0'))};
+            return {false, (translatableTexts
+                        ? tr("invalid version number: %1 detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0'))
+                        : QStringLiteral("invalid version number: %1 detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0')))};
         }
     } else {
         qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was not found, this is not likely to be a Mudlet JSON map file.";
-        return {false, QStringLiteral("no version number detected")};
+        return {false, (translatableTexts
+                    ? tr("no version number detected")
+                    : QStringLiteral("no version number detected"))};
     }
 
     if (!mapObj.contains(QLatin1String("areas")) || !mapObj.value(QLatin1String("areas")).isArray()) {
-        return {false, QStringLiteral("no areas detected")};
+        return {false, (translatableTexts
+                    ? tr("no areas detected")
+                    : QStringLiteral("no areas detected"))};
     }
 
     mProgressDialogAreasTotal = qRound(mapObj[QLatin1String("areaCount")].toDouble());
@@ -3053,7 +3092,9 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
         mDefaultAreaName = oldDefaultAreaName;
         mUnnamedAreaName = oldUnnamedName;
         delete pNewRoomDB;
-        return {false, QStringLiteral("aborted by user")};
+        return {false, (translatableTexts
+                    ? tr("aborted by user")
+                    : QStringLiteral("aborted by user"))};
     }
 
     mCustomEnvColors.swap(customEnvColors);

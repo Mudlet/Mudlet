@@ -144,7 +144,7 @@ public:
     void setRoomNamesShown(bool shown);
 
     std::pair<bool, QString> writeJsonMapFile(const QString&);
-    std::pair<bool, QString> readJsonMapFile(const QString&);
+    std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false);
     int getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
     QString getDefaultAreaName() const { return mDefaultAreaName; }
