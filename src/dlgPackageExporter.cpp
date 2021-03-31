@@ -457,8 +457,7 @@ void dlgPackageExporter::slot_export_package()
     tempPath.append("/");
 
     for (int i = 0; i < ui->listWidget_addedFiles->count(); ++i) {
-        QListWidgetItem* item = ui->listWidget_addedFiles->item(i);
-        QFileInfo asset(item->text());
+        QFileInfo asset(ui->listWidget_addedFiles->item(i)->text());
         QString filePath = tempPath;
         filePath.append(asset.fileName());
         if (!asset.exists()) {
@@ -468,9 +467,7 @@ void dlgPackageExporter::slot_export_package()
         if (asset.isFile()) {
             QFile::remove(filePath);
             QFile::copy(asset.absoluteFilePath(), filePath);
-            continue;
-        }
-        if (asset.isDir()) {
+        } else if (asset.isDir()) {
             copy_directory(asset.absoluteFilePath(), filePath, true);
         }
     }
