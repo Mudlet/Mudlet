@@ -20,13 +20,13 @@ jobs:
             buildname: 'ubuntu / gcc'
             triplet: x64-linux
             compiler: gcc_64
-            qt: '5.15.2'
+            qt: '5.14.1'
             deploy: 'deploy'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
-            qt: '5.15.2'
+            qt: '5.14.1'
           - os: ubuntu-latest
             buildname: 'ubuntu / qt 5.11'
             triplet: x64-linux
@@ -36,13 +36,13 @@ jobs:
             buildname: 'macos / c++ tests'
             triplet: x64-osx
             compiler: clang_64
-            qt: '5.15.2'
+            qt: '5.14.1'
             deploy: 'deploy'
           - os: windows-2019
             buildname: 'windows'
             triplet: x64-mingw-dynamic
             # compiler: flag not used in windows pipeline
-            qt: '5.15.2'
+            qt: '5.14.1'
             deploy: 'deploy'
 
     env:
@@ -69,9 +69,10 @@ jobs:
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
-        arch: win64_mingw81 # this key is relevant only for windows
+        arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
         aqtversion: '==1.1.2'
+
 
     - name: Restore Boost cache
       uses: actions/cache@v2.1.4
