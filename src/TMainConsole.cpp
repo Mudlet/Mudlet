@@ -647,6 +647,7 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
             mpMapper->mp2dMap->init();
             mpMapper->updateAreaComboBox();
             mpMapper->resetAreaComboBoxToPlayerRoomArea();
+            mpMapper->show();
         }
 
         mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);

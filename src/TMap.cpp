@@ -3125,14 +3125,6 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     // This is it - the point at which the new map gets activated:
     TRoomDB* pOldRoomDB = mpRoomDB;
     mpRoomDB = pNewRoomDB;
-    audit();
-    if (mpMapper) {
-        mpMapper->mp2dMap->init();
-        mpMapper->updateAreaComboBox();
-        mpMapper->resetAreaComboBoxToPlayerRoomArea();
-        mpMapper->show();
-        update();
-    }
     delete pOldRoomDB;
     mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
     mpProgressDialog->close();
