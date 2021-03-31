@@ -73,7 +73,9 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     mpExportSelection->addTopLevelItem(mpKeys);
     mpExportSelection->addTopLevelItem(mpButtons);
 
+    mpExportSelection->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(mpExportSelection, &QTreeWidget::itemChanged, this, &dlgPackageExporter::slot_recountItems);
+    connect(mpExportSelection, &QTreeWidget::customContextMenuRequested, this, &dlgPackageExporter::slot_rightClickOnItems);
 
     // This button has the RejectRole which causes the dialog to be rejected
     // (and closed):
@@ -971,6 +973,9 @@ int dlgPackageExporter::countCheckedItems() const
 
 void dlgPackageExporter::checkChildren(QTreeWidgetItem* item) const
 {
+    if (!mCheckChildren) {
+        return;
+    }
     QString packageName = ui->packageList->currentText();
     auto checkState = item->checkState(0);
     // Don't check top folder if it has the same name as the package
@@ -1298,6 +1303,21 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem *item)
             debounce = false;
         });
     }
+}
+
+void dlgPackageExporter::slot_rightClickOnItems(const QPoint& point)
+{
+    auto item = mpExportSelection->itemAt(point);
+    if (!item || item->parent() == nullptr) {
+        return;
+    }
+    mCheckChildren = false;
+    if (item->checkState(0) == Qt::Checked) {
+        item->setCheckState(0, Qt::Unchecked);
+    } else {
+        item->setCheckState(0, Qt::Checked);
+    }
+    mCheckChildren = true;
 }
 
 QString dlgPackageExporter::getActualPath() const

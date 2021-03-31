@@ -88,6 +88,7 @@ private slots:
     void slot_updateLocationPlaceholder();
     void slot_enableExportButton(const QString &text);
     void slot_recountItems(QTreeWidgetItem *item);
+    void slot_rightClickOnItems(const QPoint &point);
 
 protected:
     bool eventFilter(QObject* obj, QEvent* evt) override;
@@ -121,6 +122,7 @@ private:
     QString mPackageIconPath;
     QString mPackageConfig;
     QString mPlainDescription;
+    bool mCheckChildren = true;
 
 signals:
     void signal_exportLocationChanged(const QString& location);
