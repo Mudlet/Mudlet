@@ -115,10 +115,7 @@
         </property>
         <property name="font">
          <font>
-          <family>DejaVu Sans Mono</family>
           <pointsize>14</pointsize>
-          <weight>75</weight>
-          <bold>true</bold>
          </font>
         </property>
         <property name="text">
@@ -196,7 +193,7 @@
             <enum>Qt::TabFocus</enum>
            </property>
            <property name="text">
-            <string>remove Packages</string>
+            <string>Remove package</string>
            </property>
           </widget>
          </item>
@@ -212,7 +209,7 @@
             <enum>Qt::TabFocus</enum>
            </property>
            <property name="text">
-            <string>Install new Package</string>
+            <string>Install new package</string>
            </property>
            <property name="default">
             <bool>false</bool>
