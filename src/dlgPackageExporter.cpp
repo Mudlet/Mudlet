@@ -347,7 +347,6 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
     }
 
     //Focus handling returns false so that underlying class functions still work and the cursor is visible for example
-
     //description focus handling
     if (obj == ui->textEdit_description) {
         if (evt->type() == QEvent::FocusIn) {
@@ -362,13 +361,13 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             //during package creation it uses the profile folder. But once the package is created it will use
             //profile folder/packagename
             QString plainText{mPlainDescription};
-            QString packagePath{mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())};
-            //replace packagePath with real packagePath if package exists, for a new package the packagePath is the profilePath
+            QString profilePath{mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())};
+            //$packagePath will be replaced by the resource path if an existing package is selected
             if (ui->packageList->currentIndex() != 0) {
                 QString packageName = ui->packageList->currentText();
-                plainText.replace(QLatin1String("$packagePath"), QStringLiteral("%1/%2").arg(packagePath, packageName));
+                plainText.replace(QLatin1String("$packagePath"), QStringLiteral("%1/%2").arg(profilePath, packageName));
             } else {
-                plainText.replace(QLatin1String("$packagePath"), packagePath);
+                plainText.replace(QLatin1String("$packagePath"), profilePath);
             }
             for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
                 QString fname = mDescriptionImages.at(i);
