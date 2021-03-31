@@ -239,7 +239,7 @@
             <bool>true</bool>
            </property>
            <property name="placeholderText">
-            <string>optional</string>
+            <string>optional. Markdown supported, and you can add images with drag and drop</string>
            </property>
           </widget>
          </item>
