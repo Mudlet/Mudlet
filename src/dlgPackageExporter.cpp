@@ -722,18 +722,16 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         // post 0.10 versions of libzip):
         zip_error_t error;
         zip_error_init_with_code(&error, ze);
-        return {false, tr("Failed to open package file. Error is: \"%1\".",
-                                // Intentional comment to separate arguments
-                                "This error message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere in the computer's file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.")
-                             .arg(zip_error_strerror(&error))};
+        QString errMsg =
+                tr("Failed to open package file. Error is: \"%1\".",
+                   // Intentional comment to separate arguments
+                   "This error message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere "
+                   "in the computer's file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.")
+                        .arg(zip_error_strerror(&error));
         zip_error_fini(&error);
-        isOk = false;
-        // The above flag will now cause execution to drop down to the bottom of
-        // the method and set up a means to close the dialogue after the user
-        // has seen the error message...
-
+        return {false, errMsg};
     }
-    
+
     // Opened/created archive file successfully
 #if defined(Q_OS_WIN32)
 /*
@@ -809,33 +807,23 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         // zip_dir_add(...) returns the index of the
         // added directory item in the archive or -1 on error:
         if (zip_dir_add(archive, directoryName.toStdString().c_str(), ZIP_FL_ENC_UTF_8) == -1) {
-            return {false, (tr("Failed to add directory \"%1\" to package. Error is: \"%2\".")
-                                 .arg(directoryName, zip_strerror(archive)))};
+            QString errorMsg = tr("Failed to add directory \"%1\" to package. Error is: \"%2\".")
+                                 .arg(directoryName, zip_strerror(archive));
             zip_close(archive);
-            isOk = false;
+            return {false, errorMsg};
         }
     }
 
     // Process the config and the file containing the Mudlet triggers,
     // etc. specially so they are inserted first and last respectively:
     if (isOk) {
-        // Apparently it is permissible for there NOT to be a config.lua
-        // file in the manufactured module (i.e. the user is allowed to
-        // manually remove it even though we now request they do not).
-        // If we enhance modules in the future to store more data in
-        // that file I think this will no longer be permissible and the
-        // two commented out bits of code can be restored
         if (fileEntries.contains(QStringLiteral("config.lua"))) {
             if (!writeFileToZip(QStringLiteral("config.lua"), fileEntries.value(QStringLiteral("config.lua")), archive).first) {
                 /* isOk = false; */
             } else {
                 fileEntries.remove(QStringLiteral("config.lua"));
             }
-        }/* else {
-            displayResultMessage(tr("Required \"config.lua\" file not found to include in the package. Did you remove or rename it?"), false);
-            zip_close(archive);
-            isOk = false;
-        }*/
+        }
     }
 
     QString xmlFileName = packageName;
@@ -869,7 +857,6 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
                                     "\"%2\" - "
                                     "Do you have the necessary permissions and free disk-space?")
                                     .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
-            isOk = false;
         }
     }
 
@@ -885,16 +872,16 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         ze = zip_close(archive);
         QApplication::restoreOverrideCursor();
         if (ze) {
-            return {false, (tr("Failed to write files into and then close the package. Error is: \"%1\".",
+            QString errorMsg = tr("Failed to write files into and then close the package. Error is: \"%1\".",
                                     // Intentional comment to separate arguments
                                     "This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...")
-                                 .arg(zip_strerror(archive)))};
+                                 .arg(zip_strerror(archive));
             // In libzip 0.11 a function was added to clean up
             // (deallocate) the memory associated with an archive
             // - which would normally occur upon a successful close
             // - before that version the memory just leaked away...
             zip_discard(archive);
-            isOk = false;
+            return {false, errorMsg};
         }
 
     } else {
