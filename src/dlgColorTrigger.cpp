@@ -56,8 +56,8 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
 
     connect(buttonBox->button(QDialogButtonBox::Ignore), &QAbstractButton::clicked, this, &dlgColorTrigger::slot_resetColorClicked);
     buttonBox->button(QDialogButtonBox::Ignore)->setToolTip(mudlet::htmlWrapper(mIsBackground
-                                                                                ? tr("<p>Click to make the color trigger ignore the text's background color - however chosing this for both this and the foreground is an error.</p>")
-                                                                                : tr("<p>Click to make the color trigger ignore the text's foreground color - however chosing this for both this and the background is an error.</p>")));
+                                                                                ? tr("<p>Click to make the color trigger ignore the text's background color - however choosing this for both this and the foreground is an error.</p>")
+                                                                                : tr("<p>Click to make the color trigger ignore the text's foreground color - however choosing this for both this and the background is an error.</p>")));
     // The Reset button means trigger only if the text is not set to anything
     // so is in the "default" colour - what ever THAT is:
     connect(buttonBox->button(QDialogButtonBox::Reset), &QAbstractButton::clicked, this, &dlgColorTrigger::slot_defaultColorClicked);
