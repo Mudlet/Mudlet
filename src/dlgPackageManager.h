@@ -49,6 +49,7 @@ private slots:
     void slot_install_package();
     void slot_remove_packages();
     void slot_item_clicked(QTableWidgetItem*);
+    void slot_toggle_remove_button();
 
 private:
     Ui::package_manager* ui;

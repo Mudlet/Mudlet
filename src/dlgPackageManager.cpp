@@ -45,6 +45,7 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     connect(mRemoveButton, &QAbstractButton::clicked, this, &dlgPackageManager::slot_remove_packages);
     connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgPackageManager::close);
     connect(mPackageTable, &QTableWidget::currentItemChanged, this, &dlgPackageManager::slot_item_clicked);
+    connect(mPackageTable, &QTableWidget::itemSelectionChanged, this, &dlgPackageManager::slot_toggle_remove_button);
 
     setWindowTitle(tr("Package Manager - %1").arg(mpHost->getName()));
     mDetailsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -227,4 +228,14 @@ void dlgPackageManager::fillAdditionalDetails(const QMap<QString, QString>& pack
         value->setAlignment(Qt::AlignLeft);
         ++iter;
     }
+}
+
+void dlgPackageManager::slot_toggle_remove_button()
+{
+    int selectionCount = mPackageTable->selectedItems().count();
+    bool haveSelection = selectionCount != 0;
+
+    mRemoveButton->setEnabled(haveSelection);
+    // let the translations decide whenever it should be 'Remove package', 'Remove packages', or whatever is language-appropriate
+    mRemoveButton->setText(tr("Remove packages", "Button in package manager to remove selected package(s)", selectionCount));
 }
