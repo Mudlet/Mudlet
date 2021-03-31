@@ -13833,7 +13833,7 @@ void TLuaInterpreter::initLuaGlobals()
     additionalLuaPaths << QStringLiteral("%1/?.lua").arg(appPath);
 #elif defined(Q_OS_WIN32) && defined(INCLUDE_MAIN_BUILD_SYSTEM)
     // For CI builds or users/developers using the setup-windows-sdk.ps1 method:
-    additionalCPaths << QStringLiteral("C:\\Qt\\Tools\\mingw810_32\\lib\\lua\\5.1\\?.dll");
+    additionalCPaths << QStringLiteral("C:\\Qt\\Tools\\mingw730_32\\lib\\lua\\5.1\\?.dll");
 #endif
 
     insertNativeSeparatorsFunction(pGlobalLua);
