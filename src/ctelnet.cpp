@@ -49,6 +49,7 @@
 #include <QJsonObject>
 #include <QNetworkProxy>
 #include <QProgressDialog>
+#include <QTextBoundaryFinder>
 #include <QTextCodec>
 #include <QSslError>
 #include "post_guard.h"
@@ -106,7 +107,6 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mAutoReconnect(false)
 , loadingReplay(false)
 , mIsReplayRunFromLua(false)
-, mEncodingWarningIssued(false)
 , mEncoderFailureNoticeIssued(false)
 , mConnectViaProxy(false)
 , mIncompleteSB(false)
@@ -165,6 +165,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 
     mpDownloader = new QNetworkAccessManager(this);
     connect(mpDownloader, &QNetworkAccessManager::finished, this, &cTelnet::slot_replyFinished);
+    isInitialised = true;
 }
 
 void cTelnet::reset()
@@ -249,7 +250,17 @@ void cTelnet::encodingChanged(const QByteArray& requestedEncoding)
     QByteArray encoding = mAcceptableEncodings.contains("M_" + requestedEncoding) ? "M_" + requestedEncoding : requestedEncoding;
     if (mEncoding != encoding) {
         mEncoding = encoding;
-        mEncodingWarningIssued = false;
+        mSendEncodingWarningIssued = false;
+        // Reset the warning icons for encoding problems:
+        if (isInitialised && !mpHost.isNull() && !mpHost->mpConsole.isNull()) {
+            // We have to use an isInitialised flag as this method is called in
+            // the constructor but a profile's cTelnet class instance is
+            // initiased before the Host is fully instantiated (even the
+            // TMainConsole - that mpConsole will eventually point at, has not
+            // been created at that point):
+            mpHost->mpConsole->hideWarningIcon(0);
+            mpHost->mpConsole->hideWarningIcon(1);
+        }
         mEncoderFailureNoticeIssued = false;
         // Not currently used as we do it by hand as we have to extract the data
         // from the telnet protocol and all the out-of-band stuff.  It might be
@@ -643,51 +654,38 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
     }
 
     if (mpHost->mAllowToSendCommand) {
-        std::string outData;
-        auto errorMsgTemplate = "[ WARN ]  - Tried to send '%1' to the game, but it is unlikely to understand it.";
-        if (!mEncoding.isEmpty()) {
-            if (outgoingDataEncoder) {
-                if ((!mEncodingWarningIssued) && (!outgoingDataCodec->canEncode(data))) {
-                    QString errorMsg = tr(errorMsgTemplate,
-                                          "%1 is the command that was sent to the game.").arg(data);
-                    postMessage(errorMsg);
-                    mEncodingWarningIssued = true;
-                }
-                // Even if there are bad characters - try to send it anyway...
-                outData = outgoingDataEncoder->fromUnicode(data).constData();
-            } else {
-                if (!mEncoderFailureNoticeIssued) {
-                    postMessage(tr("[ ERROR ] - Internal error, no codec found for current setting of {\"%1\"}\n"
-                                   "so Mudlet cannot send data in that format to the Game Server. Please\n"
-                                   "check to see if there is an alternative that the MUD and Mudlet can\n"
-                                   "use. Mudlet will attempt to send the data using the ASCII encoding\n"
-                                   "but will be limited to only unaccented characters of basic English.\n"
-                                   "Note: this warning will only be issued once, until the encoding is\n"
-                                   "changed.").arg(QLatin1String(mEncoding)));
-                    mEncoderFailureNoticeIssued = true;
-                }
-                // Even if there are unusable characters - try to send it as ASCII ...
-                outData = data.toStdString();
+        if (!mEncoding.isEmpty() && !outgoingDataEncoder) {
+            if (!mEncoderFailureNoticeIssued) {
+                postMessage(tr("[ ERROR ] - Internal error, no codec found for current setting of {\"%1\"}\n"
+                               "so Mudlet cannot send data in that format to the Game Server. Please\n"
+                               "check to see if there is an alternative that the MUD and Mudlet can\n"
+                               "use. Mudlet will attempt to send the data using the ASCII encoding\n"
+                               "but will be limited to only unaccented characters of basic English.\n"
+                               "Note: this warning will only be issued once, until the encoding is\n"
+                               "changed.")
+                                    .arg(QLatin1String(mEncoding)));
+                mEncoderFailureNoticeIssued = true;
             }
-        } else {
-            // Plain, raw ASCII, we hope!
-            for (int i = 0, total = data.size(); i < total; ++i) {
-                if ((!mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
-                    QString errorMsg = tr(errorMsgTemplate,
-                                          "%1 is the command that was sent to the game.").arg(data);
-                    postMessage(errorMsg);
-                    mEncodingWarningIssued = true;
-                    break;
-                }
-            }
-            // Even if there are bad characters - try to send it anyway...
-            outData = data.toStdString();
         }
 
-        if (!mpHost->mUSE_UNIX_EOL) {
-            outData += "\r";
+        auto [encodingProblem, encodedData] = stripUnencodableGraphemes(data);
+        if (!encodingProblem && (!mSendEncodingWarningsIgnored) && (!mSendEncodingWarningIssued)) {
+            postMessage(tr("[ WARN ]  - Tried to send:\n"
+                           "\"%1\"\n"
+                           "to the game server, but it contains characters that cannot be sent with the\n"
+                           "current Server encoding of \"%2\"; what will be sent instead is:\n"
+                           "\"%3\"",
+                           // Intentional argument to separate arguments
+                           "%1 is what was wanted to be sent to the game; %2 is the encoding and %3 is what "
+                           "was actually sent.")
+                                .arg(data, QString::fromUtf8(mpHost->mTelnet.getEncoding().isEmpty() ? QByteArray("ASCII") : mpHost->mTelnet.getEncoding()), encodedData));
+
+            postMessage(tr("[ INFO ]  - Click on icon to the left of the main command line to deal with this."));
+            mSendEncodingWarningIssued = true;
+            mpHost->mpConsole->showWarningIcon(1);
         }
-        outData += "\n";
+        std::string outData = (mpHost->mUSE_UNIX_EOL ? encodedData.append(QChar::LineFeed)
+                                                     : encodedData.append(QChar::CarriageReturn % QChar::LineFeed)).toStdString();
 
         // outData is using the selected Mud Server encoding here:
         // we need to cook any byte values from the encoding process that are
@@ -699,6 +697,45 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
         mpHost->mAllowToSendCommand = true;
         return false;
     }
+}
+
+// The first part is true if the text can completely be encoded and the second
+// is either equivalent to the supplied QString or (if the first part is false)
+// only the graphemes that can be encoded with the current encoding:
+std::pair<bool, QString> cTelnet::stripUnencodableGraphemes(const QString& data)
+{
+    QString output;
+    bool textHandledByEncoding = true;
+    if (Q_LIKELY(!mEncoding.isEmpty() && outgoingDataEncoder)) {
+        QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, data);
+        // The finder will be at the start of the string
+        int startPos = 0;
+        int endPos = graphemeFinder.toNextBoundary();
+        do {
+            if (endPos > 0) {
+                // The QTextCodec::canEncode(...) call should be using the (QStringView)
+                // overload if provided with a "QStringRef":
+                if (outgoingDataCodec->canEncode(data.midRef(startPos, endPos - startPos - 1))) {
+                    output.append(data.midRef(startPos, endPos - startPos - 1));
+                } else {
+                    textHandledByEncoding = false;
+                }
+                startPos = endPos;
+                endPos = graphemeFinder.toNextBoundary();
+            }
+        } while (endPos > 0);
+    } else {
+        // Plain, raw ASCII, we hope!
+        for (int i = 0, total = data.size(); i < total; ++i) {
+            if (Q_UNLIKELY(data.at(i).row() || (data.at(i).cell() > 127))) {
+                // Anything with the MSB set is NOT ASCII
+                textHandledByEncoding = false;
+            } else {
+                output.append(data.at(i));
+            }
+        }
+    }
+    return {textHandledByEncoding, output};
 }
 
 // Data is *expected* to be in the required MUD Server encoding on entry,

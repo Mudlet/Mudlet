@@ -154,6 +154,7 @@
         <file>icons/preferences-desktop-keyboard.png</file>
         <file>icons/preferences-web-browser-cache.png</file>
         <file>icons/rating.png</file>
+        <file>icons/receive_encoding_error.png</file>
         <file>icons/red-bomb.png</file>
         <file>icons/reinosdeleyenda_mud.png</file>
         <file>icons/run-build-clean.png</file>
@@ -174,6 +175,7 @@
         <file>icons/tag_checkbox_checked_grey.png</file>
         <file>icons/tools-report-bug.png</file>
         <file>icons/tools-wizard.png</file>
+        <file>icons/transmit_encoding_error.png</file>
         <file>icons/utilities-file-archiver.png</file>
         <file>icons/variable.png</file>
         <file>icons/variables.png</file>
