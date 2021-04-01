@@ -315,7 +315,7 @@ void dlgPackageExporter::slot_enableExportButton(const QString& text)
 {
     Q_UNUSED(text);
 
-    if (ui->lineEdit_packageName->text().isEmpty() || mWritingZip) {
+    if (ui->lineEdit_packageName->text().isEmpty() || mExportingPackage) {
         mExportButton->setEnabled(false);
         return;
     }
@@ -407,11 +407,11 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
     return false;
 }
 
-void dlgPackageExporter::copy_directory(const QString& fromDir, const QString& toDir, bool coverFileIfExist)
+void dlgPackageExporter::copy_directory(const QString& fromDir, const QString& toDir, bool overwrite)
 {
     QDirIterator it(fromDir);
     QDir targetDir(toDir);
-    if (coverFileIfExist && targetDir.exists()) {
+    if (overwrite && targetDir.exists()) {
         targetDir.removeRecursively();
     }
     targetDir.mkdir(toDir);
@@ -459,8 +459,18 @@ void dlgPackageExporter::slot_export_package()
     QString tempPath = stagingDirName;
     tempPath.append("/");
 
-    copyAssetsToTmp(tempPath);
-    
+    mExportingPackage = true;
+    slot_enableExportButton({});
+    displayResultMessage(tr("Exporting package..."), true);
+    qApp->processEvents();
+
+    QStringList assetPaths;
+    for (int i = 0; i < ui->listWidget_addedFiles->count(); ++i) {
+        assetPaths << ui->listWidget_addedFiles->item(i)->text();
+    }
+    // start copying assets in the background
+    auto assetsFuture = QtConcurrent::run(dlgPackageExporter::copyAssetsToTmp, assetPaths, tempPath);
+
     QFileInfo iconFile = copyIconToTmp(tempPath);
 
     mXmlPathFileName = QStringLiteral("%1/%2.xml").arg(stagingDirName, mPackageName);
@@ -471,6 +481,8 @@ void dlgPackageExporter::slot_export_package()
     if (!checkWriteability.open(QIODevice::WriteOnly)) {
         displayResultMessage(tr("Failed to export. Could not open the folder \"%1\" for writing. Do you have the necessary permissions and free disk-space to write to that folder?")
                              .arg(mXmlPathFileName), false);
+        mExportingPackage = false;
+        slot_enableExportButton({});
         return;
     }
     checkWriteability.close();
@@ -479,89 +491,57 @@ void dlgPackageExporter::slot_export_package()
     // aborted and shows an error message rather than an okay one:
     bool isOk = true;
 
-    XMLexport writer(mpHost);
-    //write trigs
-    QTreeWidgetItem* top = mpTriggers;
     QList<QTreeWidgetItem*> trigList;
-    recurseTree(top, trigList);
-    for (auto item : qAsConst(trigList)) {
-        if (item->checkState(0) == Qt::Unchecked && triggerMap.contains(item)) {
-            triggerMap[item]->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && triggerMap.contains(item) && triggerMap[item]->mModuleMasterFolder) {
-            triggerMap[item]->mModuleMasterFolder = false;
-            modTriggerMap.insert(item, triggerMap[item]);
-        }
-    }
-    top = mpTimers;
     QList<QTreeWidgetItem*> timerList;
-    recurseTree(top, timerList);
-    for (auto item : qAsConst(timerList)) {
-        if (item->checkState(0) == Qt::Unchecked && timerMap.contains(item)) {
-            timerMap[item]->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && timerMap.contains(item) && timerMap[item]->mModuleMasterFolder) {
-            timerMap[item]->mModuleMasterFolder = false;
-            modTimerMap.insert(item, timerMap[item]);
-        }
-    }
-    top = mpAliases;
     QList<QTreeWidgetItem*> aliasList;
-    recurseTree(top, aliasList);
-    for (auto item : qAsConst(aliasList)) {
-        if (item->checkState(0) == Qt::Unchecked && aliasMap.contains(item)) {
-            aliasMap[item]->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && aliasMap.contains(item) && aliasMap[item]->mModuleMasterFolder) {
-            aliasMap[item]->mModuleMasterFolder = false;
-            modAliasMap.insert(item, aliasMap[item]);
-        }
-    }
-    top = mpButtons;
     QList<QTreeWidgetItem*> actionList;
-    recurseTree(top, actionList);
-    for (auto item : qAsConst(actionList)) {
-        if (item->checkState(0) == Qt::Unchecked && actionMap.contains(item)) {
-            actionMap[item]->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && actionMap.contains(item) && actionMap[item]->mModuleMasterFolder) {
-            actionMap[item]->mModuleMasterFolder = false;
-            modActionMap.insert(item, actionMap[item]);
-        }
-    }
-    top = mpScripts;
     QList<QTreeWidgetItem*> scriptList;
-    recurseTree(top, scriptList);
-    for (auto item : qAsConst(scriptList)) {
-        if (item->checkState(0) == Qt::Unchecked && scriptMap.contains(item)) {
-            scriptMap[item]->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && scriptMap.contains(item) && scriptMap[item]->mModuleMasterFolder) {
-            scriptMap[item]->mModuleMasterFolder = false;
-            modScriptMap.insert(item, scriptMap[item]);
-        }
-    }
-    top = mpKeys;
     QList<QTreeWidgetItem*> keyList;
-    recurseTree(top, keyList);
-    for (auto item : qAsConst(keyList)) {
-        if (item->checkState(0) == Qt::Unchecked && keyMap.contains(item)) {
-            keyMap[item]->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && keyMap.contains(item) && keyMap[item]->mModuleMasterFolder) {
-            keyMap[item]->mModuleMasterFolder = false;
-            modKeyMap.insert(item, keyMap[item]);
-        }
+    exportXml(isOk, trigList, timerList, aliasList, actionList, scriptList, keyList);
+    markExportItems(trigList, timerList, aliasList, actionList, scriptList, keyList);
+
+    if (isOk) {
+        // ensure assets have been copied before we start writing the zip
+        assetsFuture.waitForFinished();
+        auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageConfig);
+        auto watcher = new QFutureWatcher<std::pair<bool, QString>>;
+        QObject::connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, [=]() {
+            mExportingPackage = false;
+            slot_enableExportButton({});
+
+            if (auto [isOk, errorMsg] = future.result(); !isOk) {
+                displayResultMessage(errorMsg);
+                // Failed - convert cancel to a close button
+                ui->buttonBox->removeButton(mCancelButton);
+                ui->buttonBox->addButton(QDialogButtonBox::Close);
+                connect(ui->buttonBox->button(QDialogButtonBox::Close), &QAbstractButton::clicked, this, &dlgPackageExporter::close);
+            }
+            displayResultMessage(
+                    tr("Package \"%1\" exported to: %2").arg(mPackageName, QStringLiteral("<a href=\"file:///%1\">%2</a>")).arg(getActualPath().toHtmlEscaped(), getActualPath().toHtmlEscaped()),
+                    true);
+        });
+        watcher->setFuture(future);
     }
 
-    if (!writer.exportPackage(mXmlPathFileName, false)) {
-        displayResultMessage(tr("Failed to export. Could not write Mudlet items to the file \"%1\".",
-                                // Intentional comment to separate arguments
-                                "This error message is shown when all the Mudlet items cannot be written to the 'packageName'.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened.")
-                             .arg(mXmlPathFileName), false);
-        // Although we have failed, we must not just abort here. We need to reset
-        // the selected "for export or not"-flags first. So note that we have failed:
-        isOk = false;
-        // After the following we will then drop through to the end of the
-        // method to set up a means to close the dialogue after the user has
-        // seen the error message...
+    if (isOk) {
+        displayResultMessage(tr("Exporting package..."), true);
+    } else {
+        mExportingPackage = false;
+        slot_enableExportButton({});
+        // Failed - convert cancel to a close button
+        ui->buttonBox->removeButton(mCancelButton);
+        ui->buttonBox->addButton(QDialogButtonBox::Close);
+        connect(ui->buttonBox->button(QDialogButtonBox::Close), &QAbstractButton::clicked, this, &dlgPackageExporter::close);
     }
+}
 
-    //now fix all the stuff we weren't exporting
+void dlgPackageExporter::markExportItems(QList<QTreeWidgetItem*>& trigList,
+                                         QList<QTreeWidgetItem*>& timerList,
+                                         QList<QTreeWidgetItem*>& aliasList,
+                                         QList<QTreeWidgetItem*>& actionList,
+                                         QList<QTreeWidgetItem*>& scriptList,
+                                         QList<QTreeWidgetItem*>& keyList)
+{ //now fix all the stuff we weren't exporting
     //trigger, timer, alias, action, script, keys
     for (auto item : qAsConst(trigList)) {
         if (triggerMap.contains(item)) {
@@ -611,39 +591,89 @@ void dlgPackageExporter::slot_export_package()
             modAliasMap[item]->mModuleMasterFolder = true;
         }
     }
-
-    if (isOk) {
-        mWritingZip = true;
-        slot_enableExportButton({});
-        auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageConfig);
-        auto watcher = new QFutureWatcher<std::pair<bool, QString>>;
-        QObject::connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, [=]() {
-            mWritingZip = false;
-            slot_enableExportButton({});
-
-            if (auto [isOk, errorMsg] = future.result(); !isOk) {
-                qDebug() << "exported NOT OK";
-                displayResultMessage(errorMsg);
-                // Failed - convert cancel to a close button
-                ui->buttonBox->removeButton(mCancelButton);
-                ui->buttonBox->addButton(QDialogButtonBox::Close);
-                connect(ui->buttonBox->button(QDialogButtonBox::Close), &QAbstractButton::clicked, this, &dlgPackageExporter::close);
-            }
-            qDebug() << "exported OK";
-            displayResultMessage(
-                    tr("Package \"%1\" exported to: %2").arg(mPackageName, QStringLiteral("<a href=\"file:///%1\">%2</a>")).arg(getActualPath().toHtmlEscaped(), getActualPath().toHtmlEscaped()),
-                    true);
-        });
-        watcher->setFuture(future);
+}
+void dlgPackageExporter::exportXml(bool& isOk,
+                                   QList<QTreeWidgetItem*>& trigList,
+                                   QList<QTreeWidgetItem*>& timerList,
+                                   QList<QTreeWidgetItem*>& aliasList,
+                                   QList<QTreeWidgetItem*>& actionList,
+                                   QList<QTreeWidgetItem*>& scriptList,
+                                   QList<QTreeWidgetItem*>& keyList)
+{
+    XMLexport writer(mpHost);
+    //write trigs
+    QTreeWidgetItem* top = mpTriggers;
+    recurseTree(top, trigList);
+    for (auto item : qAsConst(trigList)) {
+        if (item->checkState(0) == Qt::Unchecked && triggerMap.contains(item)) {
+            triggerMap[item]->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && triggerMap.contains(item) && triggerMap[item]->mModuleMasterFolder) {
+            triggerMap[item]->mModuleMasterFolder = false;
+            modTriggerMap.insert(item, triggerMap[item]);
+        }
+    }
+    top = mpTimers;
+    recurseTree(top, timerList);
+    for (auto item : qAsConst(timerList)) {
+        if (item->checkState(0) == Qt::Unchecked && timerMap.contains(item)) {
+            timerMap[item]->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && timerMap.contains(item) && timerMap[item]->mModuleMasterFolder) {
+            timerMap[item]->mModuleMasterFolder = false;
+            modTimerMap.insert(item, timerMap[item]);
+        }
+    }
+    top = mpAliases;
+    recurseTree(top, aliasList);
+    for (auto item : qAsConst(aliasList)) {
+        if (item->checkState(0) == Qt::Unchecked && aliasMap.contains(item)) {
+            aliasMap[item]->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && aliasMap.contains(item) && aliasMap[item]->mModuleMasterFolder) {
+            aliasMap[item]->mModuleMasterFolder = false;
+            modAliasMap.insert(item, aliasMap[item]);
+        }
+    }
+    top = mpButtons;
+    recurseTree(top, actionList);
+    for (auto item : qAsConst(actionList)) {
+        if (item->checkState(0) == Qt::Unchecked && actionMap.contains(item)) {
+            actionMap[item]->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && actionMap.contains(item) && actionMap[item]->mModuleMasterFolder) {
+            actionMap[item]->mModuleMasterFolder = false;
+            modActionMap.insert(item, actionMap[item]);
+        }
+    }
+    top = mpScripts;
+    recurseTree(top, scriptList);
+    for (auto item : qAsConst(scriptList)) {
+        if (item->checkState(0) == Qt::Unchecked && scriptMap.contains(item)) {
+            scriptMap[item]->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && scriptMap.contains(item) && scriptMap[item]->mModuleMasterFolder) {
+            scriptMap[item]->mModuleMasterFolder = false;
+            modScriptMap.insert(item, scriptMap[item]);
+        }
+    }
+    top = mpKeys;
+    recurseTree(top, keyList);
+    for (auto item : qAsConst(keyList)) {
+        if (item->checkState(0) == Qt::Unchecked && keyMap.contains(item)) {
+            keyMap[item]->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && keyMap.contains(item) && keyMap[item]->mModuleMasterFolder) {
+            keyMap[item]->mModuleMasterFolder = false;
+            modKeyMap.insert(item, keyMap[item]);
+        }
     }
 
-    if (isOk) {
-        displayResultMessage(tr("Exporting package..."), true);
-    } else {
-        // Failed - convert cancel to a close button
-        ui->buttonBox->removeButton(mCancelButton);
-        ui->buttonBox->addButton(QDialogButtonBox::Close);
-        connect(ui->buttonBox->button(QDialogButtonBox::Close), &QAbstractButton::clicked, this, &dlgPackageExporter::close);
+    if (!writer.exportPackage(mXmlPathFileName, false)) {
+        displayResultMessage(tr("Failed to export. Could not write Mudlet items to the file \"%1\".",
+                                // Intentional comment to separate arguments
+                                "This error message is shown when all the Mudlet items cannot be written to the 'packageName'.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened.")
+                             .arg(mXmlPathFileName), false);
+        // Although we have failed, we must not just abort here. We need to reset
+        // the selected "for export or not"-flags first. So note that we have failed:
+        isOk = false;
+        // After the following we will then drop through to the end of the
+        // method to set up a means to close the dialogue after the user has
+        // seen the error message...
     }
 }
 void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile)
@@ -692,14 +722,15 @@ QFileInfo dlgPackageExporter::copyIconToTmp(const QString& tempPath) const
     return iconFile;
 }
 
-void dlgPackageExporter::copyAssetsToTmp(const QString& tempPath)
+void dlgPackageExporter::copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath)
 {
-    for (int i = 0; i < ui->listWidget_addedFiles->count(); ++i) {
-        QFileInfo asset(ui->listWidget_addedFiles->item(i)->text());
+    for (const auto& assetPath : assetPaths) {
+        QFileInfo asset(assetPath);
         QString filePath = tempPath;
         filePath.append(asset.fileName());
         if (!asset.exists()) {
-            displayResultMessage(tr("%1 doesn't seem to exist anymore - can you double-check it?").arg(asset.absoluteFilePath()), false);
+            // TODO fixme
+//            displayResultMessage(tr("%1 doesn't seem to exist anymore - can you double-check it?").arg(asset.absoluteFilePath()), false);
             return;
         }
         if (asset.isFile()) {

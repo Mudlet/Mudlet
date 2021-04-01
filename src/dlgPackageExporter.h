@@ -59,7 +59,7 @@ public:
     void recurseActions(TAction*, QTreeWidgetItem*);
     void listTimers();
     void recurseTimers(TTimer*, QTreeWidgetItem*);
-    void copy_directory(const QString &fromDir, const QString &toDir, bool coverFileIfExist);
+    static void copy_directory(const QString &fromDir, const QString &toDir, bool overwrite);
     QMap<QTreeWidgetItem*, TTrigger*> triggerMap;
     QMap<QTreeWidgetItem*, TTrigger*> modTriggerMap;
     QMap<QTreeWidgetItem*, TAlias*> aliasMap;
@@ -102,9 +102,22 @@ private:
     QString getActualPath() const;
     static std::pair<bool, QString> writeFileToZip(const QString& archiveFileName, const QString& fileSystemFileName, zip* archive);
     static std::pair<bool, QString> zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig);
-    void copyAssetsToTmp(const QString& tempPath);
+    static void copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath);
     QFileInfo copyIconToTmp(const QString& tempPath) const;
     void writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile);
+    void exportXml(bool& isOk,
+                   QList<QTreeWidgetItem*>& trigList,
+                   QList<QTreeWidgetItem*>& timerList,
+                   QList<QTreeWidgetItem*>& aliasList,
+                   QList<QTreeWidgetItem*>& actionList,
+                   QList<QTreeWidgetItem*>& scriptList,
+                   QList<QTreeWidgetItem*>& keyList);
+    void markExportItems(QList<QTreeWidgetItem*>& trigList,
+                         QList<QTreeWidgetItem*>& timerList,
+                         QList<QTreeWidgetItem*>& aliasList,
+                         QList<QTreeWidgetItem*>& actionList,
+                         QList<QTreeWidgetItem*>& scriptList,
+                         QList<QTreeWidgetItem*>& keyList);
 
     Ui::dlgPackageExporter* ui;
     QPointer<Host> mpHost;
@@ -124,7 +137,7 @@ private:
     QString mPackageIconPath;
     QString mPackageConfig;
     QString mPlainDescription;
-    inline static bool mWritingZip = false;
+    inline static bool mExportingPackage = false;
 
 signals:
     void signal_exportLocationChanged(const QString& location);
