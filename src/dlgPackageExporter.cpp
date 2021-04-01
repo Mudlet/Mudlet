@@ -160,6 +160,8 @@ std::pair<bool, QString> dlgPackageExporter::writeFileToZip(const QString& archi
     }
 
     if (zip_file_add(archive, archiveFileName.toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE) == -1) {
+        zip_source_free(s);
+        s = nullptr;
         return {false,
                 tr("Failed to add file \"%1\" to package. Error message was: \"%3\".",
                    // Intentional comment to separate arguments
@@ -463,7 +465,8 @@ void dlgPackageExporter::slot_export_package()
 
     mExportingPackage = true;
     slot_enableExportButton({});
-    mCancelButton->setVisible(true);
+    // TODO, requires change from QtConcurrent::run
+//    mCancelButton->setVisible(true);
     mCloseButton->setVisible(false);
     displayResultMessage(tr("Exporting package..."), true);
     qApp->processEvents();
@@ -760,19 +763,19 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
 
     if (!archive) {
         // Failed to open/create archive file
-        // We now use the better error handling system (not requiring a
+        // We now use the better zipError handling system (not requiring a
         // previously defined finite-sized char type buffer {which obviously
         // could have string buffer overflow issues} which is available in
         // post 0.10 versions of libzip):
-        zip_error_t error;
-        zip_error_init_with_code(&error, ze);
+        zip_error_t zipError;
+        zip_error_init_with_code(&zipError, ze);
         QString errMsg =
                 tr("Failed to open package file. Error is: \"%1\".",
                    // Intentional comment to separate arguments
-                   "This error message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere "
+                   "This zipError message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere "
                    "in the computer's file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.")
-                        .arg(zip_error_strerror(&error));
-        zip_error_fini(&error);
+                        .arg(zip_error_strerror(&zipError));
+        zip_error_fini(&zipError);
         return {false, errMsg};
     }
     qDebug() << "1" << timer.elapsed() << "milliseconds";
