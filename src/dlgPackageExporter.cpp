@@ -76,9 +76,11 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
 
     connect(mpExportSelection, &QTreeWidget::itemChanged, this, &dlgPackageExporter::slot_recountItems);
 
-    // This button has the RejectRole which causes the dialog to be rejected
-    // (and closed):
     mCancelButton = ui->buttonBox->button(QDialogButtonBox::Cancel);
+    // make sure the Cancel button doesn't close the dialog
+    ui->buttonBox->addButton(mCancelButton, QDialogButtonBox::ResetRole);
+    mCancelButton->setVisible(false);
+    mCloseButton = ui->buttonBox->button(QDialogButtonBox::Close);
 
     // This button has the ApplyRole which applies current changes but does NOT
     // cause the dialog to close:
@@ -89,7 +91,6 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     mPackagePathFileName.clear();
     mXmlPathFileName.clear();
     connect(ui->addFiles, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_addFiles);
-    ui->buttonBox->addButton(mExportButton, QDialogButtonBox::ResetRole);
     connect(mExportButton, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_export_package);
     connect(ui->pushBotton_packageLocation, &QPushButton::clicked, this, &dlgPackageExporter::slot_openPackageLocation);
     connect(ui->lineEdit_packageName, &QLineEdit::textChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
@@ -100,6 +101,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     connect(ui->packageList, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgPackageExporter::slot_packageChanged);
     connect(ui->addDependency, &QPushButton::clicked, this, &dlgPackageExporter::slot_addDependency);
     connect(ui->pushButton_addIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_import_icon);
+    connect(mCancelButton, &QPushButton::clicked, this, &dlgPackageExporter::slot_cancelExport);
 
     ui->listWidget_addedFiles->installEventFilter(this);
     ui->textEdit_description->installEventFilter(this);
@@ -461,6 +463,8 @@ void dlgPackageExporter::slot_export_package()
 
     mExportingPackage = true;
     slot_enableExportButton({});
+    mCancelButton->setVisible(true);
+    mCloseButton->setVisible(false);
     displayResultMessage(tr("Exporting package..."), true);
     qApp->processEvents();
 
@@ -511,14 +515,13 @@ void dlgPackageExporter::slot_export_package()
 
             if (auto [isOk, errorMsg] = future.result(); !isOk) {
                 displayResultMessage(errorMsg);
-                // Failed - convert cancel to a close button
-                ui->buttonBox->removeButton(mCancelButton);
-                ui->buttonBox->addButton(QDialogButtonBox::Close);
-                connect(ui->buttonBox->button(QDialogButtonBox::Close), &QAbstractButton::clicked, this, &dlgPackageExporter::close);
-            }
-            displayResultMessage(
+            } else {
+                displayResultMessage(
                     tr("Package \"%1\" exported to: %2").arg(mPackageName, QStringLiteral("<a href=\"file:///%1\">%2</a>")).arg(getActualPath().toHtmlEscaped(), getActualPath().toHtmlEscaped()),
                     true);
+            }
+            mCancelButton->setVisible(false);
+            mCloseButton->setVisible(true);
         });
         watcher->setFuture(future);
     }
@@ -528,10 +531,8 @@ void dlgPackageExporter::slot_export_package()
     } else {
         mExportingPackage = false;
         slot_enableExportButton({});
-        // Failed - convert cancel to a close button
-        ui->buttonBox->removeButton(mCancelButton);
-        ui->buttonBox->addButton(QDialogButtonBox::Close);
-        connect(ui->buttonBox->button(QDialogButtonBox::Close), &QAbstractButton::clicked, this, &dlgPackageExporter::close);
+        mCancelButton->setVisible(false);
+        mCloseButton->setVisible(true);
     }
 }
 
@@ -744,6 +745,9 @@ void dlgPackageExporter::copyAssetsToTmp(const QStringList& assetPaths, const QS
 
 std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig)
 {
+    QElapsedTimer timer;
+    timer.start();
+
     bool isOk = true;
     QString error;
     // zip error code:
@@ -771,7 +775,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         zip_error_fini(&error);
         return {false, errMsg};
     }
-
+    qDebug() << "1" << timer.elapsed() << "milliseconds";
     // Opened/created archive file successfully
 #if defined(Q_OS_WIN32)
 /*
@@ -833,6 +837,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         }
     }
 
+    qDebug() << "2" << timer.elapsed() << "milliseconds";
 #if defined(Q_OS_WIN32)
     qt_ntfs_permission_lookup--;
 #endif
@@ -852,6 +857,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
             zip_close(archive);
             return {false, errorMsg};
         }
+        qDebug() << "3" << timer.elapsed() << "milliseconds, added " << directoryName;
     }
 
     // Process the config and the file containing the Mudlet triggers,
@@ -865,6 +871,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
             }
         }
     }
+    qDebug() << "4" << timer.elapsed() << "milliseconds, config and mudlet triggers";
 
     QString xmlFileName = packageName;
     xmlFileName.append(QLatin1String(".xml"));
@@ -880,6 +887,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
                 zip_close(archive);
                 break;
             }
+            qDebug() << "5" << timer.elapsed() << "milliseconds, wrote" << itFileName.key();
         }
     }
 
@@ -899,6 +907,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
                                     .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
         }
     }
+    qDebug() << "6" << timer.elapsed() << "milliseconds, wrote" << xmlFileName;
 
     if (isOk) {
         // THIS is the point that the archive gets created from the
@@ -909,7 +918,9 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         // Change the cursor to a system busy one while we are working:
         QApplication::setOverrideCursor(Qt::BusyCursor);
         zip_set_archive_comment(archive, packageConfig.toUtf8().constData(), packageConfig.length());
+        qDebug() << "7" << "before zip close" << timer.elapsed() << "milliseconds";
         ze = zip_close(archive);
+        qDebug() << "7" << "after zip close" << timer.elapsed() << "milliseconds";
         QApplication::restoreOverrideCursor();
         if (ze) {
             QString errorMsg = tr("Failed to write files into and then close the package. Error is: \"%1\".",
@@ -1316,4 +1327,13 @@ void dlgPackageExporter::slot_recountItems()
 QString dlgPackageExporter::getActualPath() const
 {
     return mPackagePath.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::DesktopLocation) : mPackagePath;
+}
+
+void dlgPackageExporter::slot_cancelExport()
+{
+    mExportingPackage = false;
+    slot_enableExportButton({});
+
+    mCancelButton->setVisible(false);
+    mCloseButton->setVisible(true);
 }

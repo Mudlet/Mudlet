@@ -89,6 +89,7 @@ private slots:
     void slot_updateLocationPlaceholder();
     void slot_enableExportButton(const QString& text);
     void slot_recountItems();
+    void slot_cancelExport();
 
 protected:
     bool eventFilter(QObject* obj, QEvent* evt) override;
@@ -124,6 +125,7 @@ private:
     QTreeWidget* mpExportSelection;
     QPointer<QPushButton> mExportButton;
     QPointer<QPushButton> mCancelButton;
+    QPointer<QPushButton> mCloseButton;
     QTreeWidgetItem* mpTriggers;
     QTreeWidgetItem* mpAliases;
     QTreeWidgetItem* mpTimers;
