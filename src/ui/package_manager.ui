@@ -213,7 +213,7 @@
             <enum>Qt::TabFocus</enum>
            </property>
            <property name="text">
-            <string>Remove packages</string>
+            <string>Remove package</string>
            </property>
           </widget>
          </item>
