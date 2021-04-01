@@ -459,68 +459,17 @@ void dlgPackageExporter::slot_export_package()
     QString tempPath = stagingDirName;
     tempPath.append("/");
 
-    for (int i = 0; i < ui->listWidget_addedFiles->count(); ++i) {
-        QFileInfo asset(ui->listWidget_addedFiles->item(i)->text());
-        QString filePath = tempPath;
-        filePath.append(asset.fileName());
-        if (!asset.exists()) {
-            displayResultMessage(tr("%1 doesn't seem to exist anymore - can you double-check it?").arg(asset.absoluteFilePath()), false);
-            return;
-        }
-        if (asset.isFile()) {
-            QFile::remove(filePath);
-            QFile::copy(asset.absoluteFilePath(), filePath);
-        } else if (asset.isDir()) {
-            copy_directory(asset.absoluteFilePath(), filePath, true);
-        }
-    }
-
-    QFileInfo iconFile(mPackageIconPath);
-    if (iconFile.exists()) {
-        QString iconDirName = QStringLiteral("%1.mudlet/Icon/").arg(tempPath);
-        QDir iconDir = QDir(iconDirName);
-        if (!iconDir.exists()) {
-            iconDir.mkpath(iconDirName);
-        }
-        iconDirName.append(iconFile.fileName());
-        QFile::copy(mPackageIconPath, iconDirName);
-    }
+    copyAssetsToTmp(tempPath);
+    
+    QFileInfo iconFile = copyIconToTmp(tempPath);
 
     mXmlPathFileName = QStringLiteral("%1/%2.xml").arg(stagingDirName, mPackageName);
 
-    QStringList dependencies;
-    for (int index = 0; index < ui->comboBox_dependencies->count(); index++) {
-        dependencies << ui->comboBox_dependencies->itemText(index);
-    }
-
-    mPackageConfig.clear();
-    appendToConfigFile(mPackageConfig, QStringLiteral("mpackage"), mPackageName);
-    appendToConfigFile(mPackageConfig, QStringLiteral("author"), ui->lineEdit_author->text());
-    appendToConfigFile(mPackageConfig, QStringLiteral("icon"), iconFile.fileName());
-    appendToConfigFile(mPackageConfig, QStringLiteral("title"), ui->lineEdit_title->text());
-    appendToConfigFile(mPackageConfig, QStringLiteral("description"), mPlainDescription);
-    appendToConfigFile(mPackageConfig, QStringLiteral("version"), ui->lineEdit_version->text());
-    appendToConfigFile(mPackageConfig, QStringLiteral("dependencies"), dependencies.join(","));
-    QDateTime iso8601timestamp = QDateTime::currentDateTime();
-    int offset = iso8601timestamp.offsetFromUtc();
-    iso8601timestamp.setOffsetFromUtc(offset);
-    QDateTime iso8601time(QDateTime::currentDateTime());
-    iso8601time.setTimeSpec(Qt::OffsetFromUTC);
-    mPackageConfig.append(QStringLiteral("created = \"%1\"\n").arg(iso8601timestamp.toString(Qt::ISODate)));
-
-    QString luaConfig = QStringLiteral("%1/config.lua").arg(stagingDirName);
-    QFile configFile(luaConfig);
-    if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QTextStream out(&configFile);
-        out << mPackageConfig;
-        out.flush();
-        configFile.close();
-    }
+    writeConfigFile(stagingDirName, iconFile);
 
     QFile checkWriteability(mXmlPathFileName);
     if (!checkWriteability.open(QIODevice::WriteOnly)) {
-        displayResultMessage(tr("Failed to export. Could not open the folder \"%1\" for writing in. - "
-                                "Do you have the necessary permissions and free disk-space to write to that folder?")
+        displayResultMessage(tr("Failed to export. Could not open the folder \"%1\" for writing. Do you have the necessary permissions and free disk-space to write to that folder?")
                              .arg(mXmlPathFileName), false);
         return;
     }
@@ -663,8 +612,6 @@ void dlgPackageExporter::slot_export_package()
         }
     }
 
-    qDebug() << stagingDirName << mPackagePathFileName << mXmlPathFileName << mPackageName << mPackageConfig << isOk;
-
     if (isOk) {
         mWritingZip = true;
         slot_enableExportButton({});
@@ -697,6 +644,70 @@ void dlgPackageExporter::slot_export_package()
         ui->buttonBox->removeButton(mCancelButton);
         ui->buttonBox->addButton(QDialogButtonBox::Close);
         connect(ui->buttonBox->button(QDialogButtonBox::Close), &QAbstractButton::clicked, this, &dlgPackageExporter::close);
+    }
+}
+void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile)
+{
+    QStringList dependencies;
+    for (int index = 0; index < ui->comboBox_dependencies->count(); index++) {
+        dependencies << ui->comboBox_dependencies->itemText(index);
+    }
+
+    mPackageConfig.clear();
+    appendToConfigFile(mPackageConfig, QStringLiteral("mpackage"), mPackageName);
+    appendToConfigFile(mPackageConfig, QStringLiteral("author"), ui->lineEdit_author->text());
+    appendToConfigFile(mPackageConfig, QStringLiteral("icon"), iconFile.fileName());
+    appendToConfigFile(mPackageConfig, QStringLiteral("title"), ui->lineEdit_title->text());
+    appendToConfigFile(mPackageConfig, QStringLiteral("description"), mPlainDescription);
+    appendToConfigFile(mPackageConfig, QStringLiteral("version"), ui->lineEdit_version->text());
+    appendToConfigFile(mPackageConfig, QStringLiteral("dependencies"), dependencies.join(","));
+    QDateTime iso8601timestamp = QDateTime::currentDateTime();
+    int offset = iso8601timestamp.offsetFromUtc();
+    iso8601timestamp.setOffsetFromUtc(offset);
+    QDateTime iso8601time(QDateTime::currentDateTime());
+    iso8601time.setTimeSpec(Qt::OffsetFromUTC);
+    mPackageConfig.append(QStringLiteral("created = \"%1\"\n").arg(iso8601timestamp.toString(Qt::ISODate)));
+
+    QString luaConfig = QStringLiteral("%1/config.lua").arg(stagingDirName);
+    QFile configFile(luaConfig);
+    if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream out(&configFile);
+        out << mPackageConfig;
+        out.flush();
+        configFile.close();
+    }
+}
+QFileInfo dlgPackageExporter::copyIconToTmp(const QString& tempPath) const
+{
+    QFileInfo iconFile(mPackageIconPath);
+    if (iconFile.exists()) {
+        QString iconDirName = QStringLiteral("%1.mudlet/Icon/").arg(tempPath);
+        QDir iconDir = QDir(iconDirName);
+        if (!iconDir.exists()) {
+            iconDir.mkpath(iconDirName);
+        }
+        iconDirName.append(iconFile.fileName());
+        QFile::copy(mPackageIconPath, iconDirName);
+    }
+    return iconFile;
+}
+
+void dlgPackageExporter::copyAssetsToTmp(const QString& tempPath)
+{
+    for (int i = 0; i < ui->listWidget_addedFiles->count(); ++i) {
+        QFileInfo asset(ui->listWidget_addedFiles->item(i)->text());
+        QString filePath = tempPath;
+        filePath.append(asset.fileName());
+        if (!asset.exists()) {
+            displayResultMessage(tr("%1 doesn't seem to exist anymore - can you double-check it?").arg(asset.absoluteFilePath()), false);
+            return;
+        }
+        if (asset.isFile()) {
+            QFile::remove(filePath);
+            QFile::copy(asset.absoluteFilePath(), filePath);
+        } else if (asset.isDir()) {
+            copy_directory(asset.absoluteFilePath(), filePath, true);
+        }
     }
 }
 

@@ -27,8 +27,9 @@
 
 #include "pre_guard.h"
 #include <QDialog>
-#include <zip.h>
+#include <QFileInfo>
 #include "post_guard.h"
+#include <zip.h>
 
 class QTreeWidget;
 class QTreeWidgetItem;
@@ -101,6 +102,9 @@ private:
     QString getActualPath() const;
     static std::pair<bool, QString> writeFileToZip(const QString& archiveFileName, const QString& fileSystemFileName, zip* archive);
     static std::pair<bool, QString> zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig);
+    void copyAssetsToTmp(const QString& tempPath);
+    QFileInfo copyIconToTmp(const QString& tempPath) const;
+    void writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile);
 
     Ui::dlgPackageExporter* ui;
     QPointer<Host> mpHost;
