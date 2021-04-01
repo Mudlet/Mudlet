@@ -722,14 +722,14 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     if (!missingAreasNeeded.isEmpty()) {
         if (mudlet::self()->showMapAuditErrors()) {
             QString alertMsg = tr("[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
-                                  " Look for further messsages related to the rooms that are supposed\n"
+                                  " Look for further messages related to the rooms that are supposed\n"
                                   " to be in this/these area(s)...",
                                   "Making use of %n to allow quantity dependent message form 8-) !",
                                   missingAreasNeeded.count());
             mpMap->postMessage(alertMsg);
         }
         mpMap->appendErrorMsgWithNoLf(tr("[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
-                                         " Look for further messsages related to the rooms that is/are supposed to\n"
+                                         " Look for further messages related to the rooms that is/are supposed to\n"
                                          " be in this/these area(s)...",
                                          "Making use of %n to allow quantity dependent message form 8-) !",
                                          missingAreasNeeded.count()),
@@ -778,7 +778,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             mpMap->postMessage(alertMsg);
         }
         mpMap->appendErrorMsg(tr("[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!"
-                                 "  Look for further messsages related to this for each affected area ...")
+                                 "  Look for further messages related to this for each affected area ...")
                                       .arg(areaRemapping.count()),
                               true);
 
@@ -857,7 +857,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             mpMap->postMessage(alertMsg);
         }
         mpMap->appendErrorMsg(tr("[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!"
-                                 "  Look for further messsages related to this for each affected room ...")
+                                 "  Look for further messages related to this for each affected room ...")
                                       .arg(roomRemapping.count()),
                               true);
 

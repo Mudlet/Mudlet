@@ -28,6 +28,7 @@
 #include "Host.h"
 #include "LuaInterface.h"
 #include "TConsole.h"
+#include "TDebug.h"
 #include "TEasyButtonBar.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
@@ -7329,6 +7330,12 @@ void dlgTriggerEditor::slot_debug_mode()
     mudlet::mpDebugArea->setVisible(!mudlet::debugMode);
     mudlet::debugMode = !mudlet::debugMode;
     mudlet::mpDebugArea->setWindowTitle("Central Debug Console");
+    if (mudlet::debugMode) {
+        // If this is the first time the window is shown we want any previously
+        // enqueued messages to be painted onto the central debug console:
+        TDebug::flushMessageQueue();
+    }
+    mudlet::self()->refreshTabBar();
 }
 
 void dlgTriggerEditor::slot_next_section()
@@ -8397,7 +8404,7 @@ void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardMo
 
 void dlgTriggerEditor::slot_chose_action_icon()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Seclect Icon"), QDir::homePath(), tr("Images (*.png *.xpm *.jpg)"));
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Icon"), QDir::homePath(), tr("Images (*.png *.xpm *.jpg)"));
     mpActionsMainArea->lineEdit_action_icon->setText(fileName);
 }
 
