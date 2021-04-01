@@ -5617,37 +5617,37 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="274"/>
       <source>Required packages</source>
-      <translation type="unfinished"/>
+      <translation>必需的包</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="286"/>
       <source>Include assets (images, sounds, fonts)</source>
-      <translation type="unfinished"/>
+      <translation>包含素材 (图像，声音，字体)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="302"/>
       <source>Drag and drop files and folders, or use the browse button below</source>
-      <translation type="unfinished"/>
+      <translation>拖放文件和文件夹，或使用下面的浏览按钮</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="340"/>
       <source>Select files to include in package</source>
-      <translation type="unfinished"/>
+      <translation>选择要包含在包中的文件</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="397"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="410"/>
       <source>Does this package make use of other packages? List them here as requirements. Press &apos;Delete&apos; to remove a package</source>
-      <translation type="unfinished"/>
+      <translation>此软件包是否使用其他软件包? 按要求在此处列出它们。 按 &apos;删除&apos; 以移除软件包</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="438"/>
       <source>Select export location</source>
-      <translation type="unfinished"/>
+      <translation>选择导出位置</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="61"/>
@@ -5688,12 +5688,12 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="105"/>
       <source>update installed package</source>
-      <translation type="unfinished"/>
+      <translation>更新已安装的包</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="106"/>
       <source>add dependencies</source>
-      <translation type="unfinished"/>
+      <translation>添加依赖项</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="151"/>
@@ -5710,27 +5710,27 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="300"/>
       <source>Export to %1</source>
-      <translation type="unfinished"/>
+      <translation>导出至 %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="304"/>
       <source>Export to %1/%2.mpackage</source>
-      <translation type="unfinished"/>
+      <translation>导出到 %1/%2.mpackage</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="319"/>
       <source>Open Icon</source>
-      <translation type="unfinished"/>
+      <translation>打开图标</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="319"/>
       <source>Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</source>
-      <translation type="unfinished"/>
+      <translation>图像文件(*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="429"/>
       <source>Please enter the package name.</source>
-      <translation type="unfinished"/>
+      <translation>请输入包名.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="514"/>
@@ -5780,7 +5780,9 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="1256"/>
       <source>Select what to export (%1 items)</source>
       <comment>Package exporter selection</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>选择要导出的内容 (%1 项)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="920"/>
@@ -5793,7 +5795,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="42"/>
       <source>Package Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>包管理器 - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="54"/>
@@ -6757,7 +6759,7 @@ for all of the %n selected room(s):</source>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="200"/>
       <source>Pick color</source>
-      <translation type="unfinished"/>
+      <translation>选取颜色</translation>
     </message>
   </context>
   <context>
@@ -7065,7 +7067,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="815"/>
       <source>Text to find (trigger pattern)</source>
-      <translation type="unfinished"/>
+      <translation>要查找的文本 ( 触发器模式)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2785"/>
@@ -7854,27 +7856,27 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="52"/>
       <source>Text to find (anywhere in the game output)</source>
-      <translation type="unfinished"/>
+      <translation>要查找的文本 ( 在游戏输出的全部缓存中)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="55"/>
       <source>Text to find (as a regular expression pattern)</source>
-      <translation type="unfinished"/>
+      <translation>要查找的文本 ( 正则表达式模式)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="58"/>
       <source>Text to find (from beginning of the line)</source>
-      <translation type="unfinished"/>
+      <translation>要查找的文本（从行开头开始）</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="61"/>
       <source>Exact line to match</source>
-      <translation type="unfinished"/>
+      <translation>精确行匹配</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="64"/>
       <source>Lua code to run (return true to match)</source>
-      <translation type="unfinished"/>
+      <translation>要运行的 lua 代码 ( 返回 true 以匹配)</translation>
     </message>
   </context>
   <context>
