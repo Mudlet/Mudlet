@@ -2935,7 +2935,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     QJsonDocument doc(QJsonDocument::fromJson(mapData, &jsonErr));
     if (jsonErr.error != QJsonParseError::NoError) {
         return {false, (translatableTexts
-                    ? tr("could not parse file, reason: \"%2\" at offset %3")
+                    ? tr("could not parse file, reason: \"%1\" at offset %2")
                       .arg(jsonErr.errorString(), QString::number(jsonErr.offset))
                     : QStringLiteral("could not parse file \"%1\", reason: \"%2\" at offset %3")
                       .arg(source, jsonErr.errorString(), QString::number(jsonErr.offset)))};
