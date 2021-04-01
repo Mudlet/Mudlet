@@ -2549,7 +2549,6 @@ void Host::setName(const QString& newName)
     }
 
     mHostName = newName;
-    mpConsole->setProperty("HostName", newName);
 
     mTelnet.mProfileName = newName;
     if (mpMap) {
@@ -2560,6 +2559,8 @@ void Host::setName(const QString& newName)
     }
 
     if (mpConsole) {
+        // If skipped they will be taken care of in the TMainConsole constructor:
+        mpConsole->setProperty("HostName", newName);
         mpConsole->setProfileName(newName);
     }
     mTimerUnit.changeHostName(newName);
