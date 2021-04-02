@@ -12631,7 +12631,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="360"/>
       <source>Match all occurrences of the pattern in the line.</source>
-      <translation type="unfinished"/>
+      <translation>Trova tutte le corrispondenze del pattern nella riga.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="463"/>
