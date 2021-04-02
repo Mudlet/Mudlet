@@ -12310,7 +12310,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your script or script group. This will be displayed in the script tree.&lt;/p&gt;&lt;p&gt;If a function within the script is to be used to handle events entered in the list below &lt;b&gt;&lt;u&gt;it must have the same name as is entered here.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen guten (bestenfalls einzigartigen, aber muss nicht sein) Namen für dein Skript oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;/p&gt;&lt;p&gt;Falls eine Funktion innerhalb des Skriptes zur Behandlung von Ereignissen aus der Liste unten vorgesehen ist, dann &lt;b&gt;&lt;u&gt;muss sie den gleichen Namen haben, der hier eigegeben wird.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
@@ -12379,7 +12379,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="134"/>
       <source>&lt;p&gt;milliseconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Millisekunden&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="169"/>
@@ -12605,7 +12605,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="360"/>
       <source>Match all occurrences of the pattern in the line.</source>
-      <translation type="unfinished"/>
+      <translation>Treffe alle Vorkommnisse des Musters in der Zeile.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="463"/>
