@@ -232,10 +232,13 @@ void dlgPackageManager::fillAdditionalDetails(const QMap<QString, QString>& pack
 
 void dlgPackageManager::slot_toggle_remove_button()
 {
-    int selectionCount = mPackageTable->selectedItems().count();
+    QModelIndexList selection = mPackageTable->selectionModel()->selectedRows();
+    int selectionCount = selection.count();
     bool haveSelection = selectionCount != 0;
 
     mRemoveButton->setEnabled(haveSelection);
-    // let the translations decide whenever it should be 'Remove package', 'Remove packages', or whatever is language-appropriate
-    mRemoveButton->setText(tr("Remove packages", "Button in package manager to remove selected package(s)", selectionCount));
+    if (selectionCount > 1) {
+        // let the translations decide whenever it should be 'Remove package', 'Remove packages', or whatever is language-appropriate
+        mRemoveButton->setText(tr("Remove packages", "Button in package manager to remove selected package(s)", selectionCount));
+    }
 }
