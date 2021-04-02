@@ -464,6 +464,7 @@ void dlgPackageExporter::slot_export_package()
     tempPath.append("/");
 
     mExportingPackage = true;
+    QApplication::setOverrideCursor(Qt::BusyCursor);
     slot_enableExportButton({});
     // TODO requires changing away from QtConcurrent::run
     // mCancelButton->setVisible(true);
@@ -488,8 +489,10 @@ void dlgPackageExporter::slot_export_package()
     if (!checkWriteability.open(QIODevice::WriteOnly)) {
         displayResultMessage(tr("Failed to export. Could not open the folder \"%1\" for writing. Do you have the necessary permissions and free disk-space to write to that folder?")
                              .arg(mXmlPathFileName), false);
+        assetsFuture.cancel();
         mExportingPackage = false;
         slot_enableExportButton({});
+        QApplication::restoreOverrideCursor();
         return;
     }
     checkWriteability.close();
@@ -530,6 +533,7 @@ void dlgPackageExporter::slot_export_package()
                 }
                 mCancelButton->setVisible(false);
                 mCloseButton->setVisible(true);
+                QApplication::restoreOverrideCursor();
             });
             watcher->setFuture(future);
         }
@@ -542,6 +546,7 @@ void dlgPackageExporter::slot_export_package()
         slot_enableExportButton({});
         mCancelButton->setVisible(false);
         mCloseButton->setVisible(true);
+        QApplication::restoreOverrideCursor();
     }
 }
 
@@ -754,9 +759,6 @@ std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& 
 
 std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig)
 {
-    QElapsedTimer timer;
-    timer.start();
-
     bool isOk = true;
     QString error;
     // zip error code:
@@ -784,7 +786,6 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         zip_error_fini(&zipError);
         return {false, errMsg};
     }
-    qDebug() << "1" << timer.elapsed() << "milliseconds";
     // Opened/created archive file successfully
 #if defined(Q_OS_WIN32)
 /*
@@ -846,7 +847,6 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         }
     }
 
-    qDebug() << "2" << timer.elapsed() << "milliseconds";
 #if defined(Q_OS_WIN32)
     qt_ntfs_permission_lookup--;
 #endif
@@ -866,7 +866,6 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
             zip_close(archive);
             return {false, errorMsg};
         }
-        qDebug() << "3" << timer.elapsed() << "milliseconds, added " << directoryName;
     }
 
     // Process the config and the file containing the Mudlet triggers,
@@ -880,7 +879,6 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
             }
         }
     }
-    qDebug() << "4" << timer.elapsed() << "milliseconds, config and mudlet triggers";
 
     QString xmlFileName = packageName;
     xmlFileName.append(QLatin1String(".xml"));
@@ -896,7 +894,6 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
                 zip_close(archive);
                 break;
             }
-            qDebug() << "5" << timer.elapsed() << "milliseconds, wrote" << itFileName.key();
         }
     }
 
@@ -916,7 +913,6 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
                                     .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
         }
     }
-    qDebug() << "6" << timer.elapsed() << "milliseconds, wrote" << xmlFileName;
 
     if (isOk) {
         // THIS is the point that the archive gets created from the
@@ -924,13 +920,8 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         // If it fails to write out the new file 'archive' is left
         // unchanged (and we can still access it to get the error
         // details):
-        // Change the cursor to a system busy one while we are working:
-        QApplication::setOverrideCursor(Qt::BusyCursor);
         zip_set_archive_comment(archive, packageConfig.toUtf8().constData(), packageConfig.length());
-        qDebug() << "7" << "before zip close" << timer.elapsed() << "milliseconds";
         ze = zip_close(archive);
-        qDebug() << "7" << "after zip close" << timer.elapsed() << "milliseconds";
-        QApplication::restoreOverrideCursor();
         if (ze) {
             QString errorMsg = tr("Failed to write files into and then close the package. Error is: \"%1\".",
                                     // Intentional comment to separate arguments
