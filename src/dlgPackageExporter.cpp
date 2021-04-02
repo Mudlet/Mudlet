@@ -512,6 +512,8 @@ void dlgPackageExporter::slot_export_package()
 
     if (isOk) {
         // ensure assets have been copied before we start writing the zip
+        // this will freeze the main thread, so it's not the perfect way - ideally
+        // only start this after assets copy + xml writing is complete
         assetsFuture.waitForFinished();
         if (auto [success, message] = assetsFuture.result(); !success) {
             displayResultMessage(message);
