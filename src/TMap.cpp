@@ -913,7 +913,7 @@ bool TMap::findPath(int from, int to)
         // No available normal exits from this room so check the special ones
         QStringList specialExitCommands = pFrom->getSpecialExits().keys();
         while (!specialExitCommands.isEmpty()) {
-            if (pFrom->hasSpecialExitLock(specialExitCommands.at(0))) {
+            if (!pFrom->hasSpecialExitLock(specialExitCommands.at(0))) {
                 hasUsableExit = true;
                 break;
             }
@@ -1074,7 +1074,6 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     ofs << mpRoomDB->getAreaMap().size();
     // serialize area table
     QMapIterator<int, TArea*> itAreaList(mpRoomDB->getAreaMap());
-    QList<int> areasWithData; // TODO: Remove when versions < 17 are not an option
     while (itAreaList.hasNext()) {
         itAreaList.next();
         int areaID = itAreaList.key();
@@ -3171,8 +3170,8 @@ void TMap::update()
     }
 #endif
     if (mpMapper) {
-        mpMapper->showRoomNames->setVisible(getRoomNamesPresent());
-        mpMapper->showRoomNames->setChecked(getRoomNamesShown());
+        mpMapper->checkBox_showRoomNames->setVisible(getRoomNamesPresent());
+        mpMapper->checkBox_showRoomNames->setChecked(getRoomNamesShown());
 
         if (mpMapper->mp2dMap) {
             mpMapper->mp2dMap->mNewMoveAction = true;

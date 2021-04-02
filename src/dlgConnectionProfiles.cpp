@@ -54,8 +54,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 , mDefaultGames({"3Kingdoms", "3Scapes", "Aardwolf", "Achaea", "Aetolia",
                  "Avalon.de", "BatMUD", "Clessidra", "Fierymud", "Imperian", "Luminari",
                  "Lusternia", "Materia Magica", "Midnight Sun 2", "Realms of Despair",
-                 "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD", "Carrion Fields"
-                 "Cleft of Dimensions", "CoreMUD"})
+                 "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD", "Carrion Fields",
+                 "Cleft of Dimensions", "CoreMUD", "God Wars II", "Slothmud"})
 {
     setupUi(this);
 
@@ -1327,7 +1327,6 @@ void dlgConnectionProfiles::fillout_form()
     profiles_tree_widget->setIconSize(QSize(120, 30));
     QString mudServer, description;
     QListWidgetItem* pItem;
-    QIcon mi;
 
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(QStringLiteral("deletedDefaultMuds"), QStringList()).toStringList();
@@ -1993,7 +1992,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect, const QString& playerN
                 {QStringLiteral(":/CF-loader.xml"), {QStringLiteral("carrionfields.net")}},
                 {QStringLiteral(":/run-tests.xml"), {QStringLiteral("mudlet.org")}},
                 {QStringLiteral(":/mudlet-mapper.xml"),
-                 {QStringLiteral("aetolia.com"), QStringLiteral("achaea.com"), QStringLiteral("lusternia.com"), QStringLiteral("imperian.com"), QStringLiteral("starmourn.com")}},
+                 {QStringLiteral("aetolia.com"), QStringLiteral("achaea.com"), QStringLiteral("lusternia.com"), QStringLiteral("imperian.com"), QStringLiteral("starmourn.com"), QStringLiteral("stickmud.com")}},
         };
 
         QHashIterator<QString, QStringList> i(defaultScripts);

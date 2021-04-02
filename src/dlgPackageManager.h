@@ -1,6 +1,9 @@
+#ifndef MUDLET_DLGPACKAGEMANAGER_H
+#define MUDLET_DLGPACKAGEMANAGER_H
+
 /***************************************************************************
- *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
+ *   Copyright (C) 2011 by Heiko Koehn - KoehnHeiko@googlemail.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,30 +21,37 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TMxpTagParser.h"
-#include "TMxpNodeBuilder.h"
-#include "TStringUtils.h"
+
+#include "Host.h"
 
 #include "pre_guard.h"
-#include <QDebug>
+#include <QDialog>
 #include "post_guard.h"
 
-QList<QSharedPointer<MxpNode>> TMxpTagParser::parseToMxpNodeList(const QString& tagText, bool ignoreText)
-{
-    TMxpNodeBuilder nodeBuilder(ignoreText);
-    std::string tagStdStr = tagText.toStdString();
-
-    QList<QSharedPointer<MxpNode>> result;
-    for (auto itr = tagStdStr.begin(); itr != tagStdStr.end(); itr++) {
-        if (nodeBuilder.accept(*itr)) {
-            result.append(QSharedPointer<MxpNode>(nodeBuilder.buildNode()));
-            --itr;
-        }
-    }
-
-    if (nodeBuilder.hasNode()) {
-        result.append(QSharedPointer<MxpNode>(nodeBuilder.buildNode()));
-    }
-
-    return result;
+class Host;
+namespace Ui {
+class package_manager;
 }
+
+class dlgPackageManager : public QDialog
+{
+    Q_OBJECT
+
+public:
+    Q_DISABLE_COPY(dlgPackageManager)
+    explicit dlgPackageManager(QWidget* parent, Host*);
+    ~dlgPackageManager();
+
+private slots:
+    void slot_install_package();
+    void slot_uninstall_package();
+
+private:
+    Ui::package_manager* ui;
+    Host* mpHost;
+    QListWidget* mPackageList;
+    QPushButton* mUninstallButton;
+    QPushButton* mInstallButton;
+};
+
+#endif

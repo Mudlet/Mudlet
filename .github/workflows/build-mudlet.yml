@@ -1,11 +1,11 @@
-name: Build Mudlet
+name: 🔨 Build Mudlet
 on:
   push:
     branches: [master, development]
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: '0 1 * * *'
+    - cron: '0 2 * * *'
 
 jobs:
   compile-mudlet:
@@ -62,7 +62,7 @@ jobs:
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
-        key: ${{matrix.os}}-qt-${{matrix.qt}}
+        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
@@ -71,6 +71,8 @@ jobs:
         dir: ${{runner.workspace}}
         arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
+        aqtversion: '==1.1.2'
+
 
     - name: Restore Boost cache
       uses: actions/cache@v2.1.4
@@ -94,13 +96,9 @@ jobs:
         rm -rf boost_*/* download.tar.bz2 download.tar
       shell: bash
 
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      if: ${{ failure() }}
-
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
-      uses: lukka/run-vcpkg@v6
+      uses: lukka/run-vcpkg@v7
       env:
         vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
       with:
@@ -147,7 +145,7 @@ jobs:
       run: |
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
-        sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev -y
+        sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 -y
 
         # switch to GCC that supports C++17 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 7
@@ -232,7 +230,6 @@ jobs:
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: >-
-          --target test
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
           -DVCPKG_APPLOCAL_DEPS=OFF
@@ -278,34 +275,11 @@ jobs:
         run-luarocks install --local argparse
         run-luarocks install --local lunajson
 
-        # necessary for Qt multimedia
+        # necessary for Qt multimedia and modern Qt
         if [ "${RUNNER_OS}" = "Linux" ]; then
-          sudo apt-get install libgstreamer-plugins-base1.0-0 -y
+          sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 -y
         fi
-      env:
-        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
-        RUNNER_OS: ${{runner.os}}
-        DEPLOY: ${{matrix.deploy}}
-        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
-        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
-        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
 
-
-    # - name: Setup tmate session for debugging
-    #   if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
-    #   uses: mxschmitt/action-tmate@v3
-    #   env:
-    #     BUILD_FOLDER: ${{runner.workspace}}/b/ninja
-    #     RUNNER_OS: ${{runner.os}}
-    #     DEPLOY: ${{matrix.deploy}}
-    #     DBLSQD_USER: ${{secrets.DBLSQD_USER}}
-    #     DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
-    #     DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
-
-
-    - name: (Linux/macOS) package Mudlet
-      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
-      run: |
         ${{github.workspace}}/CI/travis.after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
@@ -314,6 +288,7 @@ jobs:
         DBLSQD_USER: ${{secrets.DBLSQD_USER}}
         DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+        MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v2

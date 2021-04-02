@@ -65,7 +65,7 @@ void TMxpMudlet::popColor(QList<QColor>& stack)
 
 int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints)
 {
-    return getLinkStore().addLinks(links, hints);
+    return getLinkStore().addLinks(links, hints, mpHost);
 }
 
 bool TMxpMudlet::getLink(int id, QStringList** links, QStringList** hints)

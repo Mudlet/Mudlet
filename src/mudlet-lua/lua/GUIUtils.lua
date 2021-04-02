@@ -976,7 +976,7 @@ if rex then
   _Echos = {
     Patterns = {
       Hex = {
-        [[(\x5c?(?:#|\|c|#,)(?:[0-9a-fA-F]{6})(?:,[0-9a-fA-F]{6,})?)|(?:\||#)(\/?[biru])]],
+        [[(\x5c?(?:#|\|c)?(?:[0-9a-fA-F]{6}|(?:#,|\|c,)[0-9a-fA-F]{6,8})(?:,[0-9a-fA-F]{6,8})?)|(?:\||#)(\/?[biru])]],
         rex.new [[(?:#|\|c)(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?)?]],
       },
       Decimal = {
@@ -1115,6 +1115,8 @@ if rex then
     local args = { ... }
     local n = #args
 
+    assert(type(args[1]) == 'string', style:sub(1,1):lower() .. func .. ': bad argument #1, string expected, got '..type(args[1])..'!)')
+
     if string.find(func, "Link") then
       if n < 3 then
         error 'Insufficient arguments, usage: ([window, ] string, command, hint)'
@@ -1156,10 +1158,8 @@ if rex then
     end
 
     local t = _Echos.Process(str, style)
-
     deselect(win)
     resetFormat(win)
-    if not str then error(style:sub(1,1):lower() .. func .. ": bad argument #1, string expected, got nil",3) end
     for _, v in ipairs(t) do
       if type(v) == 'table' then
         if v.fg then
@@ -2285,13 +2285,13 @@ end
 -- This wrapper gives callback functions the possibility to be used like
 -- setCallBackFunction (name,function as string,args)
 -- it is used by setLabelCallBack functions and setCmdLineAction
-local function setActionCallback(callbackFunc, name, func, ...)
+local function setActionCallback(callbackFunc, funcName, name, func, ...)
   local nr = arg.n + 1
   arg.n = arg.n + 1
   if type(func) == "string" then
     func = loadstring("return "..func.."(...)")
   end
-  assert(type(func) == 'function', '<setActionCallback: bad argument #2 type (function expected, got '..type(func)..'!)>')
+  assert(type(func) == 'function', string.format('<%s: bad argument #2 type (function expected, got %s!)>', funcName, type(func)))
   if nr > 1 then
     return callbackFunc(name,
     function(event)
@@ -2302,47 +2302,15 @@ local function setActionCallback(callbackFunc, name, func, ...)
       func(unpack_w_nil(arg))
     end )
   end
-  callbackFunc(name, func)
+  return callbackFunc(name, func)
 end
 
-local setLC = setLC or setLabelClickCallback
-function setLabelClickCallback (...)
-  setActionCallback(setLC, ...)
-end
+local callBackFunc ={"setLabelClickCallback", "setLabelReleaseCallback", "setLabelMoveCallback", "setLabelWheelCallback", "setLabelOnEnter", "setLabelOnLeave", "setCmdLineAction"}
 
-local setLDC = setLDC or setLabelDoubleClickCallback
-function setLabelDoubleClickCallback (...)
-  setActionCallback(setLDC, ...)
-end
-
-local setLRC = setLRC or setLabelReleaseCallback
-function setLabelReleaseCallback(...)
-  setActionCallback(setLRC, ...)
-end
-
-local setLMC = setLMC or setLabelMoveCallback
-function setLabelMoveCallback(...)
-  setActionCallback(setLMC, ...)
-end
-
-local setLWC = setLWC or setLabelWheelCallback
-function setLabelWheelCallback(...)
-  setActionCallback(setLWC, ...)
-end
-
-local setOnE = setOnE or setLabelOnEnter
-function setLabelOnEnter(...)
-  setActionCallback(setOnE, ...)
-end
-
-local setOnL = setOnL or setLabelOnLeave
-function setLabelOnLeave(...)
-  setActionCallback(setOnL,...)
-end
-
-local setCmdLA = setCmdLA or setCmdLineAction
-function setCmdLineAction(...)
-  setActionCallback(setCmdLA,...)
+for i = 1, #callBackFunc do
+  local funcName = callBackFunc[i]
+  local callBackFunction = _G[funcName]
+  _G[funcName] = function(...) return setActionCallback(callBackFunction, funcName, ...) end
 end
 
 function resetUserWindowTitle(windowname)
