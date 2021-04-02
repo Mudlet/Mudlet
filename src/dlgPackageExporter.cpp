@@ -778,7 +778,7 @@ void dlgPackageExporter::slot_export_package()
                 if (zip_dir_add(archive, directoryName.toStdString().c_str(), ZIP_FL_ENC_UTF_8) == -1) {
                     displayResultMessage(tr("Failed to add directory \"%1\" to package. Error is: \"%2\".")
                                          .arg(directoryName, zip_strerror(archive)), false);
-                    zip_close(archive);
+                    zip_discard(archive);
                     isOk = false;
                 }
             }
@@ -816,7 +816,7 @@ void dlgPackageExporter::slot_export_package()
                     }
 
                     if (!writeFileToZip(itFileName.key(), itFileName.value(), archive)) {
-                        zip_close(archive);
+                        zip_discard(archive);
                         isOk = false;
                         break;
                     }
