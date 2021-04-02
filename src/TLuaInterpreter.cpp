@@ -15453,6 +15453,14 @@ int TLuaInterpreter::loadJsonMap(lua_State* L)
         return warnArgumentValue(L, __func__, message);
     }
 
+    // Must run the audit() process now - as it is no longer done within
+    // TMap::readJsonMapFile(...) as that can now be used elsewhere:
+    pHost->mpMap->audit();
+    pHost->mpMap->mpMapper->mp2dMap->init();
+    pHost->mpMap->mpMapper->updateAreaComboBox();
+    pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+    pHost->mpMap->mpMapper->show();
+
     lua_pushboolean(L, true);
     return 1;
 }
