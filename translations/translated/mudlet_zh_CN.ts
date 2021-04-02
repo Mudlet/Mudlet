@@ -3153,7 +3153,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1961"/>
       <source>{ideographic space}</source>
       <comment>Unicode U+3000 codepoint - ideographic (CJK Wide) space</comment>
-      <translation type="unfinished"/>
+      <translation>{ideographic space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1962"/>
@@ -8001,7 +8001,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="53"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>发送到游戏的文本 (可选)</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="60"/>
