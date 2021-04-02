@@ -302,8 +302,6 @@ private:
 
     std::string mMudData;
     bool mIsTimerPosting;
-    QTimer* mTimerLogin;
-    QTimer* mTimerPass;
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
     int mRecordLastChunkMSecTimeOffset;

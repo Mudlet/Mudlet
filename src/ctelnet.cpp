@@ -552,8 +552,6 @@ void cTelnet::handle_socket_signal_connected()
     QString nothing;
     mpHost->mLuaInterpreter.call(func, nothing);
     mConnectionTimer.start();
-    mTimerLogin->start(2000);
-    mTimerPass->start(3000);
 
     // Must do this before the next thing so that the password sending bit in
     // the Lua system is set to be usable:
