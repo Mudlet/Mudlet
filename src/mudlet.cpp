@@ -2451,10 +2451,10 @@ int64_t mudlet::getPhysicalMemoryTotal()
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memInfo);
     return static_cast<int64_t>(memInfo.ullTotalPhys);
-#elif defined(O_OS_HURD)
+#elif defined(Q_OS_HURD)
     // GNU/Hurd does not have a sysinfo struct  yet:
     errno = 0;
-    long pageSize = sysconf(_SC_PAGESIZE);
+    int64_t pageSize = sysconf(_SC_PAGESIZE);
     if (pageSize < 0) {
         if (errno) {
             qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - error returned from sysconf(_SC_PAGESIZE); errno: " << errno;
@@ -2463,7 +2463,7 @@ int64_t mudlet::getPhysicalMemoryTotal()
         }
         return -1;
     }
-    long pageCount = sysconf(_SC_PHYS_PAGES);
+    int64_t pageCount = sysconf(_SC_PHYS_PAGES);
     if (pageCount < 0) {
         if (errno) {
             qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - error returned from sysconf(_SC_PHYS_PAGES); errno: " << errno;
