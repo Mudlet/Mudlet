@@ -199,7 +199,7 @@ public:
                         useDictionary = mEnableUserDictionary;
                         useShared = mUseSharedDictionary; }
     void            setCustomLoginId(const int value);
-    int             getCustomLoginId() { return mCustomLoginId; }
+    int             getCustomLoginId() const { return mCustomLoginId; }
 
     void closingDown();
     bool isClosingDown();
