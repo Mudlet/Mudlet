@@ -32,7 +32,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="288"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Keine Räume auf der Karte - lade eine andere oder beginne neu zu kartieren.</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
@@ -657,7 +657,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="1255"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Keine Räume auf der Karte - lade eine andere oder beginne neu zu kartieren.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2253"/>
@@ -5611,12 +5611,12 @@ Nutzungen</translation>
       <location filename="../src/ui/dlgPackageExporter.ui" line="146"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="168"/>
       <source>Icon size of 512x512 recommended</source>
-      <translation type="unfinished"/>
+      <translation>Symbolgröße von 512x512 empfohlen</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="178"/>
       <source>512x512 recommended</source>
-      <translation type="unfinished"/>
+      <translation>512x512 empfohlen</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="380"/>
@@ -5764,7 +5764,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="464"/>
       <source>%1 doesn&apos;t seem to exist anymore - can you double-check it?</source>
-      <translation type="unfinished"/>
+      <translation>%1 scheint nicht mehr zu existieren - kannst du es noch einmal überprüfen?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="519"/>
