@@ -1499,7 +1499,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 }
 
             } else {
-                if (auto [isOk, message] = readJsonMapFile(fileName, true, false); !isOk) {
+                if (auto [isOk, message] = readJsonMapFile(fileName, true); !isOk) {
                    // Failed to read the JSON file
                    QString errMsg = tr("[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:\n"
                                        "%1; the file is:\n"
