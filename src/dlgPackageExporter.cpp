@@ -466,8 +466,7 @@ void dlgPackageExporter::slot_export_package()
     mExportingPackage = true;
     QApplication::setOverrideCursor(Qt::BusyCursor);
     slot_enableExportButton({});
-    // TODO requires changing away from QtConcurrent::run
-    // mCancelButton->setVisible(true);
+    mCancelButton->setVisible(true);
     mCloseButton->setVisible(false);
     displayResultMessage(tr("Exporting package..."), true);
     qApp->processEvents();
@@ -923,8 +922,8 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         // unchanged (and we can still access it to get the error
         // details):
         zip_set_archive_comment(archive, packageConfig.toUtf8().constData(), packageConfig.length());
-        auto cancel_callback = [](void*) -> int { return !mExportingPackage; };
-        zip_register_cancel_callback_with_state(archive, cancel_callback, nullptr);
+        auto cancel_callback = [](zip*, void*) -> int { return !mExportingPackage; };
+        zip_register_cancel_callback_with_state(archive, cancel_callback, nullptr, nullptr);
         ze = zip_close(archive);
         if (ze) {
             QString errorMsg = tr("Failed to write files into and then close the package. Error is: \"%1\".",
