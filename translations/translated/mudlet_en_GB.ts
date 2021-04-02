@@ -32,7 +32,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="288"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>No rooms in the map - load another one, or start mapping from scratch to begin.</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
@@ -659,7 +659,7 @@ please wait...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="1255"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>No rooms in the map - load another one, or start mapping from scratch to begin.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2253"/>
@@ -2565,7 +2565,14 @@ out what new id numbers to use.</source>
  Look for further messages related to the rooms that are supposed
  to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
+ Look for further messages related to the rooms that are supposed
+ to be in this/these area(s)...</numerusform>
+        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
+ Look for further messages related to the rooms that are supposed
+ to be in this/these area(s)...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="731"/>
