@@ -465,8 +465,8 @@ void dlgPackageExporter::slot_export_package()
 
     mExportingPackage = true;
     slot_enableExportButton({});
-    // TODO, requires change from QtConcurrent::run
-//    mCancelButton->setVisible(true);
+    // TODO, requires changing away from QtConcurrent::run
+    // mCancelButton->setVisible(true);
     mCloseButton->setVisible(false);
     displayResultMessage(tr("Exporting package..."), true);
     qApp->processEvents();
@@ -510,23 +510,29 @@ void dlgPackageExporter::slot_export_package()
     if (isOk) {
         // ensure assets have been copied before we start writing the zip
         assetsFuture.waitForFinished();
-        auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageConfig);
-        auto watcher = new QFutureWatcher<std::pair<bool, QString>>;
-        QObject::connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, [=]() {
-            mExportingPackage = false;
-            slot_enableExportButton({});
+        if (auto [success, message] = assetsFuture.result(); !success) {
+            displayResultMessage(message);
+            isOk = false;
+        } else {
+            auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageConfig);
+            auto watcher = new QFutureWatcher<std::pair<bool, QString>>;
+            QObject::connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, [=]() {
+                mExportingPackage = false;
+                slot_enableExportButton({});
 
-            if (auto [isOk, errorMsg] = future.result(); !isOk) {
-                displayResultMessage(errorMsg);
-            } else {
-                displayResultMessage(
-                    tr("Package \"%1\" exported to: %2").arg(mPackageName, QStringLiteral("<a href=\"file:///%1\">%2</a>")).arg(getActualPath().toHtmlEscaped(), getActualPath().toHtmlEscaped()),
-                    true);
-            }
-            mCancelButton->setVisible(false);
-            mCloseButton->setVisible(true);
-        });
-        watcher->setFuture(future);
+                if (auto [isOk, errorMsg] = future.result(); !isOk) {
+                    displayResultMessage(errorMsg);
+                } else {
+                    displayResultMessage(tr("Package \"%1\" exported to: %2")
+                                                 .arg(mPackageName, QStringLiteral("<a href=\"file:///%1\">%2</a>"))
+                                                 .arg(getActualPath().toHtmlEscaped(), getActualPath().toHtmlEscaped()),
+                                         true);
+                }
+                mCancelButton->setVisible(false);
+                mCloseButton->setVisible(true);
+            });
+            watcher->setFuture(future);
+        }
     }
 
     if (isOk) {
@@ -726,16 +732,14 @@ QFileInfo dlgPackageExporter::copyIconToTmp(const QString& tempPath) const
     return iconFile;
 }
 
-void dlgPackageExporter::copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath)
+std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath)
 {
     for (const auto& assetPath : assetPaths) {
         QFileInfo asset(assetPath);
         QString filePath = tempPath;
         filePath.append(asset.fileName());
         if (!asset.exists()) {
-            // TODO fixme
-//            displayResultMessage(tr("%1 doesn't seem to exist anymore - can you double-check it?").arg(asset.absoluteFilePath()), false);
-            return;
+            return {false, tr("%1 doesn't seem to exist anymore - can you double-check it?").arg(asset.absoluteFilePath())};
         }
         if (asset.isFile()) {
             QFile::remove(filePath);
@@ -744,6 +748,8 @@ void dlgPackageExporter::copyAssetsToTmp(const QStringList& assetPaths, const QS
             copy_directory(asset.absoluteFilePath(), filePath, true);
         }
     }
+
+    return {true, QString{}};
 }
 
 std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig)

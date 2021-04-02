@@ -103,7 +103,7 @@ private:
     QString getActualPath() const;
     static std::pair<bool, QString> writeFileToZip(const QString& archiveFileName, const QString& fileSystemFileName, zip* archive);
     static std::pair<bool, QString> zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig);
-    static void copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath);
+    static std::pair<bool, QString> copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath);
     QFileInfo copyIconToTmp(const QString& tempPath) const;
     void writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile);
     void exportXml(bool& isOk,
