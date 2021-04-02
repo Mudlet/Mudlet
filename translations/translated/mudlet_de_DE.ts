@@ -2603,7 +2603,14 @@ Bestimme neue IDs, die statt dessen genutzt werden können.</translation>
  Look for further messages related to the rooms that are supposed
  to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ACHTUNG ] - Fehlender Bereich in der Karte entdeckt und ergänzt.
+ Achte auf weitere Nachrichten zu Räumen, die in diesem Bereich
+ sein sollten...</numerusform>
+        <numerusform>[ ACHTUNG ] - %n fehlende Bereiche in der Karte entdeckt und ergänzt.
+ Achte auf weitere Nachrichten zu Räumen, die in diesen Bereichen
+ sein sollten...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="731"/>
@@ -2611,17 +2618,28 @@ Bestimme neue IDs, die statt dessen genutzt werden können.</translation>
  Look for further messages related to the rooms that is/are supposed to
  be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ACHTUNG ] - Fehlender Bereich in der Karte entdeckt und ergänzt.
+ Achte auf weitere Nachrichten zu Räumen, die in diesem Bereich
+ sein sollten...</numerusform>
+        <numerusform>[ ACHTUNG ] - %n fehlende Bereiche in der Karte entdeckt und ergänzt.
+ Achte auf weitere Nachrichten zu Räumen, die in diesen Bereichen
+ sein sollten...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="780"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messages related to this for each affected area ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Defekte Bereichs-IDs in der Karte gefunden (Anzahl: %1) 
+(Defekte IDs sind kleiner als +1 und auch nicht die reservierte ID -1)
+Achte auf weitere Nachrichten zu jedem betroffenen Bereich...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="859"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messages related to this for each affected room ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Defekte Raum-IDs in der Karte gefunden (Anzahl: %1) 
+(Defekte IDs sind kleiner als +1)
+Achte auf weitere Nachrichten zu jedem betroffenen Raum...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="866"/>
@@ -6150,7 +6168,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3228"/>
       <source>&lt;p&gt;The room symbol will appear like this if only symbols (glyphs) from the specific font are used.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Das Raumsymbol erscheint wie folgt, wenn nur Symbole (Glyphen) aus der spezifischen Schriftart verwendet werden.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3901"/>
@@ -6200,7 +6218,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="196"/>
       <source>&lt;p&gt;This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specified font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.&lt;p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Hiermit werden alle Symbole angezeigt, die in der aktuellen Karte genutzt werden, und ob sie nur mit der angegebenen Schriftart dargestellt werden können, mit einer anderen Schriftart, oder überhaupt nicht. Es wird auch eine Sequenz von Unicode-&lt;bi&gt;Code-Punkten&lt;b/i&gt; angezeigt, aus denen das Symbol zusammengesetzt wird, damit es auch identifiziert werden kann, falls es nicht dargestellt werden kann. Außerdem werden bis zu 32 Räume aufgelistet, die dieses Symbol benutzen, wodurch man unerwartete oder seltsame Fälle aufdecken kann.&lt;bp&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="209"/>
@@ -7543,7 +7561,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8407"/>
       <source>Select Icon</source>
-      <translation type="unfinished"/>
+      <translation>Wähle Symbol</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8416"/>
