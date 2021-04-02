@@ -465,7 +465,7 @@ void dlgPackageExporter::slot_export_package()
 
     mExportingPackage = true;
     slot_enableExportButton({});
-    // TODO, requires changing away from QtConcurrent::run
+    // TODO requires changing away from QtConcurrent::run
     // mCancelButton->setVisible(true);
     mCloseButton->setVisible(false);
     displayResultMessage(tr("Exporting package..."), true);
