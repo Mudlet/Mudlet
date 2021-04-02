@@ -5656,12 +5656,12 @@ Utilizzi</translation>
       <location filename="../src/ui/dlgPackageExporter.ui" line="146"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="168"/>
       <source>Icon size of 512x512 recommended</source>
-      <translation type="unfinished"/>
+      <translation>Dimensione icona di 512x512px consigliata</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="178"/>
       <source>512x512 recommended</source>
-      <translation type="unfinished"/>
+      <translation>512x512px consigliato</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="380"/>
@@ -7580,7 +7580,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8407"/>
       <source>Select Icon</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona icona</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8416"/>
@@ -12405,7 +12405,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="134"/>
       <source>&lt;p&gt;milliseconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;millisecondi&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="169"/>
