@@ -5589,12 +5589,12 @@ Count</source>
       <location filename="../src/ui/dlgPackageExporter.ui" line="146"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="168"/>
       <source>Icon size of 512x512 recommended</source>
-      <translation type="unfinished"/>
+      <translation>建议图标大小为512x512</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="178"/>
       <source>512x512 recommended</source>
-      <translation type="unfinished"/>
+      <translation>建议 512x512</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="380"/>
@@ -7500,7 +7500,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8407"/>
       <source>Select Icon</source>
-      <translation type="unfinished"/>
+      <translation>选择图标</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8416"/>
@@ -8131,7 +8131,8 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/main.cpp" line="254"/>
       <source>Copyright © 2008-2021  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>版权所有 © 2008-2021  Mudlet 开发者
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="280"/>
@@ -12308,7 +12309,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="134"/>
       <source>&lt;p&gt;milliseconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;毫秒&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="169"/>
