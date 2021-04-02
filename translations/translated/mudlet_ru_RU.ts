@@ -32,7 +32,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="288"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>У вас еще нет карты - загрузите ее или начните создавать карту с нуля.</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
@@ -667,7 +667,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="1255"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>У вас еще нет карты - загрузите ее или начните создавать карту с нуля.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2253"/>
@@ -2614,7 +2614,20 @@ out what new id numbers to use.</source>
  Look for further messages related to the rooms that are supposed
  to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ВНИМ ] - %n область обнаружена как отсутствующая на карте: добавляем иё.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этой области...</numerusform>
+        <numerusform>[ ВНИМ ] - %n областей обнаружены как отсутствующие на карте: добавляем их.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этих областях...</numerusform>
+        <numerusform>[ ВНИМ ] - %n областей обнаружены как отсутствующие на карте: добавляем их.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этих областях...</numerusform>
+        <numerusform>[ ВНИМ ] - %n областей обнаружены как отсутствующие на карте: добавляем их.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этих областях...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="731"/>
@@ -2622,17 +2635,32 @@ out what new id numbers to use.</source>
  Look for further messages related to the rooms that is/are supposed to
  be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ВНИМ ] - %n область обнаружена как отсутствующая на карте: добавляем иё.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этой области...</numerusform>
+        <numerusform>[ ВНИМ ] - %n областей обнаружены как отсутствующие на карте: добавляем их.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этих областях...</numerusform>
+        <numerusform>[ ВНИМ ] - %n областей обнаружены как отсутствующие на карте: добавляем их.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этих областях...</numerusform>
+        <numerusform>[ ВНИМ ] - %n областей обнаружены как отсутствующие на карте: добавляем их.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этих областях...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="780"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messages related to this for each affected area ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Найдены неверные (менее +1 и не зарезервированный -1) идентификаторы областей (всего: %1)
+на карте. Сообщения о каждой области последуют...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="859"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messages related to this for each affected room ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Найдены неверные (менее + и не зарезервированный -1) идентификаторы комнат (всего: %1)
+на карте. Сообщения о каждой области последуют...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="866"/>
@@ -4869,7 +4897,7 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="213"/>
       <source>Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - if you are a &lt;i&gt;SpamBot&lt;/i&gt; you will not get onto our Fora now. They have also made some useful C++ core code contributions and we look forward to future reviews on and work in that area.</source>
       <comment>about:TheFae</comment>
-      <translation type="unfinished"/>
+      <translation>Сотворил чудеса в омоложении нашего сайта в 2017 году, но кто предпочитает немного анонимности - если вы &lt;i&gt;SpamBot&lt;/i&gt; , вы не попадете на наши форумы сейчас. Они также внесли некоторые полезные вклады в основной код C++, и мы с нетерпением ждем будущих обзоров и работы в этой области.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="218"/>
@@ -5626,12 +5654,12 @@ Count</source>
       <location filename="../src/ui/dlgPackageExporter.ui" line="146"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="168"/>
       <source>Icon size of 512x512 recommended</source>
-      <translation type="unfinished"/>
+      <translation>Рекомендуемый размер значка 512x512</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="178"/>
       <source>512x512 recommended</source>
-      <translation type="unfinished"/>
+      <translation>512x512 рекомендовано</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="380"/>
@@ -5779,7 +5807,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="464"/>
       <source>%1 doesn&apos;t seem to exist anymore - can you double-check it?</source>
-      <translation type="unfinished"/>
+      <translation>%1 больше не существует, можете ли вы проверить это?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="519"/>
@@ -6169,7 +6197,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3228"/>
       <source>&lt;p&gt;The room symbol will appear like this if only symbols (glyphs) from the specific font are used.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Символ комнаты будет выглядеть так, если используются только символы (глифы) из шрифта.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3901"/>
@@ -6219,7 +6247,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="196"/>
       <source>&lt;p&gt;This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specified font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.&lt;p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Это покажет дисплей показывающий все символы, используемые на текущей карте, и могут ли они быть нарисованы только с помощью определенного шрифта, любого другого шрифта, или нет вообще.  Он также показывает последовательность Unicode &lt;i&gt;кодов&lt;/i&gt; которые составляют этот символ, так что они могут быть идентифицированы, даже если они не могут быть отображены. Кроме того, первые тридцать две комнат использующих этот символ перечислены, что может помочь определить любые неожиданные или странные случаи.&lt;p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="209"/>
@@ -7568,7 +7596,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8407"/>
       <source>Select Icon</source>
-      <translation type="unfinished"/>
+      <translation>Выбрать значок</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8416"/>
@@ -10992,7 +11020,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1112"/>
       <source>&lt;p&gt;Select this option for better compatibility if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Выберите этот параметр для лучшей совместимости, если используется нетбук или другая модель компьютера с небольшим экраном.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1268"/>
@@ -12311,7 +12339,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your script or script group. This will be displayed in the script tree.&lt;/p&gt;&lt;p&gt;If a function within the script is to be used to handle events entered in the list below &lt;b&gt;&lt;u&gt;it must have the same name as is entered here.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Выберите хорошее (в идеале уникальное) имя для скрипта или группы скриптов. Это будет показано в списке скриптов.&lt;b/p&gt;&lt;bp&gt;Если функция в скрипте будет использоваться в обработке событий, то имя скрипта должно быть тоже самое как и у функции.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
@@ -12380,7 +12408,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="134"/>
       <source>&lt;p&gt;milliseconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;милисекундах&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="169"/>
@@ -12604,7 +12632,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="360"/>
       <source>Match all occurrences of the pattern in the line.</source>
-      <translation type="unfinished"/>
+      <translation>Соответствовать всем совпаданиям шаблона в строке.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="463"/>
