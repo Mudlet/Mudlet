@@ -20,13 +20,13 @@ jobs:
             buildname: 'ubuntu / gcc'
             triplet: x64-linux
             compiler: gcc_64
-            qt: '5.14.1'
+            qt: '5.14.2'
             deploy: 'deploy'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
-            qt: '5.14.1'
+            qt: '5.14.2'
           - os: ubuntu-latest
             buildname: 'ubuntu / qt 5.11'
             triplet: x64-linux
@@ -36,13 +36,13 @@ jobs:
             buildname: 'macos / c++ tests'
             triplet: x64-osx
             compiler: clang_64
-            qt: '5.14.1'
+            qt: '5.14.2'
             deploy: 'deploy'
           - os: windows-2019
             buildname: 'windows'
             triplet: x64-mingw-dynamic
             # compiler: flag not used in windows pipeline
-            qt: '5.14.1'
+            qt: '5.14.2'
             deploy: 'deploy'
 
     env:
