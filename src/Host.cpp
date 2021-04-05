@@ -45,6 +45,7 @@
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
 #include "dlgNotepad.h"
+#include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgIRC.h"
 #include "mudlet.h"
@@ -1801,6 +1802,10 @@ bool Host::installPackage(const QString& fileName, int module)
     detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(detailedInstallEvent);
 
+    if (mpPackageManager) {
+        mpPackageManager->resetPackageTable();
+    }
+
     return true;
 }
 
@@ -1900,6 +1905,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     if (mpEditorDialog && module != 3) {
         mpEditorDialog->doCleanReset();
     }
+
     mTriggerUnit.uninstall(packageName);
     mTimerUnit.uninstall(packageName);
     mAliasUnit.uninstall(packageName);
@@ -1943,6 +1949,9 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     //NOW we reset if we're uninstalling a module
     if (mpEditorDialog && module == 3) {
         mpEditorDialog->doCleanReset();
+    }
+    if (mpPackageManager) {
+        mpPackageManager->resetPackageTable();
     }
     return true;
 }
