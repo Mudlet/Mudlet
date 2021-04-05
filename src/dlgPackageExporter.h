@@ -28,8 +28,15 @@
 #include "pre_guard.h"
 #include <QDialog>
 #include <QFileInfo>
+#include <QTextEdit>
+#include <zip.h>
 #include "post_guard.h"
 #include <zip.h>
+
+#if LIBZIP_VERSION_MAJOR > 1 || LIBZIP_VERSION_MAJOR == 1 && LIBZIP_VERSION_MINOR >= 7
+// libzip 1.7.0 supports cancelling archiving in progress
+#define LIBZIP_SUPPORTS_CANCELLING TRUE
+#endif
 
 class QTreeWidget;
 class QTreeWidgetItem;
@@ -75,6 +82,8 @@ public:
     // This will hold the absolute pathFileName for the XML file that will
     // contain the Mudlet items to go into the package:
     QString mXmlPathFileName;
+    QString mPlainDescription;
+    QStringList mDescriptionImages;
 
 public slots:
     void slot_addFiles();
@@ -138,15 +147,25 @@ private:
     QString mPackagePathFileName;
     QString mPackageIconPath;
     QString mPackageConfig;
-    QString mPlainDescription;
     inline static bool mExportingPackage = false;
 
 signals:
     void signal_exportLocationChanged(const QString& location);
 };
 
-#if LIBZIP_VERSION_MAJOR > 1 || LIBZIP_VERSION_MAJOR == 1 && LIBZIP_VERSION_MINOR >= 7
-// libzip 1.7.0 supports cancelling archiving in progress
-#define LIBZIP_SUPPORTS_CANCELLING TRUE
+class dlgPackageExporterDescription : public QTextEdit
+{
+    Q_OBJECT
+
+public:
+    Q_DISABLE_COPY(dlgPackageExporterDescription)
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 13, 0))
+    Q_DISABLE_MOVE(dlgPackageExporterDescription)
 #endif
+    explicit dlgPackageExporterDescription(QWidget* pW = nullptr);
+    ~dlgPackageExporterDescription();
+    bool canInsertFromMimeData(const QMimeData* source) const override;
+    void insertFromMimeData(const QMimeData* source) override;
+};
+
 #endif // MUDLET_DLGPACKAGEEXPORTER_H
