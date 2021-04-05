@@ -30,6 +30,7 @@
 #include "TDebug.h"
 #include "TMainConsole.h"
 #include "TCommandLine.h"
+#include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
@@ -400,6 +401,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
 {
+    TDebug::addHost(this);
+
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
 
@@ -478,6 +481,7 @@ Host::~Host()
     mIsClosingDown = true;
     mErrorLogStream.flush();
     mErrorLogFile.close();
+    TDebug::removeHost(this);
 }
 
 void Host::loadPackageInfo()
@@ -1477,6 +1481,7 @@ void Host::unregisterEventHandler(const QString& name, TScript* pScript)
     }
 }
 
+// If a handler matches the event, the Lua stack will be cleared after this function
 void Host::raiseEvent(const TEvent& pE)
 {
     if (pE.mArgumentList.isEmpty()) {
@@ -2537,13 +2542,13 @@ void Host::setName(const QString& newName)
         return;
     }
 
+    TDebug::changeHostName(this, newName);
     int currentPlayerRoom = 0;
     if (mpMap) {
         currentPlayerRoom = mpMap->mRoomIdHash.take(mHostName);
     }
 
     mHostName = newName;
-    mpConsole->setProperty("HostName", newName);
 
     mTelnet.mProfileName = newName;
     if (mpMap) {
@@ -2554,6 +2559,8 @@ void Host::setName(const QString& newName)
     }
 
     if (mpConsole) {
+        // If skipped they will be taken care of in the TMainConsole constructor:
+        mpConsole->setProperty("HostName", newName);
         mpConsole->setProfileName(newName);
     }
     mTimerUnit.changeHostName(newName);

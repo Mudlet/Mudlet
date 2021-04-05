@@ -5,7 +5,7 @@
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
- *   Copyright (C) 2011-2020 by Vadim Peretokin - vperetokin@gmail.com     *
+ *   Copyright (C) 2011-2021 by Vadim Peretokin - vperetokin@gmail.com     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -85,6 +85,7 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::Close) {
         mudlet::debugMode = false;
+        mudlet::self()->refreshTabBar();
         return QObject::eventFilter(obj, event);
     } else {
         return QObject::eventFilter(obj, event);
@@ -271,7 +272,6 @@ mudlet::mudlet()
     menuHelp->setToolTipsVisible(true);
     menuAbout->setToolTipsVisible(true);
 
-    mudlet::debugMode = false;
     setAttribute(Qt::WA_DeleteOnClose);
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(version);
@@ -2446,19 +2446,34 @@ void mudlet::startAutoLogin(const QString& cliProfile)
 // credit to https://github.com/DigitalInBlue/Celero/blob/master/src/Memory.cpp
 int64_t mudlet::getPhysicalMemoryTotal()
 {
-#ifdef WIN32
+#if defined(Q_OS_WIN32)
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memInfo);
     return static_cast<int64_t>(memInfo.ullTotalPhys);
-#elif defined(__unix__) || defined(__unix) || defined(unix)
-    // Prefer sysctl() over sysconf() except sysctl() HW_REALMEM and HW_PHYSMEM
-    // return static_cast<int64_t>(sysconf(_SC_PHYS_PAGES)) * static_cast<int64_t>(sysconf(_SC_PAGE_SIZE));
-    struct sysinfo memInfo;
-    sysinfo(&memInfo);
-    int64_t total = memInfo.totalram;
-    return total * static_cast<int64_t>(memInfo.mem_unit);
-#elif defined(__APPLE__)
+#elif defined(Q_OS_HURD)
+    // GNU/Hurd does not have a sysinfo struct  yet:
+    errno = 0;
+    int64_t pageSize = sysconf(_SC_PAGESIZE);
+    if (pageSize < 0) {
+        if (errno) {
+            qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - error returned from sysconf(_SC_PAGESIZE); errno: " << errno;
+        } else {
+            qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - indeterminent limit returned from sysconf(_SC_PAGESIZE).";
+        }
+        return -1;
+    }
+    int64_t pageCount = sysconf(_SC_PHYS_PAGES);
+    if (pageCount < 0) {
+        if (errno) {
+            qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - error returned from sysconf(_SC_PHYS_PAGES); errno: " << errno;
+        } else {
+            qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - indeterminent limit returned from sysconf(_SC_PHYS_PAGES).";
+        }
+        return -1;
+    }
+    return pageSize * pageCount;
+#elif defined(Q_OS_MACOS)
     int mib[2];
     mib[0] = CTL_HW;
     mib[1] = HW_MEMSIZE;
@@ -2472,6 +2487,14 @@ int64_t mudlet::getPhysicalMemoryTotal()
     }
 
     return -1;
+#elif defined(Q_OS_UNIX)
+    // Including both GNU/Linux and FreeBSD:
+    // Prefer sysctl() over sysconf() except sysctl() HW_REALMEM and HW_PHYSMEM
+    // return static_cast<int64_t>(sysconf(_SC_PHYS_PAGES)) * static_cast<int64_t>(sysconf(_SC_PAGE_SIZE));
+    struct sysinfo memInfo;
+    sysinfo(&memInfo);
+    int64_t total = memInfo.totalram;
+    return total * static_cast<int64_t>(memInfo.mem_unit);
 #else
     return -1;
 #endif
@@ -2924,7 +2947,7 @@ void mudlet::playSound(const QString& s, int soundVolume)
 
         if (!pPlayer) {
             /* It (should) be impossible to ever reach this */
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("Play sound: unable to create new QMediaPlayer object\n") >> 0;
+            TDebug(Qt::white, Qt::red) << QStringLiteral("Play sound: unable to create new QMediaPlayer object\n") >> pHost;
             return;
         }
 
@@ -4367,5 +4390,17 @@ void mudlet::slot_tabMoved(const int oldPos, const int newPos)
         mpHBoxLayout_profileContainer->removeItem(pLayoutItem);
         // This will readd the item to the end of the layout:
         mpHBoxLayout_profileContainer->addItem(pLayoutItem);
+    }
+}
+
+void mudlet::refreshTabBar()
+{
+    for (const auto& pHost : mHostManager) {
+        QString hostName = pHost->getName();
+        if (debugMode) {
+            mpTabBar->applyPrefixToDisplayedText(hostName, TDebug::getTag(pHost.data()));
+        } else {
+            mpTabBar->applyPrefixToDisplayedText(hostName);
+        }
     }
 }

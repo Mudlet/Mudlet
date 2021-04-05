@@ -144,7 +144,7 @@ public:
     void setRoomNamesShown(bool shown);
 
     std::pair<bool, QString> writeJsonMapFile(const QString&);
-    std::pair<bool, QString> readJsonMapFile(const QString&);
+    std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false, const bool allowUserCancellation = true);
     int getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
     QString getDefaultAreaName() const { return mDefaultAreaName; }
@@ -268,6 +268,7 @@ private:
     const QString createFileHeaderLine(QString, QChar);
     void writeJsonUserData(QJsonObject&) const;
     void readJsonUserData(const QJsonObject&);
+    bool validatePotentialMapFile(QFile&, QDataStream&);
 
     QStringList mStoredMessages;
 
@@ -281,7 +282,7 @@ private:
     QList<QString> mMapAuditErrors;
 
     // Are things so bad the user needs to check the log (ignored if messages ARE already sent to screen)
-    bool mIsFileViewingRecommended = false;;
+    bool mIsFileViewingRecommended = false;
 
     // Moved and revised from dlgMapper:
     QNetworkAccessManager* mpNetworkAccessManager = nullptr;
