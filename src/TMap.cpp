@@ -2724,7 +2724,12 @@ void TMap::setRoomNamesShown(bool shown)
 std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 {
     QString destination{dest};
-    if (!dest.endsWith(QLatin1String(".json"), Qt::CaseInsensitive)) {
+
+    if (destination.isEmpty()) {
+        destination = mudlet::getMudletPath(mudlet::profileDateTimeStampedJsonMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
+    }
+
+    if (!destination.endsWith(QLatin1String(".json"), Qt::CaseInsensitive)) {
         destination.append(QLatin1String(".json"));
     }
 

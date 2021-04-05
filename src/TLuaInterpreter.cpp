@@ -15422,13 +15422,13 @@ int TLuaInterpreter::saveJsonMap(lua_State* L)
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
-    auto dest = getVerifiedString(L, __func__, 1, "export pathFileName");
-    if (dest.isEmpty()) {
-        return warnArgumentValue(L, __func__, "a non-empty path and file name to write to must be provided");
+    QString destination;
+
+    if (lua_gettop(L) > 0) {
+        destination = getVerifiedString(L, __func__, 1, "export pathFileName");
     }
 
-
-    if (auto [result, message] = pHost->mpMap->writeJsonMapFile(dest); !result) {
+    if (auto [result, message] = pHost->mpMap->writeJsonMapFile(destination); !result) {
         return warnArgumentValue(L, __func__, message);
     }
 
