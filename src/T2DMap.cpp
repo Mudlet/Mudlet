@@ -1248,9 +1248,18 @@ void T2DMap::paintEvent(QPaintEvent* e)
         auto font(painter.font());
         font.setPointSize(10);
         painter.setFont(font);
-        auto message = mpMap->mpRoomDB
-                ? tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size())
-                : tr("You do not have a map yet - load one, or start mapping from scratch to begin.");
+
+        QString message;
+        if (mpMap->mpRoomDB) {
+            if (mpMap->mpRoomDB->isEmpty()) {
+                message = tr("No rooms in the map - load another one, or start mapping from scratch to begin.");
+            } else {
+                message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size());
+            }
+        } else {
+            message = tr("You do not have a map yet - load one, or start mapping from scratch to begin.");
+        }
+
         painter.drawText(0, 0, widgetWidth, widgetHeight, Qt::AlignCenter | Qt::TextWordWrap, message);
         painter.restore();
         return;
