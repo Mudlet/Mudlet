@@ -803,7 +803,8 @@ std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& 
     return {true, QString{}};
 }
 
-std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig)
+std::pair<bool, QString>
+dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig)
 {
     bool isOk = true;
     QString error;
@@ -813,7 +814,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
 
     // ZIP_CREATE creates the archive if it does not exist.
     // ZIP_TRUNCATE zaps any contents in a previously existing file.
-    zip* archive = zip_open(packagePathFileName.toUtf8().constData(), ZIP_CREATE|ZIP_TRUNCATE, &ze);
+    zip* archive = zip_open(packagePathFileName.toUtf8().constData(), ZIP_CREATE | ZIP_TRUNCATE, &ze);
 
     if (!archive) {
         // Failed to open/create archive file
@@ -823,30 +824,30 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         // post 0.10 versions of libzip):
         zip_error_t zipError;
         zip_error_init_with_code(&zipError, ze);
-        QString errMsg =
-                tr("Failed to open package file. Error is: \"%1\".",
-                   // Intentional comment to separate arguments
-                   "This zipError message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere "
-                   "in the computer's file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.")
-                        .arg(zip_error_strerror(&zipError));
+        QString errMsg = tr("Failed to open package file. Error is: \"%1\".",
+                            // Intentional comment to separate arguments
+                            "This zipError message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing "
+                            "file anywhere "
+                            "in the computer's file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.")
+                                 .arg(zip_error_strerror(&zipError));
         zip_error_fini(&zipError);
         return {false, errMsg};
     }
     // Opened/created archive file successfully
 #if defined(Q_OS_WIN32)
-/*
+    /*
 * From Qt Docs:
 * Note: On NTFS file systems, ownership and permissions checking is disabled by
 * default for performance reasons. To enable it, include the following line:
 */
     extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
-/*
+    /*
 * Permission checking is then turned on and off by incrementing and
 * decrementing qt_ntfs_permission_lookup by 1:
 */
     qt_ntfs_permission_lookup++;
 #endif // defined(Q_OS_WIN32)
-    QDirIterator itDir(stagingDirName, QDir::NoDotAndDotDot|QDir::AllDirs|QDir::Files, QDirIterator::Subdirectories);
+    QDirIterator itDir(stagingDirName, QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files, QDirIterator::Subdirectories);
     // relative names to use in archive:
     QStringList directoryEntries;
     // Key is relative name to use in archive
@@ -855,40 +856,34 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
     while (itDir.hasNext() && isOk) {
         QString itEntry = itDir.next();
         Q_UNUSED(itEntry);
-//              Comment out the preceding line if the following is uncommented!
-//              qDebug() << " parsing entry:" << itEntry << " fileName() is:" << itDir.fileName() << " filePath() is:" << itDir.filePath();
+        //              Comment out the preceding line if the following is uncommented!
+        //              qDebug() << " parsing entry:" << itEntry << " fileName() is:" << itDir.fileName() << " filePath() is:" << itDir.filePath();
         // QString::compare(...) returns 0 (false) if the two arguments
         // MATCH and non-0 (true) otherwise and De Morgans' Laws means
         // that the if branch should be taken if the fileName IS a Dot
         // OR IS a DotDot file...!
-        if (!(  itDir.fileName().compare(QStringLiteral("."))
-             && itDir.fileName().compare(QStringLiteral("..")))) {
-
-             // Dot and DotDot entries are no use to us so skip them
-             continue;
+        if (!(itDir.fileName().compare(QStringLiteral(".")) && itDir.fileName().compare(QStringLiteral("..")))) {
+            // Dot and DotDot entries are no use to us so skip them
+            continue;
         }
 
         QFileInfo entryInfo(itDir.fileInfo());
         if (!entryInfo.isReadable()) {
-            qWarning() << "dlgPackageExporter::slot_export_package() skipping file: "
-                       << itDir.fileName()
-                       << "it is NOT readable!";
+            qWarning() << "dlgPackageExporter::slot_export_package() skipping file: " << itDir.fileName() << "it is NOT readable!";
             continue;
         }
 
         if (entryInfo.isSymLink()) {
-            qWarning() << "dlgPackageExporter::slot_export_package() skipping file: "
-                       << itDir.fileName()
-                       << "it is a Symlink - avoided to prevent file-system loops!";
+            qWarning() << "dlgPackageExporter::slot_export_package() skipping file: " << itDir.fileName() << "it is a Symlink - avoided to prevent file-system loops!";
             continue;
         }
 
         QString nameInArchive = itDir.filePath();
         nameInArchive.remove(QStringLiteral("%1/").arg(stagingDirName));
 
-        if       (entryInfo.isDir()) {
+        if (entryInfo.isDir()) {
             directoryEntries.append(nameInArchive);
-        } else if(entryInfo.isFile()) {
+        } else if (entryInfo.isFile()) {
             fileEntries.insert(nameInArchive, itDir.filePath());
         }
     }
@@ -907,8 +902,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         // zip_dir_add(...) returns the index of the
         // added directory item in the archive or -1 on error:
         if (zip_dir_add(archive, directoryName.toStdString().c_str(), ZIP_FL_ENC_UTF_8) == -1) {
-            QString errorMsg = tr("Failed to add directory \"%1\" to package. Error is: \"%2\".")
-                                 .arg(directoryName, zip_strerror(archive));
+            QString errorMsg = tr("Failed to add directory \"%1\" to package. Error is: \"%2\".").arg(directoryName, zip_strerror(archive));
             zip_close(archive);
             return {false, errorMsg};
         }
@@ -950,13 +944,14 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
             // If successful will get to HERE...
 
         } else {
-            return {false, tr("Required file \"%1\" was not found in the staging area. "
-                                    "This area contains the Mudlet items chosen for the package, "
-                                    "which you selected to be included in the package file. "
-                                    "This suggests there may be a problem with that directory: "
-                                    "\"%2\" - "
-                                    "Do you have the necessary permissions and free disk-space?")
-                                    .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
+            return {false,
+                    tr("Required file \"%1\" was not found in the staging area. "
+                       "This area contains the Mudlet items chosen for the package, "
+                       "which you selected to be included in the package file. "
+                       "This suggests there may be a problem with that directory: "
+                       "\"%2\" - "
+                       "Do you have the necessary permissions and free disk-space?")
+                            .arg(xmlPathFileName, QDir(stagingDirName).canonicalPath())};
         }
     }
 
@@ -971,35 +966,32 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
 #ifdef LIBZIP_SUPPORTS_CANCELLING
         auto cancel_callback = [](zip*, void*) -> int { return !mExportingPackage; };
         zip_register_cancel_callback_with_state(archive, cancel_callback, nullptr, nullptr);
-    }
 #endif
 
-    ze = zip_close(archive);
-    if (ze) {
-        // libzip's C interface around the error message isn't trivial - so copy it over into Qt land where things are simpler
-        QString zipError{zip_strerror(archive)};
-        if (zipError == QStringLiteral("Operation cancelled")) {
-            zip_discard(archive);
-            return {false, tr("Export cancelled.")};
-        }
+        ze = zip_close(archive);
+        if (ze) {
+            // libzip's C interface around the error message isn't trivial - so copy it over into Qt land where things are simpler
+            QString zipError{zip_strerror(archive)};
+            if (zipError == QStringLiteral("Operation cancelled")) {
+                zip_discard(archive);
+                return {false, tr("Export cancelled.")};
+            }
 
-        QString errorMsg = tr("Failed zip up the package. Error is: \"%1\".",
-                              // Intentional comment to separate arguments
-                              "This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be "
-                              "the point at which something breaks because a problem was not spotted/detected in the process earlier...")
-                                   .arg(zipError);
+            QString errorMsg = tr("Failed zip up the package. Error is: \"%1\".",
+                                  // Intentional comment to separate arguments
+                                  "This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be "
+                                  "the point at which something breaks because a problem was not spotted/detected in the process earlier...")
+                                       .arg(zipError);
+            zip_discard(archive);
+            // In libzip 0.11 a function was added to clean up
+            // (deallocate) the memory associated with an archive
+            // - which would normally occur upon a successful close
+            // - before that version the memory just leaked away...
+            return {false, errorMsg};
+        }
+    } else {
         zip_discard(archive);
-        // In libzip 0.11 a function was added to clean up
-        // (deallocate) the memory associated with an archive
-        // - which would normally occur upon a successful close
-        // - before that version the memory just leaked away...
-        return {false, errorMsg};
     }
-}
-else
-{
-    zip_discard(archive);
-}
 
 
     return {isOk, error};
