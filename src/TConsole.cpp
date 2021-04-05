@@ -584,9 +584,6 @@ void TConsole::resizeEvent(QResizeEvent* event)
     int x = event->size().width();
     int y = event->size().height();
 
-    // don't call event in lua if size didn't change
-    bool preventLuaEvent = (event->size() == mOldSize);
-
     if (mType & (MainConsole|Buffer|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
@@ -612,7 +609,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
     QWidget::resizeEvent(event);
     mOldSize = mpMainDisplay->size();
 
-  if (preventLuaEvent) {
+    if (preventLuaEvent) {
         return;
     }
 
