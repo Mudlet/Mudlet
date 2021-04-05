@@ -624,6 +624,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                   : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
+    config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
 
     connect(comboBox_searchTerms, qOverload<int>(&QComboBox::activated), this, &dlgTriggerEditor::slot_searchMudletItems);
@@ -8701,6 +8702,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     config->setIndentSize(2);
     config->setCaretWidth(1);
     config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
+    config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
 
     // If undo is not disabled when setting the initial text, the
@@ -8716,16 +8718,17 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
 // mudlet::signal_editorThemeChanged(const QString& theme) signal
 void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
 {
-        auto localConfig = mpSourceEditorEdbee->config();
-        localConfig->beginChanges();
-        localConfig->setThemeName(theme);
-        localConfig->setFont(mpHost->getDisplayFont());
-        localConfig->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
-                                           ? edbee::TextEditorConfig::ShowWhitespaces
-                                           : edbee::TextEditorConfig::HideWhitespaces);
-        localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-        localConfig->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
-        localConfig->endChanges();
+    auto localConfig = mpSourceEditorEdbee->config();
+    localConfig->beginChanges();
+    localConfig->setThemeName(theme);
+    localConfig->setFont(mpHost->getDisplayFont());
+    localConfig->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
+                                               ? edbee::TextEditorConfig::ShowWhitespaces
+                                               : edbee::TextEditorConfig::HideWhitespaces);
+    localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    localConfig->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
+    localConfig->setAutocompleteMinimalCharacters(3);
+    localConfig->endChanges();
 }
 
 void dlgTriggerEditor::createSearchOptionIcon()

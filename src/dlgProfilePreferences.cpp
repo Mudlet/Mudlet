@@ -1311,6 +1311,7 @@ void dlgProfilePreferences::loadEditorTab()
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setFont(pHost->getDisplayFont());
     config->setAutocompleteAutoShow(pHost->mEditorAutoComplete);
+    config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
     edbeePreviewWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QStringLiteral("Buck.lua")));
     // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
