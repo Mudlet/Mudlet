@@ -5600,7 +5600,7 @@ Nutzungen</translation>
       <location filename="../src/ui/dlgPackageExporter.ui" line="54"/>
       <location filename="../src/dlgPackageExporter.cpp" line="1259"/>
       <source>Select what to export</source>
-      <translation>Wähle, was exportiert wird</translation>
+      <translation>Wähle, was exportiert werden soll</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="64"/>
@@ -5832,7 +5832,10 @@ Nutzungen</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="1261"/>
       <source>Select what to export (%1 items)</source>
       <comment>Package exporter selection</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Wähle, was exportiert werden soll (1 Element)</numerusform>
+        <numerusform>Wähle, was exportiert werden soll (%1 Elemente)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="925"/>
