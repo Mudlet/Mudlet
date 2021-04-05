@@ -466,7 +466,11 @@ void dlgPackageExporter::slot_export_package()
     mExportingPackage = true;
     QApplication::setOverrideCursor(Qt::BusyCursor);
     slot_enableExportButton({});
+
+#if LIBZIP_SUPPORTS_CANCELLING
     mCancelButton->setVisible(true);
+#endif
+
     mCloseButton->setVisible(false);
     displayResultMessage(tr("Exporting package..."), true);
     qApp->processEvents();
@@ -922,25 +926,39 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         // unchanged (and we can still access it to get the error
         // details):
         zip_set_archive_comment(archive, packageConfig.toUtf8().constData(), packageConfig.length());
+
+#ifdef LIBZIP_SUPPORTS_CANCELLING
         auto cancel_callback = [](zip*, void*) -> int { return !mExportingPackage; };
         zip_register_cancel_callback_with_state(archive, cancel_callback, nullptr, nullptr);
-        ze = zip_close(archive);
-        if (ze) {
-            QString errorMsg = tr("Failed to write files into and then close the package. Error is: \"%1\".",
-                                    // Intentional comment to separate arguments
-                                    "This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...")
-                                 .arg(zip_strerror(archive));
-            // In libzip 0.11 a function was added to clean up
-            // (deallocate) the memory associated with an archive
-            // - which would normally occur upon a successful close
-            // - before that version the memory just leaked away...
+    }
+#endif
+
+    ze = zip_close(archive);
+    if (ze) {
+        // libzip's C interface around the error message isn't trivial - so copy it over into Qt land where things are simpler
+        QString zipError{zip_strerror(archive)};
+        if (zipError == QStringLiteral("Operation cancelled")) {
             zip_discard(archive);
-            return {false, errorMsg};
+            return {false, tr("Export cancelled.")};
         }
 
-    } else {
+        QString errorMsg = tr("Failed zip up the package. Error is: \"%1\".",
+                              // Intentional comment to separate arguments
+                              "This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be "
+                              "the point at which something breaks because a problem was not spotted/detected in the process earlier...")
+                                   .arg(zipError);
         zip_discard(archive);
+        // In libzip 0.11 a function was added to clean up
+        // (deallocate) the memory associated with an archive
+        // - which would normally occur upon a successful close
+        // - before that version the memory just leaked away...
+        return {false, errorMsg};
     }
+}
+else
+{
+    zip_discard(archive);
+}
 
 
     return {isOk, error};

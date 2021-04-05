@@ -145,4 +145,8 @@ signals:
     void signal_exportLocationChanged(const QString& location);
 };
 
+#if LIBZIP_VERSION_MAJOR > 1 || LIBZIP_VERSION_MAJOR == 1 && LIBZIP_VERSION_MINOR >= 7
+// libzip 1.7.0 supports cancelling archiving in progress
+#define LIBZIP_SUPPORTS_CANCELLING TRUE
+#endif
 #endif // MUDLET_DLGPACKAGEEXPORTER_H
