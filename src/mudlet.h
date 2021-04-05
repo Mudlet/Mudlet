@@ -157,6 +157,9 @@ public:
         // Takes two extra arguments (profile name, dataTime stamp) that returns
         // the pathFile name for a dateTime stamped map file:
         profileDateTimeStampedMapPathFileName,
+        // Takes two extra arguments (profile name, dataTime stamp) that returns
+        // the pathFile name for a dateTime stamped JSON map file:
+        profileDateTimeStampedJsonMapPathFileName,
         // Takes two extra arguments (profile name, mapFileName) that returns
         // the pathFile name for any map file:
         profileMapPathFileName,
