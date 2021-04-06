@@ -4899,7 +4899,7 @@ Utilizzi</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="213"/>
       <source>Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - if you are a &lt;i&gt;SpamBot&lt;/i&gt; you will not get onto our Fora now. They have also made some useful C++ core code contributions and we look forward to future reviews on and work in that area.</source>
       <comment>about:TheFae</comment>
-      <translation type="unfinished"/>
+      <translation>Ha fatto miracoli per ringiovanire il sito nel 2017, ma preferisce restare anonimo - se sei uno &lt;i&gt;SpamBot&lt;/i&gt; non potrai più accedere al nostro forum. Ha anche creato dell'utile codice C++ per il core di Mudlet e stiamo aspettando cosa produrrà nel futuro in questo ambito.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="218"/>
@@ -5102,12 +5102,12 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s background color - however choosing this for both this and the foreground is an error.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Seleziona per fare in modo che il trigger ignori il colore di sfondo - Non utilizzare questa opzione sia per lo sfondo che per il colore del testo.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
       <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both this and the background is an error.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Seleziona per fare in modo che il trigger ignori il colore del testo - Non utilizzare questa opzione sia per il colore del testo che per lo sfondo.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="64"/>
@@ -11014,7 +11014,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1112"/>
       <source>&lt;p&gt;Select this option for better compatibility if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona questa opzione per una migliore compatibilità in caso si utilizzi un netbook o qualche altro modello di computer che dispone di uno schermo piccolo.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1268"/>
