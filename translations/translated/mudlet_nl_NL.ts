@@ -32,7 +32,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="288"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Geen kamers op de kaart. Laad een andere of begin met het opnieuw in kaart brengen.</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
@@ -116,7 +116,7 @@ wacht aub...</translation>
     <message>
       <location filename="../src/Host.cpp" line="3653"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Bezig met laden van kaart(3) %1 rapport</translation>
     </message>
   </context>
   <context>
