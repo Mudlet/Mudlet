@@ -33,7 +33,7 @@
 #include "post_guard.h"
 #include <zip.h>
 
-#if LIBZIP_VERSION_MAJOR > 1 || LIBZIP_VERSION_MAJOR == 1 && LIBZIP_VERSION_MINOR >= 7
+#if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && ((LIBZIP_VERSION_MAJOR  > 1) || (LIBZIP_VERSION_MAJOR == 1) && (LIBZIP_VERSION_MINOR >= 7))
 // libzip 1.7.0 supports cancelling archiving in progress
 #define LIBZIP_SUPPORTS_CANCELLING TRUE
 #endif
