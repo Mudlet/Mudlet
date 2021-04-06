@@ -32,7 +32,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="288"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Nessuna stanza nel file di mappa - prova a caricarne un altro o inizia una nuova mappa.</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
@@ -659,7 +659,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="1255"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Nessuna stanza nel file di mappa - prova a caricarne un altro o inizia una nuova mappa.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2253"/>
@@ -2623,12 +2623,12 @@ nel file di mappa, ora cerco di capire quale ID utilizzare.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="780"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messages related to this for each affected area ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Attenzione, ho trovato più di un Area ID duplicato (totale: %1) nel file di mappa. Maggiori informazioni sono presenti nei prossimi messaggi che riguardano ogni area interessata ...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="859"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messages related to this for each affected room ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Attenzione, ho trovato più di uno Stanza ID duplicato (totale: %1) nel file di mappa. Maggiori informazioni sono presenti nei prossimi messaggi che riguardano ogni stanza interessata ...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="866"/>
@@ -6194,7 +6194,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3228"/>
       <source>&lt;p&gt;The room symbol will appear like this if only symbols (glyphs) from the specific font are used.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Il simbolo della stanza sarà visualizzato in questo modo se saranno utilizzati simboli (glifi) solo del carattere attuale.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3901"/>
