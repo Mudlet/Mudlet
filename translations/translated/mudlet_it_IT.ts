@@ -5809,7 +5809,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="464"/>
       <source>%1 doesn&apos;t seem to exist anymore - can you double-check it?</source>
-      <translation type="unfinished"/>
+      <translation>%1 non sembra esistere - puoi verificare che il percorso sia corretto?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="519"/>
