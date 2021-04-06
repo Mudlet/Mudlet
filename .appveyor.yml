@@ -28,6 +28,7 @@ install:
 build_script:
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
 - powershell ".\appveyor.build.ps1"
+- powershell "Push-AppveyorArtifact ./verbose_output.log"
 
 on_failure:
 - cd C:\src
