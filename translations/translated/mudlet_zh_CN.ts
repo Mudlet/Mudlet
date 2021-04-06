@@ -32,7 +32,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="288"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>该地图中没有任何房间数据 - 加载另一个, 或从头开始制作新地图。</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
@@ -655,7 +655,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="1255"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>该地图中没有任何房间数据 - 加载另一个, 或从头开始制作新地图。</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2253"/>
@@ -5035,12 +5035,12 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s background color - however choosing this for both this and the foreground is an error.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;点击新增一个忽略文本背景色的颜色触发器 -- 但是, 当它同时作用于背景色和前景色时将引发错误。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
       <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both this and the background is an error.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;点击新增一个忽略文本前景色的颜色触发器 -- 但是, 当它同时作用于背景色和前景色时将引发错误。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="64"/>
