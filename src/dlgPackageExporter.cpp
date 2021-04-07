@@ -919,7 +919,7 @@ dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& pac
         // added directory item in the archive or -1 on error:
         if (zip_dir_add(archive, directoryName.toStdString().c_str(), ZIP_FL_ENC_UTF_8) == -1) {
             QString errorMsg = tr("Failed to add directory \"%1\" to package. Error is: \"%2\".").arg(directoryName, zip_strerror(archive));
-            zip_close(archive);
+            zip_discard(archive);
             return {false, errorMsg};
         }
     }
@@ -947,7 +947,7 @@ dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& pac
             }
 
             if (std::tie(isOk, error) = writeFileToZip(itFileName.key(), itFileName.value(), archive); !isOk) {
-                zip_close(archive);
+                zip_discard(archive);
                 break;
             }
         }
