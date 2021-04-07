@@ -21,7 +21,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_5">
+    <layout class="QHBoxLayout" name="horizontalLayout_packageName">
      <item>
       <widget class="QLineEdit" name="lineEdit_packageName">
        <property name="placeholderText">
@@ -70,7 +70,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QFrame" name="frame_2">
+    <widget class="QFrame" name="frame_metadata">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
        <horstretch>0</horstretch>
@@ -388,7 +388,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QWidget" name="widget" native="true">
+    <widget class="QWidget" name="widget_exportLocation" native="true">
      <layout class="QGridLayout" name="gridLayout">
       <item row="1" column="1">
        <widget class="QLineEdit" name="lineEdit_filePath">
