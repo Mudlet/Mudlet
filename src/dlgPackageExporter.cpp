@@ -443,12 +443,16 @@ void dlgPackageExporter::copy_directory(const QString& fromDir, const QString& t
 
 void dlgPackageExporter::slot_export_package()
 {
+    QElapsedTimer timer;
+    timer.start();
+
     // The native windows dialog does not support displaying files - and as this
     // code will clobber/overwrite an existing package with the same
     // name it is highly desirable to show the files.
     // Although the Qt Documentation says only that the Windows platform needs
     // to NOT use the native dialog to show files, it has also shown to be
     // required for KDE on Linux - so has been used for all platforms:
+    qDebug() << "1" << timer.elapsed() << "milliseconds";
     mPackageName = ui->lineEdit_packageName->text();
     if (mPackageName.isEmpty()) {
         displayResultMessage(tr("Please enter the package name."), false);
@@ -475,7 +479,7 @@ void dlgPackageExporter::slot_export_package()
     mExportingPackage = true;
     QApplication::setOverrideCursor(Qt::BusyCursor);
     slot_enableExportButton({});
-
+    qDebug() << "2" << timer.elapsed() << "milliseconds";
 #if LIBZIP_SUPPORTS_CANCELLING
     mCancelButton->setVisible(true);
 #endif
@@ -483,7 +487,7 @@ void dlgPackageExporter::slot_export_package()
     mCloseButton->setVisible(false);
     displayResultMessage(tr("Exporting package..."), true);
     qApp->processEvents();
-
+    qDebug() << "3" << timer.elapsed() << "milliseconds";
     //copy description image files
     QStringList imageList;
     //don't change the original plain description here as it may still be needed, for example if creating another package
@@ -514,6 +518,7 @@ void dlgPackageExporter::slot_export_package()
             plainDescription.replace(QStringLiteral("$%1").arg(imageFile.fileName()), QStringLiteral("$packagePath/.mudlet/description_images/%1").arg(imageFile.fileName()));
         }
     }
+    qDebug() << "4" << timer.elapsed() << "milliseconds";
 
     QStringList assetPaths;
     for (int i = 0; i < ui->listWidget_addedFiles->count(); ++i) {
@@ -521,14 +526,15 @@ void dlgPackageExporter::slot_export_package()
     }
 
     // start copying assets in the background
+    qDebug() << "5" << timer.elapsed() << "milliseconds";
     auto assetsFuture = QtConcurrent::run(dlgPackageExporter::copyAssetsToTmp, assetPaths, tempPath);
 
     QFileInfo iconFile = copyIconToTmp(tempPath);
-
+    qDebug() << "6" << timer.elapsed() << "milliseconds";
     mXmlPathFileName = QStringLiteral("%1/%2.xml").arg(stagingDirName, mPackageName);
 
     writeConfigFile(stagingDirName, iconFile);
-
+    qDebug() << "7" << timer.elapsed() << "milliseconds";
     QFile checkWriteability(mXmlPathFileName);
     if (!checkWriteability.open(QIODevice::WriteOnly)) {
         displayResultMessage(tr("Failed to export. Could not open the folder \"%1\" for writing. Do you have the necessary permissions and free disk-space to write to that folder?")
@@ -551,21 +557,27 @@ void dlgPackageExporter::slot_export_package()
     QList<QTreeWidgetItem*> actionList;
     QList<QTreeWidgetItem*> scriptList;
     QList<QTreeWidgetItem*> keyList;
+    qDebug() << "8" << timer.elapsed() << "milliseconds";
     exportXml(isOk, trigList, timerList, aliasList, actionList, scriptList, keyList);
+    qDebug() << "9" << timer.elapsed() << "milliseconds";
     markExportItems(trigList, timerList, aliasList, actionList, scriptList, keyList);
 
     if (isOk) {
         // ensure assets have been copied before we start writing the zip
         // this will freeze the main thread, so it's not the perfect way - ideally
         // only start this after assets copy + xml writing is complete
+        qDebug() << "10" << timer.elapsed() << "milliseconds";
         assetsFuture.waitForFinished();
+        qDebug() << "10b" << timer.elapsed() << "milliseconds";
         if (auto [success, message] = assetsFuture.result(); !success) {
             displayResultMessage(message);
             isOk = false;
         } else {
+            qDebug() << "11" << timer.elapsed() << "milliseconds";
             auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageConfig);
             auto watcher = new QFutureWatcher<std::pair<bool, QString>>;
             QObject::connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, [=]() {
+                qDebug() << "12" << timer.elapsed() << "milliseconds";
                 mExportingPackage = false;
                 slot_enableExportButton({});
 
@@ -580,6 +592,7 @@ void dlgPackageExporter::slot_export_package()
                 mCancelButton->setVisible(false);
                 mCloseButton->setVisible(true);
                 QApplication::restoreOverrideCursor();
+                qDebug() << "13" << timer.elapsed() << "milliseconds";
             });
             watcher->setFuture(future);
         }
@@ -785,6 +798,8 @@ QFileInfo dlgPackageExporter::copyIconToTmp(const QString& tempPath) const
 
 std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath)
 {
+    QElapsedTimer timer;
+    timer.start();
     for (const auto& assetPath : assetPaths) {
         QFileInfo asset(assetPath);
         QString filePath = tempPath;
@@ -799,6 +814,7 @@ std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& 
             copy_directory(asset.absoluteFilePath(), filePath, true);
         }
     }
+    qDebug() << "The copy assets operation took" << timer.elapsed() << "milliseconds";
 
     return {true, QString{}};
 }
