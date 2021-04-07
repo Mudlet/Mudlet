@@ -106,7 +106,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QSplitter" name="splitter_assets">
+        <widget class="QSplitter" name="splitter_metadataAssets">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -465,8 +465,8 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>325</x>
-     <y>733</y>
+     <x>334</x>
+     <y>814</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>
@@ -481,8 +481,8 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>257</x>
-     <y>733</y>
+     <x>266</x>
+     <y>814</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
@@ -497,12 +497,28 @@
    <slot>showMenu()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>292</x>
-     <y>187</y>
+     <x>311</x>
+     <y>249</y>
     </hint>
     <hint type="destinationlabel">
-     <x>292</x>
-     <y>187</y>
+     <x>311</x>
+     <y>249</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushBotton_openInfos</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>splitter_metadataAssets</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>282</x>
+     <y>237</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>282</x>
+     <y>480</y>
     </hint>
    </hints>
   </connection>
