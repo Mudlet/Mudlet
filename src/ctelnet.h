@@ -324,8 +324,9 @@ private:
 
     // server problem w/ not terminating IAC SB: only warn once
     bool mIncompleteSB;
+
 private slots:
-    void interfaceDownloadCancelled();
+    void interfaceDownloadCancelled() const;
 #if !defined(QT_NO_SSL)
     void handle_socket_signal_sslError(const QList<QSslError> &errors);
 #endif

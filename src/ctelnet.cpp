@@ -816,7 +816,6 @@ void cTelnet::sendTelnetOption(char type, char option)
 void cTelnet::replyFinished(QNetworkReply* reply)
 {
     mpProgressDialog->close();
-    packageDownloadReply->abort();
     packageDownloadReply->deleteLater();
 
 
@@ -843,9 +842,11 @@ void cTelnet::setDownloadProgress(qint64 got, qint64 tot)
     mpProgressDialog->setValue(static_cast<int>(got));
 }
 
-void cTelnet::interfaceDownloadCancelled()
+void cTelnet::interfaceDownloadCancelled() const
 {
     mpProgressDialog->cancel();
+    packageDownloadReply->abort();
+    packageDownloadReply->deleteLater();
 }
 
 // Helper to identify which protocol is being negotiated!
