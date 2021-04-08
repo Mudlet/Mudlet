@@ -49,7 +49,8 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     this->settings = settings;
 
-    feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"), mudlet::scmIsPublicTestVersion ? QStringLiteral("public-test-build") : QStringLiteral("testing"));
+    feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"),
+                            mudlet::scmIsPublicTestVersion ? QStringLiteral("public-test-build") : QStringLiteral("release"));
 
     if (!mDailyCheck) {
         mDailyCheck = std::make_unique<QTimer>();
