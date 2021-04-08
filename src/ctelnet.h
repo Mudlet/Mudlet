@@ -326,7 +326,6 @@ private:
     bool mIncompleteSB;
 
 private slots:
-    void interfaceDownloadCancelled() const;
 #if !defined(QT_NO_SSL)
     void handle_socket_signal_sslError(const QList<QSslError> &errors);
 #endif

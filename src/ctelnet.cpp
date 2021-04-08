@@ -818,6 +818,10 @@ void cTelnet::replyFinished(QNetworkReply* reply)
     mpProgressDialog->close();
     packageDownloadReply->deleteLater();
 
+    // don't process if download was aborted
+    if (!reply->isFinished()) {
+        return;
+    }
 
     QFile file(mServerPackage);
     file.open(QFile::WriteOnly);
@@ -840,13 +844,6 @@ void cTelnet::setDownloadProgress(qint64 got, qint64 tot)
 {
     mpProgressDialog->setRange(0, static_cast<int>(tot));
     mpProgressDialog->setValue(static_cast<int>(got));
-}
-
-void cTelnet::interfaceDownloadCancelled() const
-{
-    mpProgressDialog->cancel();
-    packageDownloadReply->abort();
-    packageDownloadReply->deleteLater();
 }
 
 // Helper to identify which protocol is being negotiated!
@@ -1677,7 +1674,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 packageDownloadReply = mpDownloader->get(request);
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
                 connect(packageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
-                connect(mpProgressDialog, &QProgressDialog::canceled, this, &cTelnet::interfaceDownloadCancelled);
+                connect(mpProgressDialog, &QProgressDialog::canceled, packageDownloadReply, &QNetworkReply::abort);
                 mpProgressDialog->show();
             }
             return;
@@ -2045,7 +2042,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         packageDownloadReply = mpDownloader->get(request);
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
         connect(packageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
-        connect(mpProgressDialog, &QProgressDialog::canceled, this, &cTelnet::interfaceDownloadCancelled);
+        connect(mpProgressDialog, &QProgressDialog::canceled, packageDownloadReply, &QNetworkReply::abort);
         mpProgressDialog->show();
         return;
     } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"), Qt::CaseInsensitive)) {
