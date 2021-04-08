@@ -106,6 +106,7 @@ public:
     int getLineNumber();
     int getLineCount();
     bool deleteLine(int);
+    void clearSelection() const;
 
     int getColumnNumber();
 
@@ -286,6 +287,7 @@ protected:
 
 private:
     ConsoleType mType;
+    QSize mOldSize;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
