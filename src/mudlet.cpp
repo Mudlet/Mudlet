@@ -2451,10 +2451,10 @@ int64_t mudlet::getPhysicalMemoryTotal()
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memInfo);
     return static_cast<int64_t>(memInfo.ullTotalPhys);
-#elif defined(O_OS_HURD)
+#elif defined(Q_OS_HURD)
     // GNU/Hurd does not have a sysinfo struct  yet:
     errno = 0;
-    long pageSize = sysconf(_SC_PAGESIZE);
+    int64_t pageSize = sysconf(_SC_PAGESIZE);
     if (pageSize < 0) {
         if (errno) {
             qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - error returned from sysconf(_SC_PAGESIZE); errno: " << errno;
@@ -2463,7 +2463,7 @@ int64_t mudlet::getPhysicalMemoryTotal()
         }
         return -1;
     }
-    long pageCount = sysconf(_SC_PHYS_PAGES);
+    int64_t pageCount = sysconf(_SC_PHYS_PAGES);
     if (pageCount < 0) {
         if (errno) {
             qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - error returned from sysconf(_SC_PHYS_PAGES); errno: " << errno;
@@ -3284,6 +3284,10 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         // Takes two extra arguments (profile name, dataTime stamp) that returns
         // the pathFile name for a dateTime stamped map file:
         return QStringLiteral("%1/.config/mudlet/profiles/%2/map/%3map.dat").arg(QDir::homePath(), extra1, extra2);
+    case profileDateTimeStampedJsonMapPathFileName:
+        // Takes two extra arguments (profile name, dataTime stamp) that returns
+        // the pathFile name for a dateTime stamped JSON map file:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/map/%3map.json").arg(QDir::homePath(), extra1, extra2);
     case profileMapPathFileName:
         // Takes two extra arguments (profile name, mapFileName) that returns
         // the pathFile name for any map file:

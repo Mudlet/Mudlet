@@ -212,12 +212,12 @@
           </widget>
          </item>
          <item row="3" column="1">
-          <widget class="QTextEdit" name="textEdit_description">
+          <widget class="dlgPackageExporterDescription" name="textEdit_description">
            <property name="tabChangesFocus">
             <bool>true</bool>
            </property>
            <property name="placeholderText">
-            <string>optional</string>
+            <string>optional. Markdown supported, and you can add images with drag and drop</string>
            </property>
           </widget>
          </item>
@@ -437,6 +437,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>dlgPackageExporterDescription</class>
+   <extends>QTextEdit</extends>
+   <header>dlgPackageExporter.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>pushBotton_openInfos</tabstop>
   <tabstop>lineEdit_author</tabstop>
