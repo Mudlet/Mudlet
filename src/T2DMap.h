@@ -40,6 +40,7 @@ class Host;
 class TArea;
 class TMap;
 class TRoom;
+class MapInfoProperties;
 
 class QCheckBox;
 class QComboBox;
@@ -137,7 +138,7 @@ public:
     qreal mOy;
     int mOz;
     bool mShiftMode;
-    bool mShowInfo;
+    QComboBox* mapInfo_combobox;
     QComboBox* arealist_combobox;
     QPointer<QDialog> mpCustomLinesDialog;
     int mCustomLinesRoomFrom;
@@ -158,7 +159,7 @@ public:
     bool mMapperUseAntiAlias;
 
     // Controls if the mapper is in view-only mode
-    bool mMapViewOnly;
+    bool mMapViewOnly = true;
 
     bool mLabelHighlighted;
     bool mMoveLabel;
@@ -180,17 +181,17 @@ public slots:
     void slot_toggleMapViewOnly();
     void slot_createLabel();
     void slot_customLineColor();
-    void shiftZup();
-    void shiftZdown();
+    void slot_shiftZup();
+    void slot_shiftZdown();
 #if (QT_VERSION) < (QT_VERSION_CHECK(5, 15, 0))
     // This is ONLY used as a slot in older versions
     void slot_switchArea(const QString& newAreaName);
 #endif
     void toggleShiftMode();
-    void shiftUp();
-    void shiftDown();
-    void shiftLeft();
-    void shiftRight();
+    void slot_shiftUp();
+    void slot_shiftDown();
+    void slot_shiftLeft();
+    void slot_shiftRight();
     void slot_showSymbolSelection();
     void slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
     void slot_setImage();
@@ -222,12 +223,14 @@ public slots:
     void slot_newMap();
 
 private:
+    void updateSelectionWidget();
     void resizeMultiSelectionWidget();
     std::pair<int, int> getMousePosition();
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
     void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, bool showRoomNames, const int, const float, const float, const bool);
-    void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const bool showingCurrentArea, QColor& infoColor);
+    void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const int displayAreaId, QColor& infoColor);
+    int paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties);
     void paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
 

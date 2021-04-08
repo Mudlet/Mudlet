@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -23,6 +23,7 @@
 #include "XMLimport.h"
 
 
+#include "dlgMapper.h"
 #include "LuaInterface.h"
 #include "TConsole.h"
 #include "TMap.h"
@@ -174,6 +175,10 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
             } else if (name() == "map") {
                 readMap();
                 mpHost->mpMap->audit();
+                mpHost->mpMap->mpMapper->mp2dMap->init();
+                mpHost->mpMap->mpMapper->updateAreaComboBox();
+                mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+                mpHost->mpMap->mpMapper->show();
             } else {
                 qDebug().nospace() << "XMLimport::importPackage(...) ERROR: "
                                       "unrecognised element with name: "
@@ -403,7 +408,7 @@ void XMLimport::readEnvColor()
     int id = attributes().value(QStringLiteral("id")).toString().toInt();
     int color = attributes().value(QStringLiteral("color")).toString().toInt();
 
-    mpHost->mpMap->envColors[id] = color;
+    mpHost->mpMap->mEnvColors[id] = color;
 }
 
 void XMLimport::readAreas()
@@ -421,10 +426,12 @@ void XMLimport::readAreas()
 
 void XMLimport::readArea()
 {
-    int id = attributes().value(QStringLiteral("id")).toString().toInt();
-    QString name = attributes().value(QStringLiteral("name")).toString();
+    if (attributes().hasAttribute(QStringLiteral("id"))) {
+        int id = attributes().value(QStringLiteral("id")).toString().toInt();
+        QString name = attributes().value(QStringLiteral("name")).toString();
 
-    mpHost->mpMap->mpRoomDB->addArea(id, name);
+        mpHost->mpMap->mpRoomDB->addArea(id, name);
+    }
 }
 
 void XMLimport::readRooms(QMultiHash<int, int>& areaRoomsHash)
@@ -582,7 +589,7 @@ std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
             }
         }
     }
-    return std::make_pair(objectType, rootItemID);
+    return {objectType, rootItemID};
 }
 
 void XMLimport::readHelpPackage()
@@ -813,7 +820,6 @@ void XMLimport::readHostPackage(Host* pHost)
     bool enableUserDictionary = attributes().value(QStringLiteral("mEnableUserDictionary")) == YES;
     bool useSharedDictionary = attributes().value(QStringLiteral("mUseSharedDictionary")) == YES;
     pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
-    pHost->mShowInfo = attributes().value(QStringLiteral("mShowInfo")) == YES;
     pHost->mAcceptServerGUI = attributes().value(QStringLiteral("mAcceptServerGUI")) == YES;
     pHost->mAcceptServerMedia = attributes().value(QStringLiteral("mAcceptServerMedia")) == YES;
     pHost->mMapperUseAntiAlias = attributes().value(QStringLiteral("mMapperUseAntiAlias")) == YES;
@@ -924,7 +930,6 @@ void XMLimport::readHostPackage(Host* pHost)
     if (mudlet::self()->mpCurrentActiveHost == pHost) {
         mudlet::self()->dactionInputLine->setChecked(compactInputLine);
     }
-
 
     while (!atEnd()) {
         readNext();
@@ -1086,6 +1091,8 @@ void XMLimport::readHostPackage(Host* pHost)
                 // QDebug() error reporting associated with the following
                 // readUnknownHostElement() for "anything not otherwise parsed"
                 Q_UNUSED(readElementText());
+            } else if (name() == "mMapInfoContributors") {
+                readMapInfoContributors();
             } else if (name() == "stopwatches") {
                 readStopWatchMap();
             } else {
@@ -1093,6 +1100,7 @@ void XMLimport::readHostPackage(Host* pHost)
             }
         }
     }
+    mpHost->loadPackageInfo();
 }
 
 bool XMLimport::readDefaultTrueBool(QString name) {
@@ -1819,6 +1827,22 @@ void XMLimport::readStopWatchMap()
                 readElementText();
             } else {
                 readUnknownHostElement();
+            }
+        }
+    }
+
+}
+
+void XMLimport::readMapInfoContributors()
+{
+    mpHost->mMapInfoContributors.clear();
+    while (!atEnd()) {
+        readNext();
+        if (isEndElement()) {
+            break;
+        } else if (isStartElement()) {
+            if (name() == "mapInfoContributor") {
+                mpHost->mMapInfoContributors.insert(readElementText());
             }
         }
     }

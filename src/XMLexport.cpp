@@ -404,7 +404,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     mpHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     host.append_attribute("mEnableUserDictionary") = enableUserDictionary ? "yes" : "no";
     host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
-    host.append_attribute("mShowInfo") = pHost->mShowInfo ? "yes" : "no";
+    if (pHost->mMapInfoContributors.isEmpty()) {
+        host.append_attribute("mShowInfo") = "no";
+    }
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
     host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
@@ -552,6 +554,14 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         // with older version of Mudlet
         host.append_child("mLineSize").text().set(QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData());
         host.append_child("mRoomSize").text().set(QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData());
+    }
+    {
+        auto mapInfoContributors = host.append_child("mMapInfoContributors");
+        QSetIterator<QString> iterator(pHost->mMapInfoContributors);
+        while (iterator.hasNext()) {
+            auto mapInfoContributor = mapInfoContributors.append_child("mapInfoContributor");
+            mapInfoContributor.text().set(iterator.next().toUtf8().constData());
+        }
     }
 
     {
@@ -728,25 +738,25 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     return false;
 }
 
-bool XMLexport::exportPackage(const QString& exportFileName)
+bool XMLexport::exportPackage(const QString& exportFileName, bool ignoreModuleMember)
 {
     auto mudletPackage = writeXmlHeader();
 
-    if (writeGenericPackage(mpHost, mudletPackage)) {
+    if (writeGenericPackage(mpHost, mudletPackage, ignoreModuleMember)) {
         return saveXml(exportFileName);
     }
 
     return false;
 }
 
-bool XMLexport::writeGenericPackage(Host* pHost, pugi::xml_node& mudletPackage)
+bool XMLexport::writeGenericPackage(Host* pHost, pugi::xml_node& mudletPackage, bool ignoreModuleMember)
 {
-    writeTriggerPackage(pHost, mudletPackage, true);
-    writeTimerPackage(pHost, mudletPackage, true);
-    writeAliasPackage(pHost, mudletPackage, true);
-    writeActionPackage(pHost, mudletPackage, true);
-    writeScriptPackage(pHost, mudletPackage, true);
-    writeKeyPackage(pHost, mudletPackage, true);
+    writeTriggerPackage(pHost, mudletPackage, ignoreModuleMember);
+    writeTimerPackage(pHost, mudletPackage, ignoreModuleMember);
+    writeAliasPackage(pHost, mudletPackage, ignoreModuleMember);
+    writeActionPackage(pHost, mudletPackage, ignoreModuleMember);
+    writeScriptPackage(pHost, mudletPackage, ignoreModuleMember);
+    writeKeyPackage(pHost, mudletPackage, ignoreModuleMember);
     // variables weren't previously exported as a generic package
     writeVariablePackage(pHost, mudletPackage);
 

@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2015-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2015-2016, 2018-2019, 2021 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
@@ -66,21 +66,26 @@
 #include <hunspell/hunspell.h>
 
 // for system physical memory info
-#ifdef WIN32
+#if defined(Q_OS_WIN32)
 #include <Windows.h>
 #include <Psapi.h>
-#elif defined(__APPLE__)
+#elif defined(Q_OS_MACOS)
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <array>
-#else
+#elif defined(Q_OS_HURD)
+#include <errno.h>
+#include <unistd.h>
+#elif defined(Q_OS_UNIX)
+// Including both GNU/Linux and FreeBSD
 #include <sys/resource.h>
 #include <sys/sysinfo.h>
 #include <sys/types.h>
 #include <unistd.h>
-
+#else
+// Any other OS?
 #endif
 
 class QAction;
@@ -152,6 +157,9 @@ public:
         // Takes two extra arguments (profile name, dataTime stamp) that returns
         // the pathFile name for a dateTime stamped map file:
         profileDateTimeStampedMapPathFileName,
+        // Takes two extra arguments (profile name, dataTime stamp) that returns
+        // the pathFile name for a dateTime stamped JSON map file:
+        profileDateTimeStampedJsonMapPathFileName,
         // Takes two extra arguments (profile name, mapFileName) that returns
         // the pathFile name for any map file:
         profileMapPathFileName,
@@ -206,7 +214,6 @@ public:
     static void start();
     HostManager& getHostManager() { return mHostManager; }
     void attachDebugArea(const QString& hostname);
-    void addSubWindow(TConsole* p);
     void addConsoleForNewHost(Host* pH);
     void disableToolbarButtons();
     void enableToolbarButtons();
@@ -247,12 +254,10 @@ public:
     void replayOver();
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
-    bool moduleTableVisible();
     void doAutoLogin(const QString&);
     void stopSounds();
     void playSound(const QString &s, int);
     QStringList getAvailableFonts();
-    void updateMudletDiscordInvite();
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     std::pair<bool, QString> resetProfileIcon(const QString& profile);
 #if defined(Q_OS_WIN32)
@@ -267,7 +272,6 @@ public:
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
     void requestProfilesToReloadMaps(QList<QString>);
-
     void showChangelogIfUpdated();
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
@@ -316,10 +320,15 @@ public:
     QSet<QString> getWordSet();
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
-    void layoutModules();
     void startAutoLogin(const QString&);
     int64_t getPhysicalMemoryTotal();
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
+    void refreshTabBar();
+
+    bool firstLaunch = false;
+    // Needed to work around a (likely only Windows) issue:
+    QString mBG_ONLY_STYLESHEET;
+    QString mTEXT_ON_BG_STYLESHEET;
 
     FontManager mFontManager;
     Discord mDiscord;
@@ -358,8 +367,6 @@ public:
     static QVariantHash mLuaFunctionNames;
     bool mHasSavedLayout;
     QPointer<dlgAboutDialog> mpAboutDlg;
-    QPointer<QDialog> mpModuleDlg;
-    QPointer<QDialog> mpPackageManagerDlg;
     QPointer<dlgConnectionProfiles> mConnectionDialog;
     // More modern Desktop styles no longer include icons on the buttons in
     // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
@@ -385,7 +392,6 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
 
-    QPointer<QTableWidget> moduleTable;
     QSystemTrayIcon mTrayIcon;
 
 #if defined(INCLUDE_UPDATER)
@@ -436,8 +442,6 @@ public slots:
     void slot_show_help_dialog_forum();
     void slot_show_help_dialog_irc();
     void slot_open_mappingscripts_page();
-    void slot_module_clicked(QTableWidgetItem*);
-    void slot_module_changed(QTableWidgetItem*);
     void slot_multi_view(const bool);
     void slot_toggle_multi_view();
     void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
@@ -449,14 +453,9 @@ public slots:
     void slot_close_profile_requested(int);
     void slot_irc();
     void slot_discord();
-    void slot_uninstall_package();
-    void slot_install_package();
     void slot_package_manager();
     void slot_package_exporter();
-    void slot_uninstall_module();
-    void slot_install_module();
     void slot_module_manager();
-    void slot_help_module();
 #if defined(INCLUDE_UPDATER)
     void slot_check_manual_update();
 #endif
@@ -509,7 +508,6 @@ private slots:
     void slot_gamepadDisconnected(int deviceId);
     void slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
 #endif
-    void slot_module_manager_destroyed();
 #if defined(INCLUDE_UPDATER)
     void slot_update_installed();
     void slot_updateAvailable(const int);
@@ -519,6 +517,7 @@ private slots:
     void slot_compact_input_line(const bool);
     void slot_password_migrated_to_secure(QKeychain::Job *job);
     void slot_password_migrated_to_profile(QKeychain::Job *job);
+    void slot_tabMoved(const int oldPos, const int newPos);
 
 
 private:
@@ -533,12 +532,12 @@ private:
     void loadTranslators(const QString &languageCode);
     void loadMaps();
     void migrateDebugConsole(Host* currentHost);
-    static bool firstLaunch();
     QString autodetectPreferredLanguage();
     void installModulesList(Host*, QStringList);
     void setupTrayIcon();
 
-    QWidget* mainPane;
+    QWidget* mpWidget_profileContainer;
+    QHBoxLayout* mpHBoxLayout_profileContainer;
 
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
@@ -610,15 +609,6 @@ private:
     QPointer<QAction> mpActionTriggers;
     QPointer<QAction> mpActionVariables;
 
-    QPointer<QListWidget> packageList;
-    QPointer<QPushButton> uninstallButton;
-    QPointer<QPushButton> installButton;
-
-    QPointer<Host> mpModuleTableHost;
-    QPointer<QPushButton> moduleUninstallButton;
-    QPointer<QPushButton> moduleInstallButton;
-    QPointer<QPushButton> moduleHelpButton;
-
     HostManager mHostManager;
 
     bool mshowMapAuditErrors;
@@ -648,7 +638,7 @@ private:
     // The collection of words in the above:
     QSet<QString> mWordSet_shared;
 
-    QString mMudletDiscordInvite = QStringLiteral("https://discord.com/invite/kuYvMQ9");
+    QString mMudletDiscordInvite = QStringLiteral("https://www.mudlet.org/chat");
 
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate {};

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018, 2020 by Stephen Lyons                  *
+ *   Copyright (C) 2014, 2016-2018, 2020-2021 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -194,7 +194,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                           "<p><u>Any timer script that has errors will still have its error messages reported whatever the setting.</u></p>"));
 
     pushButton_showGlyphUsage->setToolTip(tr("<p>This will bring up a display showing all the symbols used in the current "
-                                             "map and whether they can be drawn using just the specifed font, any other "
+                                             "map and whether they can be drawn using just the specified font, any other "
                                              "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
                                              "that make up that symbol, so that they can be identified even if they "
                                              "cannot be displayed; also, up to the first thirty two rooms that are using "
@@ -215,7 +215,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                               "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
                                               "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>"));
     checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
-                                                            "of <i>Ambigous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
+                                                            "of <i>Ambiguous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
                                                             "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
                                                             "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
                                                             "chose the right width automatically but you can override the setting for each profile.</p>"
@@ -857,7 +857,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(true);
 
         checkBox_showDefaultArea->show();
-        checkBox_showDefaultArea->setText(tr(R"(Show "%1" in the map area selection)").arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
+        checkBox_showDefaultArea->setText(tr(R"(Show "%1" in the map area selection)").arg(pHost->mpMap->getDefaultAreaName()));
         checkBox_showDefaultArea->setChecked(pHost->mpMap->mpMapper->getDefaultAreaShown());
 
         pushButton_showGlyphUsage->setEnabled(true);
@@ -1311,6 +1311,7 @@ void dlgProfilePreferences::loadEditorTab()
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setFont(pHost->getDisplayFont());
     config->setAutocompleteAutoShow(pHost->mEditorAutoComplete);
+    config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
     edbeePreviewWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QStringLiteral("Buck.lua")));
     // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
@@ -1411,26 +1412,26 @@ void dlgProfilePreferences::setColors2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        pushButton_black_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlack_2.name()));
-        pushButton_Lblack_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlack_2.name()));
-        pushButton_green_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mGreen_2.name()));
-        pushButton_Lgreen_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightGreen_2.name()));
-        pushButton_red_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRed_2.name()));
-        pushButton_Lred_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightRed_2.name()));
-        pushButton_blue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBlue_2.name()));
-        pushButton_Lblue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightBlue_2.name()));
-        pushButton_yellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mYellow_2.name()));
-        pushButton_Lyellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightYellow_2.name()));
-        pushButton_cyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mCyan_2.name()));
-        pushButton_Lcyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightCyan_2.name()));
-        pushButton_magenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMagenta_2.name()));
-        pushButton_Lmagenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightMagenta_2.name()));
-        pushButton_white_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mWhite_2.name()));
-        pushButton_Lwhite_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mLightWhite_2.name()));
+        pushButton_black_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mBlack_2.name()));
+        pushButton_Lblack_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightBlack_2.name()));
+        pushButton_green_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mGreen_2.name()));
+        pushButton_Lgreen_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightGreen_2.name()));
+        pushButton_red_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mRed_2.name()));
+        pushButton_Lred_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightRed_2.name()));
+        pushButton_blue_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mBlue_2.name()));
+        pushButton_Lblue_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightBlue_2.name()));
+        pushButton_yellow_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mYellow_2.name()));
+        pushButton_Lyellow_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightYellow_2.name()));
+        pushButton_cyan_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mCyan_2.name()));
+        pushButton_Lcyan_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightCyan_2.name()));
+        pushButton_magenta_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mMagenta_2.name()));
+        pushButton_Lmagenta_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightMagenta_2.name()));
+        pushButton_white_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mWhite_2.name()));
+        pushButton_Lwhite_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mLightWhite_2.name()));
 
-        pushButton_foreground_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mFgColor_2.name()));
-        pushButton_background_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBgColor_2.name()));
-        pushButton_roomBorderColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRoomBorderColor.name()));
+        pushButton_foreground_color_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mFgColor_2.name()));
+        pushButton_background_color_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mBgColor_2.name()));
+        pushButton_roomBorderColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mRoomBorderColor.name()));
     } else {
         pushButton_black_2->setStyleSheet(QString());
         pushButton_Lblack_2->setStyleSheet(QString());
@@ -1988,7 +1989,7 @@ void dlgProfilePreferences::downloadMap()
     }
     if (!pHost->mpMap->mpMapper) {
         // CHECK: What happens if we are NOT the current profile anymore?
-        pHost->createMapper(false);
+        pHost->showHideOrCreateMapper(false);
     }
 
     pHost->mpMap->downloadMap();
@@ -2037,7 +2038,7 @@ void dlgProfilePreferences::loadMap()
             label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
         }
     }
-    QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
+    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 
     // Restore setting immediately before we used it
     mudlet::self()->setShowMapAuditErrors(showAuditErrors);
@@ -2077,7 +2078,7 @@ void dlgProfilePreferences::saveMap()
     }
     mudlet::self()->setShowMapAuditErrors(showAuditErrors);
 
-    QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
+    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 }
 
 QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost) {
@@ -2242,7 +2243,7 @@ void dlgProfilePreferences::copyMap()
 
     if (!pHost->mpConsole->saveMap(QString())) {
         label_mapFileActionResult->setText(tr("Could not backup the map - saving it failed."));
-        QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
+        QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
         return;
     }
 
@@ -2267,7 +2268,7 @@ void dlgProfilePreferences::copyMap()
 
     if (thisProfileLatestMapFile.fileName().isEmpty()) {
         label_mapFileActionResult->setText(tr("Could not copy the map - failed to work out which map file we just saved the map as!"));
-        QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
+        QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
         return;
     }
 
@@ -2285,7 +2286,7 @@ void dlgProfilePreferences::copyMap()
 
         if (!thisProfileLatestMapFile.copy(mudlet::getMudletPath(mudlet::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
-            QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
+            QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
             continue; // Try again with next profile
         } else {
             label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
@@ -2301,7 +2302,7 @@ void dlgProfilePreferences::copyMap()
     // QStringList in many ways, the SLOT/SIGNAL system treats them as different
     // - I thinK - so use QList<QString> thoughout the SIGNAL/SLOT links Slysven!
     label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
-    QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
+    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 
     // CHECK: Race condition? We might be changing this while other profile
     // are accessing it...
@@ -2449,7 +2450,7 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->mpMap->mpMapper->setDefaultAreaShown(checkBox_showDefaultArea->isChecked());
             if (isAreaWidgetInNeedOfResetting) {
                 // Corner case fixup:
-                pHost->mpMap->mpMapper->showArea->setCurrentText(pHost->mpMap->mpRoomDB->getDefaultAreaName());
+                pHost->mpMap->mpMapper->comboBox_showArea->setCurrentText(pHost->mpMap->getDefaultAreaName());
             }
 
             // If a map was loaded
@@ -2966,7 +2967,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     connect(getReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
 #endif
         theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
-        QTimer::singleShot(5000, theme_download_label, [label = theme_download_label] {
+        QTimer::singleShot(5s, theme_download_label, [label = theme_download_label] {
             label->hide();
             label->setText(tr("Updating themes from colorsublime.github.io..."));
         });
@@ -3225,7 +3226,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         auto * pSymbolInFont = new QTableWidgetItem();
         pSymbolInFont->setTextAlignment(Qt::AlignCenter);
         pSymbolInFont->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                  .arg(tr("<p>The room symbol will appear like this if only symbols (glyphs) from the specfic font are used.</p>")));
+                                  .arg(tr("<p>The room symbol will appear like this if only symbols (glyphs) from the specific font are used.</p>")));
         pSymbolInFont->setFont(selectedFont);
 
         auto * pSymbolAnyFont = new QTableWidgetItem();
@@ -3572,7 +3573,7 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
                 painter.end();
                 button->setIcon(QIcon(labelBackground));
             } else {
-                button->setStyleSheet(QStringLiteral("QPushButton {color: %1; background-color: %2; }")
+                button->setStyleSheet(mudlet::self()->mTEXT_ON_BG_STYLESHEET
                                               .arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"),
                                                    color.name()));
             }
@@ -3610,7 +3611,7 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
             icon.addPixmap(iconBackground, QIcon::Disabled, QIcon::Off);
             button->setIcon(icon);
         } else {
-            button->setStyleSheet(QStringLiteral("QPushButton {color: %1; background-color: %2; }")
+            button->setStyleSheet(mudlet::self()->mTEXT_ON_BG_STYLESHEET
                               .arg(QLatin1String("darkGray"), disabledColor.name()));
         }
         return;

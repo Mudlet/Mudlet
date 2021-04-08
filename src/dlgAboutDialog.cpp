@@ -146,7 +146,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
         tr("<tr><td><span style=\"color:#bc8942;\"><b>Homepage</b></span></td><td><a href=\"http://www.mudlet.org/\">www.mudlet.org</a></td></tr>\n"
            "<tr><td><span style=\"color:#bc8942;\"><b>Forums</b></span></td><td><a href=\"http://forums.mudlet.org/\">forums.mudlet.org</a></td></tr>\n"
            "<tr><td><span style=\"color:#bc8942;\"><b>Documentation</b></span></td><td><a href=\"http://wiki.mudlet.org/w/Main_Page\">wiki.mudlet.org/w/Main_Page</a></td></tr>\n"
-           "<tr><td><span style=\"color:#7289DA;\"><b>Discord</b></span></td><td><a href=\"https://discord.gg/kuYvMQ9\">discord.gg</a></td></tr>\n"
+           "<tr><td><span style=\"color:#7289DA;\"><b>Discord</b></span></td><td><a href=\"https://www.mudlet.org/chat\">discord.gg</a></td></tr>\n"
            "<tr><td><span style=\"color:#40b040;\"><b>Source code</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet\">github.com/Mudlet/Mudlet</a></td></tr>\n"
            "<tr><td><span style=\"color:#40b040;\"><b>Features/bugs</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet/issues\">github.com/Mudlet/Mudlet/issues</a></td></tr>"));
 
@@ -184,7 +184,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                         tr("Contributions to the Travis integration, CMake and Visual C++ build, "
                            "a lot of code quality and memory management improvements.",
                            "about:ahmedcharles")});
-    aboutMakers.append({false, QStringLiteral("Chris Mitchell"), QString(), QStringLiteral("Chris7"), QStringLiteral("chrismudlet@gmail.com"),
+    aboutMakers.append({false, QStringLiteral("Chris Mitchell"), QString("Chris7#6113"), QStringLiteral("Chris7"), QStringLiteral("chris.mit7@gmail.com"),
                         tr("Developed a shared module system that allows script packages to be shared among profiles, "
                            "a UI for viewing Lua variables, improvements in the mapper and all around.",
                            "about:Chris7")});
@@ -210,7 +210,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                         tr("Developed the Vyzor GUI Manager for Mudlet.",
                            "about:Oneymus")});
     aboutMakers.append({false, QStringLiteral("ItsTheFae"), QStringLiteral("TheFae#9971"), QStringLiteral("Kae"), QString(),
-                        tr("Worked wonders in rejuventating our Website in 2017 but who prefers a little anonymity - "
+                        tr("Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - "
                            "if you are a <i>SpamBot</i> you will not get onto our Fora now. They have also made some useful "
                            "C++ core code contributions and we look forward to future reviews on and work in that area.",
                            "about:TheFae")});

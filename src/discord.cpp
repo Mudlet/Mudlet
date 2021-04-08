@@ -53,10 +53,12 @@ Discord::Discord(QObject* parent)
               {"luminari", {"luminarimud.com"}},
               {"achaea", {"achaea.com", "iron-ach.ironrealms.com"}},
               {"aetolia", {"aetolia.com", "iron-aet.ironrealms.com"}},
-              {"imperian", {"imperian.com", " iron-imp.ironrealms.com"}},
+              {"imperian", {"imperian.com", "iron-imp.ironrealms.com"}},
               {"lusternia", {"lusternia.com", "iron-lus.ironrealms.com"}},
               {"starmourn", {"starmourn.com"}},
-              {"stickmud", {"stickmud.com"}}}
+              {"stickmud", {"stickmud.com"}},
+              {"clessidra", {"clessidra.it", "mud.clessidra.it"}}
+            }
 {
 #if defined(Q_OS_WIN64)
     // Only defined on 64 bit Windows
