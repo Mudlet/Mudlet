@@ -45,7 +45,7 @@ class QTreeWidgetItem;
 class LuaInterface
 {
 public:
-    explicit LuaInterface(Host*);
+    explicit LuaInterface(lua_State*);
     ~LuaInterface();
     void iterateTable(lua_State*, int, TVar*, bool);
     void getVars(bool);

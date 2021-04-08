@@ -32,6 +32,9 @@ link_libraries(
 
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/edbee-lib/edbee-lib")
+include_directories("/home/mudlet/build/src/mudlet_autogen/include")
+include_directories("/usr/include/lua5.1")
 
 add_executable(TEntityResolverTest TEntityResolverTest.cpp ../src/TEntityResolver.cpp)
 add_test(NAME TEntityResolverTest COMMAND TEntityResolverTest)
@@ -52,3 +55,14 @@ add_test(NAME TMxpTagParserTest COMMAND TMxpTagParserTest)
 
 add_executable(TMxpSendTagHandlerTest TMxpSendTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpSendTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
 add_test(NAME TMxpSendTagHandlerTest COMMAND TMxpSendTagHandlerTest)
+
+add_executable(TLuaInterfaceTest TLuaInterfaceTest.cpp ../src/LuaInterface.cpp ../src/TVar.cpp ../src/VarUnit.cpp)
+add_test(NAME TLuaInterfaceTest COMMAND TLuaInterfaceTest)
+
+find_package(Lua51 REQUIRED)
+target_link_directories(
+    TLuaInterfaceTest
+    PUBLIC "/usr/lib/x86_64-linux-gnu/")
+target_link_libraries(
+    TLuaInterfaceTest
+    lua5.1)
