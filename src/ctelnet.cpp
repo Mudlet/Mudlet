@@ -819,7 +819,7 @@ void cTelnet::replyFinished(QNetworkReply* reply)
     packageDownloadReply->deleteLater();
 
     // don't process if download was aborted
-    if (!reply->isFinished()) {
+    if (!reply->isFinished() || reply->error() != QNetworkReply::NoError) {
         return;
     }
 
