@@ -56,11 +56,11 @@ jobs:
       with:
         submodules: true
         fetch-depth: 0
-        
+
     - name: (macOS) Setup XCode that can build universal binaries
       if: runner.os == 'macOS'
       run: echo "SDKROOT=macosx11.1" >> $GITHUB_ENV
-      
+
     - name: Restore Qt cache
       uses: actions/cache@v2.1.4
       id: cache-qt
@@ -250,7 +250,6 @@ jobs:
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: >-
-          --target test
           -G Xcode
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
           -DVCPKG_APPLOCAL_DEPS=OFF
