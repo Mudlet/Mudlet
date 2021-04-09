@@ -5960,17 +5960,17 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
       <source>Author</source>
-      <translation type="unfinished"/>
+      <translation>Autore</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>Versione</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
       <source>Created</source>
-      <translation type="unfinished"/>
+      <translation>Creato</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
