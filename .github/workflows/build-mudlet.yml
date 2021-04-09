@@ -61,15 +61,17 @@ jobs:
       if: runner.os == 'macOS'
       run: echo "SDKROOT=macosx11.1" >> $GITHUB_ENV
 
-    - name: Restore Qt cache
+    - name: (Linux/Windows) Restore Qt cache
       uses: actions/cache@v2.1.4
+      if: runner.os != 'macOS'
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
         key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
 
-    - name: Install Qt
+    - name: (Linux/Windows) Install Qt
       uses: jurplel/install-qt-action@v2
+      if: runner.os != 'macOS'
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
@@ -119,7 +121,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip ccache luarocks expect
+        brew install pkg-config libzzip libzip ccache luarocks expect qt@5
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
