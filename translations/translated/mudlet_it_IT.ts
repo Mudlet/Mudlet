@@ -5975,7 +5975,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
       <source>Dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Dipendenze</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageManager.cpp" line="242"/>
@@ -10493,7 +10493,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/package_manager.ui" line="122"/>
       <source>Details</source>
-      <translation type="unfinished"/>
+      <translation>Dettagli</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="203"/>
@@ -10503,7 +10503,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/package_manager.ui" line="219"/>
       <source>Remove package</source>
-      <translation type="unfinished"/>
+      <translation>Rimuovi package</translation>
     </message>
   </context>
   <context>
