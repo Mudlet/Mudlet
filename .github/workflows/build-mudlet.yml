@@ -260,7 +260,7 @@ jobs:
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: >-
           -G Xcode
-          -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
+          -DCMAKE_PREFIX_PATH=${{env.Qt5_DIR}}
           -DVCPKG_APPLOCAL_DEPS=OFF
           -DBUILD_TRANSLATIONS=OFF
           '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64'
