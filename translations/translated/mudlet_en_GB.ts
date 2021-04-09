@@ -1903,12 +1903,14 @@ Please wait...</translation>
       <source>[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:
 %1; the file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:
+%1; the file is:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1509"/>
       <source>[ INFO ]  - Ignoring this map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Ignoring this map file.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1674"/>
@@ -2051,37 +2053,37 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</translation>
     <message>
       <location filename="../src/TMap.cpp" line="2925"/>
       <source>import or export already in progress</source>
-      <translation type="unfinished"/>
+      <translation>import or export already in progress</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2933"/>
       <source>could not open file</source>
-      <translation type="unfinished"/>
+      <translation>could not open file</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2943"/>
       <source>could not parse file, reason: &quot;%1&quot; at offset %2</source>
-      <translation type="unfinished"/>
+      <translation>could not parse file, reason: &quot;%1&quot; at offset %2</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2952"/>
       <source>empty Json file, no map data detected</source>
-      <translation type="unfinished"/>
+      <translation>empty Json file, no map data detected</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2967"/>
       <source>invalid version number: %1 detected</source>
-      <translation type="unfinished"/>
+      <translation>invalid version number: %1 detected</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2973"/>
       <source>no version number detected</source>
-      <translation type="unfinished"/>
+      <translation>no version number detected</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2979"/>
       <source>no areas detected</source>
-      <translation type="unfinished"/>
+      <translation>no areas detected</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3004"/>
@@ -2092,7 +2094,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</translation>
     <message>
       <location filename="../src/TMap.cpp" line="3100"/>
       <source>aborted by user</source>
-      <translation type="unfinished"/>
+      <translation>aborted by user</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2989"/>
@@ -2125,7 +2127,7 @@ its format version number seems to be (%1) and that doesn&apos;t make sense, the
     <message>
       <location filename="../src/TMap.cpp" line="1414"/>
       <source>[ INFO ]  - Ignoring this unlikely map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Ignoring this unlikely map file.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1422"/>
@@ -2137,7 +2139,7 @@ Mudlet can handle (%2)!  The file is:
     <message>
       <location filename="../src/TMap.cpp" line="1429"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet to read it.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - You will need to upgrade your Mudlet to read it.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2412"/>
@@ -5651,7 +5653,7 @@ Count</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="220"/>
       <source>optional. Markdown supported, and you can add images with drag and drop</source>
-      <translation type="unfinished"/>
+      <translation>optional. Markdown supported, and you can add images with drag and drop</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="380"/>
@@ -5902,13 +5904,16 @@ Count</translation>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
       <source>Dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Dependencies</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageManager.cpp" line="242"/>
       <source>Remove packages</source>
       <comment>Button in package manager to remove selected package(s)</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Remove packages</numerusform>
+        <numerusform>Remove packages</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -10390,17 +10395,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager.ui" line="122"/>
       <source>Details</source>
-      <translation type="unfinished"/>
+      <translation>Details</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="203"/>
       <source>Install new package</source>
-      <translation type="unfinished"/>
+      <translation>Install new package</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="219"/>
       <source>Remove package</source>
-      <translation type="unfinished"/>
+      <translation>Remove package</translation>
     </message>
   </context>
   <context>
