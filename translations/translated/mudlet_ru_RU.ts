@@ -5963,17 +5963,17 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
       <source>Author</source>
-      <translation type="unfinished"/>
+      <translation>Автор</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>Версия</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
       <source>Created</source>
-      <translation type="unfinished"/>
+      <translation>Создан</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
