@@ -2145,7 +2145,7 @@ Mudlet can handle (%2)!  The file is:
     <message>
       <location filename="../src/TMap.cpp" line="1429"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet to read it.</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] - Du musst Mudlet aktualisieren, um sie lesen zu können.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2412"/>
@@ -5705,7 +5705,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="220"/>
       <source>optional. Markdown supported, and you can add images with drag and drop</source>
-      <translation type="unfinished"/>
+      <translation>Optional. Markdown wird unterstützt und Du kannst Bilder mit Drag &amp; Drop hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="380"/>
@@ -5951,18 +5951,21 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
       <source>Created</source>
-      <translation type="unfinished"/>
+      <translation>Erstellt</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
       <source>Dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Abhängigkeiten</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageManager.cpp" line="242"/>
       <source>Remove packages</source>
       <comment>Button in package manager to remove selected package(s)</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Paket entfernen</numerusform>
+        <numerusform>Pakete entfernen</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -10474,17 +10477,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager.ui" line="122"/>
       <source>Details</source>
-      <translation type="unfinished"/>
+      <translation>Details</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="203"/>
       <source>Install new package</source>
-      <translation type="unfinished"/>
+      <translation>Neues Paket installieren</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="219"/>
       <source>Remove package</source>
-      <translation type="unfinished"/>
+      <translation>Paket entfernen</translation>
     </message>
   </context>
   <context>
