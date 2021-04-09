@@ -64,6 +64,8 @@ class TMainConsole;
 class dlgNotepad;
 class TMap;
 class dlgIRC;
+class dlgPackageManager;
+class dlgModuleManager;
 class dlgProfilePreferences;
 
 class stopWatch {
@@ -298,7 +300,8 @@ public:
     bool installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);
     bool removeDir(const QString&, const QString&);
-    void readPackageConfig(const QString&, QString&);
+    void readPackageConfig(const QString&, QString&, bool);
+    QString getPackageConfig(const QString&, bool isModule = false);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
@@ -358,6 +361,7 @@ public:
     bool closeWindow(const QString&);
     bool echoWindow(const QString&, const QString&);
     bool pasteWindow(const QString& name);
+    void loadPackageInfo();
     bool setCmdLineAction(const QString&, const int);
     bool resetCmdLineAction(const QString&);
     bool setLabelClickCallback(const QString&, const int);
@@ -370,7 +374,7 @@ public:
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setBackgroundImage(const QString& name, QString& path, int mode);
     bool resetBackgroundImage(const QString& name);
-    void createMapper(bool loadDefaultMap);
+    void showHideOrCreateMapper(const bool loadDefaultMap);
     bool setProfileStyleSheet(const QString& styleSheet);
     void check_for_mappingscript();
 
@@ -380,6 +384,8 @@ public:
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
+    dlgPackageManager* mpPackageManager;
+    dlgModuleManager* mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
 
     int commandLineMinimumHeight;
@@ -506,6 +512,8 @@ public:
 
     // search engine URL prefix to search query
     QMap<QString, QString> mSearchEngineData;
+    QMap<QString, QMap<QString, QString>> mPackageInfo;
+    QMap<QString, QMap<QString, QString>> mModuleInfo;
     QString mSearchEngineName;
 
     // trigger/alias/script/etc ID whose Lua code to show when previewing a theme
@@ -633,6 +641,9 @@ private:
     void removeAllNonPersistentStopWatches();
     void updateConsolesFont();
     void thankForUsingPTB();
+    void toggleMapperVisibility();
+    void createMapper(const bool);
+    void removePackageInfo(const QString &packageName, const bool);
 
     QFont mDisplayFont;
     QStringList mModulesToSync;

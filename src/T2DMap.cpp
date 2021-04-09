@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2020 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2016, 2018-2021 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
@@ -76,8 +76,6 @@ const QString& key_dialog_cancel = QStringLiteral("dialog-cancel");
 const QString& key_icon_dialog_ok_apply = QStringLiteral(":/icons/dialog-ok-apply.png");
 const QString& key_icon_dialog_cancel = QStringLiteral(":/icons/dialog-cancel.png");
 
-// replacement parameter supplied at points of use:
-const QString& key_styleSheet_backgroundColor = QStringLiteral("background-color: %1");
 
 T2DMap::T2DMap(QWidget* parent)
 : QWidget(parent)
@@ -165,7 +163,6 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.move(0, 0);
     mMultiSelectionListWidget.hide();
     connect(&mMultiSelectionListWidget, &QTreeWidget::itemSelectionChanged, this, &T2DMap::slot_roomSelectionChanged);
-    setCursor(Qt::OpenHandCursor);
 }
 
 void T2DMap::init()
@@ -1251,9 +1248,18 @@ void T2DMap::paintEvent(QPaintEvent* e)
         auto font(painter.font());
         font.setPointSize(10);
         painter.setFont(font);
-        auto message = mpMap->mpRoomDB
-                ? tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size())
-                : tr("You do not have a map yet - load one, or start mapping from scratch to begin.");
+
+        QString message;
+        if (mpMap->mpRoomDB) {
+            if (mpMap->mpRoomDB->isEmpty()) {
+                message = tr("No rooms in the map - load another one, or start mapping from scratch to begin.");
+            } else {
+                message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size());
+            }
+        } else {
+            message = tr("You do not have a map yet - load one, or start mapping from scratch to begin.");
+        }
+
         painter.drawText(0, 0, widgetWidth, widgetHeight, Qt::AlignCenter | Qt::TextWordWrap, message);
         painter.restore();
         return;
@@ -2401,11 +2407,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* e)
     //move map with left mouse button + ALT (->
     if (mpMap->mLeftDown) {
         mpMap->mLeftDown = false;
-        if (mMapViewOnly) {
-            setCursor(Qt::OpenHandCursor);
-        } else {
-            unsetCursor();
-        }
+        unsetCursor();
     }
 
     if (e->button() & Qt::LeftButton) {
@@ -3208,7 +3210,7 @@ void T2DMap::slot_customLineProperties()
             mpCurrentLineArrow->setChecked(room->customLinesArrow.value(exit));
             mCurrentLineColor = room->customLinesColor.value(exit);
 
-            mpCurrentLineColor->setStyleSheet(key_styleSheet_backgroundColor.arg(mCurrentLineColor.name()));
+            mpCurrentLineColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(mCurrentLineColor.name()));
             connect(mpCurrentLineColor, &QAbstractButton::clicked, this, &T2DMap::slot_customLineColor);
             dialog->adjustSize();
 
@@ -3424,11 +3426,6 @@ void T2DMap::slot_toggleMapViewOnly()
         // In the init() case this is a no-op, otherwise it ensures the profile
         // state matches the local copy (so it gets saved with the profile):
         mpHost->mMapViewOnly = mMapViewOnly;
-        if (mMapViewOnly) {
-            setCursor(Qt::OpenHandCursor);
-        } else {
-            unsetCursor();
-        }
         TEvent mapModeEvent{};
         mapModeEvent.mArgumentList.append(QLatin1String("mapModeChangeEvent"));
         mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -4825,7 +4822,7 @@ void T2DMap::slot_setCustomLine()
     mpCurrentLineStyle->setCurrentIndex(mpCurrentLineStyle->findData(static_cast<int>(mCurrentLineStyle)));
 
     mpCurrentLineArrow->setChecked(mCurrentLineArrow);
-    mpCurrentLineColor->setStyleSheet(key_styleSheet_backgroundColor.arg(mCurrentLineColor.name()));
+    mpCurrentLineColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(mCurrentLineColor.name()));
     connect(specialExits, &QTreeWidget::itemClicked, this, &T2DMap::slot_setCustomLine2B);
     connect(mpCurrentLineColor, &QAbstractButton::clicked, this, &T2DMap::slot_customLineColor);
     dialog->adjustSize();
@@ -4846,7 +4843,7 @@ void T2DMap::slot_customLineColor()
 
     if (color.isValid()) {
         mCurrentLineColor = color;
-        mpCurrentLineColor->setStyleSheet(key_styleSheet_backgroundColor.arg(color.name()));
+        mpCurrentLineColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(color.name()));
     }
 }
 

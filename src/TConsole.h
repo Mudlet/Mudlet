@@ -106,6 +106,7 @@ public:
     int getLineNumber();
     int getLineCount();
     bool deleteLine(int);
+    void clearSelection() const;
 
     int getColumnNumber();
 
@@ -231,7 +232,6 @@ public:
     QWidget* mpMainFrame;
     QWidget* mpRightToolBar;
     QWidget* mpMainDisplay;
-    QLabel* mpBackground;
 
     dlgMapper* mpMapper;
 
@@ -243,7 +243,6 @@ public:
     bool mRecordReplay;
     QFile mReplayFile;
     QDataStream mReplayStream;
-    TChar mStandardFormat;
 
     QColor mSystemMessageBgColor;
     QColor mSystemMessageFgColor;
@@ -288,6 +287,7 @@ protected:
 
 private:
     ConsoleType mType;
+    QSize mOldSize;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
