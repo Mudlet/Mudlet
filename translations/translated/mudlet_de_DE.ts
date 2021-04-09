@@ -1895,12 +1895,14 @@ bitte warten...</translation>
       <source>[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:
 %1; the file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Fehler beim Laden einer Mudlet JSON Kartendatei, Grund:
+%1; die Datei ist: 
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1509"/>
       <source>[ INFO ]  - Ignoring this map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Ignoriere diese Kartendatei.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1674"/>
@@ -2054,37 +2056,37 @@ Gebiet %2 von %3   Raum %4 von %5   Markierung %6 von %7...</translation>
     <message>
       <location filename="../src/TMap.cpp" line="2925"/>
       <source>import or export already in progress</source>
-      <translation type="unfinished"/>
+      <translation>Import oder Export bereits im Gange</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2933"/>
       <source>could not open file</source>
-      <translation type="unfinished"/>
+      <translation>Datei konnte nicht geöffnet werden</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2943"/>
       <source>could not parse file, reason: &quot;%1&quot; at offset %2</source>
-      <translation type="unfinished"/>
+      <translation>Konnte die Datei nicht parsen, Grund: &quot;%1&quot; bei Offset %2</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2952"/>
       <source>empty Json file, no map data detected</source>
-      <translation type="unfinished"/>
+      <translation>Leere Json-Datei, keine Kartendaten gefunden</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2967"/>
       <source>invalid version number: %1 detected</source>
-      <translation type="unfinished"/>
+      <translation>Ungültige Versionsnummer: %1 erkannt</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2973"/>
       <source>no version number detected</source>
-      <translation type="unfinished"/>
+      <translation>Keine Versionsnummer erkannt</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2979"/>
       <source>no areas detected</source>
-      <translation type="unfinished"/>
+      <translation>Keine Gebiete erkannt</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3004"/>
@@ -2095,7 +2097,7 @@ Gebiet %2 von %3   Raum %4 von %5   Markierung %6 von %7...</translation>
     <message>
       <location filename="../src/TMap.cpp" line="3100"/>
       <source>aborted by user</source>
-      <translation type="unfinished"/>
+      <translation>Vom Benutzer abgebrochen</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2989"/>
@@ -2123,19 +2125,22 @@ Gebiet %2 von %3   Raum %4 von %5   Markierung %6 von %7...</translation>
       <source>[ ALERT ] - File does not seem to be a Mudlet Map file, the part that indicates
 its format version number seems to be (%1) and that doesn&apos;t make sense, the file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Datei scheint keine Mudlet Kartendatei zu sein. Der Teil, der 
+seine Versionsnummer angibt, scheint (%1) zu sein und das macht keinen Sinn.
+Die Datei ist: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1414"/>
       <source>[ INFO ]  - Ignoring this unlikely map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Ignoriere diese unwahrscheinliche Kartendatei.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1422"/>
       <source>[ ALERT ] - Map file is too new, its file format (%1) is higher than this version of
 Mudlet can handle (%2)!  The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Kartendatei ist zu neu, das Dateiformat (%1) ist höher als diese Version von Mudlet verarbeiten kann (%2)! Die Datei ist:
+&quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1429"/>
