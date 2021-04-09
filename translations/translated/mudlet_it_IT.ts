@@ -1899,12 +1899,14 @@ attendere...</translation>
       <source>[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:
 %1; the file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Il caricamento di un file di mappa JSON è fallito, errore:
+%1; il file è:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1509"/>
       <source>[ INFO ]  - Ignoring this map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Ignora questo file di mappa.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1674"/>
@@ -2060,37 +2062,37 @@ Aree: %2 di: %3   Stanze: %4 di: %5   Etichette: %6 di: %7...</translation>
     <message>
       <location filename="../src/TMap.cpp" line="2925"/>
       <source>import or export already in progress</source>
-      <translation type="unfinished"/>
+      <translation>importazione/esportazione in corso</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2933"/>
       <source>could not open file</source>
-      <translation type="unfinished"/>
+      <translation>impossibile aprire il file</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2943"/>
       <source>could not parse file, reason: &quot;%1&quot; at offset %2</source>
-      <translation type="unfinished"/>
+      <translation>impossibile analizzare il file, motivo: &quot;%1&quot; all'offset %2</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2952"/>
       <source>empty Json file, no map data detected</source>
-      <translation type="unfinished"/>
+      <translation>file Json vuoto, nessun file di mappa rilevato</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2967"/>
       <source>invalid version number: %1 detected</source>
-      <translation type="unfinished"/>
+      <translation>numero di versione non valido: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2973"/>
       <source>no version number detected</source>
-      <translation type="unfinished"/>
+      <translation>numero di versione non trovato</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2979"/>
       <source>no areas detected</source>
-      <translation type="unfinished"/>
+      <translation>nessuna area trovata</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3004"/>
@@ -2101,7 +2103,7 @@ Aree: %2 di: %3   Stanze: %4 di: %5   Etichette: %6 di: %7...</translation>
     <message>
       <location filename="../src/TMap.cpp" line="3100"/>
       <source>aborted by user</source>
-      <translation type="unfinished"/>
+      <translation>interrotto dall'utente</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2989"/>
@@ -2129,24 +2131,28 @@ Aree: %2 di: %3   Stanze: %4 di: %5   Etichette: %6 di: %7...</translation>
       <source>[ ALERT ] - File does not seem to be a Mudlet Map file, the part that indicates
 its format version number seems to be (%1) and that doesn&apos;t make sense, the file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Il file non sembra essere un file di mappa, il numero di versione
+indicato è (%1) e non è stato riconosciuto, il file è:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1414"/>
       <source>[ INFO ]  - Ignoring this unlikely map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Ignoro questo file di mappa.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1422"/>
       <source>[ ALERT ] - Map file is too new, its file format (%1) is higher than this version of
 Mudlet can handle (%2)!  The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Il file di mappa è troppo recente, il formato (%1) è superiore a quello gestibile
+da questa versione di Mudlet (%2)!  Il file di mappa è:
+&quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1429"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet to read it.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Dovrai aggiornare Mudlet per leggere questo file di mappa.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2412"/>
@@ -2672,7 +2678,14 @@ nel file di mappa, ora cerco di capire quale ID utilizzare.</translation>
  Look for further messages related to the rooms that are supposed
  to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALERT ] - %n area mancante nel file di mappa: le sto aggiungendo.
+ Maggiori informazioni sono presenti nei prossimi messaggi che
+ riguardano le stanze appartenenti a queste aree...</numerusform>
+        <numerusform>[ ALERT ] - %n aree mancanti nel file di mappa: le sto aggiungendo.
+ Maggiori informazioni sono presenti nei prossimi messaggi che
+ riguardano le stanze appartenenti a queste aree...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="731"/>
@@ -2680,7 +2693,14 @@ nel file di mappa, ora cerco di capire quale ID utilizzare.</translation>
  Look for further messages related to the rooms that is/are supposed to
  be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALERT ] - %n area mancante nel file di mappa. Le sto aggiungendo.
+ Maggiori informazioni sono presenti nei prossimi messaggi che
+ riguardano le stanze appartenenti a questa area...</numerusform>
+        <numerusform>[ ALERT ] - %n aree mancanti nel file di mappa. Le sto aggiungendo.
+ Maggiori informazioni sono presenti nei prossimi messaggi che
+ riguardano le stanze appartenenti a queste aree...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="780"/>
@@ -5727,7 +5747,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="220"/>
       <source>optional. Markdown supported, and you can add images with drag and drop</source>
-      <translation type="unfinished"/>
+      <translation>opzionale. Sintassi Markdown supportata. Puoi trascinare e aggiungere immagini</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="380"/>
@@ -5925,7 +5945,10 @@ Utilizzi</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="1301"/>
       <source>Select what to export (%1 items)</source>
       <comment>Package exporter selection</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Seleziona cosa esportare (%1 elemento)</numerusform>
+        <numerusform>Seleziona cosa esportare (%1 elementi)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="965"/>
@@ -5981,7 +6004,10 @@ Utilizzi</translation>
       <location filename="../src/dlgPackageManager.cpp" line="242"/>
       <source>Remove packages</source>
       <comment>Button in package manager to remove selected package(s)</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Rimuovi package</numerusform>
+        <numerusform>Rimuovi package</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -6336,7 +6362,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="196"/>
       <source>&lt;p&gt;This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specified font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.&lt;p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Questa impostazione permette di mostrare una finestra con tutti i simboli utilizzati nella mappa corrente e come vengono disegnati usando solo il carattere specificato, un altro carattere o se non possono essere disegnati affatto. Mostra anche la sequenza di &lt;i&gt;codici&lt;/i&gt;Unicode che compongono un determinato simbolo, in modo da poterli identificare anche se non è possibile visualizzarli; inoltre, sono elencate le prime trentadue stanze che utilizzano quel simbolo, in modo da aiutare a riconoscere eventuali casi anomali o inaspettati.&lt;p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="209"/>
@@ -10498,7 +10524,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/package_manager.ui" line="203"/>
       <source>Install new package</source>
-      <translation type="unfinished"/>
+      <translation>Installa nuovo package</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="219"/>
@@ -12433,7 +12459,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your script or script group. This will be displayed in the script tree.&lt;/p&gt;&lt;p&gt;If a function within the script is to be used to handle events entered in the list below &lt;b&gt;&lt;u&gt;it must have the same name as is entered here.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Scegli un nome chiaro (possibilmente univoco) per il tuo script o il gruppo di script. Sarà utilizzato nella vista ad albero degli script.&lt;/p&gt;&lt;p&gt;Se una funzione all'interno dello script deve essere utilizzata per gestire l'evento indicato nella lista sottostante &lt;b&gt;&lt;u&gt;deve avere lo stesso nome inserito qui.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
