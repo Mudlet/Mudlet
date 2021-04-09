@@ -131,7 +131,7 @@ jobs:
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         echo "Qt5_DIR=$(brew --prefix qt@5)/lib/cmake/Qt5" >> $GITHUB_ENV
-        echo "Qt5_INSTALL=$(brew --prefix qt@5)/lib/cmake/Qt5" >> $GITHUB_ENV
+        echo "Qt5_INSTALL=$(brew --prefix qt@5)" >> $GITHUB_ENV
         echo "$Qt5_DIR/bin" >> $GITHUB_PATH
 
         # Install lua-yajl early to generate translation statistics
