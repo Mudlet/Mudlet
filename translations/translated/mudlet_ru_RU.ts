@@ -1896,12 +1896,14 @@ please wait...</source>
       <source>[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:
 %1; the file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT]-Не удалось загрузить файл карты JSON Mudlet, причина:
+%1; файл:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1509"/>
       <source>[ INFO ]  - Ignoring this map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Игнорируя этот файл с картой.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1674"/>
@@ -2059,37 +2061,37 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2925"/>
       <source>import or export already in progress</source>
-      <translation type="unfinished"/>
+      <translation>импорт или экспорт уже выполняется</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2933"/>
       <source>could not open file</source>
-      <translation type="unfinished"/>
+      <translation>не удалось открыть файл</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2943"/>
       <source>could not parse file, reason: &quot;%1&quot; at offset %2</source>
-      <translation type="unfinished"/>
+      <translation>не удалось разобрать файл, причина: &quot;%1&quot; по смещению %2</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2952"/>
       <source>empty Json file, no map data detected</source>
-      <translation type="unfinished"/>
+      <translation>пустой файл Json, данные карты не обнаружены</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2967"/>
       <source>invalid version number: %1 detected</source>
-      <translation type="unfinished"/>
+      <translation>обнаружен неверный номер версии: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2973"/>
       <source>no version number detected</source>
-      <translation type="unfinished"/>
+      <translation>номер версии не обнаружен</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2979"/>
       <source>no areas detected</source>
-      <translation type="unfinished"/>
+      <translation>области не обнаружены</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3004"/>
@@ -2100,7 +2102,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3100"/>
       <source>aborted by user</source>
-      <translation type="unfinished"/>
+      <translation>прервано пользователем</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2989"/>
@@ -2145,7 +2147,7 @@ Mudlet can handle (%2)!  The file is:
     <message>
       <location filename="../src/TMap.cpp" line="1429"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet to read it.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Вам нужно обновить Mudlet чтобы прочитать его.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2412"/>
@@ -5725,7 +5727,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="220"/>
       <source>optional. Markdown supported, and you can add images with drag and drop</source>
-      <translation type="unfinished"/>
+      <translation>необязательно. Markdown поддерживается, и вы можете добавлять изображения с помощью перетаскивания</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="380"/>
@@ -5978,13 +5980,18 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
       <source>Dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Зависимости</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageManager.cpp" line="242"/>
       <source>Remove packages</source>
       <comment>Button in package manager to remove selected package(s)</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Удалить пакет</numerusform>
+        <numerusform>Удалить пакеты</numerusform>
+        <numerusform>Удалить пакеты</numerusform>
+        <numerusform>Удалить пакеты</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -10499,17 +10506,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager.ui" line="122"/>
       <source>Details</source>
-      <translation type="unfinished"/>
+      <translation>Детали</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="203"/>
       <source>Install new package</source>
-      <translation type="unfinished"/>
+      <translation>Установить новый пакет</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="219"/>
       <source>Remove package</source>
-      <translation type="unfinished"/>
+      <translation>Удалить пакет</translation>
     </message>
   </context>
   <context>
