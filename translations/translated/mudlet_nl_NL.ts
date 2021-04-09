@@ -649,7 +649,7 @@ wacht aub...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="1255"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Geen kamers op de kaart. Laad een andere of begin met het opnieuw in kaart brengen.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2253"/>
