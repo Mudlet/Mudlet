@@ -131,6 +131,7 @@ jobs:
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         echo "Qt5_DIR=$(brew --prefix qt@5)/lib/cmake/Qt5" >> $GITHUB_ENV
+        echo "Qt5_INSTALL=$(brew --prefix qt@5)/lib/cmake/Qt5" >> $GITHUB_ENV
         echo "$Qt5_DIR/bin" >> $GITHUB_PATH
 
         # Install lua-yajl early to generate translation statistics
@@ -260,7 +261,7 @@ jobs:
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: >-
           -G Xcode
-          -DCMAKE_PREFIX_PATH=${{env.Qt5_DIR}}
+          -DCMAKE_PREFIX_PATH=${{env.Qt5_INSTALL}}
           -DVCPKG_APPLOCAL_DEPS=OFF
           -DBUILD_TRANSLATIONS=OFF
           '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64'
