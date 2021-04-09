@@ -5895,12 +5895,12 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
       <source>Author</source>
-      <translation type="unfinished"/>
+      <translation>作者</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>版本</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
