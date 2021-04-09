@@ -126,6 +126,8 @@ jobs:
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
+        echo "Qt5_DIR=$(brew --prefix qt@5)" >> $GITHUB_ENV
+
         # Install lua-yajl early to generate translation statistics
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
         # workaround https://github.com/lloyd/yajl/issues/209
