@@ -3189,7 +3189,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
         windowName.clear();
     }
 
-    if (!lua_isnumber(L, 2)) {
+    if (!lua_isnumber(L, 2) && lua_gettop(L) >= 2) {
         name = getVerifiedString(L, __func__, 2, "miniconsole name");
     } else {
         name = windowName;
