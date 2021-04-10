@@ -356,6 +356,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
         char* tabptr = reinterpret_cast<char*>(name_table);
         for (i = 0; i < namecount; i++) {
             int n = (tabptr[0] << 8) | tabptr[1];
+            // Trim doesn't remove null character at the end of name that sometimes shows up
             auto name = QString::fromUtf8(tabptr + 2, name_entry_size - 3).trimmed().remove(QStringLiteral("\u0000"));
             char* substring_start = subject + ovector[2*n];
             int substring_length = ovector[2*n+1] - ovector[2*n];
