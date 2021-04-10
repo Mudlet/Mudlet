@@ -308,6 +308,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     int rc, i;
     std::list<std::string> captureList;
     std::list<int> posList;
+    QMap<QString, QPair<int, int>> namePositions;
     NameGroupMatches nameGroups;
     int ovector[MAX_CAPTURE_GROUPS * 3];
 
@@ -355,10 +356,15 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
         char* tabptr = reinterpret_cast<char*>(name_table);
         for (i = 0; i < namecount; i++) {
             int n = (tabptr[0] << 8) | tabptr[1];
-            auto name = QString::fromUtf8( tabptr + 2, name_entry_size - 3).trimmed();
-            auto capture = QString::fromUtf8(subject + ovector[2*n], ovector[2*n+1] - ovector[2*n]);
+            auto name = QString::fromUtf8( tabptr + 2, name_entry_size - 3).trimmed().remove(QStringLiteral("\u0000"));
+            qDebug() << name;
+            char* substring_start = subject + ovector[2*n];
+            int substring_length = ovector[2*n+1] - ovector[2*n];
+            int utf16_pos = toMatch.indexOf(QString(substring_start));
+            auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
             tabptr += name_entry_size;
+            namePositions.insert(name, qMakePair(utf16_pos + posOffset, substring_length));
         }
     }
     if (mIsColorizerTrigger || mFilterTrigger) {
@@ -468,7 +474,7 @@ END : {
     } else {
         TLuaInterpreter* pL = mpHost->getLuaInterpreter();
         pL->setCaptureGroups(captureList, posList);
-        pL->setCaptureNameGroups(nameGroups);
+        pL->setCaptureNameGroups(nameGroups, namePositions);
         execute();
         pL->clearCaptureGroups();
         if (mFilterTrigger) {
