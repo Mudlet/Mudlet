@@ -3080,10 +3080,11 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         TArea* pArea = new TArea(this, pNewRoomDB);
         auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i);
         ++mProgressDialogAreasCount;
-        if (incrementJsonProgressDialog(false, true, 0)) {
-            if (allowUserCancellation) {
-                abort = true;
-            }
+        if (incrementJsonProgressDialog(false, true, 0) && allowUserCancellation) {
+            abort = true;
+            // Since we are break-ing and not going to store the TArea we just
+            // instantiated with new we need to clean it up:
+            delete pArea;
             break;
         }
         // This will populate the TRoomDB::areas and TRoomDB::areaNameMap:
