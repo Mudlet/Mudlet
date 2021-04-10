@@ -524,13 +524,13 @@ mudlet::mudlet()
     // once was so that it is a bit more obvious when it changes:
     QFont mdiFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     mpTabBar->setFont(mdiFont);
-    qDebug() << "set tabbar font to" << mdiFont.family();
+    qDebug() << "set tabbar font to" << mdiFont.family() << mpTabBar->font().family();
 
     QFont mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     setFont(mainFont);
     mpWidget_profileContainer->setFont(mainFont);
     mpWidget_profileContainer->show();
-    qDebug() << "set main window font to" << mdiFont.family();
+    qDebug() << "set main window font to" << mdiFont.family() << font().family();
 
     connect(mpActionConnect.data(), &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
     connect(mpActionHelp.data(), &QAction::triggered, this, &mudlet::show_help_dialog);
