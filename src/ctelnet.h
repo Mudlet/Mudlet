@@ -283,7 +283,7 @@ private:
     QTimer* mpPostingTimer;
     bool mUSE_IRE_DRIVER_BUGFIX;
 
-    QNetworkReply* packageDownloadReply;
+    QNetworkReply* packageDownloadReply {};
 
     int mCommands;
     bool mMCCP_version_1;
