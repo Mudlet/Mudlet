@@ -1298,10 +1298,11 @@ int TLuaInterpreter::spawn(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCaptureGroup
-int TLuaInterpreter::selectCaptureGroup(lua_State* L)
+int TLuaInterpreter::selectCaptureGroup(lua_State *L)
 {
     if (!(lua_isnumber(L, 1) || lua_isstring(L, 1))) {
-        lua_pushfstring(L, "selectCaptureGroup: bad argument #1 type (capture group as number or capture group name as string expected, got %s!)",
+        lua_pushfstring(L,
+                        "selectCaptureGroup: bad argument #1 type (capture group as number or capture group name as string expected, got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
     }
@@ -1345,9 +1346,6 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
         }
     } else if (lua_isstring(L, 1)) {
         auto name = lua_tostring(L, 1);
-        for (const auto key : pL->mCapturedNameGroupsPosList.keys()) {
-            qDebug() << key;
-        }
         if (pL->mCapturedNameGroupsPosList.contains(name)) {
             begin = pL->mCapturedNameGroupsPosList.value(name).first;
             length = pL->mCapturedNameGroupsPosList.value(name).second;
