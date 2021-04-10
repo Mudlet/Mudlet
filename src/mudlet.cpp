@@ -522,7 +522,7 @@ mudlet::mudlet()
     // the tab if it is not the active one and new data has arrived to show in
     // the related profile - make the font size a little larger that the 6 it
     // once was so that it is a bit more obvious when it changes:
-    QFont mdiFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
+    QFont mdiFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 10, QFont::Normal);
     mpTabBar->setFont(mdiFont);
     qDebug() << "set tabbar font to" << mdiFont.family() << mpTabBar->font().family();
 
