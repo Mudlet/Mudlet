@@ -8112,7 +8112,7 @@ int TLuaInterpreter::getMapLabels(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapLabel
 int TLuaInterpreter::getMapLabel(lua_State* L)
 {
-    int area = getVerifiedInt(L, __func__, 1, "areaID");
+    int areaId = getVerifiedInt(L, __func__, 1, "areaID");
 
     if (!lua_isstring(L, 2) && !lua_isnumber(L, 2)) {
         lua_pushfstring(L, "getMapLabel: bad argument #2 type (labelID as number or labelText as string expected, got %s!)", luaL_typename(L, 2));
@@ -8131,7 +8131,10 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    auto pA = host.mpMap->mpRoomDB->getArea(area);
+    auto pA = host.mpMap->mpRoomDB->getArea(areaId);
+    if (!pA) {
+        return warnArgumentValue(L, __func__, QStringLiteral("areaID %1 does not exist").arg(areaId));
+    }
     if (pA->mMapLabels.isEmpty()) {
         // Return an empty table:
         lua_newtable(L);
@@ -8141,7 +8144,7 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
     if (labelId >= 0) {
         if (!pA->mMapLabels.contains(labelId)) {
             return warnArgumentValue(L, __func__, QStringLiteral("labelID %1 does not exist in area with areaID %2")
-                .arg(QString::number(labelId), QString::number(area)));
+                .arg(QString::number(labelId), QString::number(areaId)));
         }
         lua_newtable(L);
         auto label = pA->mMapLabels.value(labelId);
