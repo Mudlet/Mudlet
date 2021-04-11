@@ -37,6 +37,7 @@ private slots:
         TVar* base = vu->getBase();
         QList<TVar*> children = base->getChildren();
         TVar* testVar = children.first();
+        QCOMPARE(testVar->getName(), "test");
         QCOMPARE(testVar->getValue(), "1");
         QCOMPARE(testVar->getValueType(), LUA_TSTRING);
     }
@@ -49,6 +50,7 @@ private slots:
         TVar* base = vu->getBase();
         QList<TVar*> children = base->getChildren();
         TVar* testVar = children.first();
+        QCOMPARE(testVar->getName(), "test");
         QCOMPARE(testVar->getValue(), "1");
         QCOMPARE(testVar->getValueType(), LUA_TNUMBER);
     }
