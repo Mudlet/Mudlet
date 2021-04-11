@@ -2223,7 +2223,11 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
         }
     }
 
-    TRoom* room = mpMap->mpRoomDB->getRoom(roomID);
+    TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomID);
+    if (!pRoom) {
+        // Can't call pRoom->getArea() further down without a valid pRoom!
+        return;
+    }
     int yOffset = 20;
     // Left margin for info widget:
     int xOffset = 10;
@@ -2236,7 +2240,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
 
     for (const auto& key : mpMap->mMapInfoContributorManager->getContributorKeys()) {
         if (mpHost->mMapInfoContributors.contains(key)) {
-            auto properties = mpMap->mMapInfoContributorManager->getContributor(key)(roomID, mMultiSelectionSet.size(), room->getArea(), displayAreaId, infoColor);
+            auto properties = mpMap->mMapInfoContributorManager->getContributor(key)(roomID, mMultiSelectionSet.size(), pRoom->getArea(), displayAreaId, infoColor);
             if (!properties.color.isValid()) {
                 properties.color = infoColor;
             }
