@@ -787,7 +787,6 @@ void LuaInterface::getVars(bool hide)
     //returns the base item
     // QElapsedTimer t;
     // t.start();
-    L = interpreter->pGlobalLua;
     lua_pushnil(L);
     depth = 0;
     auto g = new TVar();
