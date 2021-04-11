@@ -53,7 +53,8 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
 , mpHost(pHost)
 {
     ui->setupUi(this);
-    ui->input->hide();
+    ui->splitter_metadataAssets->hide();
+    //    ui->splitter_metadata->setSizes({})
     ui->Icon->hide();
 
     mpExportSelection = ui->treeWidget_exportSelection;
