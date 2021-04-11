@@ -51,7 +51,6 @@ private:
     Host* mpHost;
     QSet<TRoom*> mpRooms;
     QHash<QString, int> mpSymbols;
-    int firstRoomId;
     QColor selectedColor = nullptr;
     QColor previewColor = nullptr;
     QColor roomColor;
