@@ -66,6 +66,7 @@ public:
     bool reparentVariable(QTreeWidgetItem*, QTreeWidgetItem*, QTreeWidgetItem*);
     bool validMove(QTreeWidgetItem*);
     void getAllChildren(TVar* var, QList<TVar*>* list);
+    lua_State* getState();
     static int onPanic(lua_State*);
 
 private:
