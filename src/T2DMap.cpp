@@ -4247,7 +4247,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
     //FIXME:
     if (mLabelHighlighted) {
         auto pA = mpMap->mpRoomDB->getArea(mAreaID);
-        if (!pA->mMapLabels.isEmpty()) {
+        if (pA && !pA->mMapLabels.isEmpty()) {
             bool needUpdate = false;
             QMapIterator<int, TMapLabel> itMapLabel(pA->mMapLabels);
             while (itMapLabel.hasNext()) {
