@@ -209,7 +209,7 @@ public:
     QString mDisplayFontName;
     int mDisplayFontSize;
     QFont mDisplayFont;
-    int mEngineCursor;
+    int mEngineCursor = -1;
     QColor mFgColor;
     TChar mFormatBasic;
     TChar mFormatSystemMessage;
