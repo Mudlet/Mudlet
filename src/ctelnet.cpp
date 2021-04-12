@@ -818,7 +818,7 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
     mpProgressDialog->close();
 
     if (reply != mpPackageDownloadReply) {
-        qWarning().nospace().noquote() << "cTelnet::slot_replyFinished(QNetworkReply*) ERROR - received argument was not the expected stored pointer.";
+        qWarning().nospace().noquote() << "cTelnet::slot_replyFinished(QNetworkReply*) ERROR - download finished, but it wasn't the one we are expecting";
         reply->deleteLater();
     } else {
         // don't process if download was aborted
