@@ -59,9 +59,6 @@ private slots:
         QCOMPARE(testVar->getValueType(), LUA_TNUMBER);
     }
 
-    void cleanupTestCase()
-    {
-    }
 };
 
 #include "TLuaInterfaceTest.moc"
