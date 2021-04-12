@@ -30,11 +30,10 @@ link_libraries(
         Qt5::UiTools
         Qt5::Widgets)
 
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
+
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/edbee-lib/edbee-lib")
-include_directories("/home/mudlet/build/src/mudlet_autogen/include")
-include_directories("/usr/include/lua5.1")
 
 add_executable(TEntityResolverTest TEntityResolverTest.cpp ../src/TEntityResolver.cpp)
 add_test(NAME TEntityResolverTest COMMAND TEntityResolverTest)
@@ -60,9 +59,6 @@ add_executable(TLuaInterfaceTest TLuaInterfaceTest.cpp ../src/LuaInterface.cpp .
 add_test(NAME TLuaInterfaceTest COMMAND TLuaInterfaceTest)
 
 find_package(Lua51 REQUIRED)
-target_link_directories(
-    TLuaInterfaceTest
-    PUBLIC "/usr/lib/x86_64-linux-gnu/")
 target_link_libraries(
     TLuaInterfaceTest
-    lua5.1)
+    LUA51::LUA51)
