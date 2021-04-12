@@ -18,13 +18,17 @@ private:
 
 private slots:
 
-    void initTestCase()
+    void init()
     {
         L = luaL_newstate();
         interface = new LuaInterface(L);
     }
 
-    void execLua(QString string) {
+    void cleanup() {
+        lua_close(L);
+    }
+
+    void execLua(const QString& string) {
         luaL_loadstring(L, string.toUtf8().constData());
         lua_pcall(L, 0, 0, 0);
     }

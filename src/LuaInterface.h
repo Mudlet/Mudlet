@@ -70,9 +70,7 @@ public:
     static int onPanic(lua_State*);
 
 private:
-    int mHostID;
     int depth;
-    TLuaInterpreter* interpreter;
     lua_State* L;
     QSet<TVar> hiddenVars;
     QScopedPointer<VarUnit> varUnit;
