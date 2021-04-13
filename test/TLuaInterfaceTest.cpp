@@ -32,8 +32,8 @@ class TVarTest : public QObject {
 Q_OBJECT
 
 private:
-    lua_State* L;
-    LuaInterface* interface;
+    lua_State* L = luaL_newstate();
+    LuaInterface* interface = new LuaInterface(L);
 
 private slots:
 
