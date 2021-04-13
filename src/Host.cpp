@@ -30,6 +30,7 @@
 #include "TDebug.h"
 #include "TMainConsole.h"
 #include "TCommandLine.h"
+#include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
@@ -44,6 +45,7 @@
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
 #include "dlgNotepad.h"
+#include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgIRC.h"
 #include "mudlet.h"
@@ -400,6 +402,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
 {
+    TDebug::addHost(this);
+
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
 
@@ -478,6 +482,7 @@ Host::~Host()
     mIsClosingDown = true;
     mErrorLogStream.flush();
     mErrorLogFile.close();
+    TDebug::removeHost(this);
 }
 
 void Host::loadPackageInfo()
@@ -1797,6 +1802,10 @@ bool Host::installPackage(const QString& fileName, int module)
     detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(detailedInstallEvent);
 
+    if (mpPackageManager) {
+        mpPackageManager->resetPackageTable();
+    }
+
     return true;
 }
 
@@ -1896,6 +1905,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     if (mpEditorDialog && module != 3) {
         mpEditorDialog->doCleanReset();
     }
+
     mTriggerUnit.uninstall(packageName);
     mTimerUnit.uninstall(packageName);
     mAliasUnit.uninstall(packageName);
@@ -1939,6 +1949,9 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     //NOW we reset if we're uninstalling a module
     if (mpEditorDialog && module == 3) {
         mpEditorDialog->doCleanReset();
+    }
+    if (mpPackageManager) {
+        mpPackageManager->resetPackageTable();
     }
     return true;
 }
@@ -2538,13 +2551,13 @@ void Host::setName(const QString& newName)
         return;
     }
 
+    TDebug::changeHostName(this, newName);
     int currentPlayerRoom = 0;
     if (mpMap) {
         currentPlayerRoom = mpMap->mRoomIdHash.take(mHostName);
     }
 
     mHostName = newName;
-    mpConsole->setProperty("HostName", newName);
 
     mTelnet.mProfileName = newName;
     if (mpMap) {
@@ -2555,6 +2568,8 @@ void Host::setName(const QString& newName)
     }
 
     if (mpConsole) {
+        // If skipped they will be taken care of in the TMainConsole constructor:
+        mpConsole->setProperty("HostName", newName);
         mpConsole->setProfileName(newName);
     }
     mTimerUnit.changeHostName(newName);

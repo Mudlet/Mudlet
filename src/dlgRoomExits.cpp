@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2016, 2021 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -1836,7 +1837,9 @@ void dlgRoomExits::init(int id)
         it.next();
         int id_to = it.value();
         QString dir = it.key();
-        originalSpecialExits[dir] = new TExit();
+        auto pSpecialExit = new TExit();
+        // It should be impossible for this not to be valid:
+        Q_ASSERT_X(pSpecialExit, "dlgRoomExits::init(...)", "failed to generate a new TExit");
         auto pI = new QTreeWidgetItem(specialExits);
         TRoom* pExitToRoom = mpHost->mpMap->mpRoomDB->getRoom(id_to);
         //0 exit roomID
@@ -1859,15 +1862,15 @@ void dlgRoomExits::init(int id)
             pI->setForeground(0, QColor(Qt::red));
             pI->setToolTip(0, singleParagraph.arg(tr("Room Id is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number.")));
         }
-        originalSpecialExits.value(dir)->destination = id_to;
+        pSpecialExit->destination = id_to;
         //1 locked (or more properly "No route") - setCheckedState
         //automagically makes it a CheckBox!!!
         if (pR->hasSpecialExitLock(dir)) {
             pI->setCheckState(1, Qt::Checked);
-            originalSpecialExits.value(dir)->hasNoRoute = true;
+            pSpecialExit->hasNoRoute = true;
         } else {
             pI->setCheckState(1, Qt::Unchecked);
-            originalSpecialExits.value(dir)->hasNoRoute = false;
+            pSpecialExit->hasNoRoute = false;
         }
         pI->setToolTip(1, singleParagraph.arg(tr("Prevent a route being created via this exit, equivalent to an infinite exit weight.")));
 
@@ -1879,7 +1882,7 @@ void dlgRoomExits::init(int id)
         }
         pI->setTextAlignment(2, Qt::AlignRight);
         pI->setToolTip(2, singleParagraph.arg(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
-        originalSpecialExits.value(dir)->weight = pI->text(2).toInt();
+        pSpecialExit->weight = pI->text(2).toInt();
 
 
         //3-6 hold a buttongroup of 4, ideally QRadioButtons, to select a door type
@@ -1917,16 +1920,16 @@ void dlgRoomExits::init(int id)
             default:
                 qWarning().nospace().noquote() << "dlgRoomExits::init(" << id << ") WARNING - unexpected (special exit) doors[" << dir << "] value:" << pR->doors[dir] << " found!";
             }
-            originalSpecialExits.value(dir)->door = specialDoor;
+            pSpecialExit->door = specialDoor;
+            originalSpecialExits[dir] = pSpecialExit;
         }
 
         //7 holds the script/name
         pI->setText(7, dir);
         // Not relevant for special exits but better initialise it
-        auto exit = originalSpecialExits.value(dir);
-        if (exit) {
-            exit->hasStub = false;
-        }
+        pSpecialExit->hasStub = false;
+
+
     }
     mRoomID = id;
     button_save->setEnabled( false );
