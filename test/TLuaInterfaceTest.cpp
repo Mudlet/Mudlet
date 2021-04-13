@@ -35,7 +35,7 @@ private:
     lua_State* L = luaL_newstate();
     LuaInterface* interface = new LuaInterface(L);
 
-private slots:
+private slots: // NOLINT(readability-redundant-access-specifiers)
 
     void init()
     {
