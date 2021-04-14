@@ -1555,27 +1555,25 @@ int TLuaInterpreter::removeMapMenu(lua_State* L)
 int TLuaInterpreter::getMapMenus(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    if (host.mpMap) {
-        if (host.mpMap->mpMapper) {
-            if (host.mpMap->mpMapper->mp2dMap) {
-                lua_newtable(L);
-                QMapIterator<QString, QStringList> it(host.mpMap->mpMapper->mp2dMap->mUserMenus);
-                while (it.hasNext()) {
-                    it.next();
-                    QString parent, display;
-                    QStringList menuInfo = it.value();
-                    parent = menuInfo[0];
-                    display = menuInfo[1];
-                    lua_pushstring(L, it.key().toUtf8().constData());
-                    lua_pushstring(L, parent.toUtf8().constData());
-                    lua_pushstring(L, display.toUtf8().constData());
-                    lua_settable(L, -3);
-                }
-            }
-            return 1;
-        }
+    if (!(host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap)) {
+        return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
-    return 0;
+
+    lua_newtable(L);
+    QMapIterator<QString, QStringList> it(host.mpMap->mpMapper->mp2dMap->mUserMenus);
+    while (it.hasNext()) {
+        it.next();
+        QString parent, display;
+        QStringList menuInfo = it.value();
+        parent = menuInfo[0];
+        display = menuInfo[1];
+        qDebug() << it.key() << parent << display;
+        lua_pushstring(L, display.toUtf8().constData());
+        lua_pushstring(L, parent.isEmpty() ? "top-level" :parent.toUtf8().constData());
+        lua_settable(L, -3);
+    }
+
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addMapEvent
