@@ -11382,38 +11382,61 @@ int TLuaInterpreter::getOS(lua_State* L)
     // a Cygwin platform
     // CHECK: hopefully will NOT be triggered on mingw/msys
     lua_pushstring(L, "cygwin");
+    lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
+    return 2;
 #elif defined(Q_OS_WIN32)
     lua_pushstring(L, "windows");
+    lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
+    return 2;
 #elif defined(Q_OS_MACOS)
     lua_pushstring(L, "mac");
+    lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
+    return 2;
 #elif defined(Q_OS_LINUX)
     lua_pushstring(L, "linux");
+    lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
+    lua_pushstring(L, QSysInfo::productType().toUtf8().constData());
+    return 3;
 #elif defined(Q_OS_HURD)
-    // One can hope/dream!
     lua_pushstring(L, "hurd");
+    lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
+    return 2;
 #elif defined(Q_OS_FREEBSD)
     // Only defined on FreeBSD but NOT Debian kFreeBSD so we should check for
     // this first
     lua_pushstring(L, "freebsd");
+    lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
+    return 2;
 #elif defined(Q_OS_FREEBSD_KERNEL)
     // Defined for BOTH Debian kFreeBSD hybrid with a GNU userland and
     // main FreeBSD so it must be after Q_OS_FREEBSD check; included for Debian
     // packager who may want to have this!
     lua_pushstring(L, "kfreebsd");
+    lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
+    return 2;
 #elif defined(Q_OS_OPENBSD)
     lua_pushstring(L, "openbsd");
+    lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
+    return 2;
 #elif defined(Q_OS_NETBSD)
     lua_pushstring(L, "netbsd");
+    lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
+    return 2;
 #elif defined(Q_OS_BSD4)
     // Generic *nix - must be before unix and after other more specific results
     lua_pushstring(L, "bsd4");
+    lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
+    return 2;
 #elif defined(Q_OS_UNIX)
     // Most generic *nix - must be after bsd4 and other more specific results
     lua_pushstring(L, "unix");
+    lua_pushstring(L, QSysInfo::kernelVersion().toUtf8().constData());
+    return 2;
 #else
     lua_pushstring(L, "unknown");
+    lua_pushstring(L, "unknown");
+    return 2;
 #endif
-    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getClipboardText
