@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2019 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2019, 2021 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -205,7 +205,7 @@ public:
 
 public slots:
     void setDownloadProgress(qint64, qint64);
-    void replyFinished(QNetworkReply*);
+    void slot_replyFinished(QNetworkReply*);
     void slot_processReplayChunk();
     void handle_socket_signal_hostFound(QHostInfo);
     void handle_socket_signal_connected();
@@ -283,7 +283,7 @@ private:
     QTimer* mpPostingTimer;
     bool mUSE_IRE_DRIVER_BUGFIX;
 
-    QNetworkReply* packageDownloadReply;
+    QNetworkReply* mpPackageDownloadReply = nullptr;
 
     int mCommands;
     bool mMCCP_version_1;

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2014, 2017-2019, 2021 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
@@ -164,7 +164,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     connect(mTimerPass, &QTimer::timeout, this, &cTelnet::slot_send_pass);
 
     mpDownloader = new QNetworkAccessManager(this);
-    connect(mpDownloader, &QNetworkAccessManager::finished, this, &cTelnet::replyFinished);
+    connect(mpDownloader, &QNetworkAccessManager::finished, this, &cTelnet::slot_replyFinished);
 }
 
 void cTelnet::reset()
@@ -813,31 +813,38 @@ void cTelnet::sendTelnetOption(char type, char option)
 }
 
 
-void cTelnet::replyFinished(QNetworkReply* reply)
+void cTelnet::slot_replyFinished(QNetworkReply* reply)
 {
     mpProgressDialog->close();
-    packageDownloadReply->deleteLater();
 
-    // don't process if download was aborted
-    if (!reply->isFinished() || reply->error() != QNetworkReply::NoError) {
-        return;
+    if (reply != mpPackageDownloadReply) {
+        qWarning().nospace().noquote() << "cTelnet::slot_replyFinished(QNetworkReply*) ERROR - download finished, but it wasn't the one we are expecting";
+        reply->deleteLater();
+    } else {
+        // don't process if download was aborted
+        if (reply->error() != QNetworkReply::NoError) {
+            reply->deleteLater();
+            mpPackageDownloadReply = nullptr;
+            return;
+        }
+
+        QFile file(mServerPackage);
+        file.open(QFile::WriteOnly);
+        file.write(reply->readAll());
+        file.flush();
+        file.close();
+        reply->deleteLater();
+        mpPackageDownloadReply = nullptr;
+        mpHost->installPackage(mServerPackage, 0);
+        QString packageName = mServerPackage.section("/", -1);
+        packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
+        packageName.remove(QLatin1String(".trigger"), Qt::CaseInsensitive);
+        packageName.remove(QLatin1String(".xml"), Qt::CaseInsensitive);
+        packageName.remove(QLatin1String(".mpackage"), Qt::CaseInsensitive);
+        packageName.remove(QLatin1Char('/'));
+        packageName.remove(QLatin1Char('\\'));
+        mpHost->mServerGUI_Package_name = packageName;
     }
-
-    QFile file(mServerPackage);
-    file.open(QFile::WriteOnly);
-    file.write(reply->readAll());
-    file.flush();
-    file.close();
-    mpHost->installPackage(mServerPackage, 0);
-    QString packageName = mServerPackage.section("/", -1);
-    packageName.replace(".zip", "");
-    packageName.replace("trigger", "");
-    packageName.replace("xml", "");
-    packageName.replace(".mpackage", "");
-    packageName.replace('/', "");
-    packageName.replace('\\', "");
-    packageName.replace('.', "");
-    mpHost->mServerGUI_Package_name = packageName;
 }
 
 void cTelnet::setDownloadProgress(qint64 got, qint64 tot)
@@ -1671,10 +1678,10 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 mpHost->updateProxySettings(mpDownloader);
                 auto request = QNetworkRequest(QUrl(url));
                 mudlet::self()->setNetworkRequestDefaults(url, request);
-                packageDownloadReply = mpDownloader->get(request);
+                mpPackageDownloadReply = mpDownloader->get(request);
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
-                connect(packageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
-                connect(mpProgressDialog, &QProgressDialog::canceled, packageDownloadReply, &QNetworkReply::abort);
+                connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+                connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
                 mpProgressDialog->show();
             }
             return;
@@ -2039,10 +2046,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpHost->updateProxySettings(mpDownloader);
         auto request = QNetworkRequest(QUrl(url));
         mudlet::self()->setNetworkRequestDefaults(url, request);
-        packageDownloadReply = mpDownloader->get(request);
+        mpPackageDownloadReply = mpDownloader->get(request);
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
-        connect(packageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
-        connect(mpProgressDialog, &QProgressDialog::canceled, packageDownloadReply, &QNetworkReply::abort);
+        connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+        connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
         mpProgressDialog->show();
         return;
     } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"), Qt::CaseInsensitive)) {
