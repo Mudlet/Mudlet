@@ -381,6 +381,7 @@ public:
     void setDockLayoutUpdated(const QString&);
     void setToolbarLayoutUpdated(TToolBar*);
     bool commitLayoutUpdates(bool flush = false);
+    void setScreenDimensions(const int width, const int height) { mScreenWidth = width; mScreenHeight = height; }
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;

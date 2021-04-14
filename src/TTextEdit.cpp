@@ -80,10 +80,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
         const auto hostFont = mpHost->getDisplayFont();
         mFontHeight = QFontMetrics(hostFont).height();
         mFontWidth = QFontMetrics(hostFont).averageCharWidth();
-        mScreenWidth = 100;
-        if ((width() / mFontWidth) < mScreenWidth) {
-            mScreenWidth = 100; //width()/mFontWidth;
-        }
 
         mpHost->setDisplayFontFixedPitch(true);
         setFont(hostFont);
@@ -100,15 +96,13 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
         mShowTimeStamps = true;
         mFontHeight = QFontMetrics(mDisplayFont).height();
         mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
-        mScreenWidth = 100;
+        mFgColor = QColor(192, 192, 192);
+        mBgColor = Qt::black;
+        mDisplayFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal);
         mDisplayFont.setFixedPitch(true);
         setFont(mDisplayFont);
-        // initialize after mFontHeight and mFontWidth have been set, because the function uses them!
-        initDefaultSettings();
     }
     mScreenHeight = height() / mFontHeight;
-
-    mScreenWidth = 100;
 
     setMouseTracking(true);
     setFocusPolicy(Qt::NoFocus);
@@ -208,17 +202,6 @@ void TTextEdit::slot_hScrollBarMoved(int offset)
     }
 }
 
-void TTextEdit::initDefaultSettings()
-{
-    mFgColor = QColor(192, 192, 192);
-    mBgColor = QColor(Qt::black);
-    mDisplayFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal);
-    mDisplayFont.setFixedPitch(true);
-    setFont(mDisplayFont);
-    mWrapAt = 100;
-    mWrapIndentCount = 5;
-}
-
 void TTextEdit::calculateHMaxRange()
 {
     if (mIsLowerPane) {
@@ -298,8 +281,7 @@ void TTextEdit::updateScreenView()
         // Note the values in the "parent" Host instance - for the UPPER pane
         // so that they are available for NAWS:
         if (!mIsLowerPane) {
-            mpHost->mScreenWidth = mScreenWidth;
-            mpHost->mScreenHeight = mScreenHeight;
+            mpHost->setScreenDimensions(mScreenWidth, mScreenHeight);
         }
     } else {
         mScreenWidth = currentScreenWidth;
@@ -768,10 +750,13 @@ void TTextEdit::paintEvent(QPaintEvent* e)
 
     if (mScreenHeight <= 0 || mScreenWidth <= 0) {
         mScreenHeight = height() / mFontHeight;
+        mScreenWidth = 100;
         if (mScreenHeight <= 0) {
             return;
         }
-        mScreenWidth = 100;
+        if (mpConsole->getType() == TConsole::MainConsole && !mIsLowerPane) {
+            mpHost->setScreenDimensions(mScreenWidth, mScreenHeight);
+        }
     }
 
     QPainter painter(this);
@@ -1546,6 +1531,9 @@ bool TTextEdit::establishSelectedText()
         mScreenWidth = 100;
         if (mScreenHeight <= 0) {
             return false;
+        }
+        if (mpConsole->getType() == TConsole::MainConsole && !mIsLowerPane) {
+            mpHost->setScreenDimensions(mScreenWidth, mScreenHeight);
         }
     }
 
