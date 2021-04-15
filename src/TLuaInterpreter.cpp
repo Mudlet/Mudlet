@@ -11652,7 +11652,7 @@ void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList
      */
 }
 
-void TLuaInterpreter::setCaptureNameGroups(const NameGroupMatches& nameGroups, const QMap<QString, QPair<int, int>>& namePositions)
+void TLuaInterpreter::setCaptureNameGroups(const NameGroupMatches& nameGroups, const NamedMatchesRanges& namePositions)
 {
     mCapturedNameGroups = nameGroups;
     mCapturedNameGroupsPosList = namePositions;
@@ -11688,8 +11688,8 @@ void TLuaInterpreter::adjustCaptureGroups(int x, int a)
         }
     }
 
-    QMap<QString, QPair<int,int>>::iterator i;
-    for (i = mCapturedNameGroupsPosList.begin(); i != mCapturedNameGroupsPosList.end(); ++i) {
+    NamedMatchesRanges::iterator i;
+    for (i = mCapturedNameGroupsPosList.begin(); i != mCapturedNameGroupsPosList.cend(); ++i) {
         i.value().first += a;
         i.value().second += a;
     }

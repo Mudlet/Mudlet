@@ -300,9 +300,6 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     }
 
     int numberOfCaptureGroups = 0;
-    unsigned char* name_table;
-    int namecount;
-    int name_entry_size;
 
     int subject_length = strlen(subject);
     int rc, i;
@@ -346,21 +343,24 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
             TDebug(Qt::darkMagenta, Qt::black) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
         }
     }
+
+    int namecount;
+    int name_entry_size;
+    char* tabptr;
+
     pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMECOUNT, &namecount);
 
     if (namecount > 0) {
         // Based on snippet https://github.com/vmg/pcre/blob/master/pcredemo.c#L216
         // Retrieves char table end entry size and extracts name of group  and captures from
-        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &name_table);
+        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &tabptr);
         pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
-        char* tabptr = reinterpret_cast<char*>(name_table);
         for (i = 0; i < namecount; i++) {
             int n = (tabptr[0] << 8) | tabptr[1];
-            // Trim doesn't remove null character at the end of name that sometimes shows up
-            auto name = QString::fromUtf8(tabptr + 2, name_entry_size - 3).trimmed().remove(QStringLiteral("\u0000"));
-            char* substring_start = subject + ovector[2*n];
-            int substring_length = ovector[2*n+1] - ovector[2*n];
-            int utf16_pos = toMatch.indexOf(QString(substring_start));
+            auto name = QString::fromUtf8(tabptr + 2).trimmed();
+            auto* substring_start = subject + ovector[2*n];
+            auto substring_length = ovector[2*n+1] - ovector[2*n];
+            auto utf16_pos = toMatch.indexOf(QString(substring_start));
             auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
             tabptr += name_entry_size;
