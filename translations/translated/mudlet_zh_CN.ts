@@ -5905,18 +5905,20 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
       <source>Created</source>
-      <translation type="unfinished"/>
+      <translation>已创建</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="171"/>
       <source>Dependencies</source>
-      <translation type="unfinished"/>
+      <translation>依赖性</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageManager.cpp" line="242"/>
       <source>Remove packages</source>
       <comment>Button in package manager to remove selected package(s)</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>移除软件包</numerusform>
+      </translation>
     </message>
   </context>
   <context>
