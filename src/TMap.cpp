@@ -3077,7 +3077,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     TRoomDB* pNewRoomDB = new TRoomDB(this);
     bool abort = false;
     for (int i = 0, total = mapObj.value(QLatin1String("areas")).toArray().count(); i < total; ++i) {
-        TArea* pArea = new TArea(this, pNewRoomDB);
+        std::unique_ptr<TArea> pArea = std::make_unique<TArea>(this, pNewRoomDB);
         auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i);
         ++mProgressDialogAreasCount;
         if (incrementJsonProgressDialog(false, true, 0)) {
@@ -3087,7 +3087,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
             break;
         }
         // This will populate the TRoomDB::areas and TRoomDB::areaNameMap:
-        pNewRoomDB->addArea(pArea, id, name);
+        pNewRoomDB->addArea(pArea.release(), id, name);
     }
     if (abort) {
         mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);

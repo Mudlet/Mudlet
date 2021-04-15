@@ -54,10 +54,12 @@ void dlgRoomSymbol::init(QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms)
     initInstructionLabel();
     if (!pRooms.isEmpty()) {
         auto pRoom = *(pRooms.begin());
-        firstRoomId = pRoom->getId();
-        selectedColor = pRoom->mSymbolColor;
-        previewColor = pRoom->mSymbolColor;
-        roomColor = mpHost->mpMap->getColor(firstRoomId);
+        if (pRoom) {
+            auto firstRoomId = pRoom->getId();
+            selectedColor = pRoom->mSymbolColor;
+            previewColor = pRoom->mSymbolColor;
+            roomColor = mpHost->mpMap->getColor(firstRoomId);
+        }
     }
     updatePreview();
 }
