@@ -2026,17 +2026,17 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2925"/>
       <source>import or export already in progress</source>
-      <translation type="unfinished"/>
+      <translation>导入或导出正在进行中</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2933"/>
       <source>could not open file</source>
-      <translation type="unfinished"/>
+      <translation>无法打开文件</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2943"/>
       <source>could not parse file, reason: &quot;%1&quot; at offset %2</source>
-      <translation type="unfinished"/>
+      <translation>无法解析文件，原因: &quot;%1&quot; at offset %2</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2952"/>
@@ -2046,17 +2046,17 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2967"/>
       <source>invalid version number: %1 detected</source>
-      <translation type="unfinished"/>
+      <translation>无效的版本号: 检测到 %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2973"/>
       <source>no version number detected</source>
-      <translation type="unfinished"/>
+      <translation>未检测到版本号</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2979"/>
       <source>no areas detected</source>
-      <translation type="unfinished"/>
+      <translation>未检测到区域</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3004"/>
@@ -2067,7 +2067,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3100"/>
       <source>aborted by user</source>
-      <translation type="unfinished"/>
+      <translation>被用户终止</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2989"/>
