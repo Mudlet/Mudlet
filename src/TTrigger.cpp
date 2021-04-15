@@ -357,7 +357,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
         pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
         for (i = 0; i < namecount; i++) {
             int n = (tabptr[0] << 8) | tabptr[1];
-            auto name = QString::fromUtf8(tabptr + 2).trimmed();
+            auto name = QString::fromUtf8(&tabptr[2]).trimmed();
             auto* substring_start = subject + ovector[2*n];
             auto substring_length = ovector[2*n+1] - ovector[2*n];
             auto utf16_pos = toMatch.indexOf(QString(substring_start));
