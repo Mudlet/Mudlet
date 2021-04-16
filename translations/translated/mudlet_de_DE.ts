@@ -5854,7 +5854,7 @@ Nutzungen</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="485"/>
       <location filename="../src/dlgPackageExporter.cpp" line="590"/>
       <source>Exporting package...</source>
-      <translation type="unfinished"/>
+      <translation>Paket wird exportiert...</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="535"/>
