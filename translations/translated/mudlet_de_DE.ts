@@ -5823,7 +5823,7 @@ Nutzungen</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="166"/>
       <source>Failed to add file &quot;%1&quot; to package. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when a file is to be placed into the package but cannot be done for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Hinzufügen der Datei &quot;%1&quot; zum Paket. Fehlermeldung: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="311"/>
@@ -5859,7 +5859,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="535"/>
       <source>Failed to export. Could not open the folder &quot;%1&quot; for writing. Do you have the necessary permissions and free disk-space to write to that folder?</source>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Exportieren. Der Ordner &quot;%1&quot; konnte nicht zum Schreiben geöffnet werden. Hast du die notwendigen Berechtigungen und freien Speicherplatz, um in diesen Ordner zu schreiben?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="794"/>
@@ -5896,13 +5896,13 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="978"/>
       <source>Export cancelled.</source>
-      <translation type="unfinished"/>
+      <translation>Export abgebrochen.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="981"/>
       <source>Failed zip up the package. Error is: &quot;%1&quot;.</source>
       <comment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</comment>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Komprimieren der Paketdatei. Fehlermeldung: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1355"/>
