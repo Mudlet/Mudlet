@@ -32,12 +32,12 @@
     <message>
       <location filename="../src/glwidget.cpp" line="288"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation>Aucune salle dans la carte - chargez-en une autre, ou recommencez le mappage depuis le début pour commencer.</translation>
+      <translation>Aucune salle dans la carte - chargez-en une autre, ou recommencez la création de carte depuis le début pour commencer.</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation>Vous n'avez pas encore de carte - chargez-en une, ou commencez le mappage à partir de zéro pour commencer.</translation>
+      <translation>Vous n'avez pas encore de carte - chargez-en une, ou commencez la création de carte à partir de zéro pour commencer.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="290"/>
@@ -50,7 +50,7 @@
     <message>
       <location filename="../src/Host.cpp" line="464"/>
       <source>Text to send to the game</source>
-      <translation type="unfinished"/>
+      <translation>Texte à envoyer au jeu</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="858"/>
@@ -108,12 +108,12 @@ veuillez patienter...</translation>
     <message>
       <location filename="../src/Host.cpp" line="3652"/>
       <source>Pre-Map loading(3) report</source>
-      <translation type="unfinished"/>
+      <translation>Rapport de chargement pré-carte(3)</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3662"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Chargement de la carte(3) au rapport %1</translation>
     </message>
   </context>
   <context>
@@ -122,7 +122,7 @@ veuillez patienter...</translation>
       <location filename="../src/KeyUnit.cpp" line="333"/>
       <source>%1undefined key (code: 0x%2)</source>
       <comment>%1 is a string describing the modifier keys (e.g. &quot;shift&quot; or &quot;control&quot;) used with the key, whose &apos;code&apos; number, in %2 is not one that we have a name for. This is probably one of those extra keys around the edge of the keyboard that some people have.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 touche non définie (code : 0x%2)</translation>
     </message>
   </context>
   <context>
