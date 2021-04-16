@@ -1479,6 +1479,10 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         entries = dir.entryList(filters, QDir::Files, QDir::Time);
     }
 
+    if (entries.empty() && location.isEmpty()) {
+        return false;
+    }
+
     bool canRestore = true;
     QDataStream ifs;
     QFile file;
