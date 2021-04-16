@@ -1571,7 +1571,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="653"/>
       <source>Loading map(2) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Bezig met laden van kaart(2) %1 rapport</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1053"/>
@@ -1598,7 +1598,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1223"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Bezig met laden van kaart(1) %1 rapport</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1225"/>
