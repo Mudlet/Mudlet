@@ -5845,7 +5845,7 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="166"/>
       <source>Failed to add file &quot;%1&quot; to package. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when a file is to be placed into the package but cannot be done for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>Не удалось добавить файл &quot;%1&quot; в пакет. Сообщение об ошибке: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="311"/>
@@ -5876,12 +5876,12 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="485"/>
       <location filename="../src/dlgPackageExporter.cpp" line="590"/>
       <source>Exporting package...</source>
-      <translation type="unfinished"/>
+      <translation>Экспорт пакета...</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="535"/>
       <source>Failed to export. Could not open the folder &quot;%1&quot; for writing. Do you have the necessary permissions and free disk-space to write to that folder?</source>
-      <translation type="unfinished"/>
+      <translation>Не удалось экспортировать. Не удалось открыть папку &quot;%1&quot; для записи. У вас есть необходимые разрешения и свободное дисковое пространство для записи в эту папку?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="794"/>
@@ -5918,13 +5918,13 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="978"/>
       <source>Export cancelled.</source>
-      <translation type="unfinished"/>
+      <translation>Экспорт отменен.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="981"/>
       <source>Failed zip up the package. Error is: &quot;%1&quot;.</source>
       <comment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</comment>
-      <translation type="unfinished"/>
+      <translation>Не удалось заархивировать пакет. Ошибка: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1355"/>
