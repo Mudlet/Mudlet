@@ -1479,11 +1479,13 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         entries = dir.entryList(filters, QDir::Files, QDir::Time);
     }
 
+    bool canRestore = true;
+    bool noMapFile = false;
     if (entries.empty() && location.isEmpty()) {
-        return false;
+        noMapFile = true;
+        canRestore = false;
     }
 
-    bool canRestore = true;
     QDataStream ifs;
     QFile file;
     if (!entries.empty() || !location.isEmpty()) {
@@ -1525,7 +1527,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         if (!foundValidFile) {
             canRestore = false;
         }
-    } else {
+    } else if (!noMapFile) {
         file.setFileName(location);
         canRestore = validatePotentialMapFile(file, ifs);
     }
