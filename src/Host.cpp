@@ -405,7 +405,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     TDebug::addHost(this);
 
     // mLogStatus = mudlet::self()->mAutolog;
-    mLuaInterface.reset(new LuaInterface(this));
+    mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
 
     // Copy across the details needed for the "color_table":
     mLuaInterpreter.updateAnsi16ColorsInTable();

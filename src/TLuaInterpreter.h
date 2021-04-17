@@ -89,6 +89,8 @@ public:
     void msdp2Lua(const char*);
     void initLuaGlobals();
     void initIndenterGlobals();
+    lua_State* getLuaGlobalState();
+
     bool call(const QString& function, const QString& mName, const bool muteDebugOutput = false);
     std::pair<bool, bool> callReturnBool(const QString& function, const QString& mName);
     bool callMulti(const QString& function, const QString& mName);
