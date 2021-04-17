@@ -114,7 +114,7 @@ private:
     static std::pair<bool, QString> zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig);
     static std::pair<bool, QString> copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath);
     QFileInfo copyIconToTmp(const QString& tempPath) const;
-    void writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile);
+    void writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile, const QString& packageDescription);
     void exportXml(bool& isOk,
                    QList<QTreeWidgetItem*>& trigList,
                    QList<QTreeWidgetItem*>& timerList,
