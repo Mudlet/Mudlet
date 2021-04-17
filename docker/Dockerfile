@@ -56,10 +56,13 @@ COPY --chown=mudlet:mudlet src src
 
 USER mudlet
 
-ARG BUILD_CORES=4
-RUN mkdir build && cd build && cmake .. && cmake --build . --parallel ${BUILD_CORES}
-RUN mkdir /home/mudlet/settings
+RUN mkdir build
+VOLUME /home/mudlet/build
 
+ARG BUILD_CORES=4
+RUN cd build && cmake .. && cmake --build . --parallel ${BUILD_CORES}
+
+RUN mkdir /home/mudlet/settings
 VOLUME /home/mudlet/settings
 
 CMD ["build/src/mudlet"]
