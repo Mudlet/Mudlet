@@ -128,6 +128,10 @@ void dlgPackageManager::slot_remove_packages()
     for (int i = 0; i < removePackages.size(); i++) {
         mpHost->uninstallPackage(removePackages.at(i), 0);
     }
+
+    mDetailsTable->hide();
+    ui->detailsLabel->hide();
+    mDescription->hide();
 }
 
 void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
