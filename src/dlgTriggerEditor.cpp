@@ -7072,9 +7072,7 @@ void dlgTriggerEditor::slot_add_new()
         addKey(false); //add normal alias
         break;
     case EditorViewType::cmVarsView:
-        if (mpCurrentVarItem) {
-            addVar(false); //add normal action
-        }
+        addVar(false); //add variable
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
@@ -7103,9 +7101,7 @@ void dlgTriggerEditor::slot_add_new_folder()
         addKey(true); //add alias group
         break;
     case EditorViewType::cmVarsView:
-        if (mpCurrentVarItem) {
-            addVar(true);
-        }
+        addVar(true); // add lua table
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
