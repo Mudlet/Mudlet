@@ -55,7 +55,6 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
 {
     ui->setupUi(this);
     ui->splitter_metadataAssets->hide();
-    //    ui->splitter_metadata->setSizes({})
     ui->Icon->hide();
 
     mpExportSelection = ui->treeWidget_exportSelection;
@@ -499,19 +498,19 @@ void dlgPackageExporter::slot_export_package()
 
     if (!imageList.isEmpty()) {
         //Create description image dir
-        QString descriptionImageDirName = QStringLiteral("%1.mudlet/description_images/").arg(tempPath);
-        QDir descriptionImageDir = QDir(descriptionImageDirName);
+        QString descriptionImagesDirName = QStringLiteral("%1.mudlet/description_images/").arg(tempPath);
+        QDir descriptionImageDir = QDir(descriptionImagesDirName);
         if (!descriptionImageDir.exists()) {
-            descriptionImageDir.mkpath(descriptionImageDirName);
+            descriptionImageDir.mkpath(descriptionImagesDirName);
         }
         for (int i = imageList.size() - 1; i >= 0; i--) {
             QFileInfo imageFile(imageList.at(i));
             if (imageFile.exists()) {
-                QString imageDir = descriptionImageDirName;
+                QString imageDir = descriptionImagesDirName;
                 imageDir.append(imageFile.fileName());
                 QFile::copy(imageFile.absoluteFilePath(), imageDir);
             }
-            //replace $Imageindex with $packagePath in description file
+            //replace temporary path with the path that is now inside the package
             plainDescription.replace(QStringLiteral("$%1").arg(imageFile.fileName()), QStringLiteral("$packagePath/.mudlet/description_images/%1").arg(imageFile.fileName()));
         }
     }
@@ -797,7 +796,7 @@ std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& 
             QFile::remove(filePath);
             QFile::copy(asset.absoluteFilePath(), filePath);
         } else if (asset.isDir()) {
-            copy_directory(asset.absoluteFilePath(), filePath, true);
+            copy_directory(asset.absoluteFilePath(), filePath, false);
         }
     }
 
