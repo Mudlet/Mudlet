@@ -4,6 +4,8 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install --no-install-recommends -y \
     build-essential \
     ccache \
+    clang-tidy \
+    clazy \
     cmake \
     gdb \
     git \
@@ -33,6 +35,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     qttools5-dev \
     qt5keychain-dev \
     qtcreator \
+    valgrind \
     zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -43,7 +46,7 @@ RUN luarocks install lcf && \
 RUN useradd -ms /bin/bash mudlet
 WORKDIR /home/mudlet
 
-COPY --chown=mudlet:mudlet CMakeLists.txt CPPLINT.cfg mudlet.desktop mudlet.png mudlet.svg ./
+COPY --chown=mudlet:mudlet .clang-tidy CMakeLists.txt CPPLINT.cfg mudlet.desktop mudlet.png mudlet.svg ./
 COPY --chown=mudlet:mudlet 3rdparty 3rdparty
 COPY --chown=mudlet:mudlet templates templates
 COPY --chown=mudlet:mudlet translations translations
