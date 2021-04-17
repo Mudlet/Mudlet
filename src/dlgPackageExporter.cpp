@@ -528,7 +528,7 @@ void dlgPackageExporter::slot_export_package()
 
     mXmlPathFileName = QStringLiteral("%1/%2.xml").arg(stagingDirName, mPackageName);
 
-    writeConfigFile(stagingDirName, iconFile);
+    writeConfigFile(stagingDirName, iconFile, plainDescription);
 
     QFile checkWriteability(mXmlPathFileName);
     if (!checkWriteability.open(QIODevice::WriteOnly)) {
@@ -738,7 +738,7 @@ void dlgPackageExporter::exportXml(bool& isOk,
         // seen the error message...
     }
 }
-void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile)
+void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile, const QString& packageDescription)
 {
     QStringList dependencies;
     for (int index = 0; index < ui->comboBox_dependencies->count(); index++) {
@@ -750,7 +750,7 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     appendToConfigFile(mPackageConfig, QStringLiteral("author"), ui->lineEdit_author->text());
     appendToConfigFile(mPackageConfig, QStringLiteral("icon"), iconFile.fileName());
     appendToConfigFile(mPackageConfig, QStringLiteral("title"), ui->lineEdit_title->text());
-    appendToConfigFile(mPackageConfig, QStringLiteral("description"), mPlainDescription);
+    appendToConfigFile(mPackageConfig, QStringLiteral("description"), packageDescription);
     appendToConfigFile(mPackageConfig, QStringLiteral("version"), ui->lineEdit_version->text());
     appendToConfigFile(mPackageConfig, QStringLiteral("dependencies"), dependencies.join(","));
     QDateTime iso8601timestamp = QDateTime::currentDateTime();
