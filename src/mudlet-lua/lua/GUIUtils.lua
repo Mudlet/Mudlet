@@ -2082,7 +2082,7 @@ end
 --- @param windowName Optional name of the window to replace on
 --- @param text The text to replace the selection with.
 function creplaceLine(window, text)
-	if not text then
+  if not text then
     selectCurrentLine()
   else
     selectCurrentLine(window)
@@ -2101,7 +2101,7 @@ end
 --- @param windowName Optional name of the window to replace on
 --- @param text The text to replace the selection with.
 function dreplaceLine(window, text)
-	if not text then
+  if not text then
     selectCurrentLine()
   else
     selectCurrentLine(window)
@@ -2120,7 +2120,7 @@ end
 --- @param windowName Optional name of the window to replace on
 --- @param text The text to replace the selection with.
 function hreplaceLine(window, text)
-	if not text then
+  if not text then
     selectCurrentLine()
   else
     selectCurrentLine(window)
