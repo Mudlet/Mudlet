@@ -13935,6 +13935,10 @@ void TLuaInterpreter::initLuaGlobals()
     //FIXME make function call in destructor lua_close(L);
 }
 
+lua_State* TLuaInterpreter::getLuaGlobalState() {
+    return pGlobalLua;
+}
+
 // No documentation available in wiki - internal function
 // Creates a 'mudlet.translations' table with directions
 void TLuaInterpreter::setupLanguageData()
