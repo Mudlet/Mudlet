@@ -1404,8 +1404,8 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     }
     ifs >> version;
     if ((version < 1) || (version > 127)) {
-        QString errMsg = tr("[ ALERT ] - File does not seem to be a Mudlet Map file, the part that indicates\n"
-                            "its format version seems to be \"%1\" and that doesn't make sense, the file is:\n"
+        QString errMsg = tr("[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates\n"
+                            "its format version seems to be \"%1\" and that doesn't make sense. The file is:\n"
                             "\"%2\".")
                                  .arg(version)
                                  .arg(file.fileName());
@@ -1419,8 +1419,8 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
         return false;
     }
     if (version > mMaxVersion) {
-        QString errMsg = tr("[ ALERT ] - Map file is too new, its format version \"%1\" is higher than this version of\n"
-                            "Mudlet can handle (%2)!  The file is:\n\"%3\".")
+        QString errMsg = tr("[ ALERT ] - Map file is too new. Its format version \"%1\" is higher than this version of\n"
+                            "Mudlet can handle (%2)! The file is:\n\"%3\".")
                                  .arg(version)
                                  .arg(mMaxVersion)
                                  .arg(file.fileName());
@@ -1435,9 +1435,9 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     }
 
     if (version < 4) {
-        QString alertMsg = tr("[ ALERT ] - Map file is really old, its format version \"%1\" is so ancient that\n"
+        QString alertMsg = tr("[ ALERT ] - Map file is really old. Its format version \"%1\" is so ancient that\n"
                               "this version of Mudlet may not gain enough information from\n"
-                              "it but it will try!  The file is: \"%2\".")
+                              "it but it will try! The file is: \"%2\".")
                                    .arg(version)
                                    .arg(file.fileName());
         appendErrorMsgWithNoLf(alertMsg, false);
