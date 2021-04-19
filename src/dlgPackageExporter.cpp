@@ -977,7 +977,7 @@ dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& pac
                 return {false, tr("Export cancelled.")};
             }
 
-            QString errorMsg = tr("Failed zip up the package. Error is: \"%1\".",
+            QString errorMsg = tr("Failed to zip up the package. Error is: \"%1\".",
                                   // Intentional comment to separate arguments
                                   "This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be "
                                   "the point at which something breaks because a problem was not spotted/detected in the process earlier...")
