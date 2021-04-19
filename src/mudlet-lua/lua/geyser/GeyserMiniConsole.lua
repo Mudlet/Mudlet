@@ -26,6 +26,30 @@ function Geyser.MiniConsole:replace (with)
   replace(self.name, with)
 end
 
+--- Replaces the entire line the cursor is on
+-- @param with The text to use as a replacement
+function Geyser.MiniConsole:replaceLine (with)
+  replaceLine(self.name, with)
+end
+
+--- Replaces the entire line the cursor is on, with color like cecho
+-- @param with The text to use as a replacement
+function Geyser.MiniConsole:creplaceLine (with)
+  creplaceLine(self.name, with)
+end
+
+--- Replaces the entire line the cursor is on, with color like decho
+-- @param with The text to use as a replacement
+function Geyser.MiniConsole:dreplaceLine (with)
+  dreplaceLine(self.name, with)
+end
+
+--- Replaces the entire line the cursor is on, with color like hecho
+-- @param with The text to use as a replacement
+function Geyser.MiniConsole:hreplaceLine (with)
+  hreplaceLine(self.name, with)
+end
+
 --- Sets the size of this miniconsole's buffer.
 -- @param linesLimit The number of lines to store - same limitations as Mudlet
 --                   function of the same name.

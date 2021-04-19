@@ -386,7 +386,6 @@ describe("Tests Other.lua functions", function()
       dispatchEventToFunctions()
       timeframe()
       killtimeframe()
-      creplaceLine()? should be moved to GUIUtils.lua I think
       translateTable()
   ]]
 end)
