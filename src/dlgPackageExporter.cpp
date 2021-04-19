@@ -1343,6 +1343,8 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem *item)
     }
 }
 
+// allow the top-folder to be force-selected for the package with right-click
+// normally undesired as it'll add unnecessary nesting
 void dlgPackageExporter::slot_rightClickOnItems(const QPoint& point)
 {
     auto item = mpExportSelection->itemAt(point);
