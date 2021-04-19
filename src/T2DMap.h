@@ -88,7 +88,7 @@ public:
 #endif
 
 
-    TMap* mpMap;
+    TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
     qreal xyzoom;
     int mRX;
