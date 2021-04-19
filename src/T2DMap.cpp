@@ -79,7 +79,6 @@ const QString& key_icon_dialog_cancel = QStringLiteral(":/icons/dialog-cancel.pn
 
 T2DMap::T2DMap(QWidget* parent)
 : QWidget(parent)
-, mpMap()
 , xyzoom(20)
 , mRX()
 , mRY()
@@ -173,8 +172,8 @@ void T2DMap::init()
 
     isCenterViewCall = false;
 
-    eSize = mpMap->mpHost->mLineSize;
-    rSize = mpMap->mpHost->mRoomSize;
+    eSize = mpHost->mLineSize;
+    rSize = mpHost->mRoomSize;
     mMapperUseAntiAlias = mpHost->mMapperUseAntiAlias;
     if (mMapViewOnly != mpHost->mMapViewOnly) {
         // If it was initialised in one state but the stored setting is the
@@ -2301,11 +2300,11 @@ int T2DMap::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset,
 
 void T2DMap::mouseDoubleClickEvent(QMouseEvent* event)
 {
-    if (mDialogLock || (event->buttons() != Qt::LeftButton)) {
-        return;
-    }
     if (!mpMap||!mpMap->mpRoomDB) {
         // No map loaded!
+        return;
+    }
+    if (mDialogLock || (event->buttons() != Qt::LeftButton)) {
         return;
     }
     int x = event->x();
@@ -2404,6 +2403,10 @@ void T2DMap::createLabel(QRectF labelRectangle)
 
 void T2DMap::mouseReleaseEvent(QMouseEvent* e)
 {
+    if (!mpMap) {
+        return;
+    }
+
     if (mMoveLabel) {
         mMoveLabel = false;
     }
@@ -2459,6 +2462,9 @@ bool T2DMap::event(QEvent* event)
 
 void T2DMap::mousePressEvent(QMouseEvent* event)
 {
+    if (!mpMap) {
+        return;
+    }
     mudlet::self()->activateProfile(mpHost);
     mNewMoveAction = true;
     if (event->buttons() & Qt::LeftButton) {
@@ -2779,7 +2785,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     getCenterSelection();
             }
 
-            if (!mpMap||!mpMap->mpRoomDB) {
+            if (!mpMap->mpRoomDB) {
                 // No map loaded
                 auto createMap = new QAction(tr("Create new map", "2D Mapper context menu (no map found) item"), this);
                 connect(createMap, &QAction::triggered, this, &T2DMap::slot_newMap);
@@ -3104,27 +3110,25 @@ void T2DMap::slot_createRoom()
         return;
     }
 
-    auto roomID = mpHost->mpMap->createNewRoomID();
-    if (!mpHost->mpMap->addRoom(roomID)) {
+    auto roomID = mpMap->createNewRoomID();
+    if (!mpMap->addRoom(roomID)) {
         return;
     }
 
-    mpHost->mpMap->setRoomArea(roomID, mAreaID, false);
+    mpMap->setRoomArea(roomID, mAreaID, false);
 
     auto mousePosition = getMousePosition();
-    mpHost->mpMap->setRoomCoordinates(roomID, mousePosition.first, mousePosition.second, mOz);
+    mpMap->setRoomCoordinates(roomID, mousePosition.first, mousePosition.second, mOz);
 
-    mpHost->mpMap->mMapGraphNeedsUpdate = true;
+    mpMap->mMapGraphNeedsUpdate = true;
 #if defined(INCLUDE_3DMAPPER)
-    if (mpHost->mpMap->mpM) {
-        mpHost->mpMap->mpM->update();
+    if (mpMap->mpM) {
+        mpMap->mpM->update();
     }
 #endif
-    if (mpHost->mpMap->mpMapper->mp2dMap) {
-        mpHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
-        mpHost->mpMap->mpMapper->mp2dMap->update();
-        mpHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = false;
-    }
+    isCenterViewCall = true;
+    update();
+    isCenterViewCall = false;
 }
 
 // Used both by "Properties..." context menu item for existing lines AND
@@ -4098,31 +4102,29 @@ void T2DMap::slot_newMap()
         return;
     }
 
-    auto roomID = mpHost->mpMap->createNewRoomID();
+    auto roomID = mpMap->createNewRoomID();
 
-    if (!mpHost->mpMap->addRoom(roomID)) {
+    if (!mpMap->addRoom(roomID)) {
         return;
     }
 
-    mpHost->mpMap->setRoomArea(roomID, -1, false);
-    mpHost->mpMap->setRoomCoordinates(roomID, 0, 0, 0);
-    mpHost->mpMap->mMapGraphNeedsUpdate = true;
+    mpMap->setRoomArea(roomID, -1, false);
+    mpMap->setRoomCoordinates(roomID, 0, 0, 0);
+    mpMap->mMapGraphNeedsUpdate = true;
 
-    mpHost->mpMap->mRoomIdHash[mpMap->mProfileName] = roomID;
-    mpHost->mpMap->mNewMove = true;
+    mpMap->mRoomIdHash[mpMap->mProfileName] = roomID;
+    mpMap->mNewMove = true;
 
 #if defined(INCLUDE_3DMAPPER)
-    if (mpHost->mpMap->mpM) {
-        mpHost->mpMap->mpM->update();
+    if (mpMap->mpM) {
+        mpMap->mpM->update();
     }
 #endif
 
-    if (mpHost->mpMap->mpMapper->mp2dMap) {
-        mpHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
-        mpHost->mpMap->mpMapper->mp2dMap->update();
-        mpHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = false;
-        mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-    }
+    isCenterViewCall = true;
+    update();
+    isCenterViewCall = false;
+    mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
 }
 
 void T2DMap::slot_setArea()
