@@ -5896,7 +5896,7 @@ Utilizzi</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="485"/>
       <location filename="../src/dlgPackageExporter.cpp" line="590"/>
       <source>Exporting package...</source>
-      <translation type="unfinished"/>
+      <translation>Esporta package...</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="535"/>
@@ -5938,7 +5938,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="978"/>
       <source>Export cancelled.</source>
-      <translation type="unfinished"/>
+      <translation>Esportazione annullata.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="981"/>
