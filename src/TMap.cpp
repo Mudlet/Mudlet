@@ -1018,8 +1018,8 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         saveVersion = 0;
     } else if (saveVersion > mMaxVersion) {
         saveVersion = mMaxVersion;
-         QString errMsg = tr("[ ERROR ] - The format {%1} you are trying to save the map with is too new\n"
-                             "for this version of Mudlet. Supported are only formats up to version {%2}.")
+         QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too new\n"
+                             "for this version of Mudlet. Supported are only formats up to version %2.")
                                  .arg(QString::number(saveVersion), QString::number(mMaxVersion));
         appendErrorMsgWithNoLf(errMsg, false);
         postMessage(errMsg);
@@ -1034,8 +1034,8 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     }
 
     if (mSaveVersion != mVersion) {
-        QString message = tr("[ ALERT ] - Saving map in a format {%1} that is different than the one it was\n"
-                             "loaded as {%2}. This may be an issue if you want to share the resulting\n"
+        QString message = tr("[ ALERT ] - Saving map in format version \"%1\" that is different than \"%2\" which\n"
+                             "it was loaded as. This may be an issue if you want to share the resulting\n"
                              "map with others relying on the original format.")
                                   .arg(mSaveVersion)
                                   .arg(mVersion);
@@ -1044,8 +1044,8 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     }
 
     if (mSaveVersion != mDefaultVersion) {
-        QString message = tr("[ WARN ]  - Saving map in a format {%1} different from the\n"
-                             "recommended format {%2} for this version of Mudlet.")
+        QString message = tr("[ WARN ]  - Saving map in format version \"%1\" different from the\n"
+                             "recommended map version %2 for this version of Mudlet.")
                                   .arg(mSaveVersion)
                                   .arg(mDefaultVersion);
         appendErrorMsgWithNoLf(message, false);
@@ -1382,7 +1382,7 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
 {
     int version = 0;
     if (!file.open(QFile::ReadOnly)) {
-        QString errMsg = tr(R"([ ERROR ] - Unable to open (for reading) map file: "%1"!)").arg(file.fileName());
+        QString errMsg = tr(R"([ ERROR ] - Unable to open map file for reading: "%1"!)").arg(file.fileName());
         appendErrorMsg(errMsg, false);
         postMessage(errMsg);
         return false;
@@ -1404,8 +1404,8 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     }
     ifs >> version;
     if ((version < 1) || (version > 127)) {
-        QString errMsg = tr("[ ALERT ] - File does not seem to be a Mudlet Map file, the part that indicates\n"
-                            "its format version number seems to be (%1) and that doesn't make sense, the file is:\n"
+        QString errMsg = tr("[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates\n"
+                            "its format version seems to be \"%1\" and that doesn't make sense. The file is:\n"
                             "\"%2\".")
                                  .arg(version)
                                  .arg(file.fileName());
@@ -1419,14 +1419,14 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
         return false;
     }
     if (version > mMaxVersion) {
-        QString errMsg = tr("[ ALERT ] - Map file is too new, its file format (%1) is higher than this version of\n"
-                            "Mudlet can handle (%2)!  The file is:\n\"%3\".")
+        QString errMsg = tr("[ ALERT ] - Map file is too new. Its format version \"%1\" is higher than this version of\n"
+                            "Mudlet can handle (%2)! The file is:\n\"%3\".")
                                  .arg(version)
                                  .arg(mMaxVersion)
                                  .arg(file.fileName());
         appendErrorMsgWithNoLf(errMsg);
         postMessage(errMsg);
-        QString infoMsg = tr("[ INFO ]  - You will need to upgrade your Mudlet to read it.");
+        QString infoMsg = tr("[ INFO ]  - You will need to update your Mudlet to read the map file.");
         appendErrorMsgWithNoLf(infoMsg);
         postMessage(infoMsg);
         ifs.setDevice(nullptr);
@@ -1435,9 +1435,9 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     }
 
     if (version < 4) {
-        QString alertMsg = tr("[ ALERT ] - Map file is really old, its file format (%1) is so ancient that\n"
+        QString alertMsg = tr("[ ALERT ] - Map file is really old. Its format version \"%1\" is so ancient that\n"
                               "this version of Mudlet may not gain enough information from\n"
-                              "it but it will try!  The file is: \"%2\".")
+                              "it but it will try! The file is: \"%2\".")
                                    .arg(version)
                                    .arg(file.fileName());
         appendErrorMsgWithNoLf(alertMsg, false);
@@ -1449,10 +1449,10 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
         postMessage(infoMsg);
     } else {
         // Less than (but not less than 4) or equal to default version
-        QString infoMsg = tr("[ INFO ]  - Reading map (format version:%1) file:\n"
+        QString infoMsg = tr("[ INFO ]  - Reading map. Format version: %1. File:\n"
                              "\"%2\",\n"
                              "please wait...").arg(version).arg(file.fileName());
-        appendErrorMsg(tr(R"([ INFO ]  - Reading map (format version:%1) file: "%2".)").arg(version).arg(file.fileName()), false);
+        appendErrorMsg(tr(R"([ INFO ]  - Reading map. Format version: %1. File: "%2".)").arg(version).arg(file.fileName()), false);
         postMessage(infoMsg);
     }
     mVersion = version;
@@ -1824,7 +1824,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     QFile file(QStringLiteral("%1/%2").arg(folder, entries.at(0)));
 
     if (!file.open(QFile::ReadOnly)) {
-        QString errMsg = tr(R"([ ERROR ] - Unable to open (for reading) map file: "%1"!)").arg(file.fileName());
+        QString errMsg = tr(R"([ ERROR ] - Unable to open map file for reading: "%1"!)").arg(file.fileName());
         appendErrorMsg(errMsg, false);
         postMessage(errMsg);
         return false;
@@ -1840,7 +1840,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
     ifs >> otherProfileVersion;
 
-    QString infoMsg = tr(R"([ INFO ]  - Checking map file: "%1", format version:%2...)").arg(file.fileName()).arg(otherProfileVersion);
+    QString infoMsg = tr(R"([ INFO ]  - Checking map file "%1", format version "%2".)").arg(file.fileName()).arg(otherProfileVersion);
     appendErrorMsg(infoMsg, false);
     if (mudlet::self()->showMapAuditErrors()) {
         postMessage(infoMsg);
@@ -2962,16 +2962,16 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
             // We only handle 1.000f right now (0.001f was borked, 0.002f
             // didn't include room symbol color, 0.003 is the same as 1.000
             // but the numbered was changed for release into the wild):
-            qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was found: " << formatVersion << "and it is not okay.";
+            qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information \"" << formatVersion << "\" was found, and it is not okay.";
             return {false, (translatableTexts
-                        ? tr("invalid version number: %1 detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0'))
-                        : QStringLiteral("invalid version number: %1 detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0')))};
+                        ? tr("invalid format version \"%1\" detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0'))
+                        : QStringLiteral("invalid format version \"%1\" detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0')))};
         }
     } else {
-        qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was not found, this is not likely to be a Mudlet JSON map file.";
+        qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was not found. This is not likely to be a Mudlet JSON map file.";
         return {false, (translatableTexts
-                    ? tr("no version number detected")
-                    : QStringLiteral("no version number detected"))};
+                    ? tr("no format version detected")
+                    : QStringLiteral("no format version detected"))};
     }
 
     if (!mapObj.contains(QLatin1String("areas")) || !mapObj.value(QLatin1String("areas")).isArray()) {
