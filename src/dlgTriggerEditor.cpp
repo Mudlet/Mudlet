@@ -3473,13 +3473,13 @@ void dlgTriggerEditor::addVar(bool isFolder)
     VarUnit* vu = lI->getVarUnit();
 
     QStringList nameL;
-    nameL << QString(isFolder ? "New table name" : "New variable name");
+    nameL << QString(isFolder ? tr("New table name") : tr("New variable name"));
 
     QTreeWidgetItem* pParent;
     QTreeWidgetItem* pNewItem;
     QTreeWidgetItem* cItem = treeWidget_variables->currentItem();
-    TVar* cVar = vu->getWVar(cItem);
     if (cItem) {
+        TVar* cVar = vu->getWVar(cItem);
         if (cVar && cVar->getValueType() == LUA_TTABLE) {
             pParent = cItem;
         } else {
