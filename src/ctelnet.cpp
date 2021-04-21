@@ -2927,7 +2927,9 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                 }
             } else {
                 if (ch == TN_BELL) {
-                    // flash taskbar for 3 seconds on the telnet bell
+                    // flash taskbar for 3 seconds on the telnet bell, and also
+                    // make the default system sound:
+                    QApplication::beep();
                     QApplication::alert(mudlet::self(), 3000);
                 }
                 if (ch != '\r' && ch != '\0') {

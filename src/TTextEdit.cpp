@@ -492,10 +492,44 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     uint unicode = getGraphemeBaseCharacter(grapheme);
     int charWidth;
     bool useReplacementCharacter = false;
-    if (unicode == '\t') {
+    switch (unicode) {
+    case 0:     graphemes.append(QChar(0x2400)); charWidth = 1; break; // NUL - not sure that this can appear
+    case 1:     graphemes.append(QChar(0x2401)); charWidth = 1; break; // SOH
+    case 2:     graphemes.append(QChar(0x2402)); charWidth = 1; break; // STX
+    case 3:     graphemes.append(QChar(0x2403)); charWidth = 1; break; // ETX
+    case 4:     graphemes.append(QChar(0x2404)); charWidth = 1; break; // EOT
+    case 5:     graphemes.append(QChar(0x2405)); charWidth = 1; break; // ENQ
+    case 6:     graphemes.append(QChar(0x2406)); charWidth = 1; break; // ACK
+    case 7:     graphemes.append(QChar(0x2407)); charWidth = 1; break; // BEL - the handling of this gets done when it is received, not when it is displayed here:
+    case 8:     graphemes.append(QChar(0x2408)); charWidth = 1; break; // BS
+    case 9: // TAB
         charWidth = mTabStopwidth - (column % mTabStopwidth);
         graphemes.append(QString(QChar::Tabulation));
-    } else {
+        break;
+    // 10 is Line-Feed and that should never appear!
+    case 11:    graphemes.append(QChar(0x240B)); charWidth = 1; break; // VT
+    case 12:    graphemes.append(QChar(0x240C)); charWidth = 1; break; // FF
+    case 13:    graphemes.append(QChar(0x240D)); charWidth = 1; break; // CR - shouldn't appear but does seem to crop up somehow!
+    case 14:    graphemes.append(QChar(0x240E)); charWidth = 1; break; // ACK
+    case 15:    graphemes.append(QChar(0x240F)); charWidth = 1; break; // SS
+    case 16:    graphemes.append(QChar(0x2410)); charWidth = 1; break; // SI
+    case 17:    graphemes.append(QChar(0x2411)); charWidth = 1; break; // DLE
+    case 18:    graphemes.append(QChar(0x2412)); charWidth = 1; break; // DC1
+    case 19:    graphemes.append(QChar(0x2413)); charWidth = 1; break; // DC2
+    case 20:    graphemes.append(QChar(0x2414)); charWidth = 1; break; // DC3
+    case 21:    graphemes.append(QChar(0x2415)); charWidth = 1; break; // DC4
+    case 22:    graphemes.append(QChar(0x2416)); charWidth = 1; break; // NAK
+    case 23:    graphemes.append(QChar(0x2417)); charWidth = 1; break; // ETB
+    case 24:    graphemes.append(QChar(0x2418)); charWidth = 1; break; // CAN
+    case 25:    graphemes.append(QChar(0x2419)); charWidth = 1; break; // EM
+    case 26:    graphemes.append(QChar(0x241A)); charWidth = 1; break; // SUB
+    case 27:    graphemes.append(QChar(0x241B)); charWidth = 1; break; // ESC - shouldn't appear as will have been intercepted previously
+    case 28:    graphemes.append(QChar(0x241C)); charWidth = 1; break; // FS
+    case 29:    graphemes.append(QChar(0x241D)); charWidth = 1; break; // GS
+    case 30:    graphemes.append(QChar(0x241E)); charWidth = 1; break; // RS
+    case 31:    graphemes.append(QChar(0x241F)); charWidth = 1; break; // US
+    case 127:   graphemes.append(QChar(0x2421)); charWidth = 1; break; // DEL
+    default:
         charWidth = getGraphemeWidth(unicode);
         if (!charWidth) {
             // Print the grapheme replacement character instead - which seems to
