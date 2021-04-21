@@ -1942,14 +1942,44 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
         // The code point is on the BMP
         quint16 value = first.unicode();
         switch (value) {
+        case 0x0000:                    return htmlCenter(tr("{nul}", "Unicode U+0000 codepoint - NULL control code.")); break;
+        case 0x0001:                    return htmlCenter(tr("{soh}", "Unicode U+0001 codepoint - Start of heading control code.")); break;
+        case 0x0002:                    return htmlCenter(tr("{stx}", "Unicode U+0002 codepoint - Start of text control code.")); break;
+        case 0x0003:                    return htmlCenter(tr("{etx}", "Unicode U+0003 codepoint - End of text control code.")); break;
+        case 0x0004:                    return htmlCenter(tr("{eot}", "Unicode U+0004 codepoint - End of transmission control code.")); break;
+        case 0x0005:                    return htmlCenter(tr("{enq}", "Unicode U+0005 codepoint - Enquiry control code.")); break;
+        case 0x0006:                    return htmlCenter(tr("{ack}", "Unicode U+0006 codepoint - Acknowledge control code.")); break;
+        case 0x0007:                    return htmlCenter(tr("{bell}", "Unicode U+0007 codepoint - Bell control code.")); break;
+        case 0x0008:                    return htmlCenter(tr("{bs}", "Unicode U+0000 codepoint - Backspace control code.")); break;
+        case QChar::Tabulation:         return htmlCenter(tr("{tab}", "Unicode U+0009 codepoint - Tab control code.")); break;
+        case QChar::LineFeed:           return htmlCenter(tr("{line-feed}", "Unicode U+000A codepoint - Line-feed. Not likely to be seen as it gets filtered out.")); break;
+        case 0x000B:                    return htmlCenter(tr("{vt}", "Unicode U+000B codepoint - Vertical tab control code.")); break;
+        case 0x000C:                    return htmlCenter(tr("{ff}", "Unicode U+000C codepoint - Form feed control code.")); break;
+        case QChar::CarriageReturn:     return htmlCenter(tr("{carriage-return}", "Unicode U+000D codepoint - Carriage-return. Not likely to be seen as it gets filtered out.")); break;
+        case 0x000E:                    return htmlCenter(tr("{ss}", "Unicode U+000E codepoint - Shift out control code.")); break;
+        case 0x000F:                    return htmlCenter(tr("{si}", "Unicode U+000F codepoint - Shift in control code.")); break;
+        case 0x0010:                    return htmlCenter(tr("{dle}", "Unicode U+0010 codepoint - Device link escape control code.")); break;
+        case 0x0011:                    return htmlCenter(tr("{dc1}", "Unicode U+0011 codepoint - Device control one control code.")); break;
+        case 0x0012:                    return htmlCenter(tr("{dc2}", "Unicode U+0012 codepoint - Device control two control code.")); break;
+        case 0x0013:                    return htmlCenter(tr("{dc3}", "Unicode U+0013 codepoint - Device control three control code.")); break;
+        case 0x0014:                    return htmlCenter(tr("{dc4}", "Unicode U+0014 codepoint - Device control fourcontrol code.")); break;
+        case 0x0015:                    return htmlCenter(tr("{nak}", "Unicode U+0015 codepoint - Negative acknowledgement control code.")); break;
+        case 0x0016:                    return htmlCenter(tr("{syn}", "Unicode U+0016 codepoint - Synchronous idle control code.")); break;
+        case 0x0017:                    return htmlCenter(tr("{etb}", "Unicode U+0017 codepoint - End of transmission block control code.")); break;
+        case 0x0018:                    return htmlCenter(tr("{can}", "Unicode U+0018 codepoint - Cancel control code.")); break;
+        case 0x0019:                    return htmlCenter(tr("{em}", "Unicode U+0019 codepoint - End of medium control code.")); break;
+        case 0x001A:                    return htmlCenter(tr("{sub}", "Unicode U+001A codepoint - Substitute control code.")); break;
+        case 0x001B:                    return htmlCenter(tr("{esc}", "Unicode U+001B codepoint - Escape control code. Not likely to be seen as it gets processed before getting to the point of display.")); break;
+        case 0x001C:                    return htmlCenter(tr("{fs}", "Unicode U+001C codepoint - Form separator control code.")); break;
+        case 0x001D:                    return htmlCenter(tr("{gs}", "Unicode U+001B codepoint - Group separator control code.")); break;
+        case 0x001E:                    return htmlCenter(tr("{rs}", "Unicode U+001E codepoint - Record separator control code.")); break;
+        case 0x001F:                    return htmlCenter(tr("{us}", "Unicode U+001F codepoint - Unit separator control code.")); break;
         case 0x003c:                    return htmlCenter(QStringLiteral("&lt;")); break; // As '<' gets interpreted as an opening HTML tag we have to handle it specially
         case 0x003e:                    return htmlCenter(QStringLiteral("&gt;")); break; // '>' does not seem to get interpreted as a closing HTML tag but for symetry it is probably best to also handle it in the same way
-        case QChar::Tabulation:         return htmlCenter(tr("{tab}", "Unicode U+0009 codepoint.")); break;
-        case QChar::LineFeed:           return htmlCenter(tr("{line-feed}", "Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.")); break;
-        case QChar::CarriageReturn:     return htmlCenter(tr("{carriage-return}", "Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.")); break;
         case QChar::Space:              return htmlCenter(tr("{space}", "Unicode U+0020 codepoint.")); break;
         case QChar::Nbsp:               return htmlCenter(tr("{non-breaking space}", "Unicode U+00A0 codepoint.")); break;
         case QChar::SoftHyphen:         return htmlCenter(tr("{soft hyphen}", "Unicode U+00AD codepoint.")); break;
+        case 0x007F:                    return htmlCenter(tr("{del}", "Unicode U+007F codepoint - Delete control code.")); break;
         case 0x034F:                    return htmlCenter(tr("{combining grapheme joiner}", "Unicode U+034F codepoint (badly named apparently - see Wikipedia!)")); break;
         case 0x1680:                    return htmlCenter(tr("{ogham space mark}", "Unicode U+1680 codepoint.")); break;
         case 0x2000:                    return htmlCenter(tr("{'n' quad}", "Unicode U+2000 codepoint.")); break;
