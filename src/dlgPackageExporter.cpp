@@ -359,6 +359,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
     //description focus handling
     if (obj == ui->textEdit_description) {
         if (evt->type() == QEvent::FocusIn) {
+            ui->textEdit_description->setCurrentCharFormat(QTextCharFormat());
             ui->textEdit_description->setPlainText(mPlainDescription);
             return false;
         }
@@ -381,6 +382,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
                 QString fname = mDescriptionImages.at(i);
                 QFileInfo info(fname);
+                fname.replace(" ", "%20");
                 plainText.replace(QStringLiteral("$%1").arg(info.fileName()), fname);
             }
             ui->textEdit_description->setMarkdown(plainText);
@@ -1432,7 +1434,7 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
                 if (!my_parent->mDescriptionImages.contains(fname)) {
                     my_parent->mDescriptionImages.append(fname);
                 }
-                QString imgSrc = QStringLiteral("<img src = \"$%1\" />").arg(info.fileName());
+                QString imgSrc = QStringLiteral("![Image]($%1)").arg(info.fileName());
                 myCursor.insertText(imgSrc);
             }
         }
@@ -1443,6 +1445,7 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
             for (int i = my_parent->mDescriptionImages.size() - 1; i >= 0; i--) {
                 QString fname = my_parent->mDescriptionImages.at(i);
                 QFileInfo info(fname);
+                fname.replace(" ", "%20");
                 plainText.replace(QStringLiteral("$%1").arg(info.fileName()), fname);
             }
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
