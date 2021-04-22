@@ -266,6 +266,7 @@ void Updater::setupOnLinux()
 void Updater::untarOnLinux(const QString& fileName)
 {
     Q_ASSERT_X(QThread::currentThread() != QCoreApplication::instance()->thread(), "untarOnLinux", "method should not be called in the main GUI thread to avoid a degradation in UX");
+    qWarning() << __func__ << "started";
 
     QProcess tar;
     tar.setProcessChannelMode(QProcess::MergedChannels);
@@ -277,10 +278,13 @@ void Updater::untarOnLinux(const QString& fileName)
     } else {
         unzippedBinaryName = tar.readAll().trimmed();
     }
+    qWarning() << __func__ << "finished";
 }
 
 void Updater::updateBinaryOnLinux()
 {
+    qWarning() << __func__ << "started";
+
     QFileInfo unzippedBinary(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + unzippedBinaryName);
     auto systemEnvironment = QProcessEnvironment::systemEnvironment();
     auto appimageLocation = systemEnvironment.contains(QStringLiteral("APPIMAGE")) ?
@@ -298,14 +302,17 @@ void Updater::updateBinaryOnLinux()
         qWarning() << "updating" << installedBinaryPath << "with new version from" << unzippedBinary.filePath() << "failed";
         return;
     }
+    qWarning() << "successfully replaced old binary with new binary";
 
     QFile updatedBinary(appimageLocation);
     if (!updatedBinary.setPermissions(executablePermissions)) {
         qWarning() << "couldn't set executable permissions on updated Mudlet binary at" << installedBinaryPath;
         return;
     }
+    qWarning() << "successfully set executable permissions for the new binary";
 
     finishSetup();
+    qWarning() << __func__ << "finished";
 }
 #endif // Q_OS_LINUX
 

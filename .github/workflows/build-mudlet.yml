@@ -20,13 +20,13 @@ jobs:
             buildname: 'ubuntu / gcc'
             triplet: x64-linux
             compiler: gcc_64
-            qt: '5.14.1'
+            qt: '5.14.2'
             deploy: 'deploy'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
-            qt: '5.14.1'
+            qt: '5.14.2'
           - os: ubuntu-latest
             buildname: 'ubuntu / qt 5.11'
             triplet: x64-linux
@@ -36,13 +36,13 @@ jobs:
             buildname: 'macos / c++ tests'
             triplet: x64-osx
             compiler: clang_64
-            qt: '5.14.1'
+            qt: '5.14.2'
             deploy: 'deploy'
           - os: windows-2019
             buildname: 'windows'
             triplet: x64-mingw-dynamic
             # compiler: flag not used in windows pipeline
-            qt: '5.14.1'
+            qt: '5.14.2'
             deploy: 'deploy'
 
     env:
@@ -58,7 +58,7 @@ jobs:
         fetch-depth: 0
 
     - name: Restore Qt cache
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.5
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
@@ -75,7 +75,7 @@ jobs:
 
 
     - name: Restore Boost cache
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.5
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
@@ -246,7 +246,7 @@ jobs:
       run: ctest --output-on-failure
 
     - name: (Linux/macOS) restore Luarocks for packaging
-      uses: actions/cache@v2
+      uses: actions/cache@v2.1.5
       with:
         path: $HOME/.luarocks
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}

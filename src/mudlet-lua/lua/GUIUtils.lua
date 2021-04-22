@@ -646,13 +646,18 @@ end
 
 
 
---- Replace the whole with a string you'd like.
+--- Replace an entire line with a string you'd like.
 ---
 --- @see deleteLine
-function replaceLine(what)
-  selectString(line, 1)
+function replaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+    text = window
+  else
+    selectCurrentLine(window)
+  end
   replace("")
-  insertText(what)
+  insertText(text)
 end
 
 
@@ -2073,6 +2078,18 @@ function creplace(window, text)
   xReplace(window, text, 'c')
 end
 
+--- version of replaceLine function that allows for color, by way of cinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function creplaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+  else
+    selectCurrentLine(window)
+  end
+  creplace(window, text)
+end
+
 --- version of replace function that allows for color, by way of dinsertText
 --- @param windowName Optional name of the window to replace on
 --- @param text The text to replace the selection with.
@@ -2080,11 +2097,35 @@ function dreplace(window, text)
   xReplace(window, text, 'd')
 end
 
+--- version of replaceLine function that allows for color, by way of dinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function dreplaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+  else
+    selectCurrentLine(window)
+  end
+  dreplace(window, text)
+end
+
 --- version of replace function that allows for color, by way of hinsertText
 --- @param windowName Optional name of the window to replace on
 --- @param text The text to replace the selection with.
 function hreplace(window, text)
   xReplace(window, text, 'h')
+end
+
+--- version of replaceLine function that allows for color, by way of hinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function hreplaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+  else
+    selectCurrentLine(window)
+  end
+  hreplace(window, text)
 end
 
 function resetLabelToolTip(label)
