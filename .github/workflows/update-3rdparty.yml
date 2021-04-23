@@ -212,7 +212,7 @@ jobs:
             Better emoji and symbol support! This file helps us tell if a particular character is 0, 1, or 2 widths wide so we can show it correctly in the display.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-widechar0width-${{ github.sha }}
+          branch: update-widechar-width-${{ github.sha }}
           path: src/
           commit-message: (autocommit) Update widechar_width.h to latest upstream
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
