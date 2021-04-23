@@ -2100,7 +2100,7 @@ Mudlet can handle (%2)! The file is:
     <message>
       <location filename="../src/TMap.cpp" line="1429"/>
       <source>[ INFO ]  - You will need to update your Mudlet to read the map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Вам нужно будет обновить Mudlet для чтения файла карты.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1438"/>
