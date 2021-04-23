@@ -2060,14 +2060,17 @@ Aree: %2 di: %3   Stanze: %4 di: %5   Etichette: %6 di: %7...</translation>
       <location filename="../src/TMap.cpp" line="1021"/>
       <source>[ ERROR ] - The format version &quot;%1&quot; you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - La versione di salvataggio del file di mappa &quot;%1&quot; è troppo recente
+per questa versione di Mudlet. Sono supportati formati fino alla versione %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1037"/>
       <source>[ ALERT ] - Saving map in format version &quot;%1&quot; that is different than &quot;%2&quot; which
 it was loaded as. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Salvataggio del file di mappa nella versione &quot;%1&quot; diversa da quella
+di caricamento &quot;%2&quot;. Questo potrebbe generare dei problemi se si desidera
+condividere la mappa con altri utenti che utilizzano la versione originale.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1047"/>
@@ -2087,7 +2090,9 @@ da quello raccomandato &quot;%2&quot; per questa versione di Mudlet.</translatio
       <source>[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates
 its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. The file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Il file non sembra essere un file di mappa, il numero di versione
+indicato è &quot;%1&quot; e non è stato riconosciuto, il file è:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1422"/>
@@ -2108,7 +2113,9 @@ da questa versione di Mudlet (%2)! Il file di mappa è:
       <source>[ ALERT ] - Map file is really old. Its format version &quot;%1&quot; is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try! The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Il file di mappa è davvero vecchio, la sua versione &quot;%1&quot; è così datata
+che questa versione di Mudlet potrebbe non avere informazioni sufficienti per il caricamento
+ma verrà effettuato un tentativo! Il file è: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1452"/>
