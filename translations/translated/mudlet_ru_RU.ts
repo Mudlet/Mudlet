@@ -2026,12 +2026,12 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2967"/>
       <source>invalid format version &quot;%1&quot; detected</source>
-      <translation type="unfinished"/>
+      <translation>обнаружен неверный номер версии: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2973"/>
       <source>no format version detected</source>
-      <translation type="unfinished"/>
+      <translation>не обнаружена версия формата</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2979"/>
@@ -2061,7 +2061,8 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="1021"/>
       <source>[ ERROR ] - The format version &quot;%1&quot; you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Формат "%1", в котором вы пытаетесь сохранить карту, слишком новый
+для этой версии Mudlet. Поддерживаются только форматы до версии "%2".</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1037"/>
@@ -2113,17 +2114,19 @@ it but it will try! The file is: &quot;%2&quot;.</source>
       <source>[ INFO ]  - Reading map. Format version: %1. File:
 &quot;%2&quot;,
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Чтение карты. Версия формата: %1. Файл:
+&quot;%2&quot;,
+пожалуйста подождите...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1455"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Чтение карты. Версия формата: %1. Файл: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1843"/>
       <source>[ INFO ]  - Checking map file &quot;%1&quot;, format version &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Проверка файла карты &quot;%1&quot;, формат версии &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2380"/>
@@ -5158,12 +5161,12 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s background color - however choosing this for both foreground and background is an error.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Нажмите, чтобы заставить цветовой триггер игнорировать текст цвета фона - однако выбор этого параметра как для переднего плана, так и для фона является ошибкой.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
       <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both foreground and background is an error.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Нажмите, чтобы заставить цветовой триггер игнорировать текст цвета переднего плана - однако выбор этого цвета как для переднего плана, так и для фона является ошибкой.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="64"/>
@@ -5851,7 +5854,7 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="982"/>
       <source>Failed to zip up the package. Error is: &quot;%1&quot;.</source>
       <comment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</comment>
-      <translation type="unfinished"/>
+      <translation>Не удалось заархивировать пакет. Ошибка: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="333"/>
