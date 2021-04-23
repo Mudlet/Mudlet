@@ -5133,12 +5133,12 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s background color - however choosing this for both foreground and background is an error.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Klicke, damit der Farbtrigger die Hintergrundfarbe des Textes ignoriert - allerdings wäre es ein Fehler, dies sowohl für Vordergrund- und Hintergrundfarbe auszuwählen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
       <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both foreground and background is an error.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Klicke, damit der Farbtrigger die Vordergrundfarbe des Textes ignoriert - allerdings wäre es ein Fehler, dies sowohl für Vordergrund- und Hintergrundfarbe auszuwählen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="64"/>
@@ -5826,7 +5826,7 @@ Nutzungen</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="982"/>
       <source>Failed to zip up the package. Error is: &quot;%1&quot;.</source>
       <comment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</comment>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Komprimieren der Paketdatei. Fehlermeldung: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="333"/>
