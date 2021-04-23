@@ -10517,7 +10517,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager.ui" line="219"/>
       <source>Remove packages</source>
-      <translation type="unfinished"/>
+      <translation>Удалить пакеты</translation>
     </message>
   </context>
   <context>
