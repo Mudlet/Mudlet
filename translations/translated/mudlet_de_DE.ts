@@ -2021,12 +2021,12 @@ Gebiet %2 von %3   Raum %4 von %5   Markierung %6 von %7...</translation>
     <message>
       <location filename="../src/TMap.cpp" line="2967"/>
       <source>invalid format version &quot;%1&quot; detected</source>
-      <translation type="unfinished"/>
+      <translation>ungültige Formatversion &quot;%1&quot; erkannt</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2973"/>
       <source>no format version detected</source>
-      <translation type="unfinished"/>
+      <translation>keine Formatversion erkannt</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2979"/>
