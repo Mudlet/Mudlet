@@ -633,17 +633,20 @@ veuillez patienter...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="1259"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Vous n'avez pas encore de carte - chargez-en une, ou commencez la création de carte à partir de zéro pour commencer.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="1256"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Vous avez une carte chargée (%n salle(s)), mais Mudlet ne sait pas où vous êtes actuellement.</numerusform>
+        <numerusform>Vous avez une carte chargée (%n salle(s)), mais Mudlet ne sait pas où vous êtes actuellement.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1254"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Aucune salle dans la carte - chargez-en une autre, ou recommencez la création de carte depuis le début pour commencer.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2256"/>
@@ -1560,12 +1563,12 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="642"/>
       <source>Pre-Map loading(2) report</source>
-      <translation type="unfinished"/>
+      <translation>Rapport de chargement pré-carte(2)</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="653"/>
       <source>Loading map(2) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Chargement de la carte(2) au rapport %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1053"/>
@@ -1587,12 +1590,12 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1205"/>
       <source>Pre-Map loading(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Rapport de chargement pré-carte(1)</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1223"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Chargement de la carte(1) au rapport %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1225"/>
