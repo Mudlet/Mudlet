@@ -2025,12 +2025,12 @@ Aree: %2 di: %3   Stanze: %4 di: %5   Etichette: %6 di: %7...</translation>
     <message>
       <location filename="../src/TMap.cpp" line="2967"/>
       <source>invalid format version &quot;%1&quot; detected</source>
-      <translation type="unfinished"/>
+      <translation>versione non valida &quot;%1&quot; rilevato</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2973"/>
       <source>no format version detected</source>
-      <translation type="unfinished"/>
+      <translation>versione non rilevata</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2979"/>
@@ -2073,13 +2073,14 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="1047"/>
       <source>[ WARN ]  - Saving map in format version &quot;%1&quot; different from the
 recommended map version %2 for this version of Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Salvataggio del file di mappa nella versione &quot;%1&quot;  diverso
+da quello raccomandato &quot;%2&quot; per questa versione di Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1385"/>
       <location filename="../src/TMap.cpp" line="1827"/>
       <source>[ ERROR ] - Unable to open map file for reading: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Impossibile aprire il file di mappa: &quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1407"/>
@@ -2093,12 +2094,14 @@ its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. 
       <source>[ ALERT ] - Map file is too new. Its format version &quot;%1&quot; is higher than this version of
 Mudlet can handle (%2)! The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Il file di mappa è troppo recente, la versione &quot;%1&quot; è superiore a quella gestibile
+da questa versione di Mudlet (%2)! Il file di mappa è:
+&quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1429"/>
       <source>[ INFO ]  - You will need to update your Mudlet to read the map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Devi aggiornare Mudlet per leggere questo file di mappa.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1438"/>
@@ -2112,17 +2115,19 @@ it but it will try! The file is: &quot;%2&quot;.</source>
       <source>[ INFO ]  - Reading map. Format version: %1. File:
 &quot;%2&quot;,
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Leggo il file di mappa. Versione: %1. File
+&quot;%2&quot;,
+attendere...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1455"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Leggo il file di mappa. Versione: %1. File: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1843"/>
       <source>[ INFO ]  - Checking map file &quot;%1&quot;, format version &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Controllo del file di mappa &quot;%1&quot;, versione &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2380"/>
@@ -5172,12 +5177,12 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s background color - however choosing this for both foreground and background is an error.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona per fare in modo che il trigger ignori il colore di sfondo - Non utilizzare questa opzione sia per il colore che per lo sfondo del testo.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
       <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both foreground and background is an error.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona per fare in modo che il trigger ignori il colore del testo - Non utilizzare questa opzione sia per il colore che per lo sfondo del testo.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="64"/>
@@ -5865,7 +5870,7 @@ Utilizzi</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="982"/>
       <source>Failed to zip up the package. Error is: &quot;%1&quot;.</source>
       <comment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</comment>
-      <translation type="unfinished"/>
+      <translation>Impossibile comprimere il package. L'errore è &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="333"/>
