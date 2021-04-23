@@ -528,594 +528,594 @@ please wait...</source>
 <context>
     <name>T2DMap</name>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2802"/>
+        <location filename="../src/T2DMap.cpp" line="2808"/>
         <source>Create a new room here</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2975"/>
+        <location filename="../src/T2DMap.cpp" line="2981"/>
         <source>Change the properties of this custom line</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3206"/>
-        <location filename="../src/T2DMap.cpp" line="4821"/>
+        <location filename="../src/T2DMap.cpp" line="3210"/>
+        <location filename="../src/T2DMap.cpp" line="4823"/>
         <source>Solid line</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3207"/>
-        <location filename="../src/T2DMap.cpp" line="4822"/>
+        <location filename="../src/T2DMap.cpp" line="3211"/>
+        <location filename="../src/T2DMap.cpp" line="4824"/>
         <source>Dot line</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3208"/>
-        <location filename="../src/T2DMap.cpp" line="4823"/>
+        <location filename="../src/T2DMap.cpp" line="3212"/>
+        <location filename="../src/T2DMap.cpp" line="4825"/>
         <source>Dash line</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3209"/>
-        <location filename="../src/T2DMap.cpp" line="4824"/>
+        <location filename="../src/T2DMap.cpp" line="3213"/>
+        <location filename="../src/T2DMap.cpp" line="4826"/>
         <source>Dash-dot line</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3210"/>
-        <location filename="../src/T2DMap.cpp" line="4825"/>
+        <location filename="../src/T2DMap.cpp" line="3214"/>
+        <location filename="../src/T2DMap.cpp" line="4827"/>
         <source>Dash-dot-dot line</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3498"/>
+        <location filename="../src/T2DMap.cpp" line="3502"/>
         <source>x coordinate (was %1):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3499"/>
+        <location filename="../src/T2DMap.cpp" line="3503"/>
         <source>y coordinate (was %1):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3500"/>
+        <location filename="../src/T2DMap.cpp" line="3504"/>
         <source>z coordinate (was %1):</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3688"/>
+        <location filename="../src/T2DMap.cpp" line="3692"/>
         <source>Delete color</source>
         <comment>Deletes an environment colour</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3706"/>
+        <location filename="../src/T2DMap.cpp" line="3710"/>
         <source>Define new color</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="4020"/>
+        <location filename="../src/T2DMap.cpp" line="4024"/>
         <source>%1 {count:%2}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="1387"/>
-        <location filename="../src/T2DMap.cpp" line="1508"/>
-        <location filename="../src/T2DMap.cpp" line="2323"/>
-        <location filename="../src/T2DMap.cpp" line="2339"/>
+        <location filename="../src/T2DMap.cpp" line="1386"/>
+        <location filename="../src/T2DMap.cpp" line="1507"/>
+        <location filename="../src/T2DMap.cpp" line="2322"/>
+        <location filename="../src/T2DMap.cpp" line="2338"/>
         <source>no text</source>
         <comment>Default text if a label is created in mapper with no text</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="142"/>
+        <location filename="../src/T2DMap.cpp" line="141"/>
         <source>ID</source>
         <comment>Room ID in the mapper widget</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="142"/>
+        <location filename="../src/T2DMap.cpp" line="141"/>
         <source>Name</source>
         <comment>Room name in the mapper widget</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="144"/>
+        <location filename="../src/T2DMap.cpp" line="143"/>
         <source>&lt;p&gt;Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="602"/>
+        <location filename="../src/T2DMap.cpp" line="601"/>
         <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="1260"/>
+        <location filename="../src/T2DMap.cpp" line="1259"/>
         <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
         <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/T2DMap.cpp" line="1257"/>
+        <location filename="../src/T2DMap.cpp" line="1256"/>
         <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
         <translation type="unfinished">
             <numerusform></numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="1255"/>
+        <location filename="../src/T2DMap.cpp" line="1254"/>
         <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2257"/>
+        <location filename="../src/T2DMap.cpp" line="2256"/>
         <source>render time: %1S mO: (%2,%3,%4)</source>
         <comment>This is debug information that is not expected to be seen in release versions, %1 is a decimal time period and %2-%4 are the x,y and z coordinates at the center of the view (but y will be negative compared to previous room related ones as it represents the real coordinate system for this widget which has y increasing in a downward direction!)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2329"/>
+        <location filename="../src/T2DMap.cpp" line="2328"/>
         <source>Text label or image label?</source>
         <comment>2D Mapper create label dialog text</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2330"/>
+        <location filename="../src/T2DMap.cpp" line="2329"/>
         <source>Text Label</source>
         <comment>2D Mapper create label dialog button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2331"/>
+        <location filename="../src/T2DMap.cpp" line="2330"/>
         <source>Image Label</source>
         <comment>2D Mapper create label dialog button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2335"/>
+        <location filename="../src/T2DMap.cpp" line="2334"/>
         <source>Enter label text.</source>
         <comment>2D Mapper create label dialog title/text</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2342"/>
+        <location filename="../src/T2DMap.cpp" line="2341"/>
         <source>Background color</source>
         <comment>2D Mapper create label color dialog title</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2343"/>
+        <location filename="../src/T2DMap.cpp" line="2342"/>
         <source>Foreground color</source>
         <comment>2D Mapper create label color dialog title</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2347"/>
+        <location filename="../src/T2DMap.cpp" line="2346"/>
         <source>Select image</source>
         <comment>2D Mapper create label file dialog title</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2354"/>
+        <location filename="../src/T2DMap.cpp" line="2353"/>
         <source>Draw label as background or on top of everything?</source>
         <comment>2D Mapper create label dialog text</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2355"/>
+        <location filename="../src/T2DMap.cpp" line="2354"/>
         <source>Background</source>
         <comment>2D Mapper create label dialog button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2356"/>
+        <location filename="../src/T2DMap.cpp" line="2355"/>
         <source>Foreground</source>
         <comment>2D Mapper create label dialog button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2598"/>
+        <location filename="../src/T2DMap.cpp" line="2604"/>
         <source>Drag to select multiple rooms or labels, release to finish...</source>
         <comment>2D Mapper big, bottom of screen help message</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2702"/>
+        <location filename="../src/T2DMap.cpp" line="2708"/>
         <source>Undo</source>
         <comment>2D Mapper context menu (drawing custom exit line) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2703"/>
+        <location filename="../src/T2DMap.cpp" line="2709"/>
         <source>Undo last point</source>
         <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2710"/>
+        <location filename="../src/T2DMap.cpp" line="2716"/>
         <source>Properties</source>
         <comment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2712"/>
+        <location filename="../src/T2DMap.cpp" line="2718"/>
         <source>properties...</source>
         <comment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2713"/>
+        <location filename="../src/T2DMap.cpp" line="2719"/>
         <source>Change the properties of this line</source>
         <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2716"/>
+        <location filename="../src/T2DMap.cpp" line="2722"/>
         <source>Finish</source>
         <comment>2D Mapper context menu (drawing custom exit line) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2717"/>
+        <location filename="../src/T2DMap.cpp" line="2723"/>
         <source>Finish drawing this line</source>
         <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2784"/>
+        <location filename="../src/T2DMap.cpp" line="2790"/>
         <source>Create new map</source>
         <comment>2D Mapper context menu (no map found) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2787"/>
+        <location filename="../src/T2DMap.cpp" line="2793"/>
         <source>Load map</source>
         <comment>2D Mapper context menu (no map found) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2801"/>
+        <location filename="../src/T2DMap.cpp" line="2807"/>
         <source>Create room</source>
         <comment>Menu option to create a new room in the mapper</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2808"/>
+        <location filename="../src/T2DMap.cpp" line="2814"/>
         <source>Move</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2809"/>
+        <location filename="../src/T2DMap.cpp" line="2815"/>
         <source>Move room</source>
         <comment>2D Mapper context menu (room) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2812"/>
+        <location filename="../src/T2DMap.cpp" line="2818"/>
         <source>Delete</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2813"/>
+        <location filename="../src/T2DMap.cpp" line="2819"/>
         <source>Delete room</source>
         <comment>2D Mapper context menu (room) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2816"/>
+        <location filename="../src/T2DMap.cpp" line="2822"/>
         <source>Color</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2817"/>
+        <location filename="../src/T2DMap.cpp" line="2823"/>
         <source>Change room color</source>
         <comment>2D Mapper context menu (room) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2820"/>
+        <location filename="../src/T2DMap.cpp" line="2826"/>
         <source>Spread</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2821"/>
+        <location filename="../src/T2DMap.cpp" line="2827"/>
         <source>Increase map X-Y spacing for the selected group of rooms</source>
         <comment>2D Mapper context menu (room) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2824"/>
+        <location filename="../src/T2DMap.cpp" line="2830"/>
         <source>Shrink</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2825"/>
+        <location filename="../src/T2DMap.cpp" line="2831"/>
         <source>Decrease map X-Y spacing for the selected group of rooms</source>
         <comment>2D Mapper context menu (room) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2828"/>
+        <location filename="../src/T2DMap.cpp" line="2834"/>
         <source>Lock</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2829"/>
+        <location filename="../src/T2DMap.cpp" line="2835"/>
         <source>Lock room for speed walks</source>
         <comment>2D Mapper context menu (room) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2832"/>
+        <location filename="../src/T2DMap.cpp" line="2838"/>
         <source>Unlock</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2833"/>
+        <location filename="../src/T2DMap.cpp" line="2839"/>
         <source>Unlock room for speed walks</source>
         <comment>2D Mapper context menu (room) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2836"/>
+        <location filename="../src/T2DMap.cpp" line="2842"/>
         <source>Weight</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2837"/>
+        <location filename="../src/T2DMap.cpp" line="2843"/>
         <source>Set room weight</source>
         <comment>2D Mapper context menu (room) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2840"/>
+        <location filename="../src/T2DMap.cpp" line="2846"/>
         <source>Exits</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2841"/>
+        <location filename="../src/T2DMap.cpp" line="2847"/>
         <source>Set room exits</source>
         <comment>2D Mapper context menu (room) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2844"/>
+        <location filename="../src/T2DMap.cpp" line="2850"/>
         <source>Symbol</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2845"/>
+        <location filename="../src/T2DMap.cpp" line="2851"/>
         <source>Set one or more symbols or letters to mark special rooms</source>
         <comment>2D Mapper context menu (room) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2848"/>
+        <location filename="../src/T2DMap.cpp" line="2854"/>
         <source>Move to</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2849"/>
+        <location filename="../src/T2DMap.cpp" line="2855"/>
         <source>Move selected group to a given position</source>
         <comment>2D Mapper context menu (room) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2852"/>
+        <location filename="../src/T2DMap.cpp" line="2858"/>
         <source>Area</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2853"/>
+        <location filename="../src/T2DMap.cpp" line="2859"/>
         <source>Set room&apos;s area number</source>
         <comment>2D Mapper context menu (room) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2856"/>
+        <location filename="../src/T2DMap.cpp" line="2862"/>
         <source>Custom exit line</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2858"/>
+        <location filename="../src/T2DMap.cpp" line="2864"/>
         <source>Replace an exit line with a custom line</source>
         <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2862"/>
+        <location filename="../src/T2DMap.cpp" line="2868"/>
         <source>Custom exit lines are not shown and are not editable in grid mode</source>
         <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2866"/>
+        <location filename="../src/T2DMap.cpp" line="2872"/>
         <source>Create Label</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2867"/>
+        <location filename="../src/T2DMap.cpp" line="2873"/>
         <source>Create labels to show text or images</source>
         <comment>2D Mapper context menu (room) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2886"/>
+        <location filename="../src/T2DMap.cpp" line="2892"/>
         <source>Set location</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2888"/>
+        <location filename="../src/T2DMap.cpp" line="2894"/>
         <source>Set player current location to here</source>
         <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2892"/>
+        <location filename="../src/T2DMap.cpp" line="2898"/>
         <source>Can only set location when exactly one room is selected</source>
         <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2899"/>
+        <location filename="../src/T2DMap.cpp" line="2905"/>
         <source>Switch to editing mode</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2900"/>
+        <location filename="../src/T2DMap.cpp" line="2906"/>
         <source>Switch to viewing mode</source>
         <comment>2D Mapper context menu (room) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2910"/>
+        <location filename="../src/T2DMap.cpp" line="2916"/>
         <source>Move</source>
         <comment>2D Mapper context menu (label) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2911"/>
+        <location filename="../src/T2DMap.cpp" line="2917"/>
         <source>Move label</source>
         <comment>2D Mapper context menu item (label) tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2913"/>
+        <location filename="../src/T2DMap.cpp" line="2919"/>
         <source>Delete</source>
         <comment>2D Mapper context menu (label) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2914"/>
+        <location filename="../src/T2DMap.cpp" line="2920"/>
         <source>Delete label</source>
         <comment>2D Mapper context menu (label) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2930"/>
+        <location filename="../src/T2DMap.cpp" line="2936"/>
         <source>Add point</source>
         <comment>2D Mapper context menu (custom line editing) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2937"/>
+        <location filename="../src/T2DMap.cpp" line="2943"/>
         <source>Divide segment by adding a new point mid-way along</source>
         <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2940"/>
+        <location filename="../src/T2DMap.cpp" line="2946"/>
         <source>Select a point first, then add a new point mid-way along the segment towards room</source>
         <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, i.e must do the suggested action first)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2944"/>
+        <location filename="../src/T2DMap.cpp" line="2950"/>
         <source>Remove point</source>
         <comment>2D Mapper context menu (custom line editing) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2951"/>
+        <location filename="../src/T2DMap.cpp" line="2957"/>
         <source>Merge pair of segments by removing this point</source>
         <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but will be able to be done again on this item)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2955"/>
+        <location filename="../src/T2DMap.cpp" line="2961"/>
         <source>Remove last segment by removing this point</source>
         <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2960"/>
+        <location filename="../src/T2DMap.cpp" line="2966"/>
         <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
         <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2966"/>
+        <location filename="../src/T2DMap.cpp" line="2972"/>
         <source>Select a point first, then remove it</source>
         <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2970"/>
+        <location filename="../src/T2DMap.cpp" line="2976"/>
         <source>Properties</source>
         <comment>2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2974"/>
+        <location filename="../src/T2DMap.cpp" line="2980"/>
         <source>properties...</source>
         <comment>2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2978"/>
+        <location filename="../src/T2DMap.cpp" line="2984"/>
         <source>Delete line</source>
         <comment>2D Mapper context menu (custom line editing) item</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="2979"/>
+        <location filename="../src/T2DMap.cpp" line="2985"/>
         <source>Delete all of this custom line</source>
         <comment>2D Mapper context menu (custom line editing) item tooltip</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3491"/>
+        <location filename="../src/T2DMap.cpp" line="3495"/>
         <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
         <comment>Use linefeeds as necessary to format text into a reasonable rectangle of text, %1 is a room number</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3515"/>
+        <location filename="../src/T2DMap.cpp" line="3519"/>
         <source>OK</source>
         <comment>dialog (room(s) move) button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3520"/>
+        <location filename="../src/T2DMap.cpp" line="3524"/>
         <source>Cancel</source>
         <comment>dialog (room(s) move) button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3714"/>
+        <location filename="../src/T2DMap.cpp" line="3718"/>
         <source>OK</source>
         <comment>dialog (room(s) change color) button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3719"/>
+        <location filename="../src/T2DMap.cpp" line="3723"/>
         <source>Cancel</source>
         <comment>dialog (room(s) change color) button</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3776"/>
+        <location filename="../src/T2DMap.cpp" line="3780"/>
         <source>Spread out rooms</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3777"/>
+        <location filename="../src/T2DMap.cpp" line="3781"/>
         <source>Increase the spacing of
 the selected rooms,
 centered on the
@@ -1124,12 +1124,12 @@ factor of:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3836"/>
+        <location filename="../src/T2DMap.cpp" line="3840"/>
         <source>Shrink in rooms</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3837"/>
+        <location filename="../src/T2DMap.cpp" line="3841"/>
         <source>Decrease the spacing of
 the selected rooms,
 centered on the
@@ -1138,14 +1138,14 @@ factor of:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3965"/>
-        <location filename="../src/T2DMap.cpp" line="3979"/>
-        <location filename="../src/T2DMap.cpp" line="4029"/>
+        <location filename="../src/T2DMap.cpp" line="3969"/>
+        <location filename="../src/T2DMap.cpp" line="3983"/>
+        <location filename="../src/T2DMap.cpp" line="4033"/>
         <source>Enter room weight</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3966"/>
+        <location filename="../src/T2DMap.cpp" line="3970"/>
         <source>Enter new roomweight
 (= travel time), minimum
 (and default) is 1:</source>
@@ -1153,7 +1153,7 @@ factor of:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="3980"/>
+        <location filename="../src/T2DMap.cpp" line="3984"/>
         <source>Enter new roomweight
 (= travel time) for all
 selected rooms, minimum
@@ -1164,17 +1164,17 @@ used is:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="4018"/>
+        <location filename="../src/T2DMap.cpp" line="4022"/>
         <source>%1 {count:%2, default}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="4026"/>
+        <location filename="../src/T2DMap.cpp" line="4030"/>
         <source>1 {count 0, default}</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="4030"/>
+        <location filename="../src/T2DMap.cpp" line="4034"/>
         <source>Choose an existing
 roomweight (= travel
 time) from the list
@@ -1187,25 +1187,25 @@ rooms:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="4079"/>
+        <location filename="../src/T2DMap.cpp" line="4083"/>
         <source>Load Mudlet map</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="4081"/>
+        <location filename="../src/T2DMap.cpp" line="4085"/>
         <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
         <comment>Do not change extensions (in braces) or the ;;s as they are used programmatically</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="4968"/>
-        <location filename="../src/T2DMap.cpp" line="5002"/>
+        <location filename="../src/T2DMap.cpp" line="4970"/>
+        <location filename="../src/T2DMap.cpp" line="5004"/>
         <source>Left-click to add point, right-click to undo/change/finish...</source>
         <comment>2D Mapper big, bottom of screen help message</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/T2DMap.cpp" line="5013"/>
+        <location filename="../src/T2DMap.cpp" line="5015"/>
         <source>Left-click and drag a square for the size and position of your label</source>
         <comment>2D Mapper big, bottom of screen help message</comment>
         <translation type="unfinished"></translation>
@@ -1286,88 +1286,88 @@ rooms:</source>
 <context>
     <name>TConsole</name>
     <message>
-        <location filename="../src/TConsole.cpp" line="114"/>
+        <location filename="../src/TConsole.cpp" line="81"/>
         <source>Debug Console</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="796"/>
+        <location filename="../src/TConsole.cpp" line="763"/>
         <source>Save profile?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="796"/>
+        <location filename="../src/TConsole.cpp" line="763"/>
         <source>Do you want to save the profile %1?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="809"/>
+        <location filename="../src/TConsole.cpp" line="776"/>
         <source>Couldn&apos;t save profile</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="809"/>
+        <location filename="../src/TConsole.cpp" line="776"/>
         <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="1722"/>
+        <location filename="../src/TConsole.cpp" line="1689"/>
         <source>System Message: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="357"/>
+        <location filename="../src/TConsole.cpp" line="324"/>
         <source>Show Time Stamps.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="369"/>
+        <location filename="../src/TConsole.cpp" line="336"/>
         <source>Record a replay.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="380"/>
+        <location filename="../src/TConsole.cpp" line="347"/>
         <source>Start logging game output to log file.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="391"/>
+        <location filename="../src/TConsole.cpp" line="358"/>
         <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="424"/>
+        <location filename="../src/TConsole.cpp" line="391"/>
         <source>Emergency Stop. Stops all timers and triggers.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="440"/>
+        <location filename="../src/TConsole.cpp" line="407"/>
         <source>Search buffer.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="448"/>
+        <location filename="../src/TConsole.cpp" line="415"/>
         <source>Earlier search result.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="459"/>
+        <location filename="../src/TConsole.cpp" line="426"/>
         <source>Later search result.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="893"/>
+        <location filename="../src/TConsole.cpp" line="860"/>
         <source>Replay recording has started. File: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="896"/>
+        <location filename="../src/TConsole.cpp" line="863"/>
         <source>Replay recording has been stopped. File: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="1875"/>
-        <location filename="../src/TConsole.cpp" line="1914"/>
+        <location filename="../src/TConsole.cpp" line="1842"/>
+        <location filename="../src/TConsole.cpp" line="1881"/>
         <source>No search results, sorry!</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1455,50 +1455,50 @@ rooms:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="14102"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="14106"/>
         <source>No error message available from Lua.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="14104"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="14108"/>
         <source>Lua error: %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="14106"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="14110"/>
         <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="14183"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="14187"/>
         <source>%1 (doesn&apos;t exist)</source>
         <comment>This file doesn&apos;t exist</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="14188"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="14192"/>
         <source>%1 (isn&apos;t a file or symlink to a file)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="14197"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="14201"/>
         <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="14215"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="14219"/>
         <source>%1 (couldn&apos;t read file)</source>
         <comment>This file could not be read for some reason (for example, no permission)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="14221"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="14225"/>
         <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="14228"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="14232"/>
         <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
@@ -1769,13 +1769,6 @@ Tried these locations:
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1037"/>
-        <source>[ ALERT ] - Saving map in a format {%1} that is different than the one it was
-loaded as {%2}. This may be an issue if you want to share the resulting
-map with others relying on the original format.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location filename="../src/TMap.cpp" line="187"/>
         <source>[MAP ERROR:]%1
 </source>
@@ -1797,47 +1790,10 @@ map with others relying on the original format.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1021"/>
-        <source>[ ERROR ] - The format {%1} you are trying to save the map with is too new
-for this version of Mudlet. Supported are only formats up to version {%2}.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/TMap.cpp" line="1047"/>
-        <source>[ WARN ]  - Saving map in a format {%1} different from the
-recommended format {%2} for this version of Mudlet.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/TMap.cpp" line="1385"/>
-        <location filename="../src/TMap.cpp" line="1827"/>
-        <source>[ ERROR ] - Unable to open (for reading) map file: &quot;%1&quot;!</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/TMap.cpp" line="1438"/>
-        <source>[ ALERT ] - Map file is really old, its file format (%1) is so ancient that
-this version of Mudlet may not gain enough information from
-it but it will try!  The file is: &quot;%2&quot;.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location filename="../src/TMap.cpp" line="1445"/>
         <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/TMap.cpp" line="1452"/>
-        <source>[ INFO ]  - Reading map (format version:%1) file:
-&quot;%2&quot;,
-please wait...</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/TMap.cpp" line="1455"/>
-        <source>[ INFO ]  - Reading map (format version:%1) file: &quot;%2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1877,11 +1833,6 @@ consistency details...</source>
     <message>
         <location filename="../src/TMap.cpp" line="1785"/>
         <source>Start my own</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/TMap.cpp" line="1843"/>
-        <source>[ INFO ]  - Checking map file: &quot;%1&quot;, format version:%2...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2010,12 +1961,12 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     </message>
     <message>
         <location filename="../src/TMap.cpp" line="2967"/>
-        <source>invalid version number: %1 detected</source>
+        <source>invalid format version &quot;%1&quot; detected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/TMap.cpp" line="2973"/>
-        <source>no version number detected</source>
+        <source>no format version detected</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2042,6 +1993,74 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/TMap.cpp" line="1021"/>
+        <source>[ ERROR ] - The format version &quot;%1&quot; you are trying to save the map with is too new
+for this version of Mudlet. Supported are only formats up to version %2.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/TMap.cpp" line="1037"/>
+        <source>[ ALERT ] - Saving map in format version &quot;%1&quot; that is different than &quot;%2&quot; which
+it was loaded as. This may be an issue if you want to share the resulting
+map with others relying on the original format.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/TMap.cpp" line="1047"/>
+        <source>[ WARN ]  - Saving map in format version &quot;%1&quot; different from the
+recommended map version %2 for this version of Mudlet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/TMap.cpp" line="1385"/>
+        <location filename="../src/TMap.cpp" line="1827"/>
+        <source>[ ERROR ] - Unable to open map file for reading: &quot;%1&quot;!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/TMap.cpp" line="1407"/>
+        <source>[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates
+its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. The file is:
+&quot;%2&quot;.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/TMap.cpp" line="1422"/>
+        <source>[ ALERT ] - Map file is too new. Its format version &quot;%1&quot; is higher than this version of
+Mudlet can handle (%2)! The file is:
+&quot;%3&quot;.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/TMap.cpp" line="1429"/>
+        <source>[ INFO ]  - You will need to update your Mudlet to read the map file.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/TMap.cpp" line="1438"/>
+        <source>[ ALERT ] - Map file is really old. Its format version &quot;%1&quot; is so ancient that
+this version of Mudlet may not gain enough information from
+it but it will try! The file is: &quot;%2&quot;.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/TMap.cpp" line="1452"/>
+        <source>[ INFO ]  - Reading map. Format version: %1. File:
+&quot;%2&quot;,
+please wait...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/TMap.cpp" line="1455"/>
+        <source>[ INFO ]  - Reading map. Format version: %1. File: &quot;%2&quot;.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/TMap.cpp" line="1843"/>
+        <source>[ INFO ]  - Checking map file &quot;%1&quot;, format version &quot;%2&quot;.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../src/TMap.cpp" line="2380"/>
         <location filename="../src/TMap.cpp" line="2758"/>
         <location filename="../src/TMap.cpp" line="2998"/>
@@ -2055,27 +2074,8 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="1407"/>
-        <source>[ ALERT ] - File does not seem to be a Mudlet Map file, the part that indicates
-its format version number seems to be (%1) and that doesn&apos;t make sense, the file is:
-&quot;%2&quot;.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location filename="../src/TMap.cpp" line="1414"/>
         <source>[ INFO ]  - Ignoring this unlikely map file.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/TMap.cpp" line="1422"/>
-        <source>[ ALERT ] - Map file is too new, its file format (%1) is higher than this version of
-Mudlet can handle (%2)!  The file is:
-&quot;%3&quot;.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/TMap.cpp" line="1429"/>
-        <source>[ INFO ]  - You will need to upgrade your Mudlet to read it.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3475,7 +3475,7 @@ Would you like to update now?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/updater.cpp" line="352"/>
+        <location filename="../src/updater.cpp" line="359"/>
         <source>Restart to apply update</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4513,145 +4513,145 @@ Count</source>
 <context>
     <name>directions</name>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13952"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13956"/>
         <source>north</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13954"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13958"/>
         <source>n</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13956"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13960"/>
         <source>east</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13958"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13962"/>
         <source>e</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13960"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13964"/>
         <source>south</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13962"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13966"/>
         <source>s</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13964"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13968"/>
         <source>west</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13966"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13970"/>
         <source>w</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13968"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13972"/>
         <source>northeast</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13970"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13974"/>
         <source>ne</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13972"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13976"/>
         <source>southeast</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13974"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13978"/>
         <source>se</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13976"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13980"/>
         <source>southwest</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13978"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13982"/>
         <source>sw</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13980"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13984"/>
         <source>northwest</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13982"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13986"/>
         <source>nw</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13984"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13988"/>
         <source>in</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13986"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13990"/>
         <source>i</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13988"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13992"/>
         <source>out</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13990"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13994"/>
         <source>o</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13992"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13996"/>
         <source>up</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13994"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="13998"/>
         <source>u</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13996"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="14000"/>
         <source>down</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="13998"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="14002"/>
         <source>d</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
@@ -4956,12 +4956,12 @@ Count</source>
     </message>
     <message>
         <location filename="../src/dlgColorTrigger.cpp" line="59"/>
-        <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s background color - however choosing this for both this and the foreground is an error.&lt;/p&gt;</source>
+        <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s background color - however choosing this for both foreground and background is an error.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/dlgColorTrigger.cpp" line="60"/>
-        <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both this and the background is an error.&lt;/p&gt;</source>
+        <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both foreground and background is an error.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -5479,7 +5479,7 @@ Count</source>
     </message>
     <message>
         <location filename="../src/ui/dlgPackageExporter.ui" line="58"/>
-        <location filename="../src/dlgPackageExporter.cpp" line="1373"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="1374"/>
         <source>Select what to export</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5582,150 +5582,146 @@ Count</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="64"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="63"/>
         <source>Triggers</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="65"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="64"/>
         <source>Aliases</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="66"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="65"/>
         <source>Timers</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="67"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="66"/>
         <source>Scripts</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="68"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="67"/>
         <source>Keys</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="69"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="68"/>
         <source>Buttons</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="89"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="88"/>
         <source>Export</source>
         <comment>Text for button to perform the package export on the items the user has selected.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="110"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="109"/>
         <source>update installed package</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="111"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="110"/>
         <source>add dependencies</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="156"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="155"/>
         <source>Failed to open file &quot;%1&quot; to place into package. Error message was: &quot;%2&quot;.</source>
         <comment>This error message will appear when a file is to be placed into the package but the code cannot open it.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="166"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="165"/>
         <source>Failed to add file &quot;%1&quot; to package. Error message was: &quot;%3&quot;.</source>
         <comment>This error message will appear when a file is to be placed into the package but cannot be done for some reason.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/dlgPackageExporter.cpp" line="311"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="313"/>
         <source>Export to %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="315"/>
-        <source>Export to %1/%2.mpackage</source>
+        <location filename="../src/dlgPackageExporter.cpp" line="982"/>
+        <source>Failed to zip up the package. Error is: &quot;%1&quot;.</source>
+        <comment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="332"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="333"/>
         <source>Open Icon</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="332"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="333"/>
         <source>Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="455"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="456"/>
         <source>Please enter the package name.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="485"/>
-        <location filename="../src/dlgPackageExporter.cpp" line="590"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="486"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="591"/>
         <source>Exporting package...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="535"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="536"/>
         <source>Failed to export. Could not open the folder &quot;%1&quot; for writing. Do you have the necessary permissions and free disk-space to write to that folder?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="794"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="795"/>
         <source>%1 doesn&apos;t seem to exist anymore - can you double-check it?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="729"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="730"/>
         <source>Failed to export. Could not write Mudlet items to the file &quot;%1&quot;.</source>
         <comment>This error message is shown when all the Mudlet items cannot be written to the &apos;packageName&apos;.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="906"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="907"/>
         <source>Failed to add directory &quot;%1&quot; to package. Error is: &quot;%2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="949"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="950"/>
         <source>Required file &quot;%1&quot; was not found in the staging area. This area contains the Mudlet items chosen for the package, which you selected to be included in the package file. This suggests there may be a problem with that directory: &quot;%2&quot; - Do you have the necessary permissions and free disk-space?</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="576"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="577"/>
         <source>Package &quot;%1&quot; exported to: %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="828"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="829"/>
         <source>Failed to open package file. Error is: &quot;%1&quot;.</source>
         <comment>This zipError message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere in the computer&apos;s file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="978"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="979"/>
         <source>Export cancelled.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="981"/>
-        <source>Failed zip up the package. Error is: &quot;%1&quot;.</source>
-        <comment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</comment>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="1355"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="1356"/>
         <source>Why not &lt;a href=&quot;https://forums.mudlet.org/viewforum.php?f=6&quot;&gt;upload&lt;/a&gt; your package for other Mudlet users?</source>
         <comment>Only the text outside of the &apos;a&apos; (HTML anchor) tags PLUS the verb &apos;upload&apos; in between them in the source text, (associated with uploading the resulting package to the Mudlet forums) should be translated.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/dlgPackageExporter.cpp" line="1375"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="1376"/>
         <source>Select what to export (%1 items)</source>
         <comment>Package exporter selection</comment>
         <translation type="unfinished">
@@ -5733,7 +5729,7 @@ Count</source>
         </translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageExporter.cpp" line="1039"/>
+        <location filename="../src/dlgPackageExporter.cpp" line="1040"/>
         <source>Where do you want to save the package?</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5762,27 +5758,27 @@ Count</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageManager.cpp" line="171"/>
+        <location filename="../src/dlgPackageManager.cpp" line="175"/>
         <source>Author</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageManager.cpp" line="171"/>
+        <location filename="../src/dlgPackageManager.cpp" line="175"/>
         <source>Version</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageManager.cpp" line="171"/>
+        <location filename="../src/dlgPackageManager.cpp" line="175"/>
         <source>Created</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgPackageManager.cpp" line="171"/>
+        <location filename="../src/dlgPackageManager.cpp" line="175"/>
         <source>Dependencies</source>
         <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/dlgPackageManager.cpp" line="242"/>
+        <location filename="../src/dlgPackageManager.cpp" line="246"/>
         <source>Remove packages</source>
         <comment>Button in package manager to remove selected package(s)</comment>
         <translation type="unfinished">
@@ -10249,7 +10245,7 @@ try again when it has finished.</source>
     </message>
     <message>
         <location filename="../src/ui/package_manager.ui" line="219"/>
-        <source>Remove package</source>
+        <source>Remove packages</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
