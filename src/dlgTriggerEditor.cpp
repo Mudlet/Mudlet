@@ -3469,18 +3469,22 @@ void dlgTriggerEditor::addVar(bool isFolder)
         mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(0);
     }
 
-    QStringList nameL;
-    nameL << QString();
-    QTreeWidgetItem* cItem = treeWidget_variables->currentItem();
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
-    TVar* cVar = vu->getWVar(cItem);
+
+    QStringList nameL;
+    nameL << QString(isFolder ? tr("New table name") : tr("New variable name"));
+
     QTreeWidgetItem* pParent;
     QTreeWidgetItem* pNewItem;
-    if (cVar && cVar->getValueType() == LUA_TTABLE) {
-        pParent = cItem;
-    } else {
-        pParent = cItem->parent();
+    QTreeWidgetItem* cItem = treeWidget_variables->currentItem();
+    if (cItem) {
+        TVar* cVar = vu->getWVar(cItem);
+        if (cVar && cVar->getValueType() == LUA_TTABLE) {
+            pParent = cItem;
+        } else {
+            pParent = cItem->parent();
+        }
     }
 
     auto newVar = new TVar();
@@ -3507,13 +3511,11 @@ void dlgTriggerEditor::addVar(bool isFolder)
     }
     vu->addTempVar(pNewItem, newVar);
     pNewItem->setFlags(pNewItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled));
-// The following test is pointless - we will already have seg. faulted if pNewItem is a nullptr...!
-//    if (pNewItem) {
-        mpCurrentVarItem = pNewItem;
-        treeWidget_variables->setCurrentItem(pNewItem);
-        showInfo(msgInfoAddVar);
-        slot_var_selected(treeWidget_variables->currentItem());
-//    }
+
+    mpCurrentVarItem = pNewItem;
+    treeWidget_variables->setCurrentItem(pNewItem);
+    showInfo(msgInfoAddVar);
+    slot_var_selected(treeWidget_variables->currentItem());
 }
 
 void dlgTriggerEditor::addKey(bool isFolder)
@@ -7072,9 +7074,7 @@ void dlgTriggerEditor::slot_add_new()
         addKey(false); //add normal alias
         break;
     case EditorViewType::cmVarsView:
-        if (mpCurrentVarItem) {
-            addVar(false); //add normal action
-        }
+        addVar(false); //add variable
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
@@ -7103,9 +7103,7 @@ void dlgTriggerEditor::slot_add_new_folder()
         addKey(true); //add alias group
         break;
     case EditorViewType::cmVarsView:
-        if (mpCurrentVarItem) {
-            addVar(true);
-        }
+        addVar(true); // add lua table
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
