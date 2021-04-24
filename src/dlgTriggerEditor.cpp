@@ -3475,7 +3475,7 @@ void dlgTriggerEditor::addVar(bool isFolder)
     QStringList nameL;
     nameL << QString(isFolder ? tr("New table name") : tr("New variable name"));
 
-    QTreeWidgetItem* pParent;
+    QTreeWidgetItem* pParent = nullptr;
     QTreeWidgetItem* pNewItem;
     QTreeWidgetItem* cItem = treeWidget_variables->currentItem();
     if (cItem) {
