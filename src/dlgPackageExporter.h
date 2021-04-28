@@ -96,8 +96,9 @@ private slots:
     void slot_openPackageLocation();
     void slot_packageChanged(int);
     void slot_updateLocationPlaceholder();
-    void slot_enableExportButton(const QString& text);
-    void slot_recountItems();
+    void slot_enableExportButton(const QString &text);
+    void slot_recountItems(QTreeWidgetItem *item);
+    void slot_rightClickOnItems(const QPoint &point);
     void slot_cancelExport();
 
 protected:
@@ -109,7 +110,9 @@ private:
     void uncheckAllChildren();
     int countRecursive(QTreeWidgetItem* item, int count) const;
     int countCheckedItems() const;
+    void checkChildren(QTreeWidgetItem* item) const;
     QString getActualPath() const;
+    static const int isTopFolder = 1;
     static std::pair<bool, QString> writeFileToZip(const QString& archiveFileName, const QString& fileSystemFileName, zip* archive);
     static std::pair<bool, QString> zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig);
     static std::pair<bool, QString> copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath);
@@ -147,6 +150,7 @@ private:
     QString mPackagePathFileName;
     QString mPackageIconPath;
     QString mPackageConfig;
+    bool mCheckChildren = true;
     inline static bool mExportingPackage = false;
 
 signals:
