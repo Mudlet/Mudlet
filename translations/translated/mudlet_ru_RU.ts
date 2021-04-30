@@ -7400,12 +7400,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3476"/>
       <source>New table name</source>
-      <translation type="unfinished"/>
+      <translation>Имя новой таблицы</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3476"/>
       <source>New variable name</source>
-      <translation type="unfinished"/>
+      <translation>Имя новой переменной</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3526"/>
