@@ -7405,12 +7405,12 @@ Non saranno salvate modifiche sul disco fisso, quindi andranno perse in caso di 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3476"/>
       <source>New table name</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo nome della tabella</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3476"/>
       <source>New variable name</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo nome della variabile</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3526"/>
