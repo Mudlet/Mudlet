@@ -607,7 +607,7 @@ QString dlgPackageExporter::copyNewImagesToTmp(const QString& tempPath) const
 }
 
 // purge images from tmp which are no longer used by the description
-void dlgPackageExporter::cleanupUnusedImages(const QString& tempPath, const QString& plainDescription) const
+void dlgPackageExporter::cleanupUnusedImages(const QString& tempPath, const QString& plainDescription)
 {
     static QRegularExpression imagesInUsePattern(R"(\$packagePath\/\.mudlet\/description_images\/(.+?)\")");
     QStringList imagesInUse;
