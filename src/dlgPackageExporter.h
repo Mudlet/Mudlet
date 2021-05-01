@@ -131,6 +131,8 @@ private:
                          QList<QTreeWidgetItem*>& actionList,
                          QList<QTreeWidgetItem*>& scriptList,
                          QList<QTreeWidgetItem*>& keyList);
+    QString copyNewImagesToTmp(const QString& tempPath) const;
+    void cleanupUnusedImages(const QString& tempPath, const QString& plainDescription) const;
 
     Ui::dlgPackageExporter* ui;
     QPointer<Host> mpHost;

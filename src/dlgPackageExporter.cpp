@@ -488,36 +488,7 @@ void dlgPackageExporter::slot_export_package()
     displayResultMessage(tr("Exporting package..."), true);
     qApp->processEvents();
 
-    //copy the newly-added description image files
-    QStringList newImageList;
-    //don't change the original plain description here as it may still be needed, for example if creating another package
-    QString plainDescription = mPlainDescription;
-    for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
-        QString fname = mDescriptionImages.at(i);
-        QFileInfo info(fname);
-        if (plainDescription.contains(QStringLiteral("$%1").arg(info.fileName()))) {
-            newImageList.append(fname);
-        }
-    }
-
-    if (!newImageList.isEmpty()) {
-        //Create description image dir
-        QString descriptionImagesDirName = QStringLiteral("%1.mudlet/description_images/").arg(tempPath);
-        QDir descriptionImageDir = QDir(descriptionImagesDirName);
-        if (!descriptionImageDir.exists()) {
-            descriptionImageDir.mkpath(descriptionImagesDirName);
-        }
-        for (int i = newImageList.size() - 1; i >= 0; i--) {
-            QFileInfo imageFile(newImageList.at(i));
-            if (imageFile.exists()) {
-                QString imageDir = descriptionImagesDirName;
-                imageDir.append(imageFile.fileName());
-                QFile::copy(imageFile.absoluteFilePath(), imageDir);
-            }
-            //replace temporary path with the path that is now inside the package
-            plainDescription.replace(QStringLiteral("$%1").arg(imageFile.fileName()), QStringLiteral("$packagePath/.mudlet/description_images/%1").arg(imageFile.fileName()));
-        }
-    }
+    auto plainDescription = copyNewImagesToTmp(tempPath);
 
     QStringList assetPaths;
     for (int i = 0; i < ui->listWidget_addedFiles->count(); ++i) {
@@ -530,7 +501,6 @@ void dlgPackageExporter::slot_export_package()
     QFileInfo iconFile = copyIconToTmp(tempPath);
 
     mXmlPathFileName = QStringLiteral("%1/%2.xml").arg(stagingDirName, mPackageName);
-
     writeConfigFile(stagingDirName, iconFile, plainDescription);
 
     QFile checkWriteability(mXmlPathFileName);
@@ -563,6 +533,7 @@ void dlgPackageExporter::slot_export_package()
         // this will freeze the main thread, so it's not the perfect way - ideally
         // only start this after assets copy + xml writing is complete
         assetsFuture.waitForFinished();
+        cleanupUnusedImages(tempPath, plainDescription);
         if (auto [success, message] = assetsFuture.result(); !success) {
             displayResultMessage(message);
             isOk = false;
@@ -597,6 +568,64 @@ void dlgPackageExporter::slot_export_package()
         mCancelButton->setVisible(false);
         mCloseButton->setVisible(true);
         QApplication::restoreOverrideCursor();
+    }
+}
+
+//copy the newly-added description image files
+QString dlgPackageExporter::copyNewImagesToTmp(const QString& tempPath) const
+{
+    QStringList newImagesList;
+    //don't change the original plain description here as it may still be needed, for example if creating another package
+    QString plainDescription = mPlainDescription;
+    for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
+        QString fname = mDescriptionImages.at(i);
+        QFileInfo info(fname);
+        if (plainDescription.contains(QStringLiteral("$%1").arg(info.fileName()))) {
+            newImagesList.append(fname);
+        }
+    }
+
+    if (!newImagesList.isEmpty()) {
+        //Create description image dir
+        QString descriptionImagesDirName = QStringLiteral("%1.mudlet/description_images/").arg(tempPath);
+        QDir descriptionImageDir = QDir(descriptionImagesDirName);
+        if (!descriptionImageDir.exists()) {
+            descriptionImageDir.mkpath(descriptionImagesDirName);
+        }
+        for (int i = newImagesList.size() - 1; i >= 0; i--) {
+            QFileInfo imageFile(newImagesList.at(i));
+            if (imageFile.exists()) {
+                QString imageDir = descriptionImagesDirName;
+                imageDir.append(imageFile.fileName());
+                QFile::copy(imageFile.absoluteFilePath(), imageDir);
+            }
+            //replace temporary path with the path that is now inside the package
+            plainDescription.replace(QStringLiteral("$%1").arg(imageFile.fileName()), QStringLiteral("$packagePath/.mudlet/description_images/%1").arg(imageFile.fileName()));
+        }
+    }
+    return plainDescription;
+}
+
+// purge images from tmp which are no longer used by the description
+void dlgPackageExporter::cleanupUnusedImages(const QString& tempPath, const QString& plainDescription) const
+{
+    static QRegularExpression imagesInUsePattern(R"(\$packagePath\/\.mudlet\/description_images\/(.+?)\")");
+    QStringList imagesInUse;
+    QRegularExpressionMatchIterator i = imagesInUsePattern.globalMatch(plainDescription);
+    while (i.hasNext()) {
+        auto match = i.next();
+        imagesInUse << match.captured(1).remove(QChar('\"'));
+    }
+
+    // iterate through all images in folder, if our list doesn't contain it - remove
+    QDirIterator allImagesCopied(QStringLiteral("%1.mudlet/description_images").arg(tempPath), QDir::Files);
+    while (allImagesCopied.hasNext()) {
+        QFileInfo copiedImage(allImagesCopied.next());
+        if (!imagesInUse.contains(copiedImage.fileName())) {
+            if (!QFile(copiedImage.absoluteFilePath()).remove()) {
+                qDebug() << "couldn't remove unused image" << copiedImage.fileName();
+            }
+        }
     }
 }
 
