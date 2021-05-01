@@ -32,7 +32,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="288"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>地圖中沒有房間 - 載入其他地圖，或從頭開始創建地圖</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
@@ -58,7 +58,7 @@
       <location filename="../src/Host.cpp" line="858"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation>[ OK ] - %1 非常感謝您使用公用測試版本！</translation>
+      <translation>[ OK ] - %1 非常感謝您使用公開測試版本！</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="859"/>
@@ -140,7 +140,7 @@ please wait...</source>
       <location filename="../src/mapInfoContributorManager.cpp" line="140"/>
       <source>Room Name: %1
 </source>
-      <translation>房间名: %1
+      <translation>房間名稱: %1
 </translation>
     </message>
     <message>
@@ -195,7 +195,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="163"/>
       <source>! You have joined %1 as %2</source>
-      <translation>! 你作为%1加入了%2</translation>
+      <translation>! 你作為 %1 加入了 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="165"/>
