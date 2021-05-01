@@ -488,27 +488,27 @@ void dlgPackageExporter::slot_export_package()
     displayResultMessage(tr("Exporting package..."), true);
     qApp->processEvents();
 
-    //copy description image files
-    QStringList imageList;
+    //copy the newly-added description image files
+    QStringList newImageList;
     //don't change the original plain description here as it may still be needed, for example if creating another package
     QString plainDescription = mPlainDescription;
     for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
         QString fname = mDescriptionImages.at(i);
         QFileInfo info(fname);
         if (plainDescription.contains(QStringLiteral("$%1").arg(info.fileName()))) {
-            imageList.append(fname);
+            newImageList.append(fname);
         }
     }
 
-    if (!imageList.isEmpty()) {
+    if (!newImageList.isEmpty()) {
         //Create description image dir
         QString descriptionImagesDirName = QStringLiteral("%1.mudlet/description_images/").arg(tempPath);
         QDir descriptionImageDir = QDir(descriptionImagesDirName);
         if (!descriptionImageDir.exists()) {
             descriptionImageDir.mkpath(descriptionImagesDirName);
         }
-        for (int i = imageList.size() - 1; i >= 0; i--) {
-            QFileInfo imageFile(imageList.at(i));
+        for (int i = newImageList.size() - 1; i >= 0; i--) {
+            QFileInfo imageFile(newImageList.at(i));
             if (imageFile.exists()) {
                 QString imageDir = descriptionImagesDirName;
                 imageDir.append(imageFile.fileName());
@@ -821,11 +821,6 @@ dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& pac
     zip* archive = zip_open(packagePathFileName.toUtf8().constData(), ZIP_CREATE | ZIP_TRUNCATE, &ze);
 
     if (!archive) {
-        // Failed to open/create archive file
-        // We now use the better zipError handling system (not requiring a
-        // previously defined finite-sized char type buffer {which obviously
-        // could have string buffer overflow issues} which is available in
-        // post 0.10 versions of libzip):
         zip_error_t zipError;
         zip_error_init_with_code(&zipError, ze);
         QString errMsg = tr("Failed to open package file. Error is: \"%1\".",
@@ -851,44 +846,39 @@ dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& pac
 */
     qt_ntfs_permission_lookup++;
 #endif // defined(Q_OS_WIN32)
-    QDirIterator itDir(stagingDirName, QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files, QDirIterator::Subdirectories);
+    QDirIterator stagingFile(stagingDirName, QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files, QDirIterator::Subdirectories);
     // relative names to use in archive:
     QStringList directoryEntries;
     // Key is relative name to use in archive
     // Value is fullName in file-system:
     QMap<QString, QString> fileEntries;
-    while (itDir.hasNext() && isOk) {
-        QString itEntry = itDir.next();
+    while (stagingFile.hasNext() && isOk) {
+        QString itEntry = stagingFile.next();
         Q_UNUSED(itEntry);
-        //              Comment out the preceding line if the following is uncommented!
-        //              qDebug() << " parsing entry:" << itEntry << " fileName() is:" << itDir.fileName() << " filePath() is:" << itDir.filePath();
-        // QString::compare(...) returns 0 (false) if the two arguments
-        // MATCH and non-0 (true) otherwise and De Morgans' Laws means
-        // that the if branch should be taken if the fileName IS a Dot
-        // OR IS a DotDot file...!
-        if (!(itDir.fileName().compare(QStringLiteral(".")) && itDir.fileName().compare(QStringLiteral("..")))) {
+        // Dot and DotDot entries are no use to us so skip them
+        if (!(stagingFile.fileName().compare(QStringLiteral(".")) && stagingFile.fileName().compare(QStringLiteral("..")))) {
             // Dot and DotDot entries are no use to us so skip them
             continue;
         }
 
-        QFileInfo entryInfo(itDir.fileInfo());
-        if (!entryInfo.isReadable()) {
-            qWarning() << "dlgPackageExporter::slot_export_package() skipping file: " << itDir.fileName() << "it is NOT readable!";
+        QFileInfo stagingFileInfo(stagingFile.fileInfo());
+        if (!stagingFileInfo.isReadable()) {
+            qWarning() << "dlgPackageExporter::slot_export_package() skipping file: " << stagingFile.fileName() << "it is NOT readable!";
             continue;
         }
 
-        if (entryInfo.isSymLink()) {
-            qWarning() << "dlgPackageExporter::slot_export_package() skipping file: " << itDir.fileName() << "it is a Symlink - avoided to prevent file-system loops!";
+        if (stagingFileInfo.isSymLink()) {
+            qWarning() << "dlgPackageExporter::slot_export_package() skipping file: " << stagingFile.fileName() << "it is a Symlink - avoided to prevent file-system loops!";
             continue;
         }
 
-        QString nameInArchive = itDir.filePath();
+        QString nameInArchive = stagingFile.filePath();
         nameInArchive.remove(QStringLiteral("%1/").arg(stagingDirName));
 
-        if (entryInfo.isDir()) {
+        if (stagingFileInfo.isDir()) {
             directoryEntries.append(nameInArchive);
-        } else if (entryInfo.isFile()) {
-            fileEntries.insert(nameInArchive, itDir.filePath());
+        } else if (stagingFileInfo.isFile()) {
+            fileEntries.insert(nameInArchive, stagingFile.filePath());
         }
     }
 
