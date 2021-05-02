@@ -344,9 +344,9 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
         }
     }
 
-    int namecount;
-    int name_entry_size;
-    char* tabptr;
+    int namecount; //NOLINT(cppcoreguidelines-init-variables)
+    int name_entry_size; //NOLINT(cppcoreguidelines-init-variables)
+    char* tabptr; //NOLINT(cppcoreguidelines-init-variables)
 
     pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMECOUNT, &namecount);
 
@@ -357,9 +357,9 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
         pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
         for (i = 0; i < namecount; i++) {
             int n = (tabptr[0] << 8) | tabptr[1];
-            auto name = QString::fromUtf8(&tabptr[2]).trimmed();
-            auto* substring_start = subject + ovector[2*n];
-            auto substring_length = ovector[2*n+1] - ovector[2*n];
+            auto name = QString::fromUtf8(&tabptr[2]).trimmed(); //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
+            auto* substring_start = subject + ovector[2*n]; //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
+            auto substring_length = ovector[2*n+1] - ovector[2*n]; //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
             auto utf16_pos = toMatch.indexOf(QString(substring_start));
             auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
