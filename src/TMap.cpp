@@ -1517,6 +1517,11 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 
            // Allow for somethings to be updated - especially on Windows?
            qApp->processEvents();
+        } else {
+            file.setFileName(location);
+            if (validatePotentialMapFile(file, ifs)) {
+                foundValidFile = true;
+            }
         }
         if (!foundValidFile) {
             canRestore = false;
