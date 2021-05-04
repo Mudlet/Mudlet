@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020 by Stephen Lyons             #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2021 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -23,14 +23,14 @@
 
 ############################################################################
 #                                                                          #
-#    NOTICE: FreeBSD is not an officially supported platform as such;      #
-#    the work on getting it working has been done by myself, and other     #
-#    developers, unless they have explicitly said so, are not able to      #
-#    address issues relating specifically to that Operating System.        #
-#    Nevertheless users of FreeBSD are equally welcome to contribute       #
-#    to the development of Mudlet - bugfixes and enhancements are          #
-#    welcome from all!                                                     #
-#                                           Stephen Lyons, February 2018   #
+#    NOTICE: FreeBSD and GNU/Hurd are not officially supported platforms   #
+#    as such; the work on getting them working has been done by myself,    #
+#    and other developers, unless they have explicitly said so, are not    #
+#    able to address issues relating specifically to these Operating       #
+#    Systems. Nevertheless users of either are equally welcome to          #
+#    contribute to the development of Mudlet - bugfixes and enhancements   #
+#    are welcome from all!                                                 #
+#                         Stephen Lyons, February 2018, updated March 2021 #
 #                                                                          #
 ############################################################################
 
@@ -89,7 +89,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.10.1
+VERSION = 4.11.3
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -284,7 +284,7 @@ unix:!macx {
         LIBS +=  \
             -L"$${MINGW_BASE_DIR_TEST}\\bin" \
             -llua51 \
-            -llibhunspell-1.6
+            -lhunspell-1.6
 
         INCLUDEPATH += \
              "C:\\Libraries\\boost_1_71_0" \
@@ -502,7 +502,6 @@ SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
     AltFocusMenuBarDisable.cpp \
-    TTextCodec.cpp \
     ctelnet.cpp \
     discord.cpp \
     dlgAboutDialog.cpp \
@@ -513,9 +512,11 @@ SOURCES += \
     dlgConnectionProfiles.cpp \
     dlgIRC.cpp \
     dlgKeysMainArea.cpp \
+    dlgModuleManager.cpp \
     dlgMapper.cpp \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
+    dlgPackageManager.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
     dlgRoomSymbol.cpp \
@@ -539,6 +540,7 @@ SOURCES += \
     main.cpp \
     mapInfoContributorManager.cpp \
     mudlet.cpp \
+    MxpTag.cpp \
     ScriptUnit.cpp \
     T2DMap.cpp \
     TAction.cpp \
@@ -564,11 +566,11 @@ SOURCES += \
     TMap.cpp \
     TMapLabel.cpp \
     TMedia.cpp \
+    TMxpBRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
     TMxpFormattingTagsHandler.cpp \
-    TMxpBRTagHandler.cpp \
     TMxpColorTagHandler.cpp \
     TMxpCustomElementTagHandler.cpp \
     TMxpFontTagHandler.cpp \
@@ -580,19 +582,20 @@ SOURCES += \
     TMxpProcessor.cpp \
     TMxpSendTagHandler.cpp \
     TMxpSupportTagHandler.cpp \
-    MxpTag.cpp \
     TMxpTagHandler.cpp \
     TMxpTagParser.cpp \
     TMxpTagProcessor.cpp \
-    TMxpVarTagHandler.cpp \
     TMxpVersionTagHandler.cpp \
+    TMxpVarTagHandler.cpp \
     TriggerUnit.cpp \
     TRoom.cpp \
     TRoomDB.cpp \
     TScript.cpp \
     TSplitter.cpp \
     TSplitterHandle.cpp \
+    TStringUtils.cpp \
     TTabBar.cpp \
+    TTextCodec.cpp \
     TTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
@@ -601,14 +604,12 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    TStringUtils.cpp
+    XMLimport.cpp
 
 HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
-    TTextCodec.h \
     ctelnet.h \
     discord.h \
     dlgAboutDialog.h \
@@ -620,8 +621,10 @@ HEADERS += \
     dlgIRC.h \
     dlgKeysMainArea.h \
     dlgMapper.h \
+    dlgModuleManager.h \
     dlgNotepad.h \
     dlgPackageExporter.h \
+    dlgPackageManager.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
     dlgRoomSymbol.h \
@@ -643,6 +646,7 @@ HEADERS += \
     LuaInterface.h \
     mapInfoContributorManager.h \
     mudlet.h \
+    MxpTag.h \
     pre_guard.h \
     post_guard.h \
     ScriptUnit.h \
@@ -691,7 +695,6 @@ HEADERS += \
     TMxpNodeBuilder.h \
     TMxpProcessor.h \
     TMxpSendTagHandler.h \
-    MxpTag.h \
     TMxpTagHandler.h \
     TMxpTagParser.h \
     TMxpTagProcessor.h \
@@ -705,7 +708,9 @@ HEADERS += \
     TScript.h \
     TSplitter.h \
     TSplitterHandle.h \
+    TStringUtils.h \
     TTabBar.h \
+    TTextCodec.h \
     TTextEdit.h \
     TTimer.h \
     TToolBar.h \
@@ -717,8 +722,7 @@ HEADERS += \
     XMLimport.h \
     widechar_width.h \
     ../3rdparty/discord/rpc/include/discord_register.h \
-    ../3rdparty/discord/rpc/include/discord_rpc.h \
-    TStringUtils.h
+    ../3rdparty/discord/rpc/include/discord_rpc.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
@@ -734,8 +738,10 @@ FORMS += \
     ui/irc.ui \
     ui/keybindings_main_area.ui \
     ui/main_window.ui \
+    ui/module_manager.ui \
     ui/mapper.ui \
     ui/notes_editor.ui \
+    ui/package_manager.ui \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
     ui/room_symbol.ui \

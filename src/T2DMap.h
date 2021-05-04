@@ -88,7 +88,7 @@ public:
 #endif
 
 
-    TMap* mpMap;
+    TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
     qreal xyzoom;
     int mRX;
@@ -138,7 +138,6 @@ public:
     qreal mOy;
     int mOz;
     bool mShiftMode;
-    QComboBox* mapInfo_combobox;
     QComboBox* arealist_combobox;
     QPointer<QDialog> mpCustomLinesDialog;
     int mCustomLinesRoomFrom;
@@ -181,17 +180,17 @@ public slots:
     void slot_toggleMapViewOnly();
     void slot_createLabel();
     void slot_customLineColor();
-    void shiftZup();
-    void shiftZdown();
+    void slot_shiftZup();
+    void slot_shiftZdown();
 #if (QT_VERSION) < (QT_VERSION_CHECK(5, 15, 0))
     // This is ONLY used as a slot in older versions
     void slot_switchArea(const QString& newAreaName);
 #endif
     void toggleShiftMode();
-    void shiftUp();
-    void shiftDown();
-    void shiftLeft();
-    void shiftRight();
+    void slot_shiftUp();
+    void slot_shiftDown();
+    void slot_shiftLeft();
+    void slot_shiftRight();
     void slot_showSymbolSelection();
     void slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
     void slot_setImage();

@@ -118,11 +118,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setAttribute(Qt::WA_OpaquePaintEvent, false);
     setAttribute(Qt::WA_DeleteOnClose);
 
-    QPalette palette;
-    palette.setColor(QPalette::Text, mFgColor);
-    palette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-    palette.setColor(QPalette::Base, mBgColor);
-    setPalette(palette);
     showNewLines();
     setMouseTracking(true); // test fix for MAC
     setEnabled(true);       //test fix for MAC
@@ -855,7 +850,7 @@ void TTextEdit::highlightSelection()
     QClipboard* clipboard = QApplication::clipboard();
     if (clipboard->supportsSelection()) {
         // X11 has a second clipboard that's updated on any selection
-        clipboard->setText(getSelectedText(QChar::LineFeed, mShowTimeStamps), QClipboard::Selection);
+        clipboard->setText(getSelectedText(QChar::LineFeed), QClipboard::Selection);
     }
 }
 
@@ -901,7 +896,8 @@ void TTextEdit::expandSelectionToWords()
             break;
         }
     }
-    mPA.setX(xind+1);
+    mDragStart.setX(xind + 1);
+    mPA.setX(xind + 1);
 
     yind = mPB.y();
     xind = mPB.x();
@@ -911,7 +907,23 @@ void TTextEdit::expandSelectionToWords()
             break;
         }
     }
-    mPB.setX(xind-1);
+    mDragSelectionEnd.setX(xind - 1);
+    mPB.setX(xind - 1);
+}
+
+void TTextEdit::expandSelectionToLine(int y)
+{
+    if (!(y < mpBuffer->lineBuffer.size())) {
+        return;
+    }
+    unHighlight();
+    mDragStart.setX(0);
+    mDragStart.setY(y);
+    mDragSelectionEnd.setX(mpBuffer->buffer[y].size());
+    mDragSelectionEnd.setY(y);
+    normaliseSelection();
+    highlightSelection();
+    mMouseTracking = true;
 }
 
 
@@ -1111,10 +1123,16 @@ void TTextEdit::slot_popupMenu()
         return;
     }
     QString cmd;
+    int luaReference{0};
     if (mPopupCommands.contains(pA->text())) {
-        cmd = mPopupCommands[pA->text()];
+        cmd = mPopupCommands[pA->text()].first;
+        luaReference = mPopupCommands[pA->text()].second;
     }
-    mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
+    if (!luaReference) {
+        mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
+    } else {
+        mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, QStringLiteral("echoPopup"));
+    }
 }
 
 void TTextEdit::mousePressEvent(QMouseEvent* event)
@@ -1151,15 +1169,9 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             x = convertMouseXToBufferX(event->x(), y, &isOutOfbounds);
         }
 
-        if (mCtrlSelecting && (y < mpBuffer->lineBuffer.size())) {
-            unHighlight();
-            mDragStart.setX(0);
-            mDragStart.setY(y);
-            mDragSelectionEnd.setX(mpBuffer->buffer[y].size());
-            mDragSelectionEnd.setY(y);
-            normaliseSelection();
+        if (mCtrlSelecting) {
+            expandSelectionToLine(y);
             highlightSelection();
-            mMouseTracking = true;
             event->accept();
             return;
         }
@@ -1168,10 +1180,15 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             if (x < static_cast<int>(mpBuffer->buffer[y].size()) && !isOutOfbounds) {
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
                     QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
+                    int luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(y).at(x).linkIndex()).value(0, false);
                     QString func;
                     if (!command.empty()) {
                         func = command.at(0);
-                        mpHost->mLuaInterpreter.compileAndExecuteScript(func);
+                        if (!luaReference){
+                            mpHost->mLuaInterpreter.compileAndExecuteScript(func);
+                        } else {
+                            mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, QStringLiteral("echoLink"));
+                        }
                         return;
                     }
                 }
@@ -1198,6 +1215,12 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             mMouseTrackLevel++;
             if (mMouseTrackLevel > 3) {
                 mMouseTrackLevel = 3;
+            }
+
+            if (mMouseTrackLevel == 3){
+                expandSelectionToLine(y);
+                event->accept();
+                return;
             }
 
             if (y >= mpBuffer->lineBuffer.size()) {
@@ -1248,16 +1271,17 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
                     QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
                     QStringList hint = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(y).at(x).linkIndex());
+                    QVector<int> luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(y).at(x).linkIndex());
                     if (command.size() > 1) {
                         auto popup = new QMenu(this);
                         for (int i = 0, total = command.size(); i < total; ++i) {
                             QAction* pA;
                             if (i < hint.size()) {
                                 pA = popup->addAction(hint[i]);
-                                mPopupCommands[hint[i]] = command[i];
+                                mPopupCommands[hint[i]] = {command[i], luaReference.value(i, 0)};
                             } else {
                                 pA = popup->addAction(command[i]);
-                                mPopupCommands[command[i]] = command[i];
+                                mPopupCommands[command[i]] = {command[i], luaReference.value(i, 0)};
                             }
                             connect(pA, &QAction::triggered, this, &TTextEdit::slot_popupMenu);
                         }
@@ -1399,7 +1423,7 @@ void TTextEdit::slot_copySelectionToClipboard()
         return;
     }
 
-    QString selectedText = getSelectedText(QChar::LineFeed, mShowTimeStamps);
+    QString selectedText = getSelectedText(QChar::LineFeed);
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(selectedText);
 }
@@ -1629,10 +1653,10 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
 
         if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() >= timeout) {
             qDebug().nospace() << "timeout for image copy (" << timeout << "s) reached, managed to draw " << i << " lines";
-            return std::make_pair(false, linesDrawn);
+            return {false, linesDrawn};
         }
     }
-    return std::make_pair(true, linesDrawn);
+    return {true, linesDrawn};
 }
 
 void TTextEdit::searchSelectionOnline()
@@ -1658,13 +1682,6 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
     int startPos = std::max(0, mPA.x());
     int endPos = std::min(mPB.x(), (mpBuffer->lineBuffer.at(endLine).size() - 1));
     QStringList textLines = mpBuffer->lineBuffer.mid(startLine, endLine - startLine + 1);
-    if (showTimestamps) {
-        QStringList timestamps = mpBuffer->timeBuffer.mid(startLine, endLine - startLine + 1);
-        QStringList result;
-        std::transform(textLines.cbegin(), textLines.cend(), timestamps.cbegin(), std::back_inserter(result),
-                               [](const QString& text, const QString& timestamp) { return timestamp + text; });
-        textLines = result;
-    }
 
     if (mPA.y() == mPB.y()) {
         // Is a single line, so trim characters off the beginning and end
@@ -1687,6 +1704,14 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
         }
     }
 
+     if (showTimestamps) {
+        QStringList timestamps = mpBuffer->timeBuffer.mid(startLine, endLine - startLine + 1);
+        QStringList result;
+        std::transform(textLines.cbegin(), textLines.cend(), timestamps.cbegin(), std::back_inserter(result),
+                               [](const QString& text, const QString& timestamp) { return timestamp + text; });
+        textLines = result;
+    }
+
     return textLines.join(newlineChar);
 }
 
@@ -1700,6 +1725,11 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 
     if (mpConsole->getType() == TConsole::SubConsole) {
         qApp->sendEvent(mpConsole->parentWidget(), &newEvent);
+        auto subConsoleParent = qobject_cast<TConsole*>(mpConsole->parent());
+        if (subConsoleParent && subConsoleParent->mpDockWidget && subConsoleParent->mpDockWidget->isFloating()) {
+            mpHost->mpConsole->activateWindow();
+            mpHost->mpConsole->setFocus();
+        }
     }
 
     if (mpConsole->getType() == TConsole::MainConsole || mpConsole->getType() == TConsole::UserWindow) {
@@ -1928,7 +1958,7 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
         case 0x206D:                    return htmlCenter(tr("{activate arabic form-shaping}", "Unicode U+206D codepoint.")); break;
         case 0x206E:                    return htmlCenter(tr("{national digit shapes}", "Unicode U+206E codepoint.")); break;
         case 0x206F:                    return htmlCenter(tr("{nominal Digit shapes}", "Unicode U+206F codepoint.")); break;
-        case 0x3000:                    return htmlCenter(tr("{ideaographic space}", "Unicode U+3000 codepoint - ideaographic (CJK Wide) space")); break;
+        case 0x3000:                    return htmlCenter(tr("{ideographic space}", "Unicode U+3000 codepoint - ideographic (CJK Wide) space")); break;
         case 0xFE00:                    return htmlCenter(tr("{variation selector 1}", "Unicode U+FE00 codepoint.")); break;
         case 0xFE01:                    return htmlCenter(tr("{variation selector 2}", "Unicode U+FE01 codepoint.")); break;
         case 0xFE02:                    return htmlCenter(tr("{variation selector 3}", "Unicode U+FE02 codepoint.")); break;
@@ -2101,7 +2131,7 @@ void TTextEdit::slot_analyseSelection()
                 // just for that number (and not the rest of the resultant String):
                 // &#8232; is the Unicode Line Separator
                 utf16Vals.append(
-                        QStringLiteral("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</centre>&#8232;<center>(0x%3:0x%4)</center></td>")
+                        QStringLiteral("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
                                 .arg(QString::number(columnsToUse))
                                 .arg(QStringLiteral("%1").arg(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1)), 4, 16, zero).toUpper())
                                 .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, zero)

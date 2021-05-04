@@ -3,7 +3,16 @@ if ("$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet") {
 }
 
 cd "$Env:APPVEYOR_BUILD_FOLDER\src\release"
-windeployqt.exe --release mudlet.exe
+
+$Script:QtVersionRegex = [regex]'\\([\d\.]+)\\mingw'
+$Script:QtVersion = $QtVersionRegex.Match($Env:QT_BASE_DIR).Groups[1].Value
+if ([version]$Script:QtVersion -ge [version]'5.14.0') {
+  windeployqt.exe mudlet.exe
+}
+else {
+  windeployqt.exe --release mudlet.exe
+}
+
 . "$Env:APPVEYOR_BUILD_FOLDER\CI\copy-non-qt-win-dependencies.ps1"
 
 Remove-Item * -include *.cpp, *.o
@@ -157,9 +166,10 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     $Script:DownloadedFeed = [System.IO.Path]::GetTempFileName()
     Invoke-WebRequest "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86" -OutFile $Script:DownloadedFeed
     Write-Output "=== Generating a changelog ==="
-    pushd "$Env:APPVEYOR_BUILD_FOLDER\CI\"
+    Push-Location "$Env:APPVEYOR_BUILD_FOLDER\CI\"
     $Script:Changelog = lua "$Env:APPVEYOR_BUILD_FOLDER\CI\generate-ptb-changelog.lua" --releasefile $Script:DownloadedFeed
-    popd
+    Pop-Location
+    Write-Output $Script:Changelog
     Write-Output "=== Creating release in Dblsqd ==="
     dblsqd release -a mudlet -c public-test-build -m $Script:Changelog "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower()
 

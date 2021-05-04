@@ -52,13 +52,14 @@ void dlgRoomSymbol::init(QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms)
         lineEdit_roomSymbol->hide();
     }
     initInstructionLabel();
-    QSetIterator<TRoom*> itRoomPtr(pRooms);
-    if (itRoomPtr.hasNext()) {
-        auto room = itRoomPtr.next();
-        firstRoomId = room->getId();
-        selectedColor = room->mSymbolColor;
-        previewColor = room->mSymbolColor;
-        roomColor = mpHost->mpMap->getColor(firstRoomId);
+    if (!pRooms.isEmpty()) {
+        auto pRoom = *(pRooms.begin());
+        if (pRoom) {
+            auto firstRoomId = pRoom->getId();
+            selectedColor = pRoom->mSymbolColor;
+            previewColor = pRoom->mSymbolColor;
+            roomColor = mpHost->mpMap->getColor(firstRoomId);
+        }
     }
     updatePreview();
 }
