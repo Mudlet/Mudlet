@@ -143,6 +143,10 @@ jobs:
     - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
       run: |
+        # workaround to install libzip-dev in Github Actions
+        sudo apt-add-repository "ppa:ondrej/php" -y
+        sudo apt-get update
+
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
         sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 -y
