@@ -8279,7 +8279,7 @@ dalla GUI)</translation>
     <message>
       <location filename="../src/main.cpp" line="178"/>
       <source>Don&apos;t show the splash screen when starting</source>
-      <translation type="unfinished"/>
+      <translation>Non mostrare la schermata iniziale di avvio</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="188"/>
