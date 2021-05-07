@@ -8174,7 +8174,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/main.cpp" line="178"/>
       <source>Don&apos;t show the splash screen when starting</source>
-      <translation type="unfinished"/>
+      <translation>Don&apos;t show the splash screen when starting</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="188"/>
