@@ -46,7 +46,7 @@ QString dlgIRC::DefaultNickName = QStringLiteral("Mudlet");
 QStringList dlgIRC::DefaultChannels = QStringList() << QStringLiteral("#mudlet");
 int dlgIRC::DefaultMessageBufferLimit = 5000;
 
-dlgIRC::dlgIRC(Host* pHost) 
+dlgIRC::dlgIRC(Host* pHost)
 : mReadyForSending(false)
 , mpHost(pHost)
 , mIrcStarted(false)
@@ -495,10 +495,11 @@ void dlgIRC::slot_onTextEntered()
 #else
         QString command = lineEdit->text().mid(1).split(" ", QString::SkipEmptyParts).value(0).toUpper();
 #endif
-        if (commandParser->commands().contains(command))
+        if (commandParser->commands().contains(command)) {
             error = tr("[ERROR] Syntax: %1").arg(commandParser->syntax(command).replace(QStringLiteral("<"), QStringLiteral("&lt;")).replace(QStringLiteral(">"), QStringLiteral("&gt;")));
-        else
+        } else {
             error = tr("[ERROR] Unknown command: %1").arg(command);
+        }
         ircBrowser->append(IrcMessageFormatter::formatMessage(error, QStringLiteral("indianred")));
         lineEdit->setStyleSheet(QStringLiteral("background: salmon"));
     }
@@ -534,17 +535,18 @@ void dlgIRC::slot_onBufferAdded(IrcBuffer* buffer)
     // joined a buffer - start listening to buffer specific messages
     connect(buffer, &IrcBuffer::messageReceived, this, &dlgIRC::slot_receiveMessage);
     // create a document for storing the buffer specific messages
-    auto * document = new QTextDocument(buffer);
+    auto* document = new QTextDocument(buffer);
     document->setMaximumBlockCount(mMessageBufferLimit);
     bufferTexts.insert(buffer, document);
     // create a sorted model for buffer users
-    auto * userModel = new IrcUserModel(buffer);
+    auto* userModel = new IrcUserModel(buffer);
     userModel->setSortMethod(Irc::SortByTitle);
     userModels.insert(buffer, userModel);
     // activate the new buffer
     int idx = bufferModel->buffers().indexOf(buffer);
-    if (idx != -1)
+    if (idx != -1) {
         bufferList->setCurrentIndex(bufferModel->index(idx));
+    }
 }
 
 void dlgIRC::slot_onBufferRemoved(IrcBuffer* buffer)
