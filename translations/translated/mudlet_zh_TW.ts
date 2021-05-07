@@ -647,7 +647,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="1254"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>地圖中沒有房間 - 載入其他地圖，或從頭開始創建地圖</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2256"/>
