@@ -8004,13 +8004,17 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     </message>
     <message>
         <location filename="../src/main.cpp" line="172"/>
-        <location filename="../src/main.cpp" line="178"/>
         <source>Display help and exit</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/main.cpp" line="175"/>
         <source>Display version and exit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/main.cpp" line="178"/>
+        <source>Don&apos;t show the splash screen when starting</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
