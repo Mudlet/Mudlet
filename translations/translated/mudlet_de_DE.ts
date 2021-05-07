@@ -8224,7 +8224,6 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     </message>
     <message>
       <location filename="../src/main.cpp" line="172"/>
-      <location filename="../src/main.cpp" line="178"/>
       <source>Display help and exit</source>
       <translation>Hilfe anzeigen und beenden</translation>
     </message>
@@ -8232,6 +8231,11 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/main.cpp" line="175"/>
       <source>Display version and exit</source>
       <translation>Version anzeigen und beenden</translation>
+    </message>
+    <message>
+      <location filename="../src/main.cpp" line="178"/>
+      <source>Don&apos;t show the splash screen when starting</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/main.cpp" line="188"/>
