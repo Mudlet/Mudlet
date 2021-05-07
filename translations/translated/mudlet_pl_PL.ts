@@ -8177,7 +8177,6 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     </message>
     <message>
       <location filename="../src/main.cpp" line="172"/>
-      <location filename="../src/main.cpp" line="178"/>
       <source>Display help and exit</source>
       <translation>Wyświetl pomoc i wyjdź</translation>
     </message>
@@ -8185,6 +8184,11 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
       <location filename="../src/main.cpp" line="175"/>
       <source>Display version and exit</source>
       <translation>Wyświetl wersję i wyjdź</translation>
+    </message>
+    <message>
+      <location filename="../src/main.cpp" line="178"/>
+      <source>Don&apos;t show the splash screen when starting</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/main.cpp" line="188"/>
