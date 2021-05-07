@@ -2056,26 +2056,28 @@ Gebiet %2 von %3   Raum %4 von %5   Markierung %6 von %7...</translation>
       <location filename="../src/TMap.cpp" line="1021"/>
       <source>[ ERROR ] - The format version &quot;%1&quot; you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version %2.</source>
-      <translation type="unfinished"/>
+      <translation>[FEHLER] - Du versuchst, die Karte mit einer zu neuen Formatversion &quot;%1&quot; zu speichern.
+Diese Version von Mudlet unterstützt nur Formate bis zur Version %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1037"/>
       <source>[ ALERT ] - Saving map in format version &quot;%1&quot; that is different than &quot;%2&quot; which
 it was loaded as. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Speichere Karte mit einer anderen Formatversion &quot;%1&quot; als %2, womit sie geladen wurde. Dies kann ein Problem sein, wenn sie mit Anderen geteilt werden soll, die das ursprüngliche Format benötigen.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1047"/>
       <source>[ WARN ]  - Saving map in format version &quot;%1&quot; different from the
 recommended map version %2 for this version of Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ]  - Speichere Karte mit einer anderen Formatversion &quot;%1&quot; als
+der für diese Version von Mudlet empfohlenen Version %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1385"/>
       <location filename="../src/TMap.cpp" line="1827"/>
       <source>[ ERROR ] - Unable to open map file for reading: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[FEHLER] - Kartendatei kann nicht zum Lesen geöffnet werden: &quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1407"/>
@@ -2089,36 +2091,41 @@ its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. 
       <source>[ ALERT ] - Map file is too new. Its format version &quot;%1&quot; is higher than this version of
 Mudlet can handle (%2)! The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Kartendatei ist zu neu. Ihre Formatversion &quot;%1&quot; ist höher als diese Version von Mudlet verarbeiten kann (%2)! Die Datei ist:
+&quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1429"/>
       <source>[ INFO ]  - You will need to update your Mudlet to read the map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Du musst Mudlet aktualisieren, um die Kartendatei lesen zu können.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1438"/>
       <source>[ ALERT ] - Map file is really old. Its format version &quot;%1&quot; is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try! The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Kartendatei ist wirklich alt, ihre Formatversion &quot;%1&quot; ist so alt, dass
+diese Version von Mudlet vielleicht nicht genügend Informationen daraus erhält,
+aber sie wird es versuchen! Die Datei ist: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1452"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File:
 &quot;%2&quot;,
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Lese Karte. Formatversion: %1. Datei:
+&quot;%2&quot;,
+bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1455"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Lese Karte. Formatversion: %1. Datei: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1843"/>
       <source>[ INFO ]  - Checking map file &quot;%1&quot;, format version &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Prüfe Kartendatei %1, Formatversion &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2380"/>
@@ -7363,12 +7370,12 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3476"/>
       <source>New table name</source>
-      <translation type="unfinished"/>
+      <translation>Neuer Tabellenname</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3476"/>
       <source>New variable name</source>
-      <translation type="unfinished"/>
+      <translation>Neuer Variablenname</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3526"/>
@@ -8235,7 +8242,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/main.cpp" line="178"/>
       <source>Don&apos;t show the splash screen when starting</source>
-      <translation type="unfinished"/>
+      <translation>Zeige keinen Splash-Screen beim Starten an</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="188"/>
