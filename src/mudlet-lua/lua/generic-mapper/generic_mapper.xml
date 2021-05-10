@@ -2432,7 +2432,7 @@ function map.find_me(name, exits, dir, manual)
     if table.size(match_IDs) == 0 then
         match_IDs = rooms
     end
-    if table.contains(match_IDs,map.currentRoom) then
+    if table.index_of(match_IDs,map.currentRoom) then
         match_IDs = {map.currentRoom}
     end
     if not table.is_empty(match_IDs) and not find_portal then
