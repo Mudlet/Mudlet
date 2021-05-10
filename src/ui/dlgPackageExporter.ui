@@ -313,6 +313,12 @@
           <layout class="QVBoxLayout" name="verticalLayout_4">
            <item>
             <widget class="QLabel" name="label_assets">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="text">
               <string>Include assets (images, sounds, fonts)</string>
              </property>
@@ -320,12 +326,6 @@
            </item>
            <item>
             <widget class="QListWidget" name="listWidget_addedFiles">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
              <property name="acceptDrops">
               <bool>true</bool>
              </property>
