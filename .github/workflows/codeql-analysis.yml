@@ -8,8 +8,7 @@ name: "CodeQL"
 on:
   push:
     branches: [development, main]
-  schedule:
-    - cron: '0 7 * * 3'
+  workflow_dispatch:
 
 jobs:
   analyze:
