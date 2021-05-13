@@ -15715,10 +15715,11 @@ int TLuaInterpreter::setButtonStateByName(lua_State* L)
 
     if (pItem->mButtonState != checked) {
         pItem->mButtonState = checked;
-        // This should probably be a Q_ASSERT_X(...) but this is a bit more
-        // foregiving:
         if (pItem->mpEButton) {
             pItem->mpEButton->setChecked(checked);
+        }
+        if (pItem->mpFButton) {
+            pItem->mpFButton->setChecked(checked);
         }
         lua_pushboolean(L, true);
         return 1;
