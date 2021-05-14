@@ -3029,7 +3029,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
         }
         connect(mapper, SIGNAL(mapped(QString)), this, SLOT(slot_userAction(QString)));
 
-        // After all has been added, finally have Qt display the popup menu as a whole
+        // After all has been added, finally have Qt display the context menu as a whole
         mPopupMenu = true;
         popup->popup(mapToGlobal(event->pos()));
     }
