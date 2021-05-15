@@ -2723,13 +2723,12 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 customLineFinish->setToolTip(tr("Finish drawing this line", "2D Mapper context menu (drawing custom exit line) item tooltip"));
                 connect(customLineFinish, &QAction::triggered, this, &T2DMap::slot_doneCustomLine);
 
-                mPopupMenu = true;
-
                 room->calcRoomDimensions();
                 popup->addAction(customLineUndoLastPoint);
                 popup->addAction(customLineProperties);
                 popup->addAction(customLineFinish);
 
+                mPopupMenu = true;
                 popup->popup(mapToGlobal(event->pos()));
                 update();
                 return;
@@ -2793,11 +2792,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 auto loadMap = new QAction(tr("Load map", "2D Mapper context menu (no map found) item"), this);
                 connect(loadMap, &QAction::triggered, this, &T2DMap::slot_loadMap);
 
-                mPopupMenu = true;
-
                 popup->addAction(createMap);
                 popup->addAction(loadMap);
 
+                mPopupMenu = true;
                 popup->popup(mapToGlobal(event->pos()));
                 return;
             }
@@ -2907,11 +2905,6 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             auto setMapViewOnly = new QAction(viewModeItem, this);
             connect(setMapViewOnly, &QAction::triggered, this, &T2DMap::slot_toggleMapViewOnly);
             popup->addAction(setMapViewOnly);
-
-            mPopupMenu = true;
-
-            popup->popup(mapToGlobal(event->pos()));
-
         } else if (mLabelHighlighted) {
             auto moveLabel = new QAction(tr("Move", "2D Mapper context menu (label) item"), this);
             moveLabel->setToolTip(tr("Move label", "2D Mapper context menu item (label) tooltip"));
@@ -2919,10 +2912,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             auto deleteLabel = new QAction(tr("Delete", "2D Mapper context menu (label) item"), this);
             deleteLabel->setToolTip(tr("Delete label", "2D Mapper context menu (label) item tooltip"));
             connect(deleteLabel, &QAction::triggered, this, &T2DMap::slot_deleteLabel);
-            mPopupMenu = true;
             popup->addAction(moveLabel);
             popup->addAction(deleteLabel);
-            popup->popup(mapToGlobal(event->pos()));
         } else {
             // seems that if we get here then we have right clicked on a selected custom line?
             //            qDebug("T2DMap::mousePressEvent(): reached else case, mCustomLineSelectedRoom=%i, Exit=%s, Point=%i",
@@ -2985,13 +2976,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     deleteLine->setToolTip(tr("Delete all of this custom line", "2D Mapper context menu (custom line editing) item tooltip"));
                     connect(deleteLine, &QAction::triggered, this, &T2DMap::slot_deleteCustomExitLine);
 
-                    mPopupMenu = true;
-
                     popup->addAction(addPoint);
                     popup->addAction(removePoint);
                     popup->addAction(lineProperties);
                     popup->addAction(deleteLine);
-                    popup->popup(mapToGlobal(event->pos()));
                 }
             }
         }
@@ -3040,6 +3028,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             connect(action, SIGNAL(triggered()), mapper, SLOT(map()));
         }
         connect(mapper, SIGNAL(mapped(QString)), this, SLOT(slot_userAction(QString)));
+
+        // After all has been added, finally have Qt display the context menu as a whole
+        mPopupMenu = true;
+        popup->popup(mapToGlobal(event->pos()));
     }
 
     updateSelectionWidget();
