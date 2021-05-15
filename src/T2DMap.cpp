@@ -2771,8 +2771,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 }
             }
 
-
-            switch (mMultiSelectionSet.size()) {
+            int selectionSize = mMultiSelectionSet.size();
+            switch (selectionSize) {
                 case 0:
                     mMultiSelectionHighlightRoomId = 0;
                     break;
@@ -2804,12 +2804,12 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             // Else there is a map - though it might not have ANY rooms!
 
             if (!mMapViewOnly) {
-              if (mMultiSelectionSet.isEmpty()) {
-                  mpCreateRoomAction = new QAction(tr("Create room", "Menu option to create a new room in the mapper"), this);
-                  mpCreateRoomAction->setToolTip(tr("Create a new room here"));
-                  connect(mpCreateRoomAction.data(), &QAction::triggered, this, &T2DMap::slot_createRoom);
-                  popup->addAction(mpCreateRoomAction);
-              }
+                if (selectionSize == 0) {
+                    mpCreateRoomAction = new QAction(tr("Create room", "Menu option to create a new room in the mapper"), this);
+                    mpCreateRoomAction->setToolTip(tr("Create a new room here"));
+                    connect(mpCreateRoomAction.data(), &QAction::triggered, this, &T2DMap::slot_createRoom);
+                    popup->addAction(mpCreateRoomAction);
+                }
 
               auto moveRoom = new QAction(tr("Move", "2D Mapper context menu (room) item"), this);
               moveRoom->setToolTip(tr("Move room", "2D Mapper context menu (room) item tooltip"));
@@ -2890,7 +2890,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             }
 
             auto setPlayerLocation = new QAction(tr("Set location", "2D Mapper context menu (room) item"), this);
-            if (mMultiSelectionSet.size() == 1) { // Only enable if ONE room is highlighted
+            if (selectionSize == 1) { // Only enable if ONE room is highlighted
                 setPlayerLocation->setToolTip(tr("Set player current location to here", "2D Mapper context menu (room) item tooltip (enabled state)"));
                 connect(setPlayerLocation, &QAction::triggered, this, &T2DMap::slot_setPlayerLocation);
             } else {
