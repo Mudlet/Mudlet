@@ -2821,6 +2821,17 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
               connect(roomExits, &QAction::triggered, this, &T2DMap::slot_setExits);
               popup->addAction(roomExits);
 
+              auto customExitLine = new QAction(tr("Custom exit line", "2D Mapper context menu (room) item"), this);
+              if (pArea && !pArea->gridMode) {
+                  customExitLine->setToolTip(tr("Replace an exit line with a custom line", "2D Mapper context menu (room) item tooltip (enabled state)"));
+                  connect(customExitLine, &QAction::triggered, this, &T2DMap::slot_setCustomLine);
+              } else {
+                  // Disable custom exit lines in grid mode as they aren't visible anyway
+                  customExitLine->setToolTip(tr("Custom exit lines are not shown and are not editable in grid mode", "2D Mapper context menu (room) item tooltip (disabled state)"));
+                  customExitLine->setEnabled(false);
+              }
+              popup->addAction(customExitLine);
+
               auto recolorRoom = new QAction(tr("Color", "2D Mapper context menu (room) item"), this);
               recolorRoom->setToolTip(tr("Change room color", "2D Mapper context menu (room) item tooltip"));
               connect(recolorRoom, &QAction::triggered, this, &T2DMap::slot_changeColor);
@@ -2870,17 +2881,6 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
               roomArea->setToolTip(tr("Set room's area number", "2D Mapper context menu (room) item tooltip"));
               connect(roomArea, &QAction::triggered, this, &T2DMap::slot_setArea);
               popup->addAction(roomArea);
-
-              auto customExitLine = new QAction(tr("Custom exit line", "2D Mapper context menu (room) item"), this);
-              if (pArea && !pArea->gridMode) {
-                  customExitLine->setToolTip(tr("Replace an exit line with a custom line", "2D Mapper context menu (room) item tooltip (enabled state)"));
-                  connect(customExitLine, &QAction::triggered, this, &T2DMap::slot_setCustomLine);
-              } else {
-                  // Disable custom exit lines in grid mode as they aren't visible anyway
-                  customExitLine->setToolTip(tr("Custom exit lines are not shown and are not editable in grid mode", "2D Mapper context menu (room) item tooltip (disabled state)"));
-                  customExitLine->setEnabled(false);
-              }
-              popup->addAction(customExitLine);
 
               auto createLabel = new QAction(tr("Create Label", "2D Mapper context menu (room) item"), this);
               createLabel->setToolTip(tr("Create labels to show text or images", "2D Mapper context menu (room) item tooltip"));
