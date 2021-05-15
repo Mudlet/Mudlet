@@ -2914,15 +2914,12 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 popup->addAction(createLabel);
             }
 
-            auto setPlayerLocation = new QAction(tr("Set location", "2D Mapper context menu (room) item"), this);
-            if (selectionSize == 1) { // Only enable if ONE room is highlighted
+            if (selectionSize == 1) {
+                auto setPlayerLocation = new QAction(tr("Set location", "2D Mapper context menu (room) item"), this);
                 setPlayerLocation->setToolTip(tr("Set player current location to here", "2D Mapper context menu (room) item tooltip (enabled state)"));
                 connect(setPlayerLocation, &QAction::triggered, this, &T2DMap::slot_setPlayerLocation);
-            } else {
-                setPlayerLocation->setEnabled(false);
-                setPlayerLocation->setToolTip(tr("Can only set location when exactly one room is selected", "2D Mapper context menu (room) item tooltip (disabled state)"));
+                popup->addAction(setPlayerLocation);
             }
-            popup->addAction(setPlayerLocation);
 
             popup->addSeparator();
 
