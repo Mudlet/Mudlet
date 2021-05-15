@@ -2803,14 +2803,14 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             }
             // Else there is a map - though it might not have ANY rooms!
 
-            if (mMultiSelectionSet.isEmpty() && !mMapViewOnly) {
-                mpCreateRoomAction = new QAction(tr("Create room", "Menu option to create a new room in the mapper"), this);
-                mpCreateRoomAction->setToolTip(tr("Create a new room here"));
-                connect(mpCreateRoomAction.data(), &QAction::triggered, this, &T2DMap::slot_createRoom);
-                popup->addAction(mpCreateRoomAction);
-            }
-
             if (!mMapViewOnly) {
+              if (mMultiSelectionSet.isEmpty()) {
+                  mpCreateRoomAction = new QAction(tr("Create room", "Menu option to create a new room in the mapper"), this);
+                  mpCreateRoomAction->setToolTip(tr("Create a new room here"));
+                  connect(mpCreateRoomAction.data(), &QAction::triggered, this, &T2DMap::slot_createRoom);
+                  popup->addAction(mpCreateRoomAction);
+              }
+
               auto moveRoom = new QAction(tr("Move", "2D Mapper context menu (room) item"), this);
               moveRoom->setToolTip(tr("Move room", "2D Mapper context menu (room) item tooltip"));
               connect(moveRoom, &QAction::triggered, this, &T2DMap::slot_moveRoom);
