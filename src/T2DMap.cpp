@@ -2814,50 +2814,62 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
               auto moveRoom = new QAction(tr("Move", "2D Mapper context menu (room) item"), this);
               moveRoom->setToolTip(tr("Move room", "2D Mapper context menu (room) item tooltip"));
               connect(moveRoom, &QAction::triggered, this, &T2DMap::slot_moveRoom);
-
-              auto deleteRoom = new QAction(tr("Delete", "2D Mapper context menu (room) item"), this);
-              deleteRoom->setToolTip(tr("Delete room", "2D Mapper context menu (room) item tooltip"));
-              connect(deleteRoom, &QAction::triggered, this, &T2DMap::slot_deleteRoom);
-
-              auto recolorRoom = new QAction(tr("Color", "2D Mapper context menu (room) item"), this);
-              recolorRoom->setToolTip(tr("Change room color", "2D Mapper context menu (room) item tooltip"));
-              connect(recolorRoom, &QAction::triggered, this, &T2DMap::slot_changeColor);
-
-              auto spreadRooms = new QAction(tr("Spread", "2D Mapper context menu (room) item"), this);
-              spreadRooms->setToolTip(tr("Increase map X-Y spacing for the selected group of rooms", "2D Mapper context menu (room) item tooltip"));
-              connect(spreadRooms, &QAction::triggered, this, &T2DMap::slot_spread);
-
-              auto shrinkRooms = new QAction(tr("Shrink", "2D Mapper context menu (room) item"), this);
-              shrinkRooms->setToolTip(tr("Decrease map X-Y spacing for the selected group of rooms", "2D Mapper context menu (room) item tooltip"));
-              connect(shrinkRooms, &QAction::triggered, this, &T2DMap::slot_shrink);
-
-              auto lockRoom = new QAction(tr("Lock", "2D Mapper context menu (room) item"), this);
-              lockRoom->setToolTip(tr("Lock room for speed walks", "2D Mapper context menu (room) item tooltip"));
-              connect(lockRoom, &QAction::triggered, this, &T2DMap::slot_lockRoom);
-
-              auto unlockRoom = new QAction(tr("Unlock", "2D Mapper context menu (room) item"), this);
-              unlockRoom->setToolTip(tr("Unlock room for speed walks", "2D Mapper context menu (room) item tooltip"));
-              connect(unlockRoom, &QAction::triggered, this, &T2DMap::slot_unlockRoom);
-
-              auto weightRoom = new QAction(tr("Weight", "2D Mapper context menu (room) item"), this);
-              weightRoom->setToolTip(tr("Set room weight", "2D Mapper context menu (room) item tooltip"));
-              connect(weightRoom, &QAction::triggered, this, &T2DMap::slot_setRoomWeight);
+              popup->addAction(moveRoom);
 
               auto roomExits = new QAction(tr("Exits", "2D Mapper context menu (room) item"), this);
               roomExits->setToolTip(tr("Set room exits", "2D Mapper context menu (room) item tooltip"));
               connect(roomExits, &QAction::triggered, this, &T2DMap::slot_setExits);
+              popup->addAction(roomExits);
+
+              auto recolorRoom = new QAction(tr("Color", "2D Mapper context menu (room) item"), this);
+              recolorRoom->setToolTip(tr("Change room color", "2D Mapper context menu (room) item tooltip"));
+              connect(recolorRoom, &QAction::triggered, this, &T2DMap::slot_changeColor);
+              popup->addAction(recolorRoom);
 
               auto roomSymbol = new QAction(tr("Symbol", "2D Mapper context menu (room) item"), this);
               roomSymbol->setToolTip(tr("Set one or more symbols or letters to mark special rooms", "2D Mapper context menu (room) item tooltip"));
               connect(roomSymbol, &QAction::triggered, this, &T2DMap::slot_showSymbolSelection);
+              popup->addAction(roomSymbol);
+
+              auto spreadRooms = new QAction(tr("Spread", "2D Mapper context menu (room) item"), this);
+              spreadRooms->setToolTip(tr("Increase map X-Y spacing for the selected group of rooms", "2D Mapper context menu (room) item tooltip"));
+              connect(spreadRooms, &QAction::triggered, this, &T2DMap::slot_spread);
+              popup->addAction(spreadRooms);
+
+              auto shrinkRooms = new QAction(tr("Shrink", "2D Mapper context menu (room) item"), this);
+              shrinkRooms->setToolTip(tr("Decrease map X-Y spacing for the selected group of rooms", "2D Mapper context menu (room) item tooltip"));
+              connect(shrinkRooms, &QAction::triggered, this, &T2DMap::slot_shrink);
+              popup->addAction(shrinkRooms);
+
+              auto lockRoom = new QAction(tr("Lock", "2D Mapper context menu (room) item"), this);
+              lockRoom->setToolTip(tr("Lock room for speed walks", "2D Mapper context menu (room) item tooltip"));
+              connect(lockRoom, &QAction::triggered, this, &T2DMap::slot_lockRoom);
+              popup->addAction(lockRoom);
+
+              auto unlockRoom = new QAction(tr("Unlock", "2D Mapper context menu (room) item"), this);
+              unlockRoom->setToolTip(tr("Unlock room for speed walks", "2D Mapper context menu (room) item tooltip"));
+              connect(unlockRoom, &QAction::triggered, this, &T2DMap::slot_unlockRoom);
+              popup->addAction(unlockRoom);
+
+              auto weightRoom = new QAction(tr("Weight", "2D Mapper context menu (room) item"), this);
+              weightRoom->setToolTip(tr("Set room weight", "2D Mapper context menu (room) item tooltip"));
+              connect(weightRoom, &QAction::triggered, this, &T2DMap::slot_setRoomWeight);
+              popup->addAction(weightRoom);
+
+              auto deleteRoom = new QAction(tr("Delete", "2D Mapper context menu (room) item"), this);
+              deleteRoom->setToolTip(tr("Delete room", "2D Mapper context menu (room) item tooltip"));
+              connect(deleteRoom, &QAction::triggered, this, &T2DMap::slot_deleteRoom);
+              popup->addAction(deleteRoom);
 
               auto moveRoomXY = new QAction(tr("Move to", "2D Mapper context menu (room) item"), this);
               moveRoomXY->setToolTip(tr("Move selected group to a given position", "2D Mapper context menu (room) item tooltip"));
               connect(moveRoomXY, &QAction::triggered, this, &T2DMap::slot_movePosition);
+              popup->addAction(moveRoomXY);
 
               auto roomArea = new QAction(tr("Area", "2D Mapper context menu (room) item"), this);
               roomArea->setToolTip(tr("Set room's area number", "2D Mapper context menu (room) item tooltip"));
               connect(roomArea, &QAction::triggered, this, &T2DMap::slot_setArea);
+              popup->addAction(roomArea);
 
               auto customExitLine = new QAction(tr("Custom exit line", "2D Mapper context menu (room) item"), this);
               if (pArea && !pArea->gridMode) {
@@ -2868,25 +2880,13 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                   customExitLine->setToolTip(tr("Custom exit lines are not shown and are not editable in grid mode", "2D Mapper context menu (room) item tooltip (disabled state)"));
                   customExitLine->setEnabled(false);
               }
+              popup->addAction(customExitLine);
 
               auto createLabel = new QAction(tr("Create Label", "2D Mapper context menu (room) item"), this);
               createLabel->setToolTip(tr("Create labels to show text or images", "2D Mapper context menu (room) item tooltip"));
               connect(createLabel, &QAction::triggered, this, &T2DMap::slot_createLabel);
-
-              popup->addAction(moveRoom);
-              popup->addAction(roomExits);
-              popup->addAction(customExitLine);
-              popup->addAction(recolorRoom);
-              popup->addAction(roomSymbol);
-              popup->addAction(spreadRooms);
-              popup->addAction(shrinkRooms);
-              popup->addAction(lockRoom);
-              popup->addAction(unlockRoom);
-              popup->addAction(weightRoom);
-              popup->addAction(deleteRoom);
-              popup->addAction(moveRoomXY);
-              popup->addAction(roomArea);
               popup->addAction(createLabel);
+
             }
 
             auto setPlayerLocation = new QAction(tr("Set location", "2D Mapper context menu (room) item"), this);
