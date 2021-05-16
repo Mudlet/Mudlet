@@ -1825,7 +1825,7 @@ better off starting again...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1509"/>
       <source>[ INFO ]  - Ignoring this map file.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 忽略此地图文件。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1674"/>
@@ -1988,17 +1988,17 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2952"/>
       <source>empty Json file, no map data detected</source>
-      <translation type="unfinished"/>
+      <translation>空的 Json 文件，未检测到地图数据</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2967"/>
       <source>invalid format version &quot;%1&quot; detected</source>
-      <translation type="unfinished"/>
+      <translation>检测到无效格式版本 &quot;%1&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2973"/>
       <source>no format version detected</source>
-      <translation type="unfinished"/>
+      <translation>未检测到格式版本</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2979"/>
@@ -2028,7 +2028,8 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="1021"/>
       <source>[ ERROR ] - The format version &quot;%1&quot; you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ 错误 ] - 您尝试保存的地图格式 &quot;%1&quot; 对于此版本的Mudlet而言太新
+。 支持的格式仅为版本 &quot;%2&quot; 。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1037"/>
@@ -2108,7 +2109,7 @@ please wait...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1414"/>
       <source>[ INFO ]  - Ignoring this unlikely map file.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 忽略此地图文件。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2412"/>
@@ -5616,7 +5617,7 @@ Count</source>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="58"/>
-      <location filename="../src/dlgPackageExporter.cpp" line="1374"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="1412"/>
       <source>Select what to export</source>
       <translation>选择要导入的内容：</translation>
     </message>
@@ -5749,116 +5750,116 @@ Count</source>
       <translation>按钮</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="88"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="90"/>
       <source>Export</source>
       <comment>Text for button to perform the package export on the items the user has selected.</comment>
       <translation>导出</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="109"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="111"/>
       <source>update installed package</source>
       <translation>更新已安装的包</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="110"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="112"/>
       <source>add dependencies</source>
       <translation>添加依赖项</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="155"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="157"/>
       <source>Failed to open file &quot;%1&quot; to place into package. Error message was: &quot;%2&quot;.</source>
       <comment>This error message will appear when a file is to be placed into the package but the code cannot open it.</comment>
       <translation>无法打开要放入包的文件 &quot;%1&quot; . 错误消息为: &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="165"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="167"/>
       <source>Failed to add file &quot;%1&quot; to package. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when a file is to be placed into the package but cannot be done for some reason.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="311"/>
       <location filename="../src/dlgPackageExporter.cpp" line="313"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="315"/>
       <source>Export to %1</source>
       <translation>导出至 %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="982"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="984"/>
       <source>Failed to zip up the package. Error is: &quot;%1&quot;.</source>
       <comment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="333"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="335"/>
       <source>Open Icon</source>
       <translation>打开图标</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="333"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="335"/>
       <source>Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</source>
       <translation>图像文件(*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="456"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="458"/>
       <source>Please enter the package name.</source>
       <translation>请输入包名.</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="486"/>
-      <location filename="../src/dlgPackageExporter.cpp" line="591"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="488"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="593"/>
       <source>Exporting package...</source>
-      <translation type="unfinished"/>
+      <translation>导出包...</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="536"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="538"/>
       <source>Failed to export. Could not open the folder &quot;%1&quot; for writing. Do you have the necessary permissions and free disk-space to write to that folder?</source>
-      <translation type="unfinished"/>
+      <translation>导出失败。无法写入文件夹 &quot;%1&quot;. - 您是否拥有写入/存储的权限并有足够的磁盘空间来写入到该文件夹？</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="795"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="797"/>
       <source>%1 doesn&apos;t seem to exist anymore - can you double-check it?</source>
-      <translation type="unfinished"/>
+      <translation>%1 似乎不再存在了 - 你能仔细检查一下吗？</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="730"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="732"/>
       <source>Failed to export. Could not write Mudlet items to the file &quot;%1&quot;.</source>
       <comment>This error message is shown when all the Mudlet items cannot be written to the &apos;packageName&apos;.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened.</comment>
       <translation>导出失败。无法写入 Mudlet 项目到文件 &quot;%1&quot;。</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="907"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="909"/>
       <source>Failed to add directory &quot;%1&quot; to package. Error is: &quot;%2&quot;.</source>
       <translation>未能将目录 &quot;%1&quot; 添加到包文件中。 错误为: &quot;%2&quot;。</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="950"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="952"/>
       <source>Required file &quot;%1&quot; was not found in the staging area. This area contains the Mudlet items chosen for the package, which you selected to be included in the package file. This suggests there may be a problem with that directory: &quot;%2&quot; - Do you have the necessary permissions and free disk-space?</source>
       <translation>在暂存区域中找不到所需文件 &quot;%1&quot; 此区域包含你选择要包含在包文件中的 Mudlet项目。 这表明该目录可能有问题： &quot;%2&quot; - 您是否拥有必要的权限和足够的磁盘空间？</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="577"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="579"/>
       <source>Package &quot;%1&quot; exported to: %2</source>
       <translation>包 &quot;%1&quot; 导出到: %2</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="829"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="831"/>
       <source>Failed to open package file. Error is: &quot;%1&quot;.</source>
       <comment>This zipError message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere in the computer&apos;s file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.</comment>
       <translation>打开包文件失败。错误是: &quot;%1&quot;。</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="979"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="981"/>
       <source>Export cancelled.</source>
-      <translation type="unfinished"/>
+      <translation>已取消导出</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="1356"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="1393"/>
       <source>Why not &lt;a href=&quot;https://forums.mudlet.org/viewforum.php?f=6&quot;&gt;upload&lt;/a&gt; your package for other Mudlet users?</source>
       <comment>Only the text outside of the &apos;a&apos; (HTML anchor) tags PLUS the verb &apos;upload&apos; in between them in the source text, (associated with uploading the resulting package to the Mudlet forums) should be translated.</comment>
       <translation>为什么不 &lt;a href=&quot;https://forums.mudlet.org/viewforum.php?f=6&quot;&gt;上传&lt;/a&gt; 你的软件包给其他 Mudlet 用户？</translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/dlgPackageExporter.cpp" line="1376"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="1414"/>
       <source>Select what to export (%1 items)</source>
       <comment>Package exporter selection</comment>
       <translation>
@@ -5866,7 +5867,7 @@ Count</source>
       </translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="1040"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="1042"/>
       <source>Where do you want to save the package?</source>
       <translation>你想将压缩包导出到哪个位置？</translation>
     </message>
@@ -6889,7 +6890,7 @@ for all of the %n selected room(s):</source>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="420"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5840"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5842"/>
       <source>Triggers</source>
       <translation>触发器</translation>
     </message>
@@ -6900,7 +6901,7 @@ for all of the %n selected room(s):</source>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="424"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5864"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5866"/>
       <source>Buttons</source>
       <translation>按钮</translation>
     </message>
@@ -6921,7 +6922,7 @@ for all of the %n selected room(s):</source>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="434"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5846"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5848"/>
       <source>Timers</source>
       <translation>定时器</translation>
     </message>
@@ -6932,7 +6933,7 @@ for all of the %n selected room(s):</source>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="438"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5852"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5854"/>
       <source>Scripts</source>
       <translation>脚本</translation>
     </message>
@@ -6953,7 +6954,7 @@ for all of the %n selected room(s):</source>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="446"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6252"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6254"/>
       <source>Variables</source>
       <translation>变量</translation>
     </message>
@@ -7010,8 +7011,8 @@ for all of the %n selected room(s):</source>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="478"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8324"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8349"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8322"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8347"/>
       <source>Ctrl+S</source>
       <translation>Ctrl+S</translation>
     </message>
@@ -7029,8 +7030,8 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="485"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8817"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8823"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8815"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8821"/>
       <source>Copy</source>
       <translation>复制</translation>
     </message>
@@ -7042,8 +7043,8 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="499"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8818"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8824"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8816"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8822"/>
       <source>Paste</source>
       <translation>粘贴</translation>
     </message>
@@ -7065,14 +7066,14 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="526"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8659"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8657"/>
       <source>Save Profile</source>
       <translation>保存配置</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="528"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8326"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8351"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8324"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8349"/>
       <source>Ctrl+Shift+S</source>
       <translation>Ctrl+Shift+S</translation>
     </message>
@@ -7265,13 +7266,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3269"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4099"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4101"/>
       <source>New trigger group</source>
       <translation>新建触发器组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3271"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4099"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4101"/>
       <source>New trigger</source>
       <translation>新建触发器</translation>
     </message>
@@ -7296,369 +7297,379 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <translation>变量名</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3524"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3476"/>
+      <source>New table name</source>
+      <translation>新表名</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3476"/>
+      <source>New variable name</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3526"/>
       <source>New key group</source>
       <translation>新按键组</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3526"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4799"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3528"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4801"/>
       <source>New key</source>
       <translation>新按键</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3608"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3610"/>
       <source>New alias group</source>
       <translation>新建别名组</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3610"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4207"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4277"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3612"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4209"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4279"/>
       <source>New alias</source>
       <translation>新建别名</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3699"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3701"/>
       <source>New menu</source>
       <translation>新建菜单</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3701"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3703"/>
       <source>New button</source>
       <translation>新建按钮</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3732"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3734"/>
       <source>New toolbar</source>
       <translation>新建工具栏</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3785"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4526"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3787"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4528"/>
       <source>New script group</source>
       <translation>新建脚本组</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3787"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4526"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3789"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4528"/>
       <source>New script</source>
       <translation>新建脚本</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4221"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4223"/>
       <source>Alias &lt;em&gt;%1&lt;/em&gt; has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn&apos;t good as it&apos;ll call itself forever.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4764"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4766"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
       <translation>选中的变量将被保存并会和您的配置文件一起加载。</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4899"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4901"/>
       <source>match on the prompt line</source>
       <translation>在提示行匹配</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4902"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4904"/>
       <source>match on the prompt line (disabled)</source>
       <translation>在提示行匹配(停用)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4903"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4905"/>
       <source>A Go-Ahead (GA) signal from the game is required to make this feature work</source>
       <translation>需要游戏中有Go-Ahead (GA) 信号才能使本功能运行</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4953"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5063"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8558"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4955"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5065"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8556"/>
       <source>Foreground color ignored</source>
       <comment>Color trigger ignored foreground color button, ensure all three instances have the same text</comment>
       <translation>忽略的前景色</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4957"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5067"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8561"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4959"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5069"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8559"/>
       <source>Default foreground color</source>
       <comment>Color trigger default foreground color button, ensure all three instances have the same text</comment>
       <translation>设置前景色</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4961"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5071"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8564"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4963"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5073"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8562"/>
       <source>Foreground color [ANSI %1]</source>
       <comment>Color trigger ANSI foreground color button, ensure all three instances have the same text</comment>
       <translation>前景色 [ANSI %1]</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4968"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5078"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8621"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4970"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5080"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8619"/>
       <source>Background color ignored</source>
       <comment>Color trigger ignored background color button, ensure all three instances have the same text</comment>
       <translation>忽略的背景色</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4972"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5082"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8624"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4974"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5084"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8622"/>
       <source>Default background color</source>
       <comment>Color trigger default background color button, ensure all three instances have the same text</comment>
       <translation>默认背景颜色</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4976"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5086"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8627"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4978"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5088"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8625"/>
       <source>Background color [ANSI %1]</source>
       <comment>Color trigger ANSI background color button, ensure all three instances have the same text</comment>
       <translation>背景色[ANSI %1]</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5097"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5099"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5101"/>
       <source>fault</source>
       <translation>故障</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5152"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5156"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8447"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8473"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8967"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8968"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5154"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5158"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8445"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8471"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8965"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8966"/>
       <source>keep</source>
       <comment>Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button</comment>
       <translation>保持</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5613"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8421"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5615"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8419"/>
       <source>Command:</source>
       <translation>命令:</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5652"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5654"/>
       <source>Menu properties</source>
       <translation>菜单属性</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5662"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5664"/>
       <source>Button properties</source>
       <translation>按钮属性</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5670"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5672"/>
       <source>Command (down);</source>
       <translation>命令 (Down);</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5858"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5860"/>
       <source>Aliases - Input Triggers</source>
       <translation>别名 - 输入触发器</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5870"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5872"/>
       <source>Key Bindings</source>
       <translation>按键绑定</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7614"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7618"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7638"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7642"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7662"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7666"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7686"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7690"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7710"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7714"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7734"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7739"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7759"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7763"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7782"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7786"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7805"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7809"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7828"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7832"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7851"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7855"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7874"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7879"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7612"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7616"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7636"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7640"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7660"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7664"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7684"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7688"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7708"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7712"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7732"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7737"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7757"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7761"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7780"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7784"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7803"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7807"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7826"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7830"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7849"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7853"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7872"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7877"/>
       <source>Export Package:</source>
       <translation>导出包:</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7614"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7618"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7638"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7642"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7662"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7666"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7686"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7690"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7710"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7714"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7734"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7739"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7759"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7763"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7782"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7786"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7805"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7809"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7828"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7832"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7851"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7855"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7874"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7879"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7612"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7616"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7636"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7640"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7660"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7664"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7684"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7688"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7708"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7712"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7732"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7737"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7757"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7761"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7780"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7784"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7803"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7807"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7826"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7830"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7849"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7853"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7872"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7877"/>
       <source>You have to choose an item for export first. Please select a tree item and then click on export again.</source>
       <translation>您必须先选择要导出的项目。 请选择一个树项，然后再次点击导出。</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7623"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7647"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7671"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7695"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7719"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7744"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7621"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7645"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7669"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7693"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7717"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7742"/>
       <source>Package %1 saved</source>
       <translation>包 %1 已保存</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7768"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7791"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7814"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7837"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7860"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7884"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7766"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7789"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7812"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7835"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7858"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7882"/>
       <source>Copied %1 to clipboard</source>
       <translation>复制的 %1至到剪贴板</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7894"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7892"/>
       <source>Export Triggers</source>
       <translation>导出触发器</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7894"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7892"/>
       <source>Mudlet packages (*.xml)</source>
       <translation>Mudlet包(*.xml)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7908"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7906"/>
       <source>export package:</source>
       <translation>导出包:</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7908"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7906"/>
       <source>Cannot write file %1:
 %2.</source>
       <translation>无法写入文件 %1：
 %2。</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8177"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8175"/>
       <source>Import Mudlet Package</source>
       <translation>导入Mudlet包</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8271"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8269"/>
       <source>Couldn&apos;t save profile</source>
       <translation>无法保存用户配置文件</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8271"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8269"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
       <translation>对不起, 以下错误导致无法保存用户配置文件: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8278"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8276"/>
       <source>Backup Profile</source>
       <translation>备份配置文件</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8278"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8276"/>
       <source>trigger files (*.trigger *.xml)</source>
       <translation>触发器文件（*.trigger *.xml）</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8408"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8406"/>
       <source>Images (*.png *.xpm *.jpg)</source>
       <translation>图像文件 (*.png *.xpm *.jpg)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8408"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8406"/>
       <source>Select Icon</source>
       <translation>选择图标</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8417"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8415"/>
       <source>Command (down):</source>
       <translation>命令 (Down):</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8438"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8436"/>
       <source>Select foreground color to apply to matches</source>
       <translation>选择要应用到匹配项的前景色</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8464"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8462"/>
       <source>Select background color to apply to matches</source>
       <translation>选择要应用于匹配项的背景色</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8482"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8480"/>
       <source>Choose sound file</source>
       <translation>选择声音文件</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8486"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8484"/>
       <source>Audio files(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;All files(*.*)</source>
       <comment>This the list of file extensions that are considered for sounds from triggers, the terms inside of the &apos;(&apos;...&apos;)&apos; and the &quot;;;&quot; are used programmatically and should not be changed.</comment>
       <translation>音频文件(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;所有文件(*.*)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8539"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8537"/>
       <source>Select foreground trigger color for item %1</source>
       <translation>为项目 %1 选择前景触发器颜色</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8603"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8601"/>
       <source>Select background trigger color for item %1</source>
       <translation>为项目 %1 选择背景触发器颜色</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8652"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8650"/>
       <source>Saving…</source>
       <translation>正在保存…</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8813"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8811"/>
       <source>Format All</source>
       <translation>全部格式化</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8816"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8822"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8814"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8820"/>
       <source>Cut</source>
       <translation>剪切</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8820"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8826"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8818"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8824"/>
       <source>Select All</source>
       <translation>选择全部</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8982"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8980"/>
       <source>&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</source>
       <translation>&lt;p&gt;触发触发器时要播放的声音文件. &lt;/p&gt;</translation>
     </message>
@@ -8148,7 +8159,6 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     </message>
     <message>
       <location filename="../src/main.cpp" line="172"/>
-      <location filename="../src/main.cpp" line="178"/>
       <source>Display help and exit</source>
       <translation>显示帮助并退出</translation>
     </message>
@@ -8156,6 +8166,11 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/main.cpp" line="175"/>
       <source>Display version and exit</source>
       <translation>显示版本并退出</translation>
+    </message>
+    <message>
+      <location filename="../src/main.cpp" line="178"/>
+      <source>Don&apos;t show the splash screen when starting</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/main.cpp" line="188"/>
@@ -10407,12 +10422,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager.ui" line="122"/>
       <source>Details</source>
-      <translation type="unfinished"/>
+      <translation>详细信息</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="203"/>
       <source>Install new package</source>
-      <translation type="unfinished"/>
+      <translation>安装新的软件包</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="219"/>
