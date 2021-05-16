@@ -1825,7 +1825,7 @@ better off starting again...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1509"/>
       <source>[ INFO ]  - Ignoring this map file.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 忽略此地图文件。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1674"/>
@@ -1988,17 +1988,17 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2952"/>
       <source>empty Json file, no map data detected</source>
-      <translation type="unfinished"/>
+      <translation>空的 Json 文件，未检测到地图数据</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2967"/>
       <source>invalid format version &quot;%1&quot; detected</source>
-      <translation type="unfinished"/>
+      <translation>检测到无效格式版本 &quot;%1&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2973"/>
       <source>no format version detected</source>
-      <translation type="unfinished"/>
+      <translation>未检测到格式版本</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2979"/>
@@ -2028,7 +2028,8 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="1021"/>
       <source>[ ERROR ] - The format version &quot;%1&quot; you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ 错误 ] - 您尝试保存的地图格式 &quot;%1&quot; 对于此版本的Mudlet而言太新
+。 支持的格式仅为版本 &quot;%2&quot; 。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1037"/>
@@ -2108,7 +2109,7 @@ please wait...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1414"/>
       <source>[ INFO ]  - Ignoring this unlikely map file.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 忽略此地图文件。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2412"/>
@@ -5807,17 +5808,17 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="488"/>
       <location filename="../src/dlgPackageExporter.cpp" line="593"/>
       <source>Exporting package...</source>
-      <translation type="unfinished"/>
+      <translation>导出包...</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="538"/>
       <source>Failed to export. Could not open the folder &quot;%1&quot; for writing. Do you have the necessary permissions and free disk-space to write to that folder?</source>
-      <translation type="unfinished"/>
+      <translation>导出失败。无法写入文件夹 &quot;%1&quot;. - 您是否拥有写入/存储的权限并有足够的磁盘空间来写入到该文件夹？</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="797"/>
       <source>%1 doesn&apos;t seem to exist anymore - can you double-check it?</source>
-      <translation type="unfinished"/>
+      <translation>%1 似乎不再存在了 - 你能仔细检查一下吗？</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="732"/>
@@ -5849,7 +5850,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="981"/>
       <source>Export cancelled.</source>
-      <translation type="unfinished"/>
+      <translation>已取消导出</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1393"/>
@@ -7298,7 +7299,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3476"/>
       <source>New table name</source>
-      <translation type="unfinished"/>
+      <translation>新表名</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3476"/>
@@ -10421,12 +10422,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager.ui" line="122"/>
       <source>Details</source>
-      <translation type="unfinished"/>
+      <translation>详细信息</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="203"/>
       <source>Install new package</source>
-      <translation type="unfinished"/>
+      <translation>安装新的软件包</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="219"/>
