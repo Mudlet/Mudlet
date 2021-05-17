@@ -437,7 +437,7 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionNotes)->setObjectName(mpActionNotes->objectName());
 
     mpButtonPackageManagers = new QToolButton(this);
-    mpButtonPackageManagers->setText(tr("Package Manager (exp.)"));
+    mpButtonPackageManagers->setText(tr("Packages (exp.)"));
     mpButtonPackageManagers->setObjectName(QStringLiteral("package_manager"));
     mpButtonPackageManagers->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonPackageManagers->setPopupMode(QToolButton::MenuButtonPopup);
@@ -446,7 +446,7 @@ mudlet::mudlet()
 
     mpActionPackageManager = new QAction(tr("Package Manager (experimental)"), this);
     mpActionPackageManager->setIcon(QIcon(QStringLiteral(":/icons/package-manager.png")));
-    mpActionPackageManager->setIconText(tr("Package Manager (exp.)", "exp. stands for experimental; shortened so it doesn't make buttons huge in the main interface"));
+    mpActionPackageManager->setIconText(tr("Packages (exp.)", "exp. stands for experimental; shortened so it doesn't make buttons huge in the main interface"));
     mpActionPackageManager->setObjectName(QStringLiteral("package_manager"));
 
     mpActionModuleManager = new QAction(tr("Module Manager"), this);
