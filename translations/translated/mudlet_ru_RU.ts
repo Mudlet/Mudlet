@@ -5723,7 +5723,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
       <source>Package Exporter (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>Экспортер пакетов (экспериментальный)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="162"/>
@@ -5941,7 +5941,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="50"/>
       <source>Package Manager (experimental) - %1</source>
-      <translation type="unfinished"/>
+      <translation>Экспортер пакетов (экспериментальный) - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="104"/>
@@ -9034,23 +9034,23 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="440"/>
       <source>Packages (exp.)</source>
-      <translation type="unfinished"/>
+      <translation>Пакеты (экс.)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="447"/>
       <source>Package Manager (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>Менеджер пакетов (экспериментальный)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="449"/>
       <source>Packages (exp.)</source>
       <comment>exp. stands for experimental; shortened so it doesn&apos;t make buttons huge in the main interface</comment>
-      <translation type="unfinished"/>
+      <translation>Пакеты (экс.)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="456"/>
       <source>Package Exporter (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>Экспортер пакетов (экспериментальный)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="478"/>
