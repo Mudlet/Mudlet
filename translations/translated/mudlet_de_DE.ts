@@ -2078,7 +2078,9 @@ der für diese Version von Mudlet empfohlenen Version %2.</translation>
       <source>[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates
 its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. The file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Datei scheint keine Mudlet Kartendatei zu sein. Der Teil, der 
+seine Versionsnummer angibt, scheint &quot;%1&quot; zu sein und das macht keinen Sinn.
+Die Datei ist: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1422"/>
@@ -5702,7 +5704,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
       <source>Package Exporter (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>Paket exportieren (experimentell)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="162"/>
@@ -5918,7 +5920,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="50"/>
       <source>Package Manager (experimental) - %1</source>
-      <translation type="unfinished"/>
+      <translation>Paket verwalten (experimentell) - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="104"/>
@@ -9013,23 +9015,23 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/mudlet.cpp" line="440"/>
       <source>Packages (exp.)</source>
-      <translation type="unfinished"/>
+      <translation>Pakete (exp.)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="447"/>
       <source>Package Manager (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>Paket verwalten (experimentell)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="449"/>
       <source>Packages (exp.)</source>
       <comment>exp. stands for experimental; shortened so it doesn&apos;t make buttons huge in the main interface</comment>
-      <translation type="unfinished"/>
+      <translation>Pakete (exp.)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="456"/>
       <source>Package Exporter (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>Paket exportieren (experimentell)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="478"/>
