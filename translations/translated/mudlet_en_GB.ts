@@ -5655,7 +5655,7 @@ Count</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
       <source>Package Exporter (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>Package Exporter (experimental)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="162"/>
@@ -5871,7 +5871,7 @@ Count</translation>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="50"/>
       <source>Package Manager (experimental) - %1</source>
-      <translation type="unfinished"/>
+      <translation>Package Manager (experimental) - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="104"/>
