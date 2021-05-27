@@ -201,6 +201,12 @@ public:
     QProgressDialog* mpProgressDialog;
     QString mServerPackage;
     QString mProfileName;
+    // Used to prevent more than one warning being shown in the event of a bad
+    // encoding (when the user wants to use characters that cannot be encoded in
+    // the current Server Encoding) - gets reset when the encoding is changed:
+    bool mSendEncodingWarningIssued = false;
+    // If this is set then the above flag is ignored for the rest of the session
+    bool mSendEncodingWarningsIgnored = false;
 
 
 public slots:
@@ -239,6 +245,7 @@ private:
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void setKeepAlive(int socketHandle);
     void processChunks();
+    std::pair<bool, QString> stripUnencodableGraphemes(const QString&);
 
 
     QPointer<Host> mpHost;
@@ -312,11 +319,8 @@ private:
     // Used to disable the TConsole ending messages if run from lua:
     bool mIsReplayRunFromLua;
     QByteArrayList mAcceptableEncodings;
-    // Used to prevent more than one warning being shown in the event of a bad
-    // encoding (when the user wants to use characters that cannot be encoded in
-    // the current Server Encoding) - gets reset when the encoding is changed:
-    bool mEncodingWarningIssued;
-    // Same sort of thing if an encoder fails to be found/loaded:
+    // Same sort of thing as mSendEncodingWarningIssued if an encoder fails to
+    // be found/loaded:
     bool mEncoderFailureNoticeIssued;
 
     // Set if the current connection is via a proxy
@@ -325,11 +329,13 @@ private:
     // server problem w/ not terminating IAC SB: only warn once
     bool mIncompleteSB;
 
+    // Set at end of constructor:
+    bool isInitialised = false;
+
 private slots:
 #if !defined(QT_NO_SSL)
     void handle_socket_signal_sslError(const QList<QSslError> &errors);
 #endif
-
 };
 
 #endif // MUDLET_CTELNET_H

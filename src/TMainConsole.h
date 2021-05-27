@@ -30,6 +30,7 @@
 #include "pre_guard.h"
 #include <QFile>
 #include <QTextStream>
+#include <QToolButton>
 #include <QWidget>
 #include "post_guard.h"
 
@@ -102,6 +103,8 @@ public:
     bool saveMap(const QString&, int saveVersion = 0);
     bool loadMap(const QString&);
     bool importMap(const QString&, QString* errMsg = Q_NULLPTR);
+    void showWarningIcon(const int);
+    void hideWarningIcon(const int);
 
 
     QMap<QString, TConsole*> mSubConsoleMap;
@@ -120,6 +123,12 @@ public slots:
     // =>"Copy Map" in another profile to inform a list of
     // profiles - asynchronously - to load in an updated map
     void slot_reloadMap(QList<QString>);
+
+    void slot_ignoreReceiveEncodingErrorWarning();
+    void slot_ignoreTransmitEncodingErrorWarning();
+    void slot_resetReceiveEncodingErrorWarning();
+    void slot_resetTransmitEncodingErrorWarning();
+    void slot_gotoAdjustEncoding();
 
 
 signals:
@@ -156,6 +165,8 @@ private:
     // for the ".aff" file - this member is for the per profile option only as
     // the shared one is held by the mudlet singleton class:
     QSet<QString> mWordSet_profile;
+    // Warning icon(s) set on the main command line
+    QHash<int, QToolButton*> mWarningIcons;
 };
 
 #endif // MUDLET_TMAINCONSOLE_H

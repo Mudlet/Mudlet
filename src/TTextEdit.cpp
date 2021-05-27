@@ -492,10 +492,44 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     uint unicode = getGraphemeBaseCharacter(grapheme);
     int charWidth;
     bool useReplacementCharacter = false;
-    if (unicode == '\t') {
+    switch (unicode) {
+    case 0:     graphemes.append(QChar(0x2400)); charWidth = 1; break; // NUL - not sure that this can appear
+    case 1:     graphemes.append(QChar(0x2401)); charWidth = 1; break; // SOH
+    case 2:     graphemes.append(QChar(0x2402)); charWidth = 1; break; // STX
+    case 3:     graphemes.append(QChar(0x2403)); charWidth = 1; break; // ETX
+    case 4:     graphemes.append(QChar(0x2404)); charWidth = 1; break; // EOT
+    case 5:     graphemes.append(QChar(0x2405)); charWidth = 1; break; // ENQ
+    case 6:     graphemes.append(QChar(0x2406)); charWidth = 1; break; // ACK
+    case 7:     graphemes.append(QChar(0x2407)); charWidth = 1; break; // BEL - the handling of this gets done when it is received, not when it is displayed here:
+    case 8:     graphemes.append(QChar(0x2408)); charWidth = 1; break; // BS
+    case 9: // TAB
         charWidth = mTabStopwidth - (column % mTabStopwidth);
         graphemes.append(QString(QChar::Tabulation));
-    } else {
+        break;
+    // 10 is Line-Feed and that should never appear!
+    case 11:    graphemes.append(QChar(0x240B)); charWidth = 1; break; // VT
+    case 12:    graphemes.append(QChar(0x240C)); charWidth = 1; break; // FF
+    case 13:    graphemes.append(QChar(0x240D)); charWidth = 1; break; // CR - shouldn't appear but does seem to crop up somehow!
+    case 14:    graphemes.append(QChar(0x240E)); charWidth = 1; break; // ACK
+    case 15:    graphemes.append(QChar(0x240F)); charWidth = 1; break; // SS
+    case 16:    graphemes.append(QChar(0x2410)); charWidth = 1; break; // SI
+    case 17:    graphemes.append(QChar(0x2411)); charWidth = 1; break; // DLE
+    case 18:    graphemes.append(QChar(0x2412)); charWidth = 1; break; // DC1
+    case 19:    graphemes.append(QChar(0x2413)); charWidth = 1; break; // DC2
+    case 20:    graphemes.append(QChar(0x2414)); charWidth = 1; break; // DC3
+    case 21:    graphemes.append(QChar(0x2415)); charWidth = 1; break; // DC4
+    case 22:    graphemes.append(QChar(0x2416)); charWidth = 1; break; // NAK
+    case 23:    graphemes.append(QChar(0x2417)); charWidth = 1; break; // ETB
+    case 24:    graphemes.append(QChar(0x2418)); charWidth = 1; break; // CAN
+    case 25:    graphemes.append(QChar(0x2419)); charWidth = 1; break; // EM
+    case 26:    graphemes.append(QChar(0x241A)); charWidth = 1; break; // SUB
+    case 27:    graphemes.append(QChar(0x241B)); charWidth = 1; break; // ESC - shouldn't appear as will have been intercepted previously
+    case 28:    graphemes.append(QChar(0x241C)); charWidth = 1; break; // FS
+    case 29:    graphemes.append(QChar(0x241D)); charWidth = 1; break; // GS
+    case 30:    graphemes.append(QChar(0x241E)); charWidth = 1; break; // RS
+    case 31:    graphemes.append(QChar(0x241F)); charWidth = 1; break; // US
+    case 127:   graphemes.append(QChar(0x2421)); charWidth = 1; break; // DEL
+    default:
         charWidth = getGraphemeWidth(unicode);
         if (!charWidth) {
             // Print the grapheme replacement character instead - which seems to
@@ -1908,14 +1942,44 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
         // The code point is on the BMP
         quint16 value = first.unicode();
         switch (value) {
+        case 0x0000:                    return htmlCenter(tr("{nul}", "Unicode U+0000 codepoint - NULL control code.")); break;
+        case 0x0001:                    return htmlCenter(tr("{soh}", "Unicode U+0001 codepoint - Start of heading control code.")); break;
+        case 0x0002:                    return htmlCenter(tr("{stx}", "Unicode U+0002 codepoint - Start of text control code.")); break;
+        case 0x0003:                    return htmlCenter(tr("{etx}", "Unicode U+0003 codepoint - End of text control code.")); break;
+        case 0x0004:                    return htmlCenter(tr("{eot}", "Unicode U+0004 codepoint - End of transmission control code.")); break;
+        case 0x0005:                    return htmlCenter(tr("{enq}", "Unicode U+0005 codepoint - Enquiry control code.")); break;
+        case 0x0006:                    return htmlCenter(tr("{ack}", "Unicode U+0006 codepoint - Acknowledge control code.")); break;
+        case 0x0007:                    return htmlCenter(tr("{bell}", "Unicode U+0007 codepoint - Bell control code.")); break;
+        case 0x0008:                    return htmlCenter(tr("{bs}", "Unicode U+0000 codepoint - Backspace control code.")); break;
+        case QChar::Tabulation:         return htmlCenter(tr("{tab}", "Unicode U+0009 codepoint - Tab control code.")); break;
+        case QChar::LineFeed:           return htmlCenter(tr("{line-feed}", "Unicode U+000A codepoint - Line-feed. Not likely to be seen as it gets filtered out.")); break;
+        case 0x000B:                    return htmlCenter(tr("{vt}", "Unicode U+000B codepoint - Vertical tab control code.")); break;
+        case 0x000C:                    return htmlCenter(tr("{ff}", "Unicode U+000C codepoint - Form feed control code.")); break;
+        case QChar::CarriageReturn:     return htmlCenter(tr("{carriage-return}", "Unicode U+000D codepoint - Carriage-return. Not likely to be seen as it gets filtered out.")); break;
+        case 0x000E:                    return htmlCenter(tr("{ss}", "Unicode U+000E codepoint - Shift out control code.")); break;
+        case 0x000F:                    return htmlCenter(tr("{si}", "Unicode U+000F codepoint - Shift in control code.")); break;
+        case 0x0010:                    return htmlCenter(tr("{dle}", "Unicode U+0010 codepoint - Device link escape control code.")); break;
+        case 0x0011:                    return htmlCenter(tr("{dc1}", "Unicode U+0011 codepoint - Device control one control code.")); break;
+        case 0x0012:                    return htmlCenter(tr("{dc2}", "Unicode U+0012 codepoint - Device control two control code.")); break;
+        case 0x0013:                    return htmlCenter(tr("{dc3}", "Unicode U+0013 codepoint - Device control three control code.")); break;
+        case 0x0014:                    return htmlCenter(tr("{dc4}", "Unicode U+0014 codepoint - Device control fourcontrol code.")); break;
+        case 0x0015:                    return htmlCenter(tr("{nak}", "Unicode U+0015 codepoint - Negative acknowledgement control code.")); break;
+        case 0x0016:                    return htmlCenter(tr("{syn}", "Unicode U+0016 codepoint - Synchronous idle control code.")); break;
+        case 0x0017:                    return htmlCenter(tr("{etb}", "Unicode U+0017 codepoint - End of transmission block control code.")); break;
+        case 0x0018:                    return htmlCenter(tr("{can}", "Unicode U+0018 codepoint - Cancel control code.")); break;
+        case 0x0019:                    return htmlCenter(tr("{em}", "Unicode U+0019 codepoint - End of medium control code.")); break;
+        case 0x001A:                    return htmlCenter(tr("{sub}", "Unicode U+001A codepoint - Substitute control code.")); break;
+        case 0x001B:                    return htmlCenter(tr("{esc}", "Unicode U+001B codepoint - Escape control code. Not likely to be seen as it gets processed before getting to the point of display.")); break;
+        case 0x001C:                    return htmlCenter(tr("{fs}", "Unicode U+001C codepoint - Form separator control code.")); break;
+        case 0x001D:                    return htmlCenter(tr("{gs}", "Unicode U+001B codepoint - Group separator control code.")); break;
+        case 0x001E:                    return htmlCenter(tr("{rs}", "Unicode U+001E codepoint - Record separator control code.")); break;
+        case 0x001F:                    return htmlCenter(tr("{us}", "Unicode U+001F codepoint - Unit separator control code.")); break;
         case 0x003c:                    return htmlCenter(QStringLiteral("&lt;")); break; // As '<' gets interpreted as an opening HTML tag we have to handle it specially
         case 0x003e:                    return htmlCenter(QStringLiteral("&gt;")); break; // '>' does not seem to get interpreted as a closing HTML tag but for symetry it is probably best to also handle it in the same way
-        case QChar::Tabulation:         return htmlCenter(tr("{tab}", "Unicode U+0009 codepoint.")); break;
-        case QChar::LineFeed:           return htmlCenter(tr("{line-feed}", "Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.")); break;
-        case QChar::CarriageReturn:     return htmlCenter(tr("{carriage-return}", "Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.")); break;
         case QChar::Space:              return htmlCenter(tr("{space}", "Unicode U+0020 codepoint.")); break;
         case QChar::Nbsp:               return htmlCenter(tr("{non-breaking space}", "Unicode U+00A0 codepoint.")); break;
         case QChar::SoftHyphen:         return htmlCenter(tr("{soft hyphen}", "Unicode U+00AD codepoint.")); break;
+        case 0x007F:                    return htmlCenter(tr("{del}", "Unicode U+007F codepoint - Delete control code.")); break;
         case 0x034F:                    return htmlCenter(tr("{combining grapheme joiner}", "Unicode U+034F codepoint (badly named apparently - see Wikipedia!)")); break;
         case 0x1680:                    return htmlCenter(tr("{ogham space mark}", "Unicode U+1680 codepoint.")); break;
         case 0x2000:                    return htmlCenter(tr("{'n' quad}", "Unicode U+2000 codepoint.")); break;

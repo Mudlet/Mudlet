@@ -24,6 +24,7 @@
 #include "TConsole.h"
 
 
+#include "dlgProfilePreferences.h"
 #include "Host.h"
 #include "TCommandLine.h"
 #include "TDebug.h"
@@ -38,6 +39,8 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QAction>
+#include <QIcon>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
@@ -1352,4 +1355,119 @@ void TMainConsole::slot_reloadMap(QList<QString> profilesList)
     }
 
     pHost->postMessage(outcomeMsg);
+}
+
+void TMainConsole::showWarningIcon(const int type)
+{
+    if (mWarningIcons.contains(type)) {
+        return;
+    }
+
+    QString iconFileName;
+    QString menuToolTip;
+    QMenu* pMenu = nullptr;
+    auto pToolButton = new QToolButton(mpCommandLine);
+    if (type == 0) {
+        iconFileName = QStringLiteral(":/icons/receive_encoding_error.png");
+        pMenu = new QMenu(pToolButton);
+
+        auto pReset = pMenu->addAction(tr("Reset warning"), this, &TMainConsole::slot_resetReceiveEncodingErrorWarning);
+        pReset->setToolTip(tr("Forget about this now, without making changes (but allows the warning to be shown if it happens again!)").prepend(QLatin1String("<p>")).append(QLatin1String("</p>")));
+
+        auto pIgnore = pMenu->addAction(tr("Ignore warning"), this, &TMainConsole::slot_ignoreReceiveEncodingErrorWarning);
+        pIgnore->setToolTip(tr("Forget about this now, without making changes, and for the rest of the session.").prepend(QLatin1String("<p>")).append(QLatin1String("</p>")));
+
+        auto pAdjust = pMenu->addAction(tr("Go to settings"), this, &TMainConsole::slot_gotoAdjustEncoding);
+        pAdjust->setToolTip(tr("Go to the preferences setting that might fix it.").prepend(QLatin1String("<p>")).append(QLatin1String("</p>")));
+
+        menuToolTip = tr("A problem has been discovered in the Game Server encoding when processing the data received from it; click the menu to choose how to deal with this.")
+                              .prepend(QLatin1String("<p>"))
+                              .append(QLatin1String("</p>"));
+    } else if (type == 1) {
+        iconFileName = QStringLiteral(":/icons/transmit_encoding_error.png");
+        pMenu = new QMenu(pToolButton);
+
+        auto pReset = pMenu->addAction(tr("Reset warning"), this, &TMainConsole::slot_resetTransmitEncodingErrorWarning);
+        pReset->setToolTip(tr("Forget about this now, without making changes (but allows the warning to be shown if it happens again!)").prepend(QLatin1String("<p>")).append(QLatin1String("</p>")));
+
+        auto pIgnore = pMenu->addAction(tr("Ignore warning"), this, &TMainConsole::slot_ignoreTransmitEncodingErrorWarning);
+        pIgnore->setToolTip(tr("Forget about this now, without making changes, and for the rest of the session.").prepend(QLatin1String("<p>")).append(QLatin1String("</p>")));
+
+        auto pAdjust = pMenu->addAction(tr("Go to settings"), this, &TMainConsole::slot_gotoAdjustEncoding);
+        pAdjust->setToolTip(tr("Go to the preferences setting that might fix it.").prepend(QLatin1String("<p>")).append(QLatin1String("</p>")));
+
+        menuToolTip = tr("A problem has been discovered in the Game Server encoding when processing the "
+                         "data you or a script or package is trying to send to it, one or more characters "
+                         "can not be conveyed in the current encoding and thus has had to be removed from "
+                         "what was sent; click the menu to choose how to deal with this warning.").prepend(QLatin1String("<p>")).append(QLatin1String("</p>"));
+    } else {
+        Q_UNREACHABLE();
+    }
+
+    auto icon = QIcon(iconFileName);
+    // This style is always the one wanted for this no matter the DE/Application
+    // styling:
+    pToolButton->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    pToolButton->setIconSize(QSize(32, 32));
+    pToolButton->setIcon(icon);
+    pToolButton->setToolTip(menuToolTip);
+    if (pMenu) {
+        pMenu->setToolTipsVisible(true);
+        pToolButton->setMenu(pMenu);
+        pToolButton->setPopupMode(QToolButton::MenuButtonPopup);
+        // So that the click action on the main button also triggers the menu as
+        // well as clicking on the menu indicator (downwards pointing triangle
+        // on the right of the button) we need to do this as well:
+        connect(pToolButton, &QToolButton::clicked, pToolButton, &QToolButton::showMenu);
+    }
+    layoutLayer2->insertWidget(0, pToolButton);
+    mWarningIcons.insert(type, pToolButton);
+}
+
+void TMainConsole::hideWarningIcon(const int type)
+{
+    auto pWidget = mWarningIcons.take(type);
+    if (!pWidget) {
+        return;
+    }
+    layoutLayer2->removeWidget(pWidget);
+    pWidget->hide();
+    pWidget->deleteLater();
+}
+
+void TMainConsole::slot_resetTransmitEncodingErrorWarning()
+{
+    auto pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    pHost->mTelnet.mSendEncodingWarningIssued = false;
+    hideWarningIcon(1);
+}
+
+void TMainConsole::slot_ignoreTransmitEncodingErrorWarning()
+{
+    auto pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    pHost->mTelnet.mSendEncodingWarningIssued = false;
+    pHost->mTelnet.mSendEncodingWarningsIgnored = true;
+    hideWarningIcon(1);
+}
+
+void TMainConsole::slot_resetReceiveEncodingErrorWarning() {}
+
+void TMainConsole::slot_ignoreReceiveEncodingErrorWarning() {}
+
+void TMainConsole::slot_gotoAdjustEncoding()
+{
+    auto pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    // Jump to the encoding option in the preferences:
+    mudlet::self()->show_options_dialog(QLatin1String("tab_general"));
+    pHost->mpDlgProfilePreferences->comboBox_encoding->setFocus(Qt::OtherFocusReason);
+    pHost->mpDlgProfilePreferences->comboBox_encoding->activateWindow();
 }
