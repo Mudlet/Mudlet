@@ -22,6 +22,8 @@ find_package(Qt5 REQUIRED
         Concurrent)
 
 link_libraries(
+		edbee-lib
+		LUA51::LUA51
         Qt5::Test
         Qt5::Concurrent
         Qt5::Core
@@ -32,7 +34,7 @@ link_libraries(
 		
 find_package(Lua51 REQUIRED)
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src" "${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/edbee-lib/edbee-lib" "/usr/include/lua51")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src")
 
 add_executable(TEntityResolverTest TEntityResolverTest.cpp ../src/TEntityResolver.cpp)
 add_test(NAME TEntityResolverTest COMMAND TEntityResolverTest)
