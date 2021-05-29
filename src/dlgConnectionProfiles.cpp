@@ -484,7 +484,7 @@ void dlgConnectionProfiles::slot_update_name(const QString& newName)
 
 void dlgConnectionProfiles::slot_save_name()
 {
-        QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     QString newProfileName = profile_name_entry->text().trimmed();
 
     validateProfile();
