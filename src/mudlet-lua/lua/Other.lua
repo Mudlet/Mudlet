@@ -5,7 +5,8 @@
 mudlet = mudlet or {}
 mudlet.supports = {
   coroutines = true,
-  namedPatterns = true
+  namedPatterns = true,
+  osVersion = true
 }
 
 -- enforce uniform locale so scripts don't get
@@ -925,13 +926,6 @@ function killtimeframe(vname)
     end
     timeframetable[vname] = nil
   end
-end
-
--- replace line from MUD with colour-tagged string
-creplaceLine = function(str)
-	selectString(line,1)
-	replace("")
-	cinsertText(str)
 end
 
 function translateTable(data, language)
