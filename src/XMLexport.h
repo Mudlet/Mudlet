@@ -56,7 +56,6 @@ public:
     XMLexport(TAction*);
     XMLexport(TScript*);
     XMLexport(TKey*);
-    ~XMLexport();
 
     void writeHost(Host*, pugi::xml_node hostPackage);
     void writeTrigger(TTrigger*, pugi::xml_node xmlParent);
@@ -69,9 +68,9 @@ public:
     void writeModuleXML(const QString& moduleName, const QString& fileName);
 
     void exportHost(const QString& filename_pugi_xml);
-    bool writeGenericPackage(Host* pHost, pugi::xml_node& mMudletPackage);
+    bool writeGenericPackage(Host* pHost, pugi::xml_node& mMudletPackage, bool ignoreModuleMember = true);
     bool exportProfile(const QString& exportFileName);
-    bool exportPackage(const QString &exportFileName);
+    bool exportPackage(const QString &exportFileName, bool ignoreModuleMember = true);
     bool exportTrigger(const QString& fileName);
     bool exportTimer(const QString& fileName);
     bool exportAlias(const QString& fileName);

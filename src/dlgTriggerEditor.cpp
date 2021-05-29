@@ -1,9 +1,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
- *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2016-2020 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -28,6 +28,7 @@
 #include "Host.h"
 #include "LuaInterface.h"
 #include "TConsole.h"
+#include "TDebug.h"
 #include "TEasyButtonBar.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
@@ -45,6 +46,8 @@
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QScrollBar>
+#include <QShortcut>
 #include <QToolBar>
 #include "post_guard.h"
 
@@ -52,7 +55,7 @@ using namespace std::chrono_literals;
 
 // Used as a QObject::property so that we can keep track of the color for the
 // trigger colorizer buttons loaded from a trigger even if the user disables
-// and then reenables the colorizer function (and we "grey out" the color whilst
+// and then reenables the colorizer function (and we "grey out" the color while
 // it is disabled):
 static const char* cButtonBaseColor = "baseColor";
 
@@ -71,20 +74,29 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 , mpCurrentTriggerItem(nullptr)
 , mpCurrentAliasItem(nullptr)
 , mpCurrentVarItem(nullptr)
+, mIsGrabKey(false)
 , mpHost(pH)
 , mpSourceEditorDocument(nullptr)
 , mpSourceEditorEdbee(nullptr)
 , mpSourceEditorEdbeeDocument(nullptr)
-, mSearchOptions(SearchOptionNone)
+, mSearchOptions(pH->mSearchOptions)
 , mpAction_searchOptions(nullptr)
 , mIcon_searchOptions(QIcon())
 , mpAction_searchCaseSensitive(nullptr)
+, mpAction_searchIncludeVariables(nullptr)
 // TODO: Implement other searchOptions:
 //, mpAction_searchWholeWords(nullptr)
 //, mpAction_searchRegExp(nullptr)
-, mCleanResetQueued(false)
 , mSavingAs(false)
+, mCleanResetQueued(false)
 , mAutosaveInterval{}
+, mTriggerEditorSplitterState{}
+, mAliasEditorSplitterState{}
+, mScriptEditorSplitterState{}
+, mActionEditorSplitterState{}
+, mKeyEditorSplitterState{}
+, mTimerEditorSplitterState{}
+, mVarEditorSplitterState{}
 {
     // init generated dialog
     setupUi(this);
@@ -165,7 +177,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     setUnifiedTitleAndToolBarOnMac(true); //MAC OSX: make window moveable
-    setWindowTitle(mpHost->getName());
+    const QString hostName{mpHost->getName()};
+    setWindowTitle(hostName);
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_editor.png")));
     auto statusBar = new QStatusBar(this);
     statusBar->setSizeGripEnabled(true);
@@ -223,9 +236,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpSourceEditorArea = new dlgSourceEditorArea(this);
     splitter_right->addWidget(mpSourceEditorArea);
 
-    // And the new edbee widget
+    // And the edbee widget
     mpSourceEditorEdbee = mpSourceEditorArea->edbeeEditorWidget;
     mpSourceEditorEdbee->setAutoScrollMargin(20);
+    mpSourceEditorEdbee->setPlaceholderText(tr("-- add your Lua code here"));
     mpSourceEditorEdbeeDocument = mpSourceEditorEdbee->textDocument();
 
     // Update the status bar on changes
@@ -239,11 +253,49 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
+    // edbee editor find area
+    mpSourceEditorFindArea = new dlgSourceEditorFindArea(mpSourceEditorEdbee);
+    mpSourceEditorEdbee->horizontalScrollBar()->installEventFilter(mpSourceEditorFindArea);
+    mpSourceEditorEdbee->verticalScrollBar()->installEventFilter(mpSourceEditorFindArea);
+    mpSourceEditorFindArea->hide();
+
+    connect(mpSourceEditorFindArea->lineEdit_findText, &QLineEdit::textChanged, this, &dlgTriggerEditor::slot_source_find_text_changed);
+    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorMovementNecessary, this, &dlgTriggerEditor::slot_move_source_find);
+    connect(mpSourceEditorFindArea->pushButton_findPrevious, &QPushButton::clicked, this, &dlgTriggerEditor::slot_source_find_previous);
+    connect(mpSourceEditorFindArea->pushButton_findNext, &QPushButton::clicked, this, &dlgTriggerEditor::slot_source_find_next);
+    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindPrevious, this, &dlgTriggerEditor::slot_source_find_previous);
+    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindNext, this, &dlgTriggerEditor::slot_source_find_next);
+    connect(mpSourceEditorFindArea->pushButton_close, &QPushButton::clicked, this, &dlgTriggerEditor::slot_close_source_find);
+
+    auto openSourceFindAction = new QAction(this);
+    openSourceFindAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    openSourceFindAction->setShortcut(QKeySequence(QKeySequence::Find));
+    mpSourceEditorArea->addAction(openSourceFindAction);
+    connect(openSourceFindAction, &QAction::triggered, this, &dlgTriggerEditor::slot_open_source_find);
+
+    QAction* closeSourceFindAction = new QAction(this);
+    closeSourceFindAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    closeSourceFindAction->setShortcut(QKeySequence(QKeySequence::Cancel));
+    mpSourceEditorArea->addAction(closeSourceFindAction);
+    connect(closeSourceFindAction, &QAction::triggered, this, &dlgTriggerEditor::slot_close_source_find);
+
+    QAction* sourceFindNextAction = new QAction(this);
+    sourceFindNextAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    sourceFindNextAction->setShortcut(QKeySequence(QKeySequence::FindNext));
+    mpSourceEditorArea->addAction(sourceFindNextAction);
+    connect(sourceFindNextAction, &QAction::triggered, this, &dlgTriggerEditor::slot_source_find_next);
+
+    QAction* sourceFindPreviousAction = new QAction(this);
+    sourceFindPreviousAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    sourceFindPreviousAction->setShortcut(QKeySequence(QKeySequence::FindPrevious));
+    mpSourceEditorArea->addAction(sourceFindPreviousAction);
+    connect(sourceFindPreviousAction, &QAction::triggered, this, &dlgTriggerEditor::slot_source_find_previous);
+
     auto* provider = new edbee::StringTextAutoCompleteProvider();
     //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
 
     // Add lua functions and reserved lua terms to an AutoComplete provider
-    for(QString key : mudlet::mLuaFunctionNames.keys()) {
+    for (QString key : mudlet::mLuaFunctionNames.keys()) {
         provider->add(key, 3, mudlet::mLuaFunctionNames.value(key).toString());
     }
 
@@ -291,10 +343,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mpErrorConsole->hide();
 
-    button_toggleSearchAreaResults->setStyleSheet(QStringLiteral("QToolButton::on{border-image:url(:/icons/arrow-down_grey-16x.png);} "
-                                                                 "QToolButton{border-image:url(:/icons/arrow-right_grey-16x.png);} "
-                                                                 "QToolButton::on:hover{border-image:url(:/icons/arrow-down-16x.png);} "
-                                                                 "QToolButton:hover{border-image:url(:/icons/arrow-right-16x.png);}"));
+    button_toggleSearchAreaResults->setStyleSheet(QStringLiteral("QToolButton::on {border-image: url(:/icons/arrow-down_grey.png);} "
+                                                                 "QToolButton {border-image: url(:/icons/arrow-right_grey.png);} "
+                                                                 "QToolButton::on:hover {border-image: url(:/icons/arrow-down.png);} "
+                                                                 "QToolButton:hover {border-image: url(:/icons/arrow-right.png);}"));
     connect(button_toggleSearchAreaResults, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_showSearchAreaResults);
 
     connect(mpTriggersMainArea->toolButton_toggleExtraControls, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_showAllTriggerControls);
@@ -467,9 +519,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     importAction->setEnabled(true);
     connect(importAction, &QAction::triggered, this, &dlgTriggerEditor::slot_import);
 
-    QAction* exportAction = new QAction(QIcon(QStringLiteral(":/icons/export.png")), tr("Export"), this);
-    exportAction->setEnabled(true);
-    connect(exportAction, &QAction::triggered, this, &dlgTriggerEditor::slot_export);
+    mpExportAction = new QAction(QIcon(QStringLiteral(":/icons/export.png")), tr("Export"), this);
+    mpExportAction->setEnabled(true);
+    connect(mpExportAction, &QAction::triggered, this, &dlgTriggerEditor::slot_export);
 
     mProfileSaveAction = new QAction(QIcon(QStringLiteral(":/icons/document-save-all.png")), tr("Save Profile"), this);
     mProfileSaveAction->setEnabled(true);
@@ -489,7 +541,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     viewStatsAction->setStatusTip(tr("Generates a statistics summary display on the main profile console."));
     connect(viewStatsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewStatsAction);
 
-    QAction* viewErrorsAction = new QAction(QIcon(QStringLiteral(":/icons/errors.png")), tr("errors"), this);
+    QAction* viewErrorsAction = new QAction(QIcon(QStringLiteral(":/icons/errors.png")), tr("Errors"), this);
     viewErrorsAction->setStatusTip(tr("Shows/Hides the errors console in the bottom right of this editor."));
     connect(viewErrorsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewErrorsAction);
 
@@ -518,6 +570,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->setMovable(true);
     toolBar->addAction(toggleActiveAction);
     toolBar->addAction(saveAction);
+    toolBar->setWindowTitle(tr("Editor Toolbar - %1 - Actions",
+                               // Intentional comment to separate arguments
+                               "This is the toolbar that is initally placed at the top of the editor.")
+                            .arg(hostName));
 
     toolBar->addSeparator();
 
@@ -527,7 +583,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addSeparator();
     toolBar->addAction(deleteTriggerAction);
     toolBar->addAction(importAction);
-    toolBar->addAction(exportAction);
+    toolBar->addAction(mpExportAction);
     toolBar->addAction(mProfileSaveAsAction);
     toolBar->addAction(mProfileSaveAction);
 
@@ -550,7 +606,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar2->addAction(showDebugAreaAction);
 
     toolBar2->setMovable(true);
-
+    toolBar2->setWindowTitle(tr("Editor Toolbar - %1 - Items",
+                                // Intentional comment to separate arguments
+                                "This is the toolbar that is initally placed at the left side of the editor.")
+                             .arg(hostName));
     toolBar2->setOrientation(Qt::Vertical);
 
     QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
@@ -565,9 +624,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                   : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
+    config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
 
-    connect(comboBox_searchTerms, qOverload<const QString&>(&QComboBox::activated), this, &dlgTriggerEditor::slot_searchMudletItems);
+    connect(comboBox_searchTerms, qOverload<int>(&QComboBox::activated), this, &dlgTriggerEditor::slot_searchMudletItems);
     connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_trigger_selected);
     connect(treeWidget_triggers, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
     connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_key_selected);
@@ -620,21 +680,32 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mpAction_searchCaseSensitive = new QAction(tr("Case sensitive"), this);
     mpAction_searchCaseSensitive->setObjectName(QStringLiteral("mpAction_searchCaseSensitive"));
-    mpAction_searchCaseSensitive->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-        .arg(tr("If checked then what is searched for must match the case precisely, otherwise the case is ignored.")));
+    mpAction_searchCaseSensitive->setToolTip(QStringLiteral("<p>%1</p>")
+        .arg(tr("Match case precisely")));
     mpAction_searchCaseSensitive->setCheckable(true);
-
     pMenu_searchOptions->insertAction(nullptr, mpAction_searchCaseSensitive);
-    connect(mpAction_searchCaseSensitive, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleSearchCaseSensitivity);
 
-    createSearchOptionIcon();
+    mpAction_searchIncludeVariables = new QAction(tr("Include variables"), this);
+    mpAction_searchIncludeVariables->setObjectName(QStringLiteral("mpAction_searchIncludeVariables"));
+    mpAction_searchIncludeVariables->setToolTip(QStringLiteral("<p>%1</p>")
+        .arg(tr("Search variables (slower)")));
+    mpAction_searchIncludeVariables->setCheckable(true);
+    pMenu_searchOptions->insertAction(nullptr, mpAction_searchIncludeVariables);
+
+    // This will set the icon and the Search Options menu items - and needs to
+    // be done BEFORE the menu items are connect()ed:
+    setSearchOptions(mSearchOptions);
+
+    connect(mpAction_searchCaseSensitive, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleSearchCaseSensitivity);
+    connect(mpAction_searchIncludeVariables, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleSearchIncludeVariables);
+
 
     mpAction_searchOptions->setMenu(pMenu_searchOptions);
 
     pLineEdit_searchTerm->addAction(mpAction_searchOptions, QLineEdit::LeadingPosition);
 
-    connect(mpScriptsMainArea->toolButton_script_add_event_handler, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_script_main_area_add_handler);
-    connect(mpScriptsMainArea->toolButton_script_remove_event_handler, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_script_main_area_delete_handler);
+    connect(mpScriptsMainArea->toolButton_script_add_event_handler, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_script_main_area_add_handler);
+    connect(mpScriptsMainArea->toolButton_script_remove_event_handler, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_script_main_area_delete_handler);
 
     mpTriggersMainArea->hide();
     mpTimersMainArea->hide();
@@ -687,7 +758,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     pixMap_begin_of_line_substring.fill(Qt::red);
     QIcon icon_begin_of_line_substring(pixMap_begin_of_line_substring);
 
-    QPixmap pixMap_exact_match(256,256);
+    QPixmap pixMap_exact_match(256, 256);
     pixMap_exact_match.fill(Qt::green);
     QIcon icon_exact_match(pixMap_exact_match);
 
@@ -731,16 +802,20 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         pBox->setItemIcon(6, icon_color_trigger);
         pBox->setItemIcon(7, icon_prompt);
         connect(pBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_setupPatternControls);
-        connect(pItem->pushButton_fgColor, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_color_trigger_fg);
-        connect(pItem->pushButton_bgColor, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_color_trigger_bg);
+        connect(pItem->pushButton_fgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_color_trigger_fg);
+        connect(pItem->pushButton_bgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_color_trigger_bg);
         HpatternList->layout()->addWidget(pItem);
         mTriggerPatternEdit.push_back(pItem);
         pItem->mRow = i;
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
         pItem->pushButton_prompt->hide();
+        pItem->spinBox_lineSpacer->hide();
         pItem->label_patternNumber->setText(QString::number(i+1));
         pItem->label_patternNumber->show();
+        if (i == 0) {
+            pItem->lineEdit_pattern->setPlaceholderText(tr("Text to find (trigger pattern)"));
+        }
     }
     // force the minimum size of the scroll area for the trigger items to be one
     // and a half trigger item widgets:
@@ -849,6 +924,14 @@ void dlgTriggerEditor::readSettings()
     move(pos);
 
     mAutosaveInterval = settings.value("autosaveIntervalMinutes", 2).toInt();
+
+    mTriggerEditorSplitterState = settings.value("mTriggerEditorSplitterState", QByteArray()).toByteArray();
+    mAliasEditorSplitterState = settings.value("mAliasEditorSplitterState", QByteArray()).toByteArray();
+    mScriptEditorSplitterState = settings.value("mScriptEditorSplitterState", QByteArray()).toByteArray();
+    mActionEditorSplitterState = settings.value("mActionEditorSplitterState", QByteArray()).toByteArray();
+    mKeyEditorSplitterState = settings.value("mKeyEditorSplitterState", QByteArray()).toByteArray();
+    mTimerEditorSplitterState = settings.value("mTimerEditorSplitterState", QByteArray()).toByteArray();
+    mVarEditorSplitterState = settings.value("mVarEditorSplitterState", QByteArray()).toByteArray();
 }
 
 void dlgTriggerEditor::writeSettings()
@@ -861,6 +944,14 @@ void dlgTriggerEditor::writeSettings()
     settings.setValue("script_editor_pos", pos());
     settings.setValue("script_editor_size", size());
     settings.setValue("autosaveIntervalMinutes", mAutosaveInterval);
+
+    settings.setValue("mTriggerEditorSplitterState", mTriggerEditorSplitterState);
+    settings.setValue("mAliasEditorSplitterState", mAliasEditorSplitterState);
+    settings.setValue("mScriptEditorSplitterState", mScriptEditorSplitterState);
+    settings.setValue("mActionEditorSplitterState", mActionEditorSplitterState);
+    settings.setValue("mKeyEditorSplitterState", mKeyEditorSplitterState);
+    settings.setValue("mTimerEditorSplitterState", mTimerEditorSplitterState);
+    settings.setValue("mVarEditorSplitterState", mVarEditorSplitterState);
 }
 
 void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
@@ -1236,8 +1327,12 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
     } // End of switch()
 }
 
-void dlgTriggerEditor::slot_searchMudletItems(const QString& s)
+void dlgTriggerEditor::slot_searchMudletItems(const int index)
 {
+    if (index < 0) {
+        return;
+    }
+    const QString s{comboBox_searchTerms->itemText(index)};
     if (s.isEmpty()) {
         return;
     }
@@ -1252,8 +1347,10 @@ void dlgTriggerEditor::slot_searchMudletItems(const QString& s)
     searchActions(s);
     searchTimers(s);
     searchKeys(s);
-    searchVariables(s);
 
+    if (mSearchOptions & SearchOptionIncludeVariables) {
+        searchVariables(s);
+    }
 
     // TODO: Edbee search term highlighter
 
@@ -1947,7 +2044,7 @@ void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const Q
         QStringList textList = trigger->getRegexCodeList();
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
-            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
@@ -1976,7 +2073,7 @@ void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const Q
         textList = trigger->getScript().split("\n");
         total = textList.count();
         for (int index = 0; index < total; ++index) {
-            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
@@ -2069,7 +2166,7 @@ void dlgTriggerEditor::recursiveSearchAlias(TAlias* pTriggerParent, const QStrin
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
@@ -2125,7 +2222,7 @@ void dlgTriggerEditor::recursiveSearchScripts(TScript* pTriggerParent, const QSt
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
@@ -2155,7 +2252,7 @@ void dlgTriggerEditor::recursiveSearchScripts(TScript* pTriggerParent, const QSt
         total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
@@ -2249,7 +2346,7 @@ void dlgTriggerEditor::recursiveSearchActions(TAction* pTriggerParent, const QSt
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
@@ -2279,7 +2376,7 @@ void dlgTriggerEditor::recursiveSearchActions(TAction* pTriggerParent, const QSt
         total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
@@ -2353,7 +2450,7 @@ void dlgTriggerEditor::recursiveSearchTimers(TTimer* pTriggerParent, const QStri
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
@@ -2427,7 +2524,7 @@ void dlgTriggerEditor::recursiveSearchKeys(TKey* pTriggerParent, const QString& 
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
-            if (textList.at(index).isEmpty() || ! textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
+            if (textList.at(index).isEmpty() || !textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
                 // Short-cuts that mean we do not have to examine the line in more detail
                 continue;
             }
@@ -3355,16 +3452,16 @@ void dlgTriggerEditor::addVar(bool isFolder)
     saveVar();
     mpVarsMainArea->comboBox_variable_key_type->setCurrentIndex(0);
     if (isFolder) {
-        // Edbee doesn't have a readonly option, so I'm using setEnabled
+        // in lieu of readonly
         mpSourceEditorEdbee->setEnabled(false);
         mpVarsMainArea->comboBox_variable_value_type->setDisabled(true);
         mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(4);
         mpVarsMainArea->lineEdit_var_name->setText(QString());
         mpVarsMainArea->lineEdit_var_name->setPlaceholderText(tr("Table name..."));
 
-        clearDocument(mpSourceEditorEdbee, QLatin1Literal("NewTable"));
+        clearDocument(mpSourceEditorEdbee, QLatin1String("NewTable"));
     } else {
-        // Edbee doesn't have a readonly option, so I'm using setEnabled
+        // in lieu of readonly
         mpSourceEditorEdbee->setEnabled(true);
         mpVarsMainArea->lineEdit_var_name->setText(QString());
         mpVarsMainArea->lineEdit_var_name->setPlaceholderText(tr("Variable name..."));
@@ -3372,18 +3469,22 @@ void dlgTriggerEditor::addVar(bool isFolder)
         mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(0);
     }
 
-    QStringList nameL;
-    nameL << QString();
-    QTreeWidgetItem* cItem = treeWidget_variables->currentItem();
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
-    TVar* cVar = vu->getWVar(cItem);
-    QTreeWidgetItem* pParent;
+
+    QStringList nameL;
+    nameL << QString(isFolder ? tr("New table name") : tr("New variable name"));
+
+    QTreeWidgetItem* pParent = nullptr;
     QTreeWidgetItem* pNewItem;
-    if (cVar && cVar->getValueType() == LUA_TTABLE) {
-        pParent = cItem;
-    } else {
-        pParent = cItem->parent();
+    QTreeWidgetItem* cItem = treeWidget_variables->currentItem();
+    if (cItem) {
+        TVar* cVar = vu->getWVar(cItem);
+        if (cVar && cVar->getValueType() == LUA_TTABLE) {
+            pParent = cItem;
+        } else {
+            pParent = cItem->parent();
+        }
     }
 
     auto newVar = new TVar();
@@ -3410,13 +3511,11 @@ void dlgTriggerEditor::addVar(bool isFolder)
     }
     vu->addTempVar(pNewItem, newVar);
     pNewItem->setFlags(pNewItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled));
-// The following test is pointless - we will already have seg. faulted if pNewItem is a nullptr...!
-//    if (pNewItem) {
-        mpCurrentVarItem = pNewItem;
-        treeWidget_variables->setCurrentItem(pNewItem);
-        showInfo(msgInfoAddVar);
-        slot_var_selected(treeWidget_variables->currentItem());
-//    }
+
+    mpCurrentVarItem = pNewItem;
+    treeWidget_variables->setCurrentItem(pNewItem);
+    showInfo(msgInfoAddVar);
+    slot_var_selected(treeWidget_variables->currentItem());
 }
 
 void dlgTriggerEditor::addKey(bool isFolder)
@@ -3475,8 +3574,8 @@ void dlgTriggerEditor::addKey(bool isFolder)
     }
 
     pT->setName(name);
-    pT->setKeyCode(-1);
-    pT->setKeyModifiers(-1);
+    pT->setKeyCode(Qt::Key_unknown);
+    pT->setKeyModifiers(Qt::NoModifier);
     pT->setScript(script);
     pT->setIsFolder(isFolder);
     pT->setIsActive(false);
@@ -3619,29 +3718,19 @@ void dlgTriggerEditor::addAction(bool isFolder)
         TAction* pParentAction = mpHost->getActionUnit()->getAction(parentID);
         if (pParentAction) {
             // insert new items as siblings unless the parent is a folder
-            if (!pParentAction->isFolder()) {
-                // handle root items
-                if (!pParentAction->getParent()) {
-                    goto ROOT_ACTION;
-                } else {
-                    // insert new item as sibling of the clicked item
-                    if (pParent->parent()) {
-                        pT = new TAction(pParentAction->getParent(), mpHost);
-                        pNewItem = new QTreeWidgetItem(pParent->parent(), nameL);
-                        pParent->parent()->insertChild(0, pNewItem);
-                    }
-                }
-            } else {
+            if (pParentAction->isFolder()) {
                 pT = new TAction(pParentAction, mpHost);
                 pNewItem = new QTreeWidgetItem(pParent, nameL);
                 pParent->insertChild(0, pNewItem);
+            } else if (pParentAction->getParent() && pParent->parent()) {
+                pT = new TAction(pParentAction->getParent(), mpHost);
+                pNewItem = new QTreeWidgetItem(pParent->parent(), nameL);
+                pParent->parent()->insertChild(0, pNewItem);
             }
-        } else {
-            goto ROOT_ACTION;
         }
-    } else {
-    //insert a new root item
-    ROOT_ACTION:
+    }
+    // Otherwise: insert a new root item
+    if (!pT) {
         name = tr("New toolbar");
         pT = new TAction(name, mpHost);
         pT->setCommandButtonUp(cmdButtonUp);
@@ -3650,11 +3739,6 @@ void dlgTriggerEditor::addAction(bool isFolder)
         pNewItem = new QTreeWidgetItem(mpActionBaseItem, nl);
         treeWidget_actions->insertTopLevelItem(0, pNewItem);
     }
-
-    if (!pT) {
-        return;
-    }
-
 
     pT->setName(name);
     pT->setCommandButtonUp(cmdButtonUp);
@@ -3704,13 +3788,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
     } else {
         name = tr("New script");
     }
-    QStringList mainFun;
-    mainFun << "-------------------------------------------------\n"
-            << "--         Put your Lua functions here.        --\n"
-            << "--                                             --\n"
-            << "-- Note that you can also use external scripts --\n"
-            << "-------------------------------------------------\n";
-    QString script = mainFun.join("");
+    QString script;
     QStringList nameL;
     nameL << name;
 
@@ -3898,12 +3976,11 @@ void dlgTriggerEditor::saveTrigger()
     for (int i = 0; i < 50; i++) {
         QString pattern = mTriggerPatternEdit.at(i)->lineEdit_pattern->text();
         int patternType = mTriggerPatternEdit.at(i)->comboBox_patternType->currentIndex();
-        if (pattern.isEmpty() && patternType != REGEX_PROMPT) {
+        if (pattern.isEmpty() && patternType != REGEX_PROMPT && patternType != REGEX_LINE_SPACER) {
             continue;
         }
-        regexList << pattern;
 
-        switch(mTriggerPatternEdit.at(i)->comboBox_patternType->currentIndex()) {
+        switch (patternType) {
         case 0:
             regexPropertyList << REGEX_SUBSTRING;
             break;
@@ -3921,6 +3998,7 @@ void dlgTriggerEditor::saveTrigger()
             break;
         case 5:
             regexPropertyList << REGEX_LINE_SPACER;
+            pattern = mTriggerPatternEdit.at(i)->spinBox_lineSpacer->text();
             break;
         case 6:
             regexPropertyList << REGEX_COLOR_PATTERN;
@@ -3929,6 +4007,7 @@ void dlgTriggerEditor::saveTrigger()
             regexPropertyList << REGEX_PROMPT;
             break;
         }
+        regexList << pattern;
     }
 
     QString script = mpSourceEditorEdbeeDocument->text();
@@ -3950,12 +4029,17 @@ void dlgTriggerEditor::saveTrigger()
         pT->mSoundTrigger = mpTriggersMainArea->groupBox_soundTrigger->isChecked();
         pT->setSound(mpTriggersMainArea->lineEdit_soundFile->text());
 
-        QColor fgColor;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        QColor fgColor(QColorConstants::Transparent);
+        QColor bgColor(QColorConstants::Transparent);
+#else
+        QColor fgColor("transparent");
+        QColor bgColor("transparent");
+#endif
         if (!mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString().isEmpty()) {
             fgColor = QColor(mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString());
         }
         pT->setColorizerFgColor(fgColor);
-        QColor bgColor;
         if (!mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString().isEmpty()) {
             bgColor = QColor(mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString());
         }
@@ -4352,6 +4436,29 @@ void dlgTriggerEditor::saveAction()
     mudlet::self()->processEventLoopHack();
 }
 
+void dlgTriggerEditor::writeScript(int id)
+{
+    QTreeWidgetItem* pItem = mpCurrentScriptItem;
+    if (!pItem) {
+        return;
+    }
+    if (mCurrentView == EditorViewType::cmUnknownView || mCurrentView != EditorViewType::cmScriptView) {
+        return;
+    }
+    int scriptID = pItem->data(0, Qt::UserRole).toInt();
+    if (scriptID != id) {
+        return;
+    }
+
+    TScript* pT = mpHost->getScriptUnit()->getScript(scriptID);
+    if (!pT) {
+        return;
+    }
+
+    QString scriptCode = pT->getScript();
+    mpSourceEditorEdbeeDocument->setText(scriptCode);
+}
+
 void dlgTriggerEditor::saveScript()
 {
     QTreeWidgetItem* pItem = mpCurrentScriptItem;
@@ -4465,6 +4572,7 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int new
     if (currentValueType == LUA_TFUNCTION || currentNameType == LUA_TTABLE) {
         return 0; //no recasting functions or table keys
     }
+
     if (newValueType == LUA_TTABLE && currentValueType != LUA_TTABLE) {
         //trying to change a table to something else
         if (!var->getChildren(false).empty()) {
@@ -4473,9 +4581,7 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int new
         //no children, we can do this without bad things happening
         return 1;
     }
-    if (newValueType == LUA_TTABLE && currentValueType != LUA_TTABLE) {
-        return 1; //non-table to table
-    }
+
     if (currentNameType == newNameType && currentValueType == newValueType) {
         return 2;
     }
@@ -4564,7 +4670,7 @@ void dlgTriggerEditor::saveVar()
                 //we're trying to rename it/recast it
                 int change = 0;
                 if (newName != variable->getName() || uiNameType != variable->getKeyType()) {
-                    //lets make sure the nametype works
+                    //let's make sure the nametype works
                     if (variable->getKeyType() == LUA_TNUMBER && newName.toInt()) {
                         uiNameType = LUA_TNUMBER;
                     } else {
@@ -4574,7 +4680,7 @@ void dlgTriggerEditor::saveVar()
                 }
                 variable->setNewName(newName, uiNameType);
                 if (variable->getValueType() != LUA_TTABLE && (newValue != variable->getValue() || uiValueType != variable->getValueType())) {
-                    //lets check again
+                    //let's check again
                     if (variable->getValueType() == LUA_TTABLE) {
                         //HEIKO: obvious logic error used to be valueType == LUA_TABLE
                         uiValueType = LUA_TTABLE;
@@ -4618,7 +4724,7 @@ void dlgTriggerEditor::saveVar()
             //we're trying to rename it/recast it
             int change = 0;
             if (newName != var->getName() || uiNameType != var->getKeyType()) {
-                //lets make sure the nametype works
+                //let's make sure the nametype works
                 if (uiNameType == LUA_TSTRING) {
                     //do nothing, we can always make key to string
                 } else if (var->getKeyType() == LUA_TNUMBER && newName.toInt()) {
@@ -4630,7 +4736,7 @@ void dlgTriggerEditor::saveVar()
                 change = change | 0x1;
             }
             if (newValue != var->getValue() || uiValueType != var->getValueType()) {
-                //lets check again
+                //let's check again
                 if (uiValueType == LUA_TTABLE) {
                     newValue = "{}";
                 } else if (uiValueType == LUA_TNUMBER && newValue.toInt()) {
@@ -4656,7 +4762,7 @@ void dlgTriggerEditor::saveVar()
         }
     }
     //redo this here in case we changed type
-    pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsTristate | Qt::ItemIsUserCheckable);
+    pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
     pItem->setToolTip(0, tr("Checked variables will be saved and loaded with your profile."));
     if (!varUnit->shouldSave(variable)) {
         pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
@@ -4692,7 +4798,7 @@ void dlgTriggerEditor::saveKey()
     }
 
     QString name = mpKeysMainArea->lineEdit_key_name->text();
-    if (name.isEmpty()) {
+    if (name.isEmpty() || name == tr("New key")) {
         name = mpKeysMainArea->lineEdit_key_binding->text();
     }
     QString command = mpKeysMainArea->lineEdit_key_command->text();
@@ -4762,40 +4868,22 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
 {
     switch (type) {
     case REGEX_SUBSTRING:
-        pItem->lineEdit_pattern->show();
-        pItem->pushButton_fgColor->hide();
-        pItem->pushButton_bgColor->hide();
-        pItem->pushButton_prompt->hide();
-        break;
     case REGEX_PERL:
-        pItem->lineEdit_pattern->show();
-        pItem->pushButton_fgColor->hide();
-        pItem->pushButton_bgColor->hide();
-        pItem->pushButton_prompt->hide();
-        break;
     case REGEX_BEGIN_OF_LINE_SUBSTRING:
-        pItem->lineEdit_pattern->show();
-        pItem->pushButton_fgColor->hide();
-        pItem->pushButton_bgColor->hide();
-        pItem->pushButton_prompt->hide();
-        break;
     case REGEX_EXACT_MATCH:
-        pItem->lineEdit_pattern->show();
-        pItem->pushButton_fgColor->hide();
-        pItem->pushButton_bgColor->hide();
-        pItem->pushButton_prompt->hide();
-        break;
     case REGEX_LUA_CODE:
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
         pItem->pushButton_prompt->hide();
+        pItem->spinBox_lineSpacer->hide();
         break;
     case REGEX_LINE_SPACER:
-        pItem->lineEdit_pattern->show();
+        pItem->lineEdit_pattern->hide();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
         pItem->pushButton_prompt->hide();
+        pItem->spinBox_lineSpacer->show();
         break;
     case REGEX_COLOR_PATTERN:
         // CHECKME: Do we need to regenerate (hidden patter text) and button texts/colors?
@@ -4803,6 +4891,7 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
         pItem->pushButton_fgColor->show();
         pItem->pushButton_bgColor->show();
         pItem->pushButton_prompt->hide();
+        pItem->spinBox_lineSpacer->hide();
         break;
     case REGEX_PROMPT:
         pItem->lineEdit_pattern->hide();
@@ -4816,6 +4905,7 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
             pItem->pushButton_prompt->setToolTip(tr("A Go-Ahead (GA) signal from the game is required to make this feature work"));
         }
         pItem->pushButton_prompt->show();
+        pItem->spinBox_lineSpacer->hide();
         break;
     }
 }
@@ -4957,14 +5047,14 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
             int pType = propertyList.at(i);
             if (!pType) {
                 // If the control is for the default (0) case nudge the setting
-                // up and down so that it copies the coloure icon for the
+                // up and down so that it copies the colour icon for the
                 // subString type across into the QLineEdit:
                 pPatternItem->comboBox_patternType->setCurrentIndex(1);
                 setupPatternControls(1, pPatternItem);
             }
             pPatternItem->comboBox_patternType->setCurrentIndex(pType);
             setupPatternControls(pType, pPatternItem);
-            if (pType == REGEX_PROMPT ) {
+            if (pType == REGEX_PROMPT) {
                 pPatternItem->lineEdit_pattern->clear();
 
             } else if (pType == REGEX_COLOR_PATTERN) {
@@ -5010,7 +5100,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                     pPatternItem->pushButton_bgColor->setStyleSheet(QString());
                     pPatternItem->pushButton_fgColor->setText(tr("fault"));
                 }
-
+            } else if (pType == REGEX_LINE_SPACER) {
+                pPatternItem->spinBox_lineSpacer->setValue(patternList.at(i).toInt());
             } else {
                 pPatternItem->lineEdit_pattern->setText(patternList.at(i));
             }
@@ -5025,6 +5116,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
             mTriggerPatternEdit[i]->pushButton_fgColor->hide();
             mTriggerPatternEdit[i]->pushButton_bgColor->hide();
             mTriggerPatternEdit[i]->pushButton_prompt->hide();
+            mTriggerPatternEdit[i]->spinBox_lineSpacer->hide();
             // Nudge the type up and down so that the appropriate (coloured) icon is copied across to the QLineEdit:
             mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(1);
             mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(0);
@@ -5047,10 +5139,24 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
         mpTriggersMainArea->lineEdit_soundFile->setCursorPosition(mpTriggersMainArea->lineEdit_soundFile->text().length());
         mpTriggersMainArea->toolButton_clearSoundFile->setEnabled(!mpTriggersMainArea->lineEdit_soundFile->text().isEmpty());
         mpTriggersMainArea->groupBox_triggerColorizer->setChecked(pT->isColorizerTrigger());
-        mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(pT->getFgColor(), pT->isColorizerTrigger()));
-        mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, pT->getFgColor().name());
+
+        QColor fgColor(pT->getFgColor());
+        QColor bgColor(pT->getBgColor());
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        bool transparentFg = fgColor == QColorConstants::Transparent;
+        bool transparentBg = bgColor == QColorConstants::Transparent;
+#else
+        bool transparentFg = fgColor == QColor("transparent");
+        bool transparentBg = bgColor == QColor("transparent");
+#endif
+        mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(fgColor, pT->isColorizerTrigger()));
+        mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, transparentFg ? QStringLiteral("transparent") : fgColor.name());
+        mpTriggersMainArea->pushButtonFgColor->setText(transparentFg ? tr("keep",
+             "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
         mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(pT->getBgColor(), pT->isColorizerTrigger()));
-        mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, pT->getBgColor().name());
+        mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, transparentBg ? QStringLiteral("transparent") : bgColor.name());
+        mpTriggersMainArea->pushButtonBgColor->setText(transparentBg ? tr("keep",
+             "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
 
@@ -5446,7 +5552,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem* pItem)
     mpVarsMainArea->checkBox_variable_hidden->setChecked(vu->isHidden(var));
     mpVarsMainArea->lineEdit_var_name->setText(var->getName());
     clearDocument(mpSourceEditorEdbee, lI->getValue(var));
-    pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsTristate | Qt::ItemIsUserCheckable);
+    pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
     pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
     pItem->setCheckState(0, Qt::Unchecked);
     if (!vu->shouldSave(var)) {
@@ -5533,11 +5639,11 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem* pItem)
                 mpActionsMainArea->groupBox_action_button_appearance->hide();
                 mpActionsMainArea->widget_top->hide();
                 mpSourceEditorArea->hide();
-            } else if (!pT->getParent() || (pT->getParent() && !pT->getParent()->getPackageName().isEmpty()))
-            // We are a top-level folder with no parent
-            // OR: We have a parent and that IS a module master folder
-            // THUS: We are a toolbar
-            {
+            } else if (!pT->getParent() || (pT->getParent() && !pT->getParent()->getPackageName().isEmpty())) {
+                // We are a top-level folder with no parent
+                // OR: We have a parent and that IS a module master folder
+                // THUS: We are a toolbar
+
                 mpActionsMainArea->groupBox_action_bar->show();
                 mpActionsMainArea->groupBox_action_button_appearance->hide();
                 mpActionsMainArea->widget_top->show();
@@ -5735,13 +5841,13 @@ void dlgTriggerEditor::fillout_form()
     mNeedUpdateData = false;
     mpTriggerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Triggers")));
     mpTriggerBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/tools-wizard.png")));
-    treeWidget_triggers->insertTopLevelItem( 0, mpTriggerBaseItem );
+    treeWidget_triggers->insertTopLevelItem(0, mpTriggerBaseItem);
     populateTriggers();
     mpTriggerBaseItem->setExpanded(true);
 
     mpTimerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Timers")));
-    mpTimerBaseItem->setIcon( 0, QPixmap(QStringLiteral(":/icons/chronometer.png")));
-    treeWidget_timers->insertTopLevelItem( 0, mpTimerBaseItem );
+    mpTimerBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/chronometer.png")));
+    treeWidget_timers->insertTopLevelItem(0, mpTimerBaseItem);
     populateTimers();
     mpTimerBaseItem->setExpanded(true);
 
@@ -6009,7 +6115,7 @@ void dlgTriggerEditor::populateTimers()
 {
     std::list<TTimer *> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
     for (auto timer : baseNodeList_timers) {
-        if( timer->isTemporary() ) {
+        if (timer->isTemporary()) {
             continue;
         }
         QString s = timer->getName();
@@ -6512,10 +6618,6 @@ void dlgTriggerEditor::slot_showSearchAreaResults(const bool isChecked)
 
 void dlgTriggerEditor::saveOpenChanges()
 {
-    if (mCurrentView == EditorViewType::cmUnknownView) {
-        return;
-    }
-
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         saveTrigger();
@@ -6538,6 +6640,8 @@ void dlgTriggerEditor::saveOpenChanges()
     case EditorViewType::cmVarsView:
         saveVar();
         break;
+    case EditorViewType::cmUnknownView:
+        return; // Silently ignore this case
     }
 }
 
@@ -6557,6 +6661,7 @@ void dlgTriggerEditor::autoSave()
 
 void dlgTriggerEditor::enterEvent(QEvent* pE)
 {
+    Q_UNUSED(pE)
     if (mNeedUpdateData) {
         saveOpenChanges();
         treeWidget_triggers->clear();
@@ -6573,6 +6678,7 @@ void dlgTriggerEditor::enterEvent(QEvent* pE)
 
 void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
 {
+    Q_UNUSED(pE)
     if (mNeedUpdateData) {
         saveOpenChanges();
         treeWidget_triggers->clear();
@@ -6639,8 +6745,8 @@ void dlgTriggerEditor::changeView(EditorViewType view)
         mNeedUpdateData = false;
     }
 
-    // Edbee doesn't have a readonly option, so I'm using setEnabled
-     mpSourceEditorEdbee->setEnabled(true);
+    // in lieu of readonly
+    mpSourceEditorEdbee->setEnabled(true);
 
     if (mCurrentView != view) {
         clearDocument(mpSourceEditorEdbee); // Change View
@@ -6668,6 +6774,8 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     mpVarsMainArea->setVisible(view == EditorViewType::cmVarsView);
     treeWidget_variables->setVisible(view == EditorViewType::cmVarsView);
     checkBox_displayAllVariables->setVisible(view == EditorViewType::cmVarsView);
+
+    mpExportAction->setEnabled(view != EditorViewType::cmVarsView);
 }
 
 void dlgTriggerEditor::slot_show_timers()
@@ -6684,6 +6792,13 @@ void dlgTriggerEditor::slot_show_timers()
         mpTimersMainArea->show();
         mpSourceEditorArea->show();
         slot_timer_selected(treeWidget_timers->currentItem());
+    }
+    if (!mTimerEditorSplitterState.isEmpty()) {
+        splitter_right->restoreState(mTimerEditorSplitterState);
+    } else {
+        const QList<int> sizes = {30, 900, 30};
+        splitter_right->setSizes(sizes);
+        mTimerEditorSplitterState = splitter_right->saveState();
     }
 }
 
@@ -6723,6 +6838,13 @@ void dlgTriggerEditor::slot_show_triggers()
         mpSourceEditorArea->show();
         slot_trigger_selected(treeWidget_triggers->currentItem());
     }
+    if (!mTriggerEditorSplitterState.isEmpty()) {
+        splitter_right->restoreState(mTriggerEditorSplitterState);
+    } else {
+        const QList<int> sizes = {30, 900, 30};
+        splitter_right->setSizes(sizes);
+        mTriggerEditorSplitterState = splitter_right->saveState();
+    }
 }
 
 void dlgTriggerEditor::slot_show_scripts()
@@ -6740,6 +6862,13 @@ void dlgTriggerEditor::slot_show_scripts()
         mpSourceEditorArea->show();
         slot_scripts_selected(treeWidget_scripts->currentItem());
     }
+    if (!mScriptEditorSplitterState.isEmpty()) {
+        splitter_right->restoreState(mScriptEditorSplitterState);
+    } else {
+        const QList<int> sizes = {30, 900, 30};
+        splitter_right->setSizes(sizes);
+        mScriptEditorSplitterState = splitter_right->saveState();
+    }
 }
 
 void dlgTriggerEditor::slot_show_keys()
@@ -6756,6 +6885,13 @@ void dlgTriggerEditor::slot_show_keys()
         mpKeysMainArea->show();
         mpSourceEditorArea->show();
         slot_key_selected(treeWidget_keys->currentItem());
+    }
+    if (!mKeyEditorSplitterState.isEmpty()) {
+        splitter_right->restoreState(mKeyEditorSplitterState);
+    } else {
+        const QList<int> sizes = {30, 900, 30};
+        splitter_right->setSizes(sizes);
+        mKeyEditorSplitterState = splitter_right->saveState();
     }
 }
 
@@ -6777,6 +6913,13 @@ void dlgTriggerEditor::slot_show_vars()
         mpVarsMainArea->show();
         mpSourceEditorArea->show();
         slot_var_selected(treeWidget_variables->currentItem());
+    }
+    if (!mVarEditorSplitterState.isEmpty()) {
+        splitter_right->restoreState(mVarEditorSplitterState);
+    } else {
+        const QList<int> sizes = {30, 900, 30};
+        splitter_right->setSizes(sizes);
+        mVarEditorSplitterState = splitter_right->saveState();
     }
 }
 
@@ -6816,6 +6959,13 @@ void dlgTriggerEditor::slot_show_aliases()
         mpAliasMainArea->show();
         mpSourceEditorArea->show();
         slot_alias_selected(treeWidget_aliases->currentItem());
+    }
+    if (!mAliasEditorSplitterState.isEmpty()) {
+        splitter_right->restoreState(mAliasEditorSplitterState);
+    } else {
+        const QList<int> sizes = {30, 900, 30};
+        splitter_right->setSizes(sizes);
+        mAliasEditorSplitterState = splitter_right->saveState();
     }
 }
 
@@ -6860,6 +7010,13 @@ void dlgTriggerEditor::slot_show_actions()
         mpActionsMainArea->show();
         mpSourceEditorArea->show();
         slot_action_selected(treeWidget_actions->currentItem());
+    }
+    if (!mActionEditorSplitterState.isEmpty()) {
+        splitter_right->restoreState(mActionEditorSplitterState);
+    } else {
+        const QList<int> sizes = {30, 900, 30};
+        splitter_right->setSizes(sizes);
+        mActionEditorSplitterState = splitter_right->saveState();
     }
 }
 
@@ -6917,9 +7074,7 @@ void dlgTriggerEditor::slot_add_new()
         addKey(false); //add normal alias
         break;
     case EditorViewType::cmVarsView:
-        if (mpCurrentVarItem) {
-            addVar(false); //add normal action
-        }
+        addVar(false); //add variable
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
@@ -6948,9 +7103,7 @@ void dlgTriggerEditor::slot_add_new_folder()
         addKey(true); //add alias group
         break;
     case EditorViewType::cmVarsView:
-        if (mpCurrentVarItem) {
-            addVar(true);
-        }
+        addVar(true); // add lua table
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
@@ -6982,6 +7135,78 @@ void dlgTriggerEditor::slot_toggle_active()
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
     }
+}
+
+void dlgTriggerEditor::slot_move_source_find()
+{
+    int x = mpSourceEditorEdbee->width() - mpSourceEditorFindArea->width();
+    int y = mpSourceEditorEdbee->height() - mpSourceEditorFindArea->height();
+    if (mpSourceEditorEdbee->verticalScrollBar()->isVisible()) {
+        x = x - mpSourceEditorEdbee->verticalScrollBar()->width();
+    }
+    if (mpSourceEditorEdbee->horizontalScrollBar()->isVisible()) {
+        y = y - mpSourceEditorEdbee->horizontalScrollBar()->height();
+    }
+    mpSourceEditorFindArea->move(x, y);
+    mpSourceEditorFindArea->update();
+}
+
+void dlgTriggerEditor::slot_open_source_find()
+{
+    slot_move_source_find();
+    mpSourceEditorFindArea->show();
+    mpSourceEditorFindArea->lineEdit_findText->setFocus();
+    mpSourceEditorFindArea->lineEdit_findText->selectAll();
+}
+
+void dlgTriggerEditor::slot_close_source_find()
+{
+    auto controller = mpSourceEditorEdbee->controller();
+    controller->borderedTextRanges()->clear();
+    controller->textSelection()->range(0).clearSelection();
+    controller->update();
+    mpSourceEditorFindArea->hide();
+    mpSourceEditorEdbee->setFocus();
+}
+
+void dlgTriggerEditor::slot_source_find_previous()
+{
+    auto controller = mpSourceEditorEdbee->controller();
+    auto searcher = controller->textSearcher();
+    searcher->setSearchTerm(mpSourceEditorFindArea->lineEdit_findText->text());
+    searcher->setCaseSensitive(false);
+    searcher->findPrev(mpSourceEditorEdbee);
+    controller->scrollCaretVisible();
+    controller->update();
+    slot_move_source_find();
+}
+
+void dlgTriggerEditor::slot_source_find_next()
+{
+    auto controller = mpSourceEditorEdbee->controller();
+    auto searcher = controller->textSearcher();
+    searcher->setSearchTerm(mpSourceEditorFindArea->lineEdit_findText->text());
+    searcher->setCaseSensitive(false);
+    searcher->findNext(mpSourceEditorEdbee);
+    controller->scrollCaretVisible();
+    controller->update();
+    slot_move_source_find();
+}
+
+void dlgTriggerEditor::slot_source_find_text_changed()
+{
+    auto text = mpSourceEditorFindArea->lineEdit_findText->text();
+    if (text.length() <= 2) {
+        return;
+    }
+
+    auto controller = mpSourceEditorEdbee->controller();
+    auto searcher = controller->textSearcher();
+    controller->borderedTextRanges()->clear();
+    controller->textSelection()->range(0).clearSelection();
+    searcher->setSearchTerm(text);
+    searcher->markAll(controller->borderedTextRanges());
+    controller->update();
 }
 
 void dlgTriggerEditor::slot_delete_item()
@@ -7041,6 +7266,8 @@ void dlgTriggerEditor::slot_item_selected_save(QTreeWidgetItem* pItem)
     case EditorViewType::cmVarsView:
         saveVar();
         break;
+    case EditorViewType::cmUnknownView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_item_selected_save() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
     }
 }
 
@@ -7102,6 +7329,12 @@ void dlgTriggerEditor::slot_debug_mode()
     mudlet::mpDebugArea->setVisible(!mudlet::debugMode);
     mudlet::debugMode = !mudlet::debugMode;
     mudlet::mpDebugArea->setWindowTitle("Central Debug Console");
+    if (mudlet::debugMode) {
+        // If this is the first time the window is shown we want any previously
+        // enqueued messages to be painted onto the central debug console:
+        TDebug::flushMessageQueue();
+    }
+    mudlet::self()->refreshTabBar();
 }
 
 void dlgTriggerEditor::slot_next_section()
@@ -7652,6 +7885,10 @@ void dlgTriggerEditor::exportKeyToClipboard()
 
 void dlgTriggerEditor::slot_export()
 {
+    if (mCurrentView == EditorViewType::cmUnknownView || mCurrentView == EditorViewType::cmVarsView) {
+        return;
+    }
+
     QString fileName = QFileDialog::getSaveFileName(this, tr("Export Triggers"), QDir::currentPath(), tr("Mudlet packages (*.xml)"));
     if (fileName.isEmpty()) {
         return;
@@ -7691,6 +7928,12 @@ void dlgTriggerEditor::slot_export()
     case EditorViewType::cmKeysView:
         exportKey(fileName);
         break;
+    case EditorViewType::cmVarsView:
+        [[fallthrough]];
+    case EditorViewType::cmUnknownView:
+        // These two have already been handled so this place in the code should
+        // indeed be:
+        Q_UNREACHABLE();
     }
 }
 
@@ -7715,9 +7958,16 @@ void dlgTriggerEditor::slot_copy_xml()
     case EditorViewType::cmKeysView:
         exportKeyToClipboard();
         break;
+    case EditorViewType::cmVarsView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_copy_xml() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmVarsView!\"";
+        break;
+    case EditorViewType::cmUnknownView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_copy_xml() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
+        break;
     }
 }
 
+// FIXME: The switch cases in here need to handle EditorViewType::cmVarsView but how is not clear
 void dlgTriggerEditor::slot_paste_xml()
 {
     XMLimport reader(mpHost);
@@ -7742,6 +7992,12 @@ void dlgTriggerEditor::slot_paste_xml()
         break;
     case EditorViewType::cmKeysView:
         saveKey();
+        break;
+    case EditorViewType::cmVarsView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 1 not expected to be called for \"EditorViewType::cmVarsView!\"";
+        break;
+    case EditorViewType::cmUnknownView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 1 not expected to be called for \"EditorViewType::cmUnknownView!\"";
         break;
     }
 
@@ -7812,6 +8068,12 @@ void dlgTriggerEditor::slot_paste_xml()
         mpHost->getKeyUnit()->reParentKey(importedItemID, 0, parentId, parentRow, siblingRow);
         break;
     }
+    case EditorViewType::cmVarsView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 2 not expected to be called for \"EditorViewType::cmVarsView!\"";
+        break;
+    case EditorViewType::cmUnknownView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 2 not expected to be called for \"EditorViewType::cmUnknownView!\"";
+        break;
     }
 
     // flag for re-rendering so the new item shows up in the right spot
@@ -7873,11 +8135,15 @@ void dlgTriggerEditor::slot_paste_xml()
         treeWidget_keys->setFocus();
         break;
     }
+    case EditorViewType::cmVarsView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 3 not expected to be called for \"EditorViewType::cmVarsView!\"";
+        break;
+    case EditorViewType::cmUnknownView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 3 not expected to be called for \"EditorViewType::cmUnknownView!\"";
+        break;
     }
 }
 
-// CHECKME: This seems to largely duplicate the actions of Host::installPackage(...)
-// Do we really need two different sets of code to import packages?
 void dlgTriggerEditor::slot_import()
 {
     switch (mCurrentView) {
@@ -7899,6 +8165,11 @@ void dlgTriggerEditor::slot_import()
     case EditorViewType::cmKeysView:
         saveKey();
         break;
+    case EditorViewType::cmVarsView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_import() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmVarsView!\"";
+        break;
+    case EditorViewType::cmUnknownView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_import() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
     }
 
     QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), QDir::currentPath());
@@ -7906,58 +8177,7 @@ void dlgTriggerEditor::slot_import()
         return;
     }
 
-    QFile file(fileName);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Import Mudlet Package:"), tr("Cannot read file %1:\n%2.").arg(fileName, file.errorString()));
-        return;
-    }
-
-    QString packageName = fileName.section(QChar('/'), -1);
-    packageName.remove(QStringLiteral(".zip"), Qt::CaseInsensitive);
-    packageName.remove(QStringLiteral(".trigger"), Qt::CaseInsensitive);
-    packageName.remove(QStringLiteral(".xml"), Qt::CaseInsensitive);
-    packageName.remove(QStringLiteral(".mpackage"), Qt::CaseInsensitive);
-    packageName.remove(QChar('/'));
-    packageName.remove(QChar('\\'));
-    packageName.remove(QChar('.'));
-
-    if (mpHost->mInstalledPackages.contains(packageName)) {
-        QMessageBox::information(this, tr("Import Mudlet Package:"), tr("Package %1 is already installed.").arg(packageName));
-        file.close();
-        return;
-    }
-
-    QFile file2;
-    if (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)) {
-        QString _dest = mudlet::getMudletPath(mudlet::profilePackagePath, mpHost->getName(), packageName);
-        QDir _tmpDir;
-        _tmpDir.mkpath(_dest);
-        QString _script = QStringLiteral("unzip([[%1]], [[%2]])").arg(fileName, _dest);
-        mpHost->mLuaInterpreter.compileAndExecuteScript(_script);
-
-        // requirements for zip packages:
-        // - packages must be compressed in zip format
-        // - file extension should be .mpackage (though .zip is accepted)
-        // - there can only be a single xml file per package
-        // - the xml file must be located in the root directory of the zip package. example: myPack.zip contains: the folder images and the file myPack.xml
-
-        QDir _dir(_dest);
-        QStringList _filterList;
-        _filterList << "*.xml"
-                    << "*.trigger";
-        QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
-        if (!entries.empty()) {
-            file2.setFileName(entries[0].absoluteFilePath());
-        }
-    } else {
-        file2.setFileName(fileName);
-    }
-    file2.open(QFile::ReadOnly | QFile::Text);
-
-    mpHost->mInstalledPackages.append(packageName);
-    QString profileName = mpHost->getName();
-    QString login = mpHost->getLogin();
-    QString pass = mpHost->getPass();
+    mpHost->installPackage(fileName, 0);
 
     treeWidget_triggers->clear();
     treeWidget_aliases->clear();
@@ -7965,13 +8185,6 @@ void dlgTriggerEditor::slot_import()
     treeWidget_timers->clear();
     treeWidget_keys->clear();
     treeWidget_scripts->clear();
-
-    XMLimport reader(mpHost);
-    reader.importPackage(&file2, packageName); // TODO: Missing false return value handler
-
-    mpHost->setName(profileName);
-    mpHost->setLogin(login);
-    mpHost->setPass(pass);
 
     slot_profileSaveAction();
 
@@ -8023,6 +8236,13 @@ void dlgTriggerEditor::runScheduledCleanReset()
     case EditorViewType::cmKeysView:
         saveKey();
         break;
+    case EditorViewType::cmVarsView:
+        // FIXME: The switch in here need to handle (or at least treat correctly) the
+        // EditorViewType:cmVarsView case but how is not clear:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::runScheduledCleanReset() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmVarsView!\"";
+        break;
+    case EditorViewType::cmUnknownView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::runScheduledCleanReset() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
     }
 
     treeWidget_triggers->clear();
@@ -8040,7 +8260,6 @@ void dlgTriggerEditor::runScheduledCleanReset()
     mpCurrentKeyItem = nullptr;
     slot_show_triggers();
 }
-
 
 void dlgTriggerEditor::slot_profileSaveAction()
 {
@@ -8096,7 +8315,7 @@ bool dlgTriggerEditor::event(QEvent* event)
             auto * ke = static_cast<QKeyEvent*>(event);
             QList<QAction*> actionList = toolBar->actions();
             switch (ke->key()) {
-            case 0x01000000:
+            case Qt::Key_Escape:
                 mIsGrabKey = false;
                 for (auto& action : actionList) {
                     if (action->text() == "Save Item") {
@@ -8108,14 +8327,20 @@ bool dlgTriggerEditor::event(QEvent* event)
                 QCoreApplication::instance()->removeEventFilter(this);
                 ke->accept();
                 return true;
-            case 0x01000020:
-            case 0x01000021:
-            case 0x01000022:
-            case 0x01000023:
-            case 0x01001103:
+
+            case Qt::Key_Shift:
+                [[fallthrough]];
+            case Qt::Key_Control:
+                [[fallthrough]];
+            case Qt::Key_Meta:
+                [[fallthrough]];
+            case Qt::Key_Alt:
+                [[fallthrough]];
+            case Qt::Key_AltGr:
                 break;
+
             default:
-                key_grab_callback(ke->key(), ke->modifiers());
+                key_grab_callback(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()));
                 mIsGrabKey = false;
                 for (auto& action : actionList) {
                     if (action->text() == "Save Item") {
@@ -8130,9 +8355,17 @@ bool dlgTriggerEditor::event(QEvent* event)
             }
         }
     }
+
     return QMainWindow::event(event);
 }
 
+void dlgTriggerEditor::resizeEvent(QResizeEvent* event)
+{
+    Q_UNUSED(event)
+    if (mpSourceEditorArea->isVisible()) {
+        slot_move_source_find();
+    }
+}
 
 void dlgTriggerEditor::slot_key_grab()
 {
@@ -8148,7 +8381,7 @@ void dlgTriggerEditor::slot_key_grab()
     QCoreApplication::instance()->installEventFilter(this);
 }
 
-void dlgTriggerEditor::key_grab_callback(int key, int modifier)
+void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardModifiers modifier)
 {
     KeyUnit* pKeyUnit = mpHost->getKeyUnit();
     if (!pKeyUnit) {
@@ -8170,7 +8403,7 @@ void dlgTriggerEditor::key_grab_callback(int key, int modifier)
 
 void dlgTriggerEditor::slot_chose_action_icon()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Seclect Icon"), QDir::homePath(), tr("Images (*.png *.xpm *.jpg)"));
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Icon"), QDir::homePath(), tr("Images (*.png *.xpm *.jpg)"));
     mpActionsMainArea->lineEdit_action_icon->setText(fileName);
 }
 
@@ -8201,10 +8434,16 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
     auto color = QColorDialog::getColor(QColor(mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString()),
                                         this,
                                         tr("Select foreground color to apply to matches"));
-    if (color.isValid()) {
-        mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(color));
-        mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, color.name());
-    }
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    color = color.isValid() ? color : QColorConstants::Transparent;
+    bool keepColor = color == QColorConstants::Transparent;
+#else
+    color = color.isValid() ? color : QColor("transparent");
+    bool keepColor = color == QColor("transparent");
+#endif
+    mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(color));
+    mpTriggersMainArea->pushButtonFgColor->setText(keepColor ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
+    mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, keepColor ? QStringLiteral("transparent") : color.name());
 }
 
 // Set the background color that will be applied to text that matches the trigger pattern(s)
@@ -8221,10 +8460,16 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
     auto color = QColorDialog::getColor(QColor(mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString()),
                                         this,
                                         tr("Select background color to apply to matches"));
-    if (color.isValid()) {
-        mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(color));
-        mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, color.name());
-    }
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    color = color.isValid() ? color : QColorConstants::Transparent;
+    bool keepColor = color == QColorConstants::Transparent;
+#else
+    color = color.isValid() ? color : QColor("transparent");
+    bool keepColor = color == QColor("transparent");
+#endif
+    mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(color));
+    mpTriggersMainArea->pushButtonBgColor->setText(keepColor ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
+    mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, keepColor ? QStringLiteral("transparent") : color.name());
 }
 
 void dlgTriggerEditor::slot_soundTrigger()
@@ -8292,7 +8537,7 @@ void dlgTriggerEditor::slot_color_trigger_fg()
     auto pD = new dlgColorTrigger(this, pT, false, tr("Select foreground trigger color for item %1").arg(QString::number(pPatternItem->mRow+1)));
     pD->setModal(true);
     // This sounds a bit iffy - prevent access to other application windows
-    // whilst we get a colour setting:
+    // while we get a colour setting:
     pD->setWindowModality(Qt::ApplicationModal);
     pD->exec();
 
@@ -8356,7 +8601,7 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     auto pD = new dlgColorTrigger(this, pT, true, tr("Select background trigger color for item %1").arg(QString::number(pPatternItem->mRow+1)));
     pD->setModal(true);
     // This sounds a bit iffy - prevent access to other application windows
-    // whilst we get a colour setting:
+    // while we get a colour setting:
     pD->setWindowModality(Qt::ApplicationModal);
     pD->exec();
 
@@ -8434,10 +8679,11 @@ void dlgTriggerEditor::slot_changeEditorTextOptions(QTextOption::Flags state)
 
 void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString& initialText)
 {
+    mpSourceEditorFindArea->hide();
     mpSourceEditorEdbeeDocument = new edbee::CharTextDocument();
     // Buck.lua is a fake filename for edbee to figure out its lexer type with. Referencing the
     // lexer directly by name previously gave problems.
-    mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
+    mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1String("Buck.lua")));
     ew->controller()->giveTextDocument(mpSourceEditorEdbeeDocument);
 
     auto config = mpSourceEditorEdbee->config();
@@ -8454,6 +8700,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     config->setIndentSize(2);
     config->setCaretWidth(1);
     config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
+    config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
 
     // If undo is not disabled when setting the initial text, the
@@ -8469,16 +8716,17 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
 // mudlet::signal_editorThemeChanged(const QString& theme) signal
 void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
 {
-        auto localConfig = mpSourceEditorEdbee->config();
-        localConfig->beginChanges();
-        localConfig->setThemeName(theme);
-        localConfig->setFont(mpHost->getDisplayFont());
-        localConfig->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
-                                           ? edbee::TextEditorConfig::ShowWhitespaces
-                                           : edbee::TextEditorConfig::HideWhitespaces);
-        localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-        localConfig->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
-        localConfig->endChanges();
+    auto localConfig = mpSourceEditorEdbee->config();
+    localConfig->beginChanges();
+    localConfig->setThemeName(theme);
+    localConfig->setFont(mpHost->getDisplayFont());
+    localConfig->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
+                                               ? edbee::TextEditorConfig::ShowWhitespaces
+                                               : edbee::TextEditorConfig::HideWhitespaces);
+    localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    localConfig->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
+    localConfig->setAutocompleteMinimalCharacters(3);
+    localConfig->endChanges();
 }
 
 void dlgTriggerEditor::createSearchOptionIcon()
@@ -8487,8 +8735,16 @@ void dlgTriggerEditor::createSearchOptionIcon()
     // beforehand - which is simpler than having to do code to combine the
     // QPixMaps...
     QIcon newIcon;
-    switch(mSearchOptions) {
+    switch (mSearchOptions) {
     // Each combination must be handled here
+    case SearchOptionCaseSensitive|SearchOptionIncludeVariables:
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive+withVariables.png"));
+        break;
+
+    case SearchOptionIncludeVariables:
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-withVariables.png"));
+        break;
+
     case SearchOptionCaseSensitive:
         newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive.png"));
         break;
@@ -8514,8 +8770,17 @@ void dlgTriggerEditor::slot_toggleSearchCaseSensitivity(const bool state)
     if ((mSearchOptions & SearchOptionCaseSensitive) != state) {
         mSearchOptions = (mSearchOptions & ~(SearchOptionCaseSensitive)) | (state ? SearchOptionCaseSensitive : SearchOptionNone);
         createSearchOptionIcon();
+        mpHost->mSearchOptions = mSearchOptions;
     }
+}
 
+void dlgTriggerEditor::slot_toggleSearchIncludeVariables(const bool state)
+{
+    if ((mSearchOptions & SearchOptionIncludeVariables) != state) {
+        mSearchOptions = (mSearchOptions & ~(SearchOptionIncludeVariables)) | (state ? SearchOptionIncludeVariables : SearchOptionNone);
+        createSearchOptionIcon();
+        mpHost->mSearchOptions = mSearchOptions;
+    }
 }
 
 void dlgTriggerEditor::slot_clearSearchResults()
@@ -8578,21 +8843,26 @@ void dlgTriggerEditor::slot_editorContextMenu()
 
 QString dlgTriggerEditor::generateButtonStyleSheet(const QColor& color, const bool isEnabled)
 {
-    if (color.isValid()) {
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    if (color != QColorConstants::Transparent && color.isValid()) {
+#else
+    if (color != QColor("transparent") && color.isValid()) {
+#endif
         if (isEnabled) {
-            return QStringLiteral("QPushButton {color: %1; background-color: %2; }")
+            return mudlet::self()->mTEXT_ON_BG_STYLESHEET
                     .arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"),
                          color.name());
         }
 
         QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness());
-        return QStringLiteral("QPushButton {color: %1; background-color: %2; }")
+        return mudlet::self()->mTEXT_ON_BG_STYLESHEET
                 .arg(QLatin1String("darkGray"), disabledColor.name());
+    } else {
+        return QString();
     }
-    return QString();
 }
 
-// Retrive the background-color or color setting from the previous method, the
+// Retrieve the background-color or color setting from the previous method, the
 // colors used can theoretically be:
 // * any strings of those from http://www.w3.org/TR/SVG/types.html#ColorKeywords
 // * #RGB (each of R, G, and B is a single hex digit) 3 Digits
@@ -8688,12 +8958,18 @@ void dlgTriggerEditor::slot_toggleGroupBoxColorizeTrigger(const bool state)
 
     if (state) {
         // Enabled so make buttons have full colour:
-        mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString(), true));
-        mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString(), true));
+        QString fgColor = mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString();
+        QString bgColor = mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString();
+        mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(fgColor, true));
+        mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(bgColor, true));
+        mpTriggersMainArea->pushButtonFgColor->setText(fgColor == QLatin1String("transparent") ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
+        mpTriggersMainArea->pushButtonBgColor->setText(bgColor == QLatin1String("transparent") ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
     } else {
         // Disabled so make buttons greyed out a bit:
         mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString(), false));
         mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString(), false));
+        mpTriggersMainArea->pushButtonFgColor->setText(QString());
+        mpTriggersMainArea->pushButtonBgColor->setText(QString());
     }
 }
 
@@ -8739,6 +9015,7 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
     const int hysteresis = 10;
     static int bottomWidgetHeight = 0;
     if (mpTriggersMainArea->isVisible()) {
+        mTriggerEditorSplitterState = splitter_right->saveState();
         // The triggersMainArea is visible
         if (mpTriggersMainArea->toolButton_toggleExtraControls->isChecked()) {
             // The extra controls are visible in the triggersMainArea
@@ -8758,5 +9035,32 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
                 slot_showAllTriggerControls(true);
             }
         }
+    } else if (mpActionsMainArea->isVisible()) {
+        mActionEditorSplitterState = splitter_right->saveState();
+    } else if (mpAliasMainArea->isVisible()) {
+        mAliasEditorSplitterState = splitter_right->saveState();
+    } else if (mpKeysMainArea->isVisible()) {
+        mKeyEditorSplitterState = splitter_right->saveState();
+    } else if (mpScriptsMainArea->isVisible()) {
+        mScriptEditorSplitterState = splitter_right->saveState();
+    } else if (mpTimersMainArea->isVisible()) {
+        mTimerEditorSplitterState = splitter_right->saveState();
+    } else if (mpVarsMainArea->isVisible()) {
+        mVarEditorSplitterState = splitter_right->saveState();
     }
+    if (mpSourceEditorFindArea->isVisible()) {
+        slot_move_source_find();
+    }
+}
+
+// Only for other classes to set the options - as they will not be carried from
+// here to the parent Host instance, whereas the slots that change the
+// individual options DO also notify that Host instance about the changes they
+// make:
+void dlgTriggerEditor::setSearchOptions(const SearchOptions optionsState)
+{
+    mSearchOptions = optionsState;
+    mpAction_searchCaseSensitive->setChecked(optionsState & SearchOptionCaseSensitive);
+    mpAction_searchIncludeVariables->setChecked(optionsState & SearchOptionIncludeVariables);
+    createSearchOptionIcon();
 }

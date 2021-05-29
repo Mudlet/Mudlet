@@ -134,7 +134,7 @@ Tree<T>::~Tree()
     delete mpMyChildrenList;
     if (mpParent) {
         mpParent->popChild(static_cast<T*>(this)); // tell parent about my death
-        if (std::uncaught_exception()) {
+        if (std::uncaught_exceptions()) {
             std::cout << "ERROR: Hook destructed during stack rewind because of an uncaught exception." << std::endl;
         }
     }

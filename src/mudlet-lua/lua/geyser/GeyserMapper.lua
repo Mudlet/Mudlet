@@ -65,10 +65,29 @@ function Geyser.Mapper:show_impl()
   end
 end
 
+-- Overridden raise and lower functions
+function Geyser.Mapper:raise()
+	raiseWindow("mapper")
+end
+
+function Geyser.Mapper:lower()
+	lowerWindow("mapper")
+end
+
 function Geyser.Mapper:setDockPosition(pos)
   if not self.embedded then
     return openMapWidget(pos)
   end
+end
+
+function Geyser.Mapper:setTitle(text)
+  self.titleText = text
+  return setMapWindowTitle(text)
+end
+
+function Geyser.Mapper:resetTitle()
+  self.titleText = ""
+  return resetMapWindowTitle()
 end
 
 -- Overridden constructor
@@ -106,11 +125,28 @@ function Geyser.Mapper:new (cons, container)
     else
       openMapWidget()
     end
-  end
 
+    if me.titleText then
+      me:setTitle(me.titleText)
+    else
+      me:resetTitle()
+    end
+  end
+-- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
+  if me.hidden or me.auto_hidden then
+    me:hide_impl()
+  end
   -- Set any defined colors
   Geyser.Color.applyColors(me)
 
   --print(" New in " .. self.name .. " : " .. me.name)
+  return me
+end
+
+--- Overridden constructor to use add2
+function Geyser.Mapper:new2 (cons, container)
+  cons = cons or {}
+  cons.useAdd2 = true
+  local me = self:new(cons, container)
   return me
 end

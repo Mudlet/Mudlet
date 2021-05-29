@@ -1,5 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018, 2020-2021 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -28,6 +29,7 @@
 #include "pre_guard.h"
 #include <QStyleOption>
 #include <QPainter>
+#include <QVariant>
 #include "post_guard.h"
 
 void TStyle::drawControl(ControlElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget) const
@@ -36,7 +38,7 @@ void TStyle::drawControl(ControlElement element, const QStyleOption *option, QPa
         QString tabName = mpTabBar->tabData(mpTabBar->tabAt(option->rect.center())).toString();
         QFont font = widget->font();
         bool isStyleChanged = false;
-        if (mBoldTabsSet.contains(tabName)||mItalicTabsSet.contains(tabName)||mUnderlineTabsSet.contains(tabName)) {
+        if (mBoldTabsSet.contains(tabName) || mItalicTabsSet.contains(tabName) || mUnderlineTabsSet.contains(tabName)) {
             painter->save();
             font.setBold(mBoldTabsSet.contains(tabName));
             font.setItalic(mItalicTabsSet.contains(tabName));
@@ -56,11 +58,11 @@ void TStyle::drawControl(ControlElement element, const QStyleOption *option, QPa
     }
 }
 
-void TStyle::setNamedTabState(const QString& text, const bool state, QSet<QString>& effect)
+void TStyle::setNamedTabState(const QString& tabName, const bool state, QSet<QString>& effect)
 {
     bool textIsInATab = false;
     for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
-        if (mpTabBar->tabData(i).toString() == text) {
+        if (mpTabBar->tabData(i).toString() == tabName) {
             textIsInATab = true;
             break;
         }
@@ -71,9 +73,9 @@ void TStyle::setNamedTabState(const QString& text, const bool state, QSet<QStrin
     }
 
     if (state) {
-        effect.insert(text);
+        effect.insert(tabName);
     } else {
-        effect.remove(text);
+        effect.remove(tabName);
     }
 }
 
@@ -90,11 +92,11 @@ void TStyle::setIndexedTabState(const int index, const bool state, QSet<QString>
     }
 }
 
-bool TStyle::namedTabState(const QString& text, const QSet<QString>& effect) const
+bool TStyle::namedTabState(const QString& tabName, const QSet<QString>& effect) const
 {
     bool textIsInATab = false;
     for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
-        if (mpTabBar->tabData(i).toString() == text) {
+        if (mpTabBar->tabData(i).toString() == tabName) {
             textIsInATab = true;
             break;
         }
@@ -104,7 +106,7 @@ bool TStyle::namedTabState(const QString& text, const QSet<QString>& effect) con
         return false;
     }
 
-    return effect.contains(text);
+    return effect.contains(tabName);
 }
 
 bool TStyle::indexedTabState(const int index, const QSet<QString>& effect) const
@@ -118,14 +120,14 @@ bool TStyle::indexedTabState(const int index, const QSet<QString>& effect) const
 
 QSize TTabBar::tabSizeHint(int index) const
 {
-    if (mStyle.tabBold(index)||mStyle.tabItalic(index)||mStyle.tabUnderline(index)) {
+    if (mStyle.tabBold(index) || mStyle.tabItalic(index) || mStyle.tabUnderline(index)) {
         const QSize s = QTabBar::tabSizeHint(index);
         const QFontMetrics fm(font());
         // Note that this method must use (because it is associated with sizing
         // the text to show) the (possibly Qt modified to include an
         // accelarator) actual tabText and not the profile name that we have
         // stored in the tabData:
-        const int w = fm.width(tabText(index));
+        const int w = fm.horizontalAdvance(tabText(index));
 
         QFont f = font();
         f.setBold(mStyle.tabBold(index));
@@ -133,10 +135,76 @@ QSize TTabBar::tabSizeHint(int index) const
         f.setUnderline(mStyle.tabUnderline(index));
         const QFontMetrics bfm(f);
 
-        const int bw = bfm.width(tabText(index));
+        const int bw = bfm.horizontalAdvance(tabText(index));
 
         return {s.width() - w + bw, s.height()};
-    } else {
-        return QTabBar::tabSizeHint(index);
+    }
+    return QTabBar::tabSizeHint(index);
+}
+
+QString TTabBar::tabName(const int index) const
+{
+    QString tabName{tabData(index).toString()};
+    return tabName;
+}
+
+int TTabBar::tabIndex(const QString& tabName) const
+{
+    int index = -1;
+    if (tabName.isEmpty()) {
+        return index;
+    }
+    const int total = count();
+    while (++index < total) {
+        if (!tabData(index).toString().compare(tabName)) {
+            return index;
+        }
+    }
+    return -1;
+}
+
+void TTabBar::removeTab(int index)
+{
+    if (index >= 0 && index < count()) {
+        setTabBold(index, false);
+        setTabItalic(index, false);
+        setTabUnderline(index, false);
+        QTabBar::removeTab(index);
+    }
+}
+
+void TTabBar::removeTab(const QString& tabName)
+{
+    int index = tabIndex(tabName);
+    if (index > -1) {
+        setTabBold(index, false);
+        setTabItalic(index, false);
+        setTabUnderline(index, false);
+        QTabBar::removeTab(index);
+    }
+}
+
+QStringList TTabBar::tabNames() const
+{
+    QStringList results;
+    for (int i = 0, total = count(); i < total; ++i) {
+        results << tabData(i).toString();
+    }
+
+    return results;
+}
+
+void TTabBar::applyPrefixToDisplayedText(const QString& tabName, const QString& prefix)
+{
+    int index = tabIndex(tabName);
+    if (index > -1) {
+        QTabBar::setTabText(index, QStringLiteral("%1%2").arg(prefix, tabData(index).toString()));
+    }
+}
+
+void TTabBar::applyPrefixToDisplayedText(int index, const QString& prefix)
+{
+    if (index > -1) {
+        QTabBar::setTabText(index, QStringLiteral("%1%2").arg(prefix, tabData(index).toString()));
     }
 }

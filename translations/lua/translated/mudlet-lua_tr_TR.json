@@ -1,0 +1,10 @@
+{
+  "AdjustableContainer.lock": {
+    "message": "Kilitle",
+    "description": "locks your container. Which means it's not movable/resizable anymore and changes some other properties depending on the Lockstyle (like hiding the borders)"
+  },
+  "AdjustableContainer.disconnect": {
+    "message": "Bağlantıyı kes ",
+    "description": "disconnect your container from the border frame"
+  }
+}

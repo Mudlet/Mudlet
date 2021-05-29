@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -31,32 +31,42 @@
 #include "ScriptUnit.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
+#include "TMainConsole.h"
 #include "TriggerUnit.h"
 #include "XMLexport.h"
 #include "ctelnet.h"
+#include "dlgTriggerEditor.h"
 
 #include "pre_guard.h"
 #include <QColor>
 #include <QFile>
 #include <QFont>
+#include <QList>
 #include <QPointer>
 #include <QTextStream>
 #include "post_guard.h"
+
+#include "TMxpMudlet.h"
+#include "TMxpProcessor.h"
 
 class QDialog;
 class QDockWidget;
 class QPushButton;
 class QListWidget;
 
-class dlgTriggerEditor;
 class TEvent;
 class TArea;
 class LuaInterface;
 class TMedia;
 class TRoom;
 class TConsole;
+class TMainConsole;
 class dlgNotepad;
 class TMap;
+class dlgIRC;
+class dlgPackageManager;
+class dlgModuleManager;
+class dlgProfilePreferences;
 
 class stopWatch {
     friend class XMLimport;
@@ -150,67 +160,68 @@ public:
     Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
 
 
-    QString            getName()                        { QMutexLocker locker(& mLock); return mHostName; }
-    QString            getCommandSeparator()            { QMutexLocker locker(& mLock); return mCommandSeparator; }
-    void               setName(const QString& s );
-    QString            getUrl()                         { QMutexLocker locker(& mLock); return mUrl; }
-    void               setUrl(const QString& s )        { QMutexLocker locker(& mLock); mUrl = s; }
-    QString            getUserDefinedName()             { QMutexLocker locker(& mLock); return mUserDefinedName; }
-    void               setUserDefinedName(const QString& s ) { QMutexLocker locker(& mLock); mUserDefinedName = s; }
-    int                getPort()                        { QMutexLocker locker(& mLock); return mPort; }
-    void               setPort( int p )                 { QMutexLocker locker(& mLock); mPort = p; }
-    void               setAutoReconnect(bool b)         { mTelnet.setAutoReconnect(b); }
-    QString &          getLogin()                       { QMutexLocker locker(& mLock); return mLogin; }
-    void               setLogin(const QString& s )      { QMutexLocker locker(& mLock); mLogin = s; }
-    QString &          getPass()                        { QMutexLocker locker(& mLock); return mPass; }
-    void               setPass(const QString& s )       { QMutexLocker locker(& mLock); mPass = s; }
-    int                getRetries()                     { QMutexLocker locker(& mLock); return mRetries;}
-    void               setRetries( int c )              { QMutexLocker locker(& mLock); mRetries=c; }
-    int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
-    void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout=seconds; }
-    bool               wideAmbiguousEAsianGlyphs() { QMutexLocker locker(& mLock); return mWideAmbigousWidthGlyphs; }
+    QString         getName()                        { return mHostName; }
+    QString         getCommandSeparator()            { return mCommandSeparator; }
+    void            setName(const QString& s);
+    QString         getUrl()                         { return mUrl; }
+    void            setUrl(const QString& s)         { mUrl = s; }
+    QString         getUserDefinedName()             { return mUserDefinedName; }
+    void            setUserDefinedName(const QString& s) { mUserDefinedName = s; }
+    int             getPort()                        { return mPort; }
+    void            setPort(const int p)                 { mPort = p; }
+    void            setAutoReconnect(const bool b)   { mTelnet.setAutoReconnect(b); }
+    QString &       getLogin()                       { return mLogin; }
+    void            setLogin(const QString& s)       { mLogin = s; }
+    QString &       getPass()                        { return mPass; }
+    void            setPass(const QString& s)        { mPass = s; }
+    int             getRetries()                     { return mRetries;}
+    void            setRetries(const int c)          { mRetries = c; }
+    int             getTimeout()                     { return mTimeout; }
+    void            setTimeout(const int seconds)    { mTimeout = seconds; }
+    bool            wideAmbiguousEAsianGlyphs() { return mWideAmbigousWidthGlyphs; }
     // Uses PartiallyChecked to set the automatic mode, otherwise Checked/Unchecked means use wide/narrow ambiguous glyphs
-    void               setWideAmbiguousEAsianGlyphs(Qt::CheckState state );
+    void            setWideAmbiguousEAsianGlyphs(Qt::CheckState state);
     // Is used to set preference dialog control directly:
-    Qt::CheckState     getWideAmbiguousEAsianGlyphsControlState() { QMutexLocker locker(& mLock);
-                                                                       return mAutoAmbigousWidthGlyphsSetting
-                                                                               ? Qt::PartiallyChecked
-                                                                               : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
-    void               setHaveColorSpaceId(const bool state) { QMutexLocker locker(& mLock); mSGRCodeHasColSpaceId = state; }
-    bool               getHaveColorSpaceId() { QMutexLocker locker(& mLock); return mSGRCodeHasColSpaceId; }
-    void               setMayRedefineColors(const bool state) { QMutexLocker locker(& mLock); mServerMayRedefineColors = state; }
-    bool               getMayRedefineColors() { QMutexLocker locker(& mLock); return mServerMayRedefineColors; }
-    void               setDiscordApplicationID(const QString& s);
-    const QString&     getDiscordApplicationID();
-    void               setSpellDic(const QString&);
-    const QString&     getSpellDic() { QMutexLocker locker(& mLock); return mSpellDic; }
-    void               setUserDictionaryOptions(const bool useDictionary, const bool useShared);
-    void               getUserDictionaryOptions(bool& useDictionary, bool& useShared) { QMutexLocker locker(& mLock); useDictionary = mEnableUserDictionary; useShared = mUseSharedDictionary; }
+    Qt::CheckState  getWideAmbiguousEAsianGlyphsControlState() {
+                           return mAutoAmbigousWidthGlyphsSetting
+                                  ? Qt::PartiallyChecked
+                                  : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
+    void            setHaveColorSpaceId(const bool state) { mSGRCodeHasColSpaceId = state; }
+    bool            getHaveColorSpaceId() { return mSGRCodeHasColSpaceId; }
+    void            setMayRedefineColors(const bool state) { mServerMayRedefineColors = state; }
+    bool            getMayRedefineColors() { return mServerMayRedefineColors; }
+    void            setDiscordApplicationID(const QString& s);
+    const QString&  getDiscordApplicationID();
+    void            setSpellDic(const QString&);
+    const QString&  getSpellDic() { return mSpellDic; }
+    void            setUserDictionaryOptions(const bool useDictionary, const bool useShared);
+    void            getUserDictionaryOptions(bool& useDictionary, bool& useShared) {
+                        useDictionary = mEnableUserDictionary;
+                        useShared = mUseSharedDictionary; }
 
     void closingDown();
     bool isClosingDown();
     unsigned int assemblePath();
     bool checkForMappingScript();
+    bool checkForCustomSpeedwalk();
 
     TriggerUnit* getTriggerUnit() { return &mTriggerUnit; }
-    TimerUnit* getTimerUnit() { return &mTimerUnit; }
-    AliasUnit* getAliasUnit() { return &mAliasUnit; }
-    ActionUnit* getActionUnit() { return &mActionUnit; }
-    KeyUnit* getKeyUnit() { return &mKeyUnit; }
-    ScriptUnit* getScriptUnit() { return &mScriptUnit; }
+    TimerUnit*   getTimerUnit()   { return &mTimerUnit; }
+    AliasUnit*   getAliasUnit()   { return &mAliasUnit; }
+    ActionUnit*  getActionUnit()  { return &mActionUnit; }
+    KeyUnit*     getKeyUnit()     { return &mKeyUnit; }
+    ScriptUnit*  getScriptUnit()  { return &mScriptUnit; }
 
     void connectToServer();
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 
     int getHostID()
     {
-        QMutexLocker locker(&mLock);
         return mHostID;
     }
 
     void setHostID(int id)
     {
-        QMutexLocker locker(&mLock);
         mHostID = id;
     }
 
@@ -248,8 +259,11 @@ public:
     QPair<bool, QString> resetAndRestartStopWatch(const int);
 
     void startSpeedWalk();
+    void startSpeedWalk(int sourceRoom, int targetRoom);
     void saveModules(int sync, bool backup = true);
     void reloadModule(const QString& reloadModuleName);
+    std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String &value);
+    std::pair<bool, QString> getModuleSync(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
     void refreshPackageFonts();
 
@@ -281,18 +295,13 @@ public:
         mTelnet.set_USE_IRE_DRIVER_BUGFIX(b);
     }
 
-    void set_LF_ON_GA(bool b)
-    {
-        mLF_ON_GA = b;
-        mTelnet.set_LF_ON_GA(b);
-    }
-
     void adjustNAWS();
 
     bool installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);
     bool removeDir(const QString&, const QString&);
-    void readPackageConfig(const QString&, QString&);
+    void readPackageConfig(const QString&, QString&, bool);
+    QString getPackageConfig(const QString&, bool isModule = false);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
@@ -324,15 +333,66 @@ public:
     // Store/retrieve all the settings in one call:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
+    void setSearchOptions(const dlgTriggerEditor::SearchOptions);
+    std::pair<bool, QString> setMapperTitle(const QString&);
+    void setDebugShowAllProblemCodepoints(const bool);
+    bool debugShowAllProblemCodepoints() const { return mDebugShowAllProblemCodepoints; }
+    void setCompactInputLine(const bool state);
+    bool getCompactInputLine() const { return mCompactInputLine; }
+    QPointer<TConsole> findConsole(QString name);
+    void close();
+
+    QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
+    std::pair<bool, QString> openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
+    std::pair<bool, QString> createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    std::pair<bool, QString> createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
+    bool setClickthrough(const QString& name, bool clickthrough);
+    void hideMudletsVariables();
+    bool createBuffer(const QString& name);
+    QSize calcFontSize(const QString& windowName);
+    bool clearWindow(const QString&);
+    bool showWindow(const QString&);
+    bool hideWindow(const QString&);
+    bool resizeWindow(const QString&, int, int);
+    bool moveWindow(const QString& name, int, int);
+    std::pair<bool, QString> setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show);
+    std::pair<bool, QString> openMapWidget(const QString& area, int x, int y, int width, int height);
+    std::pair<bool, QString> closeMapWidget();
+    bool closeWindow(const QString&);
+    bool echoWindow(const QString&, const QString&);
+    bool pasteWindow(const QString& name);
+    void loadPackageInfo();
+    bool setCmdLineAction(const QString&, const int);
+    bool resetCmdLineAction(const QString&);
+    bool setLabelClickCallback(const QString&, const int);
+    bool setLabelDoubleClickCallback(const QString&, const int);
+    bool setLabelReleaseCallback(const QString&, const int);
+    bool setLabelMoveCallback(const QString&, const int);
+    bool setLabelWheelCallback(const QString&, const int);
+    bool setLabelOnEnter(const QString&, const int);
+    bool setLabelOnLeave(const QString&, const int);
+    bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    bool setBackgroundImage(const QString& name, QString& path, int mode);
+    bool resetBackgroundImage(const QString& name);
+    void showHideOrCreateMapper(const bool loadDefaultMap);
+    bool setProfileStyleSheet(const QString& styleSheet);
+    void check_for_mappingscript();
+
+    void setDockLayoutUpdated(const QString&);
+    void setToolbarLayoutUpdated(TToolBar*);
+    bool commitLayoutUpdates(bool flush = false);
 
     cTelnet mTelnet;
-    QPointer<TConsole> mpConsole;
+    QPointer<TMainConsole> mpConsole;
+    dlgPackageManager* mpPackageManager;
+    dlgModuleManager* mpModuleManager;
     TLuaInterpreter mLuaInterpreter;
 
     int commandLineMinimumHeight;
     bool mAlertOnNewData;
     bool mAllowToSendCommand;
     bool mAutoClearCommandLineAfterSend;
+    bool mHighlightHistory;
     // Set in constructor and used in (bool) TScript::setScript(const QString&)
     // to prevent compilation of the script that was being set therein, cleared
     // after the main TConsole for a new profile has been created during the
@@ -351,6 +411,9 @@ public:
     bool mEnableMSP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
+
+    TMxpMudlet mMxpClient;
+    TMxpProcessor mMxpProcessor;
     QString mMediaLocationGMCP;
     QString mMediaLocationMSP;
     QTextStream mErrorLogStream;
@@ -358,10 +421,8 @@ public:
     bool mFORCE_GA_OFF;
     bool mFORCE_NO_COMPRESSION;
     bool mFORCE_SAVE_ON_EXIT;
-    bool mInsertedMissingLF;
 
     bool mSslTsl;
-    bool mAutoReconnect;
     bool mSslIgnoreExpired;
     bool mSslIgnoreSelfSigned;
     bool mSslIgnoreAll;
@@ -379,7 +440,6 @@ public:
     // pushed down:
     bool mIsProfileLoadingSequence;
 
-    bool mLF_ON_GA;
     bool mNoAntiAlias;
 
     dlgTriggerEditor* mpEditorDialog;
@@ -404,13 +464,13 @@ public:
     bool mIsRemoteEchoingActive;
 
     // To cover the corner case of the user changing the mode
-    // whilst a log is being written, this stores the mode of
+    // while a log is being written, this stores the mode of
     // the current log file and is set from
     // mIsNextLogFileInHtmlFormat at the point that a log is started.
     bool mIsCurrentLogFileInHtmlFormat;
 
     // To cover the corner case of the user changing the mode
-    // whilst a log is being written, this stores the mode of
+    // while a log is being written, this stores the mode of
     // future logs file as set in the profile preferences. See
     // also mIsCurrentLogFileInHtmlFormat.
     bool mIsNextLogFileInHtmlFormat;
@@ -452,6 +512,8 @@ public:
 
     // search engine URL prefix to search query
     QMap<QString, QString> mSearchEngineData;
+    QMap<QString, QMap<QString, QString>> mPackageInfo;
+    QMap<QString, QMap<QString, QString>> mModuleInfo;
     QString mSearchEngineName;
 
     // trigger/alias/script/etc ID whose Lua code to show when previewing a theme
@@ -502,6 +564,7 @@ public:
     QColor mWhite_2;
     QColor mFgColor_2;
     QColor mBgColor_2;
+    QColor mRoomBorderColor;
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
     bool mLogStatus;
@@ -521,8 +584,9 @@ public:
 
     double mLineSize;
     double mRoomSize;
-    bool mShowInfo;
+    QSet<QString> mMapInfoContributors;
     bool mBubbleMode;
+    bool mMapViewOnly = true;
     bool mShowRoomID;
     bool mShowPanel;
     QString mServerGUI_Package_version;
@@ -532,7 +596,9 @@ public:
     QColor mCommandLineFgColor;
     QColor mCommandLineBgColor;
     bool mMapperUseAntiAlias;
+    bool mMapperShowRoomBorders;
     bool mFORCE_MXP_NEGOTIATION_OFF;
+    bool mFORCE_CHARSET_NEGOTIATION_OFF;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
     bool mEnableTextAnalyzer;
@@ -545,6 +611,11 @@ public:
     QTime mTimerDebugOutputSuppressionInterval;
     std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
     QString mProfileStyleSheet;
+    dlgTriggerEditor::SearchOptions mSearchOptions;
+    QPointer<dlgIRC> mpDlgIRC;
+    QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
+    QList<QString> mDockLayoutChanges;
+    QList<TToolBar*> mToolbarLayoutChanges;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
@@ -553,9 +624,13 @@ signals:
     void profileSaveStarted();
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
+    // To tell all TConsole's upper TTextEdit panes to report all Codepoint
+    // problems as they arrive as well as a summery upon destruction:
+    void signal_changeDebugShowAllProblemCodepoints(const bool);
 
 private slots:
     void slot_reloadModules();
+    void slot_purgeTemps();
 
 private:
     void installPackageFonts(const QString &packageName);
@@ -565,6 +640,10 @@ private:
     void loadSecuredPassword();
     void removeAllNonPersistentStopWatches();
     void updateConsolesFont();
+    void thankForUsingPTB();
+    void toggleMapperVisibility();
+    void createMapper(const bool);
+    void removePackageInfo(const QString &packageName, const bool);
 
     QFont mDisplayFont;
     QStringList mModulesToSync;
@@ -577,8 +656,6 @@ private:
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
 
-    QString mBufferIncomingData;
-
     QFile mErrorLogFile;
 
     QMap<QString, TEvent*> mEventMap;
@@ -589,7 +666,6 @@ private:
     bool mIsClosingDown;
 
     QString mLine;
-    QMutex mLock;
     QString mLogin;
     QString mPass;
 
@@ -610,12 +686,6 @@ private:
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
     QStringList mActiveModules;
-
-    QPushButton* uninstallButton;
-    QListWidget* packageList;
-    QListWidget* moduleList;
-    QPushButton* moduleUninstallButton;
-    QPushButton* moduleInstallButton;
 
     bool mHaveMapperScript;
     // This option makes the control on the preferences tristated so the value
@@ -682,6 +752,15 @@ private:
     // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
     // one):
     quint8 mPlayerRoomInnerDiameterPercentage;
+    // Whether the TTextEditor class should immediately report to debug output
+    // any dodgy codepoints that it has problems with - if false it only reports
+    // each codepoint the first time it encounters itL
+    bool mDebugShowAllProblemCodepoints;
+
+    // Now a per profile option this one represents the state of this profile:
+    bool mCompactInputLine;
+
+    QTimer purgeTimer;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

@@ -41,17 +41,45 @@ class TCommandLine : public QPlainTextEdit //QLineEdit
 {
     Q_OBJECT
 
+    enum MoveDirection {
+        MOVE_UP,
+        MOVE_DOWN
+    };
+
 public:
+    enum CommandLineTypeFlag {
+        UnknownType = 0x0,     // Should not be encountered but left as a trap value
+        MainCommandLine = 0x1, // One per profile
+        SubCommandLine = 0x2,  // Overlaid on top of MainConsole instance, should be uniquely named in pool of SubCommandLine/SubConsole/UserWindow/Buffers AND Labels
+        ConsoleCommandLine = 0x4,  // Integrated in MiniConsoles
+    };
+
+    Q_DECLARE_FLAGS(CommandLineType, CommandLineTypeFlag)
+
     Q_DISABLE_COPY(TCommandLine)
-    TCommandLine(Host*, TConsole*, QWidget*);
+    explicit TCommandLine(Host*, CommandLineType type = UnknownType, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
+    void hideEvent(QHideEvent*) override;
     void recheckWholeLine();
     void clearMarksOnWholeLine();
+    void setAction(const int);
+    void resetAction();
+    void releaseFunc(const int, const int);
+    CommandLineType getType() const { return mType; }
+    void addSuggestion(const QString&);
+    void removeSuggestion(const QString&);
+    void clearSuggestions();
 
-
+    int mActionFunction = 0;
     QPalette mRegularPalette;
+    QString mCommandLineName;
 
+public slots:
+    void slot_popupMenu();
+    void slot_addWord();
+    void slot_removeWord();
+    void slot_clearSelection(bool yes);
 
 private:
     bool event(QEvent*) override;
@@ -59,15 +87,16 @@ private:
     void handleAutoCompletion();
     void spellCheck();
     void handleTabCompletion(bool);
-    void historyUp(QKeyEvent*);
-    void historyDown(QKeyEvent*);
+    void historyMove(MoveDirection);
     void enterCommand(QKeyEvent*);
     void adjustHeight();
     void processNormalKey(QEvent*);
     bool keybindingMatched(QKeyEvent*);
-
+    void spellCheckWord(QTextCursor& c);
+    bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
 
     QPointer<Host> mpHost;
+    CommandLineType mType;
     KeyUnit* mpKeyUnit;
     TConsole* mpConsole;
     QString mLastCompletion;
@@ -75,15 +104,6 @@ private:
     int mAutoCompletionCount;
     QString mTabCompletionTyped;
     bool mUserKeptOnTyping;
-
-
-public slots:
-    void slot_popupMenu();
-    void slot_addWord();
-    void slot_removeWord();
-
-
-private:
     int mHistoryBuffer;
     QStringList mHistoryList;
     QString mSelectedText;
@@ -91,12 +111,14 @@ private:
     QString mTabCompletionOld;
     QPoint mPopupPosition;
     QString mSpellCheckedWord;
+    bool mSpellChecking = false;
     int mSystemDictionarySuggestionsCount;
     int mUserDictionarySuggestionsCount;
     char** mpSystemSuggestionsList;
     char** mpUserSuggestionsList;
-    void spellCheckWord(QTextCursor& c);
-    bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
+    QSet<QString> commandLineSuggestions;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)
 
 #endif // MUDLET_TCOMMANDLINE_H
