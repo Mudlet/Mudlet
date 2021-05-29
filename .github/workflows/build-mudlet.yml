@@ -72,9 +72,7 @@ jobs:
         arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
         aqtversion: '==1.1.2'
-      env:
-        DEVELOPER_DIR: '' # see https://github.com/jurplel/install-qt-action/issues/67#issuecomment-737668832
-
+        setup-python: false # see https://github.com/jurplel/install-qt-action/issues/67
 
     - name: Restore Boost cache
       uses: actions/cache@v2.1.6
