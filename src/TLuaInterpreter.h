@@ -607,10 +607,8 @@ public:
     static int getProfileTabNumber(lua_State*);
     static int addFileWatch(lua_State*);
     static int removeFileWatch(lua_State*);
-    static int getButtonStateById(lua_State*);
-    static int getButtonStateByName(lua_State*);
-    static int setButtonStateById(lua_State*);
-    static int setButtonStateByName(lua_State*);
+    static int getButtonStateByIdOrName(lua_State*);
+    static int setButtonState(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 

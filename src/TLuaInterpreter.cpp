@@ -13830,10 +13830,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getProfileTabNumber", TLuaInterpreter::getProfileTabNumber);
     lua_register(pGlobalLua, "addFileWatch", TLuaInterpreter::addFileWatch);
     lua_register(pGlobalLua, "removeFileWatch", TLuaInterpreter::removeFileWatch);
-    lua_register(pGlobalLua, "getButtonStateById", TLuaInterpreter::getButtonStateById);
-    lua_register(pGlobalLua, "getButtonStateByName", TLuaInterpreter::getButtonStateByName);
-    lua_register(pGlobalLua, "setButtonStateById", TLuaInterpreter::setButtonStateById);
-    lua_register(pGlobalLua, "setButtonStateByName", TLuaInterpreter::setButtonStateByName);
+    lua_register(pGlobalLua, "getButtonStateByIdOrName", TLuaInterpreter::getButtonStateByIdOrName);
+    lua_register(pGlobalLua, "setButtonState", TLuaInterpreter::setButtonState);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -15627,59 +15625,91 @@ int TLuaInterpreter::removeFileWatch(lua_State * L)
     return 1;
 }
 
-int TLuaInterpreter::getButtonStateById(lua_State* L)
+int TLuaInterpreter::getButtonStateByIdOrName(lua_State* L)
 {
     auto& host = getHostFromLua(L);
-    auto id = getVerifiedInt(L, __func__, 1, "id");
-    if (id < 0) {
-        return warnArgumentValue(L, __func__, QStringLiteral("item Id (%1) invalid, it must be equal or greater than zero").arg(id).toUtf8().constData());
+    auto argType = lua_type(L, 1);
+    TAction* pItem = nullptr;
+    if (argType == LUA_TNUMBER) {
+        int id = lua_tonumber(L, 1);
+        if (id < 0) {
+            return warnArgumentValue(L, __func__, QStringLiteral("item Id (%1) invalid, it must be equal or greater than zero").arg(id).toUtf8().constData());
+        }
+        pItem = host.getActionUnit()->getAction(id);
+        if (!pItem) {
+            return warnArgumentValue(L, __func__, QStringLiteral("no button item with Id %1 found").arg(id).toUtf8().constData());
+        }
+        if (!pItem->isPushDownButton()) {
+            return warnArgumentValue(L, __func__, QStringLiteral("item Id with %1 is not a push-down button").arg(id).toUtf8().constData());
+        }
     }
-    auto pItem = host.getActionUnit()->getAction(id);
+
+    if (argType == LUA_TSTRING) {
+        QString name = lua_tostring(L, 1);
+        if (name.isEmpty()) {
+            return warnArgumentValue(L, __func__, "item name must not be an empty string");
+        }
+        pItem = host.getActionUnit()->findAction(name);
+        if (!pItem) {
+            return warnArgumentValue(L, __func__, QStringLiteral("no button item with name '%1' found").arg(name).toUtf8().constData());
+        }
+        if (!pItem->isPushDownButton()) {
+            return warnArgumentValue(L, __func__, QStringLiteral("item with name '%1' is not a push-down button").arg(name).toUtf8().constData());
+        }
+    }
+
     if (!pItem) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no button item with Id %1 found").arg(id).toUtf8().constData());
-    }
-    if (!pItem->isPushDownButton()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("item Id with %1 is not a push-down button").arg(id).toUtf8().constData());
+        // we'll get here if the (first) argument is NOT usable:
+        lua_pushfstring(L, "%s: bad argument #1 type (ID as number or name as string expected, got %s!)",
+            __func__, luaL_typename(L, 1));
+        return lua_error(L);
     }
 
     lua_pushboolean(L, pItem->mButtonState);
     return 1;
 }
 
-int TLuaInterpreter::getButtonStateByName(lua_State* L)
+int TLuaInterpreter::setButtonState(lua_State* L)
 {
     auto& host = getHostFromLua(L);
-    auto name = getVerifiedString(L, __func__, 1, "name");
-    if (name.isEmpty()) {
-        return warnArgumentValue(L, __func__, "item name must not be an empty string");
+    auto argType = lua_type(L, 1);
+    TAction* pItem = nullptr;
+    if (argType == LUA_TNUMBER) {
+        int id = lua_tonumber(L, 1);
+        if (id < 0) {
+            return warnArgumentValue(L, __func__, QStringLiteral("item Id (%1) invalid, it must be equal or greater than zero").arg(id).toUtf8().constData());
+        }
+        pItem = host.getActionUnit()->getAction(id);
+        if (!pItem) {
+            return warnArgumentValue(L, __func__, QStringLiteral("no button item with Id %1 found").arg(id).toUtf8().constData());
+        }
+        if (!pItem->isPushDownButton()) {
+            return warnArgumentValue(L, __func__, QStringLiteral("item Id with %1 is not a push-down button").arg(id).toUtf8().constData());
+        }
     }
-    auto pItem = host.getActionUnit()->findAction(name);
+
+    if (argType == LUA_TSTRING) {
+        QString name = lua_tostring(L, 1);
+        if (name.isEmpty()) {
+            return warnArgumentValue(L, __func__, "item name must not be an empty string");
+        }
+        pItem = host.getActionUnit()->findAction(name);
+        if (!pItem) {
+            return warnArgumentValue(L, __func__, QStringLiteral("no button item with name '%1' found").arg(name).toUtf8().constData());
+        }
+        if (!pItem->isPushDownButton()) {
+            return warnArgumentValue(L, __func__, QStringLiteral("item with name '%1' is not a push-down button").arg(name).toUtf8().constData());
+        }
+    }
+
     if (!pItem) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no button item with name '%1' found").arg(name).toUtf8().constData());
-    }
-    if (!pItem->isPushDownButton()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("item with name '%1' is not a push-down button").arg(name).toUtf8().constData());
+        // we'll get here if the (first) argument is NOT usable:
+        lua_pushfstring(L, "%s: bad argument #1 type (ID as number or name as string expected, got %s!)",
+            __func__, luaL_typename(L, 1));
+        return lua_error(L);
     }
 
-    lua_pushboolean(L, pItem->mButtonState);
-    return 1;
-}
-
-int TLuaInterpreter::setButtonStateById(lua_State* L)
-{
-    auto& host = getHostFromLua(L);
-    auto id = getVerifiedInt(L, __func__, 1, "id");
     auto checked = getVerifiedBool(L, __func__, 2, "checked");
-    if (id < 0) {
-        return warnArgumentValue(L, __func__, QStringLiteral("item Id (%1) invalid, it must be equal or greater than zero").arg(id).toUtf8().constData());
-    }
-    auto pItem = host.getActionUnit()->getAction(id);
-    if (!pItem) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no button item with Id %1 found").arg(id).toUtf8().constData());
-    }
-    if (!pItem->isPushDownButton()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("item Id with %1 is not a push-down button").arg(id).toUtf8().constData());
-    }
 
     if (pItem->mButtonState != checked) {
         pItem->mButtonState = checked;
@@ -15692,38 +15722,7 @@ int TLuaInterpreter::setButtonStateById(lua_State* L)
         lua_pushboolean(L, true);
         return 1;
     }
-    // We only return true if we changed the state:
-    lua_pushboolean(L, false);
-    return 1;
-}
 
-int TLuaInterpreter::setButtonStateByName(lua_State* L)
-{
-    auto& host = getHostFromLua(L);
-    auto name = getVerifiedString(L, __func__, 1, "name");
-    if (name.isEmpty()) {
-        return warnArgumentValue(L, __func__, "item name must not be an empty string");
-    }
-    auto checked = getVerifiedBool(L, __func__, 2, "checked");
-    auto pItem = host.getActionUnit()->findAction(name);
-    if (!pItem) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no button item with name '%1' found").arg(name).toUtf8().constData());
-    }
-    if (!pItem->isPushDownButton()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("item with name '%1' is not a push-down button").arg(name).toUtf8().constData());
-    }
-
-    if (pItem->mButtonState != checked) {
-        pItem->mButtonState = checked;
-        if (pItem->mpEButton) {
-            pItem->mpEButton->setChecked(checked);
-        }
-        if (pItem->mpFButton) {
-            pItem->mpFButton->setChecked(checked);
-        }
-        lua_pushboolean(L, true);
-        return 1;
-    }
     // We only return true if we changed the state:
     lua_pushboolean(L, false);
     return 1;
