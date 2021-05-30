@@ -406,6 +406,7 @@ public:
     static int selectCurrentLine(lua_State*);
     static int spawn(lua_State*);
     static int getButtonState(lua_State*);
+    static int setButtonState(lua_State*);
     static int showToolBar(lua_State*);
     static int hideToolBar(lua_State*);
     static int loadReplay(lua_State*);
@@ -607,8 +608,6 @@ public:
     static int getProfileTabNumber(lua_State*);
     static int addFileWatch(lua_State*);
     static int removeFileWatch(lua_State*);
-    static int getButtonStateByIdOrName(lua_State*);
-    static int setButtonState(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
