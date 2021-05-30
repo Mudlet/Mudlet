@@ -1644,7 +1644,7 @@ void dlgConnectionProfiles::generateCustomProfile(const QString& profileName) co
 void dlgConnectionProfiles::slot_profile_menu(QPoint pos)
 {
     QPoint globalPos = profiles_tree_widget->mapToGlobal(pos);
-    auto profileName = profiles_tree_widget->currentItem()->text();
+    auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
     QMenu menu;
     if (hasCustomIcon(profileName)) {
@@ -1658,7 +1658,7 @@ void dlgConnectionProfiles::slot_profile_menu(QPoint pos)
 
 void dlgConnectionProfiles::slot_set_custom_icon()
 {
-    auto profileName = profiles_tree_widget->currentItem()->text();
+    auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
     QString imageLocation = QFileDialog::getOpenFileName(this, tr("Select custom image for profile (should be 120x30)"),
                                                     QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
@@ -1678,7 +1678,7 @@ void dlgConnectionProfiles::slot_set_custom_icon()
 
 void dlgConnectionProfiles::slot_reset_custom_icon()
 {
-    auto profileName = profiles_tree_widget->currentItem()->text();
+    auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
     bool success = mudlet::self()->resetProfileIcon(profileName).first;
     if (!success) {
