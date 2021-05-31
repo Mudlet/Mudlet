@@ -544,73 +544,73 @@ please wait...</source>
   <context>
     <name>T2DMap</name>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2808"/>
+      <location filename="../src/T2DMap.cpp" line="2807"/>
       <source>Create a new room here</source>
       <translation>Stwórz nową lokację w tym miejscu</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2981"/>
+      <location filename="../src/T2DMap.cpp" line="2997"/>
       <source>Change the properties of this custom line</source>
       <translation>Zmień właściwości tej linii</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3210"/>
-      <location filename="../src/T2DMap.cpp" line="4823"/>
+      <location filename="../src/T2DMap.cpp" line="3227"/>
+      <location filename="../src/T2DMap.cpp" line="4840"/>
       <source>Solid line</source>
       <translation>Linia ciągła</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3211"/>
-      <location filename="../src/T2DMap.cpp" line="4824"/>
+      <location filename="../src/T2DMap.cpp" line="3228"/>
+      <location filename="../src/T2DMap.cpp" line="4841"/>
       <source>Dot line</source>
       <translation>Linia kropkowana</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3212"/>
-      <location filename="../src/T2DMap.cpp" line="4825"/>
+      <location filename="../src/T2DMap.cpp" line="3229"/>
+      <location filename="../src/T2DMap.cpp" line="4842"/>
       <source>Dash line</source>
       <translation>Linia kreskowa</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3213"/>
-      <location filename="../src/T2DMap.cpp" line="4826"/>
+      <location filename="../src/T2DMap.cpp" line="3230"/>
+      <location filename="../src/T2DMap.cpp" line="4843"/>
       <source>Dash-dot line</source>
       <translation>Linia kreska-kropka</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3214"/>
-      <location filename="../src/T2DMap.cpp" line="4827"/>
+      <location filename="../src/T2DMap.cpp" line="3231"/>
+      <location filename="../src/T2DMap.cpp" line="4844"/>
       <source>Dash-dot-dot line</source>
       <translation>Linia kreska-kropka-kropka</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3502"/>
+      <location filename="../src/T2DMap.cpp" line="3519"/>
       <source>x coordinate (was %1):</source>
       <translation>współrzędna x (była %1):</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3503"/>
+      <location filename="../src/T2DMap.cpp" line="3520"/>
       <source>y coordinate (was %1):</source>
       <translation>współrzędna y (była %1):</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3504"/>
+      <location filename="../src/T2DMap.cpp" line="3521"/>
       <source>z coordinate (was %1):</source>
       <translation>współrzędna z (była %1):</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3692"/>
+      <location filename="../src/T2DMap.cpp" line="3709"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
       <translation>Usuń kolor</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3710"/>
+      <location filename="../src/T2DMap.cpp" line="3727"/>
       <source>Define new color</source>
       <translation>Zdefiniuj nowy kolor</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4024"/>
+      <location filename="../src/T2DMap.cpp" line="4041"/>
       <source>%1 {count:%2}</source>
       <translation>%1 {ilość: %2}</translation>
     </message>
@@ -780,325 +780,319 @@ please wait...</source>
       <translation>Zakończ rysowanie tej linii</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2790"/>
+      <location filename="../src/T2DMap.cpp" line="2789"/>
       <source>Create new map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
       <translation>Utwórz nową mapę</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2793"/>
+      <location filename="../src/T2DMap.cpp" line="2792"/>
       <source>Load map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
       <translation>Wczytaj mapę</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2807"/>
+      <location filename="../src/T2DMap.cpp" line="2806"/>
       <source>Create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
       <translation>Stwórz lokację</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2814"/>
+      <location filename="../src/T2DMap.cpp" line="2813"/>
       <source>Move</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Przenieś</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2815"/>
+      <location filename="../src/T2DMap.cpp" line="2814"/>
       <source>Move room</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Przesuń lokację</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2818"/>
+      <location filename="../src/T2DMap.cpp" line="2889"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Skasuj</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2819"/>
+      <location filename="../src/T2DMap.cpp" line="2890"/>
       <source>Delete room</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Usuń pokój</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2822"/>
+      <location filename="../src/T2DMap.cpp" line="2840"/>
       <source>Color</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Kolor</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2823"/>
+      <location filename="../src/T2DMap.cpp" line="2841"/>
       <source>Change room color</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Zmień kolor pokoju</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2826"/>
+      <location filename="../src/T2DMap.cpp" line="2854"/>
       <source>Spread</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Rozprosz</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2827"/>
+      <location filename="../src/T2DMap.cpp" line="2855"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Zwiększ odległość między zaznaczonymi lokacjami na osi X-Y</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2830"/>
+      <location filename="../src/T2DMap.cpp" line="2861"/>
       <source>Shrink</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Skurcz</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2831"/>
+      <location filename="../src/T2DMap.cpp" line="2862"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Zmniejsz odległość między zaznaczonymi lokacjami na osi X-Y</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2834"/>
+      <location filename="../src/T2DMap.cpp" line="2870"/>
       <source>Lock</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Zablokuj</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2835"/>
+      <location filename="../src/T2DMap.cpp" line="2871"/>
       <source>Lock room for speed walks</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Zablokuj lokację dla łazików</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2838"/>
+      <location filename="../src/T2DMap.cpp" line="2875"/>
       <source>Unlock</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Odblokuj</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2839"/>
+      <location filename="../src/T2DMap.cpp" line="2876"/>
       <source>Unlock room for speed walks</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Odblokuj lokację dla łazików</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2842"/>
+      <location filename="../src/T2DMap.cpp" line="2882"/>
       <source>Weight</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Waga</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2843"/>
+      <location filename="../src/T2DMap.cpp" line="2883"/>
       <source>Set room weight</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Ustaw wagę lokacji</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2846"/>
+      <location filename="../src/T2DMap.cpp" line="2820"/>
       <source>Exits</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Wyjścia</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2847"/>
+      <location filename="../src/T2DMap.cpp" line="2821"/>
       <source>Set room exits</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Ustaw wyjścia z lokacji</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2850"/>
+      <location filename="../src/T2DMap.cpp" line="2847"/>
       <source>Symbol</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Symbol</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2851"/>
+      <location filename="../src/T2DMap.cpp" line="2848"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Ustaw jeden lub więcej symboli bądź liter aby oznaczyć specjalne lokacje</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2854"/>
+      <location filename="../src/T2DMap.cpp" line="2896"/>
       <source>Move to</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Przesuń do</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2855"/>
+      <location filename="../src/T2DMap.cpp" line="2897"/>
       <source>Move selected group to a given position</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Przenieś zaznaczoną grupę na podaną pozycję</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2858"/>
+      <location filename="../src/T2DMap.cpp" line="2903"/>
       <source>Area</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Obszar</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2859"/>
+      <location filename="../src/T2DMap.cpp" line="2904"/>
       <source>Set room&apos;s area number</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Ustaw lokację&apos;s numer obszaru</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2862"/>
+      <location filename="../src/T2DMap.cpp" line="2827"/>
       <source>Custom exit line</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Niestandardowa linia wyjścia</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2864"/>
+      <location filename="../src/T2DMap.cpp" line="2829"/>
       <source>Replace an exit line with a custom line</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
       <translation>Zamień linię wyjścia na linię niestandardową</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2868"/>
+      <location filename="../src/T2DMap.cpp" line="2833"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
       <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
       <translation>Niestandardowe linie wyjścia nie są widoczne i nie mogą być edytowane w trybie siatki</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2872"/>
+      <location filename="../src/T2DMap.cpp" line="2909"/>
       <source>Create Label</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Utwórz Etykietę</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2873"/>
+      <location filename="../src/T2DMap.cpp" line="2910"/>
       <source>Create labels to show text or images</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Stwórz etykiety aby wyświetlić tekst lub obrazy</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2892"/>
+      <location filename="../src/T2DMap.cpp" line="2916"/>
       <source>Set location</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Ustaw położenie</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2894"/>
+      <location filename="../src/T2DMap.cpp" line="2917"/>
       <source>Set player current location to here</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
       <translation>Ustaw tutaj aktualną lokację gracza</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2898"/>
-      <source>Can only set location when exactly one room is selected</source>
-      <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
-      <translation>Można ustawić lokalizację tylko wtedy, gdy wyłącznie jeden pokój jest zaznaczony</translation>
-    </message>
-    <message>
-      <location filename="../src/T2DMap.cpp" line="2905"/>
+      <location filename="../src/T2DMap.cpp" line="2926"/>
       <source>Switch to editing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Przełącz do trybu edycji</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2906"/>
+      <location filename="../src/T2DMap.cpp" line="2927"/>
       <source>Switch to viewing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Przełącz do trybu wyświetlania</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2916"/>
+      <location filename="../src/T2DMap.cpp" line="2934"/>
       <source>Move</source>
       <comment>2D Mapper context menu (label) item</comment>
       <translation>Przenieś</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2917"/>
+      <location filename="../src/T2DMap.cpp" line="2935"/>
       <source>Move label</source>
       <comment>2D Mapper context menu item (label) tooltip</comment>
       <translation>Przenieś etykietę</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2919"/>
+      <location filename="../src/T2DMap.cpp" line="2937"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (label) item</comment>
       <translation>Skasuj</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2920"/>
+      <location filename="../src/T2DMap.cpp" line="2938"/>
       <source>Delete label</source>
       <comment>2D Mapper context menu (label) item tooltip</comment>
       <translation>Usuń etykietę</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2936"/>
+      <location filename="../src/T2DMap.cpp" line="2952"/>
       <source>Add point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
       <translation>Dodaj punkt</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2943"/>
+      <location filename="../src/T2DMap.cpp" line="2959"/>
       <source>Divide segment by adding a new point mid-way along</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state)</comment>
       <translation>Podziel segment przez dodanie nowego punktu w połowie drogi</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2946"/>
+      <location filename="../src/T2DMap.cpp" line="2962"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, i.e must do the suggested action first)</comment>
       <translation>Wybierz pierwszy punkt, następnie dodaj kolejny punkt w połowie drogi do lokacji</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2950"/>
+      <location filename="../src/T2DMap.cpp" line="2966"/>
       <source>Remove point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
       <translation>Usuń punkt</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2957"/>
+      <location filename="../src/T2DMap.cpp" line="2973"/>
       <source>Merge pair of segments by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but will be able to be done again on this item)</comment>
       <translation>Złącz parę odcinków usuwając ten punkt</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2961"/>
+      <location filename="../src/T2DMap.cpp" line="2977"/>
       <source>Remove last segment by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)</comment>
       <translation>Usuń ostatni odcinek usuwając ten punkt</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2966"/>
+      <location filename="../src/T2DMap.cpp" line="2982"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action)</comment>
       <translation>użyj &quot;usuń linię&quot;, aby usunąć jedynie segment kończący się w punkcie edytowalnym</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2972"/>
+      <location filename="../src/T2DMap.cpp" line="2988"/>
       <source>Select a point first, then remove it</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)</comment>
       <translation>Najpierw wybierz punkt, potem go usuń</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2976"/>
+      <location filename="../src/T2DMap.cpp" line="2992"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</comment>
       <translation>Właściwości</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2980"/>
+      <location filename="../src/T2DMap.cpp" line="2996"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</comment>
       <translation>właściwości...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2984"/>
+      <location filename="../src/T2DMap.cpp" line="3000"/>
       <source>Delete line</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
       <translation>Usuń linię</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2985"/>
+      <location filename="../src/T2DMap.cpp" line="3001"/>
       <source>Delete all of this custom line</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip</comment>
       <translation>Usuń całą linię</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3495"/>
+      <location filename="../src/T2DMap.cpp" line="3512"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
       <comment>Use linefeeds as necessary to format text into a reasonable rectangle of text, %1 is a room number</comment>
@@ -1106,36 +1100,36 @@ the highlighted room (%1) to:</source>
 podświetlonej lokacji (%1), do:</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3519"/>
+      <location filename="../src/T2DMap.cpp" line="3536"/>
       <source>OK</source>
       <comment>dialog (room(s) move) button</comment>
       <translation>OK</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3524"/>
+      <location filename="../src/T2DMap.cpp" line="3541"/>
       <source>Cancel</source>
       <comment>dialog (room(s) move) button</comment>
       <translation>Anuluj</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3718"/>
+      <location filename="../src/T2DMap.cpp" line="3735"/>
       <source>OK</source>
       <comment>dialog (room(s) change color) button</comment>
       <translation>OK</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3723"/>
+      <location filename="../src/T2DMap.cpp" line="3740"/>
       <source>Cancel</source>
       <comment>dialog (room(s) change color) button</comment>
       <translation>Anuluj</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3780"/>
+      <location filename="../src/T2DMap.cpp" line="3797"/>
       <source>Spread out rooms</source>
       <translation>Rozłóż lokacje</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3781"/>
+      <location filename="../src/T2DMap.cpp" line="3798"/>
       <source>Increase the spacing of
 the selected rooms,
 centered on the
@@ -1144,12 +1138,12 @@ factor of:</source>
       <translation>Zwiększ odległość między wybranymi lokacjami, z wyśrodkowaniem na podkreślonym pokoju, przez współczynnik:</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3840"/>
+      <location filename="../src/T2DMap.cpp" line="3857"/>
       <source>Shrink in rooms</source>
       <translation>Zmniejsz odległości pomiędzy lokacjami</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3841"/>
+      <location filename="../src/T2DMap.cpp" line="3858"/>
       <source>Decrease the spacing of
 the selected rooms,
 centered on the
@@ -1158,14 +1152,14 @@ factor of:</source>
       <translation>Zmniejsz odstępy pomiędzy wybranymi lokacjami, środkując na podświetlonej lokacji, o współczynnik:</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3969"/>
-      <location filename="../src/T2DMap.cpp" line="3983"/>
-      <location filename="../src/T2DMap.cpp" line="4033"/>
+      <location filename="../src/T2DMap.cpp" line="3986"/>
+      <location filename="../src/T2DMap.cpp" line="4000"/>
+      <location filename="../src/T2DMap.cpp" line="4050"/>
       <source>Enter room weight</source>
       <translation>Podaj wagę lokacji (roomweight w API)</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3970"/>
+      <location filename="../src/T2DMap.cpp" line="3987"/>
       <source>Enter new roomweight
 (= travel time), minimum
 (and default) is 1:</source>
@@ -1173,7 +1167,7 @@ factor of:</source>
       <translation>Podaj nową wagę lokacji (= czas podróży, roomweight w API), najmniejsza (oraz domyślna) wartość to 1:</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3984"/>
+      <location filename="../src/T2DMap.cpp" line="4001"/>
       <source>Enter new roomweight
 (= travel time) for all
 selected rooms, minimum
@@ -1184,17 +1178,17 @@ used is:</source>
       <translation>Podaj nową wagę (= czas podróży, roomweight w API) dla wszystkich zaznaczonych lokacji, najmniejsza (oraz domyślna) wartość to 1:</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4022"/>
+      <location filename="../src/T2DMap.cpp" line="4039"/>
       <source>%1 {count:%2, default}</source>
       <translation>%1 {ilość:%2, domyślne}</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4030"/>
+      <location filename="../src/T2DMap.cpp" line="4047"/>
       <source>1 {count 0, default}</source>
       <translation>1 {ilość 0, domyślne}</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4034"/>
+      <location filename="../src/T2DMap.cpp" line="4051"/>
       <source>Choose an existing
 roomweight (= travel
 time) from the list
@@ -1207,25 +1201,25 @@ rooms:</source>
       <translation>Wybierz wagę lokacji (= czas podróży) z listy (posortowanej według częstotliwości użycia) lub wprowadź nową dodatnią liczbę jako wagę dla wszystkich zaznaczonych lokacji:</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4083"/>
+      <location filename="../src/T2DMap.cpp" line="4100"/>
       <source>Load Mudlet map</source>
       <translation>Załaduj mapę Mudletową</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4085"/>
+      <location filename="../src/T2DMap.cpp" line="4102"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) or the ;;s as they are used programmatically</comment>
       <translation>Mapa Mudlet'a (*.dat);;Dane mapy w formacie xml (*.xml);;Dowolny plik (*)</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4970"/>
-      <location filename="../src/T2DMap.cpp" line="5004"/>
+      <location filename="../src/T2DMap.cpp" line="4987"/>
+      <location filename="../src/T2DMap.cpp" line="5021"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
       <translation>Kliknij lewy przycisk aby dodać punkt, kliknij prawym przyciskiem myszy, aby anulować / zmienić / zakończyć ...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="5015"/>
+      <location filename="../src/T2DMap.cpp" line="5032"/>
       <source>Left-click and drag a square for the size and position of your label</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
       <translation>Przytrzymaj lewy przycisk myszy i przeciągnij ustalając rozmiar i pozycję etykiety</translation>
@@ -1836,74 +1830,74 @@ Jest tyle danych, ale lepiej zacząć od nowa ...</translation>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="1674"/>
+      <location filename="../src/TMap.cpp" line="1679"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
       <translation>[INFO] - Domyślny (reset) obszar (dla pokoi, które nie zostały przypisane do żadnego obszaru) nie został znaleziony, dodanie zarezerwowanego identyfikatora -1.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="1768"/>
+      <location filename="../src/TMap.cpp" line="1773"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
       <translation>[ INFO] - Pomyślnie odczytany plik mapy (%1s), sprawdzanie niektórych szczegółów spójności...</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="1783"/>
+      <location filename="../src/TMap.cpp" line="1788"/>
       <source>No map found. Would you like to download the map or start your own?</source>
       <translation>Nie znaleziono mapy. Czy chcesz pobrać mapę czy zacząć własną?</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="1784"/>
+      <location filename="../src/TMap.cpp" line="1789"/>
       <source>Download the map</source>
       <translation>Pobierz mapę</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="1785"/>
+      <location filename="../src/TMap.cpp" line="1790"/>
       <source>Start my own</source>
       <translation>Zacznij własną</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2231"/>
+      <location filename="../src/TMap.cpp" line="2236"/>
       <source>Map issues</source>
       <translation>Problemy z mapą</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2238"/>
+      <location filename="../src/TMap.cpp" line="2243"/>
       <source>Area issues</source>
       <translation>Problemy z obszarem</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2244"/>
+      <location filename="../src/TMap.cpp" line="2249"/>
       <source>Area id: %1 &quot;%2&quot;</source>
       <translation>Identyfikator obszaru: %1 &quot;%2&quot;</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2246"/>
+      <location filename="../src/TMap.cpp" line="2251"/>
       <source>Area id: %1</source>
       <translation>Identyfikator obszaru: %1</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2255"/>
+      <location filename="../src/TMap.cpp" line="2260"/>
       <source>Room issues</source>
       <translation>Problemy z pokojem</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2262"/>
+      <location filename="../src/TMap.cpp" line="2267"/>
       <source>Room id: %1 &quot;%2&quot;</source>
       <translation>ID pokoju: %1 &quot;%2&quot;</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2264"/>
+      <location filename="../src/TMap.cpp" line="2269"/>
       <source>Room id: %1</source>
       <translation>Identyfikator lokacji: %1</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2274"/>
+      <location filename="../src/TMap.cpp" line="2279"/>
       <source>End of report</source>
       <translation>Koniec raportu</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2280"/>
+      <location filename="../src/TMap.cpp" line="2285"/>
       <source>[ ALERT ] - At least one thing was detected during that last map operation
 that it is recommended that you review the most recent report in
 the file:
@@ -1916,7 +1910,7 @@ the file:
 &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2288"/>
+      <location filename="../src/TMap.cpp" line="2293"/>
       <source>[ INFO ]  - The equivalent to the above information about that last map
 operation has been saved for review as the most recent report in
 the file:
@@ -1930,7 +1924,7 @@ została zapisana do wiadomości jako ostatni raport w pliku:
 &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2344"/>
+      <location filename="../src/TMap.cpp" line="2349"/>
       <source>[ ERROR ] - Unable to use or create directory to store map.
 Please check that you have permissions/access to:
 &quot;%1&quot;
@@ -1941,90 +1935,90 @@ Proszę sprawdzić, czy masz uprawnienia/dostęp do:
 i jest wystarczająco dużo miejsca na dysku. Operacja pobierania nie powiodła się.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2370"/>
+      <location filename="../src/TMap.cpp" line="2375"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
       <translation>[ INFO ] - Pobieranie mapy rozpoczęte, proszę czekać...</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2381"/>
+      <location filename="../src/TMap.cpp" line="2386"/>
       <source>Map download</source>
       <comment>This is a title of a progress window.</comment>
       <translation>Pobieranie mapy</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2444"/>
+      <location filename="../src/TMap.cpp" line="2449"/>
       <source>Map import</source>
       <comment>This is a title of a progress dialog.</comment>
       <translation>Importowanie mapy</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2749"/>
-      <location filename="../src/TMap.cpp" line="3234"/>
+      <location filename="../src/TMap.cpp" line="2754"/>
+      <location filename="../src/TMap.cpp" line="3239"/>
       <source>Exporting JSON map data from %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2764"/>
+      <location filename="../src/TMap.cpp" line="2769"/>
       <source>Map JSON export</source>
       <comment>This is a title of a progress window.</comment>
       <translation>Eksport mapy do JSON</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2899"/>
+      <location filename="../src/TMap.cpp" line="2904"/>
       <source>Exporting JSON map file from %1 - writing data to file:
 %2 ...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2925"/>
+      <location filename="../src/TMap.cpp" line="2930"/>
       <source>import or export already in progress</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2933"/>
+      <location filename="../src/TMap.cpp" line="2938"/>
       <source>could not open file</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2943"/>
+      <location filename="../src/TMap.cpp" line="2948"/>
       <source>could not parse file, reason: &quot;%1&quot; at offset %2</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2952"/>
+      <location filename="../src/TMap.cpp" line="2957"/>
       <source>empty Json file, no map data detected</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2967"/>
+      <location filename="../src/TMap.cpp" line="2972"/>
       <source>invalid format version &quot;%1&quot; detected</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2973"/>
+      <location filename="../src/TMap.cpp" line="2978"/>
       <source>no format version detected</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2979"/>
+      <location filename="../src/TMap.cpp" line="2984"/>
       <source>no areas detected</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="3004"/>
+      <location filename="../src/TMap.cpp" line="3009"/>
       <source>Map JSON import</source>
       <comment>This is a title of a progress window.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="3100"/>
+      <location filename="../src/TMap.cpp" line="3105"/>
       <source>aborted by user</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2989"/>
-      <location filename="../src/TMap.cpp" line="3244"/>
+      <location filename="../src/TMap.cpp" line="2994"/>
+      <location filename="../src/TMap.cpp" line="3249"/>
       <source>Importing JSON map data to %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <translation type="unfinished"/>
@@ -2050,7 +2044,7 @@ recommended map version %2 for this version of Mudlet.</source>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1385"/>
-      <location filename="../src/TMap.cpp" line="1827"/>
+      <location filename="../src/TMap.cpp" line="1832"/>
       <source>[ ERROR ] - Unable to open map file for reading: &quot;%1&quot;!</source>
       <translation type="unfinished"/>
     </message>
@@ -2093,19 +2087,19 @@ please wait...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="1843"/>
+      <location filename="../src/TMap.cpp" line="1848"/>
       <source>[ INFO ]  - Checking map file &quot;%1&quot;, format version &quot;%2&quot;.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2380"/>
-      <location filename="../src/TMap.cpp" line="2758"/>
-      <location filename="../src/TMap.cpp" line="2998"/>
+      <location filename="../src/TMap.cpp" line="2385"/>
+      <location filename="../src/TMap.cpp" line="2763"/>
+      <location filename="../src/TMap.cpp" line="3003"/>
       <source>Abort</source>
       <translation>Przerwij</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2378"/>
+      <location filename="../src/TMap.cpp" line="2383"/>
       <source>Downloading map file for use in %1...</source>
       <comment>%1 is the name of the current Mudlet profile</comment>
       <translation>Pobieranie pliku mapy do użycia w %1...</translation>
@@ -2116,71 +2110,71 @@ please wait...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2412"/>
+      <location filename="../src/TMap.cpp" line="2417"/>
       <source>loadMap: unable to perform request, a map is already being downloaded or
 imported at user request.</source>
       <translation>loadMap: nie można wykonać żądania, mapa jest już pobierana lub
 importowana na żądanie użytkownika.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2443"/>
+      <location filename="../src/TMap.cpp" line="2448"/>
       <source>Importing XML map file for use in %1...</source>
       <translation>Importowanie pliku XML z mapą %1...</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2471"/>
+      <location filename="../src/TMap.cpp" line="2476"/>
       <source>loadMap: failure to import XML map file, further information may be available
 in main console!</source>
       <translation>loadMap: niepowodzenie importowania pliku mapy XML, dalsze informacje mogą być dostępne w głównej konsoli!</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2506"/>
+      <location filename="../src/TMap.cpp" line="2511"/>
       <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
       <translation>[ ALERT]-Pobieranie mapy zostało anulowane, na żądanie użytkownika.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2525"/>
+      <location filename="../src/TMap.cpp" line="2530"/>
       <source>[ ERROR ] - Map download encountered an error:
 %1.</source>
       <translation>[ ERROR]-Pobieranie mapy napotkało błąd:
 %1.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2556"/>
+      <location filename="../src/TMap.cpp" line="2561"/>
       <source>[ ALERT ] - Map download failed, error reported was:
 %1.</source>
       <translation>[ ALERT]-Pobieranie mapy nie powiodło się, zgłoszony błąd:
 %1.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2564"/>
+      <location filename="../src/TMap.cpp" line="2569"/>
       <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
       <translation>[ ALERT]-Pobieranie mapy nie powiodło się, nie można otworzyć pliku docelowego:
 %1.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2569"/>
+      <location filename="../src/TMap.cpp" line="2574"/>
       <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
       <translation>[ ALERT] - Pobieranie mapy nie powiodło się, nie można zapisać pliku docelowego:
 %1.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2582"/>
-      <location filename="../src/TMap.cpp" line="2599"/>
+      <location filename="../src/TMap.cpp" line="2587"/>
+      <location filename="../src/TMap.cpp" line="2604"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
       <translation>[ INFO] - ... mapa pobrana i zapisana, teraz analizuje ja ...</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2590"/>
-      <location filename="../src/TMap.cpp" line="2625"/>
+      <location filename="../src/TMap.cpp" line="2595"/>
+      <location filename="../src/TMap.cpp" line="2630"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
       <translation>[ BŁĄD ] - Problem z pobieraniem mapy, niepowodzenie w analizowaniu pliku docelowego: %1.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2630"/>
+      <location filename="../src/TMap.cpp" line="2635"/>
       <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
       <translation>[ BŁĄD ] - Problem z pobieraniem mapy, brak możliwości odczytania pliku docelowego: %1.</translation>
@@ -5599,11 +5593,6 @@ Count</source>
   <context>
     <name>dlgPackageExporter</name>
     <message>
-      <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
-      <source>Package Exporter</source>
-      <translation>Eksporter pakietów</translation>
-    </message>
-    <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="28"/>
       <source>Package name here</source>
       <translation type="unfinished"/>
@@ -5615,7 +5604,7 @@ Count</source>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="58"/>
-      <location filename="../src/dlgPackageExporter.cpp" line="1412"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="1431"/>
       <source>Select what to export</source>
       <translation type="unfinished"/>
     </message>
@@ -5663,6 +5652,11 @@ Count</source>
       <translation type="unfinished"/>
     </message>
     <message>
+      <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
+      <source>Package Exporter (experimental)</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="162"/>
       <source>Add icon</source>
       <translation type="unfinished"/>
@@ -5693,7 +5687,7 @@ Count</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/dlgPackageExporter.ui" line="317"/>
+      <location filename="../src/ui/dlgPackageExporter.ui" line="323"/>
       <source>Include assets (images, sounds, fonts)</source>
       <translation type="unfinished"/>
     </message>
@@ -5782,7 +5776,7 @@ Count</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="984"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="1003"/>
       <source>Failed to zip up the package. Error is: &quot;%1&quot;.</source>
       <comment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</comment>
       <translation type="unfinished"/>
@@ -5804,66 +5798,66 @@ Count</source>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="488"/>
-      <location filename="../src/dlgPackageExporter.cpp" line="593"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="564"/>
       <source>Exporting package...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="538"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="508"/>
       <source>Failed to export. Could not open the folder &quot;%1&quot; for writing. Do you have the necessary permissions and free disk-space to write to that folder?</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="797"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="826"/>
       <source>%1 doesn&apos;t seem to exist anymore - can you double-check it?</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="732"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="761"/>
       <source>Failed to export. Could not write Mudlet items to the file &quot;%1&quot;.</source>
       <comment>This error message is shown when all the Mudlet items cannot be written to the &apos;packageName&apos;.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened.</comment>
       <translation>Nie udało się wyeksportować. Nie można zapisać elementów Mudleta do pliku &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="909"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="928"/>
       <source>Failed to add directory &quot;%1&quot; to package. Error is: &quot;%2&quot;.</source>
       <translation>Nie można dodać katalogu &quot;%1&quot; do pakietu. Błąd to: &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="952"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="971"/>
       <source>Required file &quot;%1&quot; was not found in the staging area. This area contains the Mudlet items chosen for the package, which you selected to be included in the package file. This suggests there may be a problem with that directory: &quot;%2&quot; - Do you have the necessary permissions and free disk-space?</source>
       <translation>Wymagany plik &quot;%1&quot; nie znaleziono w miejscu postoju. Ten obszar zawiera elementy Mudlet wybrane dla pakietu, które zostały wybrane do włączenia do pliku pakietu. Sugeruje to, że może być problem z tym katalogiem: &quot;%2&quot; - Czy masz niezbędne uprawnienia i wolne miejsce na dysku?</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="579"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="550"/>
       <source>Package &quot;%1&quot; exported to: %2</source>
       <translation>Pakiet &quot;%1&quot; wyeksportowany do: %2</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="831"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="855"/>
       <source>Failed to open package file. Error is: &quot;%1&quot;.</source>
       <comment>This zipError message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere in the computer&apos;s file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.</comment>
       <translation>Nie można otworzyć pliku pakietu. Błąd to: &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="981"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="1000"/>
       <source>Export cancelled.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="1393"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="1412"/>
       <source>Why not &lt;a href=&quot;https://forums.mudlet.org/viewforum.php?f=6&quot;&gt;upload&lt;/a&gt; your package for other Mudlet users?</source>
       <comment>Only the text outside of the &apos;a&apos; (HTML anchor) tags PLUS the verb &apos;upload&apos; in between them in the source text, (associated with uploading the resulting package to the Mudlet forums) should be translated.</comment>
       <translation>Dlaczego nie &lt;a href=&quot;https://forums.mudlet.org/viewforum.php?f=6&quot;&gt;Przesłać&lt;/a&gt; twójego pakietu dla innych użytkowników Mudlet?</translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/dlgPackageExporter.cpp" line="1414"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="1433"/>
       <source>Select what to export (%1 items)</source>
       <comment>Package exporter selection</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgPackageExporter.cpp" line="1042"/>
+      <location filename="../src/dlgPackageExporter.cpp" line="1061"/>
       <source>Where do you want to save the package?</source>
       <translation>Gdzie chcesz zapisać pakiet?</translation>
     </message>
@@ -5872,7 +5866,7 @@ Count</source>
     <name>dlgPackageManager</name>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="50"/>
-      <source>Package Manager - %1</source>
+      <source>Package Manager (experimental) - %1</source>
       <translation type="unfinished"/>
     </message>
     <message>
@@ -8955,6 +8949,27 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
       <translation>Arabski (Egipt)</translation>
     </message>
     <message>
+      <location filename="../src/mudlet.cpp" line="440"/>
+      <source>Packages (exp.)</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="447"/>
+      <source>Package Manager (experimental)</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="449"/>
+      <source>Packages (exp.)</source>
+      <comment>exp. stands for experimental; shortened so it doesn&apos;t make buttons huge in the main interface</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="456"/>
+      <source>Package Exporter (experimental)</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/mudlet.cpp" line="478"/>
       <source>&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</source>
       <comment>Same text is used in 2 places.</comment>
@@ -9902,11 +9917,6 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
       <translation>Otwórz IRC</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="456"/>
-      <source>Package Exporter</source>
-      <translation>Eksporter pakietów</translation>
-    </message>
-    <message>
       <location filename="../src/mudlet.cpp" line="347"/>
       <source>Triggers</source>
       <translation>Wyzwalacze</translation>
@@ -10015,13 +10025,6 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
       <location filename="../src/mudlet.cpp" line="434"/>
       <source>Open a notepad that you can store your notes in</source>
       <translation>Otwórz notatnik, w którym można przechowywać notatki</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="440"/>
-      <location filename="../src/mudlet.cpp" line="447"/>
-      <location filename="../src/mudlet.cpp" line="449"/>
-      <source>Package Manager</source>
-      <translation>Menedżer pakietów</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="452"/>
