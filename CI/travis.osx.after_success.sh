@@ -107,7 +107,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       mv "${HOME}/Desktop/Mudlet.dmg" "${HOME}/Desktop/Mudlet-${VERSION}.dmg"
     fi
 
-    if [ "${public_test_build}" == "true" ]; then
+    # if [ "${public_test_build}" == "true" ]; then
       echo "=== Setting up for Github upload ==="
       mkdir "upload/"
       mv "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg" "upload/"
@@ -116,11 +116,11 @@ if [ "${DEPLOY}" = "deploy" ]; then
         echo "UPLOAD_FILENAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-macos"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
-    else
-      echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-      scp -i "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "keneanung@mudlet.org:${DEPLOY_PATH}"
-      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.dmg"
-    fi
+    # else
+    #   echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
+    #   scp -i "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "keneanung@mudlet.org:${DEPLOY_PATH}"
+    #   DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.dmg"
+    # fi
 
     # install dblsqd. NPM must be available here because we use it to install the tool that creates the dmg
     npm install -g dblsqd-cli
@@ -138,9 +138,9 @@ if [ "${DEPLOY}" = "deploy" ]; then
       dblsqd release -a mudlet -c public-test-build -m "${changelog}" "${VERSION}${MUDLET_VERSION_BUILD}" || true
 
       # release registration and uploading will be manual for the time being
-    else
-      echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
+    # else
+    #   echo "=== Registering release with Dblsqd ==="
+    #   dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
     fi
   fi
 
