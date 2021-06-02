@@ -427,7 +427,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
      * the same codec given that the default behaviour is to use
      * QTextCodec::codecForLocale for QTextStream:
      */
-    mErrorLogStream.setCodec(QTextCodec::codeForName("UTF-8"));
+    mErrorLogStream.setCodec(QTextCodec::codecForName("UTF-8"));
     mErrorLogStream.setDevice(&mErrorLogFile);
 
     QTimer::singleShot(0, this, [this]() {
@@ -1986,7 +1986,7 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
          * local8Bit codec that thus will not handle all the characters
          * contained in Unicode:
          */
-        in.setCodec(QTextStream::codecForName("UTF-8"));
+        in.setCodec(QTextCodec::codecForName("UTF-8"));
         in.setDevice(&configFile);
         while (!in.atEnd()) {
             strings += in.readLine();
