@@ -419,8 +419,15 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
     mErrorLogFile.setFileName(logFileName);
     mErrorLogFile.open(QIODevice::Append);
-    // This is NOW used (for map
-    // file auditing and other issues)
+    // This is NOW used (for map file auditing and other issues)
+    /*
+     * Whilst we only generate ASCII characters in our messages that get logged
+     * there can easily be not ASCII in user content and if the logs get sent to
+     * someone else for inspection there is a fair chance that they do not have
+     * the same codec given that the default behaviour is to use
+     * QTextCodec::codecForLocale for QTextStream:
+     */
+    mErrorLogStream.setCodec(QTextCodec::codecForName("UTF-8"));
     mErrorLogStream.setDevice(&mErrorLogFile);
 
     QTimer::singleShot(0, this, [this]() {
@@ -1972,7 +1979,15 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
     QFile configFile(luaConfig);
     QStringList strings;
     if (configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QTextStream in(&configFile);
+        QTextStream in;
+        /*
+         * We also have to explicit set the codec to use whilst reading the file
+         * as otherwise QTextCodec::codecForLocale() is used which might be a
+         * local8Bit codec that thus will not handle all the characters
+         * contained in Unicode:
+         */
+        in.setCodec(QTextCodec::codecForName("UTF-8"));
+        in.setDevice(&configFile);
         while (!in.atEnd()) {
             strings += in.readLine();
         }
