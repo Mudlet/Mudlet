@@ -175,7 +175,7 @@ int main(int argc, char* argv[])
     QCommandLineOption showVersion(QStringList() << "v" << "version", QCoreApplication::translate("main", "Display version and exit"));
     parser.addOption(showVersion);
 
-    QCommandLineOption beQuiet(QStringList() << "q" << "quiet", QCoreApplication::translate("main", "Display help and exit"));
+    QCommandLineOption beQuiet(QStringList() << "q" << "quiet", QCoreApplication::translate("main", "Don't show the splash screen when starting"));
     parser.addOption(beQuiet);
 
     parser.parse(app->arguments());

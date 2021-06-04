@@ -4920,8 +4920,8 @@ end</script>
   if format == "json" then
     savedjson = saveJsonMap(location)
   elseif format == "all" then
-    savednormal = saveMap(location)
     savedjson = saveJsonMap(location)
+    savednormal = saveMap(location)
   elseif format == nil or format == "" then
     savednormal = saveMap(location)
   end
@@ -5472,7 +5472,7 @@ mmp.lagtable = {
         time = 10
     }
 }
-local newversion = "21.3.1"
+local newversion = "21.4.1"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo(

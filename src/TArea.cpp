@@ -639,7 +639,6 @@ void TArea::writeJsonArea(QJsonArray& array) const
     }
     QJsonValue roomsValue{roomsArray};
     areaObj.insert(QLatin1String("rooms"), roomsValue);
-    mpMap->getCurrentProgressRoomCount();
 
     // Process the labels after the rooms so that the first area shows something
     // quickly (from the rooms) even if it has a number of labels to do.

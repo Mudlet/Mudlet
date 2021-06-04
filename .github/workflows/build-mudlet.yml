@@ -1,7 +1,8 @@
 name: 🔨 Build Mudlet
 on:
   push:
-    branches: [master, development]
+    branches: [master, development, release-*]
+    tags: [Mudlet-*]
   pull_request:
   workflow_dispatch:
   schedule:
@@ -20,29 +21,29 @@ jobs:
             buildname: 'ubuntu / gcc'
             triplet: x64-linux
             compiler: gcc_64
-            qt: '5.14.1'
+            qt: '5.14.2'
             deploy: 'deploy'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
-            qt: '5.14.1'
+            qt: '5.14.2'
           - os: ubuntu-latest
             buildname: 'ubuntu / qt 5.11'
             triplet: x64-linux
             compiler: gcc_64
             qt: '5.11.0'
-          - os: macos-11.0
+          - os: macos-11
             buildname: 'macos / c++ tests'
             triplet: x64-osx
             compiler: clang_64
-            qt: '5.14.1'
+            qt: '5.14.2'
             deploy: 'deploy'
           - os: windows-2019
             buildname: 'windows'
             triplet: x64-mingw-dynamic
             # compiler: flag not used in windows pipeline
-            qt: '5.14.1'
+            qt: '5.14.2'
             deploy: 'deploy'
 
     env:
@@ -62,7 +63,7 @@ jobs:
       run: echo "SDKROOT=macosx11.1" >> $GITHUB_ENV
 
     - name: (Linux/Windows) Restore Qt cache
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.6
       if: runner.os != 'macOS'
       id: cache-qt
       with:
@@ -81,7 +82,7 @@ jobs:
 
 
     - name: Restore Boost cache
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.6
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
@@ -157,6 +158,10 @@ jobs:
     - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
       run: |
+        # workaround to install libzip-dev in Github Actions
+        sudo apt-add-repository "ppa:ondrej/php" -y
+        sudo apt-get update
+
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
         sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 -y
@@ -219,7 +224,7 @@ jobs:
         echo "WITH_FONTS=no" >> $GITHUB_ENV
 
     - name: (Linux/macOS) restore ccache
-      uses: pat-s/always-upload-cache@v2.1.3
+      uses: pat-s/always-upload-cache@v2.1.5
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
@@ -276,7 +281,7 @@ jobs:
       run: ctest --output-on-failure
 
     - name: (Linux/macOS) restore Luarocks for packaging
-      uses: actions/cache@v2
+      uses: actions/cache@v2.1.6
       with:
         path: $HOME/.luarocks
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}
