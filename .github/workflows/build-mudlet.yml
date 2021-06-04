@@ -33,7 +33,7 @@ jobs:
             triplet: x64-linux
             compiler: gcc_64
             qt: '5.11.0'
-          - os: macos-10.15
+          - os: macos-11
             buildname: 'macos / c++ tests'
             triplet: x64-osx
             compiler: clang_64
@@ -58,15 +58,23 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: Restore Qt cache
+    - name: (macOS) Setup XCode that can build universal binaries
+      if: runner.os == 'macOS'
+      run: |
+        echo "DEVELOPER_DIR=/Applications/Xcode_12.5.app/Contents/Developer" >> $GITHUB_ENV
+        echo $(uname -m)
+
+    - name: (Linux/Windows) Restore Qt cache
       uses: actions/cache@v2.1.6
+      if: runner.os != 'macOS'
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
         key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
 
-    - name: Install Qt
+    - name: (Linux/Windows) Install Qt
       uses: jurplel/install-qt-action@v2
+      if: runner.os != 'macOS'
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
@@ -107,6 +115,10 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
 
+    # - name: Setup tmate session
+    #   if: runner.os == 'macOS'
+    #   uses: mxschmitt/action-tmate@v3
+
     - name: (macOS) Install non-vcpkg dependencies
       if: runner.os == 'macOS'
       env:
@@ -115,11 +127,15 @@ jobs:
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
-        # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip ccache luarocks expect
+        # these aren't available or don't work well in vcpkg. Install Qt from homebrew to get universal builds
+        brew install pkg-config libzzip libzip ccache luarocks expect qt@5
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+
+        echo "Qt5_DIR=$(brew --prefix qt@5)/lib/cmake/Qt5" >> $GITHUB_ENV
+        echo "Qt5_INSTALL=$(brew --prefix qt@5)" >> $GITHUB_ENV
+        echo "$Qt5_DIR/bin" >> $GITHUB_PATH
 
         # Install lua-yajl early to generate translation statistics
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
@@ -137,9 +153,6 @@ jobs:
         eval "$(luarocks path --local --lua-version "5.1")"
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
-
-        # Use latest available XCode
-        echo "DEVELOPER_DIR=/Applications/Xcode_12.4.app/Contents/Developer" >> $GITHUB_ENV
 
     - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
@@ -227,8 +240,9 @@ jobs:
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: ccache --show-stats
 
-    - name: Build Mudlet
+    - name: (Linux/Windows) Build Mudlet
       uses: lukka/run-cmake@v3
+      if: runner.os != 'macOS'
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
@@ -240,6 +254,21 @@ jobs:
           -DVCPKG_APPLOCAL_DEPS=OFF
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
+
+    - name: (macOS) Build Mudlet
+      uses: lukka/run-cmake@v3
+      if: runner.os == 'macOS'
+      with:
+        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+        useVcpkgToolchainFile: true
+        buildDirectory: '${{runner.workspace}}/b/ninja'
+        cmakeAppendedArgs: >-
+          -G Xcode
+          -DCMAKE_PREFIX_PATH=${{env.Qt5_INSTALL}}
+          -DVCPKG_APPLOCAL_DEPS=OFF
+          -DBUILD_TRANSLATIONS=OFF
+          '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64'
 
     - name: (Linux/macOS) check ccache stats post build
       if: runner.os == 'Linux' || runner.os == 'macOS'

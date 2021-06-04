@@ -36,6 +36,8 @@
 cmake_minimum_required(VERSION 3.3)
 
 if(APPLE)
+  # only useful if compiling on arm64
+  set(CMAKE_OSX_ARCHITECTURES "${ARCHS_STANDARD}")                                           
   # needed for fetching Sparkle
   cmake_minimum_required(VERSION 3.18)
   # minimum supported version by Apple
