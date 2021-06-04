@@ -44,6 +44,9 @@ if [ "${DEPLOY}" = "deploy" ]; then
     else
       mv "${BUILD_DIR}/Mudlet.app" "${BUILD_DIR}/${appBaseName}.app"
     fi
+    
+    echo "Architectures in the binary:"
+    lipo -archs "${appBaseName}.app/Contents/MacOS/mudlet"
 
     ./make-installer.sh "${appBaseName}.app"
 
