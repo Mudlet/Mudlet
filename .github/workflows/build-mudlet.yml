@@ -60,7 +60,7 @@ jobs:
 
     - name: (macOS) Setup XCode that can build universal binaries
       if: runner.os == 'macOS'
-      run: echo "SDKROOT=macosx11.1" >> $GITHUB_ENV
+      run: echo "DEVELOPER_DIR=/Applications/Xcode_12.5.app/Contents/Developer" >> $GITHUB_ENV
 
     - name: (Linux/Windows) Restore Qt cache
       uses: actions/cache@v2.1.6
@@ -151,9 +151,6 @@ jobs:
         eval "$(luarocks path --local --lua-version "5.1")"
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
-
-        # Use latest available XCode
-        echo "DEVELOPER_DIR=/Applications/Xcode_12.4.app/Contents/Developer" >> $GITHUB_ENV
 
     - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
