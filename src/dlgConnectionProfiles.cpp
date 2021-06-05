@@ -2034,6 +2034,8 @@ bool dlgConnectionProfiles::validateProfile()
 {
     bool valid = true;
 
+    validName = true, validPort = true, validUrl = true;
+
     clearNotificationArea();
 
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
@@ -2069,7 +2071,6 @@ bool dlgConnectionProfiles::validateProfile()
             valid = false;
         }
 
-        validName = true;
 
         QString port = port_entry->text().trimmed();
         if (!port.isEmpty() && (port.indexOf(QRegularExpression(QStringLiteral("^\\d+$")), 0) == -1)) {
@@ -2098,8 +2099,6 @@ bool dlgConnectionProfiles::validateProfile()
             validPort = false;
             valid = false;
         }
-
-        validPort = true;
 
 #if defined(QT_NO_SSL)
         port_ssl_tsl->setEnabled(false);
@@ -2165,8 +2164,6 @@ bool dlgConnectionProfiles::validateProfile()
                 valid = false;
             }
         }
-
-        validUrl = true;
 
         if (valid) {
             port_entry->setPalette(mOKPalette);
