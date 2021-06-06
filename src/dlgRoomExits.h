@@ -25,13 +25,17 @@
 
 #include "pre_guard.h"
 #include "ui_room_exits.h"
+#include <QAction>
 #include <QCheckBox>
 #include <QDialog>
+#include <QIcon>
 #include <QPointer>
+#include <QStyledItemDelegate>
 #include "post_guard.h"
 
 class Host;
 class TRoom;
+class dlgRoomExits;
 
 class TExit
 {
@@ -61,14 +65,77 @@ public:
     }
 };
 
+class WeightSpinBoxDelegate : public QStyledItemDelegate
+{
+    Q_OBJECT
+
+public:
+    WeightSpinBoxDelegate(QObject* parent = nullptr);
+
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override;
+    void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override;
+    void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+};
+
+class RoomIdLineEditDelegate : public QStyledItemDelegate
+{
+    Q_OBJECT
+
+public:
+    RoomIdLineEditDelegate(QObject* parent = nullptr);
+
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override;
+    void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override;
+    void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+
+    // We need to keep a pointer to the QLineEditor so we can tweak it whilst
+    // text is being entered into it - as the methods are all marked const we
+    // need to mark our additions as mutable so we can modify them in use:
+    mutable QPointer<QLineEdit> mpEditor;
+    mutable dlgRoomExits* mpDlgRoomExits = nullptr;
+    mutable QTreeWidgetItem* mpItem = nullptr;
+
+    // We also need to access some external (to this class) things which we will
+    // source by looking up our chain of ancestors to the dlgRoomExits instance:
+    mutable QPointer<Host> mpHost;
+
+    // The area ID of the room whose exits we are working on:
+    mutable int mAreaID = 0;
+
+private slots:
+    void slot_specialRoomExitEdited(const QString&);
+};
+
 class dlgRoomExits : public QDialog, public Ui::room_exits
 {
     Q_OBJECT
 
 public:
     Q_DISABLE_COPY(dlgRoomExits)
-    explicit dlgRoomExits(Host*, QWidget* parent = nullptr);
-    void init(int);
+    explicit dlgRoomExits(Host*, const int, QWidget* parent = nullptr);
+    ~dlgRoomExits();
+
+    QSet<QAction*> mAllExitActionsSet;
+    QPointer<Host> getHost() const { return mpHost; }
+    int getAreaID() const { return mAreaID; }
+    void setActionOnExit(QLineEdit*, QAction*);
+    QAction* getActionOnExit(QLineEdit* pExitLineEdit) const;
+    QString generateToolTip(const QString& exitRoomName, const QString& exitAreaName, const bool outOfAreaExit, const int exitRoomWeight) const;
+
+    // These need to be public so they can be accessed from the
+    // RoomIdLineEditDelegate:
+    QString mSpecialExitRoomIdPlaceholder;
+    QString mSpecialExitCommandPlaceholder;
+    QIcon mIcon_invalidExit;
+    QIcon mIcon_inAreaExit;
+    QIcon mIcon_otherAreaExit;
+    QAction* mpAction_noExit = nullptr;
+    QAction* mpAction_invalidExit = nullptr;
+    QAction* mpAction_inAreaExit = nullptr;
+    QAction* mpAction_otherAreaExit = nullptr;
+
 
 public slots:
     void save();
@@ -102,30 +169,41 @@ public slots:
 
 private slots:
     void slot_checkModified();
+    void slot_itemChanged(QTreeWidgetItem*, int);
+
 
 private:
+    void init();
+    void initExit(int direction, int exitId, QLineEdit* exitLineEdit,
+                  QCheckBox* noRoute, QCheckBox* stub,
+                  QRadioButton* none, QRadioButton* open, QRadioButton* closed, QRadioButton* locked,
+                  QSpinBox* weight);
+    TExit* makeExitFromControls(int direction);
+    void setIconAndToolTipsOnSpecialExit(QTreeWidgetItem*, const bool);
+    void normalExitEdited(const QString& roomExitIdText,
+                          QLineEdit* pExit,
+                          QCheckBox* pL, QCheckBox* pS,
+                          QSpinBox* pW,
+                          QRadioButton* pDoorType_none, QRadioButton* pDoorType_open, QRadioButton* pDoorType_closed, QRadioButton* pDoorType_locked,
+                          const QString& invalidExitToolTipText, const QString& noExitToolTipText);
+    void normalStubExitChanged(const int state,
+                               QLineEdit* pExit,
+                               QCheckBox* pL,
+                               QSpinBox* pW,
+                               QRadioButton* pDoorType_none, QRadioButton* pDoorType_open, QRadioButton* pDoorType_closed, QRadioButton* pDoorType_locked,
+                               const QString& noExitToolTipText);
+
+
     QPointer<Host> mpHost;
-    QTreeWidgetItem* mpEditItem;
-    TRoom* pR;
-    int mRoomID;
-    int mEditColumn;
+    QTreeWidgetItem* mpEditItem = nullptr;
+    TRoom* pR = nullptr;
+    int mRoomID = 0;
+    int mAreaID = 0;
+    int mEditColumn = -1;
 
     // key = (normal) exit DIR_***, value = exit class instance
     QMap<int, TExit*> originalExits;
     QMap<QString, TExit*> originalSpecialExits;
-
-    void initExit(int roomId,
-                  int direction,
-                  int exitId,
-                  QLineEdit* exitLineEdit,
-                  QCheckBox* noRoute,
-                  QCheckBox* stub,
-                  QRadioButton* none,
-                  QRadioButton* open,
-                  QRadioButton* closed,
-                  QRadioButton* locked,
-                  QSpinBox* weight);
-    TExit* makeExitFromControls(int direction);
 };
 
 #endif // MUDLET_DLGROOMEXITS_H
