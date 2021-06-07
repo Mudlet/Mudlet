@@ -4012,27 +4012,27 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="252"/>
       <source>Red (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>紅 (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="262"/>
       <source>Green (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>綠 (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="272"/>
       <source>Blue (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>藍 (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="282"/>
       <source>16 + 36 x R + 6 x G + B =</source>
-      <translation type="unfinished"/>
+      <translation>16 + 36 x R + 6 x G + B =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="343"/>
       <source>[16]</source>
-      <translation type="unfinished"/>
+      <translation>[16]</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="353"/>
@@ -4047,7 +4047,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="375"/>
       <source>Gray (0-23)</source>
-      <translation type="unfinished"/>
+      <translation>灰 (0-23)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="382"/>
@@ -4239,7 +4239,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="729"/>
       <source>Auto-reconnect</source>
-      <translation type="unfinished"/>
+      <translation>自動重連</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="732"/>
@@ -5228,7 +5228,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="145"/>
       <source>copy profile</source>
-      <translation type="unfinished"/>
+      <translation>複製配置</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="146"/>
@@ -5606,7 +5606,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="144"/>
       <source>Icon</source>
-      <translation type="unfinished"/>
+      <translation>圖示</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
@@ -5616,17 +5616,17 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="162"/>
       <source>Add icon</source>
-      <translation type="unfinished"/>
+      <translation>新增圖示</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="200"/>
       <source>Short description</source>
-      <translation type="unfinished"/>
+      <translation>簡介</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="220"/>
       <source>Description</source>
-      <translation type="unfinished"/>
+      <translation>詳細資料</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="240"/>
@@ -5641,7 +5641,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="260"/>
       <source>Required packages</source>
-      <translation type="unfinished"/>
+      <translation>必要的套件</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="323"/>
@@ -5712,7 +5712,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="112"/>
       <source>add dependencies</source>
-      <translation type="unfinished"/>
+      <translation>添加依賴</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="157"/>
@@ -5824,7 +5824,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="50"/>
       <source>Package Manager (experimental) - %1</source>
-      <translation type="unfinished"/>
+      <translation>套件管理（實驗）- %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="104"/>
@@ -5925,12 +5925,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="738"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss（如：1970-01-01#00-00-00%1）</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="740"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss（如：1970-01-01T00-00-00%1）</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="741"/>
@@ -6361,12 +6361,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3534"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss（如：1970-01-01#00-00-00.html）</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3535"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss（如：1970-01-01T00-00-00.html）</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3536"/>
@@ -6506,7 +6506,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="216"/>
       <source>(room ID)</source>
       <comment>Placeholder, if no room ID is set for an exit, yet. This string is used in 2 places, ensure they match!</comment>
-      <translation type="unfinished"/>
+      <translation>（房間編號）</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="133"/>
@@ -6805,7 +6805,7 @@ for all of the %n selected room(s):</source>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="202"/>
       <source>Pick color</source>
-      <translation type="unfinished"/>
+      <translation>選擇顏色</translation>
     </message>
   </context>
   <context>
@@ -7842,7 +7842,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2311"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2316"/>
       <source>Command {Down}</source>
-      <translation type="unfinished"/>
+      <translation>指令 {Down}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1654"/>
@@ -7850,13 +7850,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2330"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2335"/>
       <source>Command {Up}</source>
-      <translation type="unfinished"/>
+      <translation>指令 {Up}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1683"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2359"/>
       <source>Action</source>
-      <translation type="unfinished"/>
+      <translation>操作</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1683"/>
@@ -7943,7 +7943,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="53"/>
       <source>index (integer number)</source>
-      <translation type="unfinished"/>
+      <translation>索引（整數）</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="54"/>
@@ -8037,7 +8037,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="53"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>發送到遊戲中的文字（可選）</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="60"/>
@@ -8150,18 +8150,20 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/main.cpp" line="237"/>
       <source>Project home page: http://www.mudlet.org/
 </source>
-      <translation type="unfinished"/>
+      <translation>專案主頁：http://www.mudlet.org/
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="254"/>
       <source>Copyright © 2008-2021  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>版權所有 © 2008-2021 Mudlet 開發人員
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="280"/>
       <source>Version: %1</source>
-      <translation type="unfinished"/>
+      <translation>版本：%1</translation>
     </message>
   </context>
   <context>
@@ -8224,7 +8226,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="213"/>
       <source>IRC</source>
-      <translation type="unfinished"/>
+      <translation>IRC</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="216"/>
@@ -8275,7 +8277,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="321"/>
       <source>Discord help channel</source>
-      <translation type="unfinished"/>
+      <translation>Discord 幫助頻道</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="326"/>
