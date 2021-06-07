@@ -8131,20 +8131,24 @@ less likely to be useful for normal use of this application:
       <location filename="../src/main.cpp" line="255"/>
       <source>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html
 </source>
-      <translation type="unfinished"/>
+      <translation>授權許可 GPLv2+：GNU GPL 第 2 版或更新版本 - http://gnu.org/licenses/gpl.html
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="256"/>
       <source>This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
 </source>
-      <translation type="unfinished"/>
+      <translation>這是自由軟體：您可以自由地變更和重新發布軟體。
+請在法律允許的範圍內使用。
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="236"/>
       <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues
 </source>
-      <translation type="unfinished"/>
+      <translation>錯誤回報：https://github.com/Mudlet/Mudlet/issues
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="237"/>
@@ -8536,127 +8540,127 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="709"/>
       <source>Afrikaans (South Africa)</source>
-      <translation type="unfinished"/>
+      <translation>Afrikaans (South Africa)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="710"/>
       <source>Aragonese</source>
-      <translation type="unfinished"/>
+      <translation>Aragonese</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="711"/>
       <source>Aragonese (Spain)</source>
-      <translation type="unfinished"/>
+      <translation>Aragonese (Spain)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="712"/>
       <source>Arabic</source>
-      <translation type="unfinished"/>
+      <translation>Arabic</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="713"/>
       <source>Arabic (United Arab Emirates)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (United Arab Emirates)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="714"/>
       <source>Arabic (Bahrain)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (Bahrain)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="715"/>
       <source>Arabic (Algeria)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (Algeria)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="717"/>
       <source>Arabic (India)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (India)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="718"/>
       <source>Arabic (Iraq)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (Iraq)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="719"/>
       <source>Arabic (Jordan)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (Jordan)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="720"/>
       <source>Arabic (Kuwait)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (Kuwait)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="721"/>
       <source>Arabic (Lebanon)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (Lebanon)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="722"/>
       <source>Arabic (Libya)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (Libya)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="723"/>
       <source>Arabic (Morocco)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (Morocco)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="724"/>
       <source>Arabic (Oman)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (Oman)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="725"/>
       <source>Arabic (Qatar)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (Qatar)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="726"/>
       <source>Arabic (Saudi Arabia)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (Saudi Arabia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="727"/>
       <source>Arabic (Sudan)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (Sudan)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="728"/>
       <source>Arabic (Syria)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (Syria)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="729"/>
       <source>Arabic (Tunisia)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (Tunisia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="730"/>
       <source>Arabic (Yemen)</source>
-      <translation type="unfinished"/>
+      <translation>Arabic (Yemen)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="731"/>
       <source>Belarusian</source>
-      <translation type="unfinished"/>
+      <translation>Belarusian</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="732"/>
       <source>Belarusian (Belarus)</source>
-      <translation type="unfinished"/>
+      <translation>Belarusian (Belarus)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="733"/>
       <source>Belarusian (Russia)</source>
-      <translation type="unfinished"/>
+      <translation>Belarusian (Russia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="734"/>
       <source>Bulgarian</source>
-      <translation type="unfinished"/>
+      <translation>Bulgarian</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="735"/>
@@ -8701,42 +8705,42 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="743"/>
       <source>Breton (France)</source>
-      <translation type="unfinished"/>
+      <translation>Breton (France)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="744"/>
       <source>Bosnian</source>
-      <translation type="unfinished"/>
+      <translation>Bosnian</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="745"/>
       <source>Bosnian (Bosnia/Herzegovina)</source>
-      <translation type="unfinished"/>
+      <translation>Bosnian (Bosnia/Herzegovina)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="746"/>
       <source>Bosnian (Bosnia/Herzegovina - Cyrillic alphabet)</source>
-      <translation type="unfinished"/>
+      <translation>Bosnian (Bosnia/Herzegovina - Cyrillic alphabet)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="747"/>
       <source>Catalan</source>
-      <translation type="unfinished"/>
+      <translation>Catalan</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="748"/>
       <source>Catalan (Spain)</source>
-      <translation type="unfinished"/>
+      <translation>Catalan (Spain)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="749"/>
       <source>Catalan (Spain - Valencian)</source>
-      <translation type="unfinished"/>
+      <translation>Catalan (Spain - Valencian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="750"/>
       <source>Central Kurdish</source>
-      <translation type="unfinished"/>
+      <translation>Central Kurdish</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="751"/>
@@ -8831,17 +8835,17 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="769"/>
       <source>English (Antigua/Barbuda)</source>
-      <translation type="unfinished"/>
+      <translation>English (Antigua/Barbuda)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="770"/>
       <source>English (Australia)</source>
-      <translation type="unfinished"/>
+      <translation>English (Australia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="772"/>
       <source>English (Bahamas)</source>
-      <translation type="unfinished"/>
+      <translation>English (Bahamas)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="773"/>
@@ -8899,7 +8903,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="775"/>
       <source>English (Canada)</source>
-      <translation type="unfinished"/>
+      <translation>English (Canada)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="776"/>
@@ -8910,12 +8914,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="777"/>
       <source>English (Denmark)</source>
-      <translation type="unfinished"/>
+      <translation>English (Denmark)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="778"/>
       <source>English (United Kingdom)</source>
-      <translation type="unfinished"/>
+      <translation>English (United Kingdom)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="779"/>
@@ -8927,62 +8931,62 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="780"/>
       <source>English (United Kingdom - &apos;ise&apos; not &apos;ize&apos;)</source>
       <comment>This dictionary prefers the British &apos;ise&apos; form over the American &apos;ize&apos; one.</comment>
-      <translation type="unfinished"/>
+      <translation>English (United Kingdom - &apos;ise&apos; not &apos;ize&apos;)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="781"/>
       <source>English (Ghana)</source>
-      <translation type="unfinished"/>
+      <translation>English (Ghana)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="782"/>
       <source>English (Hong Kong SAR China)</source>
-      <translation type="unfinished"/>
+      <translation>English (Hong Kong SAR China)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="783"/>
       <source>English (Ireland)</source>
-      <translation type="unfinished"/>
+      <translation>English (Ireland)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="784"/>
       <source>English (India)</source>
-      <translation type="unfinished"/>
+      <translation>English (India)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="785"/>
       <source>English (Jamaica)</source>
-      <translation type="unfinished"/>
+      <translation>English (Jamaica)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="786"/>
       <source>English (Namibia)</source>
-      <translation type="unfinished"/>
+      <translation>English (Namibia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="787"/>
       <source>English (Nigeria)</source>
-      <translation type="unfinished"/>
+      <translation>English (Nigeria)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="788"/>
       <source>English (New Zealand)</source>
-      <translation type="unfinished"/>
+      <translation>English (New Zealand)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="789"/>
       <source>English (Philippines)</source>
-      <translation type="unfinished"/>
+      <translation>English (Philippines)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="790"/>
       <source>English (Singapore)</source>
-      <translation type="unfinished"/>
+      <translation>English (Singapore)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="791"/>
       <source>English (Trinidad/Tobago)</source>
-      <translation type="unfinished"/>
+      <translation>English (Trinidad/Tobago)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="792"/>
@@ -9128,7 +9132,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="820"/>
       <source>Basque</source>
-      <translation type="unfinished"/>
+      <translation>Basque</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="821"/>
@@ -9389,7 +9393,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="872"/>
       <source>Dutch (Netherlands Antilles)</source>
-      <translation type="unfinished"/>
+      <translation>Dutch (Netherlands Antilles)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="873"/>
@@ -9404,7 +9408,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="875"/>
       <source>Dutch (Netherlands)</source>
-      <translation type="unfinished"/>
+      <translation>Dutch (Netherlands)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="876"/>
@@ -9676,7 +9680,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="929"/>
       <source>Turkmen (Turkmenistan)</source>
-      <translation type="unfinished"/>
+      <translation>Turkmen (Turkmenistan)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="930"/>
@@ -9691,102 +9695,102 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="932"/>
       <source>Tswana (South Africa)</source>
-      <translation type="unfinished"/>
+      <translation>Tswana (South Africa)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="933"/>
       <source>Tsonga</source>
-      <translation type="unfinished"/>
+      <translation>Tsonga</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="934"/>
       <source>Tsonga (South Africa)</source>
-      <translation type="unfinished"/>
+      <translation>Tsonga (South Africa)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="935"/>
       <source>Ukrainian</source>
-      <translation type="unfinished"/>
+      <translation>Ukrainian</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="936"/>
       <source>Ukrainian (Ukraine)</source>
-      <translation type="unfinished"/>
+      <translation>Ukrainian (Ukraine)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="937"/>
       <source>Uzbek</source>
-      <translation type="unfinished"/>
+      <translation>Uzbek</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="938"/>
       <source>Uzbek (Uzbekistan)</source>
-      <translation type="unfinished"/>
+      <translation>Uzbek (Uzbekistan)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="939"/>
       <source>Venda</source>
-      <translation type="unfinished"/>
+      <translation>Venda</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="940"/>
       <source>Vietnamese</source>
-      <translation type="unfinished"/>
+      <translation>Vietnamese</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="941"/>
       <source>Vietnamese (Vietnam)</source>
-      <translation type="unfinished"/>
+      <translation>Vietnamese (Vietnam)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="942"/>
       <source>Vietnamese (DauCu varient - old-style diacritics)</source>
-      <translation type="unfinished"/>
+      <translation>Vietnamese (DauCu varient - old-style diacritics)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="943"/>
       <source>Vietnamese (DauMoi varient - new-style diacritics)</source>
-      <translation type="unfinished"/>
+      <translation>Vietnamese (DauMoi varient - new-style diacritics)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="944"/>
       <source>Walloon</source>
-      <translation type="unfinished"/>
+      <translation>Walloon</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="945"/>
       <source>Xhosa</source>
-      <translation type="unfinished"/>
+      <translation>Xhosa</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="946"/>
       <source>Yiddish</source>
-      <translation type="unfinished"/>
+      <translation>Yiddish</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="947"/>
       <source>Chinese</source>
-      <translation type="unfinished"/>
+      <translation>Chinese</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="948"/>
       <source>Chinese (China - simplified)</source>
-      <translation type="unfinished"/>
+      <translation>Chinese (China - simplified)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="949"/>
       <source>Chinese (Taiwan - traditional)</source>
-      <translation type="unfinished"/>
+      <translation>Chinese (Taiwan - traditional)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="950"/>
       <source>Zulu</source>
-      <translation type="unfinished"/>
+      <translation>Zulu</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4345"/>
       <source>Hide tray icon</source>
-      <translation type="unfinished"/>
+      <translation>隱藏系統匣圖示</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4350"/>
@@ -9819,12 +9823,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="399"/>
       <source>Open Discord</source>
-      <translation type="unfinished"/>
+      <translation>開啟 Discord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="404"/>
       <source>Open IRC</source>
-      <translation type="unfinished"/>
+      <translation>開啟 IRC</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="347"/>
@@ -9990,7 +9994,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="958"/>
       <source>ISO 8859-1 (Western European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-1 (Western European)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="959"/>
