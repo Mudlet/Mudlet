@@ -5798,7 +5798,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1000"/>
       <source>Export cancelled.</source>
-      <translation type="unfinished"/>
+      <translation>已取消匯出</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1412"/>
@@ -5845,7 +5845,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="175"/>
       <source>Author</source>
-      <translation type="unfinished"/>
+      <translation>作者</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="175"/>
@@ -5866,7 +5866,9 @@ Count</source>
       <location filename="../src/dlgPackageManager.cpp" line="246"/>
       <source>Remove packages</source>
       <comment>Button in package manager to remove selected package(s)</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>移除套件</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -10341,12 +10343,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager.ui" line="203"/>
       <source>Install new package</source>
-      <translation type="unfinished"/>
+      <translation>安裝套件</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="219"/>
       <source>Remove packages</source>
-      <translation type="unfinished"/>
+      <translation>移除套件</translation>
     </message>
   </context>
   <context>
