@@ -1576,7 +1576,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1101"/>
       <source>N:%1 S:%2</source>
       <comment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</comment>
-      <translation type="unfinished"/>
+      <translation>N:%1 S:%2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1108"/>
@@ -1771,7 +1771,8 @@ Tried these locations:
       <location filename="../src/TMap.cpp" line="187"/>
       <source>[MAP ERROR:]%1
 </source>
-      <translation type="unfinished"/>
+      <translation>[MAP ERROR:]%1
+</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="48"/>
