@@ -10345,7 +10345,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager.ui" line="122"/>
       <source>Details</source>
-      <translation type="unfinished"/>
+      <translation>詳細資訊</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="203"/>
@@ -11697,7 +11697,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2597"/>
       <source>6667</source>
-      <translation type="unfinished"/>
+      <translation>6667</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3338"/>
@@ -11732,7 +11732,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3150"/>
       <source>Connect to the game via proxy</source>
-      <translation type="unfinished"/>
+      <translation>透過代理伺服器連線到遊戲</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3165"/>
@@ -11752,7 +11752,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3201"/>
       <source>username (optional)</source>
-      <translation type="unfinished"/>
+      <translation>帳號（選填）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3211"/>
@@ -11762,7 +11762,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3217"/>
       <source>password (optional)</source>
-      <translation type="unfinished"/>
+      <translation>密碼（選填）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3436"/>
