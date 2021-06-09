@@ -2415,7 +2415,7 @@ void TTextEdit::slot_changeDebugShowAllProblemCodepoints(const bool state)
     }
 }
 
-void TTextEdit::slot_mouseAction(QString uniqueName)
+void TTextEdit::slot_mouseAction(const QString &uniqueName)
 {
     TEvent event {};
     QStringList mouseEvent = mpHost->mConsoleActions[uniqueName];

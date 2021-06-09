@@ -126,7 +126,7 @@ public slots:
     void slot_analyseSelection();
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
     void slot_changeDebugShowAllProblemCodepoints(const bool);
-    void slot_mouseAction(QString);
+    void slot_mouseAction(const QString&);
 
 private slots:
     void slot_copySelectionToClipboardImage();
