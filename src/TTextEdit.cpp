@@ -1369,7 +1369,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
         // Add user actions
         QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
-        QSignalMapper* mapper = new QSignalMapper(this);
+        auto mapper = new QSignalMapper(this);
         while (it.hasNext()) {
             it.next();
             QStringList actionInfo = it.value();
