@@ -1370,7 +1370,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         // Add user actions
         QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
         QSignalMapper* mapper = new QSignalMapper(this);
-        while(it.hasNext()) {
+        while (it.hasNext()) {
             it.next();
             QStringList actionInfo = it.value();
             QAction * action = new QAction(actionInfo[1], this);
@@ -2419,12 +2419,12 @@ void TTextEdit::slot_mouseAction(const QString &uniqueName)
 {
     TEvent event {};
     QStringList mouseEvent = mpHost->mConsoleActions[uniqueName];
-    event.mArgumentList.append( mouseEvent[0] );
+    event.mArgumentList.append(mouseEvent[0]);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append( uniqueName );
+    event.mArgumentList.append(uniqueName);
 
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append( mpConsole->mConsoleName);
+    event.mArgumentList.append(mpConsole->mConsoleName);
 
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(mPA.x()));
@@ -2435,7 +2435,7 @@ void TTextEdit::slot_mouseAction(const QString &uniqueName)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     event.mArgumentList.append(QString::number(mPB.y()));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mpHost->raiseEvent( event );
+    mpHost->raiseEvent(event);
 }
 
 // Originally this was going to be part of the destructor - but it was unable
