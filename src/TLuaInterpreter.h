@@ -607,6 +607,9 @@ public:
     static int getProfileTabNumber(lua_State*);
     static int addFileWatch(lua_State*);
     static int removeFileWatch(lua_State*);
+    static int addMouseEvent(lua_State* L);
+    static int removeMouseEvent(lua_State* L);
+    static int getMouseEvents(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
 

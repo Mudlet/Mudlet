@@ -13830,6 +13830,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getProfileTabNumber", TLuaInterpreter::getProfileTabNumber);
     lua_register(pGlobalLua, "addFileWatch", TLuaInterpreter::addFileWatch);
     lua_register(pGlobalLua, "removeFileWatch", TLuaInterpreter::removeFileWatch);
+    lua_register(pGlobalLua, "addMouseEvent", TLuaInterpreter::addMouseEvent);
+    lua_register(pGlobalLua, "removeMouseEvent", TLuaInterpreter::removeMouseEvent);
+    lua_register(pGlobalLua, "getMouseEvents", TLuaInterpreter::getMouseEvents);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -15620,5 +15623,52 @@ int TLuaInterpreter::removeFileWatch(lua_State * L)
     auto& host = getHostFromLua(L);
 
     lua_pushboolean(L, host.getLuaInterpreter()->mpFileSystemWatcher->removePath(path));
+    return 1;
+}
+
+int TLuaInterpreter::addMouseEvent(lua_State * L)
+{
+    QStringList actionInfo;
+    QString uniqueName = getVerifiedString(L, __func__, 1, "uniquename");
+    actionInfo << getVerifiedString(L, __func__, 2, "event name");
+
+    // Display name
+    if (!lua_isstring(L, 3)) {
+        actionInfo << uniqueName;
+    } else {
+        actionInfo << lua_tostring(L, 3);
+    }
+
+    Host& host = getHostFromLua(L);
+    host.mConsoleActions.insert(uniqueName, actionInfo);
+    return 0;
+}
+
+int TLuaInterpreter::removeMouseEvent(lua_State * L)
+{
+    QString displayName = getVerifiedString(L, __func__, 1, "event name");
+    Host& host = getHostFromLua(L);
+    host.mConsoleActions.remove(displayName);
+    return 0;
+}
+
+int TLuaInterpreter::getMouseEvents(lua_State * L)
+{
+    Host& host = getHostFromLua(L);
+    // create the result table
+    lua_newtable(L);
+    QMapIterator<QString, QStringList> it(host.mConsoleActions);
+    while (it.hasNext()) {
+        it.next();
+        QStringList eventInfo = it.value();
+        lua_createtable(L, 0, 3);
+        lua_pushstring(L, eventInfo.at(0).toUtf8().constData());
+        lua_setfield(L, -2, "event name");
+        lua_pushstring(L, eventInfo.at(1).toUtf8().constData());
+        lua_setfield(L, -2, "display name");
+
+        // Add the mapEvent object to the result table
+        lua_setfield(L, -2, it.key().toUtf8().constData());
+    }
     return 1;
 }
