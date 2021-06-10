@@ -416,7 +416,7 @@ private:
     void autoSave();
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
     void key_grab_callback(const Qt::Key, const Qt::KeyboardModifiers);
-
+    void setShortcuts(const bool unsetInstead = false);
 
     QToolBar* toolBar;
     QToolBar* toolBar2;
