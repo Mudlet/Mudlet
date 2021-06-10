@@ -1369,14 +1369,12 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
         // Add user actions
         QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
-        auto mapper = new QSignalMapper(this);
         while (it.hasNext()) {
             it.next();
             QStringList actionInfo = it.value();
             QString actionName = actionInfo[1];
             QAction * action = new QAction(actionInfo[1], this);
             popup->addAction(action);
-            mapper->setMapping(action, it.key());
             connect(action, &QAction::triggered, this, [this, actionName] { slot_mouseAction(actionName); });
         }
         popup->popup(mapToGlobal(event->pos()), action);
