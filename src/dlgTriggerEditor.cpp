@@ -8357,36 +8357,28 @@ void dlgTriggerEditor::resizeEvent(QResizeEvent* event)
 void dlgTriggerEditor::slot_key_grab()
 {
     mIsGrabKey = true;
-    unsetShortcuts();
+    setShortcuts(true);
     QCoreApplication::instance()->installEventFilter(this);
 }
 
-void dlgTriggerEditor::setShortcuts()
+/* private void setShortcuts(const bool unsetInstead = false); */
+void dlgTriggerEditor::setShortcuts(const bool unsetInstead)
 {
-    /* Activate shortcuts for editor menu items like Ctrl+S for "Save Item" etc */
-    /* TODO: Refactor into nice array to iterate in both un- and setShortcuts() */
+    /* Activate shortcuts for editor menu items like Ctrl+S for "Save Item" etc. */
+    /* Deactivate instead with optional "true" - useful to grab for a keybinding */
+    /* TODO: Refactor into nice array to iterate */
     QList<QAction*> actionList = toolBar->actions();
+    QString shortcut;
     for (auto& action : actionList) {
-        if (action->text() == "Save Item") {
-            action->setShortcut(tr("Ctrl+S"));
-        } else if (action->text() == "Save Profile") {
-            action->setShortcut(tr("Ctrl+Shift+S"));
+        switch (action->text()) {
+          case "Save Item": /* Not sure why, but this seems to work without tr() */
+            shortcut = (unsetInstead) ? tr("") : tr("Ctrl+S");
+            break;
+          case "Save Profile":
+            shortcut = (unsetInstead) ? tr("") : tr("Ctrl+Shift+S");
+            break;
         }
-    }
-}
-
-void dlgTriggerEditor::unsetShortcuts()
-{
-    /* Temporarily disabling the existing shortcuts for editor menu items like Ctrl+S etc.
-       This will allow binding them for macros until key was input or canceled with Escape */
-    /* TODO: Refactor into nice array to iterate in both un- and setShortcuts() */
-    QList<QAction*> actionList = toolBar->actions();
-    for (auto& action : actionList) {
-        if (action->text() == "Save Item") {
-            action->setShortcut(tr(""));
-        } else if (action->text() == "Save Profile") {
-            action->setShortcut(tr(""));
-        }
+        action->setShortcut(shortcut);
     }
 }
 
