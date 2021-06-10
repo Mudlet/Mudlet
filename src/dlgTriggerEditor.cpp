@@ -8369,7 +8369,6 @@ void dlgTriggerEditor::slot_key_grab()
     QCoreApplication::instance()->installEventFilter(this);
 }
 
-/* private void setShortcuts(const bool unsetInstead = false); */
 void dlgTriggerEditor::setShortcuts(const bool unsetInstead)
 {
     /* Activate shortcuts for editor menu items like Ctrl+S for "Save Item" etc. */
