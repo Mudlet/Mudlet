@@ -15641,7 +15641,7 @@ int TLuaInterpreter::addMouseEvent(lua_State * L)
 
     Host& host = getHostFromLua(L);
     host.mConsoleActions.insert(uniqueName, actionInfo);
-    return 0;
+    return 1;
 }
 
 int TLuaInterpreter::removeMouseEvent(lua_State * L)
@@ -15649,7 +15649,7 @@ int TLuaInterpreter::removeMouseEvent(lua_State * L)
     QString displayName = getVerifiedString(L, __func__, 1, "event name");
     Host& host = getHostFromLua(L);
     host.mConsoleActions.remove(displayName);
-    return 0;
+    return 1;
 }
 
 int TLuaInterpreter::getMouseEvents(lua_State * L)

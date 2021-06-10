@@ -1373,13 +1373,12 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         while (it.hasNext()) {
             it.next();
             QStringList actionInfo = it.value();
+            QString actionName = actionInfo[1];
             QAction * action = new QAction(actionInfo[1], this);
             popup->addAction(action);
             mapper->setMapping(action, it.key());
-            connect(action, SIGNAL(triggered()), mapper, SLOT(map()));
+            connect(action, &QAction::triggered, this, [this, actionName] { slot_mouseAction(actionName); });
         }
-        connect(mapper, SIGNAL(mapped(QString)), this, SLOT(slot_mouseAction(QString)));
-
         popup->popup(mapToGlobal(event->pos()), action);
         event->accept();
         return;
