@@ -421,23 +421,17 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     viewTriggerAction->setStatusTip(tr("Show Triggers"));
     connect(viewTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_triggers);
 
-    QAction* viewActionAction = new QAction(QIcon(QStringLiteral(":/icons/bookmarks.png")), tr("Buttons"), this);
-    viewActionAction->setStatusTip(tr("Show Buttons"));
-    connect(viewActionAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_actions);
-
-
     QAction* viewAliasAction = new QAction(QIcon(QStringLiteral(":/icons/system-users.png")), tr("Aliases"), this);
     viewAliasAction->setStatusTip(tr("Show Aliases"));
     connect(viewAliasAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_aliases);
 
+    QAction* viewScriptsAction = new QAction(QIcon(QStringLiteral(":/icons/document-properties.png")), tr("Scripts"), this);
+    viewScriptsAction->setStatusTip(tr("Show Scripts"));
+    connect(viewScriptsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_scripts);
 
     QAction* showTimersAction = new QAction(QIcon(QStringLiteral(":/icons/chronometer.png")), tr("Timers"), this);
     showTimersAction->setStatusTip(tr("Show Timers"));
     connect(showTimersAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_timers);
-
-    QAction* viewScriptsAction = new QAction(QIcon(QStringLiteral(":/icons/document-properties.png")), tr("Scripts"), this);
-    viewScriptsAction->setStatusTip(tr("Show Scripts"));
-    connect(viewScriptsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_scripts);
 
     QAction* viewKeysAction = new QAction(QIcon(QStringLiteral(":/icons/preferences-desktop-keyboard.png")), tr("Keys"), this);
     viewKeysAction->setStatusTip(tr("Show Keybindings"));
@@ -446,6 +440,25 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QAction* viewVarsAction = new QAction(QIcon(QStringLiteral(":/icons/variables.png")), tr("Variables"), this);
     viewVarsAction->setStatusTip(tr("Show Variables"));
     connect(viewVarsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_vars);
+
+    QAction* viewActionAction = new QAction(QIcon(QStringLiteral(":/icons/bookmarks.png")), tr("Buttons"), this);
+    viewActionAction->setStatusTip(tr("Show Buttons"));
+    connect(viewActionAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_actions);
+
+
+    QAction* viewErrorsAction = new QAction(QIcon(QStringLiteral(":/icons/errors.png")), tr("Errors"), this);
+    viewErrorsAction->setStatusTip(tr("Shows/Hides the errors console in the bottom right of this editor."));
+    connect(viewErrorsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewErrorsAction);
+
+    QAction* viewStatsAction = new QAction(QIcon(QStringLiteral(":/icons/view-statistics.png")), tr("Statistics"), this);
+    viewStatsAction->setStatusTip(tr("Generates a statistics summary display on the main profile console."));
+    connect(viewStatsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewStatsAction);
+
+    QAction* showDebugAreaAction = new QAction(QIcon(QStringLiteral(":/icons/tools-report-bug.png")), tr("Debug"), this);
+    showDebugAreaAction->setToolTip(tr("Activates Debug Messages -> system will be <b><i>slower</i></b>."));
+    showDebugAreaAction->setStatusTip(tr("Shows/Hides the separate Central Debug Console - when being displayed the system will be slower."));
+    connect(showDebugAreaAction, &QAction::triggered, this, &dlgTriggerEditor::slot_debug_mode);
+
 
     QAction* toggleActiveAction = new QAction(QIcon(QStringLiteral(":/icons/document-encrypt.png")), tr("Activate"), this);
     toggleActiveAction->setStatusTip(tr("Toggle Active or Non-Active Mode for Triggers, Scripts etc."));
@@ -534,19 +547,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mProfileSaveAsAction = new QAction(QIcon(QStringLiteral(":/icons/utilities-file-archiver.png")), tr("Save Profile As"), this);
     mProfileSaveAsAction->setEnabled(true);
     connect(mProfileSaveAsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAsAction);
-
-    QAction* viewStatsAction = new QAction(QIcon(QStringLiteral(":/icons/view-statistics.png")), tr("Statistics"), this);
-    viewStatsAction->setStatusTip(tr("Generates a statistics summary display on the main profile console."));
-    connect(viewStatsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewStatsAction);
-
-    QAction* viewErrorsAction = new QAction(QIcon(QStringLiteral(":/icons/errors.png")), tr("Errors"), this);
-    viewErrorsAction->setStatusTip(tr("Shows/Hides the errors console in the bottom right of this editor."));
-    connect(viewErrorsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewErrorsAction);
-
-    QAction* showDebugAreaAction = new QAction(QIcon(QStringLiteral(":/icons/tools-report-bug.png")), tr("Debug"), this);
-    showDebugAreaAction->setToolTip(tr("Activates Debug Messages -> system will be <b><i>slower</i></b>."));
-    showDebugAreaAction->setStatusTip(tr("Shows/Hides the separate Central Debug Console - when being displayed the system will be slower."));
-    connect(showDebugAreaAction, &QAction::triggered, this, &dlgTriggerEditor::slot_debug_mode);
 
     auto *nextSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab), this);
     QObject::connect(nextSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_next_section);
