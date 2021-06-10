@@ -8960,7 +8960,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="456"/>
       <source>Package Exporter (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>包导出器 (实验性)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="478"/>
