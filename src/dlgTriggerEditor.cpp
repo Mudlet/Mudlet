@@ -8313,17 +8313,10 @@ bool dlgTriggerEditor::event(QEvent* event)
     if (mIsGrabKey) {
         if (event->type() == QEvent::KeyPress) {
             auto * ke = static_cast<QKeyEvent*>(event);
-            QList<QAction*> actionList = toolBar->actions();
             switch (ke->key()) {
             case Qt::Key_Escape:
                 mIsGrabKey = false;
-                for (auto& action : actionList) {
-                    if (action->text() == "Save Item") {
-                        action->setShortcut(tr("Ctrl+S"));
-                    } else if (action->text() == "Save Profile") {
-                        action->setShortcut(tr("Ctrl+Shift+S"));
-                    }
-                }
+                setShortcuts();
                 QCoreApplication::instance()->removeEventFilter(this);
                 ke->accept();
                 return true;
@@ -8342,13 +8335,7 @@ bool dlgTriggerEditor::event(QEvent* event)
             default:
                 key_grab_callback(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()));
                 mIsGrabKey = false;
-                for (auto& action : actionList) {
-                    if (action->text() == "Save Item") {
-                        action->setShortcut(tr("Ctrl+S"));
-                    } else if (action->text() == "Save Profile") {
-                        action->setShortcut(tr("Ctrl+Shift+S"));
-                    }
-                }
+                setShortcuts();
                 QCoreApplication::instance()->removeEventFilter(this);
                 ke->accept();
                 return true;
@@ -8370,6 +8357,29 @@ void dlgTriggerEditor::resizeEvent(QResizeEvent* event)
 void dlgTriggerEditor::slot_key_grab()
 {
     mIsGrabKey = true;
+    unsetShortcuts();
+    QCoreApplication::instance()->installEventFilter(this);
+}
+
+void dlgTriggerEditor::setShortcuts()
+{
+    /* Activate shortcuts for editor menu items like Ctrl+S for "Save Item" etc */
+    /* TODO: Refactor into nice array to iterate in both un- and setShortcuts() */
+    QList<QAction*> actionList = toolBar->actions();
+    for (auto& action : actionList) {
+        if (action->text() == "Save Item") {
+            action->setShortcut(tr("Ctrl+S"));
+        } else if (action->text() == "Save Profile") {
+            action->setShortcut(tr("Ctrl+Shift+S"));
+        }
+    }
+}
+
+void dlgTriggerEditor::unsetShortcuts()
+{
+    /* Temporarily disabling the existing shortcuts for editor menu items like Ctrl+S etc.
+       This will allow binding them for macros until key was input or canceled with Escape */
+    /* TODO: Refactor into nice array to iterate in both un- and setShortcuts() */
     QList<QAction*> actionList = toolBar->actions();
     for (auto& action : actionList) {
         if (action->text() == "Save Item") {
@@ -8378,7 +8388,6 @@ void dlgTriggerEditor::slot_key_grab()
             action->setShortcut(tr(""));
         }
     }
-    QCoreApplication::instance()->installEventFilter(this);
 }
 
 void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardModifiers modifier)
