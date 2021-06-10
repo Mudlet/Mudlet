@@ -1814,7 +1814,9 @@ better off starting again...</source>
       <source>[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:
 %1; the file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[警报] - 未能加载Mudlet JSON 地图文件， 原因：
+%1; 文件:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1509"/>
@@ -2036,13 +2038,14 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="1047"/>
       <source>[ WARN ]  - Saving map in format version &quot;%1&quot; different from the
 recommended map version %2 for this version of Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>[注意] - 保存地图的格式版本 &quot;%1&quot; 与Mudlet这个版本的
+推荐地图版本 %2 不同。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1385"/>
       <location filename="../src/TMap.cpp" line="1832"/>
       <source>[ ERROR ] - Unable to open map file for reading: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[错误] - 无法打开(读取) 地图文件: &quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1407"/>
@@ -2061,7 +2064,7 @@ Mudlet can handle (%2)! The file is:
     <message>
       <location filename="../src/TMap.cpp" line="1429"/>
       <source>[ INFO ]  - You will need to update your Mudlet to read the map file.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 你需要更新你的Mudlet来读取地图文件。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1438"/>
@@ -5656,7 +5659,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
       <source>Package Exporter (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>包导出器 (实验性)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="162"/>
@@ -5871,7 +5874,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="50"/>
       <source>Package Manager (experimental) - %1</source>
-      <translation type="unfinished"/>
+      <translation>包管理器 (实验性) - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="104"/>
@@ -7298,7 +7301,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3476"/>
       <source>New variable name</source>
-      <translation type="unfinished"/>
+      <translation>新变量名称</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3526"/>
