@@ -8368,17 +8368,15 @@ void dlgTriggerEditor::setShortcuts(const bool unsetInstead)
     /* Deactivate instead with optional "true" - useful to grab for a keybinding */
     /* TODO: Refactor into nice array to iterate */
     QList<QAction*> actionList = toolBar->actions();
-    QString shortcut;
     for (auto& action : actionList) {
         switch (action->text()) {
           case "Save Item": /* Not sure why, but this seems to work without tr() */
-            shortcut = (unsetInstead) ? tr("") : tr("Ctrl+S");
+            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+S"));
             break;
           case "Save Profile":
-            shortcut = (unsetInstead) ? tr("") : tr("Ctrl+Shift+S");
+            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+Shift+S"));
             break;
         }
-        action->setShortcut(shortcut);
     }
 }
 
