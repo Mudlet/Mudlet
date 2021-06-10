@@ -475,7 +475,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(addFolderAction, &QAction::triggered, this, &dlgTriggerEditor::slot_add_new_folder);
 
     QAction* saveAction = new QAction(QIcon(QStringLiteral(":/icons/document-save-as.png")), tr("Save Item"), this);
-    saveAction->setShortcut(tr("Ctrl+S"));
     saveAction->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
                                    .arg(tr("Saves the selected item. (Ctrl+S)</p>Saving causes any changes to the item to take effect.\nIt will not save to disk, "
                                            "so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)")));
@@ -525,7 +524,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mProfileSaveAction = new QAction(QIcon(QStringLiteral(":/icons/document-save-all.png")), tr("Save Profile"), this);
     mProfileSaveAction->setEnabled(true);
-    mProfileSaveAction->setShortcut(tr("Ctrl+Shift+S"));
     mProfileSaveAction->setToolTip(
             QStringLiteral("<html><head/><body><p>%1</p></body></html>")
                     .arg(tr(R"(Saves your profile. (Ctrl+Shift+S)<p>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.</p><p>It also makes a backup of your profile, you can load an older version of it when connecting.</p><p>Should there be any modules that are marked to be "<i>synced</i>" this will also cause them to be saved and reloaded into other profiles if they too are active.)")));
@@ -614,6 +612,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
     QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar);
+    setShortcuts();
 
     auto config = mpSourceEditorEdbee->config();
     config->beginChanges();
