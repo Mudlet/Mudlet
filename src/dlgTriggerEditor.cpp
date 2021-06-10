@@ -8378,13 +8378,47 @@ void dlgTriggerEditor::setShortcuts(const bool unsetInstead)
     QList<QAction*> actionList = toolBar->actions();
     for (auto& action : actionList) {
         switch (action->text()) {
-          case "Save Item": /* Not sure why, but this seems to work without tr() */
-            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+S"));
-            break;
-          case "Save Profile":
-            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+Shift+S"));
-            break;
+            case "Save Item": /* Not sure why, but this seems to work without tr() */
+                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+S"));
+                break;
+            case "Save Profile":
+                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+Shift+S"));
+                break;
         }
+    }
+    actionList = toolBar2->actions();
+    for (auto& action : actionList) {
+        switch (action->text()) {
+            case "Triggers":
+                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+1"));
+                break;
+            case "Aliases":
+                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+2"));
+                break;
+            case "Scripts":
+                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+3"));
+                break;
+            case "Timers":
+                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+4"));
+                break;
+            case "Keys":
+                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+5"));
+                break;
+            case "Variables":
+                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+6"));
+                break;
+            case "Buttons":
+                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+7"));
+                break;
+            case "Errors":
+                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+8"));
+                break;
+            case "Statistics":
+                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+9"));
+                break;
+            case "Debug":
+                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+0"));
+                break;
     }
 }
 
