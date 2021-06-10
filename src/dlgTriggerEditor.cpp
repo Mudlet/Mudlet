@@ -419,44 +419,53 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     QAction* viewTriggerAction = new QAction(QIcon(QStringLiteral(":/icons/tools-wizard.png")), tr("Triggers"), this);
     viewTriggerAction->setStatusTip(tr("Show Triggers"));
+    viewTriggerAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Show Triggers"), tr("Ctrl+1"))
     connect(viewTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_triggers);
 
     QAction* viewAliasAction = new QAction(QIcon(QStringLiteral(":/icons/system-users.png")), tr("Aliases"), this);
     viewAliasAction->setStatusTip(tr("Show Aliases"));
+    viewTriggerAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Show Aliases"), tr("Ctrl+2"))
     connect(viewAliasAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_aliases);
 
     QAction* viewScriptsAction = new QAction(QIcon(QStringLiteral(":/icons/document-properties.png")), tr("Scripts"), this);
     viewScriptsAction->setStatusTip(tr("Show Scripts"));
+    viewTriggerAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Show Scripts"), tr("Ctrl+3"))
     connect(viewScriptsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_scripts);
 
     QAction* showTimersAction = new QAction(QIcon(QStringLiteral(":/icons/chronometer.png")), tr("Timers"), this);
     showTimersAction->setStatusTip(tr("Show Timers"));
+    viewTriggerAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Show Timers"), tr("Ctrl+4"))
     connect(showTimersAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_timers);
 
     QAction* viewKeysAction = new QAction(QIcon(QStringLiteral(":/icons/preferences-desktop-keyboard.png")), tr("Keys"), this);
     viewKeysAction->setStatusTip(tr("Show Keybindings"));
+    viewTriggerAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Show Keybindings"), tr("Ctrl+5"))
     connect(viewKeysAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_keys);
 
     QAction* viewVarsAction = new QAction(QIcon(QStringLiteral(":/icons/variables.png")), tr("Variables"), this);
     viewVarsAction->setStatusTip(tr("Show Variables"));
+    viewTriggerAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Show Variables"), tr("Ctrl+6"))
     connect(viewVarsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_vars);
 
     QAction* viewActionAction = new QAction(QIcon(QStringLiteral(":/icons/bookmarks.png")), tr("Buttons"), this);
     viewActionAction->setStatusTip(tr("Show Buttons"));
+    viewTriggerAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Show Buttons"), tr("Ctrl+7"))
     connect(viewActionAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_actions);
 
 
     QAction* viewErrorsAction = new QAction(QIcon(QStringLiteral(":/icons/errors.png")), tr("Errors"), this);
-    viewErrorsAction->setStatusTip(tr("Shows/Hides the errors console in the bottom right of this editor."));
+    viewErrorsAction->setStatusTip(tr("Show/Hide the errors console in the bottom right of this editor."));
+    viewTriggerAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Show/Hide errors console"), tr("Ctrl+8"))
     connect(viewErrorsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewErrorsAction);
 
     QAction* viewStatsAction = new QAction(QIcon(QStringLiteral(":/icons/view-statistics.png")), tr("Statistics"), this);
-    viewStatsAction->setStatusTip(tr("Generates a statistics summary display on the main profile console."));
+    viewStatsAction->setStatusTip(tr("Generate a statistics summary display on the main profile console."));
+    viewTriggerAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Generate statistics"), tr("Ctrl+9"))
     connect(viewStatsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewStatsAction);
 
     QAction* showDebugAreaAction = new QAction(QIcon(QStringLiteral(":/icons/tools-report-bug.png")), tr("Debug"), this);
-    showDebugAreaAction->setToolTip(tr("Activates Debug Messages -> system will be <b><i>slower</i></b>."));
-    showDebugAreaAction->setStatusTip(tr("Shows/Hides the separate Central Debug Console - when being displayed the system will be slower."));
+    showDebugAreaAction->setStatusTip(tr("Show/Hide the separate Central Debug Console - when being displayed the system will be slower."));
+    showDebugAreaAction->setToolTip(tr("Show/Hide Debug Console (Ctrl+0) -> system will be <b><i>slower</i></b>."));
     connect(showDebugAreaAction, &QAction::triggered, this, &dlgTriggerEditor::slot_debug_mode);
 
 
