@@ -8375,49 +8375,39 @@ void dlgTriggerEditor::setShortcuts(const bool unsetInstead)
     /* Deactivate instead with optional "true" - useful to grab for a keybinding */
     /* TODO: Refactor into nice array to iterate */
     QList<QAction*> actionList = toolBar->actions();
+    QString actionText;
     for (auto& action : actionList) {
-        switch (action->text()) {
-            case "Save Item": /* Not sure why, but this seems to work without tr() */
-                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+S"));
-                break;
-            case "Save Profile":
-                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+Shift+S"));
-                break;
+        actionText = action->text();
+        if (actionText == "Save Item") { /* Not sure why, but this seems to work without tr() */
+            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+S"));
+        } else if (actionText == "Save Profile") {
+            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+Shift+S"));
         }
     }
     actionList = toolBar2->actions();
     for (auto& action : actionList) {
-        switch (action->text()) {
-            case "Triggers":
-                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+1"));
-                break;
-            case "Aliases":
-                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+2"));
-                break;
-            case "Scripts":
-                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+3"));
-                break;
-            case "Timers":
-                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+4"));
-                break;
-            case "Keys":
-                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+5"));
-                break;
-            case "Variables":
-                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+6"));
-                break;
-            case "Buttons":
-                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+7"));
-                break;
-            case "Errors":
-                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+8"));
-                break;
-            case "Statistics":
-                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+9"));
-                break;
-            case "Debug":
-                action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+0"));
-                break;
+        actionText = action->text();
+        if (actionText == "Triggers") {
+            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+1"));
+        } else if (actionText == "Aliases") {
+            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+2"));
+        } else if (actionText == "Scripts") {
+            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+3"));
+        } else if (actionText == "Timers") {
+            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+4"));
+        } else if (actionText == "Keys") {
+            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+5"));
+        } else if (actionText == "Variables") {
+            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+6"));
+        } else if (actionText == "Buttons") {
+            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+7"));
+        } else if (actionText == "Errors") {
+            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+8"));
+        } else if (actionText == "Statistics") {
+            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+9"));
+        } else if (actionText == "Debug") {
+            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+0"));
+        }
     }
 }
 
