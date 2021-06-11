@@ -17,7 +17,7 @@ jobs:
       matrix:
         include:
           # oldest OS supported for maximum compatibility of built AppImage
-          - os: ubuntu-16.04
+          - os: ubuntu-18.04
             buildname: 'ubuntu / gcc'
             triplet: x64-linux
             compiler: gcc_64
@@ -144,8 +144,6 @@ jobs:
     - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
       run: |
-        # workaround to install libzip-dev in Github Actions
-        sudo apt-add-repository "ppa:ondrej/php" -y
         sudo apt-get update
 
         # Install from vcpkg everything we can for cross-platform consistency
