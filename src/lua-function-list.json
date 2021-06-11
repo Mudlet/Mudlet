@@ -252,7 +252,7 @@
     "killAlias": "killAlias(aliasID)",
     "killAnonymousEventHandler": "killAnonymousEventHandler(handler id)",
     "killKey": "killKey(name)",
-    "killMapInfo": "registerMapInfo(label)",
+    "killMapInfo": "killMapInfo(label)",
     "killTimer": "killTimer(id)",
     "killTrigger": "killTrigger(id)",
     "loadJsonMap": "loadJsonMap(pathFileName)",
