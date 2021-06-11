@@ -8369,11 +8369,10 @@ void dlgTriggerEditor::slot_key_grab()
     QCoreApplication::instance()->installEventFilter(this);
 }
 
+// Activate shortcuts for editor menu items like Ctrl+S for "Save Item" etc.
+// Deactivate instead with optional "true" - useful to grab for a keybinding
 void dlgTriggerEditor::setShortcuts(const bool unsetInstead)
 {
-    /* Activate shortcuts for editor menu items like Ctrl+S for "Save Item" etc. */
-    /* Deactivate instead with optional "true" - useful to grab for a keybinding */
-    /* TODO: Refactor into nice array to iterate */
     QList<QAction*> actionList = toolBar->actions();
     QString actionText;
     for (auto& action : actionList) {
@@ -8387,6 +8386,7 @@ void dlgTriggerEditor::setShortcuts(const bool unsetInstead)
     actionList = toolBar2->actions();
     for (auto& action : actionList) {
         actionText = action->text();
+        // TODO: Refactor into nice array to iterate
         if (actionText == tr("Triggers")) {
             action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+1"));
         } else if (actionText == tr("Aliases")) {
