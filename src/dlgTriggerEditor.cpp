@@ -8409,6 +8409,7 @@ void dlgTriggerEditor::setShortcuts(const bool setNotUnset)
             action->setShortcut((setNotUnset) ? tr("Ctrl+0") : tr(""));
         }
     }
+}
 
 void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardModifiers modifier)
 {
