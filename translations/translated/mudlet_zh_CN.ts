@@ -2032,7 +2032,8 @@ for this version of Mudlet. Supported are only formats up to version %2.</source
       <source>[ ALERT ] - Saving map in format version &quot;%1&quot; that is different than &quot;%2&quot; which
 it was loaded as. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation type="unfinished"/>
+      <translation>[警报] - 保存地图的格式版本 &quot;%1&quot; 不同于已加载的 &quot;%2&quot; 的格式。 如果您想要与依赖原始格式的其他人分享结果的
+地图，这可能是一个问题。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1047"/>
@@ -2052,7 +2053,8 @@ recommended map version %2 for this version of Mudlet.</source>
       <source>[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates
 its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. The file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[警报] - 文件似乎不是一个Mudlet地图文件。其格式版本的部分似乎是 &quot;%1&quot; ，这是没有意义的。该文件是。
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1422"/>
