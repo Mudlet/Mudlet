@@ -8370,46 +8370,45 @@ void dlgTriggerEditor::slot_key_grab()
 }
 
 // Activate shortcuts for editor menu items like Ctrl+S for "Save Item" etc.
-// Deactivate instead with optional "true" - useful to grab for a keybinding
-void dlgTriggerEditor::setShortcuts(const bool unsetInstead)
+// Deactivate instead with optional "false" - to allow these for keybindings
+void dlgTriggerEditor::setShortcuts(const bool setNotUnset)
 {
     QList<QAction*> actionList = toolBar->actions();
     QString actionText;
     for (auto& action : actionList) {
         actionText = action->text();
         if (actionText ==  tr("Save Item")) {
-            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+S"));
+            action->setShortcut((setNotUnset) ? tr("Ctrl+S") : tr(""));
         } else if (actionText == tr("Save Profile")) {
-            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+Shift+S"));
+            action->setShortcut((setNotUnset) ? tr("Ctrl+Shift+S") : tr(""));
         }
     }
     actionList = toolBar2->actions();
     for (auto& action : actionList) {
         actionText = action->text();
-        // TODO: Refactor into nice array to iterate
+        // TODO: Refactor into nice list to iterate
         if (actionText == tr("Triggers")) {
-            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+1"));
+            action->setShortcut((setNotUnset) ? tr("Ctrl+1") : tr(""));
         } else if (actionText == tr("Aliases")) {
-            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+2"));
+            action->setShortcut((setNotUnset) ? tr("Ctrl+2") : tr(""));
         } else if (actionText == tr("Scripts")) {
-            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+3"));
+            action->setShortcut((setNotUnset) ? tr("Ctrl+3") : tr(""));
         } else if (actionText == tr("Timers")) {
-            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+4"));
+            action->setShortcut((setNotUnset) ? tr("Ctrl+4") : tr(""));
         } else if (actionText == tr("Keys")) {
-            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+5"));
+            action->setShortcut((setNotUnset) ? tr("Ctrl+5") : tr(""));
         } else if (actionText == tr("Variables")) {
-            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+6"));
+            action->setShortcut((setNotUnset) ? tr("Ctrl+6") : tr(""));
         } else if (actionText == tr("Buttons")) {
-            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+7"));
+            action->setShortcut((setNotUnset) ? tr("Ctrl+7") : tr(""));
         } else if (actionText == tr("Errors")) {
-            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+8"));
+            action->setShortcut((setNotUnset) ? tr("Ctrl+8") : tr(""));
         } else if (actionText == tr("Statistics")) {
-            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+9"));
+            action->setShortcut((setNotUnset) ? tr("Ctrl+9") : tr(""));
         } else if (actionText == tr("Debug")) {
-            action->setShortcut((unsetInstead) ? tr("") : tr("Ctrl+0"));
+            action->setShortcut((setNotUnset) ? tr("Ctrl+0") : tr(""));
         }
     }
-}
 
 void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardModifiers modifier)
 {
