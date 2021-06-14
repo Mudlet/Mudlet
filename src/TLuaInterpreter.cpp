@@ -15626,11 +15626,17 @@ int TLuaInterpreter::removeFileWatch(lua_State * L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addMouseEvent
 int TLuaInterpreter::addMouseEvent(lua_State * L)
 {
+    Host& host = getHostFromLua(L);
     QStringList actionInfo;
     QString uniqueName = getVerifiedString(L, __func__, 1, "uniquename");
-    actionInfo << getVerifiedString(L, __func__, 2, "event name");
+    if (host.mConsoleActions.contains(uniqueName)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("mouse event '%1' already exists").arg(uniqueName));
+    }
+
+    actionInfo << getVerifiedString(L, __func__, 2, "event name", false);
 
     // Display name
     if (!lua_isstring(L, 3)) {
@@ -15639,23 +15645,33 @@ int TLuaInterpreter::addMouseEvent(lua_State * L)
         actionInfo << lua_tostring(L, 3);
     }
 
-    Host& host = getHostFromLua(L);
+    // tooltip text
+    if (!lua_isstring(L, 4)) {
+        actionInfo << "";
+    } else {
+        actionInfo << lua_tostring(L, 4);
+    }
+
     host.mConsoleActions.insert(uniqueName, actionInfo);
 
     lua_pushboolean(L, true);
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeMouseEvent
 int TLuaInterpreter::removeMouseEvent(lua_State * L)
 {
-    QString displayName = getVerifiedString(L, __func__, 1, "event name");
+    QString uniqueName = getVerifiedString(L, __func__, 1, "event name");
     Host& host = getHostFromLua(L);
-    host.mConsoleActions.remove(displayName);
+    if (host.mConsoleActions.remove(uniqueName) == 0) {
+        return warnArgumentValue(L, __func__, QStringLiteral("mouse event '%1' does not exist").arg(uniqueName));
+    }
 
     lua_pushboolean(L, true);
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMouseEvents
 int TLuaInterpreter::getMouseEvents(lua_State * L)
 {
     Host& host = getHostFromLua(L);
@@ -15670,6 +15686,8 @@ int TLuaInterpreter::getMouseEvents(lua_State * L)
         lua_setfield(L, -2, "event name");
         lua_pushstring(L, eventInfo.at(1).toUtf8().constData());
         lua_setfield(L, -2, "display name");
+        lua_pushstring(L, eventInfo.at(2).toUtf8().constData());
+        lua_setfield(L, -2, "tooltip text");
 
         // Add the mapEvent object to the result table
         lua_setfield(L, -2, it.key().toUtf8().constData());
