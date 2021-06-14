@@ -1372,7 +1372,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         while (it.hasNext()) {
             it.next();
             QStringList actionInfo = it.value();
-            const QString actionName = actionInfo.at(1);
+            const QString &actionName = actionInfo.at(1);
             QAction * action = new QAction(actionName, this);
             action->setToolTip(actionInfo.at(2));
             popup->addAction(action);
