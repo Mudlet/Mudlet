@@ -3815,7 +3815,7 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="266"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Inserisci uno o più comandi che vuoi siano inviati direttamente al gioco quando il bottone viene premuto. (Opzionale)&lt;/p&gt;&lt;p&gt;Se questo è un bottone a &lt;i&gt;due stati&lt;/i&gt;, i comandi sono inviati solo quando passa dallo stato &lt;i&gt;non attivo&lt;/i&gt; a quello &lt;i&gt;premuto&lt;/i&gt;. &lt;/p&gt;&lt;p&gt;Per inviare comandi più complessi che dipendono o necessitano di variabili dovresti utilizzare &lt;i&gt;invece&lt;/i&gt; la sezione sottostante per il codice Lua.&lt;/p&gt;&lt;p&gt;E' consentito inserire comandi sia in quest'area &lt;i&gt;sia&lt;/i&gt; nel codice Lua, verranno inviati &lt;b&gt;prima&lt;/b&gt;questi e poi sarà eseguito il codice.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="269"/>
@@ -3826,7 +3826,7 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="286"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Inserisci uno o più comandi che vuoi siano inviati direttamente al gioco quando il bottone viene premuto. (Opzionale)&lt;/p&gt;&lt;p&gt;Per inviare comandi più complessi che dipendono o necessitano di variabili dovresti utilizzare &lt;i&gt;invece&lt;/i&gt; la sezione sottostante per il codice Lua.&lt;/p&gt;&lt;p&gt;E' consentito inserire comandi sia in quest'area &lt;i&gt;sia&lt;/i&gt; nel codice Lua, verranno inviati &lt;b&gt;prima&lt;/b&gt;questi e poi sarà eseguito il codice.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="276"/>
@@ -3889,7 +3889,7 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="171"/>
       <source>&lt;p&gt;Type in one or more commands you want the alias to send directly to the game if the keys entered match the pattern. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Inserisci uno o più comandi che vuoi siano inviati direttamente al gioco quando il testo specificato nella casella di input rispetta il pattern. (Opzionale)&lt;/p&gt;&lt;p&gt;Per inviare comandi più complessi che dipendono o necessitano di variabili dovresti utilizzare &lt;i&gt;invece&lt;/i&gt; la sezione sottostante per il codice Lua.&lt;/p&gt;&lt;p&gt;E' consentito inserire comandi sia in quest'area &lt;i&gt;sia&lt;/i&gt; nel codice Lua, verranno inviati &lt;b&gt;prima&lt;/b&gt;questi e poi sarà eseguito il codice.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="174"/>
@@ -8207,7 +8207,7 @@ dalla GUI)</translation>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
       <source>&lt;p&gt;Type in one or more commands you want the key to send directly to the game when pressed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Inserisci uno o più comandi che vuoi siano inviati direttamente al gioco quando premi la relativa combinazione di tasti. (Opzionale)&lt;/p&gt;&lt;p&gt;Per inviare comandi più complessi che dipendono o necessitano di variabili dovresti utilizzare &lt;i&gt;invece&lt;/i&gt; la sezione sottostante per il codice Lua.&lt;/p&gt;&lt;p&gt;E' consentito inserire comandi sia in quest'area &lt;i&gt;sia&lt;/i&gt; nel codice Lua, verranno inviati &lt;b&gt;prima&lt;/b&gt;questi e poi sarà eseguito il codice.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="53"/>
@@ -12567,7 +12567,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="74"/>
       <source>&lt;p&gt;Type in one or more commands you want the timer to send directly to the game when the time has elapsed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Inserisci uno o più comandi che vuoi siano inviati direttamente al gioco quando scade il timer. (Opzionale)&lt;/p&gt;&lt;p&gt;Per inviare comandi più complessi che dipendono o necessitano di variabili dovresti utilizzare &lt;i&gt;invece&lt;/i&gt; la sezione sottostante per il codice Lua.&lt;/p&gt;&lt;p&gt;E' consentito inserire comandi sia in quest'area &lt;i&gt;sia&lt;/i&gt; nel codice Lua, verranno inviati &lt;b&gt;prima&lt;/b&gt;questi e poi sarà eseguito il codice.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="77"/>
@@ -12763,7 +12763,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="124"/>
       <source>&lt;p&gt;Type in one or more commands you want the trigger to send directly to the game if it fires. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Inserisci uno o più comandi che vuoi siano inviati direttamente al gioco quando viene attivato il trigger. (Opzionale)&lt;/p&gt;&lt;p&gt;Per inviare comandi più complessi che dipendono o necessitano di variabili dovresti utilizzare &lt;i&gt;invece&lt;/i&gt; la sezione sottostante per il codice Lua.&lt;/p&gt;&lt;p&gt;E' consentito inserire comandi sia in quest'area &lt;i&gt;sia&lt;/i&gt; nel codice Lua, verranno inviati &lt;b&gt;prima&lt;/b&gt;questi e poi sarà eseguito il codice.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="247"/>
