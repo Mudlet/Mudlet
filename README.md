@@ -143,3 +143,4 @@ GPL2+
 > [website](https://www.mudlet.org/) &nbsp;&middot;&nbsp;
 > [forums](https://forums.mudlet.org/) &nbsp;&middot;&nbsp;
 > [manual](https://wiki.mudlet.org/w/Manual:Contents)
+
