@@ -832,7 +832,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                 QIcon::fromTheme(QStringLiteral("edit-paste"), QIcon(QStringLiteral(":/icons/edit-paste.png"))),
                 tr("Paste without line breaks"), this);
         pasteOneLine->setEnabled(canPaste());
-        pasteOneLine->setShortcut(QStringLiteral("Ctrl+Shift+B"));
+        pasteOneLine->setShortcut(QStringLiteral("Ctrl+Shift+V"));
         connect(pasteOneLine, &QAction::triggered, [=]() { pasteWithNoLineBreaks(); });
         popup->addAction(pasteOneLine);
 
