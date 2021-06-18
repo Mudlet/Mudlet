@@ -70,6 +70,7 @@ public:
     void addSuggestion(const QString&);
     void removeSuggestion(const QString&);
     void clearSuggestions();
+    void pasteWithNoLineBreaks();
 
     int mActionFunction = 0;
     QPalette mRegularPalette;

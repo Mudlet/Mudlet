@@ -208,6 +208,14 @@ bool TCommandLine::event(QEvent* event)
             }
             break;
 
+            case Qt::Key_V:
+                if ((ke->modifiers() & (allModifiers & (Qt::AltModifier))) == Qt::NoModifier) {
+                    pasteWithNoLineBreaks();
+                    ke->accept();
+                    return true;
+                }
+                break;
+
         case Qt::Key_unknown:
             qWarning() << "ERROR: key unknown!";
             break;
@@ -820,6 +828,14 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             // one:
         }
 
+        auto pasteOneLine = new QAction(
+                QIcon::fromTheme(QStringLiteral("edit-paste"), QIcon(QStringLiteral(":/icons/edit-paste.png"))),
+                tr("Paste without line breaks"), this);
+        pasteOneLine->setEnabled(canPaste());
+        pasteOneLine->setShortcut(QStringLiteral("Ctrl+Shift+B"));
+        connect(pasteOneLine, &QAction::triggered, [=]() { pasteWithNoLineBreaks(); });
+        popup->addAction(pasteOneLine);
+
         mPopupPosition = event->pos();
         popup->popup(event->globalPos());
         // The use of accept here prevents this event from reaching any parent
@@ -1209,4 +1225,10 @@ void TCommandLine::removeSuggestion(const QString& suggestion)
 void TCommandLine::clearSuggestions()
 {
     commandLineSuggestions.clear();
+}
+
+void TCommandLine::pasteWithNoLineBreaks()
+{
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    insertPlainText(clipboard->text().remove("\n"));
 }
