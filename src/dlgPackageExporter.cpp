@@ -770,8 +770,10 @@ void dlgPackageExporter::exportXml(bool& isOk,
         // seen the error message...
     }
 }
+
 void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile, const QString& packageDescription)
 {
+    static bool reportedCodec = false;
     QStringList dependencies;
     for (int index = 0; index < ui->comboBox_dependencies->count(); index++) {
         dependencies << ui->comboBox_dependencies->itemText(index);
@@ -798,6 +800,33 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
         QTextStream out;
         out.setCodec(QTextCodec::codecForName("UTF-8"));
         out.setDevice(&configFile);
+        if (!reportedCodec) {
+            auto pCodec = out.codec();
+            QByteArray name = "none";
+            if (pCodec) {
+                name = pCodec->name();
+            }
+            auto availableCodecs = QTextCodec::availableCodecs();
+            if (availableCodecs.count() > 1) {
+                std::sort(availableCodecs.begin(), availableCodecs.end());
+                // There will likely be a lot of duplicates because there are
+                // aliases - so remove them now we have a sorted list:
+                QMutableByteArrayListIterator itCodecName(availableCodecs);
+                QByteArray previous = "";
+                while (itCodecName.hasNext()) {
+                    auto codecName = itCodecName.next();
+                    if (!previous.isEmpty() && codecName == previous) {
+                        itCodecName.remove();
+                        continue;
+                    }
+                    previous = codecName;
+                }
+            }
+            if (mpHost && mpHost->mpConsole) {
+                mpHost->mpConsole->printSystemMessage(QStringLiteral("Using QTextCodec: \"%1\" from the available list:\n\"%2\".").arg(name, availableCodecs.join("\",\n\"")));
+                reportedCodec = true;
+            }
+        }
         out << mPackageConfig;
         out.flush();
         configFile.close();
