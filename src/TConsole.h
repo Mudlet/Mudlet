@@ -195,6 +195,7 @@ public:
     TTextEdit* mLowerPane = nullptr;
 
     QToolButton* emergencyStop = nullptr;
+    QToolButton* goToErrors = nullptr;
     QWidget* layer = nullptr;
     QWidget* layerCommandLine = nullptr;
     QHBoxLayout* layoutLayer2 = nullptr;
