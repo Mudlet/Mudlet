@@ -195,6 +195,7 @@ public:
     TTextEdit* mLowerPane;
 
     QToolButton* emergencyStop;
+    QToolButton* goToErrors;
     QWidget* layer;
     QWidget* layerCommandLine;
     QHBoxLayout* layoutLayer2;
