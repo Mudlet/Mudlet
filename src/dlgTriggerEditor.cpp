@@ -28,6 +28,7 @@
 #include "Host.h"
 #include "LuaInterface.h"
 #include "TConsole.h"
+#include "TDebug.h"
 #include "TEasyButtonBar.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
@@ -623,6 +624,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                   : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
+    config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
 
     connect(comboBox_searchTerms, qOverload<int>(&QComboBox::activated), this, &dlgTriggerEditor::slot_searchMudletItems);
@@ -3467,18 +3469,22 @@ void dlgTriggerEditor::addVar(bool isFolder)
         mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(0);
     }
 
-    QStringList nameL;
-    nameL << QString();
-    QTreeWidgetItem* cItem = treeWidget_variables->currentItem();
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
-    TVar* cVar = vu->getWVar(cItem);
-    QTreeWidgetItem* pParent;
+
+    QStringList nameL;
+    nameL << QString(isFolder ? tr("New table name") : tr("New variable name"));
+
+    QTreeWidgetItem* pParent = nullptr;
     QTreeWidgetItem* pNewItem;
-    if (cVar && cVar->getValueType() == LUA_TTABLE) {
-        pParent = cItem;
-    } else {
-        pParent = cItem->parent();
+    QTreeWidgetItem* cItem = treeWidget_variables->currentItem();
+    if (cItem) {
+        TVar* cVar = vu->getWVar(cItem);
+        if (cVar && cVar->getValueType() == LUA_TTABLE) {
+            pParent = cItem;
+        } else {
+            pParent = cItem->parent();
+        }
     }
 
     auto newVar = new TVar();
@@ -3505,13 +3511,11 @@ void dlgTriggerEditor::addVar(bool isFolder)
     }
     vu->addTempVar(pNewItem, newVar);
     pNewItem->setFlags(pNewItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled));
-// The following test is pointless - we will already have seg. faulted if pNewItem is a nullptr...!
-//    if (pNewItem) {
-        mpCurrentVarItem = pNewItem;
-        treeWidget_variables->setCurrentItem(pNewItem);
-        showInfo(msgInfoAddVar);
-        slot_var_selected(treeWidget_variables->currentItem());
-//    }
+
+    mpCurrentVarItem = pNewItem;
+    treeWidget_variables->setCurrentItem(pNewItem);
+    showInfo(msgInfoAddVar);
+    slot_var_selected(treeWidget_variables->currentItem());
 }
 
 void dlgTriggerEditor::addKey(bool isFolder)
@@ -7070,9 +7074,7 @@ void dlgTriggerEditor::slot_add_new()
         addKey(false); //add normal alias
         break;
     case EditorViewType::cmVarsView:
-        if (mpCurrentVarItem) {
-            addVar(false); //add normal action
-        }
+        addVar(false); //add variable
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
@@ -7101,9 +7103,7 @@ void dlgTriggerEditor::slot_add_new_folder()
         addKey(true); //add alias group
         break;
     case EditorViewType::cmVarsView:
-        if (mpCurrentVarItem) {
-            addVar(true);
-        }
+        addVar(true); // add lua table
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
@@ -7329,6 +7329,12 @@ void dlgTriggerEditor::slot_debug_mode()
     mudlet::mpDebugArea->setVisible(!mudlet::debugMode);
     mudlet::debugMode = !mudlet::debugMode;
     mudlet::mpDebugArea->setWindowTitle("Central Debug Console");
+    if (mudlet::debugMode) {
+        // If this is the first time the window is shown we want any previously
+        // enqueued messages to be painted onto the central debug console:
+        TDebug::flushMessageQueue();
+    }
+    mudlet::self()->refreshTabBar();
 }
 
 void dlgTriggerEditor::slot_next_section()
@@ -8138,8 +8144,6 @@ void dlgTriggerEditor::slot_paste_xml()
     }
 }
 
-// CHECKME: This seems to largely duplicate the actions of Host::installPackage(...)
-// Do we really need two different sets of code to import packages?
 void dlgTriggerEditor::slot_import()
 {
     switch (mCurrentView) {
@@ -8173,58 +8177,7 @@ void dlgTriggerEditor::slot_import()
         return;
     }
 
-    QFile file(fileName);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Import Mudlet Package:"), tr("Cannot read file %1:\n%2.").arg(fileName, file.errorString()));
-        return;
-    }
-
-    QString packageName = fileName.section(QChar('/'), -1);
-    packageName.remove(QStringLiteral(".zip"), Qt::CaseInsensitive);
-    packageName.remove(QStringLiteral(".trigger"), Qt::CaseInsensitive);
-    packageName.remove(QStringLiteral(".xml"), Qt::CaseInsensitive);
-    packageName.remove(QStringLiteral(".mpackage"), Qt::CaseInsensitive);
-    packageName.remove(QChar('/'));
-    packageName.remove(QChar('\\'));
-    packageName.remove(QChar('.'));
-
-    if (mpHost->mInstalledPackages.contains(packageName)) {
-        QMessageBox::information(this, tr("Import Mudlet Package:"), tr("Package %1 is already installed.").arg(packageName));
-        file.close();
-        return;
-    }
-
-    QFile file2;
-    if (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)) {
-        QString _dest = mudlet::getMudletPath(mudlet::profilePackagePath, mpHost->getName(), packageName);
-        QDir _tmpDir;
-        _tmpDir.mkpath(_dest);
-        QString _script = QStringLiteral("unzip([[%1]], [[%2]])").arg(fileName, _dest);
-        mpHost->mLuaInterpreter.compileAndExecuteScript(_script);
-
-        // requirements for zip packages:
-        // - packages must be compressed in zip format
-        // - file extension should be .mpackage (though .zip is accepted)
-        // - there can only be a single xml file per package
-        // - the xml file must be located in the root directory of the zip package. example: myPack.zip contains: the folder images and the file myPack.xml
-
-        QDir _dir(_dest);
-        QStringList _filterList;
-        _filterList << "*.xml"
-                    << "*.trigger";
-        QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
-        if (!entries.empty()) {
-            file2.setFileName(entries[0].absoluteFilePath());
-        }
-    } else {
-        file2.setFileName(fileName);
-    }
-    file2.open(QFile::ReadOnly | QFile::Text);
-
-    mpHost->mInstalledPackages.append(packageName);
-    QString profileName = mpHost->getName();
-    QString login = mpHost->getLogin();
-    QString pass = mpHost->getPass();
+    mpHost->installPackage(fileName, 0);
 
     treeWidget_triggers->clear();
     treeWidget_aliases->clear();
@@ -8232,13 +8185,6 @@ void dlgTriggerEditor::slot_import()
     treeWidget_timers->clear();
     treeWidget_keys->clear();
     treeWidget_scripts->clear();
-
-    XMLimport reader(mpHost);
-    reader.importPackage(&file2, packageName); // TODO: Missing false return value handler
-
-    mpHost->setName(profileName);
-    mpHost->setLogin(login);
-    mpHost->setPass(pass);
 
     slot_profileSaveAction();
 
@@ -8457,7 +8403,7 @@ void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardMo
 
 void dlgTriggerEditor::slot_chose_action_icon()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Seclect Icon"), QDir::homePath(), tr("Images (*.png *.xpm *.jpg)"));
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Icon"), QDir::homePath(), tr("Images (*.png *.xpm *.jpg)"));
     mpActionsMainArea->lineEdit_action_icon->setText(fileName);
 }
 
@@ -8754,6 +8700,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     config->setIndentSize(2);
     config->setCaretWidth(1);
     config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
+    config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
 
     // If undo is not disabled when setting the initial text, the
@@ -8769,16 +8716,17 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
 // mudlet::signal_editorThemeChanged(const QString& theme) signal
 void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
 {
-        auto localConfig = mpSourceEditorEdbee->config();
-        localConfig->beginChanges();
-        localConfig->setThemeName(theme);
-        localConfig->setFont(mpHost->getDisplayFont());
-        localConfig->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
-                                           ? edbee::TextEditorConfig::ShowWhitespaces
-                                           : edbee::TextEditorConfig::HideWhitespaces);
-        localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-        localConfig->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
-        localConfig->endChanges();
+    auto localConfig = mpSourceEditorEdbee->config();
+    localConfig->beginChanges();
+    localConfig->setThemeName(theme);
+    localConfig->setFont(mpHost->getDisplayFont());
+    localConfig->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
+                                               ? edbee::TextEditorConfig::ShowWhitespaces
+                                               : edbee::TextEditorConfig::HideWhitespaces);
+    localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    localConfig->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
+    localConfig->setAutocompleteMinimalCharacters(3);
+    localConfig->endChanges();
 }
 
 void dlgTriggerEditor::createSearchOptionIcon()

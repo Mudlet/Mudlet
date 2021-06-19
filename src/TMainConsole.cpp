@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -48,6 +48,7 @@
 #include <QPainter>
 #include "post_guard.h"
 
+
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 : TConsole(pH, TConsole::MainConsole, parent)
 , mClipboard(pH)
@@ -74,6 +75,9 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     // absence of files for the first run in a new profile or from an older
     // Mudlet version:
     setProfileSpellDictionary();
+
+    // Ensure the QWidget has the profile name embedded into it
+    setProperty("HostName", pH->getName());
 }
 
 TMainConsole::~TMainConsole()
@@ -643,6 +647,7 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
             mpMapper->mp2dMap->init();
             mpMapper->updateAreaComboBox();
             mpMapper->resetAreaComboBoxToPlayerRoomArea();
+            mpMapper->show();
         }
 
         mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
@@ -1125,8 +1130,8 @@ void TMainConsole::runTriggers(int line)
     mCurrentLine.append('\n');
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::darkGreen), QColor(Qt::black)) << "new line arrived:" >> 0;
-        TDebug(QColor(Qt::lightGray), QColor(Qt::black)) << mCurrentLine << "\n" >> 0;
+        TDebug(Qt::darkGreen, Qt::black) << "new line arrived:" >> mpHost;
+        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << mCurrentLine << "\n" >> mpHost;
     }
     mpHost->incomingStreamProcessor(mCurrentLine, line);
     mIsPromptLine = false;

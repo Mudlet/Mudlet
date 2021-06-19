@@ -30,6 +30,7 @@
 
 #include "pre_guard.h"
 #include <QEvent>
+#include <QFileSystemWatcher>
 #include <QNetworkAccessManager>
 #include <QNetworkCookieJar>
 #include <QNetworkCookie>
@@ -88,6 +89,8 @@ public:
     void msdp2Lua(const char*);
     void initLuaGlobals();
     void initIndenterGlobals();
+    lua_State* getLuaGlobalState();
+
     bool call(const QString& function, const QString& mName, const bool muteDebugOutput = false);
     std::pair<bool, bool> callReturnBool(const QString& function, const QString& mName);
     bool callMulti(const QString& function, const QString& mName);
@@ -99,7 +102,6 @@ public:
     std::pair<bool, bool> callLuaFunctionReturnBool(void* pT);
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
-    bool compileScript(const QString&);
     void setAtcpTable(const QString&, const QString&);
     void signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions);
     void setGMCPTable(QString&, const QString&);
@@ -178,6 +180,10 @@ public:
     static int getModuleSync(lua_State* L);
     static int getPackages(lua_State* L);
     static int getModules(lua_State* L);
+    static int getPackageInfo(lua_State* L);
+    static int getModuleInfo(lua_State* L);
+    static int setPackageInfo(lua_State* L);
+    static int setModuleInfo(lua_State* L);
     static int lockExit(lua_State*);
     static int lockSpecialExit(lua_State*);
     static int hasExitLock(lua_State*);
@@ -599,6 +605,8 @@ public:
     static int enableMapInfo(lua_State*);
     static int disableMapInfo(lua_State*);
     static int getProfileTabNumber(lua_State*);
+    static int addFileWatch(lua_State*);
+    static int removeFileWatch(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
@@ -608,6 +616,7 @@ public:
 
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);
+    void slot_pathChanged(const QString& path);
     void slotPurge();
     void slotDeleteSender(int, QProcess::ExitStatus);
 
@@ -649,6 +658,7 @@ private:
 
 
     QNetworkAccessManager* mpFileDownloader;
+    QFileSystemWatcher* mpFileSystemWatcher;
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
     std::list<std::list<std::string>> mMultiCaptureGroupList;

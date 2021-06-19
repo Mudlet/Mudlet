@@ -646,13 +646,18 @@ end
 
 
 
---- Replace the whole with a string you'd like.
+--- Replace an entire line with a string you'd like.
 ---
 --- @see deleteLine
-function replaceLine(what)
-  selectString(line, 1)
+function replaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+    text = window
+  else
+    selectCurrentLine(window)
+  end
   replace("")
-  insertText(what)
+  insertText(text)
 end
 
 
@@ -976,7 +981,7 @@ if rex then
   _Echos = {
     Patterns = {
       Hex = {
-        [[(\x5c?(?:#|\|c|#,)(?:[0-9a-fA-F]{6,})(?:,[0-9a-fA-F]{6,})?)|(?:\||#)(\/?[biru])]],
+        [[(\x5c?(?:#|\|c)?(?:[0-9a-fA-F]{6}|(?:#,|\|c,)[0-9a-fA-F]{6,8})(?:,[0-9a-fA-F]{6,8})?)|(?:\||#)(\/?[biru])]],
         rex.new [[(?:#|\|c)(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?)?]],
       },
       Decimal = {
@@ -1724,7 +1729,7 @@ end
 local colours = {
   [0] = { 0, 0, 0 }, -- black
   [1] = { 128, 0, 0 }, -- red
-  [2] = { 0, 179, 0 }, -- green
+  [2] = { 0, 128, 0 }, -- green
   [3] = { 128, 128, 0 }, -- yellow
   [4] = { 0, 0, 128 }, --blue
   [5] = { 128, 0, 128 }, -- magenta
@@ -2073,6 +2078,18 @@ function creplace(window, text)
   xReplace(window, text, 'c')
 end
 
+--- version of replaceLine function that allows for color, by way of cinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function creplaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+  else
+    selectCurrentLine(window)
+  end
+  creplace(window, text)
+end
+
 --- version of replace function that allows for color, by way of dinsertText
 --- @param windowName Optional name of the window to replace on
 --- @param text The text to replace the selection with.
@@ -2080,11 +2097,35 @@ function dreplace(window, text)
   xReplace(window, text, 'd')
 end
 
+--- version of replaceLine function that allows for color, by way of dinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function dreplaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+  else
+    selectCurrentLine(window)
+  end
+  dreplace(window, text)
+end
+
 --- version of replace function that allows for color, by way of hinsertText
 --- @param windowName Optional name of the window to replace on
 --- @param text The text to replace the selection with.
 function hreplace(window, text)
   xReplace(window, text, 'h')
+end
+
+--- version of replaceLine function that allows for color, by way of hinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function hreplaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+  else
+    selectCurrentLine(window)
+  end
+  hreplace(window, text)
 end
 
 function resetLabelToolTip(label)

@@ -45,7 +45,7 @@ class QTreeWidgetItem;
 class LuaInterface
 {
 public:
-    explicit LuaInterface(Host*);
+    explicit LuaInterface(lua_State*);
     ~LuaInterface();
     void iterateTable(lua_State*, int, TVar*, bool);
     void getVars(bool);
@@ -66,12 +66,11 @@ public:
     bool reparentVariable(QTreeWidgetItem*, QTreeWidgetItem*, QTreeWidgetItem*);
     bool validMove(QTreeWidgetItem*);
     void getAllChildren(TVar* var, QList<TVar*>* list);
+    lua_State* getState();
     static int onPanic(lua_State*);
 
 private:
-    int mHostID;
     int depth;
-    TLuaInterpreter* interpreter;
     lua_State* L;
     QSet<TVar> hiddenVars;
     QScopedPointer<VarUnit> varUnit;
