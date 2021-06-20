@@ -2061,7 +2061,9 @@ its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. 
       <source>[ ALERT ] - Map file is too new. Its format version &quot;%1&quot; is higher than this version of
 Mudlet can handle (%2)! The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ 警告 ] - 地图文件太新了. 它的格式版本 &quot;%1&quot; 高于这个版本的
+Mudlet 可以处理的 (%2)！该文件是:
+&quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1429"/>
@@ -2073,19 +2075,21 @@ Mudlet can handle (%2)! The file is:
       <source>[ ALERT ] - Map file is really old. Its format version &quot;%1&quot; is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try! The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ 警告 ] - 地图文件已经太旧, 其过时的保存格式 (%1) 导致Mudlet无法从中获得足够的信息, 但Mudlet仍会尝试读取! 这个文件是: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1452"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File:
 &quot;%2&quot;,
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ] - 读取地图文件中. 格式版本: %1.  文件:
+&quot;%2&quot;,
+请稍等...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1455"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ]  - 读取地图文件中. 版本: %1. 文件: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1848"/>
