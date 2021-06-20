@@ -15647,7 +15647,7 @@ int TLuaInterpreter::addMouseEvent(lua_State * L)
 
     // tooltip text
     if (!lua_isstring(L, 4)) {
-        actionInfo << "";
+        actionInfo << QString();
     } else {
         actionInfo << lua_tostring(L, 4);
     }
