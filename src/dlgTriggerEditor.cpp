@@ -8365,7 +8365,7 @@ void dlgTriggerEditor::resizeEvent(QResizeEvent* event)
 void dlgTriggerEditor::slot_key_grab()
 {
     mIsGrabKey = true;
-    setShortcuts(true);
+    setShortcuts(false);
     QCoreApplication::instance()->installEventFilter(this);
 }
 
