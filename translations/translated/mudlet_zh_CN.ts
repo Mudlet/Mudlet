@@ -2094,7 +2094,7 @@ please wait...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1848"/>
       <source>[ INFO ]  - Checking map file &quot;%1&quot;, format version &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ] - 检查地图文件 &quot;%1&quot;, 版本: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2385"/>
@@ -5790,7 +5790,7 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="1003"/>
       <source>Failed to zip up the package. Error is: &quot;%1&quot;.</source>
       <comment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</comment>
-      <translation type="unfinished"/>
+      <translation>压缩包文件失败. 错误: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="335"/>
@@ -8950,18 +8950,18 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="440"/>
       <source>Packages (exp.)</source>
-      <translation type="unfinished"/>
+      <translation>包 (实验性)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="447"/>
       <source>Package Manager (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>包管理器 (实验性)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="449"/>
       <source>Packages (exp.)</source>
       <comment>exp. stands for experimental; shortened so it doesn&apos;t make buttons huge in the main interface</comment>
-      <translation type="unfinished"/>
+      <translation>包 (实验性)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="456"/>
@@ -12662,7 +12662,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="360"/>
       <source>Match all occurrences of the pattern in the line.</source>
-      <translation type="unfinished"/>
+      <translation>匹配行中该模式的所有实例。</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="463"/>
