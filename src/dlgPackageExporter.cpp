@@ -798,13 +798,19 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     QFile configFile(luaConfig);
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out;
-        out.setCodec(QTextCodec::codecForName("UTF-8"));
+        auto pCodec = QTextCodec::codecForName("UTF-8");
+        if (pCodec) {
+            if (mpHost && mpHost->mpConsole) {
+                mpHost->mpConsole->printSystemMessage(QStringLiteral("We get the QTextCodec with the name: \"%1\" when we request one for UTF-8 from Qt.").arg(pCodec->name()));
+            }
+            out.setCodec(pCodec);
+        }
         out.setDevice(&configFile);
         if (!reportedCodec) {
-            auto pCodec = out.codec();
+            auto pTestCodec = out.codec();
             QByteArray name = "none";
-            if (pCodec) {
-                name = pCodec->name();
+            if (pTestCodec) {
+                name = pTestCodec->name();
             }
             auto availableCodecs = QTextCodec::availableCodecs();
             if (availableCodecs.count() > 1) {
