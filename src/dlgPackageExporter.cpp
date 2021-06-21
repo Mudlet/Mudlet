@@ -801,7 +801,7 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
         auto pCodec = QTextCodec::codecForName("UTF-8");
         if (pCodec) {
             if (mpHost && mpHost->mpConsole) {
-                mpHost->mpConsole->printSystemMessage(QStringLiteral("We get the QTextCodec with the name: \"%1\" when we request one for UTF-8 from Qt.").arg(pCodec->name()));
+                mpHost->mpConsole->printSystemMessage(QStringLiteral("We get the QTextCodec with the name: \"%1\" when we request one for UTF-8 from Qt.").arg(QString::fromLatin1(pCodec->name())));
             }
             out.setCodec(pCodec);
         }
@@ -829,7 +829,7 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
                 }
             }
             if (mpHost && mpHost->mpConsole) {
-                mpHost->mpConsole->printSystemMessage(QStringLiteral("Using QTextCodec: \"%1\" from the available list:\n\"%2\".").arg(name, availableCodecs.join("\",\n\"")));
+                mpHost->mpConsole->printSystemMessage(QStringLiteral("Using QTextCodec: \"%1\" from the available list:\n\"%2\".").arg(QString::fromLatin1(name), QString::fromLatin1(availableCodecs.join("\",\n\""))));
                 reportedCodec = true;
             }
         }
