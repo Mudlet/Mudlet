@@ -2071,7 +2071,6 @@ bool dlgConnectionProfiles::validateProfile()
             valid = false;
         }
 
-
         QString port = port_entry->text().trimmed();
         if (!port.isEmpty() && (port.indexOf(QRegularExpression(QStringLiteral("^\\d+$")), 0) == -1)) {
             QString val = port;
