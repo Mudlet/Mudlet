@@ -74,7 +74,7 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
 
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setCenterOnScroll(false);
-    setWordWrapMode(QTextOption::WrapAnywhere);
+    setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
     setContentsMargins(0, 0, 0, 0);
     // clear console selection if selection in command line changes
     connect(this, &QPlainTextEdit::copyAvailable, this, &TCommandLine::slot_clearSelection);
