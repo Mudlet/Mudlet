@@ -487,6 +487,7 @@ void dlgConnectionProfiles::slot_save_name()
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     QString newProfileName = profile_name_entry->text().trimmed();
 
+    validateProfile();
     if (!validName || newProfileName.isEmpty() || !pItem) {
         return;
     }
@@ -2032,6 +2033,8 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 bool dlgConnectionProfiles::validateProfile()
 {
     bool valid = true;
+
+    validName = true, validPort = true, validUrl = true;
 
     clearNotificationArea();
 
