@@ -57,7 +57,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpHost(pH)
 , buffer(pH)
 , emergencyStop(new QToolButton)
-, goToErrors(new QToolButton)
 , mpBaseVFrame(new QWidget(this))
 , mpTopToolBar(new QWidget(mpBaseVFrame))
 , mpBaseHFrame(new QWidget(mpBaseVFrame))
@@ -392,21 +391,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         tr("Emergency Stop. Stops all timers and triggers.")));
     connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stop_all_triggers);
 
-    goToErrors->setMinimumSize(QSize(30, 30));
-    goToErrors->setMaximumSize(QSize(30, 30));
-    goToErrors->setIcon(QIcon(QStringLiteral(":/icons/errors.png")));
-    goToErrors->setSizePolicy(sizePolicy4);
-    goToErrors->setFocusPolicy(Qt::NoFocus);
-    goToErrors->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
-            tr("Go to errors console.")));
-    connect(goToErrors, &QAbstractButton::clicked, [=]() {
-        mpHost->mpEditorDialog->slot_show_current();
-        mpHost->mpEditorDialog->raise();
-        mpHost->mpEditorDialog->showNormal();
-        mpHost->mpEditorDialog->activateWindow();
-        mpHost->mpEditorDialog->mpErrorConsole->setVisible(true);
-    });
-
     mpBufferSearchBox->setMinimumSize(QSize(100, 30));
     mpBufferSearchBox->setMaximumSize(QSize(150, 30));
     mpBufferSearchBox->setSizePolicy(sizePolicy5);
@@ -456,8 +440,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutButtonLayer->addWidget(replayButton, 0, 8);
     layoutButtonLayer->addWidget(logButton, 0, 9);
     layoutButtonLayer->addWidget(emergencyStop, 0, 10);
-    layoutButtonLayer->addWidget(goToErrors, 0, 11);
-    layoutButtonLayer->addWidget(mpLineEdit_networkLatency, 0, 12);
+    layoutButtonLayer->addWidget(mpLineEdit_networkLatency, 0, 11);
     layoutLayer2->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(layer);
     mpLineEdit_networkLatency->setFrame(false);

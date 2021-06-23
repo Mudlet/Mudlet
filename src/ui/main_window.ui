@@ -87,7 +87,7 @@
      <x>0</x>
      <y>0</y>
      <width>750</width>
-     <height>19</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEditor">
@@ -103,6 +103,7 @@
     <addaction name="dactionReplay"/>
     <addaction name="dactionModuleManager"/>
     <addaction name="dactionPackageExporter"/>
+    <addaction name="dactionShow_errors"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
@@ -303,14 +304,14 @@
    </property>
   </action>
   <action name="dactionInputLine">
-   <property name="text">
-    <string>Compact input line</string>
-   </property>
    <property name="checkable">
-     <bool>true</bool>
+    <bool>true</bool>
    </property>
    <property name="checked">
-     <bool>false</bool>
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Compact input line</string>
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Hide / show the search area and buttons at the bottom of the screen.&lt;/p&gt;</string>
@@ -330,6 +331,14 @@
    </property>
    <property name="toolTip">
     <string>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</string>
+   </property>
+  </action>
+  <action name="dactionShowErrors">
+   <property name="text">
+    <string>Show errors</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Show errors from scripts that you have running&lt;/p&gt;</string>
    </property>
   </action>
  </widget>
