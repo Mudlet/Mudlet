@@ -183,9 +183,9 @@ public:
     void            setWideAmbiguousEAsianGlyphs(Qt::CheckState state);
     // Is used to set preference dialog control directly:
     Qt::CheckState  getWideAmbiguousEAsianGlyphsControlState() {
-                           return mAutoAmbigousWidthGlyphsSetting
-                                  ? Qt::PartiallyChecked
-                                  : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
+                        return mAutoAmbigousWidthGlyphsSetting
+                               ? Qt::PartiallyChecked
+                               : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
     void            setHaveColorSpaceId(const bool state) { mSGRCodeHasColSpaceId = state; }
     bool            getHaveColorSpaceId() { return mSGRCodeHasColSpaceId; }
     void            setMayRedefineColors(const bool state) { mServerMayRedefineColors = state; }
@@ -198,6 +198,8 @@ public:
     void            getUserDictionaryOptions(bool& useDictionary, bool& useShared) {
                         useDictionary = mEnableUserDictionary;
                         useShared = mUseSharedDictionary; }
+    void            setCustomLoginId(const int value);
+    int             getCustomLoginId() const { return mCustomLoginId; }
 
     void closingDown();
     bool isClosingDown();
@@ -612,6 +614,7 @@ public:
     std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions;
+    static const std::chrono::seconds csmLuaSendPasswordTimeout;
     QPointer<dlgIRC> mpDlgIRC;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
@@ -762,6 +765,10 @@ private:
 
     // Now a per profile option this one represents the state of this profile:
     bool mCompactInputLine;
+
+    // If greater than 0 (the default, disabled case) then use the indicated
+    // custom login text of QMap<int, QString> mudlet::mCustomLoginTexts:
+    int mCustomLoginId;
 
     QTimer purgeTimer;
 };

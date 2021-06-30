@@ -182,6 +182,7 @@ private:
     void generateDiscordTooltips();
     void hidePasswordMigrationLabel();
     void setupPasswordsMigration();
+    void generateLoginTexts();
     QString mapSaveLoadDirectory(Host* pHost);
 
     int mFontSize;

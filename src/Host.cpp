@@ -61,6 +61,8 @@
 
 using namespace std::chrono;
 
+const std::chrono::seconds Host::csmLuaSendPasswordTimeout = 30s;
+
 stopWatch::stopWatch()
 : mIsInitialised(false)
 , mIsRunning(false)
@@ -453,7 +455,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         mDiscordDisableServerSide = optin.toInt() == Qt::Unchecked ? true : false;
     }
 
-    loadSecuredPassword();
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        // Depending on how long this takes we might need to hold off on
+        // connecting until we have the password to use!
+        loadSecuredPassword();
+    }
 
     if (mudlet::scmIsPublicTestVersion) {
         thankForUsingPTB();
@@ -1712,9 +1718,6 @@ bool Host::installPackage(const QString& fileName, int module)
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
             file2.open(QFile::ReadOnly | QFile::Text);
-            QString profileName = getName();
-            QString login = getLogin();
-            QString pass = getPass();
             XMLimport reader(this);
             if (module) {
                 QStringList moduleEntry;
@@ -1726,18 +1729,12 @@ bool Host::installPackage(const QString& fileName, int module)
                 mInstalledPackages.append(packageName);
             }
             reader.importPackage(&file2, packageName, module); // TODO: Missing false return value handler
-            setName(profileName);
-            setLogin(login);
-            setPass(pass);
             file2.close();
         }
     } else {
         file2.setFileName(fileName);
         file2.open(QFile::ReadOnly | QFile::Text);
         //mInstalledPackages.append( packageName );
-        QString profileName = getName();
-        QString login = getLogin();
-        QString pass = getPass();
         XMLimport reader(this);
         if (module) {
             QStringList moduleEntry;
@@ -1749,9 +1746,6 @@ bool Host::installPackage(const QString& fileName, int module)
             mInstalledPackages.append(packageName);
         }
         reader.importPackage(&file2, packageName, module); // TODO: Missing false return value handler
-        setName(profileName);
-        setLogin(login);
-        setPass(pass);
         file2.close();
     }
     if (mpEditorDialog) {
@@ -2728,6 +2722,13 @@ void Host::setCompactInputLine(const bool state)
         if (mpConsole && mpConsole->mpButtonMainLayer) {
             mpConsole->mpButtonMainLayer->setVisible(!state);
         }
+    }
+}
+
+void Host::setCustomLoginId(const int value)
+{
+    if (value >= 0 && value < mudlet::mCustomLoginTexts.count()) {
+        mCustomLoginId = value;
     }
 }
 
