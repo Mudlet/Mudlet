@@ -3709,7 +3709,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
       <location filename="../src/ui/actions_main_area.ui" line="269"/>
       <location filename="../src/ui/actions_main_area.ui" line="289"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>發送到遊戲中的文字（可選）</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="286"/>
@@ -3782,7 +3782,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="174"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>發送到遊戲中的文字（可選）</translation>
     </message>
   </context>
   <context>
@@ -5578,7 +5578,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="118"/>
       <source>Author</source>
-      <translation type="unfinished"/>
+      <translation>作者</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="137"/>
@@ -12449,7 +12449,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="77"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>發送到遊戲中的文字（可選）</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="89"/>
@@ -12537,7 +12537,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="127"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>發送到遊戲中的文字（可選）</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="201"/>
