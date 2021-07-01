@@ -7703,7 +7703,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8409"/>
       <source>Ctrl+0</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+0</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8436"/>
@@ -7828,43 +7828,43 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
       <location filename="../src/dlgTriggerEditor.cpp" line="422"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8391"/>
       <source>Ctrl+1</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="427"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8393"/>
       <source>Ctrl+2</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+3</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="432"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8395"/>
       <source>Ctrl+3</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+3</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="437"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8397"/>
       <source>Ctrl+4</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+4</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="442"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8399"/>
       <source>Ctrl+5</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+5</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="447"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8401"/>
       <source>Ctrl+6</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+6</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="452"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8403"/>
       <source>Ctrl+7</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+7</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="456"/>
@@ -7886,7 +7886,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
       <location filename="../src/dlgTriggerEditor.cpp" line="458"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8405"/>
       <source>Ctrl+8</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+8</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="462"/>
@@ -7902,7 +7902,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
       <location filename="../src/dlgTriggerEditor.cpp" line="463"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8407"/>
       <source>Ctrl+9</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+9</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="467"/>
