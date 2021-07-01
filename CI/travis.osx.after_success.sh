@@ -16,7 +16,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
   COMMIT_DATE=$(git show -s --pretty="tformat:%cI" | cut -d'T' -f1 | tr -d '-')
   YESTERDAY_DATE=$(date -v-1d '+%F' | tr -d '-')
 
-  git clone https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
+  git clone -b keneanung-sign-with-hardened-runtime https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
 
   cd "${BUILD_DIR}/../installers/osx"
 
@@ -48,7 +48,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     ./make-installer.sh "${appBaseName}.app"
 
     if [ -n "$MACOS_SIGNING_PASS" ]; then
-      codesign --deep -s "$IDENTITY" "${HOME}/Desktop/${appBaseName}.dmg"
+      codesign --deep -o runtime -s "$IDENTITY" "${HOME}/Desktop/${appBaseName}.dmg"
       echo "Signed final .dmg"
     fi
 
@@ -94,9 +94,9 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     if [ ! -z "$MACOS_SIGNING_PASS" ]; then
       if [ "${public_test_build}" == "true" ]; then
-        codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet PTB.dmg"
+        codesign --deep -o runtime -s "$IDENTITY" "${HOME}/Desktop/Mudlet PTB.dmg"
       else
-        codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet.dmg"
+        codesign --deep -o runtime -s "$IDENTITY" "${HOME}/Desktop/Mudlet.dmg"
       fi
       echo "Signed final .dmg"
     fi
