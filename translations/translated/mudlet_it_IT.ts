@@ -7875,12 +7875,12 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="457"/>
       <source>Show/Hide the errors console in the bottom right of this editor.</source>
-      <translation type="unfinished"/>
+      <translation>Mostra/Nascondi la console degli errori nella parte inferiore destra dell'editor.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="458"/>
       <source>Show/Hide errors console</source>
-      <translation type="unfinished"/>
+      <translation>Mostra/Nascondi la console degli errori</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="458"/>
@@ -7891,12 +7891,12 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="462"/>
       <source>Generate a statistics summary display on the main profile console.</source>
-      <translation type="unfinished"/>
+      <translation>Genera le statistiche di riepilogo sulla console principale del profilo.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="463"/>
       <source>Generate statistics</source>
-      <translation type="unfinished"/>
+      <translation>Genera statistiche</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="463"/>
@@ -7907,12 +7907,12 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="467"/>
       <source>Show/Hide the separate Central Debug Console - when being displayed the system will be slower.</source>
-      <translation type="unfinished"/>
+      <translation>Mostra/Nascondi la Console di Debug Principale - quando è attiva il sistema potrebbe essere più lento.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="468"/>
       <source>Show/Hide Debug Console (Ctrl+0) -&gt; system will be &lt;b&gt;&lt;i&gt;slower&lt;/i&gt;&lt;/b&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Mostra/Nascondi la Console di Debug (Ctrl+0) -&gt; il sistema potrebbe essere &lt;b&gt;&lt;i&gt;rallentato&lt;/i&gt;&lt;/b&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="692"/>
