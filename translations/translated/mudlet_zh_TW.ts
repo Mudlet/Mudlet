@@ -7525,7 +7525,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8409"/>
       <source>Ctrl+0</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+0</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8436"/>
@@ -7650,31 +7650,31 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="422"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8391"/>
       <source>Ctrl+1</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="427"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8393"/>
       <source>Ctrl+2</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="432"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8395"/>
       <source>Ctrl+3</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+3</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="437"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8397"/>
       <source>Ctrl+4</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+4</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="442"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8399"/>
       <source>Ctrl+5</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+5</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="447"/>
