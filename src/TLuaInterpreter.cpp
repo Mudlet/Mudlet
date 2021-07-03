@@ -5793,16 +5793,16 @@ int TLuaInterpreter::getButtonState(lua_State* L)
     auto argType = lua_type(L, 1);
     TAction* pItem = nullptr;
     if (argType == LUA_TNUMBER) {
-        int id = lua_tonumber(L, 1);
+        int id = qRound(lua_tonumber(L, 1));
         if (id < 0) {
-            return warnArgumentValue(L, __func__, QStringLiteral("item Id (%1) invalid, it must be equal or greater than zero").arg(id).toUtf8().constData());
+            return warnArgumentValue(L, __func__, QStringLiteral("item ID (%1) invalid, it must be equal or greater than zero").arg(id).toUtf8().constData());
         }
         pItem = host.getActionUnit()->getAction(id);
         if (!pItem) {
-            return warnArgumentValue(L, __func__, QStringLiteral("no button item with Id %1 found").arg(id).toUtf8().constData());
+            return warnArgumentValue(L, __func__, QStringLiteral("no button item with ID %1 found").arg(id).toUtf8().constData());
         }
         if (!pItem->isPushDownButton()) {
-            return warnArgumentValue(L, __func__, QStringLiteral("item Id with %1 is not a push-down button").arg(id).toUtf8().constData());
+            return warnArgumentValue(L, __func__, QStringLiteral("item ID with %1 is not a push-down button").arg(id).toUtf8().constData());
         }
     }
 
@@ -5838,16 +5838,16 @@ int TLuaInterpreter::setButtonState(lua_State* L)
     auto argType = lua_type(L, 1);
     TAction* pItem = nullptr;
     if (argType == LUA_TNUMBER) {
-        int id = lua_tonumber(L, 1);
+        int id = qRound(lua_tonumber(L, 1));
         if (id < 0) {
-            return warnArgumentValue(L, __func__, QStringLiteral("item Id (%1) invalid, it must be equal or greater than zero").arg(id).toUtf8().constData());
+            return warnArgumentValue(L, __func__, QStringLiteral("item ID (%1) invalid, it must be equal or greater than zero").arg(id).toUtf8().constData());
         }
         pItem = host.getActionUnit()->getAction(id);
         if (!pItem) {
-            return warnArgumentValue(L, __func__, QStringLiteral("no button item with Id %1 found").arg(id).toUtf8().constData());
+            return warnArgumentValue(L, __func__, QStringLiteral("no button item with ID %1 found").arg(id).toUtf8().constData());
         }
         if (!pItem->isPushDownButton()) {
-            return warnArgumentValue(L, __func__, QStringLiteral("item Id with %1 is not a push-down button").arg(id).toUtf8().constData());
+            return warnArgumentValue(L, __func__, QStringLiteral("item ID with %1 is not a push-down button").arg(id).toUtf8().constData());
         }
     }
 
