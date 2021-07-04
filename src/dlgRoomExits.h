@@ -177,7 +177,7 @@ private:
     void initExit(int direction, int exitId, QLineEdit* exitLineEdit,
                   QCheckBox* noRoute, QCheckBox* stub,
                   QRadioButton* none, QRadioButton* open, QRadioButton* closed, QRadioButton* locked,
-                  QSpinBox* weight);
+                  QSpinBox* weight, const QString& validExitToolTip);
     TExit* makeExitFromControls(int direction);
     void setIconAndToolTipsOnSpecialExit(QTreeWidgetItem*, const bool);
     void normalExitEdited(const QString& roomExitIdText,

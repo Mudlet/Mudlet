@@ -1350,23 +1350,23 @@ void dlgRoomExits::initExit(int direction,
                             QRadioButton* open,
                             QRadioButton* closed,
                             QRadioButton* locked,
-                            QSpinBox* weight)
+                            QSpinBox* weight,
+                            const QString& validExitToolTip)
 {
     QString doorAndWeightText; // lowercase, initials for XY-plane, words for others
-    QString exitText;          // lowercase, full words, no space
     switch (direction) {
-        case DIR_NORTHWEST: doorAndWeightText = QStringLiteral("nw");   exitText = tr("northwest"); break;
-        case DIR_NORTH    : doorAndWeightText = QStringLiteral("n");    exitText = tr("north");     break;
-        case DIR_NORTHEAST: doorAndWeightText = QStringLiteral("ne");   exitText = tr("northeast"); break;
-        case DIR_UP       : doorAndWeightText = QStringLiteral("up");   exitText = tr("up");        break;
-        case DIR_WEST     : doorAndWeightText = QStringLiteral("w");    exitText = tr("west");      break;
-        case DIR_EAST     : doorAndWeightText = QStringLiteral("e");    exitText = tr("east");      break;
-        case DIR_DOWN     : doorAndWeightText = QStringLiteral("down"); exitText = tr("down");      break;
-        case DIR_SOUTHWEST: doorAndWeightText = QStringLiteral("sw");   exitText = tr("southwest"); break;
-        case DIR_SOUTH    : doorAndWeightText = QStringLiteral("s");    exitText = tr("south");     break;
-        case DIR_SOUTHEAST: doorAndWeightText = QStringLiteral("se");   exitText = tr("southeast"); break;
-        case DIR_IN       : doorAndWeightText = QStringLiteral("in");   exitText = tr("in");        break;
-        case DIR_OUT      : doorAndWeightText = QStringLiteral("out");  exitText = tr("out");       break;
+        case DIR_NORTHWEST: doorAndWeightText = QStringLiteral("nw");   break;
+        case DIR_NORTH    : doorAndWeightText = QStringLiteral("n");    break;
+        case DIR_NORTHEAST: doorAndWeightText = QStringLiteral("ne");   break;
+        case DIR_UP       : doorAndWeightText = QStringLiteral("up");   break;
+        case DIR_WEST     : doorAndWeightText = QStringLiteral("w");    break;
+        case DIR_EAST     : doorAndWeightText = QStringLiteral("e");    break;
+        case DIR_DOWN     : doorAndWeightText = QStringLiteral("down"); break;
+        case DIR_SOUTHWEST: doorAndWeightText = QStringLiteral("sw");   break;
+        case DIR_SOUTH    : doorAndWeightText = QStringLiteral("s");    break;
+        case DIR_SOUTHEAST: doorAndWeightText = QStringLiteral("se");   break;
+        case DIR_IN       : doorAndWeightText = QStringLiteral("in");   break;
+        case DIR_OUT      : doorAndWeightText = QStringLiteral("out");  break;
         default: Q_UNREACHABLE();
     }
 
@@ -1394,7 +1394,7 @@ void dlgRoomExits::initExit(int direction,
         pExitR = mpHost->mpMap->mpRoomDB->getRoom(exitId);
         if (!pExitR) {
             // Recover from a missing exit room - not doing this was causing seg. faults
-            qWarning() << "dlgRoomExits::initExit(...): Warning: missing exit to" << exitId << "in direction" << exitText << ", resetting exit.";
+            qWarning().nospace().noquote() << "dlgRoomExits::initExit(...): Warning: missing exit to " << exitId << " in direction " << doorAndWeightText << ", resetting exit.";
             exitId = -1;
         }
     }
@@ -1437,7 +1437,7 @@ void dlgRoomExits::initExit(int direction,
             locked->setEnabled(true);
         } else {
             exitLineEdit->setEnabled(true);
-            exitLineEdit->setToolTip(singleParagraph.arg(tr("Set the number of the room %1 of this one.").arg(exitText)));
+            exitLineEdit->setToolTip(validExitToolTip);
             stub->setChecked(false);
             none->setEnabled(false); //Disable door type controls, can't lock a non-existant exit..
             open->setEnabled(false); //.. and ensure the "none" one is set if it ever gets enabled
@@ -1471,29 +1471,29 @@ void dlgRoomExits::init()
     // Because we are manipulating the settings for the exit we need to know
     // explicitly where the weight comes from, pR->getExitWeight() hides that
     // detail deliberately for normal usage
-    initExit(DIR_NORTHWEST, pR->getExit(DIR_NORTHWEST), nw, noroute_nw, stub_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, weight_nw);
+    initExit(DIR_NORTHWEST, pR->getExit(DIR_NORTHWEST), nw, noroute_nw, stub_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, weight_nw, singleParagraph.arg(tr("Set the number of the room northwest of this one.")));
 
-    initExit(DIR_NORTH, pR->getExit(DIR_NORTH), n, noroute_n, stub_n, doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n, weight_n);
+    initExit(DIR_NORTH, pR->getExit(DIR_NORTH), n, noroute_n, stub_n, doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n, weight_n, singleParagraph.arg(tr("Set the number of the room north of this one.")));
 
-    initExit(DIR_NORTHEAST, pR->getExit(DIR_NORTHEAST), ne, noroute_ne, stub_ne, doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne, weight_ne);
+    initExit(DIR_NORTHEAST, pR->getExit(DIR_NORTHEAST), ne, noroute_ne, stub_ne, doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne, weight_ne, singleParagraph.arg(tr("Set the number of the room northeast of this one.")));
 
-    initExit(DIR_UP, pR->getExit(DIR_UP), up, noroute_up, stub_up, doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up, weight_up);
+    initExit(DIR_UP, pR->getExit(DIR_UP), up, noroute_up, stub_up, doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up, weight_up, singleParagraph.arg(tr("Set the number of the room up from this one.")));
 
-    initExit(DIR_WEST, pR->getExit(DIR_WEST), w, noroute_w, stub_w, doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w, weight_w);
+    initExit(DIR_WEST, pR->getExit(DIR_WEST), w, noroute_w, stub_w, doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w, weight_w, singleParagraph.arg(tr("Set the number of the room west of this one.")));
 
-    initExit(DIR_EAST, pR->getExit(DIR_EAST), e, noroute_e, stub_e, doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e, weight_e);
+    initExit(DIR_EAST, pR->getExit(DIR_EAST), e, noroute_e, stub_e, doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e, weight_e, singleParagraph.arg(tr("Set the number of the room east of this one.")));
 
-    initExit(DIR_DOWN, pR->getExit(DIR_DOWN), down, noroute_down, stub_down, doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down, weight_down);
+    initExit(DIR_DOWN, pR->getExit(DIR_DOWN), down, noroute_down, stub_down, doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down, weight_down, singleParagraph.arg(tr("Set the number of the room down from this one.")));
 
-    initExit(DIR_SOUTHWEST, pR->getExit(DIR_SOUTHWEST), sw, noroute_sw, stub_sw, doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw, weight_sw);
+    initExit(DIR_SOUTHWEST, pR->getExit(DIR_SOUTHWEST), sw, noroute_sw, stub_sw, doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw, weight_sw, singleParagraph.arg(tr("Set the number of the room southwest of this one.")));
 
-    initExit(DIR_SOUTH, pR->getExit(DIR_SOUTH), s, noroute_s, stub_s, doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s, weight_s);
+    initExit(DIR_SOUTH, pR->getExit(DIR_SOUTH), s, noroute_s, stub_s, doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s, weight_s, singleParagraph.arg(tr("Set the number of the room south of this one.")));
 
-    initExit(DIR_SOUTHEAST, pR->getExit(DIR_SOUTHEAST), se, noroute_se, stub_se, doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se, weight_se);
+    initExit(DIR_SOUTHEAST, pR->getExit(DIR_SOUTHEAST), se, noroute_se, stub_se, doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se, weight_se, singleParagraph.arg(tr("Set the number of the room southeast of this one.")));
 
-    initExit(DIR_IN, pR->getExit(DIR_IN), in, noroute_in, stub_in, doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in, weight_in);
+    initExit(DIR_IN, pR->getExit(DIR_IN), in, noroute_in, stub_in, doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in, weight_in, singleParagraph.arg(tr("Set the number of the room in from this one.")));
 
-    initExit(DIR_OUT, pR->getExit(DIR_OUT), out, noroute_out, stub_out, doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out, weight_out);
+    initExit(DIR_OUT, pR->getExit(DIR_OUT), out, noroute_out, stub_out, doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out, weight_out, singleParagraph.arg(tr("Set the number of the room out from this one.")));
 
     QMapIterator<QString, int> it(pR->getSpecialExits());
     while (it.hasNext()) {
