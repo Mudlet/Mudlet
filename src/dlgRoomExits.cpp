@@ -178,7 +178,7 @@ void RoomIdLineEditDelegate::updateEditorGeometry(QWidget* pEditor, const QStyle
     pEditor->setGeometry(option.rect);
 }
 
-void RoomIdLineEditDelegate::slot_specialRoomExitEdited(const QString& text)
+void RoomIdLineEditDelegate::slot_specialRoomExitEdited(const QString& text) const
 {
     qDebug().nospace().noquote() << "RoomIdLineEditDelegate::slot_specialRoomExitEdited(\"" << text << "\") INFO - called with given text.";
     // We do not set an icon in the status column whilst we are editing the
@@ -362,7 +362,8 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
             specialExits->closePersistentEditor(mpEditItem, mEditColumn);
             //            qDebug() << "Closed PE on item:" << mpEditItem->text(colIndex_command) << "column:" << mEditColumn;
             break;
-        default:; //noop for other column (colIndex_exitStatus & colIndex_lockExit)
+        default:
+            {} //noop for other column (colIndex_exitStatus & colIndex_lockExit)
         }
 
         setIconAndToolTipsOnSpecialExit(mpEditItem, true);
@@ -973,7 +974,7 @@ void dlgRoomExits::setIconAndToolTipsOnSpecialExit(QTreeWidgetItem* pSpecialExit
     }
 }
 
-void dlgRoomExits::setActionOnExit(QLineEdit* pExitLineEdit, QAction* pWantedAction)
+void dlgRoomExits::setActionOnExit(QLineEdit* pExitLineEdit, QAction* pWantedAction) const
 {
     auto pActions = pExitLineEdit->actions();
     // In fact there should only be one action but this code is flexible enough
@@ -1015,7 +1016,7 @@ QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
     return nullptr;
 }
 
-QString dlgRoomExits::generateToolTip(const QString& exitRoomName, const QString& exitAreaName, const bool outOfAreaExit, const int exitRoomWeight) const
+/* static */ QString dlgRoomExits::generateToolTip(const QString& exitRoomName, const QString& exitAreaName, const bool outOfAreaExit, const int exitRoomWeight)
 {
     if (exitRoomName.trimmed().length()) {
         if (outOfAreaExit) {

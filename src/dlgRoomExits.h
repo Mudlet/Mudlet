@@ -70,7 +70,7 @@ class WeightSpinBoxDelegate : public QStyledItemDelegate
     Q_OBJECT
 
 public:
-    WeightSpinBoxDelegate(QObject* parent = nullptr);
+    explicit WeightSpinBoxDelegate(QObject* parent = nullptr);
 
     QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
     void setEditorData(QWidget* editor, const QModelIndex& index) const override;
@@ -83,7 +83,7 @@ class RoomIdLineEditDelegate : public QStyledItemDelegate
     Q_OBJECT
 
 public:
-    RoomIdLineEditDelegate(QObject* parent = nullptr);
+    explicit RoomIdLineEditDelegate(QObject* parent = nullptr);
 
     QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
     void setEditorData(QWidget* editor, const QModelIndex& index) const override;
@@ -105,7 +105,7 @@ public:
     mutable int mAreaID = 0;
 
 private slots:
-    void slot_specialRoomExitEdited(const QString&);
+    void slot_specialRoomExitEdited(const QString&) const;
 };
 
 class dlgRoomExits : public QDialog, public Ui::room_exits
@@ -120,9 +120,9 @@ public:
     QSet<QAction*> mAllExitActionsSet;
     QPointer<Host> getHost() const { return mpHost; }
     int getAreaID() const { return mAreaID; }
-    void setActionOnExit(QLineEdit*, QAction*);
+    void setActionOnExit(QLineEdit*, QAction*) const;
     QAction* getActionOnExit(QLineEdit* pExitLineEdit) const;
-    QString generateToolTip(const QString& exitRoomName, const QString& exitAreaName, const bool outOfAreaExit, const int exitRoomWeight) const;
+    static QString generateToolTip(const QString& exitRoomName, const QString& exitAreaName, const bool outOfAreaExit, const int exitRoomWeight);
 
     // These need to be public so they can be accessed from the
     // RoomIdLineEditDelegate:
@@ -182,13 +182,13 @@ private:
     void setIconAndToolTipsOnSpecialExit(QTreeWidgetItem*, const bool);
     void normalExitEdited(const QString& roomExitIdText,
                           QLineEdit* pExit,
-                          QCheckBox* pL, QCheckBox* pS,
+                          QCheckBox* pNoRoute, QCheckBox* pS,
                           QSpinBox* pW,
                           QRadioButton* pDoorType_none, QRadioButton* pDoorType_open, QRadioButton* pDoorType_closed, QRadioButton* pDoorType_locked,
                           const QString& invalidExitToolTipText, const QString& noExitToolTipText);
     void normalStubExitChanged(const int state,
                                QLineEdit* pExit,
-                               QCheckBox* pL,
+                               QCheckBox* pNoRoute,
                                QSpinBox* pW,
                                QRadioButton* pDoorType_none, QRadioButton* pDoorType_open, QRadioButton* pDoorType_closed, QRadioButton* pDoorType_locked,
                                const QString& noExitToolTipText);
