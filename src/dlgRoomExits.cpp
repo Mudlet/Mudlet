@@ -1099,7 +1099,7 @@ void dlgRoomExits::normalExitEdited(const QString& roomExitIdText, QLineEdit* pE
 }
 
 void dlgRoomExits::normalStubExitChanged(const int state, QLineEdit* pExit, QCheckBox* pNoRoute, QSpinBox* pWeight,
-                                         QRadioButton* pDoorType_none, QRadioButton* pDoorType_open, QRadioButton* pDoorType_closed, QRadioButton* pDoorType_locked, const QString& noExitToolTipText)
+                                         QRadioButton* pDoorType_none, QRadioButton* pDoorType_open, QRadioButton* pDoorType_closed, QRadioButton* pDoorType_locked, const QString& noExitToolTipText) const
 {
     if (state == Qt::Checked) {
         if (!pExit->text().isEmpty()) {

@@ -191,7 +191,7 @@ private:
                                QCheckBox* pNoRoute,
                                QSpinBox* pW,
                                QRadioButton* pDoorType_none, QRadioButton* pDoorType_open, QRadioButton* pDoorType_closed, QRadioButton* pDoorType_locked,
-                               const QString& noExitToolTipText);
+                               const QString& noExitToolTipText) const;
 
 
     QPointer<Host> mpHost;
