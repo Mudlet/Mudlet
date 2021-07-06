@@ -34,7 +34,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
   COMMIT_DATE=$(git show -s --pretty="tformat:%cI" | cut -d'T' -f1 | tr -d '-')
   YESTERDAY_DATE=$(date -v-1d '+%F' | tr -d '-')
 
-  git clone -b keneanung-sign-with-hardened-runtime https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
+  git clone https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
 
   cd "${BUILD_DIR}/../installers/osx"
 
