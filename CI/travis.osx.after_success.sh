@@ -111,7 +111,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     if [ ! -z "$MACOS_SIGNING_PASS" ]; then
       if [ "${public_test_build}" == "true" ]; then
-         sign_and_notarize "${HOME}/Desktop/Mudlet PTB.dmg"
+        sign_and_notarize "${HOME}/Desktop/Mudlet PTB.dmg"
       else
         sign_and_notarize "${HOME}/Desktop/Mudlet.dmg"
       fi
