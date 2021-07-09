@@ -115,8 +115,10 @@ jobs:
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
+        # add new tap to brew for installing gon
+        brew tap mitchellh/gon
         # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip ccache luarocks expect
+        brew install pkg-config libzzip libzip ccache luarocks expect mitchellh/gon/gon
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
@@ -292,6 +294,8 @@ jobs:
         DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
         MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
+        AC_USERNAME: ${{secrets.APPLE_USERNAME}}
+        AC_PASSWORD: ${{secrets.APPLE_PASSWORD}}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v2
