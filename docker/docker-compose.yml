@@ -9,7 +9,6 @@ services:
     <<: *base-settings
     volumes:
       - settings:/home/mudlet/settings
-      - build:/home/mudlet/build
       - ../CMakeLists.txt:/home/mudlet/CMakeLists.txt
       - ../src:/home/mudlet/src
       - ../translations:/home/mudlet/translations
@@ -17,5 +16,4 @@ services:
     command: qtcreator CMakeLists.txt -settingspath /home/mudlet/settings/
 
 volumes:
-  build:
   settings:
