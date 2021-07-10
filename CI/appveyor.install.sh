@@ -86,7 +86,7 @@ echo "Working around MSYS2/Mingw-w64 issue 9037 with Luarocks..."
 # by downloading the old version of the Luarocks package and manually installing
 # it:
 /usr/bin/wget https://repo.msys2.org/mingw/mingw64/mingw-w64-${BUILDCOMPONENT}-lua51-luarocks-2.4.4-2-any.pkg.tar.zst
-/usr/bin/pacman -U mingw-w64-${BUILDCOMPONENT}-lua51-luarocks-2.4.4-2-any.pkg.tar.zst
+/usr/bin/pacman -U --noconfirm mingw-w64-${BUILDCOMPONENT}-lua51-luarocks-2.4.4-2-any.pkg.tar.zst
 
 # This was to fix https://github.com/msys2/MINGW-packages/issues/5928 but that
 # has now been done by https://github.com/msys2/MINGW-packages/pull/6580:
