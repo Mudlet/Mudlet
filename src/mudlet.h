@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2015-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2015-2016, 2018-2019, 2021 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
@@ -48,6 +48,7 @@
 #include <QMap>
 #include <QPointer>
 #include <QSettings>
+#include <QSystemTrayIcon>
 #include <QTextOption>
 #include <QTime>
 #include <QVersionNumber>
@@ -65,20 +66,26 @@
 #include <hunspell/hunspell.h>
 
 // for system physical memory info
-#ifdef WIN32
+#if defined(Q_OS_WIN32)
 #include <Windows.h>
 #include <Psapi.h>
-#elif defined(__APPLE__)
+#elif defined(Q_OS_MACOS)
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <array>
-#else
+#elif defined(Q_OS_HURD)
+#include <errno.h>
+#include <unistd.h>
+#elif defined(Q_OS_UNIX)
+// Including both GNU/Linux and FreeBSD
 #include <sys/resource.h>
 #include <sys/sysinfo.h>
 #include <sys/types.h>
 #include <unistd.h>
+#else
+// Any other OS?
 #endif
 
 class QAction;
@@ -118,153 +125,6 @@ public:
     Q_DISABLE_COPY(mudlet)
     mudlet();
     ~mudlet();
-    static mudlet* self();
-    // This method allows better debugging when mudlet::self() is called inappropriately.
-    static void start();
-    HostManager& getHostManager() { return mHostManager; }
-    void attachDebugArea(const QString& hostname);
-    FontManager mFontManager;
-    Discord mDiscord;
-    QPointer<QSettings> mpSettings;
-    void addSubWindow(TConsole* p);
-    void addConsoleForNewHost(Host* pH);
-    void disableToolbarButtons();
-    void enableToolbarButtons();
-    Host* getActiveHost();
-    void forceClose();
-    bool saveWindowLayout();
-    bool loadWindowLayout();
-    void commitLayoutUpdates(bool flush = false);
-
-    std::optional<QSize> getImageSize(const QString& imageLocation);
-    QString readProfileData(const QString& profile, const QString& item);
-    QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
-    void deleteProfileData(const QString &profile, const QString &item);
-    void readEarlySettings(const QSettings&);
-    void readLateSettings(const QSettings&);
-    void writeSettings();
-    bool openWebPage(const QString& path);
-    void checkUpdatesOnStart();
-    void processEventLoopHack();
-    static const QString scmMudletXmlDefaultVersion;
-    static QPointer<TConsole> mpDebugConsole;
-    static QPointer<QMainWindow> mpDebugArea;
-    static bool debugMode;
-    bool isGoingDown() { return mIsGoingDown; }
-    int mToolbarIconSize;
-    int mEditorTreeWidgetIconSize;
-    void setToolBarIconSize(int);
-    void setEditorTreeWidgetIconSize(int);
-    enum controlsVisibilityFlag {
-        visibleNever = 0,
-        visibleOnlyWithoutLoadedProfile = 0x1,
-        visibleMaskNormally = 0x2,
-        visibleAlways = 0x3
-    };
-    Q_DECLARE_FLAGS(controlsVisibility, controlsVisibilityFlag)
-    void setToolBarVisibility(controlsVisibility);
-    void setMenuBarVisibility(controlsVisibility);
-    void adjustToolBarVisibility();
-    void adjustMenuBarVisibility();
-    controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
-    controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
-    bool replayStart();
-    bool setClickthrough(Host* pHost, const QString& name, bool clickthrough);
-    void replayOver();
-    void showEvent(QShowEvent* event) override;
-    void hideEvent(QHideEvent* event) override;
-    bool moduleTableVisible();
-    bool mWindowMinimized;
-    void doAutoLogin(const QString&);
-    void stopSounds();
-    void playSound(const QString &s, int);
-    QStringList getAvailableFonts();
-    void updateMudletDiscordInvite();
-    std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
-    std::pair<bool, QString> resetProfileIcon(const QString& profile);
-#if defined(Q_OS_WIN32)
-    void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
-#endif
-    void activateProfile(Host*);
-
-
-    // used by developers in everyday coding
-    static const bool scmIsDevelopmentVersion;
-    // unofficial "nightly" build - still a type of a release
-    static const bool scmIsPublicTestVersion;
-    // final, official release
-    static const bool scmIsReleaseVersion;
-
-    static const QVersionNumber scmRunTimeQtVersion;
-    // A constant equivalent to QDataStream::Qt_5_12 needed in several places
-    // which can't be pulled from Qt as it is not going to be defined for older
-    // versions:
-    static const int scmQDataStreamFormat_5_12;
-    QTime mReplayTime;
-    int mReplaySpeed;
-    QToolBar* mpMainToolBar;
-    QString version;
-    QPointer<Host> mpCurrentActiveHost;
-    bool mAutolog;
-    QList<QMediaPlayer*> mMusicBoxList;
-    TTabBar* mpTabBar;
-    QStringList packagesToInstallList;
-    bool mIsLoadingLayout;
-    static QVariantHash mLuaFunctionNames;
-    bool mHasSavedLayout;
-    QPointer<dlgAboutDialog> mpAboutDlg;
-    QPointer<QDialog> mpModuleDlg;
-    QPointer<QDialog> mpPackageManagerDlg;
-    QPointer<dlgConnectionProfiles> mConnectionDialog;
-    // More modern Desktop styles no longer include icons on the buttons in
-    // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
-    // does use them - use this flag to determine whether we should apply our
-    // icons to override some of them:
-    bool mShowIconsOnDialogs;
-    // Value of QCoreApplication::testAttribute(Qt::AA_DontShowIconsInMenus) on
-    // startup which the user may leave as is or force on or off:
-    bool mShowIconsOnMenuOriginally;
-    // This is the state for the tri-state control on the preferences and
-    // means:
-    // Qt::PartiallyChecked = use the previous state set on application start
-    //    (set AA_DontShowIconsInMenus to inverse of mShowIconsOnMenuOriginally)
-    // Qt::Unchecked = icons are not used on menus (set AA_DontShowIconsInMenus
-    //    to false ourselves)
-    // Qt::Checked = icons are used on menus (set AA_DontShowIconsInMenus to
-    //    true ourselves)
-    Qt::CheckState mShowIconsOnMenuCheckedState;
-
-    // Used for editor area, but
-    // only ::ShowTabsAndSpaces
-    // and ::ShowLineAndParagraphSeparators
-    // are considered/used/stored
-    QTextOption::Flags mEditorTextOptions;
-    void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
-    static bool loadLuaFunctionList();
-    static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
-
-    // Used by a profile to tell the mudlet class
-    // to tell other profiles to reload the updated
-    // maps (via signal_profileMapReloadRequested(...))
-    void requestProfilesToReloadMaps(QList<QString>);
-
-    void showChangelogIfUpdated();
-
-    bool showMapAuditErrors() const { return mshowMapAuditErrors; }
-    void setShowMapAuditErrors(const bool);
-    void setShowIconsOnMenu(const Qt::CheckState);
-    void setGlobalStyleSheet(const QString& styleSheet);
-
-    static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
-
-    // This construct will be very useful for formatting tooltips and by
-    // defining a static function/method here we can save using the same
-    // QStringLiteral all over the place:
-    static QString htmlWrapper(const QString& text) { return QStringLiteral("<html><head/><body>%1</body></html>").arg(text); }
-
-    // From https://stackoverflow.com/a/14678964/4805858 an answer to:
-    // "How to find and replace string?" by "Czarek Tomczak":
-    static std::string replaceString(std::string subject, const std::string& search, const std::string& replace);
 
     enum mudletPathType {
         // The root of all mudlet data for the user - does not end in a '/'
@@ -297,6 +157,9 @@ public:
         // Takes two extra arguments (profile name, dataTime stamp) that returns
         // the pathFile name for a dateTime stamped map file:
         profileDateTimeStampedMapPathFileName,
+        // Takes two extra arguments (profile name, dataTime stamp) that returns
+        // the pathFile name for a dateTime stamped JSON map file:
+        profileDateTimeStampedJsonMapPathFileName,
         // Takes two extra arguments (profile name, mapFileName) that returns
         // the pathFile name for any map file:
         profileMapPathFileName,
@@ -345,6 +208,88 @@ public:
         // dictionaries from:
         hunspellDictionaryPath
     };
+
+    static mudlet* self();
+    // This method allows better debugging when mudlet::self() is called inappropriately.
+    static void start();
+    HostManager& getHostManager() { return mHostManager; }
+    void attachDebugArea(const QString& hostname);
+    void addConsoleForNewHost(Host* pH);
+    void disableToolbarButtons();
+    void enableToolbarButtons();
+    Host* getActiveHost();
+    void forceClose();
+    bool saveWindowLayout();
+    bool loadWindowLayout();
+    void commitLayoutUpdates(bool flush = false);
+
+    std::optional<QSize> getImageSize(const QString& imageLocation);
+    QString readProfileData(const QString& profile, const QString& item);
+    QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
+    void deleteProfileData(const QString &profile, const QString &item);
+    void readEarlySettings(const QSettings&);
+    void readLateSettings(const QSettings&);
+    void writeSettings();
+    bool openWebPage(const QString& path);
+    void checkUpdatesOnStart();
+    void processEventLoopHack();
+    bool isGoingDown() { return mIsGoingDown; }
+    void setToolBarIconSize(int);
+    void setEditorTreeWidgetIconSize(int);
+    enum controlsVisibilityFlag {
+        visibleNever = 0,
+        visibleOnlyWithoutLoadedProfile = 0x1,
+        visibleMaskNormally = 0x2,
+        visibleAlways = 0x3
+    };
+    Q_DECLARE_FLAGS(controlsVisibility, controlsVisibilityFlag)
+    void setToolBarVisibility(controlsVisibility);
+    void setMenuBarVisibility(controlsVisibility);
+    void adjustToolBarVisibility();
+    void adjustMenuBarVisibility();
+    controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
+    controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
+    bool replayStart();
+    bool setClickthrough(Host* pHost, const QString& name, bool clickthrough);
+    void replayOver();
+    void showEvent(QShowEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
+    void doAutoLogin(const QString&);
+    void stopSounds();
+    void playSound(const QString &s, int);
+    QStringList getAvailableFonts();
+    std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
+    std::pair<bool, QString> resetProfileIcon(const QString& profile);
+#if defined(Q_OS_WIN32)
+    void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
+#endif
+    void activateProfile(Host*);
+    void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
+    static bool loadLuaFunctionList();
+    static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
+
+    // Used by a profile to tell the mudlet class
+    // to tell other profiles to reload the updated
+    // maps (via signal_profileMapReloadRequested(...))
+    void requestProfilesToReloadMaps(QList<QString>);
+    void showChangelogIfUpdated();
+
+    bool showMapAuditErrors() const { return mshowMapAuditErrors; }
+    void setShowMapAuditErrors(const bool);
+    void setShowIconsOnMenu(const Qt::CheckState);
+    void setGlobalStyleSheet(const QString& styleSheet);
+
+    static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
+
+    // This construct will be very useful for formatting tooltips and by
+    // defining a static function/method here we can save using the same
+    // QStringLiteral all over the place:
+    static QString htmlWrapper(const QString& text) { return QStringLiteral("<html><head/><body>%1</body></html>").arg(text); }
+
+    // From https://stackoverflow.com/a/14678964/4805858 an answer to:
+    // "How to find and replace string?" by "Czarek Tomczak":
+    static std::string replaceString(std::string subject, const std::string& search, const std::string& replace);
+
     static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     // Used to enable "emergency" control recovery action - if Mudlet is
     // operating without either menubar or main toolbar showing.
@@ -375,12 +320,79 @@ public:
     QSet<QString> getWordSet();
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
-    void layoutModules();
     void startAutoLogin(const QString&);
-    QPointer<QTableWidget> moduleTable;
     int64_t getPhysicalMemoryTotal();
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
+    void refreshTabBar();
 
+    bool firstLaunch = false;
+    // Needed to work around a (likely only Windows) issue:
+    QString mBG_ONLY_STYLESHEET;
+    QString mTEXT_ON_BG_STYLESHEET;
+
+    FontManager mFontManager;
+    Discord mDiscord;
+    QPointer<QSettings> mpSettings;
+    static const QString scmMudletXmlDefaultVersion;
+    static QPointer<TConsole> mpDebugConsole;
+    static QPointer<QMainWindow> mpDebugArea;
+    static bool debugMode;
+    int mToolbarIconSize;
+    int mEditorTreeWidgetIconSize;
+    bool mWindowMinimized;
+
+    // used by developers in everyday coding
+    static const bool scmIsDevelopmentVersion;
+    // unofficial "nightly" build - still a type of a release
+    static const bool scmIsPublicTestVersion;
+    // final, official release
+    static const bool scmIsReleaseVersion;
+
+    static const QVersionNumber scmRunTimeQtVersion;
+    // A constant equivalent to QDataStream::Qt_5_12 needed in several places
+    // which can't be pulled from Qt as it is not going to be defined for older
+    // versions:
+    static const int scmQDataStreamFormat_5_12;
+
+    QTime mReplayTime;
+    int mReplaySpeed;
+    QToolBar* mpMainToolBar;
+    QString version;
+    QPointer<Host> mpCurrentActiveHost;
+    bool mAutolog;
+    QList<QMediaPlayer*> mMusicBoxList;
+    TTabBar* mpTabBar;
+    QStringList packagesToInstallList;
+    bool mIsLoadingLayout;
+    static QVariantHash mLuaFunctionNames;
+    bool mHasSavedLayout;
+    QPointer<dlgAboutDialog> mpAboutDlg;
+    QPointer<dlgConnectionProfiles> mConnectionDialog;
+    // More modern Desktop styles no longer include icons on the buttons in
+    // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
+    // does use them - use this flag to determine whether we should apply our
+    // icons to override some of them:
+    bool mShowIconsOnDialogs;
+    // Value of QCoreApplication::testAttribute(Qt::AA_DontShowIconsInMenus) on
+    // startup which the user may leave as is or force on or off:
+    bool mShowIconsOnMenuOriginally;
+    // This is the state for the tri-state control on the preferences and
+    // means:
+    // Qt::PartiallyChecked = use the previous state set on application start
+    //    (set AA_DontShowIconsInMenus to inverse of mShowIconsOnMenuOriginally)
+    // Qt::Unchecked = icons are not used on menus (set AA_DontShowIconsInMenus
+    //    to false ourselves)
+    // Qt::Checked = icons are used on menus (set AA_DontShowIconsInMenus to
+    //    true ourselves)
+    Qt::CheckState mShowIconsOnMenuCheckedState;
+
+    // Used for editor area, but
+    // only ::ShowTabsAndSpaces
+    // and ::ShowLineAndParagraphSeparators
+    // are considered/used/stored
+    QTextOption::Flags mEditorTextOptions;
+
+    QSystemTrayIcon mTrayIcon;
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
@@ -430,8 +442,6 @@ public slots:
     void slot_show_help_dialog_forum();
     void slot_show_help_dialog_irc();
     void slot_open_mappingscripts_page();
-    void slot_module_clicked(QTableWidgetItem*);
-    void slot_module_changed(QTableWidgetItem*);
     void slot_multi_view(const bool);
     void slot_toggle_multi_view();
     void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
@@ -443,14 +453,9 @@ public slots:
     void slot_close_profile_requested(int);
     void slot_irc();
     void slot_discord();
-    void slot_uninstall_package();
-    void slot_install_package();
     void slot_package_manager();
     void slot_package_exporter();
-    void slot_uninstall_module();
-    void slot_install_module();
     void slot_module_manager();
-    void slot_help_module();
 #if defined(INCLUDE_UPDATER)
     void slot_check_manual_update();
 #endif
@@ -503,7 +508,6 @@ private slots:
     void slot_gamepadDisconnected(int deviceId);
     void slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
 #endif
-    void slot_module_manager_destroyed();
 #if defined(INCLUDE_UPDATER)
     void slot_update_installed();
     void slot_updateAvailable(const int);
@@ -513,6 +517,7 @@ private slots:
     void slot_compact_input_line(const bool);
     void slot_password_migrated_to_secure(QKeychain::Job *job);
     void slot_password_migrated_to_profile(QKeychain::Job *job);
+    void slot_tabMoved(const int oldPos, const int newPos);
 
 
 private:
@@ -527,10 +532,12 @@ private:
     void loadTranslators(const QString &languageCode);
     void loadMaps();
     void migrateDebugConsole(Host* currentHost);
-    static bool firstLaunch();
     QString autodetectPreferredLanguage();
+    void installModulesList(Host*, QStringList);
+    void setupTrayIcon();
 
-    QWidget* mainPane;
+    QWidget* mpWidget_profileContainer;
+    QHBoxLayout* mpHBoxLayout_profileContainer;
 
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
@@ -574,6 +581,7 @@ private:
     QPointer<QAction> mpActionReplay;
 
     QPointer<QAction> mpActionAbout;
+    QPointer<QAction> mpActionAboutWithUpdates;
     QPointer<QToolButton> mpButtonAbout;
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
@@ -600,15 +608,6 @@ private:
     QPointer<QAction> mpActionTimers;
     QPointer<QAction> mpActionTriggers;
     QPointer<QAction> mpActionVariables;
-
-    QPointer<QListWidget> packageList;
-    QPointer<QPushButton> uninstallButton;
-    QPointer<QPushButton> installButton;
-
-    QPointer<Host> mpModuleTableHost;
-    QPointer<QPushButton> moduleUninstallButton;
-    QPointer<QPushButton> moduleInstallButton;
-    QPointer<QPushButton> moduleHelpButton;
 
     HostManager mHostManager;
 
@@ -639,7 +638,7 @@ private:
     // The collection of words in the above:
     QSet<QString> mWordSet_shared;
 
-    QString mMudletDiscordInvite = QStringLiteral("https://discord.com/invite/kuYvMQ9");
+    QString mMudletDiscordInvite = QStringLiteral("https://www.mudlet.org/chat");
 
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate {};

@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2019 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2019, 2021 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -27,6 +27,7 @@
 
 
 #include "pre_guard.h"
+#include <QElapsedTimer>
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
@@ -185,13 +186,13 @@ public:
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
     QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
-    std::pair<QString, int> getConnectionInfo() const;
+    std::tuple<QString, int, bool> getConnectionInfo() const;
 
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
-    double networkLatency;
-    QTime networkLatencyTime;
+    double networkLatencyTime;
+    QElapsedTimer networkLatencyTimer;
     bool mAlertOnNewData;
     bool mGA_Driver;
     bool mFORCE_GA_OFF;
@@ -204,7 +205,7 @@ public:
 
 public slots:
     void setDownloadProgress(qint64, qint64);
-    void replyFinished(QNetworkReply*);
+    void slot_replyFinished(QNetworkReply*);
     void slot_processReplayChunk();
     void handle_socket_signal_hostFound(QHostInfo);
     void handle_socket_signal_connected();
@@ -282,6 +283,8 @@ private:
     QTimer* mpPostingTimer;
     bool mUSE_IRE_DRIVER_BUGFIX;
 
+    QNetworkReply* mpPackageDownloadReply = nullptr;
+
     int mCommands;
     bool mMCCP_version_1;
     bool mMCCP_version_2;
@@ -291,9 +294,9 @@ private:
     bool mIsTimerPosting;
     QTimer* mTimerLogin;
     QTimer* mTimerPass;
-    QTime timeOffset;
-    QTime mConnectionTime;
-    int lastTimeOffset;
+    QElapsedTimer mRecordingChunkTimer;
+    QElapsedTimer mConnectionTimer;
+    int mRecordLastChunkMSecTimeOffset;
     bool enableCHARSET;
     bool enableATCP;
     bool enableGMCP;
@@ -318,6 +321,9 @@ private:
 
     // Set if the current connection is via a proxy
     bool mConnectViaProxy;
+
+    // server problem w/ not terminating IAC SB: only warn once
+    bool mIncompleteSB;
 
 private slots:
 #if !defined(QT_NO_SSL)

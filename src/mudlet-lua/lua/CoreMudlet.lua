@@ -1091,6 +1091,9 @@ if false then
   function setWindowWrap(windowName, wrapAt)
   end
 
+  --- Gets at what position in the line the console or miniconsole will start word wrap.
+  function getWindowWrap(windownName)
+  end
 
 
   --- <b><u>TODO</u></b>  setWindowWrapIndent - TLuaInterpreter::setWindowWrapIndent

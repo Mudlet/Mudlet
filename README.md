@@ -111,12 +111,26 @@ This software wouldnt've been possible without these open source packages:
 
 - [Qt](https://www.qt.io/)
 - [Lua](https://www.lua.org/)
+- [PCRE](https://www.pcre.org/)
 - [edbee](http://www.edbee.net/)
 - [DBLSQD](https://www.dblsqd.com/)
+- [argparse](https://github.com/luarocks/argparse)
+- [Boost Graph Library](https://www.boost.org/doc/libs/1_75_0/libs/graph/doc/)
+- [Busted](http://olivinelabs.com/busted/)
+- [Ccache](https://ccache.dev/)
 - [Communi](https://communi.github.io/)
-- [PCRE](https://www.pcre.org/)
-- [lua-yajl](https://github.com/brimworks/lua-yajl)
 - [Hunspell](https://hunspell.github.io/)
+- [lua-http](https://daurnimator.github.io/lua-http/)
+- [lua-yajl](https://github.com/brimworks/lua-yajl)
+- [lua-zip](https://github.com/brimworks/lua-zip)
+- [LuaFileSystem](http://keplerproject.github.io/luafilesystem/)
+- [Luarocks](https://luarocks.org/)
+- [LuaSQL](http://keplerproject.github.io/luasql/)
+- [luautf8](https://github.com/starwing/luautf8)
+- [pugixml](https://pugixml.org/)
+- [SQLite](https://sqlite.org/index.html)
+- [vcpkg](https://docs.microsoft.com/en-us/cpp/build/vcpkg?view=msvc-160)
+- [yajl](http://lloyd.github.io/yajl/)
 
 Credit to [Markdownify](https://github.com/amitmerchant1990/electron-markdownify) for the README inspiration.
 
@@ -129,3 +143,4 @@ GPL2+
 > [website](https://www.mudlet.org/) &nbsp;&middot;&nbsp;
 > [forums](https://forums.mudlet.org/) &nbsp;&middot;&nbsp;
 > [manual](https://wiki.mudlet.org/w/Manual:Contents)
+
