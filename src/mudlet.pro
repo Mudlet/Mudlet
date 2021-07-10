@@ -1562,15 +1562,24 @@ unix:!macx {
 DISTFILES += \
     ../.appveyor.yml \
     ../.crowdin.yml \
+    ../.devcontainer/Dockerfile \
+    ../.devcontainer/devcontainer.json \
+    ../.devcontainer/library-scripts/desktop-lite-debian.sh \
+    ../.github/CODEOWNERS \
     ../.github/CODEOWNERS.md \
     ../.github/CODE_OF_CONDUCT.md \
     ../.github/CONTRIBUTING.md \
     ../.github/FUNDING.yml \
     ../.github/ISSUE_TEMPLATE.md \
+    ../.github/codeql/codeql-config.yml \
+    ../.github/dependabot.yml \
     ../.github/pr-labeler.yml \
     ../.github/PULL_REQUEST_TEMPLATE.md \
     ../.github/SUPPORT.md \
     ../.github/workflows/build-mudlet.yml \
+    ../.github/workflows/clangtidy-diff-analysis.yml \
+    ../.github/workflows/codeql-analysis.yml \
+    ../.github/workflows/link-ptbs-to-dblsqd.yml \
     ../.github/workflows/update-3rdparty.yml \
     ../.github/workflows/update-autocompletion.yml \
     ../.github/workflows/update-geyser-docs.yml \
@@ -1579,6 +1588,22 @@ DISTFILES += \
     ../.gitignore \
     ../.gitmodules \
     ../.travis.yml \
+    ../.vscode/c_cpp_properties.json \
+    ../.vscode/extensions.json \
+    ../.vscode/settings.json \
+    ../3rdparty/discord/rpc/lib/discord-rpc32.dll \
+    ../3rdparty/discord/rpc/lib/discord-rpc64.dll \
+    ../3rdparty/discord/rpc/lib/libdiscord-rpc.dylib \
+    ../3rdparty/discord/rpc/lib/libdiscord-rpc.so \
+    ../3rdparty/our-vcpkg-dependencies/lua/CMakeLists.txt \
+    ../3rdparty/our-vcpkg-dependencies/lua/CONTROL \
+    ../3rdparty/our-vcpkg-dependencies/lua/COPYRIGHT \
+    ../3rdparty/our-vcpkg-dependencies/lua/portfile.cmake \
+    ../3rdparty/our-vcpkg-dependencies/lua/usage \
+    ../3rdparty/our-vcpkg-dependencies/lua/vs2015-impl-c99.patch \
+    ../3rdparty/our-vcpkg-dependencies/vcpkg-x64-linux-dependencies \
+    ../3rdparty/our-vcpkg-dependencies/vcpkg-x64-mingw-dynamic-dependencies \
+    ../3rdparty/our-vcpkg-dependencies/vcpkg-x64-osx-dependencies \
     ../CI/appveyor.after_build.sh \
     ../CI/appveyor.after_success.ps1 \
     ../CI/appveyor.after_success.sh \
@@ -1611,12 +1636,17 @@ DISTFILES += \
     ../CI/travis.validate_deployment.sh \
     ../CI/update-autocompletion.lua \
     ../cmake/FindHUNSPELL.cmake \
+    ../cmake/FindLua51.cmake \
     ../cmake/FindPCRE.cmake \
+    ../cmake/FindSparkle.cmake \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
     ../cmake/FindPUGIXML.cmake \
     ../CMakeLists.txt \
     ../COMMITMENT \
+    ../cmake/FindZZIPLIB.cmake \
+    ../cmake/IncludeOptionalModule.cmake \
+    ../cmake/InitGitSubmodule.cmake \
     ../mudlet.desktop \
     ../mudlet.png \
     ../mudlet.svg \
