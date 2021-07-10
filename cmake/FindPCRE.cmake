@@ -55,10 +55,17 @@ find_library(
         /opt/csw
         /opt)
 
-if(PCRE_LIBRARY_DEBUG AND PCRE_LIBRARY_RELEASE)
-  set(PCRE_LIBRARY optimized ${PCRE_LIBRARY_RELEASE} debug
-                   ${PCRE_LIBRARY_DEBUG})
-elseif(PCRE_LIBRARY_RELEASE)
+# if(PCRE_LIBRARY_DEBUG AND PCRE_LIBRARY_RELEASE)
+  #
+  # This confuses 'get_filename_component(PCRE_FILENAME ${PCRE_LIBRARY} NAME)' later on
+  # get_filename_component(PCRE_FILENAME optimized;D:/a/Mudlet/Mudlet/3rdparty/vcpkg/installed/x64-mingw-dynamic/lib/libpcre.dll.a;debug;D:/a/Mudlet/Mudlet/3rdparty/vcpkg/installed/x64-mingw-dynamic/debug/lib/libpcred.dll.a NAME )
+  # CMake Error at cmake/FindPCRE.cmake:84 (get_filename_component):
+  # ##[error]  get_filename_component unknown component
+  #
+  # set(PCRE_LIBRARY optimized ${PCRE_LIBRARY_RELEASE} debug
+                  #  ${PCRE_LIBRARY_DEBUG})
+# elseif
+if(PCRE_LIBRARY_RELEASE)
   set(PCRE_LIBRARY ${PCRE_LIBRARY_RELEASE})
 elseif(PCRE_LIBRARY_DEBUG)
   set(PCRE_LIBRARY ${PCRE_LIBRARY_DEBUG})

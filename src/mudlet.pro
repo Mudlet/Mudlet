@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020 by Stephen Lyons             #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2021 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -23,14 +23,14 @@
 
 ############################################################################
 #                                                                          #
-#    NOTICE: FreeBSD is not an officially supported platform as such;      #
-#    the work on getting it working has been done by myself, and other     #
-#    developers, unless they have explicitly said so, are not able to      #
-#    address issues relating specifically to that Operating System.        #
-#    Nevertheless users of FreeBSD are equally welcome to contribute       #
-#    to the development of Mudlet - bugfixes and enhancements are          #
-#    welcome from all!                                                     #
-#                                           Stephen Lyons, February 2018   #
+#    NOTICE: FreeBSD and GNU/Hurd are not officially supported platforms   #
+#    as such; the work on getting them working has been done by myself,    #
+#    and other developers, unless they have explicitly said so, are not    #
+#    able to address issues relating specifically to these Operating       #
+#    Systems. Nevertheless users of either are equally welcome to          #
+#    contribute to the development of Mudlet - bugfixes and enhancements   #
+#    are welcome from all!                                                 #
+#                         Stephen Lyons, February 2018, updated March 2021 #
 #                                                                          #
 ############################################################################
 
@@ -45,10 +45,6 @@ include(../3rdparty/communi/communi.pri)
     include(../translations/translated/updateqm.pri)
 }
 
-# disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-*
-# after for some warnings that we wish to ignore:
-!msvc:CONFIG += warn_off
-!msvc:QMAKE_CXXFLAGS += -Wall -Wno-deprecated
 # Before we impose OUR idea about the optimisation levels to use, remove any
 # that Qt tries to put in automatically for us for release builds, only the
 # last, ours, is supposed to apply but it can be confusing to see multiple
@@ -93,7 +89,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.10.0
+VERSION = 4.12.0
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -269,7 +265,6 @@ unix:!macx {
     }
     LIBS += -lpcre \
         -L/usr/local/lib/ \
-        -lyajl \
         -lzip \
         -lz \
         -lpugixml
@@ -289,7 +284,7 @@ unix:!macx {
         LIBS +=  \
             -L"$${MINGW_BASE_DIR_TEST}\\bin" \
             -llua51 \
-            -llibhunspell-1.6
+            -lhunspell-1.6
 
         INCLUDEPATH += \
              "C:\\Libraries\\boost_1_71_0" \
@@ -320,7 +315,6 @@ unix:!macx {
         -lpcre-1 \
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
-        -lyajl \
         -lpugixml \
         -lWs2_32
 
@@ -356,7 +350,7 @@ macx {
     # http://stackoverflow.com/a/16972067
     QT_CONFIG -= no-pkg-config
     CONFIG += link_pkgconfig
-    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip pugixml
+    PKGCONFIG += hunspell lua5.1 libpcre libzip pugixml
     INCLUDEPATH += /usr/local/include
 }
 
@@ -507,7 +501,7 @@ contains( DEFINES, INCLUDE_UPDATER ) {
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
-    TTextCodec.cpp \
+    AltFocusMenuBarDisable.cpp \
     ctelnet.cpp \
     discord.cpp \
     dlgAboutDialog.cpp \
@@ -518,11 +512,14 @@ SOURCES += \
     dlgConnectionProfiles.cpp \
     dlgIRC.cpp \
     dlgKeysMainArea.cpp \
+    dlgModuleManager.cpp \
     dlgMapper.cpp \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
+    dlgPackageManager.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
+    dlgRoomSymbol.cpp \
     dlgScriptsMainArea.cpp \
     dlgSourceEditorArea.cpp \
     dlgSourceEditorFindArea.cpp \
@@ -541,7 +538,9 @@ SOURCES += \
     KeyUnit.cpp \
     LuaInterface.cpp \
     main.cpp \
+    mapInfoContributorManager.cpp \
     mudlet.cpp \
+    MxpTag.cpp \
     ScriptUnit.cpp \
     T2DMap.cpp \
     TAction.cpp \
@@ -565,12 +564,13 @@ SOURCES += \
     TLuaInterpreter.cpp \
     TMainConsole.cpp \
     TMap.cpp \
+    TMapLabel.cpp \
     TMedia.cpp \
+    TMxpBRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
     TMxpFormattingTagsHandler.cpp \
-    TMxpBRTagHandler.cpp \
     TMxpColorTagHandler.cpp \
     TMxpCustomElementTagHandler.cpp \
     TMxpFontTagHandler.cpp \
@@ -582,19 +582,20 @@ SOURCES += \
     TMxpProcessor.cpp \
     TMxpSendTagHandler.cpp \
     TMxpSupportTagHandler.cpp \
-    MxpTag.cpp \
     TMxpTagHandler.cpp \
     TMxpTagParser.cpp \
     TMxpTagProcessor.cpp \
-    TMxpVarTagHandler.cpp \
     TMxpVersionTagHandler.cpp \
+    TMxpVarTagHandler.cpp \
     TriggerUnit.cpp \
     TRoom.cpp \
     TRoomDB.cpp \
     TScript.cpp \
     TSplitter.cpp \
     TSplitterHandle.cpp \
+    TStringUtils.cpp \
     TTabBar.cpp \
+    TTextCodec.cpp \
     TTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
@@ -603,13 +604,12 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    TStringUtils.cpp
+    XMLimport.cpp
 
 HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
-    TTextCodec.h \
+    AltFocusMenuBarDisable.h \
     ctelnet.h \
     discord.h \
     dlgAboutDialog.h \
@@ -621,10 +621,13 @@ HEADERS += \
     dlgIRC.h \
     dlgKeysMainArea.h \
     dlgMapper.h \
+    dlgModuleManager.h \
     dlgNotepad.h \
     dlgPackageExporter.h \
+    dlgPackageManager.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
+    dlgRoomSymbol.h \
     dlgScriptsMainArea.h \
     dlgSourceEditorArea.h \
     dlgSourceEditorFindArea.h \
@@ -641,7 +644,9 @@ HEADERS += \
     ircmessageformatter.h \
     KeyUnit.h \
     LuaInterface.h \
+    mapInfoContributorManager.h \
     mudlet.h \
+    MxpTag.h \
     pre_guard.h \
     post_guard.h \
     ScriptUnit.h \
@@ -670,6 +675,7 @@ HEADERS += \
     TLuaInterpreter.h \
     TMainConsole.h \
     TMap.h \
+    TMapLabel.h \
     TMatchState.h \
     TMedia.h \
     TMxpBRTagHandler.h \
@@ -689,7 +695,6 @@ HEADERS += \
     TMxpNodeBuilder.h \
     TMxpProcessor.h \
     TMxpSendTagHandler.h \
-    MxpTag.h \
     TMxpTagHandler.h \
     TMxpTagParser.h \
     TMxpTagProcessor.h \
@@ -703,7 +708,9 @@ HEADERS += \
     TScript.h \
     TSplitter.h \
     TSplitterHandle.h \
+    TStringUtils.h \
     TTabBar.h \
+    TTextCodec.h \
     TTextEdit.h \
     TTimer.h \
     TToolBar.h \
@@ -715,8 +722,7 @@ HEADERS += \
     XMLimport.h \
     widechar_width.h \
     ../3rdparty/discord/rpc/include/discord_register.h \
-    ../3rdparty/discord/rpc/include/discord_rpc.h \
-    TStringUtils.h
+    ../3rdparty/discord/rpc/include/discord_rpc.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
@@ -732,10 +738,13 @@ FORMS += \
     ui/irc.ui \
     ui/keybindings_main_area.ui \
     ui/main_window.ui \
+    ui/module_manager.ui \
     ui/mapper.ui \
     ui/notes_editor.ui \
+    ui/package_manager.ui \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
+    ui/room_symbol.ui \
     ui/scripts_main_area.ui \
     ui/source_editor_area.ui \
     ui/source_editor_find_area.ui \
@@ -1553,15 +1562,24 @@ unix:!macx {
 DISTFILES += \
     ../.appveyor.yml \
     ../.crowdin.yml \
-    ../.github/pr-labeler.yml \
+    ../.devcontainer/Dockerfile \
+    ../.devcontainer/devcontainer.json \
+    ../.devcontainer/library-scripts/desktop-lite-debian.sh \
+    ../.github/CODEOWNERS \
     ../.github/CODEOWNERS.md \
     ../.github/CODE_OF_CONDUCT.md \
     ../.github/CONTRIBUTING.md \
     ../.github/FUNDING.yml \
     ../.github/ISSUE_TEMPLATE.md \
+    ../.github/codeql/codeql-config.yml \
+    ../.github/dependabot.yml \
+    ../.github/pr-labeler.yml \
     ../.github/PULL_REQUEST_TEMPLATE.md \
     ../.github/SUPPORT.md \
     ../.github/workflows/build-mudlet.yml \
+    ../.github/workflows/clangtidy-diff-analysis.yml \
+    ../.github/workflows/codeql-analysis.yml \
+    ../.github/workflows/link-ptbs-to-dblsqd.yml \
     ../.github/workflows/update-3rdparty.yml \
     ../.github/workflows/update-autocompletion.yml \
     ../.github/workflows/update-geyser-docs.yml \
@@ -1570,7 +1588,22 @@ DISTFILES += \
     ../.gitignore \
     ../.gitmodules \
     ../.travis.yml \
-    ../CI/auto-add-ssh-key.sh \
+    ../.vscode/c_cpp_properties.json \
+    ../.vscode/extensions.json \
+    ../.vscode/settings.json \
+    ../3rdparty/discord/rpc/lib/discord-rpc32.dll \
+    ../3rdparty/discord/rpc/lib/discord-rpc64.dll \
+    ../3rdparty/discord/rpc/lib/libdiscord-rpc.dylib \
+    ../3rdparty/discord/rpc/lib/libdiscord-rpc.so \
+    ../3rdparty/our-vcpkg-dependencies/lua/CMakeLists.txt \
+    ../3rdparty/our-vcpkg-dependencies/lua/CONTROL \
+    ../3rdparty/our-vcpkg-dependencies/lua/COPYRIGHT \
+    ../3rdparty/our-vcpkg-dependencies/lua/portfile.cmake \
+    ../3rdparty/our-vcpkg-dependencies/lua/usage \
+    ../3rdparty/our-vcpkg-dependencies/lua/vs2015-impl-c99.patch \
+    ../3rdparty/our-vcpkg-dependencies/vcpkg-x64-linux-dependencies \
+    ../3rdparty/our-vcpkg-dependencies/vcpkg-x64-mingw-dynamic-dependencies \
+    ../3rdparty/our-vcpkg-dependencies/vcpkg-x64-osx-dependencies \
     ../CI/appveyor.after_build.sh \
     ../CI/appveyor.after_success.ps1 \
     ../CI/appveyor.after_success.sh \
@@ -1582,6 +1615,7 @@ DISTFILES += \
     ../CI/appveyor.set-build-info.ps1 \
     ../CI/appveyor.set-build-info.sh \
     ../CI/appveyor.validate_deployment.ps1 \
+    ../CI/auto-add-ssh-key.sh \
     ../CI/copy-non-qt-win-dependencies.ps1 \
     ../CI/generate-ptb-changelog.lua \
     ../CI/mudlet-deploy-key.enc \
@@ -1602,12 +1636,17 @@ DISTFILES += \
     ../CI/travis.validate_deployment.sh \
     ../CI/update-autocompletion.lua \
     ../cmake/FindHUNSPELL.cmake \
+    ../cmake/FindLua51.cmake \
     ../cmake/FindPCRE.cmake \
+    ../cmake/FindSparkle.cmake \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
     ../cmake/FindPUGIXML.cmake \
     ../CMakeLists.txt \
     ../COMMITMENT \
+    ../cmake/FindZZIPLIB.cmake \
+    ../cmake/IncludeOptionalModule.cmake \
+    ../cmake/InitGitSubmodule.cmake \
     ../mudlet.desktop \
     ../mudlet.png \
     ../mudlet.svg \

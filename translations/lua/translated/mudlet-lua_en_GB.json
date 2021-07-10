@@ -66,5 +66,29 @@
   "AdjustableContainer.disconnect": {
     "message": "Disconnect ",
     "description": "disconnect your container from the border frame"
+  },
+  "Mudlet.packageInstallSuccess": {
+    "message": "Package '%s' installed successfully.",
+    "description": "Success message after drag&drop of package file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.packageInstallFail": {
+    "message": "Package '%s' installation failed.",
+    "description": "Failure message after drag&drop of package file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.packageDownloading": {
+    "message": "Downloading package from %s.",
+    "description": "Download package from Url for installation - %s is source url"
+  },
+  "Mudlet.prefixOk": {
+    "message": "[  OK  ]  - ",
+    "description": "Start of the line for messages telling the player something is okay. Keep at 12 characters length for nice alignment!"
+  },
+  "Mudlet.prefixWarn": {
+    "message": "[ WARN ]  - ",
+    "description": "Start of the line for messages warning the player about something. Keep at 12 characters length for nice alignment!"
+  },
+  "Mudlet.prefixInfo": {
+    "message": "[ INFO ]  - ",
+    "description": "Start of the line for messages informing the player about something. Keep at 12 characters length for nice alignment!"
   }
 }

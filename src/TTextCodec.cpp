@@ -191,7 +191,9 @@ QString TTextCodec_437::convertToUnicode(const char *in, int length, ConverterSt
     }
 
     // If we get here and headerDone is false then we need to insert the BOM
-    result += QChar::ByteOrderMark;
+    if (!headerDone) {
+        result += QChar::ByteOrderMark;
+    }
     for (int i = 0; i < length; ++i) {
         unsigned char ch = in[i];
         if (ch < 0x80) {
@@ -221,7 +223,9 @@ QString TTextCodec_667::convertToUnicode(const char *in, int length, ConverterSt
     }
 
     // If we get here and headerDone is false then we need to insert the BOM
-    result += QChar::ByteOrderMark;
+    if (!headerDone) {
+        result += QChar::ByteOrderMark;
+    }
     for (int i = 0; i < length; ++i) {
         unsigned char ch = in[i];
         if (ch < 0x80) {
@@ -251,7 +255,9 @@ QString TTextCodec_737::convertToUnicode(const char *in, int length, ConverterSt
     }
 
     // If we get here and headerDone is false then we need to insert the BOM
-    result += QChar::ByteOrderMark;
+    if (!headerDone) {
+        result += QChar::ByteOrderMark;
+    }
     for (int i = 0; i < length; ++i) {
         unsigned char ch = in[i];
         if (ch < 0x80) {
@@ -285,7 +291,9 @@ QString TTextCodec_869::convertToUnicode(const char *in, int length, ConverterSt
     }
 
     // If we get here and headerDone is false then we need to insert the BOM
-    result += QChar::ByteOrderMark;
+    if (!headerDone) {
+        result += QChar::ByteOrderMark;
+    }
     for (int i = 0; i < length; ++i) {
         unsigned char ch = in[i];
         if (ch < 0x80) {

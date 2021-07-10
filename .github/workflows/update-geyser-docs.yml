@@ -8,18 +8,18 @@ on:
 jobs:
   update-geyser-docs:
     runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
+    if: ${{ github.repository_owner == 'Mudlet' }}
 
     steps:
     - uses: actions/checkout@v2
       name: Checkout source code
 
-    - uses: leafo/gh-actions-lua@v5
+    - uses: leafo/gh-actions-lua@v8
       name: Install Lua
       with:
         luaVersion: "5.1.5"
 
-    - uses: leafo/gh-actions-luarocks@v2
+    - uses: leafo/gh-actions-luarocks@v4
       name: Install LuaRocks
 
     - name: Install LDoc

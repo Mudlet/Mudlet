@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018, 2020 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -68,16 +68,16 @@ void KeyUnit::uninstall(const QString& packageName)
     uninstallList.clear();
 }
 
-bool KeyUnit::processDataStream(int key, int modifier)
+bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers modifiers)
 {
     bool isMatchFound = false;
     for (auto keyObject : mKeyRootNodeList) {
-        if (keyObject->match(key, modifier, mRunAllKeyMatches)) {
+        if (keyObject->match(key, modifiers, mRunAllKeyMatches)) {
             if (!mRunAllKeyMatches) {
                 return true;
-            } else {
-                isMatchFound = true;
             }
+
+            isMatchFound = true;
         }
     }
 
@@ -243,21 +243,13 @@ void KeyUnit::removeKeyRootNode(TKey* pT)
 
 TKey* KeyUnit::getKey(int id)
 {
-    if (mKeyMap.find(id) != mKeyMap.end()) {
-        return mKeyMap.value(id);
-    } else {
-        return nullptr;
-    }
+    return mKeyMap.value(id);
 }
 
 
 TKey* KeyUnit::getKeyPrivate(int id)
 {
-    if (mKeyMap.find(id) != mKeyMap.end()) {
-        return mKeyMap.value(id);
-    } else {
-        return nullptr;
-    }
+    return mKeyMap.value(id);
 }
 
 bool KeyUnit::registerKey(TKey* pT)
@@ -323,45 +315,27 @@ int KeyUnit::getNewID()
     return ++mMaxID;
 }
 
-QString KeyUnit::getKeyName(int keyCode, int modifierCode)
+QString KeyUnit::getKeyName(const Qt::Key keyCode, const Qt::KeyboardModifiers modifierCode) const
 {
     QString name;
-    /*
-     Qt::NoModifier      0x00000000 No modifier key is pressed.
-     Qt::ShiftModifier   0x02000000 A Shift key on the keyboard is pressed.
-     Qt::ControlModifier 0x04000000 A Ctrl key on the keyboard is pressed.
-     Qt::AltModifier     0x08000000 An Alt key on the keyboard is pressed.
-     Qt::MetaModifier    0x10000000 A Meta key on the keyboard is pressed.
-     Qt::KeypadModifier  0x20000000 A keypad button is pressed.
-     Qt::GroupSwitchModifier 0x40000000 X11 only. A Mode_switch key on the keyboard is pressed.
-    */
-    if (modifierCode == 0x00000000) {
-        name += "no modifiers + ";
-    }
-    if (modifierCode & 0x02000000) {
-        name += "shift + ";
-    }
-    if (modifierCode & 0x04000000) {
-        name += "control + ";
-    }
-    if (modifierCode & 0x08000000) {
-        name += "alt + ";
-    }
-    if (modifierCode & 0x10000000) {
-        name += "meta + ";
-    }
-    if (modifierCode & 0x20000000) {
-        name += "keypad + ";
-    }
-    if (modifierCode & 0x40000000) {
-        name += "groupswitch + ";
-    }
+    name = ((modifierCode & Qt::ShiftModifier) ? "shift + " : QString())
+         % ((modifierCode & Qt::ControlModifier) ? "control + " : QString())
+         % ((modifierCode & Qt::AltModifier) ? "alt + " : QString())
+         % ((modifierCode & Qt::MetaModifier) ? "meta + " : QString())
+         % ((modifierCode & Qt::KeypadModifier) ? "keypad + " : QString())
+         % ((modifierCode & Qt::GroupSwitchModifier) ? "groupswitch + " : QString());
+
+
     if (mKeys.contains(keyCode)) {
-        name += mKeys[keyCode];
-        return name;
-    } else {
-        return QString("undefined key");
+        return name % mKeys.value(keyCode);
     }
+
+    return tr("%1undefined key (code: 0x%2)",
+              // Intentional comment to separate arguments
+              "%1 is a string describing the modifier keys (e.g. \"shift\" or \"control\") "
+              "used with the key, whose 'code' number, in %2 is not one that we have a name "
+              "for. This is probably one of those extra keys around the edge of the keyboard "
+              "that some people have.").arg(name).arg(keyCode, 4, 16, QLatin1Char('0'));
 }
 
 void KeyUnit::initStats()

@@ -62,6 +62,7 @@ public:
     int mSpacer;
     std::list<std::list<std::string>> multiCaptureList;
     std::list<std::list<int>> multiCapturePosList;
+    QVector<NameGroupMatches> nameCaptures;
     int mNumberOfConditions;
     int mNextCondition;
     int mLineCount;

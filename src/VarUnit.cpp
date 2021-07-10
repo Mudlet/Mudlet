@@ -84,7 +84,7 @@ void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
             s1 << child->getName();
             auto pItem = new QTreeWidgetItem(s1);
             pItem->setText(0, child->getName());
-            pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsTristate | Qt::ItemIsUserCheckable);
+            pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
             pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
             pItem->setCheckState(0, Qt::Unchecked);
             if (isSaved(child)) {

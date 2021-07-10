@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -32,6 +32,7 @@
 #include "ircprotocol.h"
 #include "ircconnection.h"
 #include "irccommand.h"
+#include "irccore_p.h"
 #include <QMetaEnum>
 #include <QPointer>
 
@@ -182,7 +183,7 @@ IRC_BEGIN_NAMESPACE
  */
 
 #ifndef IRC_DOXYGEN
-IrcNetworkPrivate::IrcNetworkPrivate() : q_ptr(0), initialized(false),
+IrcNetworkPrivate::IrcNetworkPrivate() :
     modes(QStringList() << "o" << "v"), prefixes(QStringList() << "@" << "+"), channelTypes("#")
 {
 }
@@ -190,7 +191,7 @@ IrcNetworkPrivate::IrcNetworkPrivate() : q_ptr(0), initialized(false),
 static QHash<QString, int> numericValues(const QString& parameter)
 {
     QHash<QString, int> values;
-    const QStringList keyValues = parameter.split(",", QString::SkipEmptyParts);
+    const QStringList keyValues = parameter.split(",", Qt::SkipEmptyParts);
     foreach (const QString& keyValue, keyValues)
         values.insert(keyValue.section(":", 0, 0), keyValue.section(":", 1, 1).toInt());
     return values;
@@ -203,13 +204,13 @@ void IrcNetworkPrivate::setInfo(const QHash<QString, QString>& info)
         setName(info.value("NETWORK"));
     if (info.contains("PREFIX")) {
         const QString pfx = info.value("PREFIX");
-        setModes(pfx.mid(1, pfx.indexOf(')') - 1).split("", QString::SkipEmptyParts));
-        setPrefixes(pfx.mid(pfx.indexOf(')') + 1).split("", QString::SkipEmptyParts));
+        setModes(pfx.mid(1, pfx.indexOf(')') - 1).split("", Qt::SkipEmptyParts));
+        setPrefixes(pfx.mid(pfx.indexOf(')') + 1).split("", Qt::SkipEmptyParts));
     }
     if (info.contains("CHANTYPES"))
-        setChannelTypes(info.value("CHANTYPES").split("", QString::SkipEmptyParts));
+        setChannelTypes(info.value("CHANTYPES").split("", Qt::SkipEmptyParts));
     if (info.contains("STATUSMSG"))
-        setStatusPrefixes(info.value("STATUSMSG").split("", QString::SkipEmptyParts));
+        setStatusPrefixes(info.value("STATUSMSG").split("", Qt::SkipEmptyParts));
 
     // TODO:
     if (info.contains("NICKLEN"))
@@ -227,7 +228,7 @@ void IrcNetworkPrivate::setInfo(const QHash<QString, QString>& info)
     if (info.contains("MONITOR"))
         numericLimits.insert("MONITOR", info.value("MONITOR").toInt());
     if (info.contains("CHANMODES"))
-        channelModes = info.value("CHANMODES").split(",", QString::SkipEmptyParts);
+        channelModes = info.value("CHANMODES").split(",", Qt::SkipEmptyParts);
     if (info.contains("MAXLIST"))
         modeLimits = numericValues(info.value("MAXLIST"));
     if (info.contains("CHANLIMIT"))
@@ -246,7 +247,7 @@ void IrcNetworkPrivate::setAvailableCapabilities(const QSet<QString>& capabiliti
     Q_Q(IrcNetwork);
     if (availableCaps != capabilities) {
         availableCaps = capabilities;
-        emit q->availableCapabilitiesChanged(availableCaps.toList());
+        emit q->availableCapabilitiesChanged(IrcPrivate::setToList(availableCaps));
     }
 }
 
@@ -255,7 +256,7 @@ void IrcNetworkPrivate::setActiveCapabilities(const QSet<QString>& capabilities)
     Q_Q(IrcNetwork);
     if (activeCaps != capabilities) {
         activeCaps = capabilities;
-        emit q->activeCapabilitiesChanged(activeCaps.toList());
+        emit q->activeCapabilitiesChanged(IrcPrivate::setToList(activeCaps));
     }
 }
 
@@ -512,13 +513,13 @@ QStringList IrcNetwork::channelModes(IrcNetwork::ModeTypes types) const
     Q_D(const IrcNetwork);
     QStringList modes;
     if (types & TypeA)
-        modes += d->channelModes.value(0).split("", QString::SkipEmptyParts);
+        modes += d->channelModes.value(0).split("", Qt::SkipEmptyParts);
     if (types & TypeB)
-        modes += d->channelModes.value(1).split("", QString::SkipEmptyParts);
+        modes += d->channelModes.value(1).split("", Qt::SkipEmptyParts);
     if (types & TypeC)
-        modes += d->channelModes.value(2).split("", QString::SkipEmptyParts);
+        modes += d->channelModes.value(2).split("", Qt::SkipEmptyParts);
     if (types & TypeD)
-        modes += d->channelModes.value(3).split("", QString::SkipEmptyParts);
+        modes += d->channelModes.value(3).split("", Qt::SkipEmptyParts);
     return modes;
 }
 
@@ -589,7 +590,7 @@ int IrcNetwork::targetLimit(const QString& command) const
 QStringList IrcNetwork::availableCapabilities() const
 {
     Q_D(const IrcNetwork);
-    return d->availableCaps.toList();
+    return IrcPrivate::setToList(d->availableCaps);
 }
 
 /*!
@@ -606,7 +607,7 @@ QStringList IrcNetwork::availableCapabilities() const
 QStringList IrcNetwork::activeCapabilities() const
 {
     Q_D(const IrcNetwork);
-    return d->activeCaps.toList();
+    return IrcPrivate::setToList(d->activeCaps);
 }
 
 /*!
@@ -677,16 +678,16 @@ bool IrcNetwork::requestCapabilities(const QStringList& capabilities)
 QStringList IrcNetwork::requestedCapabilities() const
 {
     Q_D(const IrcNetwork);
-    return d->requestedCaps.toList();
+    return IrcPrivate::setToList(d->requestedCaps);
 }
 
 void IrcNetwork::setRequestedCapabilities(const QStringList& capabilities)
 {
     Q_D(IrcNetwork);
-    const QSet<QString> caps = capabilities.toSet();
+    const QSet<QString> caps = IrcPrivate::listToSet(capabilities);
     if (d->requestedCaps != caps) {
         d->requestedCaps = caps;
-        emit requestedCapabilitiesChanged(caps.toList());
+        emit requestedCapabilitiesChanged(IrcPrivate::setToList(caps));
     }
 }
 

@@ -1,0 +1,17 @@
+services:
+  mudlet: &base-settings
+    environment:
+      - DISPLAY=$DISPLAY
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    devices:
+      - "/dev/dri"
+
+  dev:
+    <<: *base-settings
+    # Ensure the .env.template file is copied to .env
+    env_file: .env
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ../src:/mudlet/src
+      - ../test:/mudlet/test

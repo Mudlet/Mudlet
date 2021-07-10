@@ -13,5 +13,18 @@ mudlet
 
 # ignore macOS apps in general, but keep the Autoupdater from Sparkle
 !3rdparty/sparkle/Sparkle.framework/Versions/A/Resources/Autoupdate.app
+
 translations/translated/lrelease_output.txt
 translations/translated/translation-stats.json
+CMakeLists.txt.user
+
+#CLion
+.idea
+cmake-build-debug
+
+#VS Code
+.vscode/*.code-workspace
+
+#Docker
+docker/docker-compose.override.yml
+docker/.env

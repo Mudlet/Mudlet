@@ -1,6 +1,10 @@
 {
+    "env": {
+        "myDefaultIncludePath": ["${workspaceFolder}", "${workspaceFolder}/build/src/mudlet_autogen"]
+    },
     "configurations": [
         {
+            "name": "Mudlet",
             "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],

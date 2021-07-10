@@ -121,6 +121,7 @@ function Adjustable.Container:onClick(label, event)
 end
 
 -- internal function to handle the onRelease event of main Adjustable.Container Label
+--- raises an event "AdjustableContainerRepositionFinish", passed values (name, width, height, x, y)
 -- @param label the main Adjustable.Container Label
 -- @param event the onRelease event and its informations
 function Adjustable.Container:onRelease (label, event)
@@ -128,6 +129,14 @@ function Adjustable.Container:onRelease (label, event)
         if label.cursorShape == "ClosedHand" then
             label:setCursor("OpenHand")
         end
+        raiseEvent(
+          "AdjustableContainerRepositionFinish",
+          self.name,
+          self.get_width(),
+          self.get_height(),
+          self.get_x(),
+          self.get_y()
+        )
         adjustInfo = {}
     end
 end
@@ -331,7 +340,7 @@ end
 --- adds elements to connect containers to borders into the right click menu
 function Adjustable.Container:addConnectMenu()
     local label = self.adjLabel
-    local menuTxt = self.Locale.connectTo and self.Locale.connectTo.message or "Connect To:"
+    local menuTxt = self.Locale.connectTo.message
     label:addMenuLabel("Connect To: ")
     label:findMenuElement("Connect To: "):echo(menuTxt, "nocolor", "c")
     local menuParent = self.rCLabel.MenuItems
@@ -344,7 +353,7 @@ function Adjustable.Container:addConnectMenu()
         label:findMenuElement("Connect To: ."..v):echo(menuTxt, "nocolor")
         label:setMenuAction("Connect To: ."..v, function() closeAllLevels(self.rCLabel) self:connectToBorder(v) end)
     end
-    menuTxt = self.Locale.disconnect and self.Locale.disconnect.message or "Disconnect "
+    menuTxt = self.Locale.disconnect.message
     label:addMenuLabel("Disconnect ")
     label:setMenuAction("Disconnect ", function() closeAllLevels(self.rCLabel) self:disconnect() end)
     label:findMenuElement("Disconnect "):echo(menuTxt, "nocolor", "c")
@@ -826,12 +835,21 @@ function Adjustable.Container:load(slot, dir)
     return true
 end
 
---- overridden reposition function to raise an event of the Adjustable.Container changing position/size
--- event name: "AdjustableContainerReposition" passed values (name, width, height, x, y)
--- it also calls the shrink_title function
+--- overridden reposition function to raise an "AdjustableContainerReposition" event and call the shrink_title function
+--- Event: "AdjustableContainerReposition" passed values (name, width, height, x, y, isMouseAction)
+--- (the isMouseAction property is true if the reposition is an effect of user dragging/resizing the window,
+--- and false if the reposition event comes as effect of external action, such as resizing of main window)
 function Adjustable.Container:reposition()
     Geyser.Container.reposition(self)
-    raiseEvent("AdjustableContainerReposition", self.name, self.get_width(), self.get_height(), self.get_x(), self.get_y())
+    raiseEvent(
+      "AdjustableContainerReposition",
+      self.name,
+      self.get_width(),
+      self.get_height(),
+      self.get_x(),
+      self.get_y(),
+      adjustInfo.name == self.adjLabel.name and (adjustInfo.move or adjustInfo.right or adjustInfo.left or adjustInfo.top or adjustInfo.bottom)
+    )
     if self.titleText and not(self.locked) then
         shrink_title(self)
     end

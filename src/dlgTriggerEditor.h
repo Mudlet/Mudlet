@@ -254,7 +254,7 @@ public slots:
     void slot_add_new();
     void slot_add_new_folder();
     void slot_toggle_active();
-    void slot_searchMudletItems(const QString&); // Was slot_search_triggers(...)
+    void slot_searchMudletItems(const int);
     void slot_item_selected_search_list(QTreeWidgetItem*);
     void slot_delete_item();
     void slot_open_source_find();
@@ -350,7 +350,7 @@ private:
     void exportScriptToClipboard();
     void exportKeyToClipboard();
 
-    void clearDocument(edbee::TextEditorWidget* ew, const QString& initialText = QLatin1Literal(""));
+    void clearDocument(edbee::TextEditorWidget* ew, const QString& initialText = QString());
 
     void setAllSearchData(QTreeWidgetItem* pItem, const EditorViewType& type, const QString& name, const int& id, const SearchDataResultType& what, const int& pos = 0, const int& instance = 0, const int& subInstance = 0) {
         // Which is it? A Trigger, an alias etc:
@@ -415,8 +415,8 @@ private:
     void runScheduledCleanReset();
     void autoSave();
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
-    void key_grab_callback(int key, int modifier);
-
+    void key_grab_callback(const Qt::Key, const Qt::KeyboardModifiers);
+    void setShortcuts(const bool setNotUnset = true);
 
     QToolBar* toolBar;
     QToolBar* toolBar2;
@@ -483,6 +483,10 @@ private:
 
     QAction* mProfileSaveAction;
     QAction* mProfileSaveAsAction;
+
+    // We need to keep a record of this button as we have to disable it
+    // for the "Variables" view:
+    QAction* mpExportAction;
 
     // tracks the duration of the "Save Profile As" action so
     // autosave doesn't kick in

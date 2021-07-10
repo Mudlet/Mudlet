@@ -4,8 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2015, 2018 by Stephen Lyons                        *
- *                                            - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2015, 2018, 2021 by Stephen Lyons                  *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -31,6 +31,7 @@
 #include <QColor>
 #include <QHash>
 #include <QMap>
+#include <QSet>
 #include <QVector3D>
 #include "post_guard.h"
 
@@ -52,29 +53,32 @@
 class XMLimport;
 class XMLexport;
 class TRoomDB;
+class QJsonArray;
+class QJsonObject;
+
 
 class TRoom
 {
     Q_DECLARE_TR_FUNCTIONS(TRoom) // Needed so we can use tr() even though TRoom is NOT derived from QObject
 
 public:
-    TRoom(TRoomDB* pRDB);
+    explicit TRoom(TRoomDB* pRDB);
     ~TRoom();
-    void setId(int);
-    bool setExit(int to, int direction);
-    int getExit(int direction);
-    QHash<int, int> getExits();
-    bool hasExit(int direction) const;
+    void setId(const int);
+    bool setExit(const int to, const int direction);
+    int getExit(const int) const;
+    QHash<int, int> getExits() const;
+    bool hasExit(const int) const;
     void setWeight(int);
-    void setExitLock(int, bool);
-    void setSpecialExitLock(int to, const QString& cmd, bool doLock);
-    bool setSpecialExitLock(const QString& cmd, bool doLock);
-    bool hasExitLock(int to);
-    bool hasSpecialExitLock(int, const QString&);
-    void removeAllSpecialExitsToRoom(int _id);
-    void setSpecialExit(int to, const QString& cmd);
+    void setExitLock(const int, const bool);
+    bool setSpecialExitLock(const QString&, const bool);
+    bool hasExitLock(const int to) const;
+    bool hasSpecialExitLock(const QString&) const;
+    void removeAllSpecialExitsToRoom(const int);
+    void setSpecialExit(const int, const QString&);
     void clearSpecialExits();
-    const QMultiMap<int, QString>& getOtherMap() const { return other; }
+    const QMap<QString, int>& getSpecialExits() const { return mSpecialExits; }
+    const QSet<QString>& getSpecialExitLocks() const { return mSpecialExitLocks; }
     const QMap<QString, int>& getExitWeights() const { return exitWeights; }
     void setExitWeight(const QString& cmd, int w);
     bool hasExitWeight(const QString& cmd);
@@ -129,63 +133,91 @@ public:
                    QMap<QString, Qt::PenStyle>&,
                    QMap<QString, bool>&,
                    QHash<int, int>);
-    const QString dirCodeToDisplayName(int dirCode);
+    QString dirCodeToDisplayName(int) const;
+    inline QString dirCodeToString(const int) const;
+    inline QString dirCodeToShortString(const int) const;
+    inline int stringToDirCode(const QString&) const;
     bool hasExitOrSpecialExit(const QString&) const;
+    void writeJsonRoom(QJsonArray&) const;
+    int readJsonRoom(const QJsonArray&, const int, const int);
 
 
-    int x;
-    int y;
-    int z;
-    int environment;
+    int x = 0;
+    int y = 0;
+    int z = 0;
+    int environment = -1;
 
-    bool isLocked;
-    qreal min_x;
-    qreal min_y;
-    qreal max_x;
-    qreal max_y;
+    bool isLocked = false;
+    qreal min_x = 0.0;
+    qreal min_y = 0.0;
+    qreal max_x = 0.0;
+    qreal max_y = 0.0;
     QString mSymbol;
+    QColor mSymbolColor;
     QString name;
-    QVector3D v;
+
     QList<int> exitStubs; //contains a list of: exittype (according to defined values above)
     QMap<QString, QString> userData;
     QList<int> exitLocks;
+    // Uses "shortstrings" for normal exit directions:
     QMap<QString, QList<QPointF>> customLines;
     QMap<QString, QColor> customLinesColor;
     QMap<QString, Qt::PenStyle> customLinesStyle;
     QMap<QString, bool> customLinesArrow;
-    bool highlight;
+
+    bool highlight = false;
     QColor highlightColor;
     QColor highlightColor2;
-    float highlightRadius;
-    bool rendered;
+    float highlightRadius = 0.0f;
+    bool rendered = false;
+    // Uses "shortstrings" for normal exit directions:
     QMap<QString, int> doors; //0=no door 1=open 2=closed 3=locked
 
 
 private:
-    int id;
-    int area;
-    int weight;
+    bool readJsonExits(const QJsonObject&);
+    void readJsonExitStubs(const QJsonObject&);
+    bool readJsonNormalExit(const QJsonObject&, const int);
+    bool readJsonSpecialExit(const QJsonObject&, const QString&);
+    void readJsonCustomExitLine(const QJsonObject&, const QString&);
+    void readJsonUserData(const QJsonObject&);
+    void readJsonDoor(const QJsonObject&, const QString&);
+    void readJsonHighlight(const QJsonObject&);
+    void readJsonSymbol(const QJsonObject&);
+
+    void writeJsonExits(QJsonObject&) const;
+    void writeJsonExitStubs(QJsonObject&) const;
+    void writeJsonNormalExit(QJsonArray&, const int) const;
+    void writeJsonSpecialExit(QJsonArray&, const QString&, const int) const;
+    void writeJsonCustomExitLine(QJsonObject&, const QString&) const;
+    void writeJsonUserData(QJsonObject&) const;
+    void writeJsonDoor(QJsonObject&, const QString&) const;
+    void writeJsonHighlight(QJsonObject&) const;
+    void writeJsonSymbol(QJsonObject&) const;
+
+
+    int id = 0;
+    int area = -1;
+    int weight = 1;
+    // Uses "shortStrings" as keys for normal exits:
     QMap<QString, int> exitWeights;
-    int north;
-    int northeast;
-    int east;
-    int southeast;
-    int south;
-    int southwest;
-    int west;
-    int northwest;
-    int up;
-    int down;
-    int in;
-    int out;
+    int north = -1;
+    int northeast = -1;
+    int east = -1;
+    int southeast = -1;
+    int south = -1;
+    int southwest = -1;
+    int west = -1;
+    int northwest =-1;
+    int up = -1;
+    int down = -1;
+    int in = -1;
+    int out = -1;
 
-    // FIXME: This should be a map of String->room id because there can be multiple special exits to the same room
-    // Also, move the special exit being locked OUT of being a prefix on the
-    // QString part:
-    QMultiMap<int, QString> other; // es knnen mehrere exits zum gleichen raum verlaufen
-                                   //verbotene exits werden mit 0 geprefixed, offene mit 1
+    QMap<QString, int> mSpecialExits;
+    QSet<QString> mSpecialExitLocks;
 
-    TRoomDB* mpRoomDB;
+    TRoomDB* mpRoomDB = nullptr;
     friend class XMLimport;
     friend class XMLexport;
 };

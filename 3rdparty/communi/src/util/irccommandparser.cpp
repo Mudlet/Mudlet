@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -29,6 +29,7 @@
 #include "irccommandparser.h"
 #include "irccommandparser_p.h"
 #include "irctoken_p.h"
+#include "irccore_p.h"
 #include <climits>
 
 IRC_BEGIN_NAMESPACE
@@ -178,7 +179,7 @@ IRC_BEGIN_NAMESPACE
  */
 
 #ifndef IRC_DOXYGEN
-IrcCommandParserPrivate::IrcCommandParserPrivate() : tolerant(false)
+IrcCommandParserPrivate::IrcCommandParserPrivate()
 {
 }
 
@@ -215,7 +216,7 @@ static inline bool isCurrent(const QString& token)
 IrcCommandInfo IrcCommandParserPrivate::parseSyntax(IrcCommand::Type type, const QString& syntax)
 {
     IrcCommandInfo cmd;
-    QStringList tokens = syntax.split(QLatin1Char(' '), QString::SkipEmptyParts);
+    QStringList tokens = syntax.split(QLatin1Char(' '), Qt::SkipEmptyParts);
     if (!tokens.isEmpty()) {
         cmd.type = type;
         cmd.command = tokens.takeFirst().toUpper();
@@ -244,7 +245,7 @@ IrcCommandInfo IrcCommandParserPrivate::parseSyntax(IrcCommand::Type type, const
 
 IrcCommand* IrcCommandParserPrivate::parseCommand(const IrcCommandInfo& command, const QString& input) const
 {
-    IrcCommand* cmd = 0;
+    IrcCommand* cmd = nullptr;
     QStringList params;
     if (processParameters(command, input, &params)) {
         const int count = params.count();
@@ -564,7 +565,7 @@ IrcCommand* IrcCommandParser::parse(const QString& input) const
             return d->parseCommand(custom, params);
         }
     }
-    return 0;
+    return nullptr;
 }
 
 /*!

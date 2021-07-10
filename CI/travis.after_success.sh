@@ -1,15 +1,19 @@
 #!/bin/bash
 
-if [ "${TRAVIS_REPO_SLUG}" != "Mudlet/Mudlet" ]; then
+set -x
+
+if { [ -n "$TRAVIS_REPO_SLUG" ] && [ "${TRAVIS_REPO_SLUG}" != "Mudlet/Mudlet" ]; } ||
+   { [ -n "$GITHUB_REPOSITORY" ] && [ "${GITHUB_REPOSITORY}" != "Mudlet/Mudlet" ]; } then
   exit 0
 fi
 
-if [ -z "${TRAVIS_OS_NAME}" ] || [ "${TRAVIS_OS_NAME}" = "linux" ]; then
-  echo Deploy on linux.
+if [ "${TRAVIS_OS_NAME}" = "linux" ] || [ "${RUNNER_OS}" = "Linux" ]; then
+  echo Deploy on Linux.
   . CI/travis.linux.after_success.sh;
-fi
-if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-  echo Deploy on OSX.
+  echo $?
+  echo "^ worked?"
+elif [ "${TRAVIS_OS_NAME}" = "osx" ]  || [ "${RUNNER_OS}" = "macOS" ]; then
+  echo Deploy on macOS.
   . CI/travis.osx.after_success.sh;
 fi
 

@@ -190,23 +190,30 @@ void TTreeWidget::mousePressEvent(QMouseEvent* event)
 
 void TTreeWidget::rowsAboutToBeRemoved(const QModelIndex& parent, int start, int end)
 {
+    // We only move one element (though it may have its own children) at a time
+    // so end is always the same as start (?)
+    Q_UNUSED(end)
+
     if (parent.isValid()) {
         mOldParentID = parent.data(Qt::UserRole).toInt();
     } else {
         mOldParentID = 0;
     }
 
-    if (mOldParentID == 0) {
+    if (!mOldParentID) {
         mOldParentID = parent.sibling(start, 0).data(Qt::UserRole).toInt();
     }
 
     if (parent.isValid()) {
-        QModelIndex child = parent.child(start, 0);
+        QModelIndex child = parent.model()->index(start, 0, parent);
         mChildID = child.data(Qt::UserRole).toInt();
-        if (mChildID == 0) {
+        if (!mChildID) {
             if (parent.isValid()) {
+                // This if seems redundant - as it has already been done once
+                // and "parent" hasn't changed - so it will always be true:
                 child = parent.model()->index(start, 0, QModelIndex());
             }
+
             if (child.isValid()) {
                 mChildID = child.data(Qt::UserRole).toInt();
             } else {
@@ -222,33 +229,31 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
     // determine position in parent list
 
     if (mIsDropAction) {
-        QModelIndex child = parent.child(start, 0);
+        QModelIndex child = parent.model()->index(start, 0, parent);
         int parentPosition = parent.row();
         int childPosition = child.row();
-        if (mChildID == 0) {
+        if (!mChildID) {
             if (!parent.model()) {
-                goto END;
+                QTreeWidget::rowsInserted(parent, start, end);
+                return;
             }
             if (!mpHost) {
-                goto END;
+                QTreeWidget::rowsInserted(parent, start, end);
+                return;
             }
             mChildID = parent.model()->index(start, 0).data(Qt::UserRole).toInt();
         }
+
         int newParentID = parent.data(Qt::UserRole).toInt();
         if (mIsTriggerTree) {
             mpHost->getTriggerUnit()->reParentTrigger(mChildID, mOldParentID, newParentID, parentPosition, childPosition);
-        }
-        if (mIsAliasTree) {
+        } else if (mIsAliasTree) {
             mpHost->getAliasUnit()->reParentAlias(mChildID, mOldParentID, newParentID, parentPosition, childPosition);
-        }
-        if (mIsKeyTree) {
+        } else if (mIsKeyTree) {
             mpHost->getKeyUnit()->reParentKey(mChildID, mOldParentID, newParentID, parentPosition, childPosition);
-        }
-
-        if (mIsTimerTree) {
+        } else if (mIsTimerTree) {
             mpHost->getTimerUnit()->reParentTimer(mChildID, mOldParentID, newParentID, parentPosition, childPosition);
             TTimer* pTChild = mpHost->getTimerUnit()->getTimer(mChildID);
-            //TTimer * pTnewParent = mpHost->getTimerUnit()->getTimer( newParentID );
             if (pTChild) {
                 QIcon icon;
                 if (pTChild->isOffsetTimer()) {
@@ -266,12 +271,15 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
                 }
                 QTreeWidgetItem* pParent = itemFromIndex(parent);
                 if (!pParent) {
-                    goto END;
+                    QTreeWidget::rowsInserted(parent, start, end);
+                    return;
                 }
+
                 for (int i = 0; i < pParent->childCount(); i++) {
                     QTreeWidgetItem* pItem = pParent->child(i);
                     if (!pItem) {
-                        goto END;
+                        QTreeWidget::rowsInserted(parent, start, end);
+                        return;
                     }
                     int id = pItem->data(0, Qt::UserRole).toInt();
                     if (id == mChildID) {
@@ -279,20 +287,23 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
                     }
                 }
             }
-        }
-        if (mIsScriptTree) {
+        } else if (mIsScriptTree) {
             mpHost->getScriptUnit()->reParentScript(mChildID, mOldParentID, newParentID, parentPosition, childPosition);
-        }
-        if (mIsActionTree) {
+        } else if (mIsActionTree) {
             mpHost->getActionUnit()->reParentAction(mChildID, mOldParentID, newParentID, parentPosition, childPosition);
             mpHost->getActionUnit()->updateToolbar();
+        } else {
+            qWarning().nospace().noquote() << "TTreeWidget::rowsInserted(...) WARNING - a TTreeWidget item which has not been classified as a mudlet type detected.";
+            // Consider marking this:
+            // Q_UNREACHABLE();
         }
 
+        // CHECK: These things are NOT hit if we have "return"-ed early, is this okay?
         mChildID = 0;
         mOldParentID = 0;
         mIsDropAction = false;
     }
-END:
+
     QTreeWidget::rowsInserted(parent, start, end);
 }
 
@@ -344,6 +355,9 @@ void TTreeWidget::dropEvent(QDropEvent* event)
 
 void TTreeWidget::beginInsertRows(const QModelIndex& parent, int first, int last)
 {
+    Q_UNUSED(parent)
+    Q_UNUSED(first)
+    Q_UNUSED(last)
 }
 
 void TTreeWidget::dragMoveEvent(QDragMoveEvent* e)

@@ -1,5 +1,9 @@
+#ifndef MUDLET_MXPTAG_H
+#define MUDLET_MXPTAG_H
+
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,13 +21,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_MXPTAG_H
-#define MUDLET_MXPTAG_H
 
+#include "pre_guard.h"
 #include <QMap>
 #include <QPair>
 #include <QString>
 #include <QStringList>
+#include "post_guard.h"
+
 #include <functional>
 
 class MxpTagAttribute : public QPair<QString, QString>
@@ -31,11 +36,13 @@ class MxpTagAttribute : public QPair<QString, QString>
 public:
     typedef std::function<MxpTagAttribute(const MxpTagAttribute&)> Transformation;
 
-    MxpTagAttribute(const QString& name, const QString& value) : QPair(name, value) {}
+    MxpTagAttribute();
+    explicit MxpTagAttribute(const QString&);
+    MxpTagAttribute(const QString&, const QString&);
 
-    explicit MxpTagAttribute(const QString& name) : MxpTagAttribute(name, QString()) {}
-
-    MxpTagAttribute() : QPair() {}
+    // Because derived classes may (in fact do) have real destructors we must
+    // declare AND define a virtual one in this, the base one:
+    virtual ~MxpTagAttribute();
 
     virtual const QString& getName() const { return first; }
 

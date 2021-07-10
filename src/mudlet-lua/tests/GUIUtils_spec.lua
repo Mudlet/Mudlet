@@ -266,3 +266,8 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 end)
+
+--[[
+  TODO:
+    replaceLine and variants
+--]]

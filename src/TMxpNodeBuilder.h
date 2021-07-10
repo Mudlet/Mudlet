@@ -22,16 +22,12 @@
 #include "MxpTag.h"
 #include "TStringUtils.h"
 
-#include "pre_guard.h"
-#include <QString>
-#include "post_guard.h"
-
 class TMxpNodeBuilder
 {
     bool mOptionIgnoreText;
 
     // current tag attrs
-    QString mCurrentTagName;
+    std::string mCurrentTagName;
     QList<MxpTagAttribute> mCurrentTagAttrs;
     bool mIsEndTag;
     bool mIsEmptyTag;
@@ -39,8 +35,8 @@ class TMxpNodeBuilder
     bool mIsInsideTag;
 
     // current attr
-    QString mCurrentAttrName;
-    QString mCurrentAttrValue;
+    std::string mCurrentAttrName;
+    std::string mCurrentAttrValue;
     // parsing attr state
     bool mIsInsideAttr;
     bool mReadingAttrValue;
@@ -53,7 +49,7 @@ class TMxpNodeBuilder
     bool mHasSequence;
 
     // current text node
-    QString mCurrentText;
+    std::string mCurrentText;
 
     // text node parsing state
     bool mIsInsideText;
@@ -68,7 +64,7 @@ class TMxpNodeBuilder
     bool acceptAttribute(char ch);
     void resetCurrentAttribute();
 
-    bool acceptSequence(char ch, QString& buffer);
+    bool acceptSequence(char ch, std::string& buffer);
     void resetCurrentSequence();
     void processAttribute();
 

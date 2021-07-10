@@ -46,14 +46,12 @@ TEasyButtonBar::TEasyButtonBar(TAction* pA, QString name, QWidget* pW)
     auto layout = new QVBoxLayout;
     setLayout(layout);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->setMargin(0);
     layout->setSpacing(0);
     layout->addWidget(mpWidget);
     if (!mpTAction->mUseCustomLayout) {
         mpLayout = new QGridLayout(mpWidget);
         setContentsMargins(0, 0, 0, 0);
         mpLayout->setContentsMargins(0, 0, 0, 0);
-        mpLayout->setMargin(0);
         mpLayout->setSpacing(0);
         QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
         mpWidget->setSizePolicy(sizePolicy);
@@ -206,12 +204,10 @@ void TEasyButtonBar::clear()
         mpWidget->setLayout(mpLayout);
         mpLayout->setContentsMargins(0, 0, 0, 0);
         mpLayout->setSpacing(0);
-        mpLayout->setMargin(0);
         QSizePolicy sizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         mpWidget->setSizePolicy(sizePolicy);
 
         mpWidget->setContentsMargins(0, 0, 0, 0);
-        mpLayout->setMargin(0);
     } else {
         mpLayout = nullptr;
         mpWidget->setMinimumHeight(mpTAction->mSizeY);

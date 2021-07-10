@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -50,7 +50,7 @@ class IRC_CORE_EXPORT IrcProtocol : public QObject
 
 public:
     explicit IrcProtocol(IrcConnection* connection);
-    virtual ~IrcProtocol();
+    ~IrcProtocol() override;
 
     IrcConnection* connection() const;
     QAbstractSocket* socket() const;

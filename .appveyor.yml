@@ -26,19 +26,19 @@ environment:
   DBLSQD_PASS:
     secure: Bm5PLJjC39XmRC55RPGVP9c5CFxvWu2VorAAmu5QS38=
   matrix:
-# was QT_BASE_DIR: C:\Qt\5.12.9\mingw73_32 and MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32 for old system and no BUILD_BITNESS
+# was QT_BASE_DIR: C:\Qt\5.14.2\mingw73_32 and MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32 for old system and no BUILD_BITNESS
 # We are not currently using CMake for Windows builds but it might be needed in
 # the future - and we now need Q_OR_C_MAKE so as to pull the version number from
-# the right project file:
+# the right project file, MINGW_BASE_DIR is configured automagically :
   - BUILD_PROCESS: Original
-    QT_BASE_DIR: C:\Qt\5.12.9\mingw73_32
+    QT_BASE_DIR: C:\Qt\5.14.2\mingw73_32
     MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32
   - BUILD_PROCESS: Replacement
     BUILD_BITNESS: 64
     Q_OR_C_MAKE: qmake
-#  - BUILD_PROCESS: Replacement
-#    BUILD_BITNESS: 32
-#    Q_OR_C_MAKE: qmake
+  - BUILD_PROCESS: Replacement
+    BUILD_BITNESS: 32
+    Q_OR_C_MAKE: qmake
 
 install:
 # We try both systems but each one will detect what BUILD_PROCESS is and exit
@@ -54,10 +54,12 @@ build_script:
 - C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.build.sh
 
 on_failure:
+# This is likely to only work fro the Original build process:
 - cd C:\src
-- bash -l -c "if [ ! \"${BUILD_PROCESS}\" = \"Replacement\" ]; then curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log ; fi"
+- powershell "Push-AppveyorArtifact ./verbose_output.log"
+- echo "Build failed - see verbose_output.log artifact upload for more information."
 
-# on successful build we may need to use the after_build stage in order to have
+ on successful build we may need to use the after_build stage in order to have
 # the produced files be made available as a "artifact" - at present it makes
 # sure that all the needed files are in the C:\\projects\\mudlet\\package dir:
 after_build:
@@ -65,11 +67,11 @@ after_build:
 
 on_success:
 - C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.after_success.sh
-
 # The approach of having two build systems may break down here...
+
 cache:
-- '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
-- C:\msys64\var\cache\pacman\pkg
+  - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
+  - C:\msys64\var\cache\pacman\pkg
 
 notifications:
 - provider: Webhook

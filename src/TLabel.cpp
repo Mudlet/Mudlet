@@ -23,6 +23,8 @@
 
 
 #include "TLabel.h"
+#include "TConsole.h"
+#include "TDockWidget.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -105,6 +107,12 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
+    auto labelParent = qobject_cast<TConsole*>(parent());
+    if (labelParent && labelParent->mpDockWidget && labelParent->mpDockWidget->isFloating()) {
+        mpHost->mpConsole->activateWindow();
+        mpHost->mpConsole->setFocus();
+    }
+
     if (mpHost && mReleaseFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mReleaseFunction, event);
         event->accept();

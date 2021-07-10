@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -33,7 +33,7 @@ IRC_BEGIN_NAMESPACE
 
 #ifndef IRC_DOXYGEN
 IrcMessagePrivate::IrcMessagePrivate() :
-    connection(0), type(IrcMessage::Unknown), timeStamp(QDateTime::currentDateTime()), encoding("ISO-8859-15"), flags(-1)
+     timeStamp(QDateTime::currentDateTime()), encoding("ISO-8859-15")
 {
 }
 
