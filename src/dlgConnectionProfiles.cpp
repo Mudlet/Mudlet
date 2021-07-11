@@ -299,7 +299,10 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
 void dlgConnectionProfiles::accept()
 {
     if (validName && validUrl && validPort) {
-        slot_connectToServer();
+        setVisible(false);
+        // This is needed to make the above take effect as fast as possible:
+        qApp->processEvents();
+        loadProfile(true);
         QDialog::accept();
     }
 }
@@ -1901,13 +1904,11 @@ void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pug
 
 void dlgConnectionProfiles::slot_load()
 {
+    setVisible(false);
+    // This is needed to make the above take effect as fast as possible:
+    qApp->processEvents();
     loadProfile(false);
     QDialog::accept();
-}
-
-void dlgConnectionProfiles::slot_connectToServer()
-{
-    loadProfile(true);
 }
 
 void dlgConnectionProfiles::loadProfile(bool alsoConnect)
