@@ -2675,8 +2675,6 @@ void Host::setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerD
 
 void Host::getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& primaryColor, QColor& secondaryColor)
 {
-    // Now we have the exclusive lock on this class's protected members
-
     styleCode = mPlayerRoomStyle;
     outerDiameter = mPlayerRoomOuterDiameterPercentage;
     innerDiameter = mPlayerRoomInnerDiameterPercentage;
