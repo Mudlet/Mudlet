@@ -971,13 +971,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2926"/>
       <source>Switch to editing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>切換到編輯模式</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2927"/>
       <source>Switch to viewing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>切換到檢視模式</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2934"/>
@@ -1253,13 +1253,13 @@ rooms:</source>
       <location filename="../src/TCommandLine.cpp" line="674"/>
       <source>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which we have bundled with Mudlet; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼ Mudlet ▼ │ 字典建議 │ ▲ 使用者 ▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="684"/>
       <source>▼System▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which is provided as part of the OS; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼ 系統 ▼ │ 字典建議 │ ▲ 使用者 ▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="752"/>
@@ -1315,12 +1315,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="324"/>
       <source>Show Time Stamps.</source>
-      <translation>顯示時間戳記。</translation>
+      <translation>顯示時間戳記</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="336"/>
       <source>Record a replay.</source>
-      <translation>记录本地录像.</translation>
+      <translation>創建本機紀錄</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="347"/>
@@ -1439,7 +1439,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13911"/>
       <source>Database support will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>資料庫支持不可使用。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13918"/>
@@ -1777,7 +1777,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="48"/>
       <source>Default Area</source>
-      <translation>默认地区</translation>
+      <translation>預設區域</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="49"/>
@@ -1955,7 +1955,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2942"/>
       <source>could not open file</source>
-      <translation type="unfinished"/>
+      <translation>無法開啟檔案</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2952"/>
@@ -3364,7 +3364,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2362"/>
       <source>Index (UTF-16)</source>
       <comment>1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>索引 (UTF-16)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2303"/>
@@ -3385,7 +3385,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2372"/>
       <source>Index (UTF-8)</source>
       <comment>4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>索引 (UTF-8)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2315"/>
@@ -3921,7 +3921,7 @@ changed.</source>
       <location filename="../src/ctelnet.cpp" line="2346"/>
       <source>LUA</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>LUA</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2357"/>
@@ -3988,7 +3988,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="17"/>
       <source>ANSI 256 Color chooser</source>
-      <translation type="unfinished"/>
+      <translation>ANSI 256 色彩選擇工具</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="39"/>
@@ -5996,7 +5996,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="1012"/>
       <location filename="../src/dlgProfilePreferences.cpp" line="3770"/>
       <source>Profile preferences - %1</source>
-      <translation>配置設定 - %1</translation>
+      <translation>偏好設定 - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1288"/>
@@ -8456,7 +8456,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="245"/>
       <source>Check for updates...</source>
-      <translation>檢查更新版本</translation>
+      <translation>檢查更新</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="250"/>
