@@ -5557,7 +5557,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="35"/>
       <source>or</source>
-      <translation type="unfinished"/>
+      <translation>或</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="58"/>
@@ -5573,7 +5573,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="95"/>
       <source>(optional) add icon, description, and more</source>
-      <translation type="unfinished"/>
+      <translation>[可選] 添加圖示、詳細說明等</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="118"/>
@@ -5585,7 +5585,7 @@ Count</source>
       <location filename="../src/ui/dlgPackageExporter.ui" line="213"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="250"/>
       <source>optional</source>
-      <translation>可选项</translation>
+      <translation>可選項目</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="159"/>
@@ -5601,7 +5601,8 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="233"/>
       <source>optional. Markdown supported, and you can add images with drag and drop</source>
-      <translation type="unfinished"/>
+      <translation>可選項目
+支持 Markdown 語法，並且可以透過拖曳來添加圖片。</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="144"/>
@@ -5626,7 +5627,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="220"/>
       <source>Description</source>
-      <translation>詳細資料</translation>
+      <translation>詳細說明</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="240"/>
@@ -5666,7 +5667,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="414"/>
       <source>Select export location</source>
-      <translation type="unfinished"/>
+      <translation>選擇匯出位置</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="63"/>
@@ -5730,7 +5731,7 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="313"/>
       <location filename="../src/dlgPackageExporter.cpp" line="315"/>
       <source>Export to %1</source>
-      <translation type="unfinished"/>
+      <translation>匯出至 %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1003"/>
@@ -5741,7 +5742,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="335"/>
       <source>Open Icon</source>
-      <translation type="unfinished"/>
+      <translation>開啟圖示</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="335"/>
@@ -5773,7 +5774,7 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="761"/>
       <source>Failed to export. Could not write Mudlet items to the file &quot;%1&quot;.</source>
       <comment>This error message is shown when all the Mudlet items cannot be written to the &apos;packageName&apos;.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened.</comment>
-      <translation type="unfinished"/>
+      <translation>匯出失敗。無法將 Mudlet 項目寫入到檔案 &quot;%1&quot;。</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="928"/>
