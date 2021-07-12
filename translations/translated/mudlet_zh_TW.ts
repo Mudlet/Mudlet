@@ -5552,7 +5552,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="28"/>
       <source>Package name here</source>
-      <translation type="unfinished"/>
+      <translation>套件名稱</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="35"/>
@@ -5563,7 +5563,7 @@ Count</source>
       <location filename="../src/ui/dlgPackageExporter.ui" line="58"/>
       <location filename="../src/dlgPackageExporter.cpp" line="1431"/>
       <source>Select what to export</source>
-      <translation type="unfinished"/>
+      <translation>選擇要匯出的内容</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="68"/>
@@ -5686,7 +5686,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="66"/>
       <source>Scripts</source>
-      <translation>脚本</translation>
+      <translation>腳本</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="67"/>
@@ -5811,7 +5811,9 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="1433"/>
       <source>Select what to export (%1 items)</source>
       <comment>Package exporter selection</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>選擇要匯出的内容（已選 %1 項）</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1061"/>
@@ -5824,7 +5826,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="50"/>
       <source>Package Manager (experimental) - %1</source>
-      <translation>套件管理（實驗）- %1</translation>
+      <translation>套件管理工具 - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="104"/>
@@ -5861,7 +5863,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="175"/>
       <source>Dependencies</source>
-      <translation type="unfinished"/>
+      <translation>依賴</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageManager.cpp" line="246"/>
@@ -6151,7 +6153,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3095"/>
       <source>{missing, possibly recently deleted script item}</source>
-      <translation type="unfinished"/>
+      <translation>{遺失，可能是最近刪除的腳本}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3098"/>
@@ -8462,7 +8464,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="266"/>
       <source>Package manager</source>
-      <translation>包管理器</translation>
+      <translation>套件管理工具</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="274"/>
@@ -8595,7 +8597,13 @@ There is NO WARRANTY, to the extent permitted by law.
 &lt;i&gt;Note: &lt;b&gt;.zip&lt;/b&gt; and &lt;b&gt;.mpackage&lt;/b&gt; modules are currently unable to be synced, only &lt;b&gt;.xml&lt;/b&gt; packages are able to be synchronized across profiles at the moment.&lt;/i&gt;&lt;/p&gt;
 &lt;p&gt;For each save operation, modules are backed up to a directory, &lt;i&gt;moduleBackups&lt;/i&gt;, within your Mudlet profile directory.&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;相較於套件（packages）只能安裝在個別設定檔下，模組（modules）是一種在多個會話中使用共同套件的方法。 &lt;/p&gt;
+&lt;p&gt;模組按照優先順序以升序進行加載（即優先順序 1 將在 2 之前載入，依此類推），具有相同優先順序的模組則將會依照字母順序加載。 &lt;/p&gt;
+&lt;p&gt;優先順序為負數的模組，將會在腳本套件之前載入。 &lt;/p&gt;
+&lt;p&gt;The &lt;b&gt;&lt;i&gt;Sync&lt;/i&gt;&lt;/b&gt; option, if it is enabled, will, when the module in &lt;b&gt;this profile&lt;/b&gt; is saved &lt;b&gt;to disk&lt;/b&gt;, cause it to be then reloaded into all profiles which also are using the same file that contains the module. To make several profiles use the same module, install it in each profile through this module manager (which should be opened when the particular profile is the one currently in the foreground).&lt;/p&gt;&lt;p&gt;
+&lt;i&gt;Note: &lt;b&gt;.zip&lt;/b&gt; and &lt;b&gt;.mpackage&lt;/b&gt; modules are currently unable to be synced, only &lt;b&gt;.xml&lt;/b&gt; packages are able to be synchronized across profiles at the moment.&lt;/i&gt;&lt;/p&gt;
+&lt;p&gt;For each save operation, modules are backed up to a directory, &lt;i&gt;moduleBackups&lt;/i&gt;, within your Mudlet profile directory.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="129"/>
@@ -8954,7 +8962,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="447"/>
       <source>Package Manager (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>套件管理工具</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="449"/>
@@ -10447,7 +10455,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager_unpack.ui" line="24"/>
       <source>unpacking please wait ...</source>
-      <translation>正在解压，请稍候...</translation>
+      <translation>正在解壓縮，請稍後……</translation>
     </message>
   </context>
   <context>
