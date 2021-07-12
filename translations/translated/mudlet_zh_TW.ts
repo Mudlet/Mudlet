@@ -525,7 +525,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
       <source>Error theme not found %1.</source>
-      <translation type="unfinished"/>
+      <translation>無法找到主題 %1.</translation>
     </message>
   </context>
   <context>
@@ -4149,12 +4149,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="535"/>
       <source>Game server URL</source>
-      <translation type="unfinished"/>
+      <translation>遊戲伺服器位址</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="538"/>
       <source>The Internet host name or IP address</source>
-      <translation type="unfinished"/>
+      <translation>伺服器主機名稱或 IP 位址</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="545"/>
@@ -4164,7 +4164,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="573"/>
       <source>Game server port</source>
-      <translation type="unfinished"/>
+      <translation>遊戲伺服器端口</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="576"/>
@@ -4174,7 +4174,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="595"/>
       <source>Connect via a secure protocol</source>
-      <translation type="unfinished"/>
+      <translation>透過安全協議進行連線</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="598"/>
@@ -6140,12 +6140,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2969"/>
       <source>Could not update themes: %1</source>
-      <translation type="unfinished"/>
+      <translation>無法更新主題：%1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2972"/>
       <source>Updating themes from colorsublime.github.io...</source>
-      <translation type="unfinished"/>
+      <translation>從 colorsublime.github.io 更新主題……</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3089"/>
@@ -10780,12 +10780,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1182"/>
       <source>Theme</source>
-      <translation>主题</translation>
+      <translation>主題</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1252"/>
       <source>Updating themes from colorsublime.github.io...</source>
-      <translation type="unfinished"/>
+      <translation>從 colorsublime.github.io 更新主題……</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1292"/>
@@ -10795,7 +10795,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1298"/>
       <source>Select your color preferences</source>
-      <translation>选择你的颜色偏好</translation>
+      <translation>選擇色彩</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1304"/>
@@ -11102,7 +11102,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1434"/>
       <source>These preferences set how you want a particular color to be represented visually in the main display:</source>
-      <translation>这些偏好设置是你想要在主显示中直观显示的特定颜色：</translation>
+      <translation>這些偏好設定是你想要在主視窗中直觀顯示的特定顏色：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1444"/>
