@@ -1305,7 +1305,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="776"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation>抱歉，以下錯誤導致無法儲存使用者設定文件：%1</translation>
+      <translation>抱歉，以下錯誤導致無法儲存設定檔：%1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1689"/>
@@ -5497,17 +5497,17 @@ Count</source>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="48"/>
       <source>Module Manager - %1</source>
-      <translation>模組管理 - %1</translation>
+      <translation>模組管理工具 - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Module Name</source>
-      <translation>模块名称</translation>
+      <translation>模組名稱</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Priority</source>
-      <translation>优先级</translation>
+      <translation>優先順序</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
@@ -5517,7 +5517,7 @@ Count</source>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="66"/>
       <source>Module Location</source>
-      <translation>模块位置</translation>
+      <translation>模組位置</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="105"/>
@@ -8467,7 +8467,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="274"/>
       <source>Module manager</source>
-      <translation>模块管理器</translation>
+      <translation>模組管理工具</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="282"/>
@@ -8610,7 +8610,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/module_manager.ui" line="149"/>
       <source>Module Help</source>
-      <translation>模块帮助</translation>
+      <translation>模組說明</translation>
     </message>
   </context>
   <context>
@@ -8949,7 +8949,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="440"/>
       <source>Packages (exp.)</source>
-      <translation type="unfinished"/>
+      <translation>套件</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="447"/>
@@ -8960,7 +8960,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="449"/>
       <source>Packages (exp.)</source>
       <comment>exp. stands for experimental; shortened so it doesn&apos;t make buttons huge in the main interface</comment>
-      <translation type="unfinished"/>
+      <translation>套件</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="456"/>
@@ -10027,7 +10027,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="452"/>
       <source>Module Manager</source>
-      <translation>模块管理器</translation>
+      <translation>模組管理工具</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="466"/>
