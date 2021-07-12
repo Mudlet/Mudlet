@@ -2,6 +2,24 @@
 
 set -e
 
+sign_and_notarize () {
+
+  local appBundle="$1"
+  codesign --deep -o runtime -s "$IDENTITY" "${appBundle}"
+  echo "Signed final .dmg"
+
+  cat << EOF > gon.json
+{
+  "notarize": [{
+    "path": "${appBundle}",
+    "bundle_id": "mudlet",
+    "staple": true
+  }]
+}
+EOF
+  gon gon.json
+}
+
 [ -n "$TRAVIS_REPO_SLUG" ] && BUILD_DIR="${TRAVIS_BUILD_DIR}" || BUILD_DIR="${BUILD_FOLDER}"
 [ -n "$TRAVIS_REPO_SLUG" ] && SOURCE_DIR="${TRAVIS_BUILD_DIR}" || SOURCE_DIR="${GITHUB_WORKSPACE}"
 
@@ -48,8 +66,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     ./make-installer.sh "${appBaseName}.app"
 
     if [ -n "$MACOS_SIGNING_PASS" ]; then
-      codesign --deep -s "$IDENTITY" "${HOME}/Desktop/${appBaseName}.dmg"
-      echo "Signed final .dmg"
+      sign_and_notarize "${HOME}/Desktop/${appBaseName}.dmg"
     fi
 
     if [ -n "$TRAVIS_REPO_SLUG" ]; then
@@ -94,11 +111,10 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     if [ -n "$MACOS_SIGNING_PASS" ]; then
       if [ "${public_test_build}" == "true" ]; then
-        codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet PTB.dmg"
+        sign_and_notarize "${HOME}/Desktop/Mudlet PTB.dmg"
       else
-        codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet.dmg"
+        sign_and_notarize "${HOME}/Desktop/Mudlet.dmg"
       fi
-      echo "Signed final .dmg"
     fi
 
     if [ "${public_test_build}" == "true" ]; then

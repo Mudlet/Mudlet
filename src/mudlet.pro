@@ -1566,7 +1566,6 @@ DISTFILES += \
     ../.devcontainer/devcontainer.json \
     ../.devcontainer/library-scripts/desktop-lite-debian.sh \
     ../.github/CODEOWNERS \
-    ../.github/CODEOWNERS.md \
     ../.github/CODE_OF_CONDUCT.md \
     ../.github/CONTRIBUTING.md \
     ../.github/FUNDING.yml \
@@ -1670,6 +1669,7 @@ DISTFILES += \
     ../translations/translated/generate-translation-stats.lua \
     ../translations/translated/updateqm.pri \
     .clang-format \
+    CF-loader.xml \
     CMakeLists.txt \
     icons/mudlet.ico \
     icons/mudlet.icns \
@@ -1677,8 +1677,10 @@ DISTFILES += \
     icons/mudlet_dev.ico \
     icons/mudlet_ptb.icns \
     icons/mudlet_ptb.ico \
-    mudlet-lua/lua/ldoc.css \
     mudlet-lua/genDoc.sh \
+    mudlet-lua/lua/generic-mapper/generic_mapper.xml \
+    mudlet-lua/lua/generic-mapper/versions.lua \
+    mudlet-lua/lua/ldoc.css \
     mudlet-lua/tests/README.md \
     mudlet-lua/tests/DB.lua \
     mudlet-lua/tests/GUIUtils.lua \
