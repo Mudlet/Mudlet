@@ -1608,7 +1608,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1292"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation>[错误] - 找不到地图文件, 使用的路径和文件名是: %1.</translation>
+      <translation>[ 錯誤 ] - 找不到地圖文件，使用的路徑和檔案名稱是：%1.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1298"/>
@@ -2112,7 +2112,7 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2534"/>
       <source>[ ERROR ] - Map download encountered an error:
 %1.</source>
-      <translation>[错误] - 下载地图出错
+      <translation>[ 錯誤 ] - 下載地圖出現錯誤
 %1</translation>
     </message>
     <message>
@@ -2145,13 +2145,13 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2634"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
-      <translation>[错误] - 地图下载出现错误, 分析目标文件失败: %1.</translation>
+      <translation>[錯誤] - 地圖下載出現錯誤，分析目標檔案失敗：%1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2639"/>
       <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
-      <translation>[错误] - 地图下载出现错误, 无法读取目标文件: %1.</translation>
+      <translation>[ 錯誤 ] - 地图下载出现错误, 无法读取目标文件: %1.</translation>
     </message>
   </context>
   <context>
@@ -3595,7 +3595,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="41"/>
       <source>About Mudlet</source>
-      <translation>關於 Mudlet</translation>
+      <translation>關於</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="122"/>
@@ -3800,7 +3800,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
 Connection cannot be established.
 The server name is not correct, not working properly,
 or your nameservers are not working properly.</source>
-      <translation>[错误] - 主机名称查找失败!
+      <translation>[ 錯誤 ] - 主机名称查找失败!
 无法建立连接.
 服务器名称不正确, 不能正常工作,
 或者你的域名服务器没有正常工作.</translation>
@@ -4770,7 +4770,7 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="158"/>
       <source>GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp;amp; user help. With the project from the very beginning and is an official spokesman of the project. Since the retirement of Heiko, he has become the head of the Mudlet project.</source>
       <comment>about:Vadi</comment>
-      <translation type="unfinished"/>
+      <translation>負責圖形化介面（GUI）設計和初始功能規劃。他負責專案頁面和使用者手冊，並且是 Windows、macOS、Ubuntu 平台和通用 Linux 安裝程式的維護者，目前負責維護 Mudlet 維基百科與 Lua 應用程式接口（API），並處理項目管理、公共關係和使用者幫助。在一開始就參與專案合作並且擔任項目的官方發言人；自從 Heiko 退休後，他成為了 Mudlet 專案的負責人。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="165"/>
@@ -4896,7 +4896,7 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="240"/>
       <source>Designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. Visit his homepage at &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.</source>
       <comment>about:Thorsten Wilms</comment>
-      <translation type="unfinished"/>
+      <translation>為我們設計了漂亮的標誌、啟動畫面、關於對話框、官方網站以及圖示和徽章。可以在 &lt;a href=“http://thorwil.wordpress.com/”&gt;thorwil.wordpress.com&lt;/a&gt; 訪問他的個人網站。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="249"/>
@@ -5010,7 +5010,8 @@ Count</source>
       <source>
                           These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patreon&lt;/a&gt;:
                           </source>
-      <translation type="unfinished"/>
+      <translation>
+                          這些令人敬畏的人將被永遠銘記&lt;br&gt;感謝他們在 &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;https://www.patreon.com/mudlet&gt;&gt;Mudlet's Patreon&lt;/a&gt;: 慷慨資助：                          </translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1068"/>
@@ -7721,12 +7722,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="462"/>
       <source>Generate a statistics summary display on the main profile console.</source>
-      <translation type="unfinished"/>
+      <translation>生成統計資料並顯示在主控制台</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="463"/>
       <source>Generate statistics</source>
-      <translation type="unfinished"/>
+      <translation>統計資料</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="463"/>
@@ -8109,7 +8110,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation>名称:</translation>
+      <translation>名稱：</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
@@ -8424,7 +8425,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="205"/>
       <source>About Mudlet</source>
-      <translation>關於 Mudlet</translation>
+      <translation>關於</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="192"/>
