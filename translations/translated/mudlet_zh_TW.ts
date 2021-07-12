@@ -4194,12 +4194,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="634"/>
       <source>load newest profile</source>
-      <translation>載入最新設定檔</translation>
+      <translation>載入最新的設定檔</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="639"/>
       <source>load oldest profile</source>
-      <translation>載入最舊設定檔</translation>
+      <translation>載入最舊的設定檔</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="662"/>
@@ -4285,7 +4285,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="710"/>
       <source>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</source>
-      <translation>激活后, Mudlet在启动时会自动加载此配置文件并连接</translation>
+      <translation>啟用之後，每次 Mudlet 啟動時都會自動載入這份設定檔並進行連線</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="722"/>
@@ -4536,16 +4536,16 @@ custom line?</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="14"/>
       <source>Confirm permanent profile deletion</source>
-      <translation>确认永久删除配置文件</translation>
+      <translation>確認永久刪除設定檔</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="26"/>
       <source>Are you sure that you&apos;d like to delete this profile? Everything (aliases, triggers, backups, etc) will be gone.
 
 If you are, please type in the profile name as a confirmation:</source>
-      <translation>你确定要删除这个配置文件吗? 一切都会消失(别名，触发器、备份等等)。
+      <translation>你確定要刪除這份設定檔嗎？包括別名、觸發與備份的一切內容都會消失。
 
-如果是，请型中档案名称为一确认：</translation>
+如果是，請輸入設定檔的名稱作為確認：</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
