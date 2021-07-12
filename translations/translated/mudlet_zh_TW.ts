@@ -2017,7 +2017,7 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="1047"/>
       <source>[ WARN ]  - Saving map in format version &quot;%1&quot; different from the
 recommended map version %2 for this version of Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>[注意] - 保存地图的格式版本 &quot;%1&quot; 與 Mudlet 當前版本的推薦地圖版本 %2 不同。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1385"/>
@@ -2824,17 +2824,17 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1309"/>
       <source>Copy HTML</source>
-      <translation>複製 HTML</translation>
+      <translation>複製為 HTML</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1313"/>
       <source>Copy as image</source>
-      <translation>复制为图片</translation>
+      <translation>複製為圖片</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1316"/>
       <source>Select All</source>
-      <translation>选择全部</translation>
+      <translation>全選</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1321"/>
@@ -5591,12 +5591,12 @@ Count</source>
       <location filename="../src/ui/dlgPackageExporter.ui" line="159"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="181"/>
       <source>Icon size of 512x512 recommended</source>
-      <translation type="unfinished"/>
+      <translation>圖示的建議尺寸為 512x512 (px)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="191"/>
       <source>512x512 recommended</source>
-      <translation type="unfinished"/>
+      <translation>建議尺寸 512x512 (px)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="233"/>
@@ -7647,7 +7647,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="242"/>
       <source>-- add your Lua code here</source>
-      <translation type="unfinished"/>
+      <translation>-- 在這裡輸入 Lua 程式碼</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="422"/>
@@ -8480,7 +8480,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="299"/>
       <source>MultiView</source>
-      <translation type="unfinished"/>
+      <translation>並列顯示</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="302"/>
@@ -10056,7 +10056,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="477"/>
       <source>MultiView</source>
-      <translation type="unfinished"/>
+      <translation>並列顯示</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="501"/>
