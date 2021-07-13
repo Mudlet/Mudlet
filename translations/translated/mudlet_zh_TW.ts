@@ -1808,7 +1808,7 @@ better off starting again...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1513"/>
       <source>[ INFO ]  - Ignoring this map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ 訊息 ] - 忽略這個地圖檔案。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1683"/>
@@ -1981,7 +1981,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2988"/>
       <source>no areas detected</source>
-      <translation type="unfinished"/>
+      <translation>沒有檢測到任何區域</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3013"/>
@@ -2908,61 +2908,61 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1926"/>
       <source>{carriage-return}</source>
       <comment>Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.</comment>
-      <translation type="unfinished"/>
+      <translation>{carriage-return}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1927"/>
       <source>{space}</source>
       <comment>Unicode U+0020 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1928"/>
       <source>{non-breaking space}</source>
       <comment>Unicode U+00A0 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{non-breaking space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1929"/>
       <source>{soft hyphen}</source>
       <comment>Unicode U+00AD codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{soft hyphen}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1930"/>
       <source>{combining grapheme joiner}</source>
       <comment>Unicode U+034F codepoint (badly named apparently - see Wikipedia!)</comment>
-      <translation type="unfinished"/>
+      <translation>{combining grapheme joiner}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1931"/>
       <source>{ogham space mark}</source>
       <comment>Unicode U+1680 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{ogham space mark}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1932"/>
       <source>{&apos;n&apos; quad}</source>
       <comment>Unicode U+2000 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{&apos;n&apos; quad}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1933"/>
       <source>{&apos;m&apos; quad}</source>
       <comment>Unicode U+2001 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{&apos;m&apos; quad}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1934"/>
       <source>{&apos;n&apos; space}</source>
       <comment>Unicode U+2002 codepoint - En (&apos;n&apos;) wide space.</comment>
-      <translation type="unfinished"/>
+      <translation>{&apos;n&apos; space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1935"/>
       <source>{&apos;m&apos; space}</source>
       <comment>Unicode U+2003 codepoint - Em (&apos;m&apos;) wide space.</comment>
-      <translation type="unfinished"/>
+      <translation>{&apos;m&apos; space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1936"/>
@@ -2980,7 +2980,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1938"/>
       <source>{6-per-em space}</source>
       <comment>Unicode U+2006 codepoint - six-per-em (&apos;m&apos;) wide (Sometimes the same as a Thin) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{6-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1939"/>
@@ -3310,19 +3310,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1998"/>
       <source>{object replacement character}</source>
       <comment>Unicode U+FFFC codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{object replacement character}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2010"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint in range U+FFD0 to U+FDEF - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{noncharacter}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2012"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint in range U+FFFx - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{noncharacter}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2021"/>
@@ -3358,7 +3358,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2029"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{noncharacter}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2300"/>
@@ -3379,7 +3379,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2368"/>
       <source>Visual</source>
       <comment>3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a &apos;{&apos;...&apos;}&apos; wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>外觀</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2311"/>
@@ -4051,12 +4051,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="382"/>
       <source>232 + Gr =</source>
-      <translation type="unfinished"/>
+      <translation>232 + Gr =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="414"/>
       <source>[232]</source>
-      <translation type="unfinished"/>
+      <translation>[232]</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="424"/>
@@ -5058,7 +5058,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="64"/>
       <source>Default</source>
-      <translation type="unfinished"/>
+      <translation>預設</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
@@ -5440,12 +5440,12 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="412"/>
       <source>[HELP] Available Commands: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ 幫助 ] 可用指令：%1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="414"/>
       <source>[HELP] Syntax: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ 幫助 ] 語法：%1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="422"/>
@@ -5494,7 +5494,7 @@ Count</source>
       <location filename="../src/dlgMapper.cpp" line="347"/>
       <source>None</source>
       <comment>Don&apos;t show the map overlay, &apos;none&apos; meaning no map overlay styled are enabled</comment>
-      <translation type="unfinished"/>
+      <translation>無</translation>
     </message>
   </context>
   <context>
@@ -5537,12 +5537,12 @@ Count</source>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="149"/>
       <source>Load Mudlet Module</source>
-      <translation type="unfinished"/>
+      <translation>載入模組</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="156"/>
       <source>Load Mudlet Module:</source>
-      <translation type="unfinished"/>
+      <translation>載入模組：</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="156"/>
@@ -5617,7 +5617,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
       <source>Package Exporter (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>套件匯出工具</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="162"/>
@@ -6015,12 +6015,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2026"/>
       <source>Imported map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>從 %1 匯入地圖。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2028"/>
       <source>Could not import map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>無法從 %1 載入地圖。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2031"/>
@@ -6030,7 +6030,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2036"/>
       <source>Loaded map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>從 %1 載入地圖。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2038"/>
@@ -6364,7 +6364,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3457"/>
       <source>Map symbol usage - %1</source>
-      <translation type="unfinished"/>
+      <translation>地圖符號使用狀況 - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3534"/>
@@ -6829,7 +6829,8 @@ for all of the %n selected room(s):</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="332"/>
       <source>*** starting new session ***
 </source>
-      <translation type="unfinished"/>
+      <translation>*** 開始新的工作階段 ***
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="420"/>
