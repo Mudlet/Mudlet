@@ -433,7 +433,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="481"/>
       <source>%1 mins</source>
-      <translation>%1 分钟</translation>
+      <translation>%1 分鐘</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="483"/>
@@ -2708,8 +2708,8 @@ they have been removed.</source>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;
 </source>
-      <translation>[  OK  ] - 所做的變更為：
-（編號） &quot;舊名稱&quot; ==&gt; &quot;新名稱&quot;
+      <translation>[ 完成 ] - 所做的變更為：
+（編號） &quot;原來名稱&quot; ==&gt; &quot;新的名稱&quot;
 </translation>
     </message>
     <message>
@@ -2725,7 +2725,7 @@ they have been removed.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1235"/>
       <source>[ ALERT ] - Empty and duplicate area names detected in Map file!</source>
-      <translation>[警告] - 在地图文件中检测到空的和重复的区域名称!</translation>
+      <translation>[ 警告 ] - 在地圖文件中偵測到空的和重複的區域名稱！</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1236"/>
@@ -2748,7 +2748,7 @@ first will also gain a suffix in this manner.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1252"/>
       <source>[ ALERT ] - Duplicate area names detected in the Map file!</source>
-      <translation>[警告] - 在地图文件中检测到重复的区域名称!</translation>
+      <translation>[ 警告 ] - 在地圖文件中偵測到重覆的區域名稱！</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1253"/>
@@ -2780,7 +2780,7 @@ first will also gain a suffix in this manner.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1268"/>
       <source>[ ALERT ] - An empty area name was detected in the Map file!</source>
-      <translation>[警告] - 在地图文件中检测到空的区域名称!</translation>
+      <translation>[ 警告 ] - 在地圖文件中偵測到空的區域名稱！</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1271"/>
@@ -2795,7 +2795,7 @@ suffix where each &quot;###&quot; is an increasing number; you may wish to
 change these, perhaps by adding more meaningful area names but it is
 entirely up to you what is used, other then you will not be able to
 set one area&apos;s name to that of another that exists at the time.</source>
-      <translation>[信息] - 过去, 由于没有考虑某些情况，Mudlet允许
+      <translation>[ 完成 ] - 过去, 由于没有考虑某些情况，Mudlet允许
 地图中存在未命名区域.
 这会让事情变得混乱, 现在已经不允许这么做了.
   为了解决这个问题, 如果一个区域没有名字(或者等以后
@@ -3443,15 +3443,14 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="1150"/>
       <source>Trigger name=%1 expired.
 </source>
-      <translation>触发器名称=%1 过期了.
-</translation>
+      <translation>觸發名稱 =%1 過期了</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1155"/>
       <source>Trigger name=%1 will fire %n more time(s).
 </source>
       <translation>
-        <numerusform>触发器名称=%1 将被触发 %n 次.
+        <numerusform>觸發名稱 =%1 將被觸發 %n 次
 </numerusform>
       </translation>
     </message>
@@ -3800,10 +3799,9 @@ and this one cannot read it, you need a newer Mudlet!</source>
 Connection cannot be established.
 The server name is not correct, not working properly,
 or your nameservers are not working properly.</source>
-      <translation>[ 錯誤 ] - 主机名称查找失败!
-无法建立连接.
-服务器名称不正确, 不能正常工作,
-或者你的域名服务器没有正常工作.</translation>
+      <translation>[ 錯誤 ] - 主機名稱查詢失敗！
+無法建立連線
+伺服器名稱不正確，不能正常工作，或者你的域名伺服器沒有正常運作</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="449"/>
@@ -8374,7 +8372,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="321"/>
       <source>Discord help channel</source>
-      <translation>Discord 幫助頻道</translation>
+      <translation>Discord 頻道</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="326"/>
@@ -8461,7 +8459,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="250"/>
       <source>Live help chat</source>
-      <translation>在线帮助聊天</translation>
+      <translation>即時協助</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="258"/>
@@ -12444,7 +12442,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="134"/>
       <source>&lt;p&gt;milliseconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;毫秒&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="169"/>
@@ -12469,12 +12467,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="89"/>
       <source>&lt;p&gt;hours&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;時&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="104"/>
       <source>&lt;p&gt;minutes&lt;/p&gt;</source>
-      <translation>&lt;p&gt;分钟&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;分&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="119"/>
@@ -12494,7 +12492,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="260"/>
       <source>&lt;p&gt;The &lt;b&gt;minute&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;定时器将停止运行的&lt;b&gt;分钟&lt;/b&gt;间隔部分。&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;時計將停止運行&lt;b&gt;分鐘（minute）&lt;/b&gt;間隔。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="326"/>
