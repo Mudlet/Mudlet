@@ -506,12 +506,12 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="448"/>
       <source> | %1 chars selected</source>
-      <translation type="unfinished"/>
+      <translation> | %1 個字元已選取</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="452"/>
       <source> | scope: </source>
-      <translation type="unfinished"/>
+      <translation> | 範圍： </translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="462"/>
@@ -600,7 +600,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4041"/>
       <source>%1 {count:%2}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {計數：%2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1386"/>
@@ -1583,7 +1583,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1108"/>
       <source>&lt;no GA&gt; S:%1</source>
       <comment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;no GA&gt; S:%1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1205"/>
@@ -1788,7 +1788,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="439"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ 訊息 ]  - 開始審核地圖……</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1445"/>
@@ -1803,7 +1803,9 @@ better off starting again...</source>
       <source>[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:
 %1; the file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ 警告 ] - 無法載入 Mudlet JSON 地圖文件，原因：
+%1; 該文件是：
+&quot;%2&quot;。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1513"/>
@@ -1910,7 +1912,10 @@ the file:
 Please check that you have permissions/access to:
 &quot;%1&quot;
 and there is enough space. The download operation has failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ 錯誤 ] - 無法使用或建立目錄來儲存地圖
+請檢察您的權限：
+&quot;%1&quot;
+並且確保空間足夠。下載失敗。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2379"/>
@@ -1976,7 +1981,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2982"/>
       <source>no format version detected</source>
-      <translation type="unfinished"/>
+      <translation>未偵測到格式版本</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2988"/>
@@ -2499,7 +2504,7 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="504"/>
       <source>Area with ID %1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>已存在 ID 為 %1 的區域！</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="523"/>
@@ -3807,7 +3812,7 @@ or your nameservers are not working properly.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="449"/>
       <source>[ ERROR ] - TCP/IP socket ERROR:</source>
-      <translation type="unfinished"/>
+      <translation>[ 錯誤 ] - TCP/IP Socket 錯誤：</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="476"/>
@@ -3848,7 +3853,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1673"/>
       <location filename="../src/ctelnet.cpp" line="2041"/>
       <source>[  OK  ]  - Package is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>[ 完成 ] - 套件已安裝。</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1682"/>
@@ -3878,7 +3883,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="516"/>
       <source>hh:mm:ss.zzz</source>
       <comment>This is the format to be used to show the profile connection time, it follows the rules of the &quot;QDateTime::toString(...)&quot; function and may need modification for some locales, e.g. France, Spain.</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss.zzz</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="547"/>
@@ -4781,7 +4786,7 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="172"/>
       <source>Former maintainer of the early Windows and Apple OSX packages. He also administers our server and helps the project in many ways.</source>
       <comment>about:demonnic</comment>
-      <translation type="unfinished"/>
+      <translation>是早期的 Windows 和 Apple OSX 軟體包的維護者，他還管理著我們的伺服器並以各種不同的方式為專案提供幫助。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="176"/>
@@ -4835,7 +4840,7 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="207"/>
       <source>Contributed to the Lua API.</source>
       <comment>about:Carter Dewey</comment>
-      <translation type="unfinished"/>
+      <translation>為 Lua API 做出了貢獻。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="210"/>
@@ -4877,7 +4882,7 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="231"/>
       <source>The original author of our Windows installer.</source>
       <comment>about:Leigh Stillard</comment>
-      <translation type="unfinished"/>
+      <translation>是我們 Windows 安裝程式的原始作者。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="234"/>
@@ -4912,7 +4917,8 @@ Count</source>
       <source>&lt;p&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
 &lt;p&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;/p&gt;</source>
       <comment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevent language: &apos;but only the English form is considered the official version of the license, so the following is reproduced in that language:&apos; to replace &apos;which is reproduced below:&apos;...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet 最初由 Heiko Köhn &lt;KoenhnHeiko@googlemail.com> 開發。&lt;/p&gt;
+&lt;p&gt;Mudlet 在 GPLv2 授權許可下發行，下面是重製內容：&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="590"/>
@@ -5182,7 +5188,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="267"/>
       <source>Game name: %1</source>
-      <translation type="unfinished"/>
+      <translation>遊戲編號：%1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1240"/>
