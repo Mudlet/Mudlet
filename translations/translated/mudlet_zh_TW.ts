@@ -1132,7 +1132,7 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation>居中高亮房间，按指定倍数缩小选中房间间距：</translation>
+      <translation>居中高亮房間，按照指定倍數減少選中房間間距：</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3986"/>
@@ -6982,7 +6982,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="503"/>
       <source>Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though...</source>
-      <translation>儲存選取的觸發、腳本或別名…等，使其變更生效，但不會儲存至硬碟……</translation>
+      <translation>儲存選取的觸發、腳本或別名等，使其變更生效，但不會儲存至硬碟……</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="506"/>
@@ -7402,7 +7402,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5868"/>
       <source>Aliases - Input Triggers</source>
-      <translation>別名 - 輸入觸發</translation>
+      <translation>別名</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5880"/>
