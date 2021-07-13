@@ -10499,7 +10499,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="121"/>
       <location filename="../src/ui/profile_preferences.ui" line="150"/>
       <source>Never</source>
-      <translation>从不</translation>
+      <translation>從不</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="126"/>
@@ -10592,12 +10592,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="474"/>
       <source>use strict UNIX line endings on commands for old UNIX servers that can&apos;t handle windows line endings correctly</source>
-      <translation>在命令中使用精确的UNIX行尾来适应老式UNIX服务器，这将不能&apos;正确地处理Windows行尾。</translation>
+      <translation>在指令中使用嚴格的 UNIX 換行，以適應早期的 UNIX 伺服器，這將會導致無法正確地處理 Windows 換行。</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="477"/>
       <source>Strict UNIX line endings</source>
-      <translation>精确的UNIX行尾</translation>
+      <translation>在發送的指令中使用嚴格的 UNIX 換行</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="494"/>
@@ -10607,7 +10607,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="484"/>
       <source>Auto clear the input line after you sent text</source>
-      <translation>在你送出文本后自动清空输入行</translation>
+      <translation>發送指令後清空指令列內容</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="201"/>
@@ -10632,7 +10632,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="524"/>
       <source>Command separator:</source>
-      <translation>命令分隔符:</translation>
+      <translation>指令分隔符號：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="534"/>
@@ -10858,7 +10858,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="223"/>
       <source>Miscellaneous</source>
-      <translation type="unfinished"/>
+      <translation>其他設定</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="275"/>
@@ -11043,12 +11043,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="501"/>
       <source>Highlights your input line text when scrolling through your history for easy cancellation</source>
-      <translation type="unfinished"/>
+      <translation>捲動歷史紀錄時，以高亮方式重點標示輸入指令內容以便於取消</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="504"/>
       <source>Highlight history</source>
-      <translation type="unfinished"/>
+      <translation>重點標示歷史指令</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="741"/>
