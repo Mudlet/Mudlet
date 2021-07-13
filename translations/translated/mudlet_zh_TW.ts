@@ -8035,7 +8035,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="53"/>
       <source>index (integer number)</source>
-      <translation>索引（整數）</translation>
+      <translation>索引鍵值 (整數)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="54"/>
@@ -12719,7 +12719,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="175"/>
       <source>⏴ Key type:</source>
-      <translation type="unfinished"/>
+      <translation>鍵值類型：</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="125"/>
@@ -12745,12 +12745,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="150"/>
       <source>key (string)</source>
-      <translation type="unfinished"/>
+      <translation>一般鍵值 (字串)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="155"/>
       <source>index (integer)</source>
-      <translation>索引（整數）</translation>
+      <translation>索引 (整數)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="71"/>
@@ -12779,7 +12779,7 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="84"/>
       <source>⏷ Value type:</source>
-      <translation>⏷ 數值類型：</translation>
+      <translation>數值類型：</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="56"/>
