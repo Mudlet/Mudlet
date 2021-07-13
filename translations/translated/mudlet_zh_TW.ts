@@ -6244,7 +6244,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="571"/>
       <source>Mudlet dictionaries:</source>
       <comment>On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones.</comment>
-      <translation>Mudlet词典：</translation>
+      <translation>內建字典</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="573"/>
@@ -10473,7 +10473,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="55"/>
       <source>General</source>
-      <translation>一般</translation>
+      <translation>一般設定</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="61"/>
@@ -10738,7 +10738,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1086"/>
       <source>Display options</source>
-      <translation>显示选项</translation>
+      <translation>顯示選項</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1095"/>
@@ -10748,7 +10748,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1105"/>
       <source>Show Spaces/Tabs</source>
-      <translation>顯示空白（space）／制表符（tab）</translation>
+      <translation>顯示空白（space） / 制表符號（tab）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1115"/>
@@ -10763,7 +10763,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1135"/>
       <source>Echo Lua errors to the main console</source>
-      <translation>回显Lua错误到主控制台</translation>
+      <translation>將 Lua 錯誤輸出顯示到主控制台</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1142"/>
@@ -10992,12 +10992,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1132"/>
       <source>&lt;p&gt;Prints Lua errors to the main console in addition to the error tab in the editor.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;在编辑器中将除了错误的列表符之外的Lua错误输出到主控制台。&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;除了在編輯器的錯誤分頁之外，也一併將 Lua 錯誤輸出顯示到主控制台&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1152"/>
       <source>Enable text analyzer</source>
-      <translation>启用文本分析</translation>
+      <translation>啟用文字分析</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3473"/>
@@ -11418,7 +11418,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2162"/>
       <source>Show room borders</source>
-      <translation type="unfinished"/>
+      <translation>顯示房間邊框</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2238"/>
@@ -11428,7 +11428,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2558"/>
       <source>Chat</source>
-      <translation type="unfinished"/>
+      <translation>聊天設定</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3250"/>
@@ -11809,7 +11809,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3328"/>
       <source>Disable automatic updates</source>
-      <translation>禁止自动更新</translation>
+      <translation>禁止自動更新</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3350"/>
