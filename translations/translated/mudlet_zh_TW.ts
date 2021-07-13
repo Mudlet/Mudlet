@@ -3698,7 +3698,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="256"/>
       <source>Command:</source>
-      <translation>命令:</translation>
+      <translation>指令：</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="266"/>
@@ -3747,7 +3747,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="76"/>
       <source>Pattern:</source>
-      <translation>匹配:</translation>
+      <translation>模式：</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="103"/>
@@ -3772,7 +3772,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="149"/>
       <source>Command:</source>
-      <translation>命令:</translation>
+      <translation>指令：</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="171"/>
@@ -7382,7 +7382,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="5623"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8449"/>
       <source>Command:</source>
-      <translation>命令：</translation>
+      <translation>指令：</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5662"/>
@@ -7392,7 +7392,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5672"/>
       <source>Button properties</source>
-      <translation>按钮属性</translation>
+      <translation>按鈕屬性</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5680"/>
@@ -8120,7 +8120,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="40"/>
       <source>Command:</source>
-      <translation>命令:</translation>
+      <translation>指令：</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
