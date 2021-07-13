@@ -538,7 +538,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2997"/>
       <source>Change the properties of this custom line</source>
-      <translation>更改此段自定义线的属性</translation>
+      <translation>變更這條自定義線段的屬性</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3227"/>
@@ -749,7 +749,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2719"/>
       <source>Change the properties of this line</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
-      <translation>改变这条线的属性</translation>
+      <translation>變更這條線段的屬性</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2722"/>
@@ -1228,7 +1228,7 @@ rooms:</source>
     <message>
       <location filename="../src/TArea.cpp" line="376"/>
       <source>roomID=%1 does not exist, can not set properties of a non-existent room!</source>
-      <translation>房间号=%1不存在，不能为一个不存在的房间设置属性！</translation>
+      <translation>房間編號 = %1 不存在，不能替一個不存在的房間設置屬性！</translation>
     </message>
     <message>
       <location filename="../src/TArea.cpp" line="765"/>
@@ -3628,7 +3628,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="115"/>
       <source>Button Bar Properties</source>
-      <translation>按钮栏属性</translation>
+      <translation>按鈕欄屬性</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="127"/>
@@ -3648,27 +3648,27 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="170"/>
       <source>Dock Area Top</source>
-      <translation>停靠区域顶部</translation>
+      <translation>停靠頂部</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="175"/>
       <source>Dock Area Left</source>
-      <translation>停靠区域左侧</translation>
+      <translation>停靠左側</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="180"/>
       <source>Dock Area Right</source>
-      <translation>停靠区域右侧</translation>
+      <translation>停靠右側</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="185"/>
       <source>Floating Toolbar</source>
-      <translation>浮动工具栏</translation>
+      <translation>浮動工具欄</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="208"/>
       <source>Button Properties</source>
-      <translation>按钮属性</translation>
+      <translation>按鈕屬性</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="214"/>
@@ -3729,7 +3729,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="308"/>
       <source>Stylesheet:</source>
-      <translation>样式表:</translation>
+      <translation>樣式</translation>
     </message>
   </context>
   <context>
@@ -8329,7 +8329,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/ui/main_window.ui" line="216"/>
       <location filename="../src/ui/main_window.ui" line="253"/>
       <source>&lt;p&gt;Opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;打开内建的IRC并在Freenode IRC 服务器的 #mudlet 频道上聊天。&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;打開内建的 IRC 工具，並在 Freenode IRC 伺服器上的 #mudlet 頻道上聊天。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="224"/>
@@ -8430,7 +8430,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="192"/>
       <source>&lt;p&gt;Opens a free form text editor window for this profile that is saved between sessions.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;打開當前配置檔的文本編輯器視窗，文件內容會在不同會話之間保存。 &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="200"/>
