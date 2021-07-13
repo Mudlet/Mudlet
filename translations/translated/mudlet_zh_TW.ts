@@ -3834,7 +3834,7 @@ or your nameservers are not working properly.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="557"/>
       <source>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</source>
-      <translation type="unfinished"/>
+      <translation>當前的遊戲端口不支持安全連接 - 請嘗試將該選項關閉。</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="602"/>
@@ -3972,7 +3972,8 @@ Try again when it has finished.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="2602"/>
       <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ 錯誤 ] - 無法讀取文件 &quot;%1&quot;
+錯誤訊息是：&quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2605"/>
@@ -4143,7 +4144,7 @@ error message was: &quot;%2&quot;.</source>
       <location filename="../src/ui/connection_profiles.ui" line="503"/>
       <source>A unique name for the profile but which is limited to a subset of ascii characters only.</source>
       <comment>Using lower case letters for &apos;ASCII&apos; may make speech synthesisers say &apos;askey&apos; which is quicker than &apos;Aay Ess Cee Eye Eye&apos;!</comment>
-      <translation type="unfinished"/>
+      <translation>配置文件的唯一名稱，僅限指用 ASCII 字元集。</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="513"/>
