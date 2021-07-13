@@ -1080,7 +1080,7 @@ please wait...</source>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
       <comment>Use linefeeds as necessary to format text into a reasonable rectangle of text, %1 is a room number</comment>
-      <translation>移动选择，将中心从高亮房间 (%1) 移至:</translation>
+      <translation>移動選擇，將中心從高亮房間 (%1) 移至：</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3536"/>
@@ -1118,7 +1118,7 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation>居中高亮房间，按指定倍数增加选中房间间距：</translation>
+      <translation>居中高亮房間，按照指定倍數增加選中房間間距：</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3857"/>
@@ -12689,7 +12689,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="626"/>
       <source>highlight</source>
-      <translation>高亮</translation>
+      <translation>重點提示</translation>
     </message>
   </context>
   <context>
