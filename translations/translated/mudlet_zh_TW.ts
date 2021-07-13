@@ -195,7 +195,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="163"/>
       <source>! You have joined %1 as %2</source>
-      <translation>! 你作為 %1 加入了 %2</translation>
+      <translation>! 你以 %2 的名稱加入了頻道 %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="165"/>
@@ -225,12 +225,12 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="211"/>
       <source>! %1 has %2 users: %3</source>
-      <translation>! %1 有 %2 位使用者：%3</translation>
+      <translation>! 頻道 %1 目前共有 %2 名使用者：%3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="213"/>
       <source>! %1 has %2 users</source>
-      <translation>! %1 有 %2 使用者</translation>
+      <translation>! 頻道 %1 目前共有 %2 名使用者</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
@@ -1645,7 +1645,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1349"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation>[好] - ... 系统已完成重新加载地图的请求.</translation>
+      <translation>[ 完成 ] - ……系统已完成重新加載地圖的請求</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1351"/>
@@ -5911,7 +5911,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="293"/>
       <source>%1 (%2% done)</source>
       <comment>%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done.</comment>
-      <translation>%1(%2已完成)</translation>
+      <translation>%1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="346"/>
@@ -8316,7 +8316,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="184"/>
       <source>&lt;p&gt;Opens the Editor for the different types of things that can be scripted by the user.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;打开不同类型事物编辑器以便用户写脚本。&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;開啟腳本編輯器&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="213"/>
@@ -8342,7 +8342,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="240"/>
       <source>&lt;p&gt;Opens the (on-line) Mudlet Forum in your system web-browser.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;在你的系统网页浏览器中打开（在线）Mudlet论坛。&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;在網頁瀏覽器中開啟 Mudlet 線上論壇&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="261"/>
@@ -8413,7 +8413,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="197"/>
       <source>API Reference</source>
-      <translation>參考文件</translation>
+      <translation>使用手冊</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="237"/>
@@ -8433,7 +8433,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="200"/>
       <source>&lt;p&gt;Opens the Mudlet manual in your web browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;在網頁瀏覽器中開啟 Mudlet 使用手冊&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="208"/>
