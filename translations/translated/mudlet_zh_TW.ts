@@ -6026,7 +6026,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2031"/>
       <source>Loading map - please wait...</source>
-      <translation>正载入地图——请稍等……</translation>
+      <translation>正在加載地圖 — 請稍後……</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2036"/>
@@ -8492,7 +8492,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/ui/main_window.ui" line="302"/>
       <source>&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</source>
       <comment>Same text is used in 2 places.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;分割 Mudlet 畫面以一次顯示多個遊戲頁面，若加載的遊戲設置少於兩個時則禁用此功能。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="307"/>
@@ -8986,7 +8986,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="478"/>
       <source>&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</source>
       <comment>Same text is used in 2 places.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;分割 Mudlet 畫面以一次顯示多個遊戲頁面，若加載的遊戲設置少於兩個時則禁用此功能。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="490"/>
@@ -10346,7 +10346,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="1588"/>
       <location filename="../src/mudlet.cpp" line="2879"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;载入Mudlet的回放。&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;載入回放紀錄。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2311"/>
@@ -10507,7 +10507,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="126"/>
       <location filename="../src/ui/profile_preferences.ui" line="155"/>
       <source>Until a profile is loaded</source>
-      <translation>直到载入配置</translation>
+      <translation>加載完成</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="131"/>
@@ -11319,12 +11319,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1827"/>
       <source>Load another map file in:</source>
-      <translation>载入另一地图文件：</translation>
+      <translation>載入其他地圖：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1837"/>
       <source>Press to choose file and load</source>
-      <translation>按下来选择文件并载入</translation>
+      <translation>載入檔案</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1844"/>
