@@ -109,7 +109,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       ./make-installer.sh -r "${VERSION}" "$app"
     fi
 
-    if [ ! -z "$MACOS_SIGNING_PASS" ]; then
+    if [ -n "$MACOS_SIGNING_PASS" ]; then
       if [ "${public_test_build}" == "true" ]; then
         sign_and_notarize "${HOME}/Desktop/Mudlet PTB.dmg"
       else
@@ -161,7 +161,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
   fi
 
   # delete keychain just in case
-  if [ ! -z "$MACOS_SIGNING_PASS" ]; then
+  if [ -n "$MACOS_SIGNING_PASS" ]; then
     security delete-keychain $KEYCHAIN
   fi
 

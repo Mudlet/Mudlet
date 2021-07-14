@@ -1,3 +1,8 @@
+if ($Env:BUILD_PROCESS -eq "Replacement") {
+  # Bail out if this build is supposed to use the shiny MSYS2 based 64-Bit one
+  exit 0
+}
+
 if ("$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet") {
   exit 0
 }
@@ -186,11 +191,11 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
 }
 
 if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
-  $prId = " ,#$Env:APPVEYOR_PULL_REQUEST_NUMBER"
+  $PR_ID = ", #$Env:APPVEYOR_PULL_REQUEST_NUMBER"
 }
 
 if (Test-Path variable:DEPLOY_URL) {
-  Invoke-WebRequest -Method POST -Body "message=Deployed Mudlet ``$Env:VERSION$Env:MUDLET_VERSION_BUILD`` (windows${prId}) to [appveyor]($DEPLOY_URL)" https://webhooks.gitter.im/e/cc99072d43b642c4673a
+  Invoke-WebRequest -Method POST -Body "message=Deployed Mudlet ``$Env:VERSION$Env:MUDLET_VERSION_BUILD`` (windows${PR_ID}) to [appveyor]($DEPLOY_URL)" https://webhooks.gitter.im/e/cc99072d43b642c4673a
 }
 
 echo ""

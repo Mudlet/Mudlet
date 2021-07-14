@@ -2,11 +2,18 @@ version: 1.0.{build}
 branches:
   only:
   - development    # build the default branch
+  - 64Bit_windows  # temporarily build this branch used to develope 64 Bit CI builds
   - /^release-.+/  # build release branches
   - /^Mudlet-.+/   # build release tags (yes, the option also applies to tags)
+
+# Without a prefix commands are batch file ones
+# With cmd: prefix they are run by cmd.exe
+# With ps: prefix they are run by PowerShell
 init:
 - cmd: mkdir C:\src\
+
 image: Visual Studio 2019
+
 environment:
   signing_password:
     secure: gOKqBtIvfDuGkEeaHGaguMmafynYAG06iVuD6Krem7M=
@@ -19,23 +26,52 @@ environment:
   DBLSQD_PASS:
     secure: Bm5PLJjC39XmRC55RPGVP9c5CFxvWu2VorAAmu5QS38=
   matrix:
-  - QT_BASE_DIR: C:\Qt\5.14.2\mingw73_32
-    MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32
+# was QT_BASE_DIR: C:\Qt\5.14.2\mingw73_32 and MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32 for old system and no BUILD_BITNESS
+# We are not currently using CMake for Windows builds but it might be needed in
+# the future - and we now need Q_OR_C_MAKE so as to pull the version number from
+# the right project file, MINGW_BASE_DIR is configured automagically :
+#  - BUILD_PROCESS: Original
+#    QT_BASE_DIR: C:\Qt\5.14.2\mingw73_32
+#    MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32
+  - BUILD_PROCESS: Replacement
+    BUILD_BITNESS: 64
+    Q_OR_C_MAKE: qmake
+  - BUILD_PROCESS: Replacement
+    BUILD_BITNESS: 32
+    Q_OR_C_MAKE: qmake
+
 install:
+# We try both systems but each one will detect what BUILD_PROCESS is and exit
+# early if not selected - we need to do it like that as there is NOT an "if"
+# within Appveyor's YAML interpreter
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
 - powershell ".\appveyor.install.ps1"
+- C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.install.sh
 
 build_script:
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
 - powershell ".\appveyor.build.ps1"
+- C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.build.sh
 
 on_failure:
+# This is likely to only work for the Original build process:
 - cd C:\src
 - powershell "Push-AppveyorArtifact ./verbose_output.log"
 - echo "Build failed - see verbose_output.log artifact upload for more information."
 
+ on successful build we may need to use the after_build stage in order to have
+# the produced files be made available as a "artifact" - at present it makes
+# sure that all the needed files are in the C:\\projects\\mudlet\\package dir:
+after_build:
+- C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.after_build.sh
+
+on_success:
+- C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.after_success.sh
+# The approach of having two build systems may break down here...
+
 cache:
   - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
+  - C:\msys64\var\cache\pacman\pkg
 
 notifications:
 - provider: Webhook

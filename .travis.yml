@@ -1,6 +1,7 @@
 language: cpp
 version: ~> 1.0
-if: branch = development OR branch =~ ^release OR tag IS present
+# if: branch = development OR branch =~ ^release OR tag IS present
+if: false
 cache:
   timeout: 600
   ccache: true

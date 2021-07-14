@@ -1456,9 +1456,12 @@ win32 {
         }
     }
 
-    # specify some windows information about the binary
+    # specify some windows information about the binary, needed to populate the
+    # Windows properties tab for the executable file:
     QMAKE_TARGET_COMPANY = "Mudlet makers"
     QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
+    # PLACEMARKER: Date-stamp needed annual update
+    QMAKE_TARGET_COPYRIGHT = "©️ Mudlet makers 2008-2020"
 
     # Product name determines the Windows Start Menu shortcut name
     contains(BUILD, "-ptb.+") {
@@ -1557,66 +1560,128 @@ unix:!macx {
 
 
 DISTFILES += \
-    CF-loader.xml \
-    CMakeLists.txt \
-    .clang-format \
-    ../.github/pr-labeler.yml \
-    ../.github/CODEOWNERS.md \
+    ../.appveyor.yml \
+    ../.crowdin.yml \
+    ../.devcontainer/Dockerfile \
+    ../.devcontainer/devcontainer.json \
+    ../.devcontainer/library-scripts/desktop-lite-debian.sh \
+    ../.github/CODEOWNERS \
     ../.github/CODE_OF_CONDUCT.md \
     ../.github/CONTRIBUTING.md \
     ../.github/FUNDING.yml \
     ../.github/ISSUE_TEMPLATE.md \
+    ../.github/codeql/codeql-config.yml \
+    ../.github/dependabot.yml \
+    ../.github/pr-labeler.yml \
     ../.github/PULL_REQUEST_TEMPLATE.md \
     ../.github/SUPPORT.md \
     ../.github/workflows/build-mudlet.yml \
+    ../.github/workflows/clangtidy-diff-analysis.yml \
+    ../.github/workflows/codeql-analysis.yml \
+    ../.github/workflows/link-ptbs-to-dblsqd.yml \
     ../.github/workflows/update-3rdparty.yml \
     ../.github/workflows/update-autocompletion.yml \
+    ../.github/workflows/update-geyser-docs.yml \
     ../.github/workflows/update-translations.yml \
     ../.github/workflows/whitespace-linter.yml \
-    ../CMakeLists.txt \
-    ../cmake/FindHUNSPELL.cmake \
-    ../cmake/FindPCRE.cmake \
-    ../cmake/FindYAJL.cmake \
-    ../cmake/FindZIP.cmake \
-    ../cmake/FindPUGIXML.cmake \
+    ../.gitignore \
+    ../.gitmodules \
     ../.travis.yml \
+    ../.vscode/c_cpp_properties.json \
+    ../.vscode/extensions.json \
+    ../.vscode/settings.json \
+    ../3rdparty/discord/rpc/lib/discord-rpc32.dll \
+    ../3rdparty/discord/rpc/lib/discord-rpc64.dll \
+    ../3rdparty/discord/rpc/lib/libdiscord-rpc.dylib \
+    ../3rdparty/discord/rpc/lib/libdiscord-rpc.so \
+    ../3rdparty/our-vcpkg-dependencies/lua/CMakeLists.txt \
+    ../3rdparty/our-vcpkg-dependencies/lua/CONTROL \
+    ../3rdparty/our-vcpkg-dependencies/lua/COPYRIGHT \
+    ../3rdparty/our-vcpkg-dependencies/lua/portfile.cmake \
+    ../3rdparty/our-vcpkg-dependencies/lua/usage \
+    ../3rdparty/our-vcpkg-dependencies/lua/vs2015-impl-c99.patch \
+    ../3rdparty/our-vcpkg-dependencies/vcpkg-x64-linux-dependencies \
+    ../3rdparty/our-vcpkg-dependencies/vcpkg-x64-mingw-dynamic-dependencies \
+    ../3rdparty/our-vcpkg-dependencies/vcpkg-x64-osx-dependencies \
+    ../CI/appveyor.after_build.sh \
+    ../CI/appveyor.after_success.ps1 \
+    ../CI/appveyor.after_success.sh \
+    ../CI/appveyor.build.ps1 \
+    ../CI/appveyor.build.sh \
+    ../CI/appveyor.functions.ps1 \
+    ../CI/appveyor.install.ps1 \
+    ../CI/appveyor.install.sh \
+    ../CI/appveyor.set-build-info.ps1 \
+    ../CI/appveyor.set-build-info.sh \
+    ../CI/appveyor.validate_deployment.ps1 \
+    ../CI/auto-add-ssh-key.sh \
+    ../CI/copy-non-qt-win-dependencies.ps1 \
+    ../CI/generate-ptb-changelog.lua \
+    ../CI/mudlet-deploy-key.enc \
+    ../CI/mudlet-deploy-key-windows.ppk \
+    ../CI/mudlet-deploy-key-windows.pem \
+    ../CI/qt-silent-install.qs \
+    ../CI/travis.after_success.sh \
     ../CI/travis.before_install.sh \
+    ../CI/travis.compile.sh \
     ../CI/travis.install.sh \
+    ../CI/travis.linux.after_success.sh \
     ../CI/travis.linux.before_install.sh \
     ../CI/travis.linux.install.sh \
+    ../CI/travis.osx.after_success.sh \
     ../CI/travis.osx.before_install.sh \
     ../CI/travis.osx.install.sh \
     ../CI/travis.set-build-info.sh \
-    ../CI/travis.after_success.sh \
-    ../CI/travis.linux.after_success.sh \
-    ../CI/travis.osx.after_success.sh \
-    ../.appveyor.yml \
-    ../CI/appveyor.after_success.ps1 \
-    ../CI/appveyor.install.ps1 \
-    ../CI/appveyor.set-build-info.ps1 \
-    ../CI/appveyor.functions.ps1 \
-    ../CI/appveyor.build.ps1 \
-    mudlet-lua/lua/generic-mapper/generic_mapper.xml \
-    mudlet-lua/lua/generic-mapper/versions.lua \
-    mudlet-lua/lua/ldoc.css \
-    mudlet-lua/genDoc.sh \
-    mudlet-lua/tests/README.md \
-    mudlet-lua/tests/DB.lua \
-    mudlet-lua/tests/GUIUtils.lua \
-    mudlet-lua/tests/Other.lua \
+    ../CI/travis.validate_deployment.sh \
+    ../CI/update-autocompletion.lua \
+    ../cmake/FindHUNSPELL.cmake \
+    ../cmake/FindLua51.cmake \
+    ../cmake/FindPCRE.cmake \
+    ../cmake/FindSparkle.cmake \
+    ../cmake/FindYAJL.cmake \
+    ../cmake/FindZIP.cmake \
+    ../cmake/FindPUGIXML.cmake \
+    ../CMakeLists.txt \
+    ../COMMITMENT \
+    ../cmake/FindZZIPLIB.cmake \
+    ../cmake/IncludeOptionalModule.cmake \
+    ../cmake/InitGitSubmodule.cmake \
     ../mudlet.desktop \
     ../mudlet.png \
     ../mudlet.svg \
     ../README.md \
+    ../translations/lua/translated/mudlet-lua_de_DE.json \
+    ../translations/lua/translated/mudlet-lua_el_GR.json \
+    ../translations/lua/translated/mudlet-lua_en_GB.json \
+    ../translations/lua/translated/mudlet-lua_en_PT.json \
+    ../translations/lua/translated/mudlet-lua_es_ES.json \
+    ../translations/lua/translated/mudlet-lua_fr_FR.json \
+    ../translations/lua/translated/mudlet-lua_it_IT.json \
+    ../translations/lua/translated/mudlet-lua_nl_NL.json \
+    ../translations/lua/translated/mudlet-lua_pl_PL.json \
+    ../translations/lua/translated/mudlet-lua_pt_BR.json \
+    ../translations/lua/translated/mudlet-lua_pt_PT.json \
+    ../translations/lua/translated/mudlet-lua_ru_RU.json \
+    ../translations/lua/translated/mudlet-lua_tr_TR.json \
+    ../translations/lua/translated/mudlet-lua_zh_CN.json \
+    ../translations/lua/translated/mudlet-lua_zh_TW.json \
     ../translations/translated/CMakeLists.txt \
     ../translations/translated/generate-translation-stats.lua \
-    ../COMMITMENT \
-    ../.crowdin.yml \
-    ../.gitignore \
-    ../.gitmodules \
     ../translations/translated/updateqm.pri \
-    ../CI/mudlet-deploy-key.enc \
-    ../CI/copy-non-qt-win-dependencies.ps1 \
-    ../CI/mudlet-deploy-key-windows.ppk \
-    ../CI/qt-silent-install.qs \
-    ../CI/travis.compile.sh
+    .clang-format \
+    CF-loader.xml \
+    CMakeLists.txt \
+    icons/mudlet.ico \
+    icons/mudlet.icns \
+    icons/mudlet_dev.icns \
+    icons/mudlet_dev.ico \
+    icons/mudlet_ptb.icns \
+    icons/mudlet_ptb.ico \
+    mudlet-lua/genDoc.sh \
+    mudlet-lua/lua/generic-mapper/generic_mapper.xml \
+    mudlet-lua/lua/generic-mapper/versions.lua \
+    mudlet-lua/lua/ldoc.css \
+    mudlet-lua/tests/README.md \
+    mudlet-lua/tests/DB.lua \
+    mudlet-lua/tests/GUIUtils.lua \
+    mudlet-lua/tests/Other.lua

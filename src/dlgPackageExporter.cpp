@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2020 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2021 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -770,8 +770,10 @@ void dlgPackageExporter::exportXml(bool& isOk,
         // seen the error message...
     }
 }
+
 void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile, const QString& packageDescription)
 {
+    static bool reportedCodec = false;
     QStringList dependencies;
     for (int index = 0; index < ui->comboBox_dependencies->count(); index++) {
         dependencies << ui->comboBox_dependencies->itemText(index);
@@ -795,7 +797,42 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     QString luaConfig = QStringLiteral("%1/config.lua").arg(stagingDirName);
     QFile configFile(luaConfig);
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QTextStream out(&configFile);
+        QTextStream out;
+        auto pCodec = QTextCodec::codecForName("UTF-8");
+        if (pCodec) {
+            if (mpHost && mpHost->mpConsole) {
+                mpHost->mpConsole->printSystemMessage(QStringLiteral("We get the QTextCodec with the name: \"%1\" when we request one for UTF-8 from Qt.").arg(QString::fromLatin1(pCodec->name())));
+            }
+            out.setCodec(pCodec);
+        }
+        out.setDevice(&configFile);
+        if (!reportedCodec) {
+            auto pTestCodec = out.codec();
+            QByteArray name = "none";
+            if (pTestCodec) {
+                name = pTestCodec->name();
+            }
+            auto availableCodecs = QTextCodec::availableCodecs();
+            if (availableCodecs.count() > 1) {
+                std::sort(availableCodecs.begin(), availableCodecs.end());
+                // There will likely be a lot of duplicates because there are
+                // aliases - so remove them now we have a sorted list:
+                QMutableByteArrayListIterator itCodecName(availableCodecs);
+                QByteArray previous = "";
+                while (itCodecName.hasNext()) {
+                    auto codecName = itCodecName.next();
+                    if (!previous.isEmpty() && codecName == previous) {
+                        itCodecName.remove();
+                        continue;
+                    }
+                    previous = codecName;
+                }
+            }
+            if (mpHost && mpHost->mpConsole) {
+                mpHost->mpConsole->printSystemMessage(QStringLiteral("Using QTextCodec: \"%1\" from the available list:\n\"%2\".").arg(QString::fromLatin1(name), QString::fromLatin1(availableCodecs.join("\",\n\""))));
+                reportedCodec = true;
+            }
+        }
         out << mPackageConfig;
         out.flush();
         configFile.close();
