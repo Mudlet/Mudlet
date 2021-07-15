@@ -1424,7 +1424,7 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="13325"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
-      <translation type="unfinished"/>
+      <translation>[錯誤] - 找不到 Lua 模組 %1。%2%3%4</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13339"/>
