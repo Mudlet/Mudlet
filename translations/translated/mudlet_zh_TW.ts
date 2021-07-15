@@ -10553,7 +10553,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="348"/>
       <source>Save log files in HTML format instead of plain text</source>
-      <translation>使用 HTML 格式儲存紀錄檔案，而非純文字格式</translation>
+      <translation>使用 HTML 格式而非純文字格式來儲存記錄檔案</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="355"/>
@@ -10874,12 +10874,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="275"/>
       <source>Enable GMCP  (Generic Mud Communication Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>啟用 GMCP 協議 (Generic MUD Communication Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="295"/>
       <source>Enable MSDP  (Mud Server Data Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>啟用 MSDP 協議 (MUD Server Data Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="282"/>
@@ -10889,7 +10889,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="285"/>
       <source>Enable MSSP  (Mud Server Status Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>啟用 MSSP 協議 (MUD Server Status Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="491"/>
@@ -11049,7 +11049,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="305"/>
       <source>Enable MSP  (Mud Sound Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>啟用 MSP 協議 (MUD Sound Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="501"/>
