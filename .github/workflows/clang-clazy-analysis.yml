@@ -1,0 +1,156 @@
+name: Static analysis checks
+on:
+  push:
+    branches: [master, development]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 1 * * *'
+
+jobs:
+  compile-mudlet:
+    name: ${{matrix.buildname}}
+    runs-on: ${{matrix.os}}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # newest OS supported for latest clang-tidy/clazy version
+          - os: ubuntu-20.04
+            buildname: 'clang-tidy'
+            triplet: x64-linux
+            compiler: clang_64
+            qt: '5.14.1'
+          - os: ubuntu-20.04
+            buildname: 'clazy'
+            triplet: x64-linux
+            compiler: clang_64
+            qt: '5.14.1'
+
+    env:
+      BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
+      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
+
+    steps:
+    - name: Checkout Mudlet source code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+
+    - name: Restore Qt cache
+      uses: actions/cache@v2.1.4
+      id: cache-qt
+      with:
+        path: ${{runner.workspace}}/Qt/${{matrix.qt}}
+        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+      with:
+        version: ${{matrix.qt}}
+        dir: ${{runner.workspace}}
+        cached: ${{steps.cache-qt.outputs.cache-hit}}
+        aqtversion: '==1.1.2'
+
+    - name: Restore Boost cache
+      uses: actions/cache@v2.1.4
+      id: cache-boost
+      with:
+        path: ${{env.BOOST_ROOT}}
+        key: boost
+
+    - name: Install Boost
+      if: steps.cache-boost.outputs.cache-hit != 'true'
+      run: |
+        if [ "$OS" == "Windows_NT" ]; then
+          # fix up paths to be forward slashes consistently
+          BOOST_ROOT=$(echo $BOOST_ROOT | sed 's/\\/\//g')
+        fi
+        mkdir -p $BOOST_ROOT
+        curl --progress-bar --location --output $BOOST_ROOT/download.tar.bz2 $BOOST_URL
+        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar.bz2 -y -bd
+        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar -y -bd
+        cd $BOOST_ROOT && cp -r boost_*/* .
+        rm -rf boost_*/* download.tar.bz2 download.tar
+      shell: bash
+
+    # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
+    - name: Restore from cache and run vcpkg
+      uses: lukka/run-vcpkg@v7
+      env:
+        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
+      with:
+        vcpkgArguments: '@${{env.vcpkgResponseFile}}'
+        vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
+        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
+
+    - name: (Linux) Install non-vcpkg dependencies
+      if: runner.os == 'Linux'
+      run: |
+        # Install from vcpkg everything we can for cross-platform consistency
+        # If not available, use other methods
+        sudo apt-get install clazy clang-tidy pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev -y
+
+        # Use latest Clang for latest analysis tools
+        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-10 10
+        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-10 10
+        sudo update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-10 10
+        sudo update-alternatives --set clang /usr/bin/clang-10
+        sudo update-alternatives --set clang++ /usr/bin/clang++-10
+        sudo update-alternatives --set clang-tidy /usr/bin/clang-tidy-10
+
+    - name: (Linux Clang) change compiler
+      if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
+      run: |
+         echo "CXX=clang++" >> $GITHUB_ENV
+         echo "CC=clang" >> $GITHUB_ENV
+
+    - name: (Linux/macOS) Set build info
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      run: |
+        ${{github.workspace}}/CI/travis.validate_deployment.sh
+        ${{github.workspace}}/CI/travis.set-build-info.sh
+
+    - name: (Linux) Setup Clang-Tidy and Clazy configuration
+      if: runner.os == 'Linux'
+      run: |
+        # Clazy configuration
+        {
+          # Ignore 3rd party and Qt headers
+          echo "CLAZY_IGNORE_DIRS=.*lib_dir.*|.*3rdparty.*|.*Qt.*"
+          echo "CLAZY_CHECKS=level0,level1,level2,isempty-vs-count,qhash-with-char-pointer-key,qproperty-type-mismatch"
+        } >> "$GITHUB_ENV"
+
+        # Clang-tidy configuration
+        # TODO
+
+        # Configure which analyser to use
+        if [ "${{matrix.buildname}}" = "clazy" ]; then
+          echo "ANALYSIS_TOOL=-DCMAKE_CXX_COMPILER=clazy" >> $GITHUB_ENV
+        else
+          echo "ANALYSIS_TOOL=-DCMAKE_CXX_CLANG_TIDY=clang-tidy;--analyzer-output sarif;--output=/tmp/sarif" >> $GITHUB_ENV
+        fi
+
+    - name: Build Mudlet and run ${{matrix.buildname}}
+      uses: lukka/run-cmake@v3
+      with:
+        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+        useVcpkgToolchainFile: true
+        buildDirectory: '${{runner.workspace}}/b/ninja'
+        cmakeAppendedArgs: >-
+          --target test
+          -G Ninja
+          -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
+          -DVCPKG_APPLOCAL_DEPS=OFF
+          -DCMAKE_CXX_FLAGS=-Wno-everything
+          $ANALYSIS_TOOL
+      env:
+        NINJA_STATUS: '[%f/%t %o/sec] '
+
+    - name: Upload clang-tidy results to Github Code scanning alerts
+      uses: github/codeql-action/upload-sarif@v1
+      if: matrix.buildname == 'clang-tidy'
+      with:
+        sarif_file: /tmp/sarif
