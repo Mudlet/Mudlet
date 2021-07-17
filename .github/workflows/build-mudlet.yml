@@ -150,7 +150,7 @@ jobs:
 
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
-        sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 -y
+        sudo apt-get install gettext ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 -y
 
         # switch to GCC that supports C++17 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 7
@@ -325,3 +325,31 @@ jobs:
           echo "CMakeOutput.log: "
           cat "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log"
         }
+
+    - name: (linux) Show relevant logs logs
+      if: failure() && runner.os == 'Linux'
+      run: |
+        if [[ -f /home/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/buildtrees/hunspell/build-dist-x64-linux-dbg-out.log ]]
+        then
+          echo "out log:"
+          cat /home/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/buildtrees/hunspell/build-dist-x64-linux-dbg-out.log
+        fi
+        if [[ -f /home/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/buildtrees/hunspell/build-dist-x64-linux-dbg-err.log ]]
+        then
+          echo "err log:"
+          cat /home/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/buildtrees/hunspell/build-dist-x64-linux-dbg-err.log
+        fi
+
+    - name: (macOS) Show relevant logs logs
+      if: failure() && runner.os == 'macOS'
+      run: |
+        if [[ -f /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/buildtrees/gettext/build-x64-osx-rel-out.log ]]
+        then
+          echo "out log:"
+          cat /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/buildtrees/gettext/build-x64-osx-rel-out.log
+        fi
+        if [[ -f /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/buildtrees/gettext/build-x64-osx-rel-err.log ]]
+        then
+          echo "err log:"
+          cat /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/buildtrees/gettext/build-x64-osx-rel-err.log
+        fi
