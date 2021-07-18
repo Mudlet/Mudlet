@@ -5778,56 +5778,56 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
 }
 
 // Internal helper function for two following functions:
-// returns 0 on success and sets pItem to point to the TAction with the ID or
-//   the first one found with the name as the index item.
-// returns a non-zero number on failure (of the number of items on the stack
-//   for the caller to return to ITS caller) and sets those items,
-//   it also resets the pItem to be a nullptr
+// returns 0 and a pointer to the TAction with the ID or
+//   the first one found with the name as the index item on sucess.
+// returns a non-zero number and a nullptr on failure (the first is the number
+//   of items on the stack for the caller to return to ITS caller).
 // does NOT return (normally) if the index item on the stack is not a number or
 //   a string
-int TLuaInterpreter::getTActionFromIdOrName(lua_State* L, TAction** pItem, const int index, const char* func)
+std::pair<int, TAction*> TLuaInterpreter::getTActionFromIdOrName(lua_State* L, const int index, const char* func)
 {
     auto& host = getHostFromLua(L);
     auto argType = lua_type(L, index);
-    *pItem = nullptr;
+    TAction* pItem = nullptr;
     if (argType == LUA_TNUMBER) {
         int id = qRound(lua_tonumber(L, index));
         if (id < 0) {
-            return warnArgumentValue(L, func, QStringLiteral("item ID (%1) invalid, it must be equal or greater than zero").arg(id).toUtf8().constData());
+            return {warnArgumentValue(L, func, QStringLiteral("item ID (%1) invalid, it must be equal or greater than zero").arg(id).toUtf8().constData()), pItem};
         }
-        *pItem = host.getActionUnit()->getAction(id);
-        if (!*pItem) {
-            return warnArgumentValue(L, func, QStringLiteral("no button item with ID %1 found").arg(id).toUtf8().constData());
+        pItem = host.getActionUnit()->getAction(id);
+        if (!pItem) {
+            return {warnArgumentValue(L, func, QStringLiteral("no button item with ID %1 found").arg(id).toUtf8().constData()), pItem};
         }
-        if (!(*pItem)->isPushDownButton()) {
-            *pItem = nullptr;
-            return warnArgumentValue(L, func, QStringLiteral("item ID with %1 is not a push-down button").arg(id).toUtf8().constData());
+        if (!pItem->isPushDownButton()) {
+            pItem = nullptr;
+            return {warnArgumentValue(L, func, QStringLiteral("item ID with %1 is not a push-down button").arg(id).toUtf8().constData()), pItem};
         }
     }
 
     if (argType == LUA_TSTRING) {
         QString name = lua_tostring(L, index);
         if (name.isEmpty()) {
-            return warnArgumentValue(L, func, "item name must not be an empty string");
+            return {warnArgumentValue(L, func, "item name must not be an empty string"), pItem};
         }
-        *pItem = host.getActionUnit()->findAction(name);
-        if (!*pItem) {
-            return warnArgumentValue(L, func, QStringLiteral("no button item with name '%1' found").arg(name).toUtf8().constData());
+        pItem = host.getActionUnit()->findAction(name);
+        if (!pItem) {
+            return {warnArgumentValue(L, func, QStringLiteral("no button item with name '%1' found").arg(name).toUtf8().constData()), pItem};
         }
-        if (!(*pItem)->isPushDownButton()) {
-            *pItem = nullptr;
-            return warnArgumentValue(L, func, QStringLiteral("item with name '%1' is not a push-down button").arg(name).toUtf8().constData());
+        if (!pItem->isPushDownButton()) {
+            pItem = nullptr;
+            return {warnArgumentValue(L, func, QStringLiteral("item with name '%1' is not a push-down button").arg(name).toUtf8().constData()), pItem};
         }
     }
 
-    if (!*pItem) {
+    if (!pItem) {
         // we'll get here if the (index) argument is NOT usable:
         lua_pushfstring(L, "%s: bad argument #%d type (ID as number or name as string expected, got %s!)",
                         func, index, luaL_typename(L, index));
-        return lua_error(L); // Does not return!
+        lua_error(L); // Does not return!
+        Q_UNREACHABLE();
     }
 
-    return 0;
+    return {0, pItem};
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getButtonState
@@ -5842,8 +5842,9 @@ int TLuaInterpreter::getButtonState(lua_State* L)
         return 1;
     }
 
-    TAction* pItem = nullptr;
-    if (int retCount = getTActionFromIdOrName(L, &pItem, 1, __func__)) {
+    auto [retCount, pItem] = getTActionFromIdOrName(L, 1, __func__);
+    if (retCount) {
+        // pItem will be a nullptr if retCount is non-zero:
         return retCount;
     }
 
@@ -5854,8 +5855,9 @@ int TLuaInterpreter::getButtonState(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setButtonState
 int TLuaInterpreter::setButtonState(lua_State* L)
 {
-    TAction* pItem = nullptr;
-    if (int retCount = getTActionFromIdOrName(L, &pItem, 1, __func__)) {
+    auto [retCount, pItem] = getTActionFromIdOrName(L, 1, __func__);
+    if (retCount) {
+        // pItem will be a nullptr if retCount is non-zero:
         return retCount;
     }
 

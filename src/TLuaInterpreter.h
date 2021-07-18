@@ -656,7 +656,7 @@ private:
     bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
     void insertNativeSeparatorsFunction(lua_State* L);
     static void pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel& label);
-    static int getTActionFromIdOrName(lua_State*, TAction**, const int, const char*);
+    static std::pair<int, TAction*> getTActionFromIdOrName(lua_State*, const int, const char*);
 
     const int LUA_FUNCTION_MAX_ARGS = 50;
 
