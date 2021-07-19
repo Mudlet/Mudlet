@@ -3576,7 +3576,7 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
             sizeTop = getVerifiedInt(L, __func__, 1, "new top size");
             sizeRight = getVerifiedInt(L, __func__, 2, "new right size");
             sizeBottom = getVerifiedInt(L, __func__, 3, "new bottom size");
-            sizeBottom = getVerifiedInt(L, __func__, 4, "new left size");
+            sizeLeft = getVerifiedInt(L, __func__, 4, "new left size");
             break;
         }
     }
