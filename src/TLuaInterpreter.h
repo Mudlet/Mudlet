@@ -60,6 +60,7 @@ extern "C" {
 
 
 class Host;
+class TAction;
 class TEvent;
 class TLuaThread;
 class TMapLabel;
@@ -406,6 +407,7 @@ public:
     static int selectCurrentLine(lua_State*);
     static int spawn(lua_State*);
     static int getButtonState(lua_State*);
+    static int setButtonState(lua_State*);
     static int showToolBar(lua_State*);
     static int hideToolBar(lua_State*);
     static int loadReplay(lua_State*);
@@ -657,6 +659,8 @@ private:
     bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
     void insertNativeSeparatorsFunction(lua_State* L);
     static void pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel& label);
+    static std::pair<int, TAction*> getTActionFromIdOrName(lua_State*, const int, const char*);
+
     const int LUA_FUNCTION_MAX_ARGS = 50;
 
 
