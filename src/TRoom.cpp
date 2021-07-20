@@ -1763,8 +1763,8 @@ int TRoom::readJsonRoom(const QJsonArray& array, const int index, const int area
         weight = roomObj.value(QLatin1String("weight")).toInt();
     }
 
-    if (roomObj.contains(QLatin1String("symbol")) && roomObj.value(QLatin1String("symbol")).isString()) {
-        mSymbol = roomObj.value(QLatin1String("symbol")).toString();
+    if (roomObj.contains(QLatin1String("symbol")) && roomObj.value(QLatin1String("symbol")).isObject()) {
+        readJsonSymbol(roomObj);
     }
 
     if (roomObj.contains(QLatin1String("environment")) && roomObj.value(QLatin1String("environment")).isDouble()) {
@@ -2355,5 +2355,13 @@ void TRoom::writeJsonSymbol(QJsonObject& roomObj) const
 
 void TRoom::readJsonSymbol(const QJsonObject& roomObj)
 {
-    Q_UNUSED(roomObj);
+    const QJsonObject symbolObj{roomObj.value(QLatin1String("symbol")).toObject()};
+    if (symbolObj.contains(QLatin1String("text")) && symbolObj.value(QLatin1String("text")).isString()) {
+        mSymbol = symbolObj.value(QLatin1String("text")).toString();
+    }
+
+    QColor color = TMap::readJsonColor(symbolObj);
+    if (color.isValid()) {
+        mSymbolColor = color;
+    }
 }
