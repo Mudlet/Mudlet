@@ -773,7 +773,6 @@ void dlgPackageExporter::exportXml(bool& isOk,
 
 void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile, const QString& packageDescription)
 {
-    static bool reportedCodec = false;
     QStringList dependencies;
     for (int index = 0; index < ui->comboBox_dependencies->count(); index++) {
         dependencies << ui->comboBox_dependencies->itemText(index);
@@ -796,47 +795,32 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
 
     QString luaConfig = QStringLiteral("%1/config.lua").arg(stagingDirName);
     QFile configFile(luaConfig);
+#if defined (Q_OS_WIN32)
+    // On Windows prior to late 2019 10 versions (or those later with the option
+    // to use UTF-8 for "non-Unicode applications" NOT enabled) asking for a
+    // "UTF-8" QTextCodec did not deliver the goods - instead something like
+    // "Windows-1252" (a "local-8bit" encoder) was served up which meant the
+    // file produced was not compatible with other OSes - so use a different
+    // method on that OS:
+    if (configFile.open(QIODevice::WriteOnly)) {
+        QDataStream out;
+        QByteArray rawBytes{mPackageConfig.toUtf8()};
+        out.setDevice(&configFile);
+        out.writeRawData(rawBytes.constData(), rawBytes.constData().size());
+        out.flush();
+        configFile.close();
+    }
+#else
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out;
         auto pCodec = QTextCodec::codecForName("UTF-8");
-        if (pCodec) {
-            if (mpHost && mpHost->mpConsole) {
-                mpHost->mpConsole->printSystemMessage(QStringLiteral("We get the QTextCodec with the name: \"%1\" when we request one for UTF-8 from Qt.").arg(QString::fromLatin1(pCodec->name())));
-            }
-            out.setCodec(pCodec);
-        }
         out.setDevice(&configFile);
-        if (!reportedCodec) {
-            auto pTestCodec = out.codec();
-            QByteArray name = "none";
-            if (pTestCodec) {
-                name = pTestCodec->name();
-            }
-            auto availableCodecs = QTextCodec::availableCodecs();
-            if (availableCodecs.count() > 1) {
-                std::sort(availableCodecs.begin(), availableCodecs.end());
-                // There will likely be a lot of duplicates because there are
-                // aliases - so remove them now we have a sorted list:
-                QMutableByteArrayListIterator itCodecName(availableCodecs);
-                QByteArray previous = "";
-                while (itCodecName.hasNext()) {
-                    auto codecName = itCodecName.next();
-                    if (!previous.isEmpty() && codecName == previous) {
-                        itCodecName.remove();
-                        continue;
-                    }
-                    previous = codecName;
-                }
-            }
-            if (mpHost && mpHost->mpConsole) {
-                mpHost->mpConsole->printSystemMessage(QStringLiteral("Using QTextCodec: \"%1\" from the available list:\n\"%2\".").arg(QString::fromLatin1(name), QString::fromLatin1(availableCodecs.join("\",\n\""))));
-                reportedCodec = true;
-            }
-        }
+        out.setCodec(pCodec);
         out << mPackageConfig;
         out.flush();
         configFile.close();
     }
+#endif
 }
 QFileInfo dlgPackageExporter::copyIconToTmp(const QString& tempPath) const
 {
