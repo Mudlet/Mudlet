@@ -807,7 +807,6 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
         QByteArray rawBytes{mPackageConfig.toUtf8()};
         out.setDevice(&configFile);
         out.writeRawData(rawBytes.constData(), rawBytes.constData().size());
-        out.flush();
         configFile.close();
     }
 #else
