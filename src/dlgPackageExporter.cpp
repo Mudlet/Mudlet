@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2020 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2021 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -770,6 +770,7 @@ void dlgPackageExporter::exportXml(bool& isOk,
         // seen the error message...
     }
 }
+
 void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile, const QString& packageDescription)
 {
     QStringList dependencies;
@@ -794,12 +795,31 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
 
     QString luaConfig = QStringLiteral("%1/config.lua").arg(stagingDirName);
     QFile configFile(luaConfig);
+#if defined (Q_OS_WIN32)
+    // On Windows prior to late 2019 10 versions (or those later with the option
+    // to use UTF-8 for "non-Unicode applications" NOT enabled) asking for a
+    // "UTF-8" QTextCodec did not deliver the goods - instead something like
+    // "Windows-1252" (a "local-8bit" encoder) was served up which meant the
+    // file produced was not compatible with other OSes - so use a different
+    // method on that OS:
+    if (configFile.open(QIODevice::WriteOnly)) {
+        QDataStream out;
+        QByteArray rawBytes{mPackageConfig.toUtf8()};
+        out.setDevice(&configFile);
+        out.writeRawData(rawBytes.constData(), rawBytes.size());
+        configFile.close();
+    }
+#else
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QTextStream out(&configFile);
+        QTextStream out;
+        auto pCodec = QTextCodec::codecForName("UTF-8");
+        out.setDevice(&configFile);
+        out.setCodec(pCodec);
         out << mPackageConfig;
         out.flush();
         configFile.close();
     }
+#endif
 }
 QFileInfo dlgPackageExporter::copyIconToTmp(const QString& tempPath) const
 {
