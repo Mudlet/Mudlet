@@ -110,7 +110,7 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="3652"/>
       <source>Pre-Map loading(3) report</source>
-      <translation>加載地圖前 (3) 的報告</translation>
+      <translation>讀取地圖前 (3) 的報告</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3662"/>
