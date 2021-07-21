@@ -162,7 +162,7 @@ std::pair<bool, QString> dlgPackageExporter::writeFileToZip(const QString& archi
         zip_source_free(s);
         s = nullptr;
         return {false,
-                tr("Failed to add file \"%1\" to package. Error message was: \"%3\".",
+                tr("Failed to add file \"%1\" to package. Error message was: \"%2\".",
                    // Intentional comment to separate arguments
                    "This error message will appear when a file is to be placed into the package but cannot be done for some reason.")
                         .arg(archiveFileName, zip_strerror(archive))};
@@ -444,12 +444,6 @@ void dlgPackageExporter::copy_directory(const QString& fromDir, const QString& t
 
 void dlgPackageExporter::slot_export_package()
 {
-    // The native windows dialog does not support displaying files - and as this
-    // code will clobber/overwrite an existing package with the same
-    // name it is highly desirable to show the files.
-    // Although the Qt Documentation says only that the Windows platform needs
-    // to NOT use the native dialog to show files, it has also shown to be
-    // required for KDE on Linux - so has been used for all platforms:
     mPackageName = ui->lineEdit_packageName->text();
     if (mPackageName.isEmpty()) {
         displayResultMessage(tr("Please enter the package name."), false);
@@ -477,7 +471,7 @@ void dlgPackageExporter::slot_export_package()
     QApplication::setOverrideCursor(Qt::BusyCursor);
     checkToEnableExportButton();
 
-#if LIBZIP_SUPPORTS_CANCELLING
+#if defined(LIBZIP_SUPPORTS_CANCELLING)
     mCancelButton->setVisible(true);
 #endif
 
@@ -853,8 +847,7 @@ std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& 
     return {true, QString{}};
 }
 
-std::pair<bool, QString>
-dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig)
+std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig)
 {
     bool isOk = true;
     QString error;
@@ -881,15 +874,15 @@ dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& pac
     // Opened/created archive file successfully
 #if defined(Q_OS_WIN32)
     /*
-* From Qt Docs:
-* Note: On NTFS file systems, ownership and permissions checking is disabled by
-* default for performance reasons. To enable it, include the following line:
-*/
+     * From Qt Docs:
+     * Note: On NTFS file systems, ownership and permissions checking is disabled by
+     * default for performance reasons. To enable it, include the following line:
+     */
     extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
     /*
-* Permission checking is then turned on and off by incrementing and
-* decrementing qt_ntfs_permission_lookup by 1:
-*/
+     * Permission checking is then turned on and off by incrementing and
+     * decrementing qt_ntfs_permission_lookup by 1:
+     */
     qt_ntfs_permission_lookup++;
 #endif // defined(Q_OS_WIN32)
     QDirIterator stagingFile(stagingDirName, QDir::NoDotAndDotDot | QDir::AllDirs | QDir::Files, QDirIterator::Subdirectories);
@@ -996,18 +989,18 @@ dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& pac
     }
 
     if (isOk) {
+        zip_set_archive_comment(archive, packageConfig.toUtf8().constData(), packageConfig.length());
+
+#if defined(LIBZIP_SUPPORTS_CANCELLING)
+        auto cancel_callback = [](zip*, void*) -> int { return !mExportingPackage; };
+        zip_register_cancel_callback_with_state(archive, cancel_callback, nullptr, nullptr);
+#endif
+
         // THIS is the point that the archive gets created from the
         // source materials - it may take a short while!
         // If it fails to write out the new file 'archive' is left
         // unchanged (and we can still access it to get the error
         // details):
-        zip_set_archive_comment(archive, packageConfig.toUtf8().constData(), packageConfig.length());
-
-#ifdef LIBZIP_SUPPORTS_CANCELLING
-        auto cancel_callback = [](zip*, void*) -> int { return !mExportingPackage; };
-        zip_register_cancel_callback_with_state(archive, cancel_callback, nullptr, nullptr);
-#endif
-
         ze = zip_close(archive);
         if (ze) {
             // libzip's C interface around the error message isn't trivial - so copy it over into Qt land where things are simpler
@@ -1041,6 +1034,12 @@ void dlgPackageExporter::slot_addFiles()
 {
     QFileDialog* fDialog = new QFileDialog;
     fDialog->setFileMode(QFileDialog::Directory);
+    // The native windows dialog does not support displaying files - and as this
+    // code will clobber/overwrite an existing package with the same
+    // name it is highly desirable to show the files.
+    // Although the Qt Documentation says only that the Windows platform needs
+    // to NOT use the native dialog to show files, it has also shown to be
+    // required for KDE on Linux - so has been used for all platforms:
     fDialog->setOption(QFileDialog::DontUseNativeDialog);
 
     QStringList selectedFiles;
