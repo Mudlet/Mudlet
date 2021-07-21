@@ -997,7 +997,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
     }
 
     if (isOk) {
-        zip_set_archive_comment(archive, packageConfig.toUtf8().constData(), packageConfig.length());
+        zip_set_archive_comment(archive, packageConfig.toUtf8().constData(), packageConfig.toUtf8().length());
 
 #if defined(LIBZIP_SUPPORTS_CANCELLING)
         auto cancel_callback = [](zip*, void*) -> int { return !mExportingPackage; };
