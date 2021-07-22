@@ -1635,7 +1635,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1317"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ 資訊 ] - 已找到地圖，但無法開啟它，請檢查許可權：%1。</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1320"/>
