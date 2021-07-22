@@ -115,7 +115,7 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="3662"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>讀取地圖 (3) 在 %1 報告</translation>
     </message>
   </context>
   <context>
@@ -124,7 +124,7 @@ please wait...</source>
       <location filename="../src/KeyUnit.cpp" line="333"/>
       <source>%1undefined key (code: 0x%2)</source>
       <comment>%1 is a string describing the modifier keys (e.g. &quot;shift&quot; or &quot;control&quot;) used with the key, whose &apos;code&apos; number, in %2 is not one that we have a name for. This is probably one of those extra keys around the edge of the keyboard that some people have.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 未定義鍵 (錯誤碼: 0x%2)</translation>
     </message>
   </context>
   <context>
@@ -149,7 +149,8 @@ please wait...</source>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when NO rooms are selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the current player&apos;s room.</comment>
-      <translation type="unfinished"/>
+      <translation>房間%1ID：%1%2 位置%1%1地圖：（%3，%4，%5）%1目前玩家位置
+</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="170"/>
@@ -1430,7 +1431,7 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="13339"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name (may specify which variant) of the module.</comment>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Lua 模組 %1 已載入。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13893"/>
@@ -1445,12 +1446,12 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13918"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>utf8.* Lua 函數不可用。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13924"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>yajl.*Lua 函數不可用。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14109"/>
@@ -1466,18 +1467,19 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="14113"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ 錯誤 ] - 無法載入程式碼格式化，縮排功能無法使用。
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14190"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (不存在)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14195"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
-      <translation type="unfinished"/>
+      <translation>%1 （不是檔案或連結到檔案）</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14204"/>
@@ -1493,7 +1495,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14228"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Mudlet-lua API 和 Geyser 佈置管理程式已載入。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14235"/>
@@ -1945,7 +1947,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="2773"/>
       <source>Map JSON export</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>匯出地圖 Json 檔案</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2908"/>
@@ -1956,7 +1958,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2934"/>
       <source>import or export already in progress</source>
-      <translation type="unfinished"/>
+      <translation>匯入或匯出已在進行中</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2942"/>
@@ -1971,7 +1973,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2961"/>
       <source>empty Json file, no map data detected</source>
-      <translation type="unfinished"/>
+      <translation>空的 Json 檔案，偵測到無地圖資料</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2976"/>
