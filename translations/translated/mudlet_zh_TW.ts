@@ -14,7 +14,7 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="275"/>
       <source>Too many redirects.</source>
-      <translation>太多重新導向</translation>
+      <translation>過多的重新導向</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="284"/>
@@ -110,12 +110,12 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="3652"/>
       <source>Pre-Map loading(3) report</source>
-      <translation>加載地圖前 (3) 的報告</translation>
+      <translation>讀取地圖前 (3) 的報告</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3662"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>讀取地圖 (3) 在 %1 報告</translation>
     </message>
   </context>
   <context>
@@ -124,7 +124,7 @@ please wait...</source>
       <location filename="../src/KeyUnit.cpp" line="333"/>
       <source>%1undefined key (code: 0x%2)</source>
       <comment>%1 is a string describing the modifier keys (e.g. &quot;shift&quot; or &quot;control&quot;) used with the key, whose &apos;code&apos; number, in %2 is not one that we have a name for. This is probably one of those extra keys around the edge of the keyboard that some people have.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 未定義鍵 (錯誤碼: 0x%2)</translation>
     </message>
   </context>
   <context>
@@ -149,7 +149,8 @@ please wait...</source>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when NO rooms are selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the current player&apos;s room.</comment>
-      <translation type="unfinished"/>
+      <translation>房間%1ID：%1%2 位置%1%1地圖：（%3，%4，%5）%1目前玩家位置
+</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="170"/>
@@ -454,12 +455,12 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
       <source>Expected %1 while parsing</source>
-      <translation type="unfinished"/>
+      <translation>解析時預期 %1</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
       <source>%1 @ line %2</source>
-      <translation type="unfinished"/>
+      <translation>%1 在 %2 行</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="82"/>
@@ -470,13 +471,15 @@ please wait...</source>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
       <source>Expected object in keymap
 </source>
-      <translation type="unfinished"/>
+      <translation>預期物件在 KeyMap
+</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="129"/>
       <source>Invalid keysequence used %1
 </source>
-      <translation type="unfinished"/>
+      <translation>使用無效鍵序 %1
+</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="371"/>
@@ -496,7 +499,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
       <source>Line %1, Column %2</source>
-      <translation type="unfinished"/>
+      <translation>第 %1 行第 %2 欄</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
@@ -521,7 +524,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
       <source>Error parsing theme %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>解析主題 %1時發生錯誤：%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
@@ -631,7 +634,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="601"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished"/>
+      <translation>地圖處理器：無法使用已知出口查找從 %1 到 %2 的路徑。</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1259"/>
@@ -924,13 +927,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2904"/>
       <source>Set room&apos;s area number</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>設定房間的區域編號</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2827"/>
       <source>Custom exit line</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>自訂出口線</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2829"/>
@@ -1044,7 +1047,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2982"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action)</comment>
-      <translation type="unfinished"/>
+      <translation>使用[刪除行]刪除唯一以可編輯點結尾的片段</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2988"/>
@@ -1216,12 +1219,13 @@ rooms:</source>
       <location filename="../src/TAlias.cpp" line="200"/>
       <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.
 </source>
-      <translation type="unfinished"/>
+      <translation>[別名錯誤:] %1 超過擷取群組限制，擷取較少的群組。
+</translation>
     </message>
     <message>
       <location filename="../src/TAlias.cpp" line="269"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>錯誤：錯誤的正則表達式，原因： %1。</translation>
     </message>
   </context>
   <context>
@@ -1356,12 +1360,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="860"/>
       <source>Replay recording has started. File: %1</source>
-      <translation type="unfinished"/>
+      <translation>重播錄製已開始。檔案： %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="863"/>
       <source>Replay recording has been stopped. File: %1</source>
-      <translation type="unfinished"/>
+      <translation>重播記錄已停止。 檔案： %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1842"/>
@@ -1375,7 +1379,7 @@ rooms:</source>
     <message>
       <location filename="../src/TEasyButtonBar.cpp" line="70"/>
       <source>Easybutton Bar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>簡單按鈕欄- %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -1424,13 +1428,13 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="13325"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
-      <translation type="unfinished"/>
+      <translation>[錯誤] - 找不到 Lua 模組 %1。%2%3%4</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13339"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name (may specify which variant) of the module.</comment>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Lua 模組 %1 已載入。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13893"/>
@@ -1445,12 +1449,12 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13918"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>utf8.* Lua 函數不可用。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13924"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>yajl.*Lua 函數不可用。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14109"/>
@@ -1466,18 +1470,19 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="14113"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ 錯誤 ] - 無法載入程式碼格式化，縮排功能無法使用。
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14190"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (不存在)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14195"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
-      <translation type="unfinished"/>
+      <translation>%1 （不是檔案或連結到檔案）</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14204"/>
@@ -1493,7 +1498,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14228"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Mudlet-lua API 和 Geyser 佈置管理程式已載入。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14235"/>
@@ -1630,7 +1635,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1317"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ 資訊 ] - 已找到地圖，但無法開啟它，請檢查許可權：%1。</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1320"/>
@@ -1945,7 +1950,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="2773"/>
       <source>Map JSON export</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>匯出地圖 Json 檔案</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2908"/>
@@ -1956,7 +1961,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2934"/>
       <source>import or export already in progress</source>
-      <translation type="unfinished"/>
+      <translation>匯入或匯出已在進行中</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2942"/>
@@ -1971,7 +1976,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2961"/>
       <source>empty Json file, no map data detected</source>
-      <translation type="unfinished"/>
+      <translation>空的 Json 檔案，偵測到無地圖資料</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2976"/>
@@ -10553,7 +10558,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="348"/>
       <source>Save log files in HTML format instead of plain text</source>
-      <translation>使用 HTML 格式儲存紀錄檔案，而非純文字格式</translation>
+      <translation>使用 HTML 格式而非純文字格式來儲存記錄檔案</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="355"/>
@@ -10874,12 +10879,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="275"/>
       <source>Enable GMCP  (Generic Mud Communication Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>啟用 GMCP 協議 (Generic MUD Communication Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="295"/>
       <source>Enable MSDP  (Mud Server Data Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>啟用 MSDP 協議 (MUD Server Data Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="282"/>
@@ -10889,7 +10894,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="285"/>
       <source>Enable MSSP  (Mud Server Status Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>啟用 MSSP 協議 (MUD Server Status Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="491"/>
@@ -11049,7 +11054,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="305"/>
       <source>Enable MSP  (Mud Sound Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>啟用 MSP 協議 (MUD Sound Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="501"/>
