@@ -524,7 +524,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
       <source>Error parsing theme %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>解析主題 %1時發生錯誤：%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
@@ -634,7 +634,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="601"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished"/>
+      <translation>地圖處理器：無法使用已知出口查找從 %1 到 %2 的路徑。</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1259"/>
@@ -927,13 +927,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2904"/>
       <source>Set room&apos;s area number</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>設定房間的區域編號</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2827"/>
       <source>Custom exit line</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>自訂出口線</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2829"/>
@@ -1047,7 +1047,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2982"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action)</comment>
-      <translation type="unfinished"/>
+      <translation>使用[刪除行]刪除唯一以可編輯點結尾的片段</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2988"/>
@@ -1219,12 +1219,13 @@ rooms:</source>
       <location filename="../src/TAlias.cpp" line="200"/>
       <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.
 </source>
-      <translation type="unfinished"/>
+      <translation>[別名錯誤:] %1 超過擷取群組限制，擷取較少的群組。
+</translation>
     </message>
     <message>
       <location filename="../src/TAlias.cpp" line="269"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>錯誤：錯誤的正則表達式，原因： %1。</translation>
     </message>
   </context>
   <context>
@@ -1359,12 +1360,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="860"/>
       <source>Replay recording has started. File: %1</source>
-      <translation type="unfinished"/>
+      <translation>重播錄製已開始。檔案： %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="863"/>
       <source>Replay recording has been stopped. File: %1</source>
-      <translation type="unfinished"/>
+      <translation>重播記錄已停止。 檔案： %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1842"/>
@@ -1378,7 +1379,7 @@ rooms:</source>
     <message>
       <location filename="../src/TEasyButtonBar.cpp" line="70"/>
       <source>Easybutton Bar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>簡單按鈕欄- %1 - %2</translation>
     </message>
   </context>
   <context>
