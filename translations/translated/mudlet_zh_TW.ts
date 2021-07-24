@@ -2334,7 +2334,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1259"/>
       <source>[ INFO ]  - Room had special exit &quot;%1&quot; that was to room with an invalid room: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ 資訊 ] - 房間有特殊的出口 %1 是無效的房間： %2 不存在。 出口將被移除（錯誤目的地房間 ID 將存儲在房間用戶數據中，鑰匙下：%3）。</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1292"/>
@@ -2419,7 +2419,7 @@ an exit to invalid room: %3 to now go to: %4.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1478"/>
       <source>[ INFO ]  - Correcting exit &quot;%1&quot; that was to invalid room id: %2 to now go to: %3.</source>
-      <translation type="unfinished"/>
+      <translation>[ 資訊 ] - 修正出口 %1， 這是無效的房間 ID： %2  => %3。</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1489"/>
