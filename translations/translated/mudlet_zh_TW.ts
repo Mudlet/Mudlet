@@ -4245,7 +4245,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="713"/>
       <source>Auto-open profile</source>
-      <translation type="unfinished"/>
+      <translation>自動開啟設定檔</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="716"/>
