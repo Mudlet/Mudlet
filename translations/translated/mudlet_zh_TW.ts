@@ -2480,7 +2480,7 @@ It was locked, this is recorded as user data with key:
     <message>
       <location filename="../src/TRoom.cpp" line="1643"/>
       <source>  It was locked, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>它被鎖定，這是記錄為用戶數據與密鑰： %1。</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1651"/>
@@ -2494,7 +2494,7 @@ It had a weight, this is recorded as user data with key:
     <message>
       <location filename="../src/TRoom.cpp" line="1655"/>
       <source>  It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>  它有一個重量，這是記錄為用戶數據的關鍵：%1。</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1666"/>
@@ -2604,7 +2604,9 @@ out what new id numbers to use.</source>
  Look for further messages related to the rooms that are supposed
  to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ 警告 ] - 地圖中檢測到遺失的區域 %n ，紀錄它們 。查找與區域相關房間的更多資訊..</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="731"/>
