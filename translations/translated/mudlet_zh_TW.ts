@@ -2436,7 +2436,7 @@ and the exit will be turned into a stub.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1502"/>
       <source>[ WARN ]  - Room has an exit &quot;%1&quot; to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ 警告 ] - 房間有一個出口 %1 到 %2 但該房間不存在。 出口將被移除（但目的地房間ID將存儲在房間用戶數據中的密鑰下： %4），出口將變成殘根。</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1546"/>
@@ -2449,7 +2449,7 @@ be removed.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1556"/>
       <source>[ ALERT ] - Room has an exit &quot;%1&quot; to: %2 but also has a stub exit in the same direction!  As a real exit precludes a stub, the latter will be removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ 警報 ] - 房間出口 %1 => %2 ，但也有一個殘根出口在同一方向！ 由於真正的退出排除了殘根，後者將被移除。</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1612"/>
@@ -2466,7 +2466,7 @@ and the exit will be turned into a stub.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1623"/>
       <source>[ INFO ]  - Room exit &quot;%1&quot; that was to a room with an invalid id: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ 資訊 ] - 房間出口 %1 是一個無效的ID的房間：不存在 %2 。 出口將被移除（不良目的地房間ID將存儲在房間用戶數據中的密鑰下：%4），出口將變成殘根。</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1639"/>
