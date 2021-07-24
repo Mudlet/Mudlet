@@ -1748,35 +1748,6 @@ local lightColours = {
   [7] = { 255, 255, 255 }, -- white
 }
 
--- black + 23 tone grayscale up to white
--- The values are to be used for each of te r, g and b values
-local grayscaleComponents = {
-  [0] = 0,
-  [1] = 11,
-  [2] = 22,
-  [3] = 33,
-  [4] = 44,
-  [5] = 55,
-  [6] = 67,
-  [7] = 78,
-  [8] = 89,
-  [9] = 100,
-  [10] = 111,
-  [11] = 122,
-  [12] = 133,
-  [13] = 144,
-  [14] = 155,
-  [15] = 166,
-  [16] = 177,
-  [17] = 188,
-  [18] = 200,
-  [19] = 211,
-  [20] = 222,
-  [21] = 233,
-  [22] = 244,
-  [23] = 255
-}
-
 local ansiPattern = rex.new("\\e\\[([0-9:;]+?)m")
 
 -- function for converting a raw ANSI string into plain strings
@@ -1820,9 +1791,11 @@ function ansi2decho(text, ansi_default_color)
         r = floor(tag / 36)
         g = floor((tag - (r * 36)) / 6)
         b = floor((tag - (r * 36)) - (g * 6))
-        rgb = { r * 51, g * 51, b * 51 }
+        rgb = { r == 0 and 0 or (r - 1) * 40 + 95,
+                g == 0 and 0 or (r - 1) * 40 + 95,
+                b == 0 and 0 or (r - 1) * 40 + 95 }
       else
-        local component = grayscaleComponents[tag - 232]
+        local component = tag - 232 * 10 + 8
         rgb = { component, component, component }
       end
 
