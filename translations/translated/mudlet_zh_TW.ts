@@ -1505,7 +1505,9 @@ rooms:</source>
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
-      <translation type="unfinished"/>
+      <translation>[錯誤]-無法找到、載入並執行 LuaGlobal.lua - 你的 Muldlet 壞了！
+嘗試了這些位置：
+%1</translation>
     </message>
   </context>
   <context>
