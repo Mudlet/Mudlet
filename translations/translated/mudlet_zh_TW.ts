@@ -2071,17 +2071,17 @@ it but it will try! The file is: &quot;%2&quot;.</source>
       <source>[ INFO ]  - Reading map. Format version: %1. File:
 &quot;%2&quot;,
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ 資訊 ] - 讀取地圖。 格式版本： %1。 File：%2，請稍候</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1455"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ 資訊 ] - 讀取地圖。 格式版本： %1。 檔案：%2</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1852"/>
       <source>[ INFO ]  - Checking map file &quot;%1&quot;, format version &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ 資訊 ] - 檢查地圖檔 %1，格式版本 %2。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2389"/>
@@ -2099,7 +2099,7 @@ please wait...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1414"/>
       <source>[ INFO ]  - Ignoring this unlikely map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ 資訊 ] - 忽略這個不太可能的地圖檔。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2421"/>
