@@ -1946,7 +1946,8 @@ and there is enough space. The download operation has failed.</source>
       <location filename="../src/TMap.cpp" line="3243"/>
       <source>Exporting JSON map data from %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>從 %1 倒出 JSON 地圖資料
+區域： %2 ，共 %3   個房間： %4 個標籤： %5   個標籤： %6 ： %7...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2773"/>
@@ -1973,7 +1974,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2952"/>
       <source>could not parse file, reason: &quot;%1&quot; at offset %2</source>
-      <translation type="unfinished"/>
+      <translation>無法解析檔案，原因：%1 在 %2 偏移</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2961"/>
@@ -1983,7 +1984,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2976"/>
       <source>invalid format version &quot;%1&quot; detected</source>
-      <translation type="unfinished"/>
+      <translation>偵測到無效的格式版本 %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2982"/>
@@ -1999,7 +2000,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="3013"/>
       <source>Map JSON import</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>導入 JSON 地圖 </translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3109"/>
@@ -2011,7 +2012,8 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="3253"/>
       <source>Importing JSON map data to %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>將 JSON 地圖數據導入 %1
+區域： %2 個房間： %3   個房間： %4 個標籤： %5   個標籤： %6 個： %7...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1021"/>
