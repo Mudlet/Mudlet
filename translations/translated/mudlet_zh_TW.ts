@@ -2019,14 +2019,14 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="1021"/>
       <source>[ ERROR ] - The format version &quot;%1&quot; you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version %2.</source>
-      <translation type="unfinished"/>
+      <translation>[錯誤] - 格式版本 %1，您保存地圖的 Mudlet 版本太新。僅支援格式直到版本 %2。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1037"/>
       <source>[ ALERT ] - Saving map in format version &quot;%1&quot; that is different than &quot;%2&quot; which
 it was loaded as. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation type="unfinished"/>
+      <translation>[警告]-以格式版本 %1 保存地圖，與載入 %2 不同，如果您想與其他人共享依賴原始格式生成的地圖，可能會有問題。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1047"/>
@@ -2038,33 +2038,33 @@ recommended map version %2 for this version of Mudlet.</source>
       <location filename="../src/TMap.cpp" line="1385"/>
       <location filename="../src/TMap.cpp" line="1836"/>
       <source>[ ERROR ] - Unable to open map file for reading: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[錯誤] - 無法打開地圖文件進行閱讀： %1！</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1407"/>
       <source>[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates
 its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. The file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 檔案似乎不是一個 Mudlet 地圖檔。部分格式版本似乎是 %1 ，沒有意義。檔案是：%2。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1422"/>
       <source>[ ALERT ] - Map file is too new. Its format version &quot;%1&quot; is higher than this version of
 Mudlet can handle (%2)! The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 地圖檔太新了。格式版本 %1，高於這個版本的 Mudlet 可以處理 （%2）！檔案是：%3。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1429"/>
       <source>[ INFO ]  - You will need to update your Mudlet to read the map file.</source>
-      <translation type="unfinished"/>
+      <translation>[資訊] - 您將需要更新您的 Mudlet 來讀取地圖檔。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1438"/>
       <source>[ ALERT ] - Map file is really old. Its format version &quot;%1&quot; is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try! The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[警告] - 地圖檔格式版本  %1 太舊，這個版本的 Mudlet 可能無法從它獲得足夠的資訊，但它會嘗試！檔案是：%2。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1452"/>
