@@ -4260,7 +4260,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="732"/>
       <source>Automatically reconnect this profile if it should become disconnected for any reason other than the user disconnecting from the game server.</source>
-      <translation type="unfinished"/>
+      <translation>如果使用者主動段開伺服器之外的任何原因而斷開連接，則自動重新連接此設定檔。</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="748"/>
@@ -4270,7 +4270,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="751"/>
       <source>If provided will be sent, along with the character name to identify the user in the game.</source>
-      <translation type="unfinished"/>
+      <translation>如果提供將發送，以及角色名稱，以識別遊戲中的使用者。</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="764"/>
@@ -4280,7 +4280,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="770"/>
       <source>Allow this profile to use Mudlet&apos;s Discord &quot;Rich Presence&quot;  features</source>
-      <translation type="unfinished"/>
+      <translation>允許此配置檔使用 Mudlet 的 Discord 的 Rich Presence 功能</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="876"/>
@@ -4339,7 +4339,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="46"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>行設定：</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="84"/>
@@ -4354,7 +4354,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="43"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>選擇樣式、顏色以及是否用結束行箭頭。</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="122"/>
@@ -4397,7 +4397,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="63"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>行設定：</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="97"/>
@@ -4417,12 +4417,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="47"/>
       <source>&lt;p&gt;Selecting an exit immediately proceeds to drawing the first line segment from the centre point of the room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>立即選擇出口，從房間的中心點繪製第一行段。</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="60"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head BEFORE then choosing the exit to draw the line for...&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>選擇樣式、顏色以及是否在退出之前用箭頭結束行以繪製線條</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="187"/>
