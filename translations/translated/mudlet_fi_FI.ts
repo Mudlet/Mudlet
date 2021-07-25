@@ -37,12 +37,15 @@
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Sinulla ei ole vielä karttaa - lataa yksi, tai aloita kartoitus tyhjästä aloittaaksesi.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="290"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Sinmulla on kartta ladattu (%n huone(tta)), mutta Mudlet ei tiedä missä olet tällä hetkellä.</numerusform>
+        <numerusform>Sinulla on ladattu kartta (%n huone(tta)), mutta Mudlet ei tiedä missä olet tällä hetkellä.</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -50,13 +53,13 @@
     <message>
       <location filename="../src/Host.cpp" line="464"/>
       <source>Text to send to the game</source>
-      <translation type="unfinished"/>
+      <translation>Teksti, joka lähetetään peliin</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="858"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - %1 Paljon kiitoksia, kun käytit julkista testi koontia!</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="859"/>
