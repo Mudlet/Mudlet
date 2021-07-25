@@ -32,7 +32,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="288"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Ei yhtään huonetta kartassa - lataa toinen, tai aloita kartoitus tyhjästä aloittaaksesi.</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
