@@ -35,6 +35,14 @@
     "message": "標準",
     "description": "one of the Lockstyles. This Lockstyle is the standard setting, with a small margin on top to keep the right click menu usable"
   },
+  "AdjustableContainer.light": {
+    "message": "亮",
+    "description": "one of the Lockstyles. Can also be translated as simple. It is only hiding the min/restore labels the borders and margin stay intact"
+  },
+  "AdjustableContainer.full": {
+    "message": "完整",
+    "description": "one of the Lockstyles. Can also be translated as complete as it's locking the container without any margin left for the right click menu."
+  },
   "AdjustableContainer.border": {
     "message": "邊框",
     "description": "one of the Lockstyles which keeps the borders of the container visible."
