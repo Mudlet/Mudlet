@@ -65,44 +65,48 @@
       <location filename="../src/Host.cpp" line="859"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - %1 Auta meitä parantamaan Mudletia raportoimalla ongelmista.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1659"/>
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Moduulin purkaminen pakkauksesta:
+&quot;%1&quot;
+Odota...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1661"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Paketin purkaminen pakkauksesta:
+&quot;%1&quot;
+Odota...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1665"/>
       <source>Unpacking</source>
-      <translation type="unfinished"/>
+      <translation>Puretaan</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2314"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Toistetaan %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2316"/>
       <location filename="../src/Host.cpp" line="2322"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
-      <translation type="unfinished"/>
+      <translation>%1 osoitteessa %2:%3</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2704"/>
       <location filename="../src/Host.cpp" line="3636"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Kartta - %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3652"/>
