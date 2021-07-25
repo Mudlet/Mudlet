@@ -111,12 +111,12 @@ Odota...</translation>
     <message>
       <location filename="../src/Host.cpp" line="3652"/>
       <source>Pre-Map loading(3) report</source>
-      <translation type="unfinished"/>
+      <translation>Esikertan lataus(3) raportti</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3662"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Ladataan kartta(3) %1 raportista</translation>
     </message>
   </context>
   <context>
