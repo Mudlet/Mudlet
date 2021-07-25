@@ -6,7 +6,7 @@
     <message>
       <location filename="../src/discord.cpp" line="149"/>
       <source>via Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Mudletin kautta</translation>
     </message>
   </context>
   <context>
@@ -14,17 +14,17 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="275"/>
       <source>Too many redirects.</source>
-      <translation type="unfinished"/>
+      <translation>Liian monta uudelleenohjausta.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="284"/>
       <source>No data received from server</source>
-      <translation type="unfinished"/>
+      <translation>Palvelimelta ei saatu tietoja</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="295"/>
       <source>Could not verify download integrity.</source>
-      <translation type="unfinished"/>
+      <translation>Latauksen eheyttä ei voitu todentaa.</translation>
     </message>
   </context>
   <context>
