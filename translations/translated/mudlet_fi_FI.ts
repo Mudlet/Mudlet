@@ -142,7 +142,8 @@ Odota...</translation>
       <location filename="../src/mapInfoContributorManager.cpp" line="140"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Huoneen nimi: %1
+</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="153"/>
