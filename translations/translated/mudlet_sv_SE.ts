@@ -37,7 +37,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Du har inte en karta ännu - ladda en, eller börja kartlägga från början.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="290"/>
