@@ -6,7 +6,7 @@
     <message>
       <location filename="../src/discord.cpp" line="149"/>
       <source>via Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>via Mudlet</translation>
     </message>
   </context>
   <context>
@@ -14,17 +14,17 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="275"/>
       <source>Too many redirects.</source>
-      <translation type="unfinished"/>
+      <translation>För många omdirigeringar.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="284"/>
       <source>No data received from server</source>
-      <translation type="unfinished"/>
+      <translation>Ingen data mottagen från servern</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="295"/>
       <source>Could not verify download integrity.</source>
-      <translation type="unfinished"/>
+      <translation>Kunde inte verifiera nedladdningens integritet.</translation>
     </message>
   </context>
   <context>
@@ -32,7 +32,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="288"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Inga rum på kartan - ladda en annan karta eller börja kartläggningen från början.</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
