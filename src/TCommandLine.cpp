@@ -581,7 +581,7 @@ void TCommandLine::adjustHeight()
         lines = 10;
     }
     int _height = fontH * lines;
-    if( _height < 31 ) {
+    if(_height < 31) {
         _height = 31; // Minimum usable height taken from buttonLayer in TConsole.cpp
     }
      if (_height < mpHost->commandLineMinimumHeight) {
