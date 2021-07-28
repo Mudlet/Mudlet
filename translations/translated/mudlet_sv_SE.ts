@@ -50,50 +50,54 @@
     <message>
       <location filename="../src/Host.cpp" line="464"/>
       <source>Text to send to the game</source>
-      <translation type="unfinished"/>
+      <translation>Text att skicka till spelet</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="858"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[OK] - %1 Tack så mycket för att du använder Public Test Build!</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="859"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - %1 Hjälp oss att förbättra Mudlet genom att rapportera eventuella problem.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1659"/>
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Packar upp modulen:
+&quot;%1&quot;
+Vänligen vänta...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1661"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Packar upp paket:
+&quot;%1&quot;
+Vänligen vänta...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1665"/>
       <source>Unpacking</source>
-      <translation type="unfinished"/>
+      <translation>Packar upp</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2314"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Spelar %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2316"/>
       <location filename="../src/Host.cpp" line="2322"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
-      <translation type="unfinished"/>
+      <translation>%1 på %2:%3</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2704"/>
