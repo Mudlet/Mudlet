@@ -56,7 +56,7 @@
       <location filename="../src/Host.cpp" line="858"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation>[OK] - %1 Tack så mycket för att du använder Public Test Build!</translation>
+      <translation>[  OK  ]  - %1 Tack så mycket för att du använder Public Test Build!</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="859"/>
