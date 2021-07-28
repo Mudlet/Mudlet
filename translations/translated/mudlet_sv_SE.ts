@@ -103,17 +103,17 @@ Vänligen vänta...</translation>
       <location filename="../src/Host.cpp" line="2704"/>
       <location filename="../src/Host.cpp" line="3636"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Karta - %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3652"/>
       <source>Pre-Map loading(3) report</source>
-      <translation type="unfinished"/>
+      <translation>Ladda ner förkarta(3) rapporten</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3662"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Laddar karta (3) vid %1 -rapport</translation>
     </message>
   </context>
   <context>
@@ -122,7 +122,7 @@ Vänligen vänta...</translation>
       <location filename="../src/KeyUnit.cpp" line="333"/>
       <source>%1undefined key (code: 0x%2)</source>
       <comment>%1 is a string describing the modifier keys (e.g. &quot;shift&quot; or &quot;control&quot;) used with the key, whose &apos;code&apos; number, in %2 is not one that we have a name for. This is probably one of those extra keys around the edge of the keyboard that some people have.</comment>
-      <translation type="unfinished"/>
+      <translation>%1undefinierad nyckel (kod: 0x%2)</translation>
     </message>
   </context>
   <context>
@@ -132,13 +132,15 @@ Vänligen vänta...</translation>
       <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. %2 is the (text) name of the area, %3 is the number for it, %4 to %9 are pairs (min &lt;-&gt; max) of extremes for each of x,y and z coordinates</comment>
-      <translation type="unfinished"/>
+      <translation>Område:%1%2 ID:%1%3 x:%1%4%1&lt;-&gt;%1%5 y:%1%6%1&lt;-&gt;%1%7 z:%1%8%1&lt;-&gt;%1%9
+</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="140"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Rumsnamn: %1
+</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="153"/>
