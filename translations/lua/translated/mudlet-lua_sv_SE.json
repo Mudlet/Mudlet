@@ -1,1 +1,22 @@
-{}
+{
+  "AdjustableContainer.attach": {
+    "message": "Bifoga till:",
+    "description": "attaches your container to a border"
+  },
+  "AdjustableContainer.bottom": {
+    "message": "nederkant",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.top": {
+    "message": "ovankant",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.left": {
+    "message": "vänster",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.right": {
+    "message": "höger",
+    "description": "one of the borders the container can be attached to"
+  }
+}
