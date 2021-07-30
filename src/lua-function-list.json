@@ -168,7 +168,7 @@
     "getMainConsoleWidth": "getMainConsoleWidth()",
     "getMainWindowSize": "getMainWindowSize()",
     "getMapEvents": "mapevents = getMapEvents()",
-    "getMapLabel": "labelinfo = getMapLabels(areaID, labelID or labelText)",
+    "getMapLabel": "labelinfo = getMapLabel(areaID, labelID or labelText)",
     "getMapLabels": "arealabels = getMapLabels(areaID)",
     "getMapMenus": "getMapMenus()",
     "getMapSelection": "getMapSelection()",
