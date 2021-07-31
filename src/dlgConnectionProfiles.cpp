@@ -54,8 +54,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 , mDefaultGames({"3Kingdoms", "3Scapes", "Aardwolf", "Achaea", "Aetolia",
                  "Avalon.de", "BatMUD", "Clessidra", "Fierymud", "Imperian", "Luminari",
                  "Lusternia", "Materia Magica", "Midnight Sun 2", "Realms of Despair",
-                 "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD", "Carrion Fields"
-                 "Cleft of Dimensions", "CoreMUD"})
+                 "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD", "Carrion Fields",
+                 "Cleft of Dimensions", "CoreMUD", "God Wars II", "Slothmud",
+                 "Legends of the Jedi"})
 {
     setupUi(this);
 
@@ -299,7 +300,10 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
 void dlgConnectionProfiles::accept()
 {
     if (validName && validUrl && validPort) {
-        slot_connectToServer();
+        setVisible(false);
+        // This is needed to make the above take effect as fast as possible:
+        qApp->processEvents();
+        loadProfile(true);
         QDialog::accept();
     }
 }
@@ -487,6 +491,7 @@ void dlgConnectionProfiles::slot_save_name()
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     QString newProfileName = profile_name_entry->text().trimmed();
 
+    validateProfile();
     if (!validName || newProfileName.isEmpty() || !pItem) {
         return;
     }
@@ -614,6 +619,11 @@ void dlgConnectionProfiles::slot_deleteprofile_check(const QString& text)
 void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
     QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    reallyDeleteProfile(profile);
+}
+
+void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
+{
     QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, profile));
     dir.removeRecursively();
 
@@ -630,6 +640,7 @@ void dlgConnectionProfiles::slot_reallyDeleteProfile()
 }
 
 // called when the 'delete' button is pressed, raises a dialog to confirm deletion
+// if this profile has been used
 void dlgConnectionProfiles::slot_deleteProfile()
 {
     if (!profiles_tree_widget->currentItem()) {
@@ -638,12 +649,19 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
     QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
+    QDir profileDirContents(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile));
+    if (!profileDirContents.exists() || profileDirContents.isEmpty()) {
+        // shortcut - don't show profile deletion confirmation if there is no data to delete
+        reallyDeleteProfile(profile);
+        return;
+    }
+
     QUiLoader loader;
 
     QFile file(QStringLiteral(":/ui/delete_profile_confirmation.ui"));
     file.open(QFile::ReadOnly);
 
-    auto * delete_profile_dialog = dynamic_cast<QDialog*>(loader.load(&file, this));
+    auto* delete_profile_dialog = dynamic_cast<QDialog*>(loader.load(&file, this));
     file.close();
 
     if (!delete_profile_dialog) {
@@ -652,7 +670,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
     delete_profile_lineedit = delete_profile_dialog->findChild<QLineEdit*>(QStringLiteral("delete_profile_lineedit"));
     delete_button = delete_profile_dialog->findChild<QPushButton*>(QStringLiteral("delete_button"));
-    auto * cancel_button = delete_profile_dialog->findChild<QPushButton*>(QStringLiteral("cancel_button"));
+    auto* cancel_button = delete_profile_dialog->findChild<QPushButton*>(QStringLiteral("cancel_button"));
 
     if (!delete_profile_lineedit || !delete_button || !cancel_button) {
         return;
@@ -665,6 +683,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
     delete_profile_lineedit->setFocus();
     delete_button->setEnabled(false);
     delete_profile_dialog->setWindowTitle(tr("Deleting '%1'").arg(profile));
+    delete_profile_dialog->setAttribute(Qt::WA_DeleteOnClose);
 
     delete_profile_dialog->show();
     delete_profile_dialog->raise();
@@ -823,6 +842,9 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
     } else if (hostUrl == QStringLiteral("coremud.org")) {
         return QStringLiteral("Welcome to Core Mud, an interactive text MUD set on the planet formal star-charts refer to as Hermes 571-G, but that everyone in the know refers to simply as \"Core\".\n\nCore is one of the most distant settlements known to mankind, most famous for its lucrative yet oppressive mines, but more than mankind can be found here...\n\nCore is a diverse group of 9 races in total, all vying for recognition or profits, or both, working for The Company, the megalithic entity running the colony itself.\n\nTo The Company, everything is secondary to profits.\n\nIt is up to you to determine how best to survive in this environment, whether that be through combat training, superior mining skills, or technical prowess.\n\nCore MUD is always free to play and features a fun and supportive atmosphere. Roleplaying is encouraged but not mandatory.\n\nMining is your primary source of income, but there are multiple ways to scrape together a few credits... or a few million.\n\nCore Mud also features an economy which is player-driven.  Players own merchandise shops featuring energy weaponry or useful tools, pubs featuring assorted alcoholic (of course) and non-alcoholic beverages, and clinics for healing, to name a few.\n\nCome join us today!");
 
+    } else if (hostUrl == QStringLiteral("legendsofthejedi.com")) {
+        return QStringLiteral("Legends of the Jedi is a text-based roleplaying experience that immerses players in a multiplayer world where they can rewrite classic Star Wars stories with their own heroes, villains, battles, and endings. Over the course of each two-year timeline, the game explores all the key eras of the Star Wars Expanded Universe.\n\nTake and hold planets as an Imperial Stormtrooper, command the Rebel navy and liberate the galaxy, pursue targets as a bounty hunter, or shape things on a larger scale as a member of the Galactic Senate. Maybe you'll even be one of the few born with force sensitivity, destined to be trained by Jedi or Sith.\n\nThe game offers an extensive crafting system for engineers to supply weapons, armor, and ships to the galaxy. Develop new, cutting-edge armaments to give your side an edge, or open a shop in a bustling commercial district and become wealthy as part of a powerful engineering conglomerate.\n\nLOTJ offers full PVP in both ground and space combat, governed by a set of rules to minimize griefing and ensure that all kills have sufficient in-character cause.\n\nWhat role will you play? The legend awaits!");
+
     } else {
         return readProfileData(profile_name, QStringLiteral("description"));
     }
@@ -917,6 +939,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("CoreMUD")) {
             host_url = QStringLiteral("coremud.org");
+        }
+        if (profile_name == QStringLiteral("Legends of the Jedi")) {
+            host_url = QStringLiteral("legendsofthejedi.com");
         }
     }
     host_name_entry->setText(host_url);
@@ -1040,6 +1065,10 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("CoreMUD")) {
             host_port = QStringLiteral("4000");
+            port_ssl_tsl->setChecked(false);
+        }
+        if (profile_name == QStringLiteral("Legends of the Jedi")) {
+            host_port = QStringLiteral("5656");
             port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Mudlet self-test")) {
@@ -1174,6 +1203,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("CoreMUD")) {
             val = QStringLiteral("<center><a href='https://coremud.org/'>coremud.org</a></center>");
+        }
+        if (profile_name == QStringLiteral("Legends of the Jedi")) {
+            val = QStringLiteral("<center><a href='https://www.legendsofthejedi.com/'>legendsofthejedi.com</a></center>");
         }
     }
     website_entry->setText(val);
@@ -1318,7 +1350,6 @@ void dlgConnectionProfiles::fillout_form()
     profiles_tree_widget->setIconSize(QSize(120, 30));
     QString mudServer, description;
     QListWidgetItem* pItem;
-    QIcon mi;
 
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(QStringLiteral("deletedDefaultMuds"), QStringList()).toStringList();
@@ -1466,6 +1497,12 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("coremud.org"), 0, mudServer), QStringLiteral(":/icons/coremud_icon.jpg"));
+    }
+
+    mudServer = QStringLiteral("Legends of the Jedi");
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pItem = new QListWidgetItem();
+        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("legendsofthejedi.com"), 0, mudServer), QStringLiteral(":/icons/legendsofthejedi_120x30.png"));
     }
 
 
@@ -1631,7 +1668,7 @@ void dlgConnectionProfiles::generateCustomProfile(const QString& profileName) co
 void dlgConnectionProfiles::slot_profile_menu(QPoint pos)
 {
     QPoint globalPos = profiles_tree_widget->mapToGlobal(pos);
-    auto profileName = profiles_tree_widget->currentItem()->text();
+    auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
     QMenu menu;
     if (hasCustomIcon(profileName)) {
@@ -1645,7 +1682,7 @@ void dlgConnectionProfiles::slot_profile_menu(QPoint pos)
 
 void dlgConnectionProfiles::slot_set_custom_icon()
 {
-    auto profileName = profiles_tree_widget->currentItem()->text();
+    auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
     QString imageLocation = QFileDialog::getOpenFileName(this, tr("Select custom image for profile (should be 120x30)"),
                                                     QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
@@ -1665,7 +1702,7 @@ void dlgConnectionProfiles::slot_set_custom_icon()
 
 void dlgConnectionProfiles::slot_reset_custom_icon()
 {
-    auto profileName = profiles_tree_widget->currentItem()->text();
+    auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
     bool success = mudlet::self()->resetProfileIcon(profileName).first;
     if (!success) {
@@ -1887,13 +1924,11 @@ void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pug
 
 void dlgConnectionProfiles::slot_load()
 {
+    setVisible(false);
+    // This is needed to make the above take effect as fast as possible:
+    qApp->processEvents();
     loadProfile(false);
     QDialog::accept();
-}
-
-void dlgConnectionProfiles::slot_connectToServer()
-{
-    loadProfile(true);
 }
 
 void dlgConnectionProfiles::loadProfile(bool alsoConnect)
@@ -1992,12 +2027,11 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         const QHash<QString, QStringList> defaultScripts = {
                 {QStringLiteral(":/run-lua-code-v4.xml"), {QStringLiteral("*")}},
                 {QStringLiteral(":/echo.xml"), {QStringLiteral("*")}},
-                {QStringLiteral(":/send-text-to-all-games.xml"), {QStringLiteral("*")}},
                 {QStringLiteral(":/deleteOldProfiles.xml"), {QStringLiteral("*")}},
                 {QStringLiteral(":/CF-loader.xml"), {QStringLiteral("carrionfields.net")}},
                 {QStringLiteral(":/run-tests.xml"), {QStringLiteral("mudlet.org")}},
                 {QStringLiteral(":/mudlet-mapper.xml"),
-                 {QStringLiteral("aetolia.com"), QStringLiteral("achaea.com"), QStringLiteral("lusternia.com"), QStringLiteral("imperian.com"), QStringLiteral("starmourn.com")}},
+                 {QStringLiteral("aetolia.com"), QStringLiteral("achaea.com"), QStringLiteral("lusternia.com"), QStringLiteral("imperian.com"), QStringLiteral("starmourn.com"), QStringLiteral("stickmud.com")}},
         };
 
         QHashIterator<QString, QStringList> i(defaultScripts);
@@ -2020,6 +2054,8 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 bool dlgConnectionProfiles::validateProfile()
 {
     bool valid = true;
+
+    validName = true, validPort = true, validUrl = true;
 
     clearNotificationArea();
 

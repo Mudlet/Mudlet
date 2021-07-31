@@ -39,12 +39,14 @@ void MapInfoContributorManager::registerContributor(const QString& name, MapInfo
     }
     ordering.append(name);
     contributors.insert(name, callback);
+    emit signal_contributorsUpdated();
 }
 
 bool MapInfoContributorManager::removeContributor(const QString& name)
 {
     mpHost->mMapInfoContributors.remove(name);
     ordering.removeOne(name);
+    emit signal_contributorsUpdated();
     return contributors.remove(name) > 0;
 }
 
@@ -54,9 +56,7 @@ bool MapInfoContributorManager::enableContributor(const QString &name) {
     }
     mpHost->mMapInfoContributors.insert(name);
     mpHost->mpMap->update();
-    if (mpHost->mpMap->mpMapper != nullptr) {
-        mpHost->mpMap->mpMapper->updateInfoContributors();
-    }
+    emit signal_contributorsUpdated();
     return true;
 }
 
@@ -66,9 +66,7 @@ bool MapInfoContributorManager::disableContributor(const QString &name) {
     }
     mpHost->mMapInfoContributors.remove(name);
     mpHost->mpMap->update();
-    if (mpHost->mpMap->mpMapper != nullptr) {
-        mpHost->mpMap->mpMapper->updateInfoContributors();
-    }
+    emit signal_contributorsUpdated();
     return true;
 }
 
@@ -84,17 +82,21 @@ QList<QString> &MapInfoContributorManager::getContributorKeys()
 
 MapInfoProperties MapInfoContributorManager::shortInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor)
 {
-    Q_UNUSED("selectionSize");
-    Q_UNUSED("displayAreaId");
+    Q_UNUSED(selectionSize);
+    Q_UNUSED(displayAreaId);
 
     QString infoText;
     TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomID);
     if (room) {
         QString areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
-        infoText = QStringLiteral("%1 (%3)\n")
-                           .arg(!room->name.isEmpty() && room->name != QString::number(room->getId()) ? QStringLiteral("%1/%2").arg(room->name, QString::number(room->getId()))
-                                                                                                      : QString::number(room->getId()),
-                                areaName);
+        static const QRegularExpression trailingPunctuation(QStringLiteral("[.,/]+$"));
+        auto roomName = QString(room->name);
+        if (mpHost->mMapViewOnly) {
+            roomName = roomName.remove(trailingPunctuation).trimmed();
+        }
+        auto roomFragment = !roomName.isEmpty() && roomName != QString::number(room->getId()) ?
+            QStringLiteral("%1 / %2").arg(roomName, QString::number(room->getId())) : QString::number(room->getId());
+        infoText = QStringLiteral("%1 (%2)\n").arg(roomFragment, areaName);
     }
     return MapInfoProperties{false, false, infoText, infoColor};
 }

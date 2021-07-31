@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2020 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2017, 2020-2021 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -31,6 +32,7 @@
 #include <QPointer>
 #include "post_guard.h"
 
+class EAction;
 class Host;
 class mudlet;
 class TEasyButtonBar;
@@ -95,6 +97,8 @@ public:
 
     QPointer<TToolBar> mpToolBar;
     QPointer<TEasyButtonBar> mpEasyButtonBar;
+    QPointer<EAction> mpEButton;
+    QPointer<TFlipButton> mpFButton;
     // The following was an int but there was confusion over:
     // EITHER: "1" = released/unclicked/up & "2" = pressed/clicked/down
     // OR:     "1" = pressed/clicked/down  & "0" = released/unclicked/up
@@ -107,10 +111,6 @@ public:
     int mPosY;
     int mOrientation;
     int mLocation;
-    QString mName;
-    QString mCommandButtonUp;
-    QString mCommandButtonDown;
-    QString mScript;
     bool mIsPushDownButton;
 
     bool mNeedsToBeCompiled;
@@ -135,6 +135,10 @@ public:
 private:
     TAction() = default;
 
+    QString mName;
+    QString mCommandButtonUp;
+    QString mCommandButtonDown;
+    QString mScript;
     QString mFuncName;
     bool mModuleMember;
     bool mDataChanged;

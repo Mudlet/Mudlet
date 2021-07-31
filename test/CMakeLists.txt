@@ -30,6 +30,8 @@ link_libraries(
         Qt5::UiTools
         Qt5::Widgets)
 
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
+
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src")
 
@@ -42,6 +44,7 @@ add_test(NAME TEntityHandlerTest COMMAND TEntityHandlerTest)
 add_executable(TLinkStoreTest TLinkStoreTest.cpp ../src/TLinkStore.cpp ../src/TEntityResolver.cpp)
 add_test(NAME TLinkStoreTest COMMAND TLinkStoreTest)
 
+target_compile_definitions(TLinkStoreTest PRIVATE LinkStore_Test)
 
 file(GLOB MXP_SOURCE ../src/TMxp*.cpp ../src/MxpTag.cpp ../src/TEntityHandler.cpp ../src/TEntityResolver.cpp ../src/TStringUtils.cpp)
 list(FILTER MXP_SOURCE EXCLUDE REGEX ".*/src/TMxpMudlet.cpp")
@@ -51,3 +54,11 @@ add_test(NAME TMxpTagParserTest COMMAND TMxpTagParserTest)
 
 add_executable(TMxpSendTagHandlerTest TMxpSendTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpSendTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
 add_test(NAME TMxpSendTagHandlerTest COMMAND TMxpSendTagHandlerTest)
+
+add_executable(TLuaInterfaceTest TLuaInterfaceTest.cpp ../src/LuaInterface.cpp ../src/TVar.cpp ../src/VarUnit.cpp)
+add_test(NAME TLuaInterfaceTest COMMAND TLuaInterfaceTest)
+
+find_package(Lua51 REQUIRED)
+target_link_libraries(
+    TLuaInterfaceTest
+    LUA51::LUA51)

@@ -101,7 +101,6 @@ QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
         }
         kS[x][y].insert(z, id);
     }
-    //qDebug()<< "kS="<<kS;
     return kS;
 }
 
@@ -640,7 +639,6 @@ void TArea::writeJsonArea(QJsonArray& array) const
     }
     QJsonValue roomsValue{roomsArray};
     areaObj.insert(QLatin1String("rooms"), roomsValue);
-    mpMap->getCurrentProgressRoomCount();
 
     // Process the labels after the rooms so that the first area shows something
     // quickly (from the rooms) even if it has a number of labels to do.
@@ -702,7 +700,6 @@ void TArea::writeJsonUserData(QJsonObject& obj) const
 // Takes a userData object and parses all its elements
 void TArea::readJsonUserData(const QJsonObject& obj)
 {
-    QMap<QString, QString> results;
     if (obj.isEmpty()) {
         // Skip doing anything more if there is nothing to do:
         return;

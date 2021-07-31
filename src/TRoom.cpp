@@ -128,7 +128,7 @@ QString TRoom::dirCodeToShortString(const int dirCode)
     case DIR_EAST:      return QLatin1String("east");
     case DIR_WEST:      return QLatin1String("west");
     case DIR_SOUTH:     return QLatin1String("south");
-    case DIR_SOUTHEAST: return QLatin1String("southeastst");
+    case DIR_SOUTHEAST: return QLatin1String("southeast");
     case DIR_SOUTHWEST: return QLatin1String("southwest");
     case DIR_UP:        return QLatin1String("up");
     case DIR_DOWN:      return QLatin1String("down");
@@ -164,7 +164,7 @@ int TRoom::stringToDirCode(const QString& string) const
     if (string == QLatin1String("northwest")) {
         return DIR_NORTHWEST;
     }
-    if (string == QLatin1String("southeastst")) {
+    if (string == QLatin1String("southeast")) {
         return DIR_SOUTHEAST;
     }
     if (string == QLatin1String("southwest")) {
@@ -727,7 +727,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             if (cmd.startsWith(QLatin1String("1"))) {
                 // Is locked:
                 mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
-                mSpecialExitLocks.insert(cmd);
+                mSpecialExitLocks.insert(cmd.mid(1));
             } else if (Q_LIKELY(cmd.startsWith(QLatin1String("0")))) {
                 // Is not locked:
                 mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
@@ -1761,8 +1761,8 @@ int TRoom::readJsonRoom(const QJsonArray& array, const int index, const int area
         weight = roomObj.value(QLatin1String("weight")).toInt();
     }
 
-    if (roomObj.contains(QLatin1String("symbol")) && roomObj.value(QLatin1String("symbol")).isString()) {
-        mSymbol = roomObj.value(QLatin1String("symbol")).toString();
+    if (roomObj.contains(QLatin1String("symbol")) && roomObj.value(QLatin1String("symbol")).isObject()) {
+        readJsonSymbol(roomObj);
     }
 
     if (roomObj.contains(QLatin1String("environment")) && roomObj.value(QLatin1String("environment")).isDouble()) {
@@ -2353,5 +2353,13 @@ void TRoom::writeJsonSymbol(QJsonObject& roomObj) const
 
 void TRoom::readJsonSymbol(const QJsonObject& roomObj)
 {
-    Q_UNUSED(roomObj);
+    const QJsonObject symbolObj{roomObj.value(QLatin1String("symbol")).toObject()};
+    if (symbolObj.contains(QLatin1String("text")) && symbolObj.value(QLatin1String("text")).isString()) {
+        mSymbol = symbolObj.value(QLatin1String("text")).toString();
+    }
+
+    QColor color = TMap::readJsonColor(symbolObj);
+    if (color.isValid()) {
+        mSymbolColor = color;
+    }
 }

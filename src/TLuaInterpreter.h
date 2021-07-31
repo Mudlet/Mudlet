@@ -30,6 +30,7 @@
 
 #include "pre_guard.h"
 #include <QEvent>
+#include <QFileSystemWatcher>
 #include <QNetworkAccessManager>
 #include <QNetworkCookieJar>
 #include <QNetworkCookie>
@@ -59,6 +60,7 @@ extern "C" {
 
 
 class Host;
+class TAction;
 class TEvent;
 class TLuaThread;
 class TMapLabel;
@@ -69,6 +71,8 @@ class TTrigger;
 #define USERCOMMAND 2
 #define PROMPT 3
 #define RAWDATA 4
+
+using NamedMatchesRanges = QMap<QString, QPair<int, int>>;
 
 
 class TLuaInterpreter : public QThread
@@ -88,6 +92,8 @@ public:
     void msdp2Lua(const char*);
     void initLuaGlobals();
     void initIndenterGlobals();
+    lua_State* getLuaGlobalState();
+
     bool call(const QString& function, const QString& mName, const bool muteDebugOutput = false);
     std::pair<bool, bool> callReturnBool(const QString& function, const QString& mName);
     bool callMulti(const QString& function, const QString& mName);
@@ -99,7 +105,6 @@ public:
     std::pair<bool, bool> callLuaFunctionReturnBool(void* pT);
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
-    bool compileScript(const QString&);
     void setAtcpTable(const QString&, const QString&);
     void signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions);
     void setGMCPTable(QString&, const QString&);
@@ -115,12 +120,13 @@ public:
     void set_lua_string(const QString& varName, const QString& varValue);
     void set_lua_table(const QString& tableName, QStringList& variableList);
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
-    void setCaptureNameGroups(const NameGroupMatches&);
+    void setCaptureNameGroups(const NameGroupMatches&, const NamedMatchesRanges&);
     void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<NameGroupMatches>& nameMatches);
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
     bool callEventHandler(const QString& function, const TEvent& pE);
     bool callCmdLineAction(const int func, QString);
+    bool callAnonymousFunction(const int func, QString name);
     bool callLabelCallbackEvent(const int func, const QEvent* qE = nullptr);
     static QString dirToString(lua_State*, int);
     static int dirToNumber(lua_State*, int);
@@ -175,6 +181,12 @@ public:
     static int enableModuleSync(lua_State* L);
     static int disableModuleSync(lua_State* L);
     static int getModuleSync(lua_State* L);
+    static int getPackages(lua_State* L);
+    static int getModules(lua_State* L);
+    static int getPackageInfo(lua_State* L);
+    static int getModuleInfo(lua_State* L);
+    static int setPackageInfo(lua_State* L);
+    static int setModuleInfo(lua_State* L);
     static int lockExit(lua_State*);
     static int lockSpecialExit(lua_State*);
     static int hasExitLock(lua_State*);
@@ -397,6 +409,7 @@ public:
     static int selectCurrentLine(lua_State*);
     static int spawn(lua_State*);
     static int getButtonState(lua_State*);
+    static int setButtonState(lua_State*);
     static int showToolBar(lua_State*);
     static int hideToolBar(lua_State*);
     static int loadReplay(lua_State*);
@@ -576,6 +589,7 @@ public:
     static int getTextFormat(lua_State*);
     static int getWindowsCodepage(lua_State*);
     static int getHTTP(lua_State* L);
+    static int customHTTP(lua_State* L);
     static int putHTTP(lua_State* L);
     static int postHTTP(lua_State* L);
     static int deleteHTTP(lua_State* L);
@@ -588,12 +602,18 @@ public:
     static int getMapRoomExitsColor(lua_State*);
     static int setMapRoomExitsColor(lua_State*);
     static int showNotification(lua_State*);
-    static int exportJsonMap(lua_State*);
-    static int importJsonMap(lua_State*);
+    static int saveJsonMap(lua_State*);
+    static int loadJsonMap(lua_State*);
     static int registerMapInfo(lua_State*);
     static int killMapInfo(lua_State*);
     static int enableMapInfo(lua_State*);
     static int disableMapInfo(lua_State*);
+    static int getProfileTabNumber(lua_State*);
+    static int addFileWatch(lua_State*);
+    static int removeFileWatch(lua_State*);
+    static int addMouseEvent(lua_State* L);
+    static int removeMouseEvent(lua_State* L);
+    static int getMouseEvents(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
 
@@ -603,10 +623,12 @@ public:
 
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);
+    void slot_pathChanged(const QString& path);
     void slotPurge();
     void slotDeleteSender(int, QProcess::ExitStatus);
 
 private:
+    bool callReference(lua_State *L, QString name, int parameters);
     static bool getVerifiedBool(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static QString getVerifiedString(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static int getVerifiedInt(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
@@ -626,6 +648,7 @@ private:
     void setupLanguageData();
     QString readScriptFile(const QString& path) const;
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
+    static int performHttpRequest(lua_State *L, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb);
     void handleHttpOK(QNetworkReply*);
     static void raiseDownloadProgressEvent(lua_State*, QString, qint64, qint64);
 #if defined(Q_OS_WIN32)
@@ -638,15 +661,19 @@ private:
     bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
     void insertNativeSeparatorsFunction(lua_State* L);
     static void pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel& label);
+    static std::pair<int, TAction*> getTActionFromIdOrName(lua_State*, const int, const char*);
+
     const int LUA_FUNCTION_MAX_ARGS = 50;
 
 
     QNetworkAccessManager* mpFileDownloader;
+    QFileSystemWatcher* mpFileSystemWatcher;
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
     QVector<QPair<QString, QString>> mCapturedNameGroups;
+    QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
 
     QMap<QNetworkReply*, QString> downloadMap;

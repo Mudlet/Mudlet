@@ -57,8 +57,10 @@ set(mudlet_SRCS
     dlgIRC.cpp
     dlgKeysMainArea.cpp
     dlgMapper.cpp
+    dlgModuleManager.cpp
     dlgNotepad.cpp
     dlgPackageExporter.cpp
+    dlgPackageManager.cpp
     dlgProfilePreferences.cpp
     dlgRoomExits.cpp
     dlgRoomSymbol.cpp
@@ -160,8 +162,10 @@ set(mudlet_UIS
     ui/irc.ui
     ui/keybindings_main_area.ui
     ui/main_window.ui
+    ui/module_manager.ui
     ui/mapper.ui
     ui/notes_editor.ui
+    ui/package_manager.ui
     ui/profile_preferences.ui
     ui/room_exits.ui
     ui/room_symbol.ui
@@ -190,8 +194,10 @@ set(mudlet_HDRS
     dlgIRC.h
     dlgKeysMainArea.h
     dlgMapper.h
+    dlgModuleManager.h
     dlgNotepad.h
     dlgPackageExporter.h
+    dlgPackageManager.h
     dlgProfilePreferences.h
     dlgRoomExits.h
     dlgRoomSymbol.h
@@ -356,11 +362,10 @@ add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS}
                       ${mudlet_UIS})
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
-set_target_properties(
-  mudlet
-  PROPERTIES AUTOMOC ON AUTOUIC ON AUTOUIC_SEARCH_PATHS
-                                   "${CMAKE_CURRENT_SOURCE_DIR}/ui" AUTORCC ON
-             POSITION_INDEPENDENT_CODE ON)
+set_target_properties(mudlet PROPERTIES
+  AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
+  AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
+  AUTOGEN_ORIGIN_DEPENDS OFF)
 
 if(USE_FONTS)
   target_compile_definitions(mudlet PRIVATE INCLUDE_FONTS)
@@ -446,16 +451,42 @@ if(APPLE)
   if(USE_UPDATER)
     target_link_libraries(mudlet cocoa-qt-glue "-framework AppKit")
   endif(USE_UPDATER)
-  set_target_properties(mudlet PROPERTIES MACOSX_BUNDLE ON
-                                          MACOSX_BUNDLE_BUNDLE_NAME Mudlet)
 
-#  set_source_files_properties(${QT_TRANSLATIONS} PROPERTIES MACOSX_PACKAGE_LOCATION translations)
+  set_target_properties(mudlet PROPERTIES
+    MACOSX_BUNDLE ON
+    MACOSX_BUNDLE_BUNDLE_NAME Mudlet
+    MACOSX_BUNDLE_BUNDLE_VERSION ${APP_VERSION}${APP_BUILD}
+    MACOSX_BUNDLE_GUI_IDENTIFIER org.mudlet.mudlet
+    MACOSX_BUNDLE_SHORT_VERSION_STRING ${APP_VERSION}
+  )
+
+  if(${APP_BUILD} MATCHES "-ptb.+")
+    set_target_properties(mudlet PROPERTIES
+      MACOSX_BUNDLE_ICON_FILE mudlet_ptb.icns
+      MACOSX_BUNDLE_LONG_VERSION_STRING ${APP_VERSION}${APP_BUILD}
+    )
+    file(GLOB ICON_FILE "icons/mudlet_ptb.icns")
+  elseif((${APP_BUILD} MATCHES "-dev.+") OR (${APP_BUILD} MATCHES "-test.+"))
+    set_target_properties(mudlet PROPERTIES
+      MACOSX_BUNDLE_ICON_FILE mudlet_dev.icns
+      MACOSX_BUNDLE_LONG_VERSION_STRING ${APP_VERSION}${APP_BUILD}
+    )
+    file(GLOB ICON_FILE "icons/mudlet_dev.icns")
+  else()
+    set_target_properties(mudlet PROPERTIES
+      MACOSX_BUNDLE_ICON_FILE mudlet.icns
+      MACOSX_BUNDLE_LONG_VERSION_STRING ${APP_VERSION}
+    )
+    file(GLOB ICON_FILE "icons/mudlet.icns")
+  endif()
+
   file(GLOB_RECURSE MUDLET_LUA_FILES LIST_DIRECTORIES true "mudlet-lua/*")
   file(GLOB_RECURSE LUA_TRANSLATIONS LIST_DIRECTORIES true "../translations/lua/*")
   file(GLOB DIC_FILES "*.dic")
   file(GLOB AFF_FILES "*.aff")
-  target_sources(mudlet PRIVATE ${MUDLET_LUA_FILES} ${LUA_TRANSLATIONS} ${DIC_FILES} ${AFF_FILES})
-  
+  target_sources(mudlet PRIVATE ${MUDLET_LUA_FILES} ${LUA_TRANSLATIONS} ${DIC_FILES} ${AFF_FILES} ${ICON_FILE})
+
+  set_source_files_properties(${DIC_FILES} ${AFF_FILES} ${ICON_FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
   foreach(FILE ${MUDLET_LUA_FILES})
     string(REPLACE ${CMAKE_CURRENT_SOURCE_DIR} "" PATH_IN_BUNDLE ${FILE} )
     get_filename_component(PATH_IN_BUNDLE "${PATH_IN_BUNDLE}" DIRECTORY)
@@ -468,7 +499,6 @@ if(APPLE)
     get_filename_component(PATH_IN_BUNDLE "${PATH_IN_BUNDLE}" DIRECTORY)
     set_source_files_properties(${FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/translations/${PATH_IN_BUNDLE})
   endforeach()
-  set_source_files_properties(${DIC_FILES} ${AFF_FILES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 endif()
 
 target_compile_options(mudlet PRIVATE -Wno-deprecated)

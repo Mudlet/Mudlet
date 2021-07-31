@@ -83,7 +83,6 @@ public slots:
     void slot_update_autologin(int state);
     void slot_update_autoreconnect(int state);
     void slot_update_discord_optin(int state);
-    void slot_connectToServer();
     void slot_load();
     void slot_cancel();
     void slot_copy_profile();
@@ -116,6 +115,7 @@ private:
     void writeSecurePassword(const QString& profile, const QString& pass) const;
     void deleteSecurePassword(const QString& profile) const;
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
+    void reallyDeleteProfile(const QString& profile);
     void setItemName(QListWidgetItem*, const QString&) const;
     QIcon customIcon(const QString&) const;
     void addLetterToProfileSearch(const int);
