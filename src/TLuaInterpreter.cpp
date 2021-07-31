@@ -1300,40 +1300,60 @@ int TLuaInterpreter::spawn(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCaptureGroup
-int TLuaInterpreter::selectCaptureGroup(lua_State* L)
+int TLuaInterpreter::selectCaptureGroup(lua_State *L)
 {
-    int captureGroup = getVerifiedInt(L, __func__, 1, "capture group");
-    Host& host = getHostFromLua(L);
-    if (captureGroup < 1) {
-        lua_pushnumber(L, -1);
-        return 1;
+    if (!(lua_isnumber(L, 1) || lua_isstring(L, 1))) {
+        lua_pushfstring(L,
+                        "selectCaptureGroup: bad argument #1 type (capture group as number or capture group name as string expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     }
-    // We want capture groups to start with 1 instead of 0 so predecrement
-    // luaNumOfMatch :
-    if (--captureGroup < static_cast<int>(host.getLuaInterpreter()->mCaptureGroupList.size())) {
-        TLuaInterpreter* pL = host.getLuaInterpreter();
-        auto iti = pL->mCaptureGroupPosList.begin();
-        auto its = pL->mCaptureGroupList.begin();
-        int begin = *iti;
-        std::string& s = *its;
 
-        for (int i = 0; iti != pL->mCaptureGroupPosList.end(); ++iti, ++i) {
+    Host &host = getHostFromLua(L);
+    TLuaInterpreter *pL = host.getLuaInterpreter();
+    int begin = 0;
+    int length = 0;
+
+    if (lua_isnumber(L, 1)) {
+        auto captureGroup = lua_tonumber(L, 1);
+        if (captureGroup < 1) {
+            lua_pushnumber(L, -1);
+            return 1;
+        }
+        // We want capture groups to start with 1 instead of 0 so predecrement
+        // luaNumOfMatch :
+        if (--captureGroup < static_cast<int>(host.getLuaInterpreter()->mCaptureGroupList.size())) {
+            auto iti = pL->mCaptureGroupPosList.begin();
+            auto its = pL->mCaptureGroupList.begin();
             begin = *iti;
-            if (i >= captureGroup) {
-                break;
-            }
-        }
-        for (int i = 0; its != pL->mCaptureGroupList.end(); ++its, ++i) {
-            s = *its;
-            if (i >= captureGroup) {
-                break;
-            }
-        }
+            std::string &s = *its;
 
-        int length = QString::fromStdString(s).size();
-        if (mudlet::debugMode) {
-            TDebug(Qt::white, Qt::red) << "selectCaptureGroup(" << begin << ", " << length << ")\n" >> &host;
+            for (int i = 0; iti != pL->mCaptureGroupPosList.end(); ++iti, ++i) {
+                begin = *iti;
+                if (i >= captureGroup) {
+                    break;
+                }
+            }
+            for (int i = 0; its != pL->mCaptureGroupList.end(); ++its, ++i) {
+                s = *its;
+                if (i >= captureGroup) {
+                    break;
+                }
+            }
+
+            length = QString::fromStdString(s).size();
+            if (mudlet::debugMode) {
+                TDebug(Qt::white, Qt::red) << "selectCaptureGroup(" << begin << ", " << length << ")\n" >> &host;
+            }
         }
+    } else if (lua_isstring(L, 1)) {
+        auto name = lua_tostring(L, 1);
+        if (pL->mCapturedNameGroupsPosList.contains(name)) {
+            begin = pL->mCapturedNameGroupsPosList.value(name).first;
+            length = pL->mCapturedNameGroupsPosList.value(name).second;
+        }
+    }
+    if (length > 0) {
         int pos = host.mpConsole->selectSection(begin, length);
         lua_pushnumber(L, pos);
     } else {
@@ -11751,9 +11771,10 @@ void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList
      */
 }
 
-void TLuaInterpreter::setCaptureNameGroups(const NameGroupMatches& nameGroups)
+void TLuaInterpreter::setCaptureNameGroups(const NameGroupMatches& nameGroups, const NamedMatchesRanges& namePositions)
 {
     mCapturedNameGroups = nameGroups;
+    mCapturedNameGroupsPosList = namePositions;
 }
 
 // No documentation available in wiki - internal function
@@ -11764,6 +11785,7 @@ void TLuaInterpreter::clearCaptureGroups()
     mMultiCaptureGroupList.clear();
     mMultiCaptureGroupPosList.clear();
     mCapturedNameGroups.clear();
+    mCapturedNameGroupsPosList.clear();
     mMultiCaptureNameGroups.clear();
 
     lua_State* L = pGlobalLua;
@@ -11783,6 +11805,12 @@ void TLuaInterpreter::adjustCaptureGroups(int x, int a)
         if (it >= x) {
             it += a;
         }
+    }
+
+    NamedMatchesRanges::iterator i;
+    for (i = mCapturedNameGroupsPosList.begin(); i != mCapturedNameGroupsPosList.cend(); ++i) {
+        i.value().first += a;
+        i.value().second += a;
     }
 }
 
