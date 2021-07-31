@@ -7884,7 +7884,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         return lua_error(L);
     }
     if (lua_isnumber(L, 2)) {
-        id_to = lua_tointeger(L, 2);
+        id_to = static_cast<int>(lua_tointeger(L, 2));
         TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(id_to);
         if (!pR_to) {
             return warnArgumentValue(L, __func__, QStringLiteral("target room id %1 does not exist").arg(id_to));
@@ -7950,7 +7950,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                         y.append(lua_tonumber(L, -1));
                         break;
                     case 3:
-                        z.append(lua_tonumber(L, -1));
+                        z.append(static_cast<int>(lua_tonumber(L, -1)));
                         break;
                     default:; // No-op
                     }
@@ -7958,6 +7958,16 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                 lua_pop(L, 1);
             }
             lua_pop(L, 1);
+        }
+        if (!i || !x.count()) {
+            // If there is only an empty sub-table inside the table then i is
+            // one but there is nothing in any of the QLists and things will
+            // still blow up as per Issue #5272 - so also check for at least one
+            // x-coordinate value:
+            return warnArgumentValue(L, __func__, "missing coordinates to create the line to");
+        }
+        if (x.count() != y.count() || x.count() != z.count()) {
+            return warnArgumentValue(L, __func__, "mismatch in numbers of coordinates for the points for the custom line given in table as second argument; each must contain three coordinates, i.e. x, y AND z numeric values as a sub-table");
         }
     }
 
@@ -7967,7 +7977,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         return lua_error(L);
     }
     if (!pR->hasExitOrSpecialExit(direction)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("room id %1 does not have an exit that can be identified from '%2'")
+        return warnArgumentValue(L, __func__, QStringLiteral("room id %1 does not have an exit in a direction that can be identified from '%2'")
             .arg(QString::number(id_from), lua_tostring(L, 3)));
     }
 
@@ -7989,7 +7999,8 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     }
 
     if (!lua_istable(L, 5)) {
-        lua_pushfstring(L, "addCustomLine: bad argument #5 type (RGB color components as a table expected, got %s!)", luaL_typename(L, 4));
+        lua_pushfstring(L, "addCustomLine: bad argument #5 type (RGB color components as a table expected, got %s!)", luaL_typename(L, 5));
+        return lua_error(L);
     } else {
         lua_pushnil(L);
         int tind = 0;
@@ -7997,28 +8008,28 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
             if (++tind <= 3) {
                 if (lua_type(L, -1) != LUA_TNUMBER) {
                     lua_pushfstring(L,
-                                    "addCustomLine: bad argument #4 table item #%d type (%s color component as a number between 0 and 255 expected, got %s!)",
+                                    "addCustomLine: bad argument #5 table item #%d type (%s color component as a number between 0 and 255 expected, got %s!)",
                                     tind,
                                     (tind == 1 ? "red" : (tind == 2 ? "green" : "blue")),
                                     luaL_typename(L, -1));
                     return lua_error(L);
                 }
 
-                qint64 component = lua_tonumber(L, -1);
+                qint64 component = lua_tointeger(L, -1);
                 if (component < 0 || component > 255) {
                     return warnArgumentValue(L, __func__, QStringLiteral(
-                        "%1 color component in the table of the fourth argument is %2 which is out of the valid range (0 to 255)")
+                        "%1 color component in the table of the fifth argument is %2 which is out of the valid range (0 to 255)")
                         .arg((tind == 1 ? "red" : (tind == 2 ? "green" : "blue")), QString::number(component)));
                 }
                 switch (tind) {
                 case 1:
-                    r = component;
+                    r = static_cast<int>(component);
                     break;
                 case 2:
-                    g = component;
+                    g = static_cast<int>(component);
                     break;
                 case 3:
-                    b = component;
+                    b = static_cast<int>(component);
                     break;
                 default:
                     Q_UNREACHABLE();
