@@ -97,6 +97,10 @@ jobs:
         rm -rf boost_*/* download.tar.bz2 download.tar
       shell: bash
 
+    # workaround a poor interaction between github actions/cmake/vcpkg, see https://github.com/lukka/run-vcpkg/issues/88#issuecomment-885758902
+    - name: Use CMake 3.20.1
+      uses: lukka/get-cmake@v3.20.1
+
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v7
@@ -115,8 +119,10 @@ jobs:
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
+        # add new tap to brew for installing gon
+        brew tap mitchellh/gon
         # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip ccache luarocks expect
+        brew install pkg-config libzzip libzip ccache luarocks expect mitchellh/gon/gon
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
@@ -292,6 +298,8 @@ jobs:
         DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
         MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
+        AC_USERNAME: ${{secrets.APPLE_USERNAME}}
+        AC_PASSWORD: ${{secrets.APPLE_PASSWORD}}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v2

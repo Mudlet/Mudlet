@@ -1557,6 +1557,7 @@ unix:!macx {
 
 
 DISTFILES += \
+    CF-loader.xml \
     CMakeLists.txt \
     .clang-format \
     ../.github/pr-labeler.yml \
@@ -1595,6 +1596,8 @@ DISTFILES += \
     ../CI/appveyor.set-build-info.ps1 \
     ../CI/appveyor.functions.ps1 \
     ../CI/appveyor.build.ps1 \
+    mudlet-lua/lua/generic-mapper/generic_mapper.xml \
+    mudlet-lua/lua/generic-mapper/versions.lua \
     mudlet-lua/lua/ldoc.css \
     mudlet-lua/genDoc.sh \
     mudlet-lua/tests/README.md \
