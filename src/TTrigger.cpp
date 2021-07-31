@@ -300,14 +300,12 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     }
 
     int numberOfCaptureGroups = 0;
-    unsigned char* name_table;
-    int namecount;
-    int name_entry_size;
 
     int subject_length = strlen(subject);
     int rc, i;
     std::list<std::string> captureList;
     std::list<int> posList;
+    QMap<QString, QPair<int, int>> namePositions;
     NameGroupMatches nameGroups;
     int ovector[MAX_CAPTURE_GROUPS * 3];
 
@@ -345,20 +343,28 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
             TDebug(Qt::darkMagenta, Qt::black) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
         }
     }
+
+    int namecount; //NOLINT(cppcoreguidelines-init-variables)
+    int name_entry_size; //NOLINT(cppcoreguidelines-init-variables)
+    char* tabptr; //NOLINT(cppcoreguidelines-init-variables)
+
     pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMECOUNT, &namecount);
 
     if (namecount > 0) {
         // Based on snippet https://github.com/vmg/pcre/blob/master/pcredemo.c#L216
         // Retrieves char table end entry size and extracts name of group  and captures from
-        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &name_table);
+        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &tabptr);
         pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
-        char* tabptr = reinterpret_cast<char*>(name_table);
         for (i = 0; i < namecount; i++) {
             int n = (tabptr[0] << 8) | tabptr[1];
-            auto name = QString::fromUtf8( tabptr + 2, name_entry_size - 3).trimmed();
-            auto capture = QString::fromUtf8(subject + ovector[2*n], ovector[2*n+1] - ovector[2*n]);
+            auto name = QString::fromUtf8(&tabptr[2]).trimmed(); //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
+            auto* substring_start = subject + ovector[2*n]; //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
+            auto substring_length = ovector[2*n+1] - ovector[2*n]; //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+            auto utf16_pos = toMatch.indexOf(QString(substring_start));
+            auto capture = QString::fromUtf8(substring_start, substring_length);
             nameGroups << qMakePair(name, capture);
             tabptr += name_entry_size;
+            namePositions.insert(name, qMakePair(utf16_pos + posOffset, substring_length));
         }
     }
     if (mIsColorizerTrigger || mFilterTrigger) {
@@ -468,7 +474,7 @@ END : {
     } else {
         TLuaInterpreter* pL = mpHost->getLuaInterpreter();
         pL->setCaptureGroups(captureList, posList);
-        pL->setCaptureNameGroups(nameGroups);
+        pL->setCaptureNameGroups(nameGroups, namePositions);
         execute();
         pL->clearCaptureGroups();
         if (mFilterTrigger) {

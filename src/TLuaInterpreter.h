@@ -72,6 +72,8 @@ class TTrigger;
 #define PROMPT 3
 #define RAWDATA 4
 
+using NamedMatchesRanges = QMap<QString, QPair<int, int>>;
+
 
 class TLuaInterpreter : public QThread
 {
@@ -118,7 +120,7 @@ public:
     void set_lua_string(const QString& varName, const QString& varValue);
     void set_lua_table(const QString& tableName, QStringList& variableList);
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
-    void setCaptureNameGroups(const NameGroupMatches&);
+    void setCaptureNameGroups(const NameGroupMatches&, const NamedMatchesRanges&);
     void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<NameGroupMatches>& nameMatches);
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
@@ -671,6 +673,7 @@ private:
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
     QVector<QPair<QString, QString>> mCapturedNameGroups;
+    QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
 
     QMap<QNetworkReply*, QString> downloadMap;
