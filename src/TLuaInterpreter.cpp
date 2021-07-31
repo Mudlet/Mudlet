@@ -7849,7 +7849,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
             // one but there is nothing in any of the QLists and things will
             // still blow up as per Issue #5272 - so also check for at least one
             // x-coordinate value:
-            return warnArgumentValue(L, __func__, "no coordinate of points for the custom line given in table as second argument; at least one set of coordinates as a sub-table is required");
+            return warnArgumentValue(L, __func__, "missing coordinates to create the line to");
         }
         if (x.count() != y.count() || x.count() != z.count()) {
             return warnArgumentValue(L, __func__, "mismatch in numbers of coordinates for the points for the custom line given in table as second argument; each must contain three coordinates, i.e. x, y AND z numeric values as a sub-table");
