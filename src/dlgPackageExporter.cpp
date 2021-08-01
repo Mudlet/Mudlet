@@ -382,7 +382,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
                 QString fname = mDescriptionImages.at(i);
                 QFileInfo info(fname);
-                fname.replace(" ", "%20");
+                fname = fname.toHtmlEscaped();
                 plainText.replace(QStringLiteral("$%1").arg(info.fileName()), fname);
             }
             ui->textEdit_description->setMarkdown(plainText);
@@ -1445,7 +1445,7 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
             for (int i = my_parent->mDescriptionImages.size() - 1; i >= 0; i--) {
                 QString fname = my_parent->mDescriptionImages.at(i);
                 QFileInfo info(fname);
-                fname.replace(" ", "%20");
+                fname = fname.toHtmlEscaped();
                 plainText.replace(QStringLiteral("$%1").arg(info.fileName()), fname);
             }
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
