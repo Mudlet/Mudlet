@@ -3056,7 +3056,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     if (mapObj.contains(QLatin1String("customEnvColors")) && mapObj.value(QLatin1String("customEnvColors")).isArray()) {
         const QJsonArray customEnvColorArray = mapObj.value(QLatin1String("customEnvColors")).toArray();
         if (!customEnvColorArray.isEmpty()) {
-            for (auto customEnvColorValue : qAsConst(customEnvColorArray)) {
+            for (const auto& customEnvColorValue : qAsConst(customEnvColorArray)) {
                 const QJsonObject customEnvColorObj{customEnvColorValue.toObject()};
                 if (customEnvColorObj.contains(QLatin1String("id"))
                     && ((customEnvColorObj.contains(QLatin1String("color32RGBA")) && customEnvColorObj.value(QLatin1String("color32RGBA")).isArray())
@@ -3132,6 +3132,12 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     // This is it - the point at which the new map gets activated:
     TRoomDB* pOldRoomDB = mpRoomDB;
     mpRoomDB = pNewRoomDB;
+    // Need to update the master copy of these details in the Host class:
+    mpHost->setPlayerRoomStyleDetails(mPlayerRoomStyle, mPlayerRoomOuterDiameterPercentage, mPlayerRoomInnerDiameterPercentage, mPlayerRoomOuterColor, mPlayerRoomInnerColor);
+    // And redraw the indicator if a 2D map is being shown:
+    if (mpMapper && mpMapper->mp2dMap) {
+        mpMapper->mp2dMap->setPlayerRoomStyle(mPlayerRoomStyle);
+    }
     delete pOldRoomDB;
     mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
     mpProgressDialog->close();

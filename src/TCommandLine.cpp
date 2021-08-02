@@ -74,7 +74,7 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
 
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setCenterOnScroll(false);
-    setWordWrapMode(QTextOption::WrapAnywhere);
+    setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
     setContentsMargins(0, 0, 0, 0);
     // clear console selection if selection in command line changes
     connect(this, &QPlainTextEdit::copyAvailable, this, &TCommandLine::slot_clearSelection);
@@ -574,15 +574,17 @@ void TCommandLine::adjustHeight()
         return;
     }
     int fontH = QFontMetrics(font()).height();
+    int marginH = lines > 1 ? fontH : 0;
     if (lines < 1) {
         lines = 1;
     }
     if (lines > 10) {
         lines = 10;
     }
-    int _baseHeight = fontH * lines;
-    int _height = _baseHeight + fontH;
-
+    int _height = fontH * lines + marginH;
+    if (_height < 31) {
+        _height = 31; // Minimum usable height taken from buttonLayer in TConsole.cpp
+    }
     if (_height < mpHost->commandLineMinimumHeight) {
         _height = mpHost->commandLineMinimumHeight;
     }

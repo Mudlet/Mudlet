@@ -1367,6 +1367,17 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             popup->addAction(actionRestoreMainToolBar);
         }
 
+        // Add user actions
+        QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
+        while (it.hasNext()) {
+            it.next();
+            QStringList actionInfo = it.value();
+            const QString &actionName = actionInfo.at(1);
+            QAction * action = new QAction(actionName, this);
+            action->setToolTip(actionInfo.at(2));
+            popup->addAction(action);
+            connect(action, &QAction::triggered, this, [this, actionName] { slot_mouseAction(actionName); });
+        }
         popup->popup(mapToGlobal(event->pos()), action);
         event->accept();
         return;
@@ -2400,6 +2411,29 @@ void TTextEdit::slot_changeDebugShowAllProblemCodepoints(const bool state)
     if (mShowAllCodepointIssues != state) {
         mShowAllCodepointIssues = state;
     }
+}
+
+void TTextEdit::slot_mouseAction(const QString &uniqueName)
+{
+    TEvent event {};
+    QStringList mouseEvent = mpHost->mConsoleActions[uniqueName];
+    event.mArgumentList.append(mouseEvent[0]);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(uniqueName);
+
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(mpConsole->mConsoleName);
+
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(mPA.x()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(mPA.y()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(mPB.x()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(mPB.y()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mpHost->raiseEvent(event);
 }
 
 // Originally this was going to be part of the destructor - but it was unable
