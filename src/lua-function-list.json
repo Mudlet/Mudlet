@@ -333,6 +333,7 @@
     "searchAreaUserData": "searchRoom (room number | room name[, case-sensitive [, exact-match]])",
     "searchRoomUserData": "searchRoomUserData(key, value)",
     "selectCaptureGroup": "selectCaptureGroup(groupNumber)",
+    "selectCmdLineText": "selectCmdLineText()",
     "selectCurrentLine": "selectCurrentLine([windowName])",
     "selectSection": "selectSection( [windowName], fromPosition, length )",
     "selectString": "selectString( [windowName], text, number_of_match )",

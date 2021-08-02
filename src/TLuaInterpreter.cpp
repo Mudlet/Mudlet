@@ -10367,6 +10367,20 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
     return 0;
 }
 
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCmdLineText
+int TLuaInterpreter::selectCmdLineText(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString name = "main";
+    if (n >= 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    auto commandline = COMMANDLINE(L, name);
+    commandline->selectAll();
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLine
 int TLuaInterpreter::getCmdLine(lua_State* L)
 {
@@ -13767,6 +13781,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "clearRoomUserDataItem", TLuaInterpreter::clearRoomUserDataItem);
     lua_register(pGlobalLua, "downloadFile", TLuaInterpreter::downloadFile);
     lua_register(pGlobalLua, "appendCmdLine", TLuaInterpreter::appendCmdLine);
+    lua_register(pGlobalLua, "selectCmdLineText", TLuaInterpreter::selectCmdLineText);
     lua_register(pGlobalLua, "getCmdLine", TLuaInterpreter::getCmdLine);
     lua_register(pGlobalLua, "addCmdLineSuggestion", TLuaInterpreter::addCmdLineSuggestion);
     lua_register(pGlobalLua, "removeCmdLineSuggestion", TLuaInterpreter::removeCmdLineSuggestion);
