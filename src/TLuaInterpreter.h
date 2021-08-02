@@ -241,6 +241,7 @@ public:
     static int getSpecialExitsSwap(lua_State*);
     static int appendCmdLine(lua_State*);
     static int getCmdLine(lua_State* L);
+    static int selectCmdLineText(lua_State* L);
     static int addCmdLineSuggestion(lua_State* L);
     static int removeCmdLineSuggestion(lua_State* L);
     static int clearCmdLineSuggestions(lua_State* L);
