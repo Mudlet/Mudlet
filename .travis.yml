@@ -11,7 +11,6 @@ dist: xenial
 addons:
   apt:
     sources: &add-sources
-    - sourceline: 'ppa:beineri/opt-qt-5.11.3-xenial'
     - sourceline: 'ppa:beineri/opt-qt-5.12.9-xenial'
     - sourceline: 'ppa:ondrej/php' # more-or-less up to date libzip
     - sourceline: 'ppa:ubuntu-toolchain-r/test' # gcc 7
@@ -50,20 +49,6 @@ env:
 git:
   submodules: false # We selectively pull in the wanted submodules ourselves now
 jobs:
-  include:
-  - os: osx
-    osx_image: xcode10.1
-    compiler: clang
-    env:
-    - Q_OR_C_MAKE=qmake
-      DEPLOY=deploy
-
-  - os: osx
-    osx_image: xcode10.1
-    compiler: clang
-    env:
-    - Q_OR_C_MAKE=cmake
-
   - os: linux
     compiler: gcc
     env:
@@ -82,55 +67,6 @@ jobs:
         - qt512speech
         - qt512translations
 
-  - os: linux
-    compiler: gcc
-    env:
-    - Q_OR_C_MAKE=cmake
-      QT_VERSION=512
-    addons:
-      apt:
-        sources: *add-sources
-        packages:
-        - *qt512-packages
-
-  - os: linux
-    compiler: clang
-    env:
-    - Q_OR_C_MAKE=qmake
-      QT_VERSION=512
-    addons:
-      apt:
-        sources: *add-sources
-        packages:
-        - *qt512-packages
-
-  - os: linux
-    compiler: clang
-    env:
-    - Q_OR_C_MAKE=cmake
-      QT_VERSION=512
-    addons:
-      apt:
-        sources: *add-sources
-        packages:
-        - *qt512-packages
-
-  - os: linux
-    compiler: gcc
-    env:
-    - Q_OR_C_MAKE=cmake
-    - WITH_UPDATER=no
-    - WITH_3DMAPPER=no
-    - WITH_FONTS=no
-    - QT_VERSION=511 # actually Qt 5.11, used to check minimum supported Qt works
-    addons:
-      apt:
-        sources: *add-sources
-        packages: &qt511-packages
-        - *common-packages
-        - qt511base
-        - qt511multimedia
-        - qt511tools
 before_cache:
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew cleanup; fi
 before_install:

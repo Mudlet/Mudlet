@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018, 2020 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,7 +27,6 @@
 
 #include "pre_guard.h"
 #include <QPointer>
-#include <QRegularExpression>
 #include "post_guard.h"
 
 class Host;
@@ -45,10 +44,12 @@ public:
     void compileAll();
     QString getName() { return mName; }
     void setName(const QString & name);
-    int getKeyCode() { return mKeyCode; }
-    void setKeyCode(int code) { mKeyCode = code; }
-    int getKeyModifiers() { return mKeyModifier; }
-    void setKeyModifiers(int code) { mKeyModifier = code; }
+    Qt::Key getKeyCode() const { return mKeyCode; }
+    void setKeyCode(const Qt::Key code) { mKeyCode = code; }
+    void setKeyCode(const int codeNumber) { setKeyCode(static_cast<Qt::Key>(codeNumber)); }
+    Qt::KeyboardModifiers getKeyModifiers() { return mKeyModifier; }
+    void setKeyModifiers(const Qt::KeyboardModifiers code) { mKeyModifier = code; }
+    void setKeyModifiers(const int codeNumber) { setKeyModifiers(static_cast<Qt::KeyboardModifiers>(codeNumber)); }
     void enableKey(const QString& name);
     void disableKey(const QString& name);
     void compile();
@@ -59,7 +60,7 @@ public:
     void setCommand(QString command) { mCommand = command; }
     QString getCommand() { return mCommand; }
 
-    bool match(int, int, const bool);
+    bool match(const Qt::Key, const Qt::KeyboardModifiers, const bool);
     bool registerKey();
 
     bool exportItem;
@@ -72,18 +73,19 @@ private:
     QString mName;
     QString mCommand;
 
-    /*Qt::NoModifier 0x00000000 No modifier key is pressed.
-      Qt::ShiftModifier 0x02000000 A Shift key on the keyboard is pressed.
-      Qt::ControlModifier 0x04000000 A Ctrl key on the keyboard is pressed.
-      Qt::AltModifier 0x08000000 An Alt key on the keyboard is pressed.
-      Qt::MetaModifier 0x10000000 A Meta key on the keyboard is pressed.
-      Qt::KeypadModifier 0x20000000 A keypad button is pressed. */
+    /*
+     * Qt::NoModifier      0x00000000 No modifier key is pressed.
+     * Qt::ShiftModifier   0x02000000 A Shift key on the keyboard is pressed.
+     * Qt::ControlModifier 0x04000000 A Ctrl key on the keyboard is pressed.
+     * Qt::AltModifier     0x08000000 An Alt key on the keyboard is pressed.
+     * Qt::MetaModifier    0x10000000 A Meta key on the keyboard is pressed.
+     * Qt::KeypadModifier  0x20000000 A keypad button is pressed.
+     */
 
-    int mKeyCode;
-    int mKeyModifier;
+    Qt::Key mKeyCode;
+    Qt::KeyboardModifiers mKeyModifier;
 
     QString mRegexCode;
-    QRegularExpression mRegex;
     QString mScript;
     QString mFuncName;
     QPointer<Host> mpHost;
