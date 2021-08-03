@@ -178,7 +178,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     setUnifiedTitleAndToolBarOnMac(true); //MAC OSX: make window moveable
     const QString hostName{mpHost->getName()};
-    setWindowTitle(hostName);
+    setWindowTitle(tr("%1 - Editor").arg(hostName));
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_editor.png")));
     auto statusBar = new QStatusBar(this);
     statusBar->setSizeGripEnabled(true);

@@ -33,6 +33,12 @@ function Geyser.CommandLine:append(text)
   appendCmdLine(self.name, text)
 end
 
+--- selects the text in the commandline
+function Geyser.CommandLine:selectText()
+  return selectCmdLineText(self.name)
+end
+
+
 --- returns the text in the commandline
 -- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLine
 function Geyser.CommandLine:getText()
