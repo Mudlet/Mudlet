@@ -330,10 +330,12 @@ jobs:
           cat "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log"
         }
         if (Test-Path -Path "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\gettext\build-x64-windows-rel-err.log") {
-          echo "build-x64-windows-rel-err.log "
+          echo "build-x64-windows-rel-err.log start:"
           cat "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\gettext\build-x64-windows-rel-err.log"
+          echo "build-x64-windows-rel-err.log end."
         }
         if (Test-Path -Path "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\gettext\build-x64-windows-rel-out.log") {
-          echo "build-x64-windows-rel-out.log "
+          echo "build-x64-windows-rel-out.log start:"
           cat "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\gettext\build-x64-windows-rel-out.log"
+          echo "build-x64-windows-rel-out.log end."
         }
