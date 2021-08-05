@@ -565,6 +565,9 @@ void TCommandLine::hideEvent(QHideEvent* event)
 
 void TCommandLine::adjustHeight()
 {
+    if(!mpConsole->layerCommandLine) {
+        return;
+    }
     int lines = document()->size().height();
     // Workaround for SubCommandLines textCursor not visible in some situations
     // SubCommandLines cannot autoresize

@@ -517,6 +517,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     if (mType & MainConsole) {
         mpButtonMainLayer->setVisible(!mpHost->getCompactInputLine());
     }
+
+    if (mType & MainConsole) {
+        mpCommandLine->adjustHeight();
+    }
 }
 
 TConsole::~TConsole()
