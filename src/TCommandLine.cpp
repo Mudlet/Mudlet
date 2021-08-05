@@ -58,6 +58,7 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
     setFocusPolicy(Qt::StrongFocus);
 
     setFont(mpHost->getDisplayFont());
+    document()->setDocumentMargin(2);
 
     mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
     mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
@@ -573,18 +574,15 @@ void TCommandLine::adjustHeight()
         }
         return;
     }
-    int fontH = QFontMetrics(font()).height();
-    int marginH = lines > 1 ? fontH : 0;
     if (lines < 1) {
         lines = 1;
     }
     if (lines > 10) {
         lines = 10;
     }
+    int fontH = QFontMetrics(font()).height();
+    int marginH = fontH/4 < 4 ? 4 : fontH/4;
     int _height = fontH * lines + marginH;
-    if (_height < 31) {
-        _height = 31; // Minimum usable height taken from buttonLayer in TConsole.cpp
-    }
     if (_height < mpHost->commandLineMinimumHeight) {
         _height = mpHost->commandLineMinimumHeight;
     }
