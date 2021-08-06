@@ -613,7 +613,7 @@ Vänligen vänta...</translation>
       <location filename="../src/T2DMap.cpp" line="141"/>
       <source>ID</source>
       <comment>Room ID in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="141"/>
@@ -634,17 +634,20 @@ Vänligen vänta...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="1259"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Du har inte en karta ännu - ladda en, eller börja kartlägga från början.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="1256"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Du har laddat en karta (%n rum), men Mudlet vet inte var du befinner dig just nu.</numerusform>
+        <numerusform>Du har laddat en karta (%n rum), men Mudlet vet inte var du befinner dig just nu.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1254"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Inga rum på kartan - ladda en annan karta eller börja kartläggningen från början.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2256"/>
@@ -842,7 +845,7 @@ Vänligen vänta...</translation>
       <location filename="../src/T2DMap.cpp" line="2870"/>
       <source>Lock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Lås</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2871"/>
@@ -1379,7 +1382,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="10131"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Spelar %1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="12560"/>
@@ -1555,12 +1558,12 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="642"/>
       <source>Pre-Map loading(2) report</source>
-      <translation type="unfinished"/>
+      <translation>Ladda ner förkarta(2) rapporten</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="653"/>
       <source>Loading map(2) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Laddar karta (2) vid %1 -rapport</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1053"/>
@@ -1582,12 +1585,12 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1205"/>
       <source>Pre-Map loading(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Ladda ner förkarta(1) rapporten</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1223"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Laddar karta (1) vid %1 -rapport</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1225"/>
@@ -11769,7 +11772,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3541"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Spara</translation>
     </message>
   </context>
   <context>
@@ -11823,7 +11826,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="767"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="790"/>
@@ -12147,7 +12150,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1978"/>
       <source>&amp;Save</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Spara</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1886"/>
