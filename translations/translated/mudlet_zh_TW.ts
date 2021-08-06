@@ -1568,12 +1568,12 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="642"/>
       <source>Pre-Map loading(2) report</source>
-      <translation type="unfinished"/>
+      <translation>讀取地圖前 (2) 的報告</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="653"/>
       <source>Loading map(2) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>讀取地圖 (2) 在 %1 報告</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1053"/>
@@ -1595,12 +1595,12 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1205"/>
       <source>Pre-Map loading(1) report</source>
-      <translation type="unfinished"/>
+      <translation>讀取地圖前 (1) 的報告</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1223"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>讀取地圖 (1) 在 %1 報告</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1225"/>
@@ -6826,7 +6826,7 @@ for all of the %n selected room(s):</source>
       <location filename="../src/dlgRoomSymbol.cpp" line="131"/>
       <source>%1 {count:%2}</source>
       <comment>Everything after the first parameter (the &apos;%1&apos;) will be removed by processing it as a QRegularExpression programmatically, ensure the translated text has ` {` immediately after the &apos;%1&apos;, and &apos;}&apos; as the very last character, so that the right portion can be extracted if the user clicks on this item when it is shown in the QComboBox it is put in.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 {計數：%2}</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="202"/>
@@ -10347,7 +10347,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="494"/>
       <source>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</source>
-      <translation type="unfinished"/>
+      <translation>公開測試版本會更快取得新特性，您也可以協助我們更快找到問題。發現了什麼奇怪的東西嗎？ 讓我們知道一下吧！</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="956"/>
