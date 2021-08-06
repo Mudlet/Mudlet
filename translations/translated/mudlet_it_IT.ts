@@ -7218,7 +7218,7 @@ Non saranno salvate modifiche sul disco fisso, quindi andranno perse in caso di 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="181"/>
       <source>%1 - Editor</source>
-      <translation type="unfinished"/>
+      <translation>%1 - Editor</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="466"/>
@@ -9438,7 +9438,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <location filename="../src/mudlet.cpp" line="823"/>
       <location filename="../src/mudlet.cpp" line="824"/>
       <source>Finnish</source>
-      <translation type="unfinished"/>
+      <translation>Finlandese</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="825"/>
