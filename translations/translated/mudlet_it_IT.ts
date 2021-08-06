@@ -8559,7 +8559,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/ui/main_window.ui" line="324"/>
       <source>&lt;p&gt;Open a link to the Mudlet server on Discord.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Apre un link al server Mudlet su Discord.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="329"/>
@@ -8632,7 +8632,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <location filename="../src/ui/main_window.ui" line="216"/>
       <location filename="../src/ui/main_window.ui" line="253"/>
       <source>&lt;p&gt;Opens a built-in IRC chat.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Apri una chat IRC integrata.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="221"/>
