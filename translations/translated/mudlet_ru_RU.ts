@@ -7208,7 +7208,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="181"/>
       <source>%1 - Editor</source>
-      <translation type="unfinished"/>
+      <translation>%1 - Редактор</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="466"/>
@@ -8538,7 +8538,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="324"/>
       <source>&lt;p&gt;Open a link to the Mudlet server on Discord.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Откройте ссылку на сервер Mudlet в Discord.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="329"/>
@@ -8611,7 +8611,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/ui/main_window.ui" line="216"/>
       <location filename="../src/ui/main_window.ui" line="253"/>
       <source>&lt;p&gt;Opens a built-in IRC chat.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Открывает встроенный IRC чат.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="221"/>
@@ -9411,7 +9411,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="823"/>
       <location filename="../src/mudlet.cpp" line="824"/>
       <source>Finnish</source>
-      <translation type="unfinished"/>
+      <translation>Финский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="825"/>
