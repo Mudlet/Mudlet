@@ -565,7 +565,9 @@ void TCommandLine::hideEvent(QHideEvent* event)
 
 void TCommandLine::adjustHeight()
 {
-    if(!mpConsole->layerCommandLine) {
+    // Make sure adjustHeight won't crash if it's used before mpConsole->layerCommandLine has a value
+    if (!mpConsole->layerCommandLine) {
+        qWarning() << "TCommandLine::adjustHeight() ERROR: mpConsole->layerCommandLine is NULL!";
         return;
     }
     int lines = document()->size().height();
