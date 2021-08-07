@@ -7180,7 +7180,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="181"/>
       <source>%1 - Editor</source>
-      <translation type="unfinished"/>
+      <translation>%1 - Editor</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="466"/>
@@ -8519,7 +8519,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/ui/main_window.ui" line="324"/>
       <source>&lt;p&gt;Open a link to the Mudlet server on Discord.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Öffne einen Link zum Mudlet-Server auf Discord.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="329"/>
@@ -8592,7 +8592,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <location filename="../src/ui/main_window.ui" line="216"/>
       <location filename="../src/ui/main_window.ui" line="253"/>
       <source>&lt;p&gt;Opens a built-in IRC chat.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Öffnet einen eingebauten IRC-Chat.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="221"/>
@@ -9392,7 +9392,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <location filename="../src/mudlet.cpp" line="823"/>
       <location filename="../src/mudlet.cpp" line="824"/>
       <source>Finnish</source>
-      <translation type="unfinished"/>
+      <translation>Finnisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="825"/>
