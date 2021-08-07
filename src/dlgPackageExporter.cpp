@@ -383,7 +383,6 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
                 QString fname = mDescriptionImages.at(i);
                 QFileInfo info(fname);
                 fname = QUrl::toPercentEncoding(fname).constData();
-                qDebug() << "fname is:" << fname;
                 plainText.replace(QStringLiteral("$%1").arg(info.fileName()), fname);
             }
             ui->textEdit_description->setMarkdown(plainText);
@@ -1447,7 +1446,6 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
                 QString fname = my_parent->mDescriptionImages.at(i);
                 QFileInfo info(fname);
                 fname = QUrl::toPercentEncoding(fname).constData();
-                qDebug() << "fname is:" << fname;
                 plainText.replace(QStringLiteral("$%1").arg(info.fileName()), fname);
             }
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
