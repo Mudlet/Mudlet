@@ -313,29 +313,36 @@ jobs:
       run: curl -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
 
-    - name: (windows) Show relevant logs logs
-      if: failure() && runner.os == 'Windows'
-      run: |
-        $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
-        if (Test-Path -Path "$env:WORKING_BASE_DIR\stderr.log") {
-          echo "Standard error log from non-vcpkg dependencies: "
-          cat $env:WORKING_BASE_DIR\stderr.log
-        }
-        if (Test-Path -Path "$env:WORKING_BASE_DIR\stdout.log") {
-          echo "Standard output log from non-vcpkg dependencies: "
-          cat $env:WORKING_BASE_DIR\stdout.log
-        }
-        if (Test-Path -Path "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log") {
-          echo "CMakeOutput.log: "
-          cat "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log"
-        }
-        if (Test-Path -Path "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\gettext\build-x64-windows-rel-err.log") {
-          echo "build-x64-windows-rel-err.log start:"
-          cat "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\gettext\build-x64-windows-rel-err.log"
-          echo "build-x64-windows-rel-err.log end."
-        }
-        if (Test-Path -Path "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\gettext\build-x64-windows-rel-out.log") {
-          echo "build-x64-windows-rel-out.log start:"
-          cat "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\gettext\build-x64-windows-rel-out.log"
-          echo "build-x64-windows-rel-out.log end."
-        }
+    - name: Upload GitHub Actions artifact of vcpkg build logs
+      if: always()
+      uses: actions/upload-artifact@v2
+      with:
+        name: vcpkg-logs-${{ runner.os }}
+        path: ${{ github.workspace }}/3rdparty/vcpkg/buildtrees/**/*.log
+
+    # - name: (windows) Show relevant logs logs
+    #   if: failure() && runner.os == 'Windows'
+    #   run: |
+    #     $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
+    #     if (Test-Path -Path "$env:WORKING_BASE_DIR\stderr.log") {
+    #       echo "Standard error log from non-vcpkg dependencies: "
+    #       cat $env:WORKING_BASE_DIR\stderr.log
+    #     }
+    #     if (Test-Path -Path "$env:WORKING_BASE_DIR\stdout.log") {
+    #       echo "Standard output log from non-vcpkg dependencies: "
+    #       cat $env:WORKING_BASE_DIR\stdout.log
+    #     }
+    #     if (Test-Path -Path "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log") {
+    #       echo "CMakeOutput.log: "
+    #       cat "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log"
+    #     }
+    #     if (Test-Path -Path "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\gettext\build-x64-windows-rel-err.log") {
+    #       echo "build-x64-windows-rel-err.log start:"
+    #       cat "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\gettext\build-x64-windows-rel-err.log"
+    #       echo "build-x64-windows-rel-err.log end."
+    #     }
+    #     if (Test-Path -Path "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\gettext\build-x64-windows-rel-out.log") {
+    #       echo "build-x64-windows-rel-out.log start:"
+    #       cat "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\gettext\build-x64-windows-rel-out.log"
+    #       echo "build-x64-windows-rel-out.log end."
+    #     }
