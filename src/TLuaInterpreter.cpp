@@ -14241,9 +14241,8 @@ QString TLuaInterpreter::readScriptFile(const QString& path) const
         return QString();
     }
 
-    QTextStream in;
+    QTextStream in(&file);
     in.setCodec(QTextCodec::codecForName("UTF-8"));
-    in.setDevice(&file);
     /*
      * FIXME: Qt Documentation for this method reports:
      * "Reads the entire content of the stream, and returns it as a QString.

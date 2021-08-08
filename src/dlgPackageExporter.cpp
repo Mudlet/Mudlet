@@ -794,32 +794,15 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
 
     QString luaConfig = QStringLiteral("%1/config.lua").arg(stagingDirName);
     QFile configFile(luaConfig);
-#if defined (Q_OS_WIN32)
-    // On Windows prior to late 2019 10 versions (or those later with the option
-    // to use UTF-8 for "non-Unicode applications" NOT enabled) asking for a
-    // "UTF-8" QTextCodec did not deliver the goods - instead something like
-    // "Windows-1252" (a "local-8bit" encoder) was served up which meant the
-    // file produced was not compatible with other OSes - so use a different
-    // method on that OS:
-    if (configFile.open(QIODevice::WriteOnly)) {
-        QDataStream out;
-        QByteArray rawBytes{mPackageConfig.toUtf8()};
-        out.setDevice(&configFile);
-        out.writeRawData(rawBytes.constData(), rawBytes.size());
-        configFile.close();
-    }
-#else
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QTextStream out;
-        auto pCodec = QTextCodec::codecForName("UTF-8");
-        out.setDevice(&configFile);
-        out.setCodec(pCodec);
+        QTextStream out(&configFile);
+        out.setCodec(QTextCodec::codecForName("UTF-8"));
         out << mPackageConfig;
         out.flush();
         configFile.close();
     }
-#endif
 }
+
 QFileInfo dlgPackageExporter::copyIconToTmp(const QString& tempPath) const
 {
     QFileInfo iconFile(mPackageIconPath);

@@ -427,8 +427,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
      * the same codec given that the default behaviour is to use
      * QTextCodec::codecForLocale for QTextStream:
      */
-    mErrorLogStream.setCodec(QTextCodec::codecForName("UTF-8"));
     mErrorLogStream.setDevice(&mErrorLogFile);
+    mErrorLogStream.setCodec(QTextCodec::codecForName("UTF-8"));
 
     QTimer::singleShot(0, this, [this]() {
         qDebug() << "Host::Host() - restore map case 4 {QTimer::singleShot(0)} lambda.";
@@ -1979,7 +1979,7 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
     QFile configFile(luaConfig);
     QStringList strings;
     if (configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QTextStream in;
+        QTextStream in(&configFile);
         /*
          * We also have to explicit set the codec to use whilst reading the file
          * as otherwise QTextCodec::codecForLocale() is used which might be a
@@ -1987,10 +1987,10 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
          * contained in Unicode:
          */
         in.setCodec(QTextCodec::codecForName("UTF-8"));
-        in.setDevice(&configFile);
         while (!in.atEnd()) {
             strings += in.readLine();
         }
+        configFile.close();
     }
 
     lua_State* L = luaL_newstate();
