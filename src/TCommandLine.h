@@ -70,6 +70,7 @@ public:
     void addSuggestion(const QString&);
     void removeSuggestion(const QString&);
     void clearSuggestions();
+    void adjustHeight();
 
     int mActionFunction = 0;
     QPalette mRegularPalette;
@@ -89,7 +90,6 @@ private:
     void handleTabCompletion(bool);
     void historyMove(MoveDirection);
     void enterCommand(QKeyEvent*);
-    void adjustHeight();
     void processNormalKey(QEvent*);
     bool keybindingMatched(QKeyEvent*);
     void spellCheckWord(QTextCursor& c);
