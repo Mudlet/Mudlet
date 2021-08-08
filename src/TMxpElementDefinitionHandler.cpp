@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephem Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,6 +24,7 @@
 // <!ELEMENT element-name [definition] [ATT=attribute-list] [TAG=tag] [FLAG=flags] [OPEN] [DELETE] [EMPTY]>
 TMxpTagHandlerResult TMxpElementDefinitionHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
+    Q_UNUSED(client)
     if (tag->getAttributesCount() < 2) { // UNEXPECTED: element without definition nor attributes
         return MXP_TAG_NOT_HANDLED;
     }
@@ -44,7 +46,11 @@ TMxpTagHandlerResult TMxpElementDefinitionHandler::handleStartTag(TMxpContext& c
     }
 
     if (tag->hasAttribute("ATT")) {
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+        el.attrs = tag->getAttributeValue("ATT").toLower().split(' ', Qt::SkipEmptyParts);
+#else
         el.attrs = tag->getAttributeValue("ATT").toLower().split(' ', QString::SkipEmptyParts);
+#endif
     }
 
     if (tag->hasAttribute("TAG")) {
@@ -59,8 +65,7 @@ TMxpTagHandlerResult TMxpElementDefinitionHandler::handleStartTag(TMxpContext& c
     el.empty = tag->hasAttribute("EMPTY");
 
     if (!el.definition.isEmpty()) {
-        TMxpTagParser parser;
-        el.parsedDefinition = parser.parseToMxpNodeList(el.definition);
+        el.parsedDefinition = TMxpTagParser::parseToMxpNodeList(el.definition);
     }
 
     ctx.getElementRegistry().registerElement(el);

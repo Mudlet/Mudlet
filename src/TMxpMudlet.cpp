@@ -19,11 +19,10 @@
 
 #include "TMxpMudlet.h"
 #include "Host.h"
+#include "TMedia.h"
 #include "TConsole.h"
 #include "TLinkStore.h"
 
-
-TMxpMudlet::TMxpMudlet(Host* pHost) : mpHost(pHost), mLinkMode(false), isBold(false), isUnderline(false), isItalic(false) {}
 
 QString TMxpMudlet::getVersion()
 {
@@ -66,7 +65,7 @@ void TMxpMudlet::popColor(QList<QColor>& stack)
 
 int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints)
 {
-    return getLinkStore().addLinks(links, hints);
+    return getLinkStore().addLinks(links, hints, mpHost);
 }
 
 bool TMxpMudlet::getLink(int id, QStringList** links, QStringList** hints)
@@ -75,6 +74,16 @@ bool TMxpMudlet::getLink(int id, QStringList** links, QStringList** hints)
     *hints = &getLinkStore().getHints(id);
 
     return true;
+}
+
+void TMxpMudlet::playMedia(TMediaData& mediaData)
+{
+    mpHost->mpMedia->playMedia(mediaData);
+}
+
+void TMxpMudlet::stopMedia(TMediaData& mediaData)
+{
+    mpHost->mpMedia->stopMedia(mediaData);
 }
 
 TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult result)

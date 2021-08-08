@@ -1,5 +1,11 @@
 # Some global variables / settings
 $workingBaseDir = "C:\src\"
+if (Test-Path env:WORKING_BASE_DIR) {
+  $workingBaseDir = $env:WORKING_BASE_DIR
+}
+
+echo "workingBaseDir is $workingBaseDir"
+
 $logFile = "$workingBaseDir\verbose_output.log"
 $ciScriptDir = (Get-Item -Path ".\" -Verbose).FullName
 
@@ -22,7 +28,7 @@ function SetQtBaseDir([string] $logFile) {
     }
     catch
     {
-      $Env:QT_BASE_DIR = "C:\Qt\5.13.2\mingw73_32"
+      $Env:QT_BASE_DIR = "C:\Qt\5.14.2\mingw73_32"
     }
   }
   Write-Output "Using $Env:QT_BASE_DIR as QT base directory." | Tee-Object -File "$logFile" -Append
@@ -114,8 +120,8 @@ function DownloadFile([string] $url, [string] $outputFile, [bool] $bigDownload =
 function ExtractTar([string] $tarFile, [string] $outputPath) {
   Step "Extracting source distribution"
   $file = Get-ChildItem $tarFile
-  exec "7z" @("x", "$($file.FullName)", "-y")
-  exec "7z" @("-o$outputPath", "x", "$($file.Directory)\$($file.BaseName)", "-y")
+  exec "7z" @("-o$outputPath", "x", "$($file.FullName)", "-y")
+  exec "7z" @("-o$outputPath", "x", "$($outputPath)\$($file.BaseName)", "-y")
 }
 
 function ExtractZip([string] $zipFile, [string] $outputPath) {
@@ -203,15 +209,15 @@ function InstallMsys() {
   exec "mingw-get" @("install", "mingw32-autotools")
 }
 
-function InstallBoost() {
+function InstallBoost([string] $outputLocation = "C:\Libraries\") {
   DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.71.0.beta1/boost_1_71_0_b1.tar.gz/download" "boost.tar.gz" $true
   if (!(Test-Path -Path "C:\Libraries\" -PathType Container)) {
     Step "Creating Boost path"
     New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
   }
-  ExtractTar "boost.tar.gz" "."
+  ExtractTar "$workingBaseDir\boost.tar.gz" "$workingBaseDir"
   Step "Copying folder"
-  Move-Item "boost_1_71_0" "C:\Libraries\" >> "$logFile" 2>&1
+  Move-Item "$workingBaseDir\boost_1_71_0" "$outputLocation" >> "$logFile" 2>&1
 }
 
 function InstallQt() {
@@ -286,7 +292,7 @@ function InstallPcre() {
   DownloadFile "https://ftp.pcre.org/pub/pcre/pcre-8.43.zip" "pcre.zip"
   ExtractZip "pcre.zip" "pcre"
   Set-Location pcre\pcre-8.43
-  RunConfigure "--enable-utf --enable-unicode-properties --enable-pcre16 --prefix=$Env:MINGW_BASE_DIR_BASH"
+  RunConfigure "--enable-utf --enable-unicode-properties --prefix=$Env:MINGW_BASE_DIR_BASH"
   RunMake
   RunMakeInstall
 }
@@ -305,8 +311,8 @@ function InstallSqlite() {
 
 function InstallZlib() {
   DownloadFile "http://zlib.net/zlib-1.2.11.tar.gz" "zlib-1.2.11.tar.gz"
-  ExtractTar "zlib-1.2.11.tar.gz" "zlib"
-  Set-Location zlib\zlib-1.2.11
+  ExtractTar "$workingBaseDir\zlib-1.2.11.tar.gz" "$workingBaseDir\zlib"
+  Set-Location "$workingBaseDir\zlib\zlib-1.2.11"
   RunMake "win32/Makefile.gcc"
   $Env:INCLUDE_PATH = "$Env:MINGW_BASE_DIR\include"
   $Env:LIBRARY_PATH = "$Env:MINGW_BASE_DIR\lib"
@@ -318,9 +324,9 @@ function InstallZlib() {
 
 function InstallLibzip() {
   $Env:Path = $NoShPath
-  DownloadFile "https://libzip.org/download/libzip-1.5.2.tar.gz" "libzip.tar.gz"
-  ExtractTar "libzip.tar.gz" "libzip"
-  Set-Location libzip\libzip-1.5.2
+  DownloadFile "https://libzip.org/download/libzip-1.7.3.tar.gz" "libzip.tar.gz"
+  ExtractTar "$workingBaseDir\libzip.tar.gz" "$workingBaseDir\libzip"
+  Set-Location "$workingBaseDir\libzip\libzip-1.7.3"
   if (!(Test-Path -Path "build" -PathType Container)) {
     Step "Creating libzip build path"
     New-Item build -ItemType Directory >> "$logFile" 2>&1

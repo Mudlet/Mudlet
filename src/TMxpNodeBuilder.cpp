@@ -16,9 +16,28 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 #include "TMxpNodeBuilder.h"
 #include "TMxpTagParser.h"
 #include "TStringUtils.h"
+
+TMxpNodeBuilder::TMxpNodeBuilder(bool ignoreText)
+: mOptionIgnoreText(ignoreText)
+, mIsEndTag(false)
+, mIsEmptyTag(false)
+, mIsInsideTag(false)
+, mIsInsideAttr(false)
+, mReadingAttrValue(false)
+, mIsInsideSequence(false)
+, mIsQuotedSequence(false)
+, mOpeningQuote('\0')
+, mSequenceHasSpaces(false)
+, mHasSequence(false)
+, mIsInsideText(false)
+, mHasNode(false)
+, mIsText(false)
+{
+}
 
 bool TMxpNodeBuilder::accept(char ch)
 {
@@ -44,7 +63,7 @@ bool TMxpNodeBuilder::accept(char ch)
         }
     } else if (!mOptionIgnoreText) { // text
         mIsInsideText = true;
-        mCurrentText.append(ch);
+        mCurrentText.push_back(ch);
         return false;
     }
 
@@ -61,15 +80,16 @@ bool TMxpNodeBuilder::acceptTag(char ch)
         if (!acceptAttribute(ch)) {
             return false;
         } else {
-            if (!mCurrentAttrName.isEmpty()) {
+            if (!mCurrentAttrName.empty()) {
                 processAttribute();
             }
             resetCurrentAttribute();
         }
     }
 
-    if (QChar(ch).isSpace())
+    if (QChar(ch).isSpace()) {
         return false;
+    }
 
     if (ch == '<') { // reset
         resetCurrentTag();
@@ -78,7 +98,7 @@ bool TMxpNodeBuilder::acceptTag(char ch)
     }
 
     if (ch == '/') {
-        mIsEndTag = mCurrentTagName.isEmpty();
+        mIsEndTag = mCurrentTagName.empty();
         mIsEmptyTag = !mIsEndTag;
         return false;
     }
@@ -89,17 +109,18 @@ bool TMxpNodeBuilder::acceptTag(char ch)
         return false;
     }
 
-    if (!acceptAttribute(ch))
+    if (!acceptAttribute(ch)) {
         return false;
+    }
 
     return false;
 }
 void TMxpNodeBuilder::processAttribute()
 {
-    if (mCurrentTagName.isEmpty()) {
+    if (mCurrentTagName.empty()) {
         mCurrentTagName = mCurrentAttrName;
-    } else if (!mCurrentAttrName.isEmpty()) {
-        mCurrentTagAttrs.append(MxpTagAttribute(mCurrentAttrName, mCurrentAttrValue));
+    } else if (!mCurrentAttrName.empty()) {
+        mCurrentTagAttrs.append(MxpTagAttribute(mCurrentAttrName.c_str(), mCurrentAttrValue.c_str()));
     }
 }
 void TMxpNodeBuilder::resetCurrentTag()
@@ -117,14 +138,14 @@ bool TMxpNodeBuilder::acceptAttribute(char ch)
 {
     mIsInsideAttr = true;
 
-    QString& buffer = mReadingAttrValue ? mCurrentAttrValue : mCurrentAttrName;
+    std::string& buffer = mReadingAttrValue ? mCurrentAttrValue : mCurrentAttrName;
     if (!acceptSequence(ch, buffer)) {
         return false;
     }
 
     resetCurrentSequence();
 
-    if (ch == '=') {
+    if (ch == '=' && !mReadingAttrValue) {
         mReadingAttrValue = true;
         return false;
     } else {
@@ -141,7 +162,7 @@ void TMxpNodeBuilder::resetCurrentAttribute()
     mIsInsideAttr = false;
     resetCurrentSequence();
 }
-bool TMxpNodeBuilder::acceptSequence(char ch, QString& buffer)
+bool TMxpNodeBuilder::acceptSequence(char ch, std::string& buffer)
 {
     if (mHasSequence) {
         mHasSequence = false;
@@ -164,13 +185,14 @@ bool TMxpNodeBuilder::acceptSequence(char ch, QString& buffer)
         if (QChar(ch).isSpace()) {
             mHasSequence = true;
             return false;
-        } else if (ch == '>' || ch == '/' || ch == '=') {
+        } else if (ch == '/') {
+            // Special case for end tags in the format <a given prefix/tag_name> used in MateriaMagica
+            mCurrentTagName.clear();
+            resetCurrentAttribute();
+            return true;
+        } else if (ch == '>' || ch == '=') {
             return true;
         }
-    }
-
-    if (mIsQuotedSequence && !mSequenceHasSpaces && ch == '=') {
-        return true;
     }
 
     if (!mIsInsideSequence) {
@@ -179,7 +201,7 @@ bool TMxpNodeBuilder::acceptSequence(char ch, QString& buffer)
 
     mSequenceHasSpaces = mSequenceHasSpaces || QChar(ch).isSpace();
 
-    buffer.append(ch);
+    buffer.push_back(ch);
     return false;
 }
 void TMxpNodeBuilder::resetCurrentSequence()
@@ -191,14 +213,14 @@ void TMxpNodeBuilder::resetCurrentSequence()
 }
 MxpTag* TMxpNodeBuilder::buildTag()
 {
-    MxpTag* result = mIsEndTag ? static_cast<MxpTag*>(new MxpEndTag(mCurrentTagName)) : static_cast<MxpTag*>(new MxpStartTag(mCurrentTagName, mCurrentTagAttrs, mIsEmptyTag));
+    MxpTag* result = mIsEndTag ? static_cast<MxpTag*>(new MxpEndTag(mCurrentTagName.c_str())) : static_cast<MxpTag*>(new MxpStartTag(mCurrentTagName.c_str(), mCurrentTagAttrs, mIsEmptyTag));
     resetCurrentTag();
 
     return result;
 }
 MxpNode* TMxpNodeBuilder::buildNode()
 {
-    MxpNode* node = mIsText ? static_cast<MxpNode*>(new MxpTextNode(mCurrentText)) : static_cast<MxpNode*>(buildTag());
+    MxpNode* node = mIsText ? static_cast<MxpNode*>(new MxpTextNode(mCurrentText.c_str())) : static_cast<MxpNode*>(buildTag());
     mCurrentText.clear();
     mHasNode = false;
     return node;

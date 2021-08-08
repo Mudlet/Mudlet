@@ -40,7 +40,7 @@ public:
 
     QString widgetConsoleName;
     bool hasLayoutAlready;
-
+    void setVisible(bool) override;
 
 protected:
     void closeEvent(QCloseEvent *) override;

@@ -3,7 +3,16 @@ if ("$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet") {
 }
 
 cd "$Env:APPVEYOR_BUILD_FOLDER\src\release"
-windeployqt.exe --release mudlet.exe
+
+$Script:QtVersionRegex = [regex]'\\([\d\.]+)\\mingw'
+$Script:QtVersion = $QtVersionRegex.Match($Env:QT_BASE_DIR).Groups[1].Value
+if ([version]$Script:QtVersion -ge [version]'5.14.0') {
+  windeployqt.exe mudlet.exe
+}
+else {
+  windeployqt.exe --release mudlet.exe
+}
+
 . "$Env:APPVEYOR_BUILD_FOLDER\CI\copy-non-qt-win-dependencies.ps1"
 
 Remove-Item * -include *.cpp, *.o
@@ -15,8 +24,6 @@ if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
 } else {
   $Script:Commit = git rev-parse --short HEAD
 }
-# ensure sha part always starts with a character due to https://github.com/Squirrel/Squirrel.Windows/issues/1394
-$Script:VersionAndSha = "$Env:VERSION-ptb$Script:Commit"
 
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating a snapshot build ==="
@@ -26,17 +33,29 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
   Set-Variable -Name "inFile" -Value "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
   Set-Variable -Name "outFile" -Value "upload-location.txt";
+  Write-Output "=== Uploading the snapshot build ==="
   Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
 
   $DEPLOY_URL = Get-Content -Path $outFile -Raw
 } else {
   if ($Script:PublicTestBuild) {
+
+    $COMMIT_DATE = Get-Date -date $(git show -s --format="%cs")
+    $YESTERDAY_DATE = $(Get-Date).AddDays(-1).Date
+    if ($COMMIT_DATE -lt $YESTERDAY_DATE) {
+      Write-Output "=== No new commits, aborting public test build generation ==="
+      exit 0
+    }
+
     Write-Output "=== Creating a public test build ==="
     # Squirrel takes Start menu name from the binary
-  Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet PTB.exe"
+    Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet PTB.exe"
+    # ensure sha part always starts with a character due to https://github.com/Squirrel/Squirrel.Windows/issues/1394
+    $Script:VersionAndSha = "$Env:VERSION-ptb$Script:Commit"
   } else {
     Write-Output "=== Creating a release build ==="
     Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet.exe"
+    $Script:VersionAndSha = "$Env:VERSION"
   }
 
   Write-Output "=== Cloning installer project ==="
@@ -72,8 +91,10 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating installers from Nuget package ==="
   if ($Script:PublicTestBuild) {
     $TestBuildString = "-PublicTestBuild"
+    $InstallerIconFile = "${Env:APPVEYOR_BUILD_FOLDER}\src\icons\mudlet_ptb.ico"
   } else {
     $TestBuildString = ""
+    $InstallerIconFile = "${Env:APPVEYOR_BUILD_FOLDER}\src\icons\mudlet.ico"
   }
 
   $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet$TestBuildString.$Script:VersionAndSha.nupkg"
@@ -83,8 +104,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   }
 
   # fails silently if the nupkg file is not found
-  .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon C:\projects\installers\windows\mudlet_main_48px.ico -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
-
+  .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon $InstallerIconFile -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
   Write-Output "=== Removing old directory content of release folder ==="
   Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release\*
   Write-Output "=== Copying installer over for appveyor ==="
@@ -107,34 +127,37 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     $DEPLOY_URL = $DEPLOY_URL.Trim()
     echo "Deployed Mudlet to '$DEPLOY_URL'"
   } else {
+    # disabled temporarily as ssh key is unavailable
+
     # get winscp .NET dll for uploads
     # activate higher TLS version. Seems PS only uses 1.0 by default
     # credit: https://stackoverflow.com/questions/41618766/powershell-invoke-webrequest-fails-with-ssl-tls-secure-channel/48030563#48030563
-    [Net.ServicePointManager]::SecurityProtocol = [System.Security.Authentication.SslProtocols] "tls, tls11, tls12"
-    (New-Object System.Net.WebClient).DownloadFile("https://downloads.sourceforge.net/project/winscp/WinSCP/5.13.4/WinSCP-5.13.4-Automation.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fwinscp%2Ffiles%2FWinSCP%2F5.13.4%2FWinSCP-5.13.4-Automation.zip%2Fdownload&ts=1538514946", "C:\src\Winscp-automation.zip")
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    [System.IO.Compression.ZipFile]::ExtractToDirectory("C:\src\Winscp-automation.zip", "C:\src\Winscp-automation\")
-    Add-Type -Path 'C:\src\Winscp-automation\WinSCPnet.dll'
+    # [Net.ServicePointManager]::SecurityProtocol = [System.Security.Authentication.SslProtocols] "tls, tls11, tls12"
+    # (New-Object System.Net.WebClient).DownloadFile("https://downloads.sourceforge.net/project/winscp/WinSCP/5.13.4/WinSCP-5.13.4-Automation.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fwinscp%2Ffiles%2FWinSCP%2F5.13.4%2FWinSCP-5.13.4-Automation.zip%2Fdownload&ts=1538514946", "C:\src\Winscp-automation.zip")
+    # Add-Type -AssemblyName System.IO.Compression.FileSystem
+    # [System.IO.Compression.ZipFile]::ExtractToDirectory("C:\src\Winscp-automation.zip", "C:\src\Winscp-automation\")
+    # Add-Type -Path 'C:\src\Winscp-automation\WinSCPnet.dll'
 
-    # do the upload
-    $sessionOptions = New-Object WinSCP.SessionOptions -Property @{
-      # sftp://
-      Protocol = [WinSCP.Protocol]::Scp
-      HostName = "mudlet.org"
-      UserName = "keneanung"
-      SshPrivateKeyPath = "$Env:APPVEYOR_BUILD_FOLDER\CI\mudlet-deploy-key-windows.ppk"
-      SshPrivateKeyPassphrase = "${Env:DEPLOY_KEY_PASS}"
-    }
-    $session = New-Object WinSCP.Session
-    $fingerprint =  $session.ScanFingerprint($sessionOptions, "SHA-256")
-    $sessionOptions.SshHostKeyFingerprint = $fingerprint
-    # Connect
-    Write-Output "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-    $session.Open($sessionOptions)
-    $session.PutFiles("${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe", "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe")
-    $session.Close()
-    $session.Dispose()
-    $DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
+    # # do the upload
+    # $sessionOptions = New-Object WinSCP.SessionOptions -Property @{
+    #   # sftp://
+    #   Protocol = [WinSCP.Protocol]::Scp
+    #   HostName = "mudlet.org"
+    #   UserName = "keneanung"
+    #   SshPrivateKeyPath = "$Env:APPVEYOR_BUILD_FOLDER\CI\mudlet-deploy-key-windows.ppk"
+    #   SshPrivateKeyPassphrase = "${Env:DEPLOY_KEY_PASS}"
+    # }
+    # $session = New-Object WinSCP.Session
+    # $fingerprint =  $session.ScanFingerprint($sessionOptions, "SHA-256")
+    # $sessionOptions.SshHostKeyFingerprint = $fingerprint
+    # # Connect
+    # Write-Output "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
+    # $session.Open($sessionOptions)
+    # $session.PutFiles("${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe", "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe")
+    # $session.Close()
+    # $session.Dispose()
+    # $DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
+    Push-AppveyorArtifact "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe" -DeploymentName "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe"
   }
 
   Write-Output "=== Installing dblsqd-cli ==="
@@ -146,18 +169,20 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     $Script:DownloadedFeed = [System.IO.Path]::GetTempFileName()
     Invoke-WebRequest "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86" -OutFile $Script:DownloadedFeed
     Write-Output "=== Generating a changelog ==="
-    pushd "$Env:APPVEYOR_BUILD_FOLDER\CI\"
+    Push-Location "$Env:APPVEYOR_BUILD_FOLDER\CI\"
     $Script:Changelog = lua "$Env:APPVEYOR_BUILD_FOLDER\CI\generate-ptb-changelog.lua" --releasefile $Script:DownloadedFeed
-    popd
+    Pop-Location
+    Write-Output $Script:Changelog
     Write-Output "=== Creating release in Dblsqd ==="
     dblsqd release -a mudlet -c public-test-build -m $Script:Changelog "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower()
 
     Write-Output "=== Registering release with Dblsqd ==="
     dblsqd push -a mudlet -c public-test-build -r "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower() -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
-  } else {
-    Write-Output "=== Registering release with Dblsqd ==="
-    dblsqd push -a mudlet -c release -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
   }
+  #  else {
+  #   Write-Output "=== Registering release with Dblsqd ==="
+  #   dblsqd push -a mudlet -c release -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
+  # }
 }
 
 if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {

@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,7 +21,6 @@
 #include "TMxpClient.h"
 #include "TStringUtils.h"
 
-TMxpSendTagHandler::TMxpSendTagHandler() : TMxpSingleTagHandler("SEND"), mLinkId(0), mIsHrefInContent(false) {}
 TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
     //    if (tag->hasAttr("EXPIRE") && tag->getAttr(0).isNamed("EXPIRE"))
@@ -40,6 +40,11 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
         hints.removeFirst();
     }
 
+    // <SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">30901</SEND>
+    if (hrefs.size() > 1 && hints.size() == 1) {
+        hints = hrefs;
+    }
+
     // handle print to prompt feature PROMPT
     // <SEND "tell Zugg " PROMPT>Zugg</SEND>
     QString command = tag->hasAttribute(ATTR_PROMPT) ? QStringLiteral("printCmdLine") : QStringLiteral("send");
@@ -48,7 +53,9 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
         hrefs[i] = ctx.getEntityResolver().interpolate(hrefs[i]);
         hrefs[i] = QStringLiteral("%1([[%2]])").arg(command, hrefs[i]);
 
-        hints[i] = ctx.getEntityResolver().interpolate(hints[i]);
+        if (i < hints.size()) {
+            hints[i] = ctx.getEntityResolver().interpolate(hints[i]);
+        }
     }
 
     mLinkId = client.setLink(hrefs, hints);
@@ -57,6 +64,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 
     return MXP_TAG_HANDLED;
 }
+
 QString TMxpSendTagHandler::extractHref(MxpStartTag* tag)
 {
     if (tag->getAttributesCount() == 0) {
@@ -95,6 +103,8 @@ QString TMxpSendTagHandler::extractHint(MxpStartTag* tag)
 
 TMxpTagHandlerResult TMxpSendTagHandler::handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag)
 {
+    Q_UNUSED(ctx)
+    Q_UNUSED(tag)
     if (mIsHrefInContent) {
         updateHrefInLinks(client);
     }

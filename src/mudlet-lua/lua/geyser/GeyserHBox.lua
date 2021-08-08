@@ -25,22 +25,45 @@ end
 --- Responsible for organizing the elements inside the HBox
 -- Called when a new element is added
 function Geyser.HBox:organize()
-  self.parent:reposition()
-  local window_width = (self:calculate_dynamic_window_size().width / self:get_width()) * 100
+  local self_height = self:get_height()
+  local self_width = self:get_width()
+  local calculated_width = self:calculate_dynamic_window_size().width
+  -- Workaround for issue with width/height being 0 at creation
+  self_height = self_height <= 0 and 0.9 or self_height
+  self_width = self_width <= 0 and #self.windows or self_width
+  calculated_width = calculated_width <= 0 and 1 or calculated_width
+
+  local window_width = (calculated_width / self_width) * 100
   local start_x = 0
+  self.contains_fixed = false
   for _, window_name in ipairs(self.windows) do
     local window = self.windowList[window_name]
-    local width = (window:get_width() / self:get_width()) * 100
-    local height = (window:get_height() / self:get_height()) * 100
+    local width = (window:get_width() / self_width) * 100
+    local height = (window:get_height() / self_height) * 100
+    if window.h_policy == Geyser.Fixed or window.v_policy == Geyser.Fixed then
+      self.contains_fixed = true
+    end
     window:move(start_x.."%", "0%")
     if window.h_policy == Geyser.Dynamic then
       width = window_width * window.h_stretch_factor
+      if window.width ~= width .. "%" then
+        window:resize(width .. "%", nil)
+      end
     end
     if window.v_policy == Geyser.Dynamic then
       height = 100
+      if window.height ~= height .. "%" then
+        window:resize(nil, height .. "%")
+      end
     end
-    window:resize(width.."%", height.."%")
-    start_x = start_x + (window:get_width() / self:get_width()) * 100
+    start_x = start_x + width
+  end
+end
+
+function Geyser.HBox:reposition()
+  Geyser.Container.reposition(self)
+  if self.contains_fixed then
+    self:organize()
   end
 end
 

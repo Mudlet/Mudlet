@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2019 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2019, 2021 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -27,6 +27,7 @@
 
 
 #include "pre_guard.h"
+#include <QElapsedTimer>
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
@@ -103,6 +104,7 @@ const char OPT_TIMING_MARK = 6;
 const char OPT_TERMINAL_TYPE = 24;
 const char OPT_EOR = 25;
 const char OPT_NAWS = 31;
+const char OPT_CHARSET = 42;
 const char OPT_MSDP = 69; // http://tintin.sourceforge.net/msdp/
 const char OPT_MSSP = static_cast<char>(70); // https://tintin.sourceforge.io/protocols/mssp/
 const char OPT_COMPRESS = 85;
@@ -113,6 +115,14 @@ const char OPT_102 = 102;
 const char OPT_ATCP = static_cast<char>(200);
 const char OPT_GMCP = static_cast<char>(201);
 
+const char CHARSET_REQUEST = 1;
+const char CHARSET_ACCEPTED = 2;
+const char CHARSET_REJECTED = 3;
+const char CHARSET_TTABLE_IS = 4;
+const char CHARSET_TTABLE_REJECTED = 5;
+const char CHARSET_TTABLE_ACK = 6;
+const char CHARSET_TTABLE_NAK = 7;
+
 const char MSSP_VAR = 1;
 const char MSSP_VAL = 2;
 
@@ -122,7 +132,6 @@ const char MSDP_TABLE_OPEN = 3;
 const char MSDP_TABLE_CLOSE = 4;
 const char MSDP_ARRAY_OPEN = 5;
 const char MSDP_ARRAY_CLOSE = 6;
-
 
 class cTelnet : public QObject
 {
@@ -136,18 +145,20 @@ public:
     void reconnect();
     void disconnectIt();
     void abortConnection();
-    bool sendData(QString& data);
+    // Second argument needs to be set false when sending password to prevent
+    // it being sniffed by scripts/packages:
+    bool sendData(QString& data, bool permitDataSendRequestEvent = true);
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
     void setMSPVariables(const QByteArray&);
+    bool purgeMediaCache();
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void setDisplayDimensions();
     void setAutoReconnect(bool status);
     void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
-    void set_LF_ON_GA(bool b) { mLF_ON_GA = b; }
     void recordReplay();
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
     void loadReplayChunk();
@@ -166,6 +177,7 @@ public:
 #endif
     QByteArray decodeBytes(const char*);
     std::string encodeAndCookBytes(const std::string&);
+    bool isCHARSETEnabled() const { return enableCHARSET; }
     bool isATCPEnabled() const { return enableATCP; }
     bool isGMCPEnabled() const { return enableGMCP; }
     bool isMSSPEnabled() const { return enableMSSP; }
@@ -174,13 +186,13 @@ public:
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
     QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
-    std::pair<QString, int> getConnectionInfo() const;
+    std::tuple<QString, int, bool> getConnectionInfo() const;
 
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
-    double networkLatency;
-    QTime networkLatencyTime;
+    double networkLatencyTime;
+    QElapsedTimer networkLatencyTimer;
     bool mAlertOnNewData;
     bool mGA_Driver;
     bool mFORCE_GA_OFF;
@@ -193,7 +205,7 @@ public:
 
 public slots:
     void setDownloadProgress(qint64, qint64);
-    void replyFinished(QNetworkReply*);
+    void slot_replyFinished(QNetworkReply*);
     void slot_processReplayChunk();
     void handle_socket_signal_hostFound(QHostInfo);
     void handle_socket_signal_connected();
@@ -243,8 +255,6 @@ private:
     QTextEncoder* outgoingDataEncoder;
     QString hostName;
     int hostPort;
-    double networkLatencyMin;
-    double networkLatencyMax;
     bool mWaitingForResponse;
     std::queue<int> mCommandQueue;
 
@@ -252,7 +262,9 @@ private:
 
     bool mNeedDecompression;
     std::string command;
-    bool iac, iac2, insb;
+    bool iac;
+    bool iac2;
+    bool insb;
     // Set if we have negotiated the use of the option by us:
     bool myOptionState[256];
     // Set if he has negotiated the use of the option by him:
@@ -266,12 +278,12 @@ private:
     bool triedToEnable[256];
     bool recvdGA;
 
-    int curX, curY;
     QString termType;
     QByteArray mEncoding;
     QTimer* mpPostingTimer;
     bool mUSE_IRE_DRIVER_BUGFIX;
-    bool mLF_ON_GA;
+
+    QNetworkReply* mpPackageDownloadReply = nullptr;
 
     int mCommands;
     bool mMCCP_version_1;
@@ -282,9 +294,10 @@ private:
     bool mIsTimerPosting;
     QTimer* mTimerLogin;
     QTimer* mTimerPass;
-    QTime timeOffset;
-    QTime mConnectionTime;
-    int lastTimeOffset;
+    QElapsedTimer mRecordingChunkTimer;
+    QElapsedTimer mConnectionTimer;
+    int mRecordLastChunkMSecTimeOffset;
+    bool enableCHARSET;
     bool enableATCP;
     bool enableGMCP;
     bool enableMSSP;
@@ -308,6 +321,9 @@ private:
 
     // Set if the current connection is via a proxy
     bool mConnectViaProxy;
+
+    // server problem w/ not terminating IAC SB: only warn once
+    bool mIncompleteSB;
 
 private slots:
 #if !defined(QT_NO_SSL)

@@ -30,8 +30,6 @@
 // Uncomment this to provide some additional qDebug() output:
 // #define DEBUG_DISCORD 1
 
-QReadWriteLock Discord::smReadWriteLock;
-
 QString Discord::smUserName;
 QString Discord::smUserId;
 QString Discord::smDiscriminator;
@@ -41,9 +39,9 @@ const QString Discord::mMudletApplicationId = QStringLiteral("450571881909583884
 Discord::Discord(QObject* parent)
 : QObject(parent)
 , mLoaded{}
-// For details see https://discordapp.com/developers/docs/rich-presence/how-to#initialization
+// For details see https://discord.com/developers/docs/rich-presence/how-to#initialization
 // Initialise with a nullptr one with Mudlet's own ID
-// N. B. for testing the following MUDs have registered:
+// NB: for testing the following MUDs have registered:
 // "midmud"  is "460618737712889858", has "server-icon", "exventure" and "mudlet" icons
 // "carinus" is "438335628942376960", has "server-icon" and "mudlet" icons
 // "wotmud"  is "464945517156106240", has "mudlet", "ajar_(red|green|yellow|blue|white|grey|brown)"
@@ -55,10 +53,12 @@ Discord::Discord(QObject* parent)
               {"luminari", {"luminarimud.com"}},
               {"achaea", {"achaea.com", "iron-ach.ironrealms.com"}},
               {"aetolia", {"aetolia.com", "iron-aet.ironrealms.com"}},
-              {"imperian", {"imperian.com", " iron-imp.ironrealms.com"}},
+              {"imperian", {"imperian.com", "iron-imp.ironrealms.com"}},
               {"lusternia", {"lusternia.com", "iron-lus.ironrealms.com"}},
               {"starmourn", {"starmourn.com"}},
-              {"stickmud", {"stickmud.com"}}}
+              {"stickmud", {"stickmud.com"}},
+              {"clessidra", {"clessidra.it", "mud.clessidra.it"}}
+            }
 {
 #if defined(Q_OS_WIN64)
     // Only defined on 64 bit Windows
@@ -266,12 +266,10 @@ void Discord::timerEvent(QTimerEvent* event)
 
 void Discord::handleDiscordReady(const DiscordUser* request)
 {
-    Discord::smReadWriteLock.lockForWrite(); // Will block until gets lock
-    Discord::smUserName = QString::fromUtf8(request->username);
-    Discord::smUserId = QString::fromUtf8(request->userId);
-    Discord::smDiscriminator = QString::fromUtf8(request->discriminator);
-    Discord::smAvatar = QString::fromUtf8(request->avatar);
-    Discord::smReadWriteLock.unlock();
+    Discord::smUserName = request->username;
+    Discord::smUserId = request->userId;
+    Discord::smDiscriminator = request->discriminator;
+    Discord::smAvatar = request->avatar;
 
 #if defined(DEBUG_DISCORD)
     qDebug().noquote().nospace() << "Discord Ready callback received - for UserName: \"" << smUserName << "\", ID: \"" << smUserId << "#" << smDiscriminator << "\".";
@@ -283,14 +281,8 @@ void Discord::handleDiscordReady(const DiscordUser* request)
 QStringList Discord::getDiscordUserDetails() const
 {
     QStringList results;
-    if (Discord::smReadWriteLock.tryLockForRead()) {
-        results << Discord::smUserName << Discord::smUserId << Discord::smDiscriminator << Discord::smAvatar;
-        // Make a deep copy whilst we hold a lock on the details to avoid the
-        // writer {handleDiscordReady(...)} having to invoking the C-o-W itself.
-        results.detach();
-        Discord::smReadWriteLock.unlock();
-    }
-
+    results << Discord::smUserName << Discord::smUserId << Discord::smDiscriminator << Discord::smAvatar;
+    results.detach();
     return results;
 }
 
@@ -389,6 +381,13 @@ void Discord::UpdatePresence()
 
         Discord_Initialize(applicationID.toUtf8().constData(), mpHandlers, 0, nullptr);
         mCurrentApplicationId = applicationID;
+    }
+
+    // Coverity thinks that pDiscordPresence could be a nullptr here, which
+    // would be bad {CID 1473922} so let's test for that and abort:
+    if (!pDiscordPresence) {
+        qCritical().noquote() << "Discord::UpdatePresence() CRITICAL - pDiscordPresence is unexpectedly a nullptr, unable to proceed with this procedure, please report this to Mudlet Makers!";
+        return;
     }
 
     if (pHost->mDiscordAccessFlags & Host::DiscordSetDetail) {

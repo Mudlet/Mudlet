@@ -18,21 +18,44 @@
  ***************************************************************************/
 
 #include "TLinkStore.h"
+#if not defined(LinkStore_Test)
+#include "Host.h"
+#endif
 
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
+int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Host* pH, const QVector<int>& luaReference)
 {
     if (++mLinkID > maxLinks) {
         mLinkID = 1;
     }
+
+    // Used to unref lua objects in the registry to avoid memory leaks
+    freeReference(pH, mReferenceStore.value(mLinkID, QVector<int>()));
+
     mLinkStore[mLinkID] = links;
     mHintStore[mLinkID] = hints;
+    mReferenceStore[mLinkID] = luaReference;
 
     return mLinkID;
 }
 
+void TLinkStore::freeReference(Host* pH, const QVector<int>& oldReference)
+{
+    if (!pH || oldReference.isEmpty()) {
+        return;
+    }
+
+    for (int i = 0, total = oldReference.size(); i < total; ++i) {
+        if (oldReference.value(i, 0)) {
+            #if not defined(LinkStore_Test)
+            pH->mLuaInterpreter.freeLuaRegistryIndex(oldReference.at(i));
+            #endif
+        }
+    }
+}
+
 QStringList TLinkStore::getCurrentLinks() const
 {
-    return mLinkStore[mLinkID];
+    return mLinkStore.value(mLinkID);
 }
 
 void TLinkStore::setCurrentLinks(const QStringList& links)
@@ -48,6 +71,21 @@ QStringList& TLinkStore::getLinks(int id)
 QStringList& TLinkStore::getHints(int id)
 {
     return mHintStore[id];
+}
+
+QVector<int> TLinkStore::getReference(int id) const
+{
+    return mReferenceStore.value(id);
+}
+
+QStringList TLinkStore::getLinksConst(int id) const
+{
+    return mLinkStore.value(id);
+}
+
+QStringList TLinkStore::getHintsConst(int id) const
+{
+    return mHintStore.value(id);
 }
 
 int TLinkStore::getCurrentLinkID() const

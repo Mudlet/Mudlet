@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2019, 2021 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -71,8 +71,17 @@ TTimer::~TTimer()
     mpQTimer->stop();
     if (mpHost) {
         mpHost->getTimerUnit()->unregisterTimer(this);
+
+        if (isTemporary()) {
+            if (mScript.isEmpty()) {
+                mpHost->mLuaInterpreter.delete_luafunction(this);
+            } else {
+                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+            }
+        }
     }
 
+    mpHost->getTimerUnit()->mQTimerSet.remove(mpQTimer);
     mpQTimer->deleteLater();
 }
 
@@ -86,12 +95,11 @@ void TTimer::setName(const QString& name)
     mName = name;
     // Merely for information if needed later:
     mpQTimer->setObjectName(QStringLiteral("timer(Host:%1)(TTimerId:%2)").arg(mpHost->getName(), name));
-    mpHost->getTimerUnit()->mLookupTable.insertMulti(name, this);
+    mpHost->getTimerUnit()->mLookupTable.insert(name, this);
 }
 
 void TTimer::setTime(QTime time)
 {
-    QMutexLocker locker(&mLock);
     // Stop the timer before doing anything else:
     mpQTimer->stop();
     mTime = time;
@@ -145,7 +153,7 @@ void TTimer::compile()
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
             if (mudlet::debugMode) {
-                TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> 0;
+                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }
@@ -160,7 +168,7 @@ void TTimer::compileAll()
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
         if (mudlet::debugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> 0;
+            TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
     }
