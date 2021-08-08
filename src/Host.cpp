@@ -2200,6 +2200,7 @@ QColor Host::getAnsiColor(const int ansiCode, const bool isBackground) const
             int g = (ansiCode - 16 - (r * 36)) / 6;
             int b = (ansiCode - 16 - (r * 36)) - (g * 6);
             // Values are scaled according to the standard Xterm color palette
+            // http://jonasjacek.github.io/colors/
             return QColor(r == 0 ? 0 : (r - 1) * 40 + 95,
                           g == 0 ? 0 : (g - 1) * 40 + 95,
                           b == 0 ? 0 : (b - 1) * 40 + 95);
