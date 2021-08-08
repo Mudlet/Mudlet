@@ -258,6 +258,7 @@ public:
     void stopSounds();
     void playSound(const QString &s, int);
     QStringList getAvailableFonts();
+    const QStringList& getDefaultGames() const { return mDefaultGames; }
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     std::pair<bool, QString> resetProfileIcon(const QString& profile);
 #if defined(Q_OS_WIN32)
@@ -429,6 +430,7 @@ public:
 
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
+
 
 public slots:
     void processEventLoopHack_timerRun();
@@ -650,6 +652,32 @@ private:
 
     // Whether multi-view is in effect:
     bool mMultiView;
+
+    const QStringList mDefaultGames = {"3Kingdoms",
+                                       "3Scapes",
+                                       "Aardwolf",
+                                       "Achaea",
+                                       "Aetolia",
+                                       "Avalon.de",
+                                       "BatMUD",
+                                       "Clessidra",
+                                       "Fierymud",
+                                       "Imperian",
+                                       "Luminari",
+                                       "Lusternia",
+                                       "Materia Magica",
+                                       "Midnight Sun 2",
+                                       "Realms of Despair",
+                                       "Reinos de Leyenda",
+                                       "StickMUD",
+                                       "WoTMUD",
+                                       "ZombieMUD",
+                                       "Carrion Fields",
+                                       "Cleft of Dimensions",
+                                       "CoreMUD",
+                                       "God Wars II",
+                                       "Slothmud",
+                                       "Legends of the Jedi"};
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
