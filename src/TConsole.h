@@ -90,9 +90,9 @@ public:
     void insertHTML(const QString&);
     void insertText(const QString&);
     void insertText(const QString&, QPoint);
-    void insertLink(const QString&, QStringList&, QStringList&, QPoint, bool customFormat = false);
-    void insertLink(const QString&, QStringList&, QStringList&, bool customFormat = false);
-    void echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat = false);
+    void insertLink(const QString&, QStringList&, QStringList&, QPoint, bool customFormat = false, QVector<int> luaReference = QVector<int>());
+    void insertLink(const QString&, QStringList&, QStringList&, bool customFormat = false, QVector<int> luaReference = QVector<int>());
+    void echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat = false, QVector<int> luaReference = QVector<int>());
     void copy();
     void cut();
     void paste();
@@ -106,6 +106,7 @@ public:
     int getLineNumber();
     int getLineCount();
     bool deleteLine(int);
+    void clearSelection() const;
 
     int getColumnNumber();
 
@@ -144,7 +145,6 @@ public:
     void print(const QString& msg);
     void print(const char*);
     void printSystemMessage(const QString& msg);
-    void printOnDisplay(std::string&, bool isFromServer = false);
     void printCommand(QString&);
     bool hasSelection();
     void moveCursorEnd();
@@ -156,11 +156,9 @@ public:
     bool setFont(const QString& font);
     bool setConsoleBackgroundImage(const QString&, int);
     bool resetConsoleBackgroundImage();
-    void setLink(const QStringList& linkFunction, const QStringList& linkHint);
+    void setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference = QVector<int>());
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
-    void finalize();
-    void runTriggers(int);
     void showStatistics();
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
@@ -171,9 +169,6 @@ public:
     void luaWrapLine(int line);
     QString getCurrentLine();
     void selectCurrentLine();
-    bool saveMap(const QString&, int saveVersion = 0);
-    bool loadMap(const QString&);
-    bool importMap(const QString&, QString* errMsg = Q_NULLPTR);
 
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
@@ -196,92 +191,91 @@ public:
 
     TBuffer buffer;
     static const QString cmLuaLineVariable;
-    TTextEdit* mUpperPane;
-    TTextEdit* mLowerPane;
+    TTextEdit* mUpperPane = nullptr;
+    TTextEdit* mLowerPane = nullptr;
 
-    QToolButton* emergencyStop;
-    QWidget* layer;
-    QWidget* layerCommandLine;
-    QHBoxLayout* layoutLayer2;
-    QWidget* layerEdit;
-    QColor mBgColor;
-    int mButtonState;
-    QColor mCommandBgColor;
-    QColor mCommandFgColor;
+    QToolButton* emergencyStop = nullptr;
+    QWidget* layer = nullptr;
+    QWidget* layerCommandLine = nullptr;
+    QHBoxLayout* layoutLayer2 = nullptr;
 
-    QString mConsoleName;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    QColor mBgColor = QColorConstants::Black;
+    QColor mFgColor = QColorConstants::LightGray;
+    QColor mSystemMessageFgColor = QColorConstants::Red;
+    QColor mCommandBgColor = QColorConstants::Black;
+#else
+    QColor mBgColor = Qt::black;
+    QColor mFgColor = Qt::lightGray;
+    QColor mSystemMessageFgColor = Qt::red;
+    QColor mCommandBgColor = Qt::black;
+#endif
+    QColor mSystemMessageBgColor = mBgColor;
+    QColor mCommandFgColor = QColor(213, 195, 0);
+
+    //1 = unclicked/up; 2 = clicked/down, 0 is NOT valid:
+    int mButtonState = 1;
+
+    QString mConsoleName = QStringLiteral("main");
     QString mCurrentLine;
-    int mDeletedLines;
-    QString mDisplayFontName;
-    int mDisplayFontSize;
-    QFont mDisplayFont;
-    int mEngineCursor;
-    QColor mFgColor;
+    QString mDisplayFontName = QStringLiteral("Bitstream Vera Sans Mono");
+    int mDisplayFontSize = 14;
+    QFont mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
+    int mEngineCursor = -1;
     TChar mFormatBasic;
     TChar mFormatSystemMessage;
 
-    int mIndentCount;
-    int mMainFrameBottomHeight;
-    int mMainFrameLeftWidth;
-    int mMainFrameRightWidth;
-    int mMainFrameTopHeight;
-    int mOldX;
-    int mOldY;
+    int mIndentCount = 0;
+    int mMainFrameBottomHeight = 0;
+    int mMainFrameLeftWidth = 0;
+    int mMainFrameRightWidth = 0;
+    int mMainFrameTopHeight = 0;
+    int mOldX = 0;
+    int mOldY = 0;
 
     TChar mFormatCurrent;
     QString mFormatSequenceRest;
 
-    QWidget* mpBaseVFrame;
-    QWidget* mpTopToolBar;
-    QWidget* mpBaseHFrame;
-    QWidget* mpLeftToolBar;
-    QWidget* mpMainFrame;
-    QWidget* mpRightToolBar;
-    QWidget* mpMainDisplay;
-    QLabel* mpBackground;
+    QWidget* mpBaseVFrame = nullptr;
+    QWidget* mpTopToolBar = nullptr;
+    QWidget* mpBaseHFrame = nullptr;
+    QWidget* mpLeftToolBar = nullptr;
+    QWidget* mpMainFrame = nullptr;
+    QWidget* mpRightToolBar = nullptr;
+    QWidget* mpMainDisplay = nullptr;
 
-    dlgMapper* mpMapper;
+    dlgMapper* mpMapper = nullptr;
 
-    QScrollBar* mpScrollBar;
-    QScrollBar* mpHScrollBar;
-
+    QScrollBar* mpScrollBar = nullptr;
+    QScrollBar* mpHScrollBar = nullptr;
 
     QElapsedTimer mProcessingTimer;
-    bool mRecordReplay;
+    bool mRecordReplay = false;
     QFile mReplayFile;
     QDataStream mReplayStream;
-    TChar mStandardFormat;
 
-    QColor mSystemMessageBgColor;
-    QColor mSystemMessageFgColor;
-    bool mTriggerEngineMode;
+    bool mTriggerEngineMode = false;
 
     QPoint mUserCursor;
-    int mWrapAt;
-    QLineEdit* mpLineEdit_networkLatency;
+    int mWrapAt = 100;
+    QLineEdit* mpLineEdit_networkLatency = nullptr;
     QPoint P_begin;
     QPoint P_end;
     QString mProfileName;
-    TSplitter* splitter;
-    bool mIsPromptLine;
-    QToolButton* logButton;
-    bool mUserAgreedToCloseConsole;
-    QLineEdit* mpBufferSearchBox;
-    QToolButton* mpBufferSearchUp;
-    QToolButton* mpBufferSearchDown;
-    int mCurrentSearchResult;
+    TSplitter* splitter = nullptr;
+    bool mIsPromptLine = false;
+    QToolButton* logButton = nullptr;
+    bool mUserAgreedToCloseConsole = false;
+    QLineEdit* mpBufferSearchBox = nullptr;
+    QToolButton* mpBufferSearchUp = nullptr;
+    QToolButton* mpBufferSearchDown = nullptr;
+    int mCurrentSearchResult = 0;
     QList<int> mSearchResults;
     QString mSearchQuery;
-    QWidget* mpButtonMainLayer;
-    int mBgImageMode;
+    QWidget* mpButtonMainLayer = nullptr;
+    int mBgImageMode = 0;
     QString mBgImagePath;
-    bool mHScrollBarEnabled;
-
-signals:
-    // Raised when new data is incoming to trigger Alert handling in mudlet
-    // class, second argument is true for a lower priority indication when
-    // locally produced information is painted into main console
-    void signal_newDataAlert(const QString&, bool isLowerPriorityChange = false);
+    bool mHScrollBarEnabled = false;
 
 
 public slots:
@@ -291,10 +285,6 @@ public slots:
     void slot_stop_all_triggers(bool);
     void slot_toggleLogging();
 
-    // Used by mudlet class as told by "Profile Preferences"
-    // =>"Copy Map" in another profile to inform a list of
-    // profiles - asynchronously - to load in an updated map
-    void slot_reloadMap(QList<QString>);
 
 protected:
     void dragEnterEvent(QDragEnterEvent*) override;
@@ -302,8 +292,10 @@ protected:
     void mouseReleaseEvent(QMouseEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
 
+
 private:
-    ConsoleType mType;
+    ConsoleType mType = UnknownType;
+    QSize mOldSize;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

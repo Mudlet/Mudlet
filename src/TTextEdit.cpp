@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2020 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -73,6 +73,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 // class:
 , mTimeStampWidth(13)
 , mShowAllCodepointIssues(false)
+, mMouseWheelRemainder()
 {
     mLastClickTimer.start();
     if (pC->getType() != TConsole::CentralDebugConsole) {
@@ -117,11 +118,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setAttribute(Qt::WA_OpaquePaintEvent, false);
     setAttribute(Qt::WA_DeleteOnClose);
 
-    QPalette palette;
-    palette.setColor(QPalette::Text, mFgColor);
-    palette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-    palette.setColor(QPalette::Base, mBgColor);
-    setPalette(palette);
     showNewLines();
     setMouseTracking(true); // test fix for MAC
     setEnabled(true);       //test fix for MAC
@@ -177,6 +173,7 @@ void TTextEdit::slot_toggleTimeStamps(const bool state)
     }
 }
 
+// Only wired up for the upper pane:
 void TTextEdit::slot_scrollBarMoved(int line)
 {
     if (mpConsole->mpScrollBar) {
@@ -187,6 +184,7 @@ void TTextEdit::slot_scrollBarMoved(int line)
 
 void TTextEdit::updateScrollBar(int line)
 {
+    Q_ASSERT_X(!mIsLowerPane, "updateScrollBar(...)", "called on LOWER pane when it should only be used on upper one!");
     int screenHeight{mScreenHeight};
     if (mIsTailMode){
         screenHeight -= mpConsole->mLowerPane->getScreenHeight();
@@ -201,6 +199,7 @@ void TTextEdit::updateScrollBar(int line)
     }
 }
 
+// Only wired up for the upper pane:
 void TTextEdit::slot_hScrollBarMoved(int offset)
 {
     if (mpConsole->mHScrollBarEnabled && mpConsole->mpHScrollBar) {
@@ -296,9 +295,12 @@ void TTextEdit::updateScreenView()
         // This is the MAIN console - we do not want it to ever disappear!
         mScreenWidth = qMax(40, currentScreenWidth);
 
-        // Note the values in the "parent" Host instance
-        mpHost->mScreenWidth = mScreenWidth;
-        mpHost->mScreenHeight = mScreenHeight;
+        // Note the values in the "parent" Host instance - for the UPPER pane
+        // so that they are available for NAWS:
+        if (!mIsLowerPane) {
+            mpHost->mScreenWidth = mScreenWidth;
+            mpHost->mScreenHeight = mScreenHeight;
+        }
     } else {
         mScreenWidth = currentScreenWidth;
     }
@@ -397,12 +399,6 @@ void TTextEdit::scrollDown(int lines)
     }
 }
 
-inline void TTextEdit::drawBackground(QPainter& painter, const QRect& rect, const QColor& bgColor) const
-{
-    QRect bR = rect;
-    painter.fillRect(bR.x(), bR.y(), bR.width(), bR.height(), bgColor);
-}
-
 // Extract the base (first) part which will be one or two QChars
 // and if they ARE a surrogate pair convert them back to the single
 // Unicode codepoint (needs around 21 bits, can be contained in a
@@ -441,8 +437,20 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     if (mShowTimeStamps) {
         TChar timeStampStyle(QColor(200, 150, 0), QColor(22, 22, 22));
         QString timestamp(mpBuffer->timeBuffer.at(lineNumber));
+        QVector<QColor> fgColors;
+        QVector<QRect> textRects;
+        QVector<int> charWidths;
+        QVector<QString> graphemes;
         for (const QChar c : timestamp) {
-            cursor.setX(cursor.x() + drawGrapheme(painter, cursor, c, 0, timeStampStyle));
+            // The column argument is not incremented here (is fixed at 0) so
+            // the timestamp does not take up any places when it is clicked on
+            // by the mouse...
+            cursor.setX(cursor.x() + drawGraphemeBackground(painter, fgColors, textRects, graphemes, charWidths, cursor, c, 0, timeStampStyle));
+        }
+        int index = -1;
+        for (const QChar c : timestamp) {
+            ++index;
+            drawGraphemeForeground(painter, fgColors.at(index), textRects.at(index), c, timeStampStyle);
         }
         currentSize += mTimeStampWidth;
     }
@@ -453,27 +461,32 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     }
 
     int columnWithOutTimestamp = 0;
+    QVector<QColor> fgColors;
+    QVector<QRect> textRects;
+    QVector<int> charWidths;
+    QVector<QString> graphemes;
     for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total;) {
         int nextBoundary = boundaryFinder.toNextBoundary();
 
         TChar& charStyle = mpBuffer->buffer.at(lineNumber).at(indexOfChar);
-        int graphemeWidth = drawGrapheme(painter, cursor, lineText.mid(indexOfChar, nextBoundary - indexOfChar), columnWithOutTimestamp, charStyle);
+        int graphemeWidth = drawGraphemeBackground(painter, fgColors, textRects, graphemes, charWidths, cursor, lineText.mid(indexOfChar, nextBoundary - indexOfChar), columnWithOutTimestamp, charStyle);
         cursor.setX(cursor.x() + graphemeWidth);
         indexOfChar = nextBoundary;
         columnWithOutTimestamp += graphemeWidth;
     }
+    boundaryFinder.toStart();
+    int index = -1;
+    for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total;) {
+        int nextBoundary = boundaryFinder.toNextBoundary();
+
+        TChar& charStyle = mpBuffer->buffer.at(lineNumber).at(indexOfChar);
+        ++index;
+        drawGraphemeForeground(painter, fgColors.at(index), textRects.at(index), graphemes.at(index), charStyle);
+        indexOfChar = nextBoundary;
+    }
 }
 
-/**
- * @brief TTextEdit::drawGrapheme
- * @param painter
- * @param cursor
- * @param grapheme
- * @param column Used to calculate the width of Tab
- * @param charStyle
- * @return Return the display width of the grapheme
- */
-int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QString& grapheme, int column, TChar& charStyle) const
+int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColors, QVector<QRect>& textRects, QVector<QString>& graphemes, QVector<int>& charWidths, QPoint& cursor, const QString& grapheme, const int column, TChar& charStyle) const
 {
     static const QString replacementCharacter{QChar::ReplacementCharacter};
     uint unicode = getGraphemeBaseCharacter(grapheme);
@@ -481,15 +494,36 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
     bool useReplacementCharacter = false;
     if (unicode == '\t') {
         charWidth = mTabStopwidth - (column % mTabStopwidth);
+        graphemes.append(QString(QChar::Tabulation));
     } else {
         charWidth = getGraphemeWidth(unicode);
         if (!charWidth) {
             // Print the grapheme replacement character instead - which seems to
             // be 1 wide
             useReplacementCharacter = true;
+            charWidth = 1;
         }
+        graphemes.append(useReplacementCharacter ? replacementCharacter : grapheme);
     }
+    charWidths.append(charWidth);
 
+    TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
+    auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
+    textRects.append(textRect);
+    QColor bgColor;
+    if (Q_UNLIKELY(static_cast<bool>(attributes & TChar::Reverse) != charStyle.isSelected())) {
+        fgColors.append(charStyle.background());
+        bgColor = charStyle.foreground();
+    } else {
+        fgColors.append(charStyle.foreground());
+        bgColor = charStyle.background();
+    }
+    painter.fillRect(textRect, bgColor);
+    return charWidth;
+}
+
+void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor, const QRect& textRect, const QString& grapheme, TChar& charStyle) const
+{
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
     const bool isItalics = attributes & TChar::Italic;
@@ -511,25 +545,10 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
         painter.setFont(font);
     }
 
-    QColor bgColor;
-    QColor fgColor;
-    if (static_cast<bool>(attributes & TChar::Reverse) != charStyle.isSelected()) {
-        fgColor = charStyle.background();
-        bgColor = charStyle.foreground();
-    } else {
-        fgColor = charStyle.foreground();
-        bgColor = charStyle.background();
-    }
-
-    auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * (useReplacementCharacter ? 1 : charWidth), mFontHeight);
-    drawBackground(painter, textRect, bgColor);
-
     if (painter.pen().color() != fgColor) {
         painter.setPen(fgColor);
     }
-
-    painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, (useReplacementCharacter ? replacementCharacter : grapheme));
-    return (useReplacementCharacter ? 1 : charWidth);
+    painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, grapheme);
 }
 
 int TTextEdit::getGraphemeWidth(uint unicode) const
@@ -714,7 +733,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     //needed for horizontal scrolling because there sometimes characters didn't get cleared
     QRect deleteRect = QRect(0, from * mFontHeight, x2 * mFontHeight, (y2 + 1) * mFontHeight);
     p.setCompositionMode(QPainter::CompositionMode_Source);
-    drawBackground(p, deleteRect, Qt::transparent);
+    p.fillRect(deleteRect, Qt::transparent);
 
     p.setCompositionMode(QPainter::CompositionMode_SourceOver);
     for (int i = from; i <= y2; ++i) {
@@ -831,7 +850,7 @@ void TTextEdit::highlightSelection()
     QClipboard* clipboard = QApplication::clipboard();
     if (clipboard->supportsSelection()) {
         // X11 has a second clipboard that's updated on any selection
-        clipboard->setText(getSelectedText(), QClipboard::Selection);
+        clipboard->setText(getSelectedText(QChar::LineFeed), QClipboard::Selection);
     }
 }
 
@@ -877,7 +896,8 @@ void TTextEdit::expandSelectionToWords()
             break;
         }
     }
-    mPA.setX(xind+1);
+    mDragStart.setX(xind + 1);
+    mPA.setX(xind + 1);
 
     yind = mPB.y();
     xind = mPB.x();
@@ -887,7 +907,23 @@ void TTextEdit::expandSelectionToWords()
             break;
         }
     }
-    mPB.setX(xind-1);
+    mDragSelectionEnd.setX(xind - 1);
+    mPB.setX(xind - 1);
+}
+
+void TTextEdit::expandSelectionToLine(int y)
+{
+    if (!(y < mpBuffer->lineBuffer.size())) {
+        return;
+    }
+    unHighlight();
+    mDragStart.setX(0);
+    mDragStart.setY(y);
+    mDragSelectionEnd.setX(mpBuffer->buffer[y].size());
+    mDragSelectionEnd.setY(y);
+    normaliseSelection();
+    highlightSelection();
+    mMouseTracking = true;
 }
 
 
@@ -1087,10 +1123,16 @@ void TTextEdit::slot_popupMenu()
         return;
     }
     QString cmd;
+    int luaReference{0};
     if (mPopupCommands.contains(pA->text())) {
-        cmd = mPopupCommands[pA->text()];
+        cmd = mPopupCommands[pA->text()].first;
+        luaReference = mPopupCommands[pA->text()].second;
     }
-    mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
+    if (!luaReference) {
+        mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
+    } else {
+        mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, QStringLiteral("echoPopup"));
+    }
 }
 
 void TTextEdit::mousePressEvent(QMouseEvent* event)
@@ -1127,15 +1169,9 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             x = convertMouseXToBufferX(event->x(), y, &isOutOfbounds);
         }
 
-        if (mCtrlSelecting && (y < mpBuffer->lineBuffer.size())) {
-            unHighlight();
-            mDragStart.setX(0);
-            mDragStart.setY(y);
-            mDragSelectionEnd.setX(mpBuffer->buffer[y].size());
-            mDragSelectionEnd.setY(y);
-            normaliseSelection();
+        if (mCtrlSelecting) {
+            expandSelectionToLine(y);
             highlightSelection();
-            mMouseTracking = true;
             event->accept();
             return;
         }
@@ -1144,10 +1180,15 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             if (x < static_cast<int>(mpBuffer->buffer[y].size()) && !isOutOfbounds) {
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
                     QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
+                    int luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(y).at(x).linkIndex()).value(0, false);
                     QString func;
                     if (!command.empty()) {
                         func = command.at(0);
-                        mpHost->mLuaInterpreter.compileAndExecuteScript(func);
+                        if (!luaReference){
+                            mpHost->mLuaInterpreter.compileAndExecuteScript(func);
+                        } else {
+                            mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, QStringLiteral("echoLink"));
+                        }
                         return;
                     }
                 }
@@ -1174,6 +1215,12 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             mMouseTrackLevel++;
             if (mMouseTrackLevel > 3) {
                 mMouseTrackLevel = 3;
+            }
+
+            if (mMouseTrackLevel == 3){
+                expandSelectionToLine(y);
+                event->accept();
+                return;
             }
 
             if (y >= mpBuffer->lineBuffer.size()) {
@@ -1224,16 +1271,17 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
                     QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
                     QStringList hint = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(y).at(x).linkIndex());
+                    QVector<int> luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(y).at(x).linkIndex());
                     if (command.size() > 1) {
                         auto popup = new QMenu(this);
                         for (int i = 0, total = command.size(); i < total; ++i) {
                             QAction* pA;
                             if (i < hint.size()) {
                                 pA = popup->addAction(hint[i]);
-                                mPopupCommands[hint[i]] = command[i];
+                                mPopupCommands[hint[i]] = {command[i], luaReference.value(i, 0)};
                             } else {
                                 pA = popup->addAction(command[i]);
-                                mPopupCommands[command[i]] = command[i];
+                                mPopupCommands[command[i]] = {command[i], luaReference.value(i, 0)};
                             }
                             connect(pA, &QAction::triggered, this, &TTextEdit::slot_popupMenu);
                         }
@@ -1319,12 +1367,23 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             popup->addAction(actionRestoreMainToolBar);
         }
 
+        // Add user actions
+        QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
+        while (it.hasNext()) {
+            it.next();
+            QStringList actionInfo = it.value();
+            const QString &actionName = actionInfo.at(1);
+            QAction * action = new QAction(actionName, this);
+            action->setToolTip(actionInfo.at(2));
+            popup->addAction(action);
+            connect(action, &QAction::triggered, this, [this, actionName] { slot_mouseAction(actionName); });
+        }
         popup->popup(mapToGlobal(event->pos()), action);
         event->accept();
         return;
     }
 
-    if (event->button() == Qt::MidButton) {
+    if (event->button() == Qt::MiddleButton) {
         mpConsole->mLowerPane->mCursorY = mpConsole->buffer.size(); //
         mpConsole->mLowerPane->hide();
         mpBuffer->mCursorY = mpBuffer->size();
@@ -1375,7 +1434,7 @@ void TTextEdit::slot_copySelectionToClipboard()
         return;
     }
 
-    QString selectedText = getSelectedText();
+    QString selectedText = getSelectedText(QChar::LineFeed);
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(selectedText);
 }
@@ -1605,10 +1664,10 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
 
         if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() >= timeout) {
             qDebug().nospace() << "timeout for image copy (" << timeout << "s) reached, managed to draw " << i << " lines";
-            return std::make_pair(false, linesDrawn);
+            return {false, linesDrawn};
         }
     }
-    return std::make_pair(true, linesDrawn);
+    return {true, linesDrawn};
 }
 
 void TTextEdit::searchSelectionOnline()
@@ -1619,12 +1678,12 @@ void TTextEdit::searchSelectionOnline()
     QDesktopServices::openUrl(QUrl(url));
 }
 
-QString TTextEdit::getSelectedText(const QChar& newlineChar)
+QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTimestamps)
 {
     // mPA QPoint where selection started
     // mPB QPoint where selection ended
     // try to prevent crash if buffer is batch deleted
-    if (mPA.y() > mpBuffer->lineBuffer.size() - 1 || mPB.y() > mpBuffer->lineBuffer.size() - 1){
+    if (mPA.y() > mpBuffer->lineBuffer.size() - 1 || mPB.y() > mpBuffer->lineBuffer.size() - 1) {
         mPA.ry() -= mpBuffer->mBatchDeleteSize;
         mPB.ry() -= mpBuffer->mBatchDeleteSize;
     }
@@ -1656,6 +1715,14 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar)
         }
     }
 
+     if (showTimestamps) {
+        QStringList timestamps = mpBuffer->timeBuffer.mid(startLine, endLine - startLine + 1);
+        QStringList result;
+        std::transform(textLines.cbegin(), textLines.cend(), timestamps.cbegin(), std::back_inserter(result),
+                               [](const QString& text, const QString& timestamp) { return timestamp + text; });
+        textLines = result;
+    }
+
     return textLines.join(newlineChar);
 }
 
@@ -1669,6 +1736,11 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 
     if (mpConsole->getType() == TConsole::SubConsole) {
         qApp->sendEvent(mpConsole->parentWidget(), &newEvent);
+        auto subConsoleParent = qobject_cast<TConsole*>(mpConsole->parent());
+        if (subConsoleParent && subConsoleParent->mpDockWidget && subConsoleParent->mpDockWidget->isFloating()) {
+            mpHost->mpConsole->activateWindow();
+            mpHost->mpConsole->setFocus();
+        }
     }
 
     if (mpConsole->getType() == TConsole::MainConsole || mpConsole->getType() == TConsole::UserWindow) {
@@ -1706,18 +1778,41 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
 
 void TTextEdit::wheelEvent(QWheelEvent* e)
 {
-    int k = 3;
-    if (e->delta() < 0) {
-        mpConsole->scrollDown(abs(k));
-        e->accept();
-        return;
+    // Make the speed up be half of the (upper pane) lines - need to round it so
+    // that a decimal part does not make the end +/- value for up/down different
+    // in magnitude:
+    double ySpeedUp = qRound(mpConsole->mUpperPane->getScreenHeight() / 2.0);
+    // Just a number plucked out of the air for the x-direction:
+    double xSpeedUp = 10.0;
+
+    QPointF delta = e->angleDelta();
+    // Convert to degrees:
+    delta /= 8.0;
+    // Allow the control key to introduce a speed up - but also allow it to be
+    // overriden by a shift key to slow the scroll down to one line/character
+    // per click:
+    delta.rx() *= (e->modifiers() & Qt::ShiftModifier ? 1.0 : (e->modifiers() & Qt::ControlModifier ? xSpeedUp : 3.0));
+    delta.ry() *= (e->modifiers() & Qt::ShiftModifier ? 1.0 : (e->modifiers() & Qt::ControlModifier ? ySpeedUp : 3.0));
+    // Add on any previously stored (integer) remainder:
+    delta += mMouseWheelRemainder;
+    // Convert to 15 degree steps and record them:
+    int xDelta = qRound(delta.x() / 15.0);
+    int yDelta = qRound(delta.y() / 15.0);
+    // Store the (rounded) remainder
+    mMouseWheelRemainder = QPoint(delta.x() - (15 * xDelta), delta.y() - (15 * yDelta));
+
+    bool used = false;
+    if (yDelta > 0) {
+        mpConsole->scrollUp(yDelta);
+        used = true;
+    } else if (yDelta < 0) {
+        mpConsole->scrollDown(-yDelta);
+        used = true;
     }
-    if (e->delta() > 0) {
-        mpConsole->scrollUp(k);
-        e->accept();
-        return;
-    }
-    e->ignore();
+
+    // Space for future use of xDelta
+
+    e->setAccepted(used);
 }
 
 int TTextEdit::imageTopLine()
@@ -1874,7 +1969,7 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
         case 0x206D:                    return htmlCenter(tr("{activate arabic form-shaping}", "Unicode U+206D codepoint.")); break;
         case 0x206E:                    return htmlCenter(tr("{national digit shapes}", "Unicode U+206E codepoint.")); break;
         case 0x206F:                    return htmlCenter(tr("{nominal Digit shapes}", "Unicode U+206F codepoint.")); break;
-        case 0x3000:                    return htmlCenter(tr("{ideaographic space}", "Unicode U+3000 codepoint - ideaographic (CJK Wide) space")); break;
+        case 0x3000:                    return htmlCenter(tr("{ideographic space}", "Unicode U+3000 codepoint - ideographic (CJK Wide) space")); break;
         case 0xFE00:                    return htmlCenter(tr("{variation selector 1}", "Unicode U+FE00 codepoint.")); break;
         case 0xFE01:                    return htmlCenter(tr("{variation selector 2}", "Unicode U+FE01 codepoint.")); break;
         case 0xFE02:                    return htmlCenter(tr("{variation selector 3}", "Unicode U+FE02 codepoint.")); break;
@@ -2047,7 +2142,7 @@ void TTextEdit::slot_analyseSelection()
                 // just for that number (and not the rest of the resultant String):
                 // &#8232; is the Unicode Line Separator
                 utf16Vals.append(
-                        QStringLiteral("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</centre>&#8232;<center>(0x%3:0x%4)</center></td>")
+                        QStringLiteral("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
                                 .arg(QString::number(columnsToUse))
                                 .arg(QStringLiteral("%1").arg(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1)), 4, 16, zero).toUpper())
                                 .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, zero)
@@ -2316,6 +2411,29 @@ void TTextEdit::slot_changeDebugShowAllProblemCodepoints(const bool state)
     if (mShowAllCodepointIssues != state) {
         mShowAllCodepointIssues = state;
     }
+}
+
+void TTextEdit::slot_mouseAction(const QString &uniqueName)
+{
+    TEvent event {};
+    QStringList mouseEvent = mpHost->mConsoleActions[uniqueName];
+    event.mArgumentList.append(mouseEvent[0]);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(uniqueName);
+
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(mpConsole->mConsoleName);
+
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(mPA.x()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(mPA.y()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(mPB.x()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(mPB.y()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mpHost->raiseEvent(event);
 }
 
 // Originally this was going to be part of the destructor - but it was unable

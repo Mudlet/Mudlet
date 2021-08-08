@@ -102,6 +102,7 @@ public slots:
     void setColorLightWhite2();
     void setFgColor2();
     void setBgColor2();
+    void setRoomBorderColor();
     void resetColors2();
 
     // Map.
@@ -181,6 +182,7 @@ private:
     void generateDiscordTooltips();
     void hidePasswordMigrationLabel();
     void setupPasswordsMigration();
+    QString mapSaveLoadDirectory(Host* pHost);
 
     int mFontSize;
     QPointer<Host> mpHost;

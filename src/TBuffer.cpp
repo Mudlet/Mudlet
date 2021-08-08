@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2018, 2020 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -51,16 +52,6 @@
 //#define DEBUG_MXP_PROCESSING
 
 
-// Default constructor:
-TChar::TChar()
-: mFgColor(Qt::white)
-, mBgColor(Qt::black)
-, mFlags(None)
-, mIsSelected(false)
-, mLinkIndex(0)
-{
-}
-
 TChar::TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags, const int linkIndex)
 : mFgColor(fg)
 , mBgColor(bg)
@@ -106,7 +97,8 @@ bool TChar::operator==(const TChar& other)
     return true;
 }
 
-// Copy constructor:
+// Copy constructor - because it is resetting the mIsSelected flag it is NOT a
+// default copy constructor:
 TChar::TChar(const TChar& copy)
 : mFgColor(copy.mFgColor)
 , mBgColor(copy.mBgColor)
@@ -269,9 +261,9 @@ int TBuffer::getLastLineNumber()
     }
 }
 
-void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format)
+void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference)
 {
-    int id = mLinkStore.addLinks(command, hint);
+    int id = mLinkStore.addLinks(command, hint, mpHost, luaReference);
 
     if (!trigMode) {
         append(text, 0, text.length(), format.mFgColor, format.mBgColor, format.mFlags, id);
@@ -2434,7 +2426,7 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
     for (int total = P2.x(); x < total; ++x) {
         int linkId = buffer.at(y).at(x).linkIndex();
         if (linkId && (linkId != oldLinkId)) {
-            id = slice.mLinkStore.addLinks(mLinkStore.getLinksConst(linkId), mLinkStore.getHintsConst(linkId));
+            id = slice.mLinkStore.addLinks(mLinkStore.getLinksConst(linkId), mLinkStore.getHintsConst(linkId), mpHost);
             oldLinkId = linkId;
         }
 
@@ -2509,7 +2501,7 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
     for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
         int linkId = chunk.buffer.at(0).at(cx).linkIndex();
         if (linkId && (oldLinkId != linkId)) {
-            id = mLinkStore.addLinks(chunk.mLinkStore.getLinksConst(linkId), chunk.mLinkStore.getHintsConst(linkId));
+            id = mLinkStore.addLinks(chunk.mLinkStore.getLinksConst(linkId), chunk.mLinkStore.getHintsConst(linkId), mpHost);
             oldLinkId = linkId;
         }
         if (!linkId) {
@@ -2701,7 +2693,7 @@ void TBuffer::log(int fromLine, int toLine)
 
     // record the last log call into a temporary buffer - we'll actually log
     // on the next iteration after duplication detection has run
-    lastTextToLog = std::move(linesToLog.join(QString()));
+    lastTextToLog = linesToLog.join(QString());
     lastLoggedFromLine = fromLine;
     lastloggedToLine = toLine;
 }
@@ -2987,7 +2979,7 @@ bool TBuffer::deleteLines(int from, int to)
     }
 }
 
-bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStringList& linkFunction, const QStringList& linkHint)
+bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStringList& linkFunction, const QStringList& linkHint, QVector<int> luaReference)
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
@@ -3020,7 +3012,7 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
                     }
                 }
                 if (linkID == 0) {
-                    linkID = mLinkStore.addLinks(linkFunction, linkHint);
+                    linkID = mLinkStore.addLinks(linkFunction, linkHint, mpHost, luaReference);
                 }
                 buffer.at(y).at(x++).mLinkIndex = linkID;
             }

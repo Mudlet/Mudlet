@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2014, 2017-2019, 2021 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
@@ -52,6 +52,8 @@
 #include <QTextCodec>
 #include <QSslError>
 #include "post_guard.h"
+
+using namespace std::chrono_literals;
 
 // Uncomment this to get debugging messages about WILL/WONT/DO/DONT commands for
 // suboptions - change the value to 2 to get a bit more detail about the sizes
@@ -162,7 +164,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     connect(mTimerPass, &QTimer::timeout, this, &cTelnet::slot_send_pass);
 
     mpDownloader = new QNetworkAccessManager(this);
-    connect(mpDownloader, &QNetworkAccessManager::finished, this, &cTelnet::replyFinished);
+    connect(mpDownloader, &QNetworkAccessManager::finished, this, &cTelnet::slot_replyFinished);
 }
 
 void cTelnet::reset()
@@ -481,8 +483,8 @@ void cTelnet::handle_socket_signal_connected()
     QString nothing = "";
     mpHost->mLuaInterpreter.call(func, nothing);
     mConnectionTimer.start();
-    mTimerLogin->start(2000);
-    mTimerPass->start(3000);
+    mTimerLogin->start(2s);
+    mTimerPass->start(3s);
 
     emit signal_connected(mpHost);
 
@@ -642,17 +644,12 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
 
     if (mpHost->mAllowToSendCommand) {
         std::string outData;
-        auto errorMsgTemplate = "[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
-            "be encoded into the range that is acceptable for the character\n"
-            "encoding that is currently set {\"%1\"} for the game server.\n"
-            "It may not understand what is sent to it.\n"
-            "Note: this warning will only be issued once, even if this happens again, until\n"
-            "the encoding is changed.";
+        auto errorMsgTemplate = "[ WARN ]  - Tried to send '%1' to the game, but it is unlikely to understand it.";
         if (!mEncoding.isEmpty()) {
             if (outgoingDataEncoder) {
                 if ((!mEncodingWarningIssued) && (!outgoingDataCodec->canEncode(data))) {
                     QString errorMsg = tr(errorMsgTemplate,
-                                          "%1 is the name of the encoding currently set.").arg(QLatin1String(mEncoding));
+                                          "%1 is the command that was sent to the game.").arg(data);
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                 }
@@ -677,7 +674,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
             for (int i = 0, total = data.size(); i < total; ++i) {
                 if ((!mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
                     QString errorMsg = tr(errorMsgTemplate,
-                                          "%1 is the name of the encoding currently set.").arg(QStringLiteral("ASCII"));
+                                          "%1 is the command that was sent to the game.").arg(data);
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                     break;
@@ -816,26 +813,38 @@ void cTelnet::sendTelnetOption(char type, char option)
 }
 
 
-void cTelnet::replyFinished(QNetworkReply* reply)
+void cTelnet::slot_replyFinished(QNetworkReply* reply)
 {
     mpProgressDialog->close();
 
+    if (reply != mpPackageDownloadReply) {
+        qWarning().nospace().noquote() << "cTelnet::slot_replyFinished(QNetworkReply*) ERROR - download finished, but it wasn't the one we are expecting";
+        reply->deleteLater();
+    } else {
+        // don't process if download was aborted
+        if (reply->error() != QNetworkReply::NoError) {
+            reply->deleteLater();
+            mpPackageDownloadReply = nullptr;
+            return;
+        }
 
-    QFile file(mServerPackage);
-    file.open(QFile::WriteOnly);
-    file.write(reply->readAll());
-    file.flush();
-    file.close();
-    mpHost->installPackage(mServerPackage, 0);
-    QString packageName = mServerPackage.section("/", -1);
-    packageName.replace(".zip", "");
-    packageName.replace("trigger", "");
-    packageName.replace("xml", "");
-    packageName.replace(".mpackage", "");
-    packageName.replace('/', "");
-    packageName.replace('\\', "");
-    packageName.replace('.', "");
-    mpHost->mServerGUI_Package_name = packageName;
+        QFile file(mServerPackage);
+        file.open(QFile::WriteOnly);
+        file.write(reply->readAll());
+        file.flush();
+        file.close();
+        reply->deleteLater();
+        mpPackageDownloadReply = nullptr;
+        mpHost->installPackage(mServerPackage, 0);
+        QString packageName = mServerPackage.section("/", -1);
+        packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
+        packageName.remove(QLatin1String(".trigger"), Qt::CaseInsensitive);
+        packageName.remove(QLatin1String(".xml"), Qt::CaseInsensitive);
+        packageName.remove(QLatin1String(".mpackage"), Qt::CaseInsensitive);
+        packageName.remove(QLatin1Char('/'));
+        packageName.remove(QLatin1Char('\\'));
+        mpHost->mServerGUI_Package_name = packageName;
+    }
 }
 
 void cTelnet::setDownloadProgress(qint64 got, qint64 tot)
@@ -932,12 +941,15 @@ QString cTelnet::decodeOption(const unsigned char ch) const
     }
 }
 
-std::pair<QString, int> cTelnet::getConnectionInfo() const
+std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
 {
+    // intentionally simplify connection state to a boolean
+    const bool connected = socket.state() == QAbstractSocket::ConnectedState;
+
     if (hostName.isEmpty() && hostPort == 0) {
-        return {mpHost->getUrl(), mpHost->getPort()};
+        return {mpHost->getUrl(), mpHost->getPort(), connected};
     } else {
-        return {hostName, hostPort};
+        return {hostName, hostPort, connected};
     }
 }
 
@@ -1190,11 +1202,15 @@ void cTelnet::processTelnetCommand(const std::string& command)
                     hisOptionState[idxOption] = true;
                 } else if ((option == OPT_COMPRESS) || (option == OPT_COMPRESS2)) {
                     //these are handled separately, as they're a bit special
-                    if (mpHost->mFORCE_NO_COMPRESSION || ((option == OPT_COMPRESS) && (hisOptionState[static_cast<int>(OPT_COMPRESS2)]))) {
+                    if (mpHost->mFORCE_NO_COMPRESSION) {
+                        sendTelnetOption(TN_DONT, option);
+                        hisOptionState[idxOption] = false;
+                        qDebug().nospace().noquote() << "Rejecting MCCP v" << (option == OPT_COMPRESS ? "1" : "2") << ", because the 'Force compression off' option is enabled.";
+                    } else if ((option == OPT_COMPRESS) && (hisOptionState[static_cast<int>(OPT_COMPRESS2)])) {
                         //protocol says: reject MCCP v1 if you have previously accepted MCCP v2...
                         sendTelnetOption(TN_DONT, option);
                         hisOptionState[idxOption] = false;
-                        qDebug() << "Rejecting MCCP v1, because v2 has already been negotiated or FORCE COMPRESSION OFF is set to ON.";
+                        qDebug() << "Rejecting MCCP v1, because v2 has already been negotiated.";
                     } else {
                         sendTelnetOption(TN_DO, option);
                         hisOptionState[idxOption] = true;
@@ -1588,7 +1604,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 return;
             }
 
-            rawData = rawData.replace(TN_BELL, QLatin1String("\\\\7"));
+            rawData = rawData.replace(TN_BELL, QByteArray("\\\\7"));
 
             // rawData is in the Mud Server's encoding, trim off the Telnet suboption
             // bytes from beginning (3) and end (2):
@@ -1618,7 +1634,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 output += TN_IAC;
                 output += TN_SE;
                 socketOutRaw(output);
-            } else if (payload.startsWith(QByteArray("Client.GUI"))) {
+            } else if (payload.toLower().startsWith(QByteArray("client.gui"))) {
                 if (!mpHost->mAcceptServerGUI) {
                     return;
                 }
@@ -1629,7 +1645,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 // encoding is wrong.
                 QString msg = decodeBytes(payload);
                 QString version = msg.section(QChar::LineFeed, 0);
-                version.remove(QStringLiteral("Client.GUI "));
+                version.remove(QStringLiteral("Client.GUI "), Qt::CaseInsensitive);
                 version.replace(QChar::LineFeed, QChar::Space);
                 version = version.section(QChar::Space, 0, 0);
 
@@ -1666,9 +1682,10 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 mpHost->updateProxySettings(mpDownloader);
                 auto request = QNetworkRequest(QUrl(url));
                 mudlet::self()->setNetworkRequestDefaults(url, request);
-                QNetworkReply* reply = mpDownloader->get(request);
+                mpPackageDownloadReply = mpDownloader->get(request);
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
-                connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+                connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+                connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
                 mpProgressDialog->show();
             }
             return;
@@ -1941,7 +1958,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         data = transcodedMsg.section(QChar::LineFeed, 1);
     }
 
-    if (transcodedMsg.startsWith(QStringLiteral("Client.GUI"))) {
+    if (transcodedMsg.startsWith(QStringLiteral("Client.GUI"), Qt::CaseInsensitive)) {
         if (!mpHost->mAcceptServerGUI) {
             return;
         }
@@ -1962,7 +1979,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         if (!document.isObject()) {
             // This is raw telnet, not JSON
             version = transcodedMsg.section(QChar::LineFeed, 0);
-            version.remove(QLatin1String("Client.GUI "));
+            version.remove(QLatin1String("Client.GUI "), Qt::CaseInsensitive);
             version.replace(QChar::LineFeed, QChar::Space);
             version = version.section(QChar::Space, 0, 0);
 
@@ -2033,12 +2050,13 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpHost->updateProxySettings(mpDownloader);
         auto request = QNetworkRequest(QUrl(url));
         mudlet::self()->setNetworkRequestDefaults(url, request);
-        QNetworkReply* reply = mpDownloader->get(request);
+        mpPackageDownloadReply = mpDownloader->get(request);
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
-        connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+        connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+        connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
         mpProgressDialog->show();
         return;
-    } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"))) {
+    } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"), Qt::CaseInsensitive)) {
         mpHost->setMmpMapLocation(data);
     }
     data.remove(QChar::LineFeed);
@@ -2048,12 +2066,12 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     // remove \r's from the data, as yajl doesn't like it
     data.remove(QChar::CarriageReturn);
 
-    if (packageMessage.startsWith(QLatin1String("External.Discord.Status"))
-        || packageMessage.startsWith(QLatin1String("External.Discord.Info"))) {
+    if (packageMessage.startsWith(QLatin1String("External.Discord.Status"), Qt::CaseInsensitive)
+        || packageMessage.startsWith(QLatin1String("External.Discord.Info"), Qt::CaseInsensitive)) {
         mpHost->processDiscordGMCP(packageMessage, data);
     }
 
-    if (mpHost->mAcceptServerMedia && packageMessage.toLower().startsWith(QStringLiteral("client.media"))) {
+    if (mpHost->mAcceptServerMedia && packageMessage.startsWith(QStringLiteral("Client.Media"), Qt::CaseInsensitive)) {
         mpHost->mpMedia->parseGMCP(packageMessage, data);
     }
 
@@ -2188,7 +2206,8 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
                 } else if (mspVAR == "U") {
                     mediaData.setMediaUrl(mspVAL);
                 } else {
-                    return; // Invalid MSP.
+                    qDebug() << "MSP: tag" << mspVAR << "isn't one we understand";
+                    continue; // robustness principle: ignore anything we don't understand
                 }
             }
         }
@@ -2340,7 +2359,7 @@ void cTelnet::postMessage(QString msg)
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(200, 50, 50), mpHost->mBgColor); // Red
                 }
             } else if (prefix.contains(tr("WARN", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("WARN"))) {
-                mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);
+                mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);                     // Cyan
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 150, 0), mpHost->mBgColor); // Orange
                 for (quint8 _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
@@ -2747,7 +2766,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
         if (mNeedDecompression) {
             datalen = decompressBuffer(in_buffer, amount, out_buffer);
             buffer = out_buffer;
-            //qDebug() << "buffer:" << buffer;
         }
         buffer[datalen] = '\0';
         if (mpHost->mpConsole->mRecordReplay) {
