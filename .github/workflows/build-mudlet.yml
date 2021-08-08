@@ -318,7 +318,7 @@ jobs:
     - name: (Linux) Run Lua tests
       if: runner.os == 'Linux'
       timeout-minutes: 1
-      uses: GabrielBB/xvfb-action@v1.0
+      uses: GabrielBB/xvfb-action@v1.5
       with:
         run: ${{runner.workspace}}/b/ninja/src/mudlet --profile Achaea
 
