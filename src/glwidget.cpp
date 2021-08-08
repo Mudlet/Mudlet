@@ -190,7 +190,7 @@ void GLWidget::slot_topView()
 
 void GLWidget::slot_setScale(int angle)
 {
-    mScale = 150 / ((float)angle + 300);
+    mScale = 150 / (static_cast<float>(angle) + 300.0f);
     makeCurrent();
     resizeGL(width(), height());
     doneCurrent();

@@ -272,7 +272,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
 
 void dlgMapper::slot_roomSize(int d)
 {
-    float s = (float)d / 10.0;
+    float s = static_cast<float>(d / 10.0);
     mp2dMap->setRoomSize(s);
     mp2dMap->update();
 }

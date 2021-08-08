@@ -51,10 +51,10 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* interpreter, lua_State* L) : QPr
     callBackFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
 
 
-    QString prog = QString((char*)luaL_checkstring(L, 2));
+    QString prog{luaL_checkstring(L, 2)};
     QStringList args;
     for (int i = 3; i <= n; i++) {
-        args << ((char*)luaL_checkstring(L, i));
+        args << luaL_checkstring(L, i);
     }
 
     // QProcess::finished is overloaded so we have to say which form we are

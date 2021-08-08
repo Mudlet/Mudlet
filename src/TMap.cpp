@@ -312,7 +312,7 @@ void TMap::connectExitStub(int roomId, int dirType)
             }
         } else {
             //to avoid rooms on same plane from stealing stubs
-            if ((int)pR->x != rx) {
+            if (pR->x != rx) {
                 continue;
             }
         }
