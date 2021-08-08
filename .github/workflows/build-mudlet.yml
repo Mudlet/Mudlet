@@ -154,7 +154,7 @@ jobs:
 
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
-        # imagemagick is for the desktop screenshot 
+        # imagemagick is for the desktop screenshot
         sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 \
           libxkbcommon-x11-0 imagemagick -y
 
@@ -317,7 +317,7 @@ jobs:
 
     - name: (Linux) Run Lua tests
       if: runner.os == 'Linux'
-      timeout-minutes: 1      
+      timeout-minutes: 1
       uses: GabrielBB/xvfb-action@v1.0
       with:
         run: ${{runner.workspace}}/b/ninja/src/mudlet --profile Achaea
@@ -335,7 +335,7 @@ jobs:
       with:
         name: Screenshot
         path: 'desktop.jpg'
-      
+
     - name: (windows) Show relevant logs logs
       if: failure() && runner.os == 'Windows'
       run: |
