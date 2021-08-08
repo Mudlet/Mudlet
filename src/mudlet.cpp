@@ -2270,7 +2270,7 @@ void mudlet::slot_show_help_dialog_forum()
 
 void mudlet::slot_show_help_dialog_irc()
 {
-    QDesktopServices::openUrl(QUrl("https://webchat.freenode.net/?channels=mudlet"));
+    QDesktopServices::openUrl(QUrl("https://web.libera.chat/?channel=#mudlet"));
 }
 
 void mudlet::slot_mapper()
