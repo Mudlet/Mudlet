@@ -535,7 +535,7 @@ void dlgPackageExporter::slot_export_package()
         assetsFuture.waitForFinished();
         cleanupUnusedImages(tempPath, plainDescription);
         if (auto [success, message] = assetsFuture.result(); !success) {
-            displayResultMessage(message);
+            displayResultMessage(message, false);
             isOk = false;
         } else {
             auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageConfig);
@@ -545,11 +545,11 @@ void dlgPackageExporter::slot_export_package()
                 slot_enableExportButton({});
 
                 if (auto [isOk, errorMsg] = future.result(); !isOk) {
-                    displayResultMessage(errorMsg);
+                    displayResultMessage(errorMsg, false);
                 } else {
                     displayResultMessage(tr("Package \"%1\" exported to: %2")
-                                                 .arg(mPackageName, QStringLiteral("<a href=\"file:///%1\">%2</a>"))
-                                                 .arg(getActualPath().toHtmlEscaped(), getActualPath().toHtmlEscaped()),
+                                                 .arg(mPackageName, QStringLiteral("<a href=\"file:///%1\">%1</a>")
+                                                                            .arg(getActualPath().toHtmlEscaped())),
                                          true);
                 }
                 mCancelButton->setVisible(false);
