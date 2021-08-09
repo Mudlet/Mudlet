@@ -478,7 +478,7 @@ void dlgPackageExporter::slot_export_package()
 
     mExportingPackage = true;
     QApplication::setOverrideCursor(Qt::BusyCursor);
-    checkToEnableExportButton();
+    slot_enableExportButton({});
 
 #if LIBZIP_SUPPORTS_CANCELLING
     mCancelButton->setVisible(true);
