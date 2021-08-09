@@ -42,7 +42,7 @@
 using namespace std::chrono_literals;
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
-: QDialog(parent), validName(), validUrl(), validPort(), mProfileList(QStringList()), offline_button(nullptr), connect_button(nullptr), delete_profile_lineedit(nullptr), delete_button(nullptr)
+: QDialog(parent), validName(), validUrl(), validPort(), offline_button(nullptr), connect_button(nullptr), delete_profile_lineedit(nullptr), delete_button(nullptr)
 {
     setupUi(this);
 
