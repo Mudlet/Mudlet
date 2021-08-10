@@ -488,7 +488,7 @@ void dlgPackageExporter::slot_export_package()
     QApplication::setOverrideCursor(Qt::BusyCursor);
     slot_enableExportButton({});
 
-#if LIBZIP_SUPPORTS_CANCELLING
+#if defined(LIBZIP_SUPPORTS_CANCELLING)
     mCancelButton->setVisible(true);
 #endif
 
@@ -994,7 +994,7 @@ dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& pac
         // details):
         zip_set_archive_comment(archive, packageConfig.toUtf8().constData(), packageConfig.length());
 
-#ifdef LIBZIP_SUPPORTS_CANCELLING
+#if defined(LIBZIP_SUPPORTS_CANCELLING)
         auto cancel_callback = [](zip*, void*) -> int { return !mExportingPackage; };
         zip_register_cancel_callback_with_state(archive, cancel_callback, nullptr, nullptr);
 #endif
