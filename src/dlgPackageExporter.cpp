@@ -785,6 +785,7 @@ void dlgPackageExporter::exportXml(bool& isOk,
         // seen the error message...
     }
 }
+
 void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile, const QString& packageDescription)
 {
     QStringList dependencies;
@@ -818,6 +819,7 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
         configFile.close();
     }
 }
+
 QFileInfo dlgPackageExporter::copyIconToTmp(const QString& tempPath) const
 {
     QFileInfo iconFile(mPackageIconPath);
