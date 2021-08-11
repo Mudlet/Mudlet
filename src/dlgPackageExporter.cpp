@@ -98,8 +98,6 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     connect(ui->lineEdit_packageName, &QLineEdit::textChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     connect(this, &dlgPackageExporter::signal_exportLocationChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     slot_updateLocationPlaceholder();
-    connect(ui->lineEdit_packageName, &QLineEdit::textChanged, this, &dlgPackageExporter::slot_enableExportButton);
-    slot_enableExportButton(QString());
     connect(ui->packageList, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgPackageExporter::slot_packageChanged);
     connect(ui->addDependency, &QPushButton::clicked, this, &dlgPackageExporter::slot_addDependency);
     connect(ui->pushButton_addIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_import_icon);
@@ -315,19 +313,18 @@ void dlgPackageExporter::slot_updateLocationPlaceholder()
         path = tr("Export to %1").arg(QStringLiteral("%1/%2.mpackage").arg(getActualPath(), packageName));
     }
 
+    checkToEnableExportButton();
+
     ui->lineEdit_filePath->setPlaceholderText(path);
 }
 
-void dlgPackageExporter::slot_enableExportButton(const QString& text)
+void dlgPackageExporter::checkToEnableExportButton()
 {
-    Q_UNUSED(text);
-
     if (ui->lineEdit_packageName->text().isEmpty() || mExportingPackage) {
         mExportButton->setEnabled(false);
-        return;
+    } else {
+        mExportButton->setEnabled(true);
     }
-
-    mExportButton->setEnabled(true);
 }
 
 void dlgPackageExporter::slot_import_icon()
@@ -486,7 +483,7 @@ void dlgPackageExporter::slot_export_package()
 
     mExportingPackage = true;
     QApplication::setOverrideCursor(Qt::BusyCursor);
-    slot_enableExportButton({});
+    checkToEnableExportButton();
 
 #if LIBZIP_SUPPORTS_CANCELLING
     mCancelButton->setVisible(true);
@@ -517,7 +514,7 @@ void dlgPackageExporter::slot_export_package()
                              .arg(mXmlPathFileName), false);
         assetsFuture.cancel();
         mExportingPackage = false;
-        slot_enableExportButton({});
+        checkToEnableExportButton();
         QApplication::restoreOverrideCursor();
         return;
     }
@@ -550,7 +547,7 @@ void dlgPackageExporter::slot_export_package()
             auto watcher = new QFutureWatcher<std::pair<bool, QString>>;
             QObject::connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, [=]() {
                 mExportingPackage = false;
-                slot_enableExportButton({});
+                checkToEnableExportButton();
 
                 if (auto [isOk, errorMsg] = future.result(); !isOk) {
                     displayResultMessage(errorMsg);
@@ -572,7 +569,7 @@ void dlgPackageExporter::slot_export_package()
         displayResultMessage(tr("Exporting package..."), true);
     } else {
         mExportingPackage = false;
-        slot_enableExportButton({});
+        checkToEnableExportButton();
         mCancelButton->setVisible(false);
         mCloseButton->setVisible(true);
         QApplication::restoreOverrideCursor();
@@ -1470,7 +1467,7 @@ QString dlgPackageExporter::getActualPath() const
 void dlgPackageExporter::slot_cancelExport()
 {
     mExportingPackage = false;
-    slot_enableExportButton({});
+    checkToEnableExportButton();
 
     mCancelButton->setVisible(false);
     mCloseButton->setVisible(true);
