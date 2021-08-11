@@ -7914,6 +7914,10 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     }
 
     bool arrow = getVerifiedBool(L, __func__, 6, "end with arrow");
+    if (z.empty()) {
+        lua_pushfstring(L, "addCustomLine: bad argument #2 (points table cannot be empty)");
+        return lua_error(L);
+    }
     int lz = z.at(0);
     QList<QPointF> points;
     // TODO: make provision for 3D custom lines (and store the z coordinates and allow them to vary)
