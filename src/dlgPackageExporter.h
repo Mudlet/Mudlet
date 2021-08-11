@@ -96,7 +96,6 @@ private slots:
     void slot_openPackageLocation();
     void slot_packageChanged(int);
     void slot_updateLocationPlaceholder();
-    void slot_enableExportButton(const QString &text);
     void slot_recountItems(QTreeWidgetItem *item);
     void slot_rightClickOnItems(const QPoint &point);
     void slot_cancelExport();
@@ -133,6 +132,7 @@ private:
                          QList<QTreeWidgetItem*>& keyList);
     QString copyNewImagesToTmp(const QString& tempPath) const;
     static void cleanupUnusedImages(const QString& tempPath, const QString& plainDescription);
+    void checkToEnableExportButton();
 
     Ui::dlgPackageExporter* ui;
     QPointer<Host> mpHost;
