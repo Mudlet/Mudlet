@@ -32,6 +32,7 @@
 
 #include "pre_guard.h"
 #include <QtUiTools>
+#include <QColorDialog>
 #include <QDir>
 #include <QRandomGenerator>
 #include <QSettings>
@@ -555,7 +556,7 @@ void dlgConnectionProfiles::slot_save_name()
         slot_item_clicked(pRestoredItems.first());
     } else {
         setItemName(pItem, newProfileName);
-        pItem->setIcon(customIcon(newProfileName));
+        pItem->setIcon(customIcon(newProfileName, std::nullopt));
     }
 }
 
@@ -1657,11 +1658,33 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString &profile, L callba
     job->start();
 }
 
+std::optional<QColor> getCustomColor(const QString& profileName)
+{
+
+    auto profileColorPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, QStringLiteral("profilecolor"));
+    if(QFileInfo::exists(profileColorPath)) {
+        QFile file(profileColorPath);
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+            return std::nullopt;
+
+        QTextStream in(&file);
+        QString colorString = in.readLine();
+        QColor color(colorString);
+        if(color.isValid()) {
+            return {color};
+        }
+        else {
+            return std::nullopt;
+        }
+    }
+    return std::nullopt;
+}
+
 void dlgConnectionProfiles::generateCustomProfile(const QString& profileName) const
 {
     auto pItem = new QListWidgetItem();
     setItemName(pItem, profileName);
-    pItem->setIcon(customIcon(profileName));
+    pItem->setIcon(customIcon(profileName, getCustomColor(profileName)));
     profiles_tree_widget->addItem(pItem);
 }
 
@@ -1675,6 +1698,7 @@ void dlgConnectionProfiles::slot_profile_menu(QPoint pos)
         menu.addAction(tr("Reset icon", "Reset the custom picture for this profile in the connection dialog and show the default one instead"), this, &dlgConnectionProfiles::slot_reset_custom_icon);
     } else {
         menu.addAction(QIcon(":/icons/mudlet_main_16px.png"), tr("Set custom icon", "Set a custom picture to show for the profile in the connection dialog"), this,  &dlgConnectionProfiles::slot_set_custom_icon);
+         menu.addAction(QIcon(":/icons/mudlet_main_16px.png"), tr("Set custom color", "Set a custom color to show for the profile in the connection dialog"), this,  &dlgConnectionProfiles::slot_set_custom_color);
     }
 
     menu.exec(globalPos);
@@ -1699,7 +1723,20 @@ void dlgConnectionProfiles::slot_set_custom_icon()
     auto icon = QIcon(QPixmap(imageLocation).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
     profiles_tree_widget->currentItem()->setIcon(icon);
 }
-
+void dlgConnectionProfiles::slot_set_custom_color()
+{
+    auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    QColor color = QColorDialog::getColor(getCustomColor(profileName).value_or(QColor(255,255,255)));
+    if(color.isValid()) {
+        auto profileColorPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, QStringLiteral("profilecolor"));
+        QFile file(profileColorPath);
+        file.open(QIODevice::WriteOnly | QIODevice::Text);
+        auto colorName = color.name();
+        file.write(colorName.toUtf8(), colorName.length());
+        file.close();
+        profiles_tree_widget->currentItem()->setIcon(customIcon(profileName, {color}));
+    }
+}
 void dlgConnectionProfiles::slot_reset_custom_icon()
 {
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
@@ -2332,12 +2369,14 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
     }
 }
 
-QIcon dlgConnectionProfiles::customIcon(const QString& text) const
+QIcon dlgConnectionProfiles::customIcon(const QString& text, std::optional<QColor> backgroundColor) const
 {
     QPixmap background(120, 30);
-    uint hash = qHash(text);
-    QColor backgroundColor = mCustomIconColors.at((hash * 8131) % mCustomIconColors.count());
-    background.fill(backgroundColor);
+
+    QColor color = backgroundColor.value_or(
+                mCustomIconColors.at((qHash(text) * 8131) % mCustomIconColors.count())
+                );
+    background.fill(color);
 
     // Set to one larger than wanted so that do loop can contain the decrementor
     int fontSize = 30;
@@ -2357,7 +2396,7 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
         pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
         QPixmap pg(QStringLiteral(":/icons/mudlet_main_32px.png"));
         pt.drawPixmap(QRect(5, 5, 20, 20), pg);
-        if (backgroundColor.lightness() > 127) {
+        if (color.lightness() > 127) {
             pt.setPen(Qt::black);
         } else {
             pt.setPen(Qt::white);

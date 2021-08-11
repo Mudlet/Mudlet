@@ -117,7 +117,7 @@ private:
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
     void setItemName(QListWidgetItem*, const QString&) const;
-    QIcon customIcon(const QString&) const;
+    QIcon customIcon(const QString&, std::optional<QColor>) const;
     void addLetterToProfileSearch(const int);
     inline void clearNotificationArea();
 
@@ -151,6 +151,7 @@ private:
 private slots:
     void slot_profile_menu(QPoint pos);
     void slot_set_custom_icon();
+    void slot_set_custom_color();
     void slot_reset_custom_icon();
     void slot_togglePasswordVisibility(const bool);
     void slot_password_saved(QKeychain::Job* job);
