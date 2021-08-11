@@ -420,12 +420,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mErrorLogFile.setFileName(logFileName);
     mErrorLogFile.open(QIODevice::Append);
     // This is NOW used (for map file auditing and other issues)
-    /*
-     * Whilst we only generate ASCII characters in our messages that get logged
-     * there can easily be not ASCII in user content and if the logs get sent to
-     * someone else for inspection there is a fair chance that they do not have
-     * the same codec given that the default behaviour is to use
-     * QTextCodec::codecForLocale for QTextStream:
+     /*
+     * Mudlet will log messages in ASCII, but force a universal (UTF-8) encoding
+     * since user-content can contain anything and someone else reviewing
+     * such logs need not have the same default encoding which would be used
+     * otherwise - note that this must be done AFTER setDevice(...):
      */
     mErrorLogStream.setDevice(&mErrorLogFile);
     mErrorLogStream.setCodec(QTextCodec::codecForName("UTF-8"));
