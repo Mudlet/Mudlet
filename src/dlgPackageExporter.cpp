@@ -987,18 +987,18 @@ dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& pac
     }
 
     if (isOk) {
-        // THIS is the point that the archive gets created from the
-        // source materials - it may take a short while!
-        // If it fails to write out the new file 'archive' is left
-        // unchanged (and we can still access it to get the error
-        // details):
-        zip_set_archive_comment(archive, packageConfig.toUtf8().constData(), packageConfig.length());
+        zip_set_archive_comment(archive, packageConfig.toUtf8().constData(), packageConfig.toUtf8().length());
 
 #ifdef LIBZIP_SUPPORTS_CANCELLING
         auto cancel_callback = [](zip*, void*) -> int { return !mExportingPackage; };
         zip_register_cancel_callback_with_state(archive, cancel_callback, nullptr, nullptr);
 #endif
 
+        // THIS is the point that the archive gets created from the
+        // source materials - it may take a short while!
+        // If it fails to write out the new file 'archive' is left
+        // unchanged (and we can still access it to get the error
+        // details):
         ze = zip_close(archive);
         if (ze) {
             // libzip's C interface around the error message isn't trivial - so copy it over into Qt land where things are simpler
