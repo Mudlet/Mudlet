@@ -1558,8 +1558,6 @@ void dlgConnectionProfiles::fillout_form()
 
 void dlgConnectionProfiles::setProfileIcon() const
 {
-    const auto defaultGames = mudlet::self()->getDefaultGames();
-
     for (int i = 0; i < mProfileList.size(); i++) {
         const QString& profileName = mProfileList.at(i);
         if (profileName.isEmpty()) {
@@ -1573,7 +1571,7 @@ void dlgConnectionProfiles::setProfileIcon() const
             // necessarily case preserving for file names so any tests on them
             // should be case insensitive
             // skip creating icons for default MUDs as they are already created above
-            if (defaultGames.contains(profileName, Qt::CaseInsensitive)) {
+            if (mudlet::scmDefaultGames.contains(profileName, Qt::CaseInsensitive)) {
                 continue;
             }
 
