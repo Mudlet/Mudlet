@@ -3330,9 +3330,9 @@ QColor TMap::getColor(int id)
                 quint8 g = (base - (r * 36)) / 6;
                 quint8 b = (base - (r * 36)) - (g * 6);
 
-                r = r * 51;
-                g = g * 51;
-                b = b * 51;
+                r = r == 0 ? 0 : (r - 1) * 40 + 95;
+                g = g == 0 ? 0 : (g - 1) * 40 + 95;
+                b = b == 0 ? 0 : (b - 1) * 40 + 95;
                 color = QColor(r, g, b, 255);
             } else if (231 < env && env < 256) {
                 quint8 k = ((env - 232) * 10) + 8;

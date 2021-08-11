@@ -15348,13 +15348,13 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
 
         lua_createtable(L, 3, 0);
 
-        lua_pushnumber(L, 51 * r);
+        lua_pushnumber(L, r == 0 ? 0 : (r - 1) * 40 + 95);
         lua_rawseti(L, -2, 1);
 
-        lua_pushnumber(L, 51 * g);
+        lua_pushnumber(L, g == 0 ? 0 : (g - 1) * 40 + 95);
         lua_rawseti(L, -2, 2);
 
-        lua_pushnumber(L, 51 * b);
+        lua_pushnumber(L, b == 0 ? 0 : (b - 1) * 40 + 95);
         lua_rawseti(L, -2, 3);
 
         lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
@@ -15371,39 +15371,7 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
     for (int i = 232; i < 256; ++i) {
         lua_createtable(L, 3, 0);
 
-        int value = 128;
-        // Divide the range 0 to 255 into 23 + 1 values to give a 24 value
-        // greyscale - this is lifted from TBuffer::decodeSGR{3|4}8() - and
-        // we really ought to refactor things so we only have this in one common
-        // place:
-        switch (i) {
-            case 232:   value =   0; break; //   0.000
-            case 233:   value =  11; break; //  11.087
-            case 234:   value =  22; break; //  22.174
-            case 235:   value =  33; break; //  33.261
-            case 236:   value =  44; break; //  44.348
-            case 237:   value =  55; break; //  55.435
-            case 238:   value =  67; break; //  66.522
-            case 239:   value =  78; break; //  77.609
-            case 240:   value =  89; break; //  88.696
-            case 241:   value = 100; break; //  99.783
-            case 242:   value = 111; break; // 110.870
-            case 243:   value = 122; break; // 121.957
-            case 244:   value = 133; break; // 133.043
-            case 245:   value = 144; break; // 144.130
-            case 246:   value = 155; break; // 155.217
-            case 247:   value = 166; break; // 166.304
-            case 248:   value = 177; break; // 177.391
-            case 249:   value = 188; break; // 188.478
-            case 250:   value = 200; break; // 199.565
-            case 251:   value = 211; break; // 210.652
-            case 252:   value = 222; break; // 221.739
-            case 253:   value = 233; break; // 232.826
-            case 254:   value = 244; break; // 243.913
-            case 255:   value = 255; break; // 255.000
-            default:
-            Q_UNREACHABLE(); // We should not have a case outside of the range 232 to 255
-        }
+        int value = (i - 232) * 10 + 8;
 
         lua_pushnumber(L, value);
         lua_rawseti(L, -2, 1);
