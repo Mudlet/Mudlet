@@ -7,7 +7,7 @@
         <location filename="../../src/glwidget.cpp" line="290"/>
         <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
         <translation>
-            <numerusform>You have a map loaded (1 room), but Mudlet does not know where you are at the moment.</numerusform>
+            <numerusform>You have a map loaded (%n room), but Mudlet does not know where you are at the moment.</numerusform>
             <numerusform>You have a map loaded (%n rooms), but Mudlet does not know where you are at the moment.</numerusform>
         </translation>
     </message>
@@ -18,7 +18,7 @@
         <location filename="../../src/mapInfoContributorManager.cpp" line="188"/>
         <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms
 </source>
-        <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
+        <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
         <translation>
             <numerusform>{Unused} Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms
 </numerusform>
@@ -30,7 +30,7 @@
 <context>
     <name>T2DMap</name>
     <message numerus="yes">
-        <location filename="../../src/T2DMap.cpp" line="1256"/>
+        <location filename="../../src/T2DMap.cpp" line="1263"/>
         <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
         <translation>
             <numerusform>You have a map loaded (1 room), but Mudlet does not know where you are at the moment.</numerusform>
@@ -87,7 +87,7 @@
 <context>
     <name>TTrigger</name>
     <message numerus="yes">
-        <location filename="../../src/TTrigger.cpp" line="1161"/>
+        <location filename="../../src/TTrigger.cpp" line="1201"/>
         <source>Trigger name=%1 will fire %n more time(s).
 </source>
         <translation>
@@ -101,9 +101,9 @@
 <context>
     <name>dlgPackageExporter</name>
     <message numerus="yes">
-        <location filename="../../src/dlgPackageExporter.cpp" line="1433"/>
+        <location filename="../../src/dlgPackageExporter.cpp" line="1459"/>
         <source>Select what to export (%n item(s))</source>
-        <comment>Package exporter selection</comment>
+        <comment>This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.</comment>
         <translation>
             <numerusform>Select what to export (%n item)</numerusform>
             <numerusform>Select what to export (%n items)</numerusform>
@@ -115,7 +115,7 @@
     <message numerus="yes">
         <location filename="../../src/dlgPackageManager.cpp" line="244"/>
         <source>Remove %n package(s)</source>
-        <comment>Button in package manager to remove selected package(s)</comment>
+        <comment>Message on button in package manager to remove one or more (%n is the count of) selected package(s).</comment>
         <translation>
             <numerusform>Remove %n package</numerusform>
             <numerusform>Remove %n packages</numerusform>
@@ -167,7 +167,7 @@ for all of the %n selected rooms:</numerusform>
 <context>
     <name>mudlet</name>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="3466"/>
+        <location filename="../../src/mudlet.cpp" line="3744"/>
         <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
         <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
         <translation>
@@ -176,7 +176,7 @@ for all of the %n selected rooms:</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="3484"/>
+        <location filename="../../src/mudlet.cpp" line="3762"/>
         <source>Review %n update(s)...</source>
         <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
         <translatorcomment>Could do with the insertion of &quot;the&quot; as a second word!</translatorcomment>
@@ -186,13 +186,12 @@ for all of the %n selected rooms:</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="3489"/>
-        <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
+        <location filename="../../src/mudlet.cpp" line="3767"/>
+        <source>Review the update(s) available...</source>
         <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
-        <translatorcomment>As per the developer&apos;s comment it is not necessary to include the number of update in this text in English.</translatorcomment>
         <translation>
-            <numerusform>&lt;p&gt;Review the update available...&lt;/p&gt;</numerusform>
-            <numerusform>&lt;p&gt;Review the updates available...&lt;/p&gt;</numerusform>
+            <numerusform>Review the update available...</numerusform>
+            <numerusform>Review the updates available...</numerusform>
         </translation>
     </message>
 </context>
