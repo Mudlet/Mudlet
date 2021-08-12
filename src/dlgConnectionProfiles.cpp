@@ -1708,16 +1708,15 @@ std::optional<QColor> getCustomColor(const QString& profileName)
     auto profileColorPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, QStringLiteral("profilecolor"));
     if (QFileInfo::exists(profileColorPath)) {
         QFile file(profileColorPath);
-        if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             return std::nullopt;
+        }
 
         QTextStream in(&file);
         QString colorString = in.readLine();
         QColor color(colorString);
         if (color.isValid()) {
             return {color};
-        } else {
-            return std::nullopt;
         }
     }
     return std::nullopt;
@@ -2397,11 +2396,11 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
     }
 }
 
-QIcon dlgConnectionProfiles::customIcon(const QString& text, std::optional<QColor> backgroundColor) const
+QIcon dlgConnectionProfiles::customIcon(const QString& text, const std::optional<QColor>& backgroundColor) const
 {
     QPixmap background(120, 30);
 
-    QColor color = backgroundColor.value_or(mCustomIconColors.at((qHash(text) * 8131) % mCustomIconColors.count()));
+    QColor color = backgroundColor.value_or(mCustomIconColors.at(static_cast<int>((qHash(text) * 8131) % mCustomIconColors.count())));
     background.fill(color);
 
     // Set to one larger than wanted so that do loop can contain the decrementor
