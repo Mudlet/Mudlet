@@ -430,6 +430,33 @@ public:
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
 
+    inline static const QStringList scmDefaultGames {
+        "3Scapes",
+        "Aardwolf",
+        "Achaea",
+        "Aetolia",
+        "Avalon.de",
+        "BatMUD",
+        "Clessidra",
+        "Fierymud",
+        "Imperian",
+        "Luminari",
+        "Lusternia",
+        "Materia Magica",
+        "Midnight Sun 2",
+        "Realms of Despair",
+        "Reinos de Leyenda",
+        "StickMUD",
+        "WoTMUD",
+        "ZombieMUD",
+        "Carrion Fields",
+        "Cleft of Dimensions",
+        "CoreMUD",
+        "God Wars II",
+        "Slothmud",
+        "Legends of the Jedi"
+    };
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();

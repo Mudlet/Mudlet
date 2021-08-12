@@ -138,7 +138,6 @@ private:
     QLineEdit* delete_profile_lineedit;
     QPushButton* delete_button;
     QString mDiscordApplicationId;
-    const QStringList mDefaultGames;
     QAction* mpAction_revealPassword;
     // true for the duration of the 'Copy profile' action
     bool mCopyingProfile {};

@@ -42,21 +42,7 @@
 using namespace std::chrono_literals;
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
-: QDialog(parent)
-, validName()
-, validUrl()
-, validPort()
-, mProfileList(QStringList())
-, offline_button(nullptr)
-, connect_button(nullptr)
-, delete_profile_lineedit(nullptr)
-, delete_button(nullptr)
-, mDefaultGames({"3Kingdoms", "3Scapes", "Aardwolf", "Achaea", "Aetolia",
-                 "Avalon.de", "BatMUD", "Clessidra", "Fierymud", "Imperian", "Luminari",
-                 "Lusternia", "Materia Magica", "Midnight Sun 2", "Realms of Despair",
-                 "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD", "Carrion Fields",
-                 "Cleft of Dimensions", "CoreMUD", "God Wars II", "Slothmud",
-                 "Legends of the Jedi"})
+: QDialog(parent), validName(), validUrl(), validPort(), offline_button(nullptr), connect_button(nullptr), delete_profile_lineedit(nullptr), delete_button(nullptr)
 {
     setupUi(this);
 
@@ -1585,7 +1571,7 @@ void dlgConnectionProfiles::setProfileIcon() const
             // necessarily case preserving for file names so any tests on them
             // should be case insensitive
             // skip creating icons for default MUDs as they are already created above
-            if (mDefaultGames.contains(profileName, Qt::CaseInsensitive)) {
+            if (mudlet::scmDefaultGames.contains(profileName, Qt::CaseInsensitive)) {
                 continue;
             }
 
