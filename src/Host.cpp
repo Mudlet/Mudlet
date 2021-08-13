@@ -419,7 +419,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
     mErrorLogFile.setFileName(logFileName);
     mErrorLogFile.open(QIODevice::Append);
-    // This is NOW used (for map file auditing and other issues)
      /*
      * Mudlet will log messages in ASCII, but force a universal (UTF-8) encoding
      * since user-content can contain anything and someone else reviewing
