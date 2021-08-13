@@ -494,7 +494,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
       <source>%1 ranges</source>
-      <translation type="unfinished"/>
+      <translation>%1 範圍</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
@@ -504,7 +504,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
       <source>, Offset %1</source>
-      <translation type="unfinished"/>
+      <translation>, 偏移 %1</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="448"/>
@@ -1172,7 +1172,7 @@ used is:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4047"/>
       <source>1 {count 0, default}</source>
-      <translation type="unfinished"/>
+      <translation>1 {count 0, default}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4051"/>
@@ -1196,7 +1196,7 @@ rooms:</source>
       <location filename="../src/T2DMap.cpp" line="4102"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) or the ;;s as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet map (*.dat);;Xml map data (*.xml);;所有檔案 (*)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4987"/>
@@ -1487,13 +1487,13 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14354"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
-      <translation type="unfinished"/>
+      <translation>%1（不是一個可讀取的檔案或檔案的超連結）</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14372"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
-      <translation type="unfinished"/>
+      <translation>%1（無法讀取檔案）</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14378"/>
@@ -1558,7 +1558,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="315"/>
       <source>&apos;Log session ending at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;紀錄會話結束於&apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="328"/>
@@ -1605,7 +1605,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1225"/>
       <source>Loading map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>正在載入地圖 (1) &quot;%1&quot; 在 %2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1269"/>
@@ -1632,7 +1632,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1314"/>
       <source>Importing map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>正在插入地圖 (1) &quot;%1&quot; 在 %2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1317"/>
@@ -1959,7 +1959,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="2908"/>
       <source>Exporting JSON map file from %1 - writing data to file:
 %2 ...</source>
-      <translation type="unfinished"/>
+      <translation>正在從 %1 匯出 JSON 地圖檔案 - 將資料寫入檔案文件：%2 ...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2934"/>
@@ -2005,7 +2005,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3109"/>
       <source>aborted by user</source>
-      <translation type="unfinished"/>
+      <translation>已被使用者中斷</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2998"/>
@@ -3454,7 +3454,8 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="396"/>
       <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.
 </source>
-      <translation type="unfinished"/>
+      <translation>【觸發錯誤】%1 超出擷取群組的最大限制。
+</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="1156"/>
