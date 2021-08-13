@@ -94,7 +94,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     mXmlPathFileName.clear();
     connect(ui->addFiles, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_addFiles);
     connect(mExportButton, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_export_package);
-    connect(ui->pushBotton_packageLocation, &QPushButton::clicked, this, &dlgPackageExporter::slot_openPackageLocation);
+    connect(ui->pushButton_packageLocation, &QPushButton::clicked, this, &dlgPackageExporter::slot_openPackageLocation);
     connect(ui->lineEdit_packageName, &QLineEdit::textChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     connect(this, &dlgPackageExporter::signal_exportLocationChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     slot_updateLocationPlaceholder();
