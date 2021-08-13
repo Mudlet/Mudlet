@@ -3902,7 +3902,8 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="559"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: </source>
-      <translation type="unfinished"/>
+      <translation>[ 提示 ] - Socket 連線已中斷。
+原因：</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="611"/>
