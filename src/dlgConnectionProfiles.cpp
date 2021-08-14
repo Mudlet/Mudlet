@@ -2008,13 +2008,13 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     } else {
         return;
     }
-    pHost->hideMudletsVariables();
 
     QString folder(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
     bool preInstallPackages = false;
+    pHost->hideMudletsVariables();
     if (entries.isEmpty()) {
         preInstallPackages = true;
     } else {

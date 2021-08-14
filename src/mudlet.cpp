@@ -2546,7 +2546,6 @@ void mudlet::doAutoLogin(const QString& profile_name)
     } else {
         return;
     }
-    pHost->hideMudletsVariables();
 
     LuaInterface* lI = pHost->getLuaInterface();
     lI->getVars(true);
