@@ -4420,18 +4420,18 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl) const
 {
     const QHash<QString, QStringList> defaultScripts = {
         // clang-format off
-        // scripts to pre-install for a profile                games this applies to, * means all games
+        // scripts to pre-install for a profile      games this applies to, * means all games
         {QStringLiteral(":/run-lua-code-v4.xml"),    {QStringLiteral("*")}},
         {QStringLiteral(":/echo.xml"),               {QStringLiteral("*")}},
         {QStringLiteral(":/deleteOldProfiles.xml"),  {QStringLiteral("*")}},
         {QStringLiteral(":/CF-loader.xml"),          {QStringLiteral("carrionfields.net")}},
         {QStringLiteral(":/run-tests.xml"),          {QStringLiteral("mudlet.org")}},
         {QStringLiteral(":/mudlet-mapper.xml"),      {QStringLiteral("aetolia.com"),
-                                                                  QStringLiteral("achaea.com"),
-                                                                  QStringLiteral("lusternia.com"),
-                                                                  QStringLiteral("imperian.com"),
-                                                                  QStringLiteral("starmourn.com"),
-                                                                  QStringLiteral("stickmud.com")}},
+                                                      QStringLiteral("achaea.com"),
+                                                      QStringLiteral("lusternia.com"),
+                                                      QStringLiteral("imperian.com"),
+                                                      QStringLiteral("starmourn.com"),
+                                                      QStringLiteral("stickmud.com")}},
         // clang-format on
     };
 
