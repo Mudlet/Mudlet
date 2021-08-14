@@ -2425,6 +2425,7 @@ void mudlet::startAutoLogin(const QString& cliProfile)
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     hostList += mudlet::scmDefaultGames;
+    hostList << QStringLiteral("Mudlet self-test");
     hostList.removeDuplicates();
     bool openedProfile = false;
 
