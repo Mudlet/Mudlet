@@ -131,7 +131,7 @@ dlgPackageExporter::~dlgPackageExporter()
     delete ui;
 }
 
-void dlgPackageExporter::appendToCommentAndConfigFile(const QString& what, const QString& value)
+void dlgPackageExporter::appendToDetails(const QString& what, const QString& value)
 {
     if (value.isEmpty()) {
         return;
@@ -800,13 +800,13 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
 
     mPackageConfig.clear();
     mPackageComment.clear();
-    appendToCommentAndConfigFile(QStringLiteral("mpackage"), mPackageName);
-    appendToCommentAndConfigFile(QStringLiteral("author"), ui->lineEdit_author->text());
-    appendToCommentAndConfigFile(QStringLiteral("icon"), iconFile.fileName());
-    appendToCommentAndConfigFile(QStringLiteral("title"), ui->lineEdit_title->text());
-    appendToCommentAndConfigFile(QStringLiteral("description"), packageDescription);
-    appendToCommentAndConfigFile(QStringLiteral("version"), ui->lineEdit_version->text());
-    appendToCommentAndConfigFile(QStringLiteral("dependencies"), dependencies.join(","));
+    appendToDetails(QStringLiteral("mpackage"), mPackageName);
+    appendToDetails(QStringLiteral("author"), ui->lineEdit_author->text());
+    appendToDetails(QStringLiteral("icon"), iconFile.fileName());
+    appendToDetails(QStringLiteral("title"), ui->lineEdit_title->text());
+    appendToDetails(QStringLiteral("description"), packageDescription);
+    appendToDetails(QStringLiteral("version"), ui->lineEdit_version->text());
+    appendToDetails(QStringLiteral("dependencies"), dependencies.join(","));
     QDateTime iso8601timestamp = QDateTime::currentDateTime();
     int offset = iso8601timestamp.offsetFromUtc();
     iso8601timestamp.setOffsetFromUtc(offset);

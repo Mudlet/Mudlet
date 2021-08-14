@@ -104,7 +104,7 @@ protected:
     bool eventFilter(QObject* obj, QEvent* evt) override;
 
 private:
-    void appendToCommentAndConfigFile(const QString&, const QString&);
+    void appendToDetails(const QString&, const QString&);
     void displayResultMessage(const QString&, const bool isSuccessMessage = true);
     void uncheckAllChildren();
     int countRecursive(QTreeWidgetItem* item, int count) const;
