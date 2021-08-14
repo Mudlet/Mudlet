@@ -1427,11 +1427,11 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem *item)
         debounce = true;
         QTimer::singleShot(0, this, [this]() {
             int itemsToExport = countCheckedItems();
-            // Previously we special-cased the zero count case but in some
-            // locales (France, Poland, Russia, etc.) that is included in a
-            // plural form so it is better to just include it within the same
-            // translation as the other quantities:
-            mpSelectionText->setTitle(tr("Select what to export (%n item(s) already selected)", "Package exporter selection", itemsToExport));
+            if (itemsToExport == 0) {
+                mpSelectionText->setTitle(tr("Select what to export"));
+            } else {
+                mpSelectionText->setTitle(tr("Select what to export (%n item(s) already selected)", "Package exporter selection", itemsToExport));
+            }
             debounce = false;
         });
     }
