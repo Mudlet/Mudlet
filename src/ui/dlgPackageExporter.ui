@@ -52,6 +52,12 @@
    </item>
    <item>
     <widget class="QSplitter" name="splitter_metadata">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="orientation">
       <enum>Qt::Vertical</enum>
      </property>
@@ -76,7 +82,7 @@
      </widget>
      <widget class="QFrame" name="frame_metadata">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
+       <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
@@ -89,7 +95,7 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
-        <widget class="QPushButton" name="pushBotton_openInfos">
+        <widget class="QPushButton" name="pushButton_openInfos">
          <property name="focusPolicy">
           <enum>Qt::TabFocus</enum>
          </property>
@@ -109,10 +115,22 @@
        </item>
        <item>
         <widget class="QSplitter" name="splitter_metadataAssets">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
          <widget class="QWidget" name="widget_optionalsForm" native="true">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <layout class="QFormLayout" name="formLayout_metadata">
            <property name="leftMargin">
             <number>0</number>
@@ -285,7 +303,13 @@
            </item>
            <item row="5" column="1">
             <widget class="QWidget" name="widget_requiredPackages" native="true">
-             <layout class="QHBoxLayout" name="horizontalLayout_dependencies">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <layout class="QHBoxLayout" name="horizontalLayout_dependencies" stretch="1,0,1">
               <property name="leftMargin">
                <number>0</number>
               </property>
@@ -295,16 +319,10 @@
               <item>
                <widget class="QComboBox" name="DependencyList">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>150</width>
-                  <height>16777215</height>
-                 </size>
                 </property>
                </widget>
               </item>
@@ -337,6 +355,12 @@
           </layout>
          </widget>
          <widget class="QWidget" name="widget_assets" native="true">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <layout class="QVBoxLayout" name="verticalLayout_4">
            <property name="leftMargin">
             <number>0</number>
@@ -503,7 +527,7 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>pushBotton_openInfos</tabstop>
+  <tabstop>pushButton_openInfos</tabstop>
   <tabstop>lineEdit_filePath</tabstop>
  </tabstops>
  <resources/>
@@ -541,9 +565,9 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushBotton_openInfos</sender>
+   <sender>pushButton_openInfos</sender>
    <signal>toggled(bool)</signal>
-   <receiver>pushBotton_openInfos</receiver>
+   <receiver>pushButton_openInfos</receiver>
    <slot>showMenu()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -557,7 +581,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushBotton_openInfos</sender>
+   <sender>pushButton_openInfos</sender>
    <signal>toggled(bool)</signal>
    <receiver>splitter_metadataAssets</receiver>
    <slot>setVisible(bool)</slot>
