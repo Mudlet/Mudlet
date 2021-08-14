@@ -144,7 +144,7 @@ void dlgPackageExporter::appendToDetails(const QString& what, const QString& val
         // four spaces in the next chunk of code.
         mPackageComment.append(QChar::LineFeed);
     }
-    if (!what.compare(QLatin1String("mPackage"))) {
+    if (!what.compare(QLatin1String("mpackage"))) {
         // No point in using an internal variable name in an external, user
         // viewable aspect, use something that is more sensible:
         mPackageComment.append(QStringLiteral("    Package name: %1\n").arg(value));
@@ -813,7 +813,7 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     QDateTime iso8601time(QDateTime::currentDateTime());
     iso8601time.setTimeSpec(Qt::OffsetFromUTC);
     mPackageConfig.append(QStringLiteral("created = \"%1\"\n").arg(iso8601timestamp.toString(Qt::ISODate)));
-    mPackageComment.append(QStringLiteral("created: %1\n").arg(iso8601timestamp.toString(Qt::ISODate)));
+    mPackageComment.append(QStringLiteral("    created: %1\n").arg(iso8601timestamp.toString(Qt::ISODate)));
 
     QString luaConfig = QStringLiteral("%1/config.lua").arg(stagingDirName);
     QFile configFile(luaConfig);
