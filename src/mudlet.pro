@@ -1557,6 +1557,9 @@ unix:!macx {
 
 
 DISTFILES += \
+    ../docker/Dockerfile \
+    ../docker/docker-compose.override.linux.yml \
+    ../docker/docker-compose.yml \
     CF-loader.xml \
     CMakeLists.txt \
     .clang-format \
