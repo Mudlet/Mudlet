@@ -321,6 +321,9 @@ jobs:
       uses: GabrielBB/xvfb-action@v1.5
       with:
         run: ${{runner.workspace}}/b/ninja/src/mudlet --profile Achaea
+      env:
+        AUTORUN_BUSTED_TESTS: 'true'
+        QUIT_MUDLET_AFTER_TESTS: 'true'
 
     - name: Take a screenshot
       # Mudlet should self shut down in the previous action, ideally
