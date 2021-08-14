@@ -52,6 +52,7 @@ public:
     void accept() override;
     QList<QListWidgetItem*> findData(const QListWidget& listWidget, const QVariant& what, const int role = Qt::UserRole) const;
     QList<int> findProfilesBeginningWith(const QString&) const;
+    void setupPreInstallPackages(const QString& gameUrl) const;
     static const int csmNameRole{Qt::UserRole};
 
     QString btn_connect_enabled_accessDesc;
