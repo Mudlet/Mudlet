@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2020 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2021 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -775,6 +775,7 @@ void dlgPackageExporter::exportXml(bool& isOk,
         // seen the error message...
     }
 }
+
 void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QFileInfo& iconFile, const QString& packageDescription)
 {
     QStringList dependencies;
@@ -801,11 +802,13 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     QFile configFile(luaConfig);
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out(&configFile);
+        out.setCodec(QTextCodec::codecForName("UTF-8"));
         out << mPackageConfig;
         out.flush();
         configFile.close();
     }
 }
+
 QFileInfo dlgPackageExporter::copyIconToTmp(const QString& tempPath) const
 {
     QFileInfo iconFile(mPackageIconPath);

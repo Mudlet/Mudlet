@@ -45,6 +45,7 @@
 #include <QShortcut>
 #include <QTextBoundaryFinder>
 #include <QTextCodec>
+#include <QTextStream>
 #include <QPainter>
 #include "post_guard.h"
 

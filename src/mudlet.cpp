@@ -3838,6 +3838,7 @@ bool mudlet::scanDictionaryFile(QFile& dict, int& oldWC, QHash<QString, unsigned
     }
 
     QTextStream ds(&dict);
+    ds.setCodec(QTextCodec::codecForName("UTF-8"));
     QString dictionaryLine;
     ds.readLineInto(&dictionaryLine);
 
@@ -3905,6 +3906,7 @@ bool mudlet::overwriteDictionaryFile(QFile& dict, const QStringList& wl)
     }
 
     QTextStream ds(&dict);
+    ds.setCodec(QTextCodec::codecForName("UTF-8"));
     ds << qMax(0, wl.count());
     if (!wl.isEmpty()) {
       ds << QChar(QChar::LineFeed);
@@ -3928,6 +3930,7 @@ int mudlet::getDictionaryWordCount(QFile &dict)
     }
 
     QTextStream ds(&dict);
+    ds.setCodec(QTextCodec::codecForName("UTF-8"));
     QString dictionaryLine;
     // Read the header line containing the word count:
     ds.readLineInto(&dictionaryLine);
@@ -3974,6 +3977,7 @@ bool mudlet::overwriteAffixFile(QFile& aff, QHash<QString, unsigned int>& gc)
     }
 
     QTextStream as(&aff);
+    as.setCodec(QTextCodec::codecForName("UTF-8"));
     as << affixLines.join(QChar::LineFeed).toUtf8();
     as << QChar(QChar::LineFeed);
     as.flush();

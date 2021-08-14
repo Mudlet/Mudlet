@@ -14395,6 +14395,17 @@ QString TLuaInterpreter::readScriptFile(const QString& path) const
     }
 
     QTextStream in(&file);
+    in.setCodec(QTextCodec::codecForName("UTF-8"));
+
+    /*
+     * FIXME: Qt Documentation for this method reports:
+     * "Reads the entire content of the stream, and returns it as a QString.
+     * Avoid this function when working on large files, as it will consume a
+     * significant amount of memory.
+     *
+     * Calling readLine() is better if you do not know how much data is
+     * available."
+     */
     QString text = in.readAll();
     file.close();
 
