@@ -2073,43 +2073,11 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     }
 
     if (preInstallPackages) {
-        setupPreInstallPackages(pHost->getUrl().toLower());
+        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
     }
 
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
     emit signal_load_profile(profile_name, alsoConnect);
-}
-
-void dlgConnectionProfiles::setupPreInstallPackages(const QString& gameUrl) const
-{
-    const QHash<QString, QStringList> defaultScripts = {
-        // clang-format off
-        // scripts to pre-install for a profile                games this applies to, * means all games
-        {QStringLiteral(":/run-lua-code-v4.xml"),    {QStringLiteral("*")}},
-        {QStringLiteral(":/echo.xml"),               {QStringLiteral("*")}},
-        {QStringLiteral(":/deleteOldProfiles.xml"),  {QStringLiteral("*")}},
-        {QStringLiteral(":/CF-loader.xml"),          {QStringLiteral("carrionfields.net")}},
-        {QStringLiteral(":/run-tests.xml"),          {QStringLiteral("mudlet.org")}},
-        {QStringLiteral(":/mudlet-mapper.xml"),      {QStringLiteral("aetolia.com"),
-                                                                  QStringLiteral("achaea.com"),
-                                                                  QStringLiteral("lusternia.com"),
-                                                                  QStringLiteral("imperian.com"),
-                                                                  QStringLiteral("starmourn.com"),
-                                                                  QStringLiteral("stickmud.com")}},
-        // clang-format on
-    };
-
-    QHashIterator<QString, QStringList> i(defaultScripts);
-    while (i.hasNext()) {
-        i.next();
-        if (i.value().first() == QLatin1String("*") || i.value().contains(gameUrl)) {
-            mudlet::self()->packagesToInstallList.append(i.key());
-        }
-    }
-
-    if (!mudlet::self()->packagesToInstallList.contains(QStringLiteral(":/mudlet-mapper.xml"))) {
-        mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
-    }
 }
 
 bool dlgConnectionProfiles::validateProfile()
