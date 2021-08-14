@@ -10,7 +10,7 @@
 -- for simple cases.
 --
 -- IT DOES NOT WORK WITHOUT SOME SETUP - YOU NEED BUSTED INSTALLED
--- PLEASE READ https://github.com/Mudlet/Mudlet/blob/development/src/mudlet-lua/tests/README.md
+-- PLEASE READ THE README UNDER SCRIPTS
 --
 -- Called without an argument, it will run the last tests run, or the
 -- default tests if this is the first invocation.
