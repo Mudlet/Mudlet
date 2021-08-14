@@ -101,24 +101,24 @@
 <context>
     <name>dlgPackageExporter</name>
     <message numerus="yes">
-        <location filename="../../src/dlgPackageExporter.cpp" line="1434"/>
-        <source>Select what to export (%n item(s) already selected)</source>
+        <location filename="../../src/dlgPackageExporter.cpp" line="1433"/>
+        <source>Select what to export (%n item(s))</source>
         <comment>Package exporter selection</comment>
         <translation>
-            <numerusform>Select what to export (1 item already selected)</numerusform>
-            <numerusform>Select what to export (%n items already selected)</numerusform>
+            <numerusform>Select what to export (%n item)</numerusform>
+            <numerusform>Select what to export (%n items)</numerusform>
         </translation>
     </message>
 </context>
 <context>
     <name>dlgPackageManager</name>
     <message numerus="yes">
-        <location filename="../../src/dlgPackageManager.cpp" line="246"/>
-        <source>Remove packages</source>
+        <location filename="../../src/dlgPackageManager.cpp" line="244"/>
+        <source>Remove %n package(s)</source>
         <comment>Button in package manager to remove selected package(s)</comment>
         <translation>
-            <numerusform>Remove package</numerusform>
-            <numerusform>Remove packages</numerusform>
+            <numerusform>Remove %n package</numerusform>
+            <numerusform>Remove %n packages</numerusform>
         </translation>
     </message>
 </context>

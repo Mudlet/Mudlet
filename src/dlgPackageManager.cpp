@@ -241,8 +241,5 @@ void dlgPackageManager::slot_toggle_remove_button()
     bool haveSelection = selectionCount != 0;
 
     mRemoveButton->setEnabled(haveSelection);
-    if (selectionCount > 1) {
-        // let the translations decide whenever it should be 'Remove package', 'Remove packages', or whatever is language-appropriate
-        mRemoveButton->setText(tr("Remove packages", "Button in package manager to remove selected package(s)", selectionCount));
-    }
+    mRemoveButton->setText(tr("Remove %n package(s)", "Button in package manager to remove selected package(s)", selectionCount));
 }

@@ -216,7 +216,7 @@
             <enum>Qt::TabFocus</enum>
            </property>
            <property name="text">
-            <string>Remove packages</string>
+            <string comment="Initially nothing will be selected for removal so the count will be zero in the initial display of this text.">Remove 0 packages</string>
            </property>
           </widget>
          </item>

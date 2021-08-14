@@ -1430,7 +1430,7 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem *item)
             if (itemsToExport == 0) {
                 mpSelectionText->setTitle(tr("Select what to export"));
             } else {
-                mpSelectionText->setTitle(tr("Select what to export (%n item(s) already selected)", "Package exporter selection", itemsToExport));
+                mpSelectionText->setTitle(tr("Select what to export (%n item(s))", "Package exporter selection", itemsToExport));
             }
             debounce = false;
         });
