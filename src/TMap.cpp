@@ -1480,9 +1480,13 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
     }
 
     bool canRestore = true;
+    if (entries.empty() && location.isEmpty()) {
+        canRestore = false;
+    }
+
     QDataStream ifs;
     QFile file;
-    if (!entries.empty() || !location.isEmpty()) {
+    if (canRestore && (!entries.empty() || !location.isEmpty())) {
         // We get to here if there is one or more entries OR location is
         // supplied - if the latter then there is only one file to consider but
         // if the former we may have to check more than one to find a valid
@@ -1517,11 +1521,16 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 
            // Allow for somethings to be updated - especially on Windows?
            qApp->processEvents();
+        } else {
+            file.setFileName(location);
+            if (validatePotentialMapFile(file, ifs)) {
+                foundValidFile = true;
+            }
         }
         if (!foundValidFile) {
             canRestore = false;
         }
-    } else {
+    } else if (canRestore && !location.isEmpty()) {
         file.setFileName(location);
         canRestore = validatePotentialMapFile(file, ifs);
     }
@@ -3047,7 +3056,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     if (mapObj.contains(QLatin1String("customEnvColors")) && mapObj.value(QLatin1String("customEnvColors")).isArray()) {
         const QJsonArray customEnvColorArray = mapObj.value(QLatin1String("customEnvColors")).toArray();
         if (!customEnvColorArray.isEmpty()) {
-            for (auto customEnvColorValue : qAsConst(customEnvColorArray)) {
+            for (const auto& customEnvColorValue : qAsConst(customEnvColorArray)) {
                 const QJsonObject customEnvColorObj{customEnvColorValue.toObject()};
                 if (customEnvColorObj.contains(QLatin1String("id"))
                     && ((customEnvColorObj.contains(QLatin1String("color32RGBA")) && customEnvColorObj.value(QLatin1String("color32RGBA")).isArray())
@@ -3123,6 +3132,12 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     // This is it - the point at which the new map gets activated:
     TRoomDB* pOldRoomDB = mpRoomDB;
     mpRoomDB = pNewRoomDB;
+    // Need to update the master copy of these details in the Host class:
+    mpHost->setPlayerRoomStyleDetails(mPlayerRoomStyle, mPlayerRoomOuterDiameterPercentage, mPlayerRoomInnerDiameterPercentage, mPlayerRoomOuterColor, mPlayerRoomInnerColor);
+    // And redraw the indicator if a 2D map is being shown:
+    if (mpMapper && mpMapper->mp2dMap) {
+        mpMapper->mp2dMap->setPlayerRoomStyle(mPlayerRoomStyle);
+    }
     delete pOldRoomDB;
     mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
     mpProgressDialog->close();
@@ -3315,9 +3330,9 @@ QColor TMap::getColor(int id)
                 quint8 g = (base - (r * 36)) / 6;
                 quint8 b = (base - (r * 36)) - (g * 6);
 
-                r = r * 51;
-                g = g * 51;
-                b = b * 51;
+                r = r == 0 ? 0 : (r - 1) * 40 + 95;
+                g = g == 0 ? 0 : (g - 1) * 40 + 95;
+                b = b == 0 ? 0 : (b - 1) * 40 + 95;
                 color = QColor(r, g, b, 255);
             } else if (231 < env && env < 256) {
                 quint8 k = ((env - 232) * 10) + 8;

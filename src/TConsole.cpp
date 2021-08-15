@@ -517,6 +517,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     if (mType & MainConsole) {
         mpButtonMainLayer->setVisible(!mpHost->getCompactInputLine());
     }
+
+    if (mType & MainConsole) {
+        mpCommandLine->adjustHeight();
+    }
 }
 
 TConsole::~TConsole()
@@ -646,6 +650,10 @@ void TConsole::refresh()
     }
 
     mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
+
+    if (mType & MainConsole) {
+        mpCommandLine->adjustHeight();
+    }
 
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     x = width();
