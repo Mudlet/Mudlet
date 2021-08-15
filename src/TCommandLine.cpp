@@ -58,6 +58,7 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
     setFocusPolicy(Qt::StrongFocus);
 
     setFont(mpHost->getDisplayFont());
+    document()->setDocumentMargin(2);
 
     mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
     mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
@@ -74,7 +75,7 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
 
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setCenterOnScroll(false);
-    setWordWrapMode(QTextOption::WrapAnywhere);
+    setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
     setContentsMargins(0, 0, 0, 0);
     // clear console selection if selection in command line changes
     connect(this, &QPlainTextEdit::copyAvailable, this, &TCommandLine::slot_clearSelection);
@@ -564,6 +565,11 @@ void TCommandLine::hideEvent(QHideEvent* event)
 
 void TCommandLine::adjustHeight()
 {
+    // Make sure adjustHeight won't crash if it's used before mpConsole->layerCommandLine has a value
+    if (!mpConsole->layerCommandLine) {
+        qWarning() << "TCommandLine::adjustHeight() ERROR: mpConsole->layerCommandLine is NULL!";
+        return;
+    }
     int lines = document()->size().height();
     // Workaround for SubCommandLines textCursor not visible in some situations
     // SubCommandLines cannot autoresize
@@ -573,16 +579,19 @@ void TCommandLine::adjustHeight()
         }
         return;
     }
-    int fontH = QFontMetrics(font()).height();
     if (lines < 1) {
         lines = 1;
     }
     if (lines > 10) {
         lines = 10;
     }
-    int _baseHeight = fontH * lines;
-    int _height = _baseHeight + fontH;
-
+    int fontH = QFontMetrics(font()).height();
+    // Adjust height margin based on font size and if it is more than one row
+    int marginH = lines > 1 ? 2+fontH/3 : 5;
+    if (lines > 1 && marginH < 8) {
+        marginH = 8; // needed for very small fonts
+    }
+    int _height = fontH * lines + marginH;
     if (_height < mpHost->commandLineMinimumHeight) {
         _height = mpHost->commandLineMinimumHeight;
     }

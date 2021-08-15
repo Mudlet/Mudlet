@@ -1632,8 +1632,7 @@ void dlgProfilePreferences::setCommandBgColor()
 void dlgProfilePreferences::setFontSize()
 {
     mFontSize = fontSize->currentIndex() + 1;
-    // delay setting pHost->mDisplayFont until save is clicked by the user.
-    //setDisplayFont();
+    setDisplayFont();
 }
 
 void dlgProfilePreferences::setDisplayFont()

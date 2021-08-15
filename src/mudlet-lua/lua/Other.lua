@@ -928,13 +928,6 @@ function killtimeframe(vname)
   end
 end
 
--- replace line from MUD with colour-tagged string
-creplaceLine = function(str)
-	selectString(line,1)
-	replace("")
-	cinsertText(str)
-end
-
 function translateTable(data, language)
   language = language or mudlet.translations.interfacelanguage
   assert(type(data) == "table", string.format("translateTable: bad argument #1 type (input as table expected, got %s!)", type(data)))

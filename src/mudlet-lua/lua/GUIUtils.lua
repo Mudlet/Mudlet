@@ -646,13 +646,18 @@ end
 
 
 
---- Replace the whole with a string you'd like.
+--- Replace an entire line with a string you'd like.
 ---
 --- @see deleteLine
-function replaceLine(what)
-  selectString(line, 1)
+function replaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+    text = window
+  else
+    selectCurrentLine(window)
+  end
   replace("")
-  insertText(what)
+  insertText(text)
 end
 
 
@@ -1724,7 +1729,7 @@ end
 local colours = {
   [0] = { 0, 0, 0 }, -- black
   [1] = { 128, 0, 0 }, -- red
-  [2] = { 0, 179, 0 }, -- green
+  [2] = { 0, 128, 0 }, -- green
   [3] = { 128, 128, 0 }, -- yellow
   [4] = { 0, 0, 128 }, --blue
   [5] = { 128, 0, 128 }, -- magenta
@@ -1741,35 +1746,6 @@ local lightColours = {
   [5] = { 255, 0, 255 }, -- magenta
   [6] = { 0, 255, 255 }, -- cyan
   [7] = { 255, 255, 255 }, -- white
-}
-
--- black + 23 tone grayscale up to white
--- The values are to be used for each of te r, g and b values
-local grayscaleComponents = {
-  [0] = 0,
-  [1] = 11,
-  [2] = 22,
-  [3] = 33,
-  [4] = 44,
-  [5] = 55,
-  [6] = 67,
-  [7] = 78,
-  [8] = 89,
-  [9] = 100,
-  [10] = 111,
-  [11] = 122,
-  [12] = 133,
-  [13] = 144,
-  [14] = 155,
-  [15] = 166,
-  [16] = 177,
-  [17] = 188,
-  [18] = 200,
-  [19] = 211,
-  [20] = 222,
-  [21] = 233,
-  [22] = 244,
-  [23] = 255
 }
 
 local ansiPattern = rex.new("\\e\\[([0-9:;]+?)m")
@@ -1815,9 +1791,11 @@ function ansi2decho(text, ansi_default_color)
         r = floor(tag / 36)
         g = floor((tag - (r * 36)) / 6)
         b = floor((tag - (r * 36)) - (g * 6))
-        rgb = { r * 51, g * 51, b * 51 }
+        rgb = { r == 0 and 0 or (r - 1) * 40 + 95,
+                g == 0 and 0 or (r - 1) * 40 + 95,
+                b == 0 and 0 or (r - 1) * 40 + 95 }
       else
-        local component = grayscaleComponents[tag - 232]
+        local component = tag - 232 * 10 + 8
         rgb = { component, component, component }
       end
 
@@ -2073,6 +2051,18 @@ function creplace(window, text)
   xReplace(window, text, 'c')
 end
 
+--- version of replaceLine function that allows for color, by way of cinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function creplaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+  else
+    selectCurrentLine(window)
+  end
+  creplace(window, text)
+end
+
 --- version of replace function that allows for color, by way of dinsertText
 --- @param windowName Optional name of the window to replace on
 --- @param text The text to replace the selection with.
@@ -2080,11 +2070,35 @@ function dreplace(window, text)
   xReplace(window, text, 'd')
 end
 
+--- version of replaceLine function that allows for color, by way of dinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function dreplaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+  else
+    selectCurrentLine(window)
+  end
+  dreplace(window, text)
+end
+
 --- version of replace function that allows for color, by way of hinsertText
 --- @param windowName Optional name of the window to replace on
 --- @param text The text to replace the selection with.
 function hreplace(window, text)
   xReplace(window, text, 'h')
+end
+
+--- version of replaceLine function that allows for color, by way of hinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function hreplaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+  else
+    selectCurrentLine(window)
+  end
+  hreplace(window, text)
 end
 
 function resetLabelToolTip(label)
