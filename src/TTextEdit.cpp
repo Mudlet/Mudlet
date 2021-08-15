@@ -1743,10 +1743,6 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
 {
     updateScreenView();
     if (!mIsLowerPane && mpConsole->getType() == TConsole::MainConsole) {
-        // CHECKME: This looks suspect - it would seem to be called on resizing
-        // floating user windows, and the Editor's Error TConsole as well as
-        // components in the main window - for NAWS purposes it seems more
-        // likely to be needed ONLY on the main TConsole for the profile
         mpHost->adjustNAWS();
     }
 

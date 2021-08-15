@@ -747,7 +747,8 @@ void cTelnet::setDisplayDimensions()
 {
     int x = (mpHost->mScreenWidth < mpHost->mWrapAt) ? mpHost->mScreenWidth : mpHost->mWrapAt;
     int y = mpHost->mScreenHeight;
-    if (myOptionState[static_cast<size_t>(OPT_NAWS)]) {
+    if ((y > 0) && myOptionState[static_cast<size_t>(OPT_NAWS)]) {
+        // qDebug().nospace().noquote() << "cTelnet::setDisplayDimensions() INFO - want to send NAWS data (for: \"" << mProfileName << "\") of X = " << x << ", Y = " << y << ".";
         std::string s;
         s = TN_IAC;
         s += TN_SB;
