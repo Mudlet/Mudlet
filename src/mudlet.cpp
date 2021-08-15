@@ -4418,7 +4418,7 @@ void mudlet::refreshTabBar()
 
 //NOLINT(readability-convert-member-functions-to-static)
 // doesn't make sense to make it static since it modfies a class variable
-void mudlet::setupPreInstallPackages(const QString& gameUrl) const
+void mudlet::setupPreInstallPackages(const QString& gameUrl)
 {
     const QHash<QString, QStringList> defaultScripts = {
         // clang-format off
