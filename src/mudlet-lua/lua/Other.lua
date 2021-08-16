@@ -440,6 +440,7 @@ end
 
 --- Resumes a paused speedwalk
 function resumeSpeedWalk()
+  if speedwalkTimerID then return end
   speedwalktimer(speedwalkList, speedwalkDelay, speedwalkShow)
 end
 
