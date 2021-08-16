@@ -413,12 +413,36 @@ function table.unpickle( t, tables, tcopy, pickled )
 end
 
 
+
+--- local functions used for pausing/resuming a speedwalk
 local speedwalkTimerID
+local speedwalkDelay
+local speedwalkList
+local speedwalkShow
+
+--- Stops a speedwalk and clears the walklist
 function stopSpeedwalk()
+  pauseSpeedwalk()
+  speedwalkList = {}
+end
+
+
+
+--- pauses a running speedwalk, but leaves the walklist intact in case you want to resume
+function pauseSpeedwalk()
   if speedwalkTimerID then
     killTimer(speedwalkTimerID)
+    speedwalkTimerID = false
   end
 end
+
+
+
+--- Resumes a paused speedwalk
+function resumeSpeedWalk()
+  speedwalktimer(speedwalkList, speedwalkDelay, speedwalkShow)
+end
+
 
 --- <b><u>TODO</u></b> speedwalktimer()
 function speedwalktimer(walklist, walkdelay, show)
@@ -438,6 +462,8 @@ function speedwalk(dirString, backwards, delay, show)
   local dirString = dirString:lower()
   local walkdelay = delay
   if show ~= false then show = true end
+  speedwalkShow = show
+  speedwalkDelay = delay
   local walklist = {}
   local long_dir = {north = 'n', south = 's', east = 'e', west = 'w', up = 'u', down = 'd'}
   for k,v in pairs(long_dir) do
@@ -479,6 +505,7 @@ function speedwalk(dirString, backwards, delay, show)
     end
   end
   if walkdelay then
+    speedwalkList = walklist
     speedwalktimer(walklist, walkdelay, show)
   end
 end
