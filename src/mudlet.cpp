@@ -2424,7 +2424,7 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 void mudlet::startAutoLogin(const QString& cliProfile)
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
-    hostList += mudlet::scmDefaultGames;
+    hostList += mudlet::scmDefaultGames.keys();
     hostList << QStringLiteral("Mudlet self-test");
     hostList.removeDuplicates();
     bool openedProfile = false;
