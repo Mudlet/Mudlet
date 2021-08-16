@@ -422,8 +422,12 @@ local speedwalkShow
 
 --- Stops a speedwalk and clears the walklist
 function stopSpeedwalk()
-  pauseSpeedwalk()
-  speedwalkList = {}
+  local active = pauseSpeedwalk()
+  if active then 
+    speedwalkList = {}
+    return true
+  end
+  return nil, "stopSpeedwalk(): no active speedwalk found"
 end
 
 
@@ -433,7 +437,9 @@ function pauseSpeedwalk()
   if speedwalkTimerID then
     killTimer(speedwalkTimerID)
     speedwalkTimerID = false
+    return true
   end
+  return nil, "pauseSpeedwalk(): no active speedwalk found"
 end
 
 
@@ -441,14 +447,13 @@ end
 --- Resumes a paused speedwalk
 function resumeSpeedwalk()
   if speedwalkTimerID then
-    debugc("resumeSpeedwalk(): attempted to resume an already running speedwalk")
-    return
+    return nil, "resumeSpeedwalk(): attempted to resume an already running speedwalk"
   end
   if not speedwalkList or table.is_empty(speedwalkList) then
-    debugc("resumeSpeedwalk(): attempted to resume a speedwalk but no active speedwalk found")
-    return
+    return nil, "resumeSpeedwalk(): attempted to resume a speedwalk but no active speedwalk found"
   end
   speedwalktimer(speedwalkList, speedwalkDelay, speedwalkShow)
+  return true
 end
 
 
