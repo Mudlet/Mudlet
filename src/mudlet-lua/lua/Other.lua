@@ -413,13 +413,19 @@ function table.unpickle( t, tables, tcopy, pickled )
 end
 
 
+local speedwalkTimerID
+function stopSpeedwalk()
+  if speedwalkTimerID then
+    killTimer(speedwalkTimerID)
+  end
+end
 
 --- <b><u>TODO</u></b> speedwalktimer()
 function speedwalktimer(walklist, walkdelay, show)
   send(walklist[1], show)
   table.remove(walklist, 1)
   if #walklist > 0 then
-    tempTimer(walkdelay, function()
+    speedwalkTimerID = tempTimer(walkdelay, function()
       speedwalktimer(walklist, walkdelay, show)
     end)
   end
