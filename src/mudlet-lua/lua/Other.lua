@@ -440,7 +440,14 @@ end
 
 --- Resumes a paused speedwalk
 function resumeSpeedwalk()
-  if speedwalkTimerID then return end
+  if speedwalkTimerID then
+    debugc("resumeSpeedwalk(): attempted to resume an already running speedwalk")
+    return
+  end
+  if not speedwalkList or table.is_empty(speedwalkList) then
+    debugc("resumeSpeedwalk(): attempted to resume a speedwalk but no active speedwalk found")
+    return
+  end
   speedwalktimer(speedwalkList, speedwalkDelay, speedwalkShow)
 end
 
