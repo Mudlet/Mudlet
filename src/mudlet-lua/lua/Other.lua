@@ -439,7 +439,7 @@ end
 
 
 --- Resumes a paused speedwalk
-function resumeSpeedWalk()
+function resumeSpeedwalk()
   if speedwalkTimerID then return end
   speedwalktimer(speedwalkList, speedwalkDelay, speedwalkShow)
 end
