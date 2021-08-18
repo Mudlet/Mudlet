@@ -25,6 +25,7 @@
 
 #include "pre_guard.h"
 #include "ui_connection_profiles.h"
+#include <optional>
 #include <QTimer>
 #include <QKeyEvent>
 #include <pugixml.hpp>
