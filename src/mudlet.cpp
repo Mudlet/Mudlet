@@ -453,7 +453,7 @@ mudlet::mudlet()
     mpActionModuleManager->setIcon(QIcon(QStringLiteral(":/icons/module-manager.png")));
     mpActionModuleManager->setObjectName(QStringLiteral("module_manager"));
 
-    mpActionPackageExporter = new QAction(tr("Package Exporter (experimental)"), this);
+    mpActionPackageExporter = new QAction(tr("Package Exporter"), this);
     mpActionPackageExporter->setIcon(QIcon(QStringLiteral(":/icons/package-exporter.png")));
     mpActionPackageExporter->setObjectName(QStringLiteral("package_exporter"));
 

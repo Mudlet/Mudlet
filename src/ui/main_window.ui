@@ -279,7 +279,7 @@
   </action>
   <action name="dactionPackageExporter">
    <property name="text">
-    <string>Package exporter (experimental)</string>
+    <string>Package exporter</string>
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Gather and bundle up collections of Mudlet Lua items and other reasources into a module.&lt;/p&gt;</string>
