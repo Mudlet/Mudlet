@@ -2554,7 +2554,17 @@ void mudlet::doAutoLogin(const QString& profile_name)
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    if (!entries.isEmpty()) {
+    bool preInstallPackages = false;
+    if (entries.isEmpty()) {
+        preInstallPackages = true;
+
+        const auto it = mudlet::scmDefaultGames.constFind(profile_name);
+        if (it != mudlet::scmDefaultGames.cend()) {
+            pHost->setUrl(it->hostUrl);
+            pHost->setPort(it->port);
+            pHost->mSslTsl = it->tlsEnabled;
+        }
+    } else {
         QFile file(QStringLiteral("%1/%2").arg(folder, entries.at(0)));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
