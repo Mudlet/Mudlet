@@ -5347,7 +5347,7 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1714"/>
       <source>Set custom color</source>
       <comment>Set a custom color to show for the profile in the connection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>設定自訂顏色</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1727"/>
