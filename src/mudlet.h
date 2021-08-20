@@ -467,11 +467,11 @@ public:
         {"Realms of Despair", {"realmsofdespair.com", 4000, false, "<center><a href='http://www.realmsofdespair.com/'>http://www.realmsofdespair.com</a></center>", ":/icons/120x30RoDLogo.png"}},
         {"ZombieMUD", {"zombiemud.org", 23, false, "<center><a href='http://www.zombiemud.org/'>http://www.zombiemud.org</a></center>", ":/icons/zombiemud.png"}},
         {"Carrion Fields", {"carrionfields.net", 4449, false, "<center><a href='http://www.carrionfields.net'>www.carrionfields.net</a></center>", ":/icons/carrionfields.png"}},
-        {"Cleft of Dimensions", {"cleftofdimensions.net", 4354, false, "<center><a href='https://www.cleftofdimensions.net/'>cleftofdimensions.net</a></center>",":/icons/cleftofdimensions.png"}},
+        {"Cleft of Dimensions", {"cleftofdimensions.net", 4354, false, "<center><a href='https://www.cleftofdimensions.net/'>cleftofdimensions.net</a></center>", ":/icons/cleftofdimensions.png"}},
         {"3Kingdoms", {"3k.org", 3200, false, "<center><a href='http://www.3k.org/'>http://www.3k.org</a></center>", ":/icons/3klogo.png"}},
         {"Slothmud", {"slothmud.org", 6101, false, "<center><a href='http://www.slothmud.org/'>http://www.slothmud.org/</a></center>", ":/icons/Slothmud.png"}},
         {"WoTMUD", {"game.wotmud.org", 2224, false, "<center><a href='http://www.wotmud.org/'>Main website</a></center>\n"
-                                 "<center><a href='http://www.wotmod.org/'>Forums</a></center>",":/icons/wotmudicon.png"}},
+                                 "<center><a href='http://www.wotmod.org/'>Forums</a></center>", ":/icons/wotmudicon.png"}},
         {"Midnight Sun 2", {"midnightsun2.org", 3000, false, "<center><a href='http://midnightsun2.org/'>http://midnightsun2.org/</a></center>", ":/icons/midnightsun2.png"}},
         {"Luminari", {"luminarimud.com", 4100, false, "<center><a href='http://www.luminarimud.com/'>http://www.luminarimud.com/</a></center>", ":/icons/luminari_icon.png"}},
         {"StickMUD", {"stickmud.com", 7680, false, "<center><a href='http://www.stickmud.com/'>stickmud.com</a></center>", ":/icons/stickmud_icon.jpg"}},
