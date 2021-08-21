@@ -2424,7 +2424,7 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 void mudlet::startAutoLogin(const QString& cliProfile)
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
-    hostList += mudlet::scmDefaultGames;
+    hostList += mudlet::scmDefaultGames.keys();
     hostList << QStringLiteral("Mudlet self-test");
     hostList.removeDuplicates();
     bool openedProfile = false;
@@ -2557,6 +2557,13 @@ void mudlet::doAutoLogin(const QString& profile_name)
     bool preInstallPackages = false;
     if (entries.isEmpty()) {
         preInstallPackages = true;
+
+        const auto it = mudlet::scmDefaultGames.constFind(profile_name);
+        if (it != mudlet::scmDefaultGames.cend()) {
+            pHost->setUrl(it->hostUrl);
+            pHost->setPort(it->port);
+            pHost->mSslTsl = it->tlsEnabled;
+        }
     } else {
         QFile file(QStringLiteral("%1/%2").arg(folder, entries.at(0)));
         file.open(QFile::ReadOnly | QFile::Text);
