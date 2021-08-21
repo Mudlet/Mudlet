@@ -453,7 +453,7 @@ mudlet::mudlet()
     mpActionModuleManager->setIcon(QIcon(QStringLiteral(":/icons/module-manager.png")));
     mpActionModuleManager->setObjectName(QStringLiteral("module_manager"));
 
-    mpActionPackageExporter = new QAction(tr("Package Exporter (experimental)"), this);
+    mpActionPackageExporter = new QAction(tr("Package Exporter"), this);
     mpActionPackageExporter->setIcon(QIcon(QStringLiteral(":/icons/package-exporter.png")));
     mpActionPackageExporter->setObjectName(QStringLiteral("package_exporter"));
 
@@ -2424,6 +2424,9 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 void mudlet::startAutoLogin(const QString& cliProfile)
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    hostList += mudlet::scmDefaultGames.keys();
+    hostList << QStringLiteral("Mudlet self-test");
+    hostList.removeDuplicates();
     bool openedProfile = false;
 
     for (auto& pHost : hostList) {
@@ -2551,13 +2554,28 @@ void mudlet::doAutoLogin(const QString& profile_name)
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    if (!entries.isEmpty()) {
+    bool preInstallPackages = false;
+    if (entries.isEmpty()) {
+        preInstallPackages = true;
+
+        const auto it = mudlet::scmDefaultGames.constFind(profile_name);
+        if (it != mudlet::scmDefaultGames.cend()) {
+            pHost->setUrl(it->hostUrl);
+            pHost->setPort(it->port);
+            pHost->mSslTsl = it->tlsEnabled;
+        }
+    } else {
         QFile file(QStringLiteral("%1/%2").arg(folder, entries.at(0)));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         importer.importPackage(&file); // TODO: Missing false return value handler
         pHost->refreshPackageFonts();
+
+        // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
+        if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
+            preInstallPackages = true;
+        }
     }
 
     pHost->setLogin(readProfileData(profile_name, QStringLiteral("login")));
@@ -2566,6 +2584,10 @@ void mudlet::doAutoLogin(const QString& profile_name)
     // This settings also need to be configured, note that the only time not to
     // save the setting is on profile loading:
     pHost->mTelnet.setEncoding(readProfileData(profile_name, QStringLiteral("encoding")).toUtf8(), false);
+
+    if (preInstallPackages) {
+        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
+    }
 
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
@@ -3835,6 +3857,7 @@ bool mudlet::scanDictionaryFile(QFile& dict, int& oldWC, QHash<QString, unsigned
     }
 
     QTextStream ds(&dict);
+    ds.setCodec(QTextCodec::codecForName("UTF-8"));
     QString dictionaryLine;
     ds.readLineInto(&dictionaryLine);
 
@@ -3902,6 +3925,7 @@ bool mudlet::overwriteDictionaryFile(QFile& dict, const QStringList& wl)
     }
 
     QTextStream ds(&dict);
+    ds.setCodec(QTextCodec::codecForName("UTF-8"));
     ds << qMax(0, wl.count());
     if (!wl.isEmpty()) {
       ds << QChar(QChar::LineFeed);
@@ -3925,6 +3949,7 @@ int mudlet::getDictionaryWordCount(QFile &dict)
     }
 
     QTextStream ds(&dict);
+    ds.setCodec(QTextCodec::codecForName("UTF-8"));
     QString dictionaryLine;
     // Read the header line containing the word count:
     ds.readLineInto(&dictionaryLine);
@@ -3971,6 +3996,7 @@ bool mudlet::overwriteAffixFile(QFile& aff, QHash<QString, unsigned int>& gc)
     }
 
     QTextStream as(&aff);
+    as.setCodec(QTextCodec::codecForName("UTF-8"));
     as << affixLines.join(QChar::LineFeed).toUtf8();
     as << QChar(QChar::LineFeed);
     as.flush();
@@ -4398,5 +4424,39 @@ void mudlet::refreshTabBar()
         } else {
             mpTabBar->applyPrefixToDisplayedText(hostName);
         }
+    }
+}
+
+//NOLINT(readability-convert-member-functions-to-static)
+// doesn't make sense to make it static since it modfies a class variable
+void mudlet::setupPreInstallPackages(const QString& gameUrl)
+{
+    const QHash<QString, QStringList> defaultScripts = {
+        // clang-format off
+        // scripts to pre-install for a profile      games this applies to, * means all games
+        {QStringLiteral(":/run-lua-code-v4.xml"),    {QStringLiteral("*")}},
+        {QStringLiteral(":/echo.xml"),               {QStringLiteral("*")}},
+        {QStringLiteral(":/deleteOldProfiles.xml"),  {QStringLiteral("*")}},
+        {QStringLiteral(":/CF-loader.xml"),          {QStringLiteral("carrionfields.net")}},
+        {QStringLiteral(":/run-tests.xml"),          {QStringLiteral("mudlet.org")}},
+        {QStringLiteral(":/mudlet-mapper.xml"),      {QStringLiteral("aetolia.com"),
+                                                      QStringLiteral("achaea.com"),
+                                                      QStringLiteral("lusternia.com"),
+                                                      QStringLiteral("imperian.com"),
+                                                      QStringLiteral("starmourn.com"),
+                                                      QStringLiteral("stickmud.com")}},
+        // clang-format on
+    };
+
+    QHashIterator<QString, QStringList> i(defaultScripts);
+    while (i.hasNext()) {
+        i.next();
+        if (i.value().first() == QLatin1String("*") || i.value().contains(gameUrl)) {
+            mudlet::self()->packagesToInstallList.append(i.key());
+        }
+    }
+
+    if (!mudlet::self()->packagesToInstallList.contains(QStringLiteral(":/mudlet-mapper.xml"))) {
+        mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
     }
 }

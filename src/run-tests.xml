@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE MudletPackage>
 <MudletPackage version="1.001">
-  <TriggerPackage />
-  <TimerPackage />
-  <AliasPackage>
-    <Alias isActive="yes" isFolder="no">
-      <name>Run Tests</name>
-      <script>-- Alias to run busted tests, which should be sufficient
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>Run Tests</name>
+			<script>-- Alias to run busted tests, which should be sufficient
 -- for simple cases.
 --
 -- IT DOES NOT WORK WITHOUT SOME SETUP - YOU NEED BUSTED INSTALLED
@@ -34,26 +34,17 @@ else
   bustedState.setup({matches[2]})
 end
 bustedState.runTests()</script>
-      <command></command>
-      <packageName></packageName>
-      <regex>^runTests(?: (.*))?$</regex>
-    </Alias>
-  </AliasPackage>
-  <ActionPackage />
-  <ScriptPackage>
-    <name>test</name>
-    <packageName></packageName>
-    <script>-------------------------------------------------
---         Put your Lua functions here.        --
---                                             --
--- Note that you can also use external Scripts --
--------------------------------------------------
-</script>
-    <eventHandlerList />
-    <Script isActive="no" isFolder="no">
-      <name>test scripts</name>
-      <packageName></packageName>
-		<script>-- Checks to see if the "busted" package is available.
+			<command></command>
+			<packageName></packageName>
+			<regex>^runTests(?: (.*))?$</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage>
+		<Script isActive="no" isFolder="no">
+			<name>test scripts</name>
+			<packageName></packageName>
+			<script>-- Checks to see if the "busted" package is available.
 
 bustedState = bustedState or {}
 function bustedState.isBustedAvailable()
@@ -102,17 +93,6 @@ options.defaultPatterns = {"_spec"}
 
 if bustedState.isBustedAvailable() then
   local path = require 'pl.path'
-  local pathTable = getMudletLuaDefaultPaths()
-  if type(pathTable) == 'table' then
-    for _, v in pairs(pathTable) do
-      if path.isdir(v) then
-        if path.isdir(v .. "/tests") then
-		    options.defaultFiles = {v .. "/tests"}
-          break
-        end
-      end
-    end
-  end
 end
 options.defaultFiles = options.defaultFiles or {"."}
 
@@ -335,12 +315,12 @@ function bustedState.runTests()
 
   io.write = oldiowrite
 end -- bustedState.runTests</script>
-      <eventHandlerList />
-    </Script>
-    <Script isActive="no" isFolder="no">
-      <name>README</name>
-      <packageName></packageName>
-      <script>-- This is the set of mudlet scripts to allow running Busted tests from
+			<eventHandlerList />
+		</Script>
+		<Script isActive="no" isFolder="no">
+			<name>README</name>
+			<packageName></packageName>
+			<script>-- This is the set of mudlet scripts to allow running Busted tests from
 -- within the hosted lua environment of Mudlet.
 -- Busted is "a unit testing framework with a focus on being easy to use."
 -- It is written by olivine Labs, and documentation can be found on
@@ -435,11 +415,11 @@ describe("should always pass", function()
 -- 'runTests'
 --
 -- Good Luck.</script>
-      <eventHandlerList />
-    </Script>
-  </ScriptPackage>
-  <KeyPackage />
-  <VariablePackage>
-    <HiddenVariables />
-  </VariablePackage>
+			<eventHandlerList />
+		</Script>
+	</ScriptPackage>
+	<KeyPackage />
+	<HelpPackage>
+		<helpURL></helpURL>
+	</HelpPackage>
 </MudletPackage>

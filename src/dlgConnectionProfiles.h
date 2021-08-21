@@ -25,6 +25,7 @@
 
 #include "pre_guard.h"
 #include "ui_connection_profiles.h"
+#include <optional>
 #include <QTimer>
 #include <QKeyEvent>
 #include <pugixml.hpp>
@@ -66,12 +67,12 @@ signals:
 public slots:
     void slot_update_name(const QString&);
     void slot_save_name();
-    void slot_update_url(const QString &);
+    void slot_update_url(const QString&);
     void slot_update_port(const QString&);
     void slot_update_SSL_TSL_port(int state);
-    void slot_update_login(const QString &);
-    void slot_update_pass(const QString &);
-    void slot_update_website(const QString &);
+    void slot_update_login(const QString&);
+    void slot_update_pass(const QString&);
+    void slot_update_website(const QString&);
     void slot_deleteprofile_check(const QString&);
     void slot_update_description();
 
@@ -117,7 +118,7 @@ private:
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
     void setItemName(QListWidgetItem*, const QString&) const;
-    QIcon customIcon(const QString&) const;
+    QIcon customIcon(const QString&, const std::optional<QColor>&) const;
     void addLetterToProfileSearch(const int);
     inline void clearNotificationArea();
 
@@ -138,10 +139,9 @@ private:
     QLineEdit* delete_profile_lineedit;
     QPushButton* delete_button;
     QString mDiscordApplicationId;
-    const QStringList mDefaultGames;
     QAction* mpAction_revealPassword;
     // true for the duration of the 'Copy profile' action
-    bool mCopyingProfile {};
+    bool mCopyingProfile{};
     QString mDateTimeFormat;
     QVector<QColor> mCustomIconColors;
     QTimer mSearchTextTimer;
@@ -151,6 +151,7 @@ private:
 private slots:
     void slot_profile_menu(QPoint pos);
     void slot_set_custom_icon();
+    void slot_set_custom_color();
     void slot_reset_custom_icon();
     void slot_togglePasswordVisibility(const bool);
     void slot_password_saved(QKeychain::Job* job);
