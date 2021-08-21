@@ -399,7 +399,7 @@ void dlgConnectionProfiles::slot_update_autoreconnect(int state)
 }
 
 // This gets called when the QCheckBox that it is connect-ed to gets its
-// checked state set programatically AS WELL as when the user clicks on it:
+// checked state set programmatically AS WELL as when the user clicks on it:
 void dlgConnectionProfiles::slot_update_discord_optin(int state)
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
@@ -728,7 +728,7 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
     } else if (hostUrl == QLatin1String("carrionfields.net")) {
         return QLatin1String("Carrion Fields is a unique blend of high-caliber roleplay and complex, hardcore player-versus-player combat that has been running continuously, and 100% free, for over "
                              "25 years.\n\nChoose from among 21 races, 17 highly customizable classes, and several cabals and religions to suit your playstyle and the story you want to tell. Our "
-                             "massive, original world is full of secrets and envied limited objects that take skill to acquire and great care to keep.\n\nWe like to think of ourselves as the Dark "
+                             "massive, original world is full of secrets and envied limited objects that take skill to acquire and great care to keep.\n\new like to think of ourselves as the Dark "
                              "Souls of MUDs, with a community that is supportive of new players - unforgiving though our world may be. Join us for a real challenge and real rewards: "
                              "adrenalin-pumping battles, memorable quests run by our volunteer immortal staff, and stories that will stick with you for a lifetime.");
     } else if (hostUrl == QLatin1String("cleftofdimensions.net")) {

@@ -137,7 +137,7 @@ const QHash<QString, QString> TEntityResolver::scmStandardEntites = {
         {QStringLiteral("&iexcl;"), QStringLiteral("¡")},
         {QStringLiteral("&cent;"), QStringLiteral("¢")},
         {QStringLiteral("&pound;"), QStringLiteral("£")},
-        {QStringLiteral("&curren;"), QStringLiteral("¤")},
+        {QStringLiteral("&current;"), QStringLiteral("¤")},
         {QStringLiteral("&yen;"), QStringLiteral("¥")},
         {QStringLiteral("&brvbar;"), QStringLiteral("¦")},
         {QStringLiteral("&sect;"), QStringLiteral("§")},

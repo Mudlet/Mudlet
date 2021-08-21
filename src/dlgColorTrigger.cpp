@@ -369,7 +369,7 @@ void dlgColorTrigger::slot_moreColorsClicked()
     // Used to pull the button down if this slot is called from the constructor:
     buttonBox->button(QDialogButtonBox::Apply)->setChecked(true);
 
-    // Impliment a one-shot action by disabling it once it is pressed:
+    // Implement a one-shot action by disabling it once it is pressed:
     buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
 
     buttonBox->button(QDialogButtonBox::Apply)->setToolTip(tr("All color options are showing."));

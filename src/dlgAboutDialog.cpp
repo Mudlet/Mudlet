@@ -115,7 +115,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
      * the most efficient way of putting together a set of large QStrings
      * some of which will shortly be made translable, it is intended to make
      * it easier to add and remove sections according to the build settings
-     * and for boiler-plate licences to be reused mulitple times if necessary.
+     * and for boiler-plate licences to be reused multiple times if necessary.
      */
 
     // A uniform header for all tabs:
@@ -294,7 +294,7 @@ void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
     QString headerText(tr("<p>Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.</p>\n"
                           "<p>Mudlet is released under the GPL license version 2, which is reproduced below:</p>",
                           "For non-english language versions please append a translation of the following "
-                          "to explain why the GPL is NOT reproduced in the relevent language: 'but only "
+                          "to explain why the GPL is NOT reproduced in the relevant language: 'but only "
                           "the English form is considered the official version of the license, so the "
                           "following is reproduced in that language:' to replace 'which is reproduced below:'..."));
 
@@ -891,7 +891,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 
     QString Sparkle3rdPartyHeader(tr("<h4>bspatch.c and bsdiff.c, from bsdiff 4.3 <a href=\"http://www.daemonology.net/bsdiff/\">http://www.daemonology.net/bsdiff</a>:</h4>"
                                      "<h3>Copyright © 2003-2005 Colin Percival.</h3>"
-                                     "<h4>sais.c and sais.c, from sais-lite (2010/08/07) <a href=\"https://sites.google.com/site/yuta256/sais\">https://sites.google.com/site/yuta256/sais</a>:</h4>"
+                                     "<h4>says.c and says.c, from says-lite (2010/08/07) <a href=\"https://sites.google.com/site/yuta256/says\">https://sites.google.com/site/yuta256/says</a>:</h4>"
                                      "<h3>Copyright © 2008-2010 Yuta Mori.</h3>"
                                      "<h4>SUDSAVerifier.m:</h4>"
                                      "<h3>Copyright © 2011 Mark Hamlin.<br>"
