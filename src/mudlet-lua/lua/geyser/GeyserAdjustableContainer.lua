@@ -106,7 +106,7 @@ function Adjustable.Container:onClick(label, event)
         --if not in the Geyser main window attach Label is not needed and will be removed
         if self.container ~= Geyser and table.index_of(self.rCLabel.nestedLabels, self.attLabel) then
             label:hideMenuLabel("attLabel")
-            -- if we are back to the Geyser main window attach Label will be read
+            -- if we are back to the Geyser main window attach Label will be re-added
         elseif self.container == Geyser and not table.index_of(self.rCLabel.nestedLabels, self.attLabel) then
             label:showMenuLabel("attLabel") 
         end

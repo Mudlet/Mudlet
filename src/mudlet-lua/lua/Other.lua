@@ -31,7 +31,7 @@ setmetatable( _G, {
 
 
 
---- Mudlet's support for ATCP. This is primarily available on IRE-based MUDs, but Mudlets implementation is generic enough
+--- Mudlet's support for ATCP. This is primarily available on IRE-based MUDs, but Mudlet's implementation is generic enough
 --- such that any it should work on others. <br/><br/>
 ---
 --- The latest ATCP data is stored in the atcp table. Whenever new data arrives, the previous is overwritten. An event is also
@@ -297,7 +297,7 @@ end
 ---  Functions are saved via string.dump, so make sure it has no upvalues <br/>
 ---  References are saved <br/>
 ---
---- @usage Saves the globals table (minus some lua environment stuffs) into a file (only Mudlet should use this).
+--- @usage Saves the globals table (minus some lua environment stuff) into a file (only Mudlet should use this).
 ---   <pre>
 ---   table.save(file)
 ---   </pre>
