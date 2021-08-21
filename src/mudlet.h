@@ -278,7 +278,7 @@ public:
     void setShowMapAuditErrors(const bool);
     void setShowIconsOnMenu(const Qt::CheckState);
     void setGlobalStyleSheet(const QString& styleSheet);
-
+    void setupPreInstallPackages(const QString& gameUrl);
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
 
     // This construct will be very useful for formatting tooltips and by
