@@ -891,7 +891,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 
     QString Sparkle3rdPartyHeader(tr("<h4>bspatch.c and bsdiff.c, from bsdiff 4.3 <a href=\"http://www.daemonology.net/bsdiff/\">http://www.daemonology.net/bsdiff</a>:</h4>"
                                      "<h3>Copyright © 2003-2005 Colin Percival.</h3>"
-                                     "<h4>says.c and says.c, from says-lite (2010/08/07) <a href=\"https://sites.google.com/site/yuta256/says\">https://sites.google.com/site/yuta256/says</a>:</h4>"
+                                     "<h4>sais.c and sais.c, from sais-lite (2010/08/07) <a href=\"https://sites.google.com/site/yuta256/sais\">https://sites.google.com/site/yuta256/sais</a>:</h4>"
                                      "<h3>Copyright © 2008-2010 Yuta Mori.</h3>"
                                      "<h4>SUDSAVerifier.m:</h4>"
                                      "<h3>Copyright © 2011 Mark Hamlin.<br>"
