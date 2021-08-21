@@ -3013,7 +3013,7 @@ void cTelnet::setKeepAlive(int socketHandle)
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout));
 #endif
 
-    // Interval between keep-alive, in seconds:
+    // Interval between keep-alives, in seconds:
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
     // Number of failed keep alives before forcing a close:
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
