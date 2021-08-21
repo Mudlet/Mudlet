@@ -1,9 +1,9 @@
-WONT
-DONT
+wont
+dont
 optin
 Od
-atEnd
-errorString
+atend
+errorstring
 uint
 oly
 ba
@@ -11,9 +11,9 @@ nWe
 que
 te
 contro
-nTo
+nto
 te
 struc
 ba
-parY
+pary
 ot
