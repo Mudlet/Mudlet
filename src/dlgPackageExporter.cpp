@@ -131,12 +131,27 @@ dlgPackageExporter::~dlgPackageExporter()
     delete ui;
 }
 
-void dlgPackageExporter::appendToConfigFile(QString& comment, const QString& what, const QString& value)
+void dlgPackageExporter::appendToDetails(const QString& what, const QString& value)
 {
     if (value.isEmpty()) {
         return;
     }
-    comment.append(QStringLiteral("%1 = [[%2]]\n").arg(what, value));
+    if (mPackageComment.isEmpty()) {
+        // Insert a leading linefeed at the start as some zip utilities prefix
+        // the first line with, say something like "Comment: " which does not
+        // look so good when immediately followed by "Package name:". For
+        // Similiar layout reasons, indent all the comment entries by, say,
+        // four spaces in the next chunk of code.
+        mPackageComment.append(QChar::LineFeed);
+    }
+    if (!what.compare(QLatin1String("mpackage"))) {
+        // No point in using an internal variable name in an external, user
+        // viewable aspect, use something that is more sensible:
+        mPackageComment.append(QStringLiteral("    Package name: %1\n").arg(value));
+    } else {
+        mPackageComment.append(QStringLiteral("    %1: %2\n").arg(what, value));
+    }
+    mPackageConfig.append(QStringLiteral("%1 = [[%2]]\n").arg(what, value));
 }
 
 void dlgPackageExporter::recurseTree(QTreeWidgetItem* pItem, QList<QTreeWidgetItem*>& treeList)
@@ -358,6 +373,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
     //description focus handling
     if (obj == ui->textEdit_description) {
         if (evt->type() == QEvent::FocusIn) {
+            ui->textEdit_description->setCurrentCharFormat(QTextCharFormat());
             ui->textEdit_description->setPlainText(mPlainDescription);
             return false;
         }
@@ -380,6 +396,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
                 QString fname = mDescriptionImages.at(i);
                 QFileInfo info(fname);
+                fname = QUrl::toPercentEncoding(fname).constData();
                 plainText.replace(QStringLiteral("$%1").arg(info.fileName()), fname);
             }
             ui->textEdit_description->setMarkdown(plainText);
@@ -543,7 +560,7 @@ void dlgPackageExporter::slot_export_package()
             displayResultMessage(message, false);
             isOk = false;
         } else {
-            auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageConfig);
+            auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageComment);
             auto watcher = new QFutureWatcher<std::pair<bool, QString>>;
             QObject::connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, [=]() {
                 mExportingPackage = false;
@@ -604,8 +621,10 @@ QString dlgPackageExporter::copyNewImagesToTmp(const QString& tempPath) const
                 imageDir.append(imageFile.fileName());
                 QFile::copy(imageFile.absoluteFilePath(), imageDir);
             }
+            //replaces spaces with %20 in image file name to create a compatible url
+            QString imageName = QUrl::toPercentEncoding(imageFile.fileName()).constData();
             //replace temporary path with the path that is now inside the package
-            plainDescription.replace(QStringLiteral("$%1").arg(imageFile.fileName()), QStringLiteral("$packagePath/.mudlet/description_images/%1").arg(imageFile.fileName()));
+            plainDescription.replace(QStringLiteral("$%1").arg(imageFile.fileName()), QStringLiteral("$packagePath/.mudlet/description_images/%1").arg(imageName));
         }
     }
     return plainDescription;
@@ -614,7 +633,7 @@ QString dlgPackageExporter::copyNewImagesToTmp(const QString& tempPath) const
 // purge images from tmp which are no longer used by the description
 void dlgPackageExporter::cleanupUnusedImages(const QString& tempPath, const QString& plainDescription)
 {
-    static QRegularExpression imagesInUsePattern(R"(\$packagePath\/\.mudlet\/description_images\/(.+?)\")");
+    static QRegularExpression imagesInUsePattern(R"(\$packagePath\/\.mudlet\/description_images\/(.+?)\.)");
     QStringList imagesInUse;
     QRegularExpressionMatchIterator i = imagesInUsePattern.globalMatch(plainDescription);
     while (i.hasNext()) {
@@ -626,7 +645,7 @@ void dlgPackageExporter::cleanupUnusedImages(const QString& tempPath, const QStr
     QDirIterator allImagesCopied(QStringLiteral("%1.mudlet/description_images").arg(tempPath), QDir::Files);
     while (allImagesCopied.hasNext()) {
         QFileInfo copiedImage(allImagesCopied.next());
-        if (!imagesInUse.contains(copiedImage.fileName())) {
+        if (!imagesInUse.contains(copiedImage.baseName())) {
             if (!QFile(copiedImage.absoluteFilePath()).remove()) {
                 qDebug() << "couldn't remove unused image" << copiedImage.fileName();
             }
@@ -784,19 +803,21 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     }
 
     mPackageConfig.clear();
-    appendToConfigFile(mPackageConfig, QStringLiteral("mpackage"), mPackageName);
-    appendToConfigFile(mPackageConfig, QStringLiteral("author"), ui->lineEdit_author->text());
-    appendToConfigFile(mPackageConfig, QStringLiteral("icon"), iconFile.fileName());
-    appendToConfigFile(mPackageConfig, QStringLiteral("title"), ui->lineEdit_title->text());
-    appendToConfigFile(mPackageConfig, QStringLiteral("description"), packageDescription);
-    appendToConfigFile(mPackageConfig, QStringLiteral("version"), ui->lineEdit_version->text());
-    appendToConfigFile(mPackageConfig, QStringLiteral("dependencies"), dependencies.join(","));
+    mPackageComment.clear();
+    appendToDetails(QStringLiteral("mpackage"), mPackageName);
+    appendToDetails(QStringLiteral("author"), ui->lineEdit_author->text());
+    appendToDetails(QStringLiteral("icon"), iconFile.fileName());
+    appendToDetails(QStringLiteral("title"), ui->lineEdit_title->text());
+    appendToDetails(QStringLiteral("description"), packageDescription);
+    appendToDetails(QStringLiteral("version"), ui->lineEdit_version->text());
+    appendToDetails(QStringLiteral("dependencies"), dependencies.join(","));
     QDateTime iso8601timestamp = QDateTime::currentDateTime();
     int offset = iso8601timestamp.offsetFromUtc();
     iso8601timestamp.setOffsetFromUtc(offset);
     QDateTime iso8601time(QDateTime::currentDateTime());
     iso8601time.setTimeSpec(Qt::OffsetFromUTC);
     mPackageConfig.append(QStringLiteral("created = \"%1\"\n").arg(iso8601timestamp.toString(Qt::ISODate)));
+    mPackageComment.append(QStringLiteral("    created: %1\n").arg(iso8601timestamp.toString(Qt::ISODate)));
 
     QString luaConfig = QStringLiteral("%1/config.lua").arg(stagingDirName);
     QFile configFile(luaConfig);
@@ -844,8 +865,7 @@ std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& 
     return {true, QString{}};
 }
 
-std::pair<bool, QString>
-dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageConfig)
+std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageComment)
 {
     bool isOk = true;
     QString error;
@@ -987,7 +1007,7 @@ dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& pac
     }
 
     if (isOk) {
-        zip_set_archive_comment(archive, packageConfig.toUtf8().constData(), packageConfig.toUtf8().length());
+        zip_set_archive_comment(archive, packageComment.toUtf8().constData(), static_cast<zip_uint16_t>(packageComment.toUtf8().length()));
 
 #if defined(LIBZIP_SUPPORTS_CANCELLING)
         auto cancel_callback = [](zip*, void*) -> int { return !mExportingPackage; };
@@ -1514,7 +1534,7 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
                 if (!my_parent->mDescriptionImages.contains(fname)) {
                     my_parent->mDescriptionImages.append(fname);
                 }
-                QString imgSrc = QStringLiteral("<img src = \"$%1\" />").arg(info.fileName());
+                QString imgSrc = QStringLiteral("![Image]($%1)").arg(info.fileName());
                 myCursor.insertText(imgSrc);
             }
         }
@@ -1525,6 +1545,7 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
             for (int i = my_parent->mDescriptionImages.size() - 1; i >= 0; i--) {
                 QString fname = my_parent->mDescriptionImages.at(i);
                 QFileInfo info(fname);
+                fname = QUrl::toPercentEncoding(fname).constData();
                 plainText.replace(QStringLiteral("$%1").arg(info.fileName()), fname);
             }
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
