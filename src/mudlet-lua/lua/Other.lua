@@ -31,7 +31,7 @@ setmetatable( _G, {
 
 
 
---- Mudlet's support for ATCP. This is primarily available on IRE-based MUDs, but Mudlets impelementation is generic enough
+--- Mudlet's support for ATCP. This is primarily available on IRE-based MUDs, but Mudlet's implementation is generic enough
 --- such that any it should work on others. <br/><br/>
 ---
 --- The latest ATCP data is stored in the atcp table. Whenever new data arrives, the previous is overwritten. An event is also
@@ -116,7 +116,7 @@ SavedVariables = {}
 ---   send ("wield shield")
 ---   send ("say ha!")
 ---   </pre>
---- @usage Use sendAll and do not echo sent commnad on the main window.
+--- @usage Use sendAll and do not echo sent command on the main window.
 ---   <pre>
 ---   sendAll("stand", "wield shield", "say ha!", false)
 ---   </pre>
@@ -297,7 +297,7 @@ end
 ---  Functions are saved via string.dump, so make sure it has no upvalues <br/>
 ---  References are saved <br/>
 ---
---- @usage Saves the globals table (minus some lua enviroment stuffs) into a file (only Mudlet should use this).
+--- @usage Saves the globals table (minus some lua environment stuff) into a file (only Mudlet should use this).
 ---   <pre>
 ---   table.save(file)
 ---   </pre>
@@ -727,7 +727,7 @@ do
   -- to the right functions.
   local handlers = {}
 
-  -- Remember highest hander ID to avoid ID reuse.
+  -- Remember highest handler ID to avoid ID reuse.
   local highestHandlerId = 0
   -- Helps us finding the right event handler from an ID.
   local handlerIdsToHandlers = {}

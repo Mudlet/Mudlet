@@ -43,8 +43,8 @@
 -- @field windows This is an ordered list of the names of the window held by this container.
 -- @field fontSize The default size font used when calculating dimensions
 --                 based on the character constraint. Default is 8.
--- @field h_policy This sets if this widget should be stretched/shrinked horizontally or not
--- @field v_policy This sets if this widget should be stretched/shrinked vertically or not
+-- @field h_policy This sets if this widget should be stretched/shrunk horizontally or not
+-- @field v_policy This sets if this widget should be stretched/shrunk vertically or not
 -- @field v_stretch_factor This sets by how much more then window will be stretched horizontally in comparison to
 --                 other windows
 -- @field v_stretch_factor This sets by how much more then window will be stretched vertically in comparison to
@@ -252,7 +252,7 @@ function Geyser.Container:lowerAll()
   self:lower()
 end
 
---- Moves this window according to the new x and y contraints set.
+--- Moves this window according to the new x and y constraints set.
 -- @param x New x constraint to use. If nil, uses current value.
 -- @param y New y constraint to use. If nil, uses current value.
 function Geyser.Container:move (x, y)
@@ -282,7 +282,7 @@ function Geyser.Container:setFontSize (fontSize)
   self:set_constraints()
 end
 
---- Sets all contraints (x, y, width, height) for this window.
+--- Sets all constraints (x, y, width, height) for this window.
 -- @param cons Any Lua table that contains appropriate constraint entries.
 function Geyser.Container:set_constraints (cons)
   cons = cons or self
