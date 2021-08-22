@@ -579,7 +579,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addAction(saveAction);
     toolBar->setWindowTitle(tr("Editor Toolbar - %1 - Actions",
                                // Intentional comment to separate arguments
-                               "This is the toolbar that is initally placed at the top of the editor.")
+                               "This is the toolbar that is initially placed at the top of the editor.")
                             .arg(hostName));
 
     toolBar->addSeparator();
@@ -615,7 +615,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar2->setMovable(true);
     toolBar2->setWindowTitle(tr("Editor Toolbar - %1 - Items",
                                 // Intentional comment to separate arguments
-                                "This is the toolbar that is initally placed at the left side of the editor.")
+                                "This is the toolbar that is initially placed at the left side of the editor.")
                              .arg(hostName));
     toolBar2->setOrientation(Qt::Vertical);
 
@@ -5045,7 +5045,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
 
         for (int i = 0; i < patternList.size(); i++) {
             if (i >= 50) {
-                break; //pattern liste ist momentan auf 50 begrenzt
+                break; // pattern list is limited to 50 at the moment
             }
             if (i >= pT->mColorPatternList.size()) {
                 break;
@@ -5314,7 +5314,7 @@ void dlgTriggerEditor::recursiveSearchVariables(TVar* var, QList<TVar*>& list, b
 
 void dlgTriggerEditor::slot_var_changed(QTreeWidgetItem* pItem)
 {
-    // This handles a small case where the radio buttom is clicked while the item is currently selected
+    // This handles a small case where the radio button is clicked while the item is currently selected
     // which causes the variable to not save. In places where we populate the TreeWidgetItem, we have
     // to guard it with mChangingVar or else this will be called with every change such as the variable
     // name, etc.
@@ -8935,7 +8935,7 @@ QColor dlgTriggerEditor::parseButtonStyleSheetColors(const QString& styleSheetTe
                 if (QColor::isValidColor(match.captured(1))) {
                     return QColor(match.captured(1));
                 } else {
-                    qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invaid string \"" <<  match.captured(1) << "\" found as name of foreground color!";
+                    qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invalid string \"" <<  match.captured(1) << "\" found as name of foreground color!";
                     return QColor();
                 }
             } else {
@@ -8969,7 +8969,7 @@ QColor dlgTriggerEditor::parseButtonStyleSheetColors(const QString& styleSheetTe
                 if (QColor::isValidColor(match.captured(1))) {
                     return QColor(match.captured(1));
                 } else {
-                    qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invaid string \"" <<  match.captured(1) << "\" found as name of background color!";
+                    qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invalid string \"" <<  match.captured(1) << "\" found as name of background color!";
                     return QColor();
                 }
             } else {

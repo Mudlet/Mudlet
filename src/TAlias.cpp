@@ -174,7 +174,7 @@ bool TAlias::match(const QString& toMatch)
             tabptr += name_entry_size;
         }
     }
-    //TODO: add named groups seperately later as Lua::namedGroups
+    //TODO: add named groups separately later as Lua::namedGroups
     for (;;) {
         int options = 0;
         int start_offset = ovector[1];

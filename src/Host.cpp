@@ -2514,7 +2514,7 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
     }
 
     if (dictionaryChanged) {
-        // This will propogate the changes in the two flags to the main
+        // This will propagate the changes in the two flags to the main
         // TConsole's copies of them - although setProfileSpellDictionary() is
         // also called in the main TConsole constructor:
         mpConsole->setProfileSpellDictionary();
@@ -2863,7 +2863,7 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
             return {true, QString()};
         }
     } else if (pC) {
-        // CHECK: The absence of an explict return statement in this block means that
+        // CHECK: The absence of an explicit return statement in this block means that
         // reusing an existing mini console causes the lua function to seem to
         // fail - is this as per Wiki?
         // This part was causing problems with UserWindows
@@ -3712,7 +3712,7 @@ bool Host::commitLayoutUpdates(bool flush)
         for (auto pToolBar : mToolbarLayoutChanges) {
             // Under some circumstances there is NOT a
             // pToolBar->property("layoutChanged") and examining that
-            // non-existant variant to see if it was true or false causes seg. faults!
+            // non-existent variant to see if it was true or false causes seg. faults!
             if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
                 qWarning().nospace().noquote() << "host::commitLayoutUpdates() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
             } else if (pToolBar->property("layoutChanged").toBool()) {

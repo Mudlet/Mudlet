@@ -1067,7 +1067,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
                 if (matchStatePair.second->isComplete()) {
                     mKeepFiring = mStayOpen;
                     if (mudlet::debugMode) {
-                        TDebug(Qt::yellow, Qt::darkMagenta) << "multiline trigger name=" << mName << " *FIRES* all conditons are fullfilled. Executing script.\n" >> mpHost;
+                        TDebug(Qt::yellow, Qt::darkMagenta) << "multiline trigger name=" << mName << " *FIRES* all conditions are fulfilled. Executing script.\n" >> mpHost;
                     }
                     removeList.push_back(matchStatePair.first);
                     conditionMet = true;
@@ -1106,7 +1106,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
                 if (mConditionMap.find(matchState) != mConditionMap.end()) {
                     delete mConditionMap[matchState];
                     if (mudlet::debugMode) {
-                        TDebug(Qt::darkBlue, Qt::black) << "removing condition from conditon table.\n" >> mpHost;
+                        TDebug(Qt::darkBlue, Qt::black) << "removing condition from condition table.\n" >> mpHost;
                     }
                     mConditionMap.erase(matchState);
                 }
@@ -1116,7 +1116,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
 
         // definition trigger chain: a folder is part of a trigger chain if it has a regex defined
         // a trigger chain only lets data pass if the condition matches or in case of multiline all
-        // all conditions are fullfilled
+        // all conditions are fulfilled
         //
         // a folder can also be a simple structural element in which case all data passes through
         // if at least one regex is defined a folder is considered a trigger chain otherwise a structural element
@@ -1173,7 +1173,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
 // colors for foreground and background (proper ANSI indexes) and what they look
 // like give the current Host settings (the first 16 ANSI ones and the default
 // fore and background colors can be changed by the user and since OSC P/R
-// support has been implimented - by the MUD Server!)
+// support has been implemented - by the MUD Server!)
 TColorTable* TTrigger::createColorPattern(int ansiFg, int ansiBg)
 {
     /*
