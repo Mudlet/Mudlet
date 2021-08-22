@@ -150,8 +150,8 @@ isEmpty( FONT_TEST ) | !equals(FONT_TEST, "NO" ) {
     # It would be nice if we could automate the download and extraction of all
     # the font and associate documentation (but NOT the "sources" sub-directory)
     # contents into the ./src/fonts/ directory structure only if this option is
-    # set to ON; however that would be plaform specific and add more complexity
-    # and it is not obvious that there is a demand to do this currenly.
+    # set to ON; however that would be platform specific and add more complexity
+    # and it is not obvious that there is a demand to do this currently.
 }
 
 ######################### Auto Updater setting detection #########,#############
@@ -215,7 +215,7 @@ isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
 # from the executable's location will be used.  Mudlet will now moan and ask
 # the user to find them if the files (and specifically the <10KByte
-# "LuaGlobal.lua" one) is not accessable (read access only required) during
+# "LuaGlobal.lua" one) is not accessible (read access only required) during
 # startup.  The precise directory is remembered once found (and stored in the
 # Mudlet configuration file as "systemLuaFilePath") but if the installer places
 # the files in the place documented here the user will not be bothered by this.
@@ -490,7 +490,7 @@ contains( DEFINES, INCLUDE_UPDATER ) {
 
     macx {
         # We do not actually have to do anything to include it here - it is
-        # pulled in by the Sparkle complation below
+        # pulled in by the Sparkle compilation below
         !exists("$${PWD}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
             error("Cannot locate Sparkle glue library submodule source code, build abandoned!")
         }
@@ -840,7 +840,7 @@ TRANSLATIONS = $$files(../translations/translated/*.ts)
 #
 # Select Qt Creator's "Project" Side tab and under the "Build and Run" top tab
 # choose your Build Kit's "Run"->"Run Settings" ensure you have a "Make" step
-# that - if you are NOT runnning QT Creator as root, which is the safest way
+# that - if you are NOT running QT Creator as root, which is the safest way
 # (i.e safe = NOT root) - against:
 # "Override <path to?>/make" has the entry: "/usr/bin/sudo"
 # without the quotes, assuming /usr/bin is the location of "sudo"
@@ -1483,7 +1483,7 @@ OTHER_FILES += \
 
 # Unix Makefile installer:
 # lua file installation, needs install, sudo, and a setting in /etc/sudo.conf
-# or via enviromental variable SUDO_ASKPASS to something like ssh-askpass
+# or via environmental variable SUDO_ASKPASS to something like ssh-askpass
 # to provide a graphic password requestor needed to install software
 unix:!macx {
 # say what we want to get installed by "make install" (executed by 'deployment' step):

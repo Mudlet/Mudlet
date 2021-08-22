@@ -93,7 +93,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 apt-get-update-if-needed
 
-# On older Ubuntu, Tilix is in a PPA. On Debian Strech, its in backports
+# On older Ubuntu, Tilix is in a PPA. On Debian Stretch, its in backports
 if [[ -z $(apt-cache --names-only search ^tilix$) ]]; then
     apt-get install -y --no-install-recommends lsb-release
     if [ "$(lsb_release -is)" = "Ubuntu" ]; then
@@ -261,7 +261,7 @@ startInBackgroundIfNotRunning "x11vnc" sudoIf "x11vnc -display \${DISPLAY:-:1} -
 # Set resolution
 /usr/local/bin/set-resolution \${VNC_RESOLUTION:-1440x768} \${VNC_DPI:-96} true
 
-# Spin up noVNC if installed and not runnning.
+# Spin up noVNC if installed and not running.
 if [ -d "/usr/local/novnc" ] && [ "\$(ps -ef | grep /usr/local/novnc/noVNC*/utils/launch.sh | grep -v grep)" = "" ]; then
     keepRunningInBackground "noVNC" sudoIf "/usr/local/novnc/noVNC*/utils/launch.sh --listen \${NOVNC_PORT:-6080} --vnc localhost:\${VNC_PORT:-5901}"
     log "noVNC started."
