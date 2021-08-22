@@ -10673,7 +10673,7 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 
     bool isToShowDefaultArea = getVerifiedBool(L, __func__, 1, "isToShowDefaultArea");
     if (host.mpMap->mpMapper) {
-        // If we are re-enabled the display of the default area
+        // If we are re-enabling the display of the default area
         // AND the mapper was showing the default area
         // the area widget will NOT be showing the correct area name afterwards
         bool isAreaWidgetInNeedOfResetting = false;
