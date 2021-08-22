@@ -417,6 +417,31 @@ describe("should always pass", function()
 -- Good Luck.</script>
 			<eventHandlerList />
 		</Script>
+			<Script isActive="yes" isFolder="no">
+				<name>quitMudletAfterTests</name>
+				<packageName></packageName>
+				<script>function quitMudletAfterTests()
+  local quitMudlet = os.getenv("QUIT_MUDLET_AFTER_TESTS")
+  if quitMudlet then
+    ioprint("All tests complete, shutting down Mudlet")
+    closeMudlet()
+  end
+end</script>
+				<eventHandlerList>
+					<string>testsComplete</string>
+				</eventHandlerList>
+			</Script>
+			<Script isActive="yes" isFolder="no">
+				<name>testQuittingMudlet</name>
+				<packageName></packageName>
+				<script>function testQuittingMudlet()
+  ioprint("Mudlet loaded, waiting 5s before raising 'testsComplete'...")
+  tempTimer(5, function() raiseEvent("testsComplete") end)
+end</script>
+				<eventHandlerList>
+					<string>sysLoadEvent</string>
+				</eventHandlerList>
+			</Script>
 	</ScriptPackage>
 	<KeyPackage />
 	<HelpPackage>
