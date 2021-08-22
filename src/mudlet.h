@@ -399,7 +399,7 @@ public:
 #endif
 
 
-    // Currently tracks the "mudlet_option_use_smallscreen" file's existance but
+    // Currently tracks the "mudlet_option_use_smallscreen" file's existence but
     // may eventually migrate solely to the "EnableFullScreenMode" in the main
     // QSetting file - it is only stored as a file now to maintain backwards
     // compatibility...
@@ -673,7 +673,7 @@ private:
     // on the mpToolBarReplay:
     QString mTimeFormat;
 
-    // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
+    // Has default form of "en_US" but can be just an ISO language code e.g. "fr" for french,
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
     // file for GUI translation
     QString mInterfaceLanguage {};
@@ -682,7 +682,7 @@ private:
     QLocale mUserLocale {};
 
     // The next pair retains the path argument supplied to the corresponding
-    // scanForXxxTranslations(...) method so it is available to the subsquent
+    // scanForXxxTranslations(...) method so it is available to the subsequent
     // loadTranslators(...) call
     QString mQtTranslationsPathName;
     QString mMudletTranslationsPathName;
@@ -723,7 +723,7 @@ protected:
 
 
 // A convenience class to keep all the details for the translators for a
-// specific locale code (langauge only "xx" or language/country "xx_YY")
+// specific locale code (language only "xx" or language/country "xx_YY")
 // in one unified structure.
 class translation
 {

@@ -124,8 +124,4 @@ private:
     // Made private as we may change implementation detail
 };
 
-// - gezeichnet werden erstmal die areas
-//   unter berücksichtigung der an die area angrenzenden edges
-// - der span der area ist unterschiedlich
-
 #endif // MUDLET_TAREA_H

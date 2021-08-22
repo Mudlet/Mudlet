@@ -399,7 +399,7 @@ void dlgConnectionProfiles::slot_update_autoreconnect(int state)
 }
 
 // This gets called when the QCheckBox that it is connect-ed to gets its
-// checked state set programatically AS WELL as when the user clicks on it:
+// checked state set programmatically AS WELL as when the user clicks on it:
 void dlgConnectionProfiles::slot_update_discord_optin(int state)
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();

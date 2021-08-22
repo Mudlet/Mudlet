@@ -86,7 +86,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 
     if (mpHost && mClickFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mClickFunction, event);
-        // The use of accept() here prevents the propogation of the event to
+        // The use of accept() here prevents the propagation of the event to
         // any parent, e.g. the containing TConsole
         event->accept();
         mudlet::self()->activateProfile(mpHost);

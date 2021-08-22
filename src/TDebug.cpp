@@ -195,7 +195,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     hostName.detach();
     QPair<QString, QString> newIdentifier;
     if (TDebug::smAvailableIdentifiers.isEmpty()) {
-        // Run out of identifers - use fall-back one:
+        // Run out of identifiers - use fall-back one:
         newIdentifier = qMakePair(hostName, csmTagOverflow);
         TDebug::smIdentifierMap.insert(pHost, newIdentifier);
     } else {
