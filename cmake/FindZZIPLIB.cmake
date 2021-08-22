@@ -7,7 +7,7 @@
 
 # Break each step into a separate command so any status message is output
 # straight away The include directory setup for Zip is unusual in that as well
-# as e.g. /usr/include/zip.h we need the path to an interal header zipconf.g
+# as e.g. /usr/include/zip.h we need the path to an internal header zipconf.g
 # that it calls for using '<''>'s i.e. SYSTEM #include delimiters which are
 # typically located at e.g. /usr/lib/libzip/include/zipconf.h and using pkg-
 # config is the recommended way to get the details. Spotted recommendation to

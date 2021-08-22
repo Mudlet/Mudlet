@@ -218,6 +218,6 @@ function Geyser:changeContainer (container)
     setMyWindow(self, windowname)
     setContainerWindow(self, windowname)
   end
-  -- use add2 without overwriting childrens add functions
+  -- use add2 without overwriting childrens' add functions
   container:add2(self, cons, false)
 end
