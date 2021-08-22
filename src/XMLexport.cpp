@@ -332,11 +332,11 @@ bool XMLexport::saveXmlFile(QFile& file)
 {
     std::stringstream saveStringStream(std::ios::out);
     // Remember, the mExportDoc is the data in the form of a pugi::xml_document
-    // instance - the save method needs a stream that impliments the
+    // instance - the save method needs a stream that implements the
     // std::ostream interface into which it can push the data:
     mExportDoc.save(saveStringStream);
     // We need to do our own replacement of ASCII control characters that are
-    // not valid in XML verison 1.0 and that means we cannot use the pugixml
+    // not valid in XML version 1.0 and that means we cannot use the pugixml
     // file methods as it does that in a different way which is not helpful
     // as we do not use that library for READING the XML files - so convert
     // the data to a std::string :

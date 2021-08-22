@@ -700,7 +700,7 @@ void mudlet::loadMaps()
     // QMap<T1, T2>::value(const T1&) where the parameter has been previously
     // been converted to all-lower case:
     // From https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes:
-    // More useful is the cross-referenced (Country <-> Languges):
+    // More useful is the cross-referenced (Country <-> Languages):
     // https://www.unicode.org/cldr/charts/latest/supplemental/language_territory_information.html
     // Initially populated from the dictionaries provided within the Debian
     // GNU/Linux distribution:
@@ -941,8 +941,8 @@ void mudlet::loadMaps()
                                   {QStringLiteral("ve"), tr("Venda")},
                                   {QStringLiteral("vi"), tr("Vietnamese")},
                                   {QStringLiteral("vi_vn"), tr("Vietnamese (Vietnam)")},
-                                  {QStringLiteral("vi_daucu"), tr("Vietnamese (DauCu varient - old-style diacritics)")},
-                                  {QStringLiteral("vi_daumoi"), tr("Vietnamese (DauMoi varient - new-style diacritics)")},
+                                  {QStringLiteral("vi_daucu"), tr("Vietnamese (DauCu variant - old-style diacritics)")},
+                                  {QStringLiteral("vi_daumoi"), tr("Vietnamese (DauMoi variant - new-style diacritics)")},
                                   {QStringLiteral("wa"), tr("Walloon")},
                                   {QStringLiteral("xh"), tr("Xhosa")},
                                   {QStringLiteral("yi"), tr("Yiddish")},
@@ -1062,7 +1062,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
                     percentageTranslated = 0;
                 }
             }
-            // PLACEMARKER: Start of locale codes to native language decoding - insert an entry here for any futher Mudlet supported languages
+            // PLACEMARKER: Start of locale codes to native language decoding - insert an entry here for any further Mudlet supported languages
             translation currentTranslation(percentageTranslated);
             if (!languageCode.compare(QLatin1String("en_US"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = QStringLiteral("English (American)");
@@ -1103,7 +1103,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
             mTranslationsMap.insert(languageCode, currentTranslation);
         } else {
             // This is very unlikely to be reached as it means that a file that
-            // matched the naming to be a Mudlet translation file was not infact
+            // matched the naming to be a Mudlet translation file was not in fact
             // one...
             qDebug().noquote().nospace() << "    no Mudlet translation found for locale code: \"" << languageCode << "\".";
         }
@@ -1135,7 +1135,7 @@ void mudlet::scanForQtTranslations(const QString& path)
              * IS detected.
              *
              * So although we can note the load of a given pathFileName is
-             * sucessful it might not be exactly what it seems to be!
+             * successful it might not be exactly what it seems to be!
              */
             translation current = itTranslation.value();
             current.mQtTranslationFileName = translationFileName;
@@ -2792,7 +2792,7 @@ void mudlet::toggleFullScreenView()
 bool mudlet::replayStart()
 {
     // Do not proceed if there is a problem with the main toolbar (it isn't there)
-    // OR if there is already a replay toolbar in existance (a replay is already
+    // OR if there is already a replay toolbar in existence (a replay is already
     // in progress)...
     if (!mpMainToolBar || mpToolBarReplay) {
         return false;
@@ -3554,13 +3554,13 @@ void mudlet::showChangelogIfUpdated()
 bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pErrMsg)
 {
     // Do not proceed if there is a problem with the main toolbar (it isn't there)
-    // OR if there is already a replay toolbar in existance (a replay is already
+    // OR if there is already a replay toolbar in existence (a replay is already
     // in progress)...
     if (!mpMainToolBar || mpToolBarReplay) {
         // This was in (bool) ctelnet::loadReplay(const QString&, QString*)
         // but is needed here to prevent getting into there otherwise a lua call
         // to start a replay would mess up (QFile) ctelnet::replayFile for a
-        // replay already in progess in the SAME profile.  Technically there
+        // replay already in progress in the SAME profile.  Technically there
         // could be a very small chance of a race condition if a lua call of
         // loadReplay happens at the same time as a file was selected for a
         // replay after the toolbar/menu command to do a reaply for the same
@@ -3917,7 +3917,7 @@ bool mudlet::scanDictionaryFile(QFile& dict, int& oldWC, QHash<QString, unsigned
 bool mudlet::overwriteDictionaryFile(QFile& dict, const QStringList& wl)
 {
     // (Re)Open the file to write out the cleaned/new contents
-    // QFile::WriteOnly automatically implies QFile::Truncate in the abscence of
+    // QFile::WriteOnly automatically implies QFile::Truncate in the absence of
     // certain other flags:
     if (!dict.open(QFile::WriteOnly|QFile::Text)) {
         qWarning().nospace().noquote() << "mudlet::overwriteDictionaryFile(...) ERROR - failed to open dictionary file (for writing): \"" << dict.fileName() << "\" reason: " << dict.errorString();
@@ -4091,7 +4091,7 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
     // to confuse our add/remove code.  We just need the SET line to force the
     // Hunspell API to be UTF-8 and the TRY line to allow for searching for
     // completions. Anyhow we now need to keep the copy of the word list ourself
-    // to allow for persistant editing of it as it is not possible to obtain it
+    // to allow for persistent editing of it as it is not possible to obtain it
     // from the Hunspell library:
 
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
@@ -4389,7 +4389,7 @@ void mudlet::slot_tabMoved(const int oldPos, const int newPos)
     Q_UNUSED(oldPos)
     const QStringList& tabNamesInOrder = mpTabBar->tabNames();
     int itemsCount = mpHBoxLayout_profileContainer->count();
-    Q_ASSERT_X(itemsCount == tabNamesInOrder.count(), "mudlet::slot_tabMoved(...)", "missmatch in count of tabs and TMainConsoles");
+    Q_ASSERT_X(itemsCount == tabNamesInOrder.count(), "mudlet::slot_tabMoved(...)", "mismatch in count of tabs and TMainConsoles");
     QMap<QString, QLayoutItem*> layoutItemMap;
     // Gather the QLayoutItem pointers for each TMainConsole and store them
     // against their profile name:
@@ -4408,9 +4408,9 @@ void mudlet::slot_tabMoved(const int oldPos, const int newPos)
     for (int index = 0; index < itemsCount; ++index) {
         const auto& wantedTabName = tabNamesInOrder.at(index);
         auto pLayoutItem = layoutItemMap.value(wantedTabName);
-        // This will remove the item from whereever it is in the layout:
+        // This will remove the item from wherever it is in the layout:
         mpHBoxLayout_profileContainer->removeItem(pLayoutItem);
-        // This will readd the item to the end of the layout:
+        // This will re-add the item to the end of the layout:
         mpHBoxLayout_profileContainer->addItem(pLayoutItem);
     }
 }

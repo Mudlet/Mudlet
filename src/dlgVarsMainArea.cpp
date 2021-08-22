@@ -35,7 +35,7 @@ dlgVarsMainArea::dlgVarsMainArea(QWidget* pF) : QWidget(pF)
     // init generated dialog
     setupUi(this);
 
-    // Modify the normal QComboBoxes with customised data models that impliment
+    // Modify the normal QComboBoxes with customised data models that implement
     // https://stackoverflow.com/a/21376774/4805858 so that individual entries
     // can be "disabled":
     // Key type widget:

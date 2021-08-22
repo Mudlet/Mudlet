@@ -141,7 +141,7 @@ std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name,
 
 void TMainConsole::toggleLogging(bool isMessageEnabled)
 {
-    // CHECKME: This path seems suspicious, it is shared amoungst ALL profiles
+    // CHECKME: This path seems suspicious, it is shared amongst ALL profiles
     // but the action is "Per Profile"...!
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("autolog")));
     QDateTime logDateTime = QDateTime::currentDateTime();
@@ -1280,7 +1280,7 @@ bool TMainConsole::importMap(const QString& location, QString* errMsg)
             filePathNameString = QDir::cleanPath(mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileInfo.filePath()));
         } else {
             if (fileInfo.exists()) {
-                filePathNameString = fileInfo.canonicalFilePath(); // Cannot use cannonical path if file doesn't exist!
+                filePathNameString = fileInfo.canonicalFilePath(); // Cannot use canonical path if file doesn't exist!
             } else {
                 filePathNameString = fileInfo.absoluteFilePath();
             }
