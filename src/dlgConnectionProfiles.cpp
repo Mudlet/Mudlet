@@ -1363,7 +1363,7 @@ void dlgConnectionProfiles::slot_reset_custom_icon()
 void dlgConnectionProfiles::slot_password_saved(QKeychain::Job* job)
 {
     if (job->error()) {
-        qWarning() << "dlgConnectionProfiles::slot_password_saved ERROR: couldn't save password for" << job->property("profile") << "; error was:" << job->errorString();
+        qWarning() << "dlgConnectionProfiles::slot_password_saved ERROR: couldn't save password for" << job->property("profile").toString() << "; error was:" << job->errorString();
     }
 
     job->deleteLater();
@@ -1372,7 +1372,7 @@ void dlgConnectionProfiles::slot_password_saved(QKeychain::Job* job)
 void dlgConnectionProfiles::slot_password_deleted(QKeychain::Job* job)
 {
     if (job->error()) {
-        qWarning() << "dlgConnectionProfiles::slot_password_deleted ERROR: couldn't delete password for" << job->property("profile") << "; error was:" << job->errorString();
+        qWarning() << "dlgConnectionProfiles::slot_password_deleted ERROR: couldn't delete password for" << job->property("profile").toString() << "; error was:" << job->errorString();
     }
 
     job->deleteLater();
