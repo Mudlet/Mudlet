@@ -25,7 +25,7 @@ Geyser.Gauge = Geyser.Container:new({
   orientation = "horizontal" })
 
 --- Sets the gauge amount.
--- @param currentValue Current numeric value, or if maxValue is ommitted, then
+-- @param currentValue Current numeric value, or if maxValue is omitted, then
 --        it is assumed that currentValue is a value between 0 and 100 and is
 --        used to set the gauge.
 -- @param maxValue Maximum numeric value.  Optionally nil, see above.

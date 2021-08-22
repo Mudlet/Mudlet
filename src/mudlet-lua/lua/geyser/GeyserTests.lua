@@ -53,7 +53,7 @@ function Geyser.testGauges()
   end
 end
 
---- Used by Geyser.demo1(). Sorry about the namespace polution,
+--- Used by Geyser.demo1(). Sorry about the namespace pollution,
 -- but callbacks can't use functions contained in a table.  Anyway,
 -- it just echoes some status info to the two miniconsoles.
 function demoCallback1 (value)
