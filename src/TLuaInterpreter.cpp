@@ -194,6 +194,7 @@ TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id) : mp
     connect(mpFileSystemWatcher, &QFileSystemWatcher::directoryChanged, this, &TLuaInterpreter::slot_pathChanged);
 
     initLuaGlobals();
+    qDebug() <<__FILE__ << __LINE__ <<__FUNCTION__ << "interpreter loaded OK";
 
     purgeTimer.start(2s);
 }
