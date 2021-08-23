@@ -140,7 +140,7 @@ void dlgPackageExporter::appendToDetails(const QString& what, const QString& val
         // Insert a leading linefeed at the start as some zip utilities prefix
         // the first line with, say something like "Comment: " which does not
         // look so good when immediately followed by "Package name:". For
-        // Similiar layout reasons, indent all the comment entries by, say,
+        // similar layout reasons, indent all the comment entries by, say,
         // four spaces in the next chunk of code.
         mPackageComment.append(QChar::LineFeed);
     }
