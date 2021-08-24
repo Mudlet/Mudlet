@@ -134,7 +134,7 @@ public:
                    QMap<QString, bool>&,
                    QHash<int, int>);
     QString dirCodeToDisplayName(int) const;
-    inline QString dirCodeToString(const int) const;
+    static QString dirCodeToString(const int);
     inline QString dirCodeToShortString(const int) const;
     inline int stringToDirCode(const QString&) const;
     bool hasExitOrSpecialExit(const QString&) const;
