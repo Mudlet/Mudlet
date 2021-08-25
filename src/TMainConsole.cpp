@@ -1354,3 +1354,17 @@ void TMainConsole::slot_reloadMap(QList<QString> profilesList)
 
     pHost->postMessage(outcomeMsg);
 }
+
+void TMainConsole::resizeEvent(QResizeEvent* event)
+{
+    // Process the event like other TConsoles
+    TConsole::resizeEvent(event);
+
+    auto pHost = getHost();
+    if (!pHost) {
+        return;
+    }
+
+    // Update the record of the text area size for NAWS purposes:
+    pHost->updateDisplayDimensions();
+}

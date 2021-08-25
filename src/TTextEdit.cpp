@@ -1754,7 +1754,7 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
 {
     updateScreenView();
     if (!mIsLowerPane && mpConsole->getType() == TConsole::MainConsole) {
-        mpHost->adjustNAWS();
+        mpHost->updateDisplayDimensions();
     }
 
     QWidget::resizeEvent(event);

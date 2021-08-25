@@ -295,7 +295,7 @@ public:
         mTelnet.set_USE_IRE_DRIVER_BUGFIX(b);
     }
 
-    void adjustNAWS();
+    void updateDisplayDimensions();
 
     bool installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);

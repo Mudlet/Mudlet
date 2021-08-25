@@ -743,43 +743,49 @@ bool cTelnet::socketOutRaw(std::string& data)
     return true;
 }
 
-void cTelnet::setDisplayDimensions()
+void cTelnet::checkNAWS()
 {
-    int x = (mpHost->mScreenWidth < mpHost->mWrapAt) ? mpHost->mScreenWidth : mpHost->mWrapAt;
-    int y = mpHost->mScreenHeight;
-    if ((y > 0) && myOptionState[static_cast<size_t>(OPT_NAWS)]) {
-        // qDebug().nospace().noquote() << "cTelnet::setDisplayDimensions() INFO - want to send NAWS data (for: \"" << mProfileName << "\") of X = " << x << ", Y = " << y << ".";
-        std::string s;
-        s = TN_IAC;
-        s += TN_SB;
-        s += OPT_NAWS;
-        char x1, x2, y1, y2;
-        x1 = x / 256;
-        x2 = x % 256;
-        y1 = y / 256;
-        y2 = y % 256;
-        //IAC must be doubled
-        s += x1;
-        if (x1 == TN_IAC) {
-            s += TN_IAC;
-        }
-        s += x2;
-        if (x2 == TN_IAC) {
-            s += TN_IAC;
-        }
-        s += y1;
-        if (y1 == TN_IAC) {
-            s += TN_IAC;
-        }
-        s += y2;
-        if (y2 == TN_IAC) {
-            s += TN_IAC;
-        }
-
-        s += TN_IAC;
-        s += TN_SE;
-        socketOutRaw(s);
+    int naws_x = (mpHost->mScreenWidth < mpHost->mWrapAt) ? mpHost->mScreenWidth : mpHost->mWrapAt;
+    int naws_y = mpHost->mScreenHeight;
+    if ((naws_y > 0) && (myOptionState[static_cast<size_t>(OPT_NAWS)]) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
+        qDebug().nospace().noquote() << "cTelnet::checkNAWS()() INFO - want to send NAWS data (for: \"" << mProfileName << "\") of X = " << naws_x << ", Y = " << naws_y << ".";
+        sendNAWS(naws_x, naws_y);
+        mNaws_x = naws_x;
+        mNaws_y = naws_y;
     }
+}
+
+void cTelnet::sendNAWS(int x, int y)
+{
+    std::string s;
+    s = TN_IAC;
+    s += TN_SB;
+    s += OPT_NAWS;
+    char x1 = static_cast<char>(x / 256);
+    char x2 = static_cast<char>(x % 256);
+    char y1 = static_cast<char>(y / 256);
+    char y2 = static_cast<char>(y % 256);
+    //IAC must be doubled
+    s += x1;
+    if (x1 == TN_IAC) {
+        s += TN_IAC;
+    }
+    s += x2;
+    if (x2 == TN_IAC) {
+        s += TN_IAC;
+    }
+    s += y1;
+    if (y1 == TN_IAC) {
+        s += TN_IAC;
+    }
+    s += y2;
+    if (y2 == TN_IAC) {
+        s += TN_IAC;
+    }
+
+    s += TN_IAC;
+    s += TN_SE;
+    socketOutRaw(s);
 }
 
 void cTelnet::sendTelnetOption(char type, char option)
@@ -1432,7 +1438,13 @@ void cTelnet::processTelnetCommand(const std::string& command)
         }
         if (option == OPT_NAWS) {
             //NAWS
-            setDisplayDimensions();
+            // Ensure that the stored copies of the screen dimensions have been
+            // reset before we do this so that they are different from real,
+            // used values:
+            mNaws_x = 0;
+            mNaws_y = 0;
+            // thus sending of the values is performed when we check them:
+            checkNAWS();
         }
         break;
     }

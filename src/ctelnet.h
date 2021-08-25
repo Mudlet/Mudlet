@@ -155,7 +155,7 @@ public:
     bool purgeMediaCache();
     void atcpComposerCancel();
     void atcpComposerSave(QString);
-    void setDisplayDimensions();
+    void checkNAWS();
     void setAutoReconnect(bool status);
     void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
@@ -239,6 +239,7 @@ private:
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void setKeepAlive(int socketHandle);
     void processChunks();
+    void sendNAWS(int x, int y);
 
 
     QPointer<Host> mpHost;
@@ -324,6 +325,11 @@ private:
 
     // server problem w/ not terminating IAC SB: only warn once
     bool mIncompleteSB;
+
+    // Need to track the current width and height of the TMainConsole so that
+    // we can send NAWS data when it changes:
+    int mNaws_x = 0;
+    int mNaws_y = 0;
 
 private slots:
 #if !defined(QT_NO_SSL)
