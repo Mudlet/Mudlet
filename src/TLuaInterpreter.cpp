@@ -2579,23 +2579,35 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
             // It is a string so it is (we will assume) a direction
             hasDirection = true;
         } else if (lua_type(L, 2) == LUA_TNUMBER) {
-            if (lua_tonumber(L, 2) > DIR_OUT) {
-                // It is a number greater than 12 so it is (we will assume) a
-                // toRoomID
-                hasToRoomId = true;
-            } else if (lua_tonumber(L, 2) >= DIR_NORTH) {
-                // Ambiguous - we could look in even more detail and check
-                // whether there is an exit stub in the given direction AND/OR
-                // a room with the given number IN THE SAME AREA in the same
-                // direction as an exit stub of the fromRoomID - but that
-                // more code than it is probably worth for such a corner case
-                return warnArgumentValue(L, __func__, QStringLiteral("%1 is too ambiguous a number to parse into a toID or a direction code").arg(lua_tonumber(L, 2)));
-            } else {
-                // A zero or a negative number will never work as a roomID but
-                // treat it as such so that it will trigger an invalid roomID
-                // run-time error message:
-                hasToRoomId = true;
+            int value = qRound(lua_tonumber(L, 2));
+            if (value >= DIR_OUT || value <= DIR_NORTH) {
+                // Ambiguous - look in more detail and check whether there is a
+                // a room with the given number and/or an exit stub:
+                bool hasRoomWithNumberAsId = static_cast<bool>(host.mpMap->mpRoomDB->getRoom(value));
+                auto pR = host.mpMap->mpRoomDB->getRoom(fromRoom);
+                bool hasExitStubWithNumberAsDirection = (pR && pR->exitStubs.contains(value));
+                if (hasRoomWithNumberAsId) {
+                    if (hasExitStubWithNumberAsDirection) {
+                        return warnArgumentValue(
+                                L, __func__, QStringLiteral("%1 is too ambiguous a number to parse into a toID or a direction code as both are valid in this case").arg(lua_tonumber(L, 2)));
+                    }
+                    // else - usable as only one of the two flags is set:
+                    hasToRoomId = true;
+                } else {
+                    if (hasExitStubWithNumberAsDirection) {
+                        // usable as only one of the two flags is set:
+                        hasDirection = true;
+                    }
+                    // else - not usable, as neither flag is set:
+                    return warnArgumentValue(L, __func__, QStringLiteral("%1 is not valid as a toID nor a direction code").arg(lua_tonumber(L, 2)));
+                }
             }
+            // else it is a number greater than 12 so it is (we will assume) a
+            // toRoomID - or it is zero or a negative number and will never work
+            // as a roomID but treat it as such so that it will trigger an
+            // invalid roomID run-time error message:
+            hasToRoomId = true;
+
         } else {
             errorArgumentType(L, __func__, 2, "toID or direction", "number or string");
             return lua_error(L); // lua_error() doesn't return to here!
