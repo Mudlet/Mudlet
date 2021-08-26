@@ -416,12 +416,55 @@ end
 
 
 
+--- local functions used for pausing/resuming a speedwalk
+local speedwalkTimerID
+local speedwalkDelay
+local speedwalkList
+local speedwalkShow
+
+--- Stops a speedwalk and clears the walklist
+function stopSpeedwalk()
+  local active = pauseSpeedwalk()
+  if active then 
+    speedwalkList = {}
+    return true
+  end
+  return nil, "stopSpeedwalk(): no active speedwalk found"
+end
+
+
+
+--- pauses a running speedwalk, but leaves the walklist intact in case you want to resume
+function pauseSpeedwalk()
+  if speedwalkTimerID then
+    killTimer(speedwalkTimerID)
+    speedwalkTimerID = false
+    return true
+  end
+  return nil, "pauseSpeedwalk(): no active speedwalk found"
+end
+
+
+
+--- Resumes a paused speedwalk
+function resumeSpeedwalk()
+  if speedwalkTimerID then
+    return nil, "resumeSpeedwalk(): attempted to resume an already running speedwalk"
+  end
+  if not speedwalkList or table.is_empty(speedwalkList) then
+    return nil, "resumeSpeedwalk(): attempted to resume a speedwalk but no active speedwalk found"
+  end
+  speedwalktimer(speedwalkList, speedwalkDelay, speedwalkShow)
+  return true
+end
+
+
 --- <b><u>TODO</u></b> speedwalktimer()
 function speedwalktimer(walklist, walkdelay, show)
   send(walklist[1], show)
   table.remove(walklist, 1)
   if #walklist > 0 then
-    tempTimer(walkdelay, function()
+    speedwalkTimerID = tempTimer(walkdelay, function()
       speedwalktimer(walklist, walkdelay, show)
     end)
   end
@@ -434,6 +477,8 @@ function speedwalk(dirString, backwards, delay, show)
   local dirString = dirString:lower()
   local walkdelay = delay
   if show ~= false then show = true end
+  speedwalkShow = show
+  speedwalkDelay = delay
   local walklist = {}
   local long_dir = {north = 'n', south = 's', east = 'e', west = 'w', up = 'u', down = 'd'}
   for k,v in pairs(long_dir) do
@@ -475,6 +520,7 @@ function speedwalk(dirString, backwards, delay, show)
     end
   end
   if walkdelay then
+    speedwalkList = walklist
     speedwalktimer(walklist, walkdelay, show)
   end
 end
