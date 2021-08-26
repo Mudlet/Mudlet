@@ -2594,12 +2594,12 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
                     // else - usable as only one of the two flags is set:
                     hasToRoomId = true;
                 } else {
-                    if (hasExitStubWithNumberAsDirection) {
-                        // usable as only one of the two flags is set:
-                        hasDirection = true;
+                    if (!hasExitStubWithNumberAsDirection) {
+                        // not usable, as neither flag is set:
+                        return warnArgumentValue(L, __func__, QStringLiteral("%1 is not valid as a toID nor a direction code").arg(lua_tonumber(L, 2)));
                     }
-                    // else - not usable, as neither flag is set:
-                    return warnArgumentValue(L, __func__, QStringLiteral("%1 is not valid as a toID nor a direction code").arg(lua_tonumber(L, 2)));
+                    // else - usable as only one of the two flags is set:
+                    hasDirection = true;
                 }
             }
             // else it is a number greater than 12 so it is (we will assume) a
