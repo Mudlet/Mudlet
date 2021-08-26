@@ -2601,12 +2601,13 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
                     // else - usable as only one of the two flags is set:
                     hasDirection = true;
                 }
+            } else {
+                // it is a number greater than 12 so it is (we will assume) a
+                // toRoomID - or it is zero or a negative number and will never
+                // work as a roomID but treat it as such so that it will trigger
+                // an invalid roomID run-time error message:
+                hasToRoomId = true;
             }
-            // else it is a number greater than 12 so it is (we will assume) a
-            // toRoomID - or it is zero or a negative number and will never work
-            // as a roomID but treat it as such so that it will trigger an
-            // invalid roomID run-time error message:
-            hasToRoomId = true;
 
         } else {
             errorArgumentType(L, __func__, 2, "toID or direction", "number or string");
