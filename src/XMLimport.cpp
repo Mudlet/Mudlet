@@ -1496,7 +1496,7 @@ int XMLimport::readScriptGroup(TScript* pParent)
             } else if (name() == "script") {
                 QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
-                    qDebug().nospace() << "XMLimport::readScriptGroup(...): ERROR: can not compile script's lua code for: " << pT->getName() << "; error: " << pT->getError();
+                    qDebug().nospace().noquote() << "XMLimport::readScriptGroup(...) ERROR - can not compile script's lua code for \"" << pT->getName() << "\"; reason: " << pT->getError() << ".";
                 }
             } else if (name() == "eventHandlerList") {
                 readStringList(pT->mEventHandlerList);
