@@ -3813,20 +3813,10 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
       <translation>Comando:</translation>
     </message>
     <message>
-      <location filename="../src/ui/actions_main_area.ui" line="266"/>
-      <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Inserisci uno o più comandi che vuoi siano inviati direttamente al gioco quando il bottone viene premuto. (Opzionale)&lt;/p&gt;&lt;p&gt;Se questo è un bottone a &lt;i&gt;due stati&lt;/i&gt;, i comandi sono inviati solo quando passa dallo stato &lt;i&gt;non attivo&lt;/i&gt; a quello &lt;i&gt;premuto&lt;/i&gt;. &lt;/p&gt;&lt;p&gt;Per inviare comandi più complessi che dipendono o necessitano di variabili dovresti utilizzare &lt;i&gt;invece&lt;/i&gt; la sezione sottostante per il codice Lua.&lt;/p&gt;&lt;p&gt;E' consentito inserire comandi sia in quest'area &lt;i&gt;sia&lt;/i&gt; nel codice Lua, verranno inviati &lt;b&gt;prima&lt;/b&gt;questi e poi sarà eseguito il codice.&lt;/p&gt;</translation>
-    </message>
-    <message>
       <location filename="../src/ui/actions_main_area.ui" line="269"/>
       <location filename="../src/ui/actions_main_area.ui" line="289"/>
       <source>Text to send to the game as-is (optional)</source>
       <translation>Testo da inviare direttamente al gioco (opzionale)</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/actions_main_area.ui" line="286"/>
-      <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Inserisci uno o più comandi che vuoi siano inviati direttamente al gioco quando il bottone viene premuto. (Opzionale)&lt;/p&gt;&lt;p&gt;Per inviare comandi più complessi che dipendono o necessitano di variabili dovresti utilizzare &lt;i&gt;invece&lt;/i&gt; la sezione sottostante per il codice Lua.&lt;/p&gt;&lt;p&gt;E' consentito inserire comandi sia in quest'area &lt;i&gt;sia&lt;/i&gt; nel codice Lua, verranno inviati &lt;b&gt;prima&lt;/b&gt;questi e poi sarà eseguito il codice.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="276"/>
@@ -3837,6 +3827,16 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Scegli un nome chiaro, idealmente univoco, per il bottone, il menu o la barra degli strumenti. Sarà utilizzato nella vista ad albero dei bottoni.&lt;/p&gt;</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/actions_main_area.ui" line="266"/>
+      <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/actions_main_area.ui" line="286"/>
+      <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="308"/>
@@ -3888,8 +3888,8 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="171"/>
-      <source>&lt;p&gt;Type in one or more commands you want the alias to send directly to the game if the keys entered match the pattern. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Inserisci uno o più comandi che vuoi siano inviati direttamente al gioco quando il testo specificato nella casella di input rispetta il pattern. (Opzionale)&lt;/p&gt;&lt;p&gt;Per inviare comandi più complessi che dipendono o necessitano di variabili dovresti utilizzare &lt;i&gt;invece&lt;/i&gt; la sezione sottostante per il codice Lua.&lt;/p&gt;&lt;p&gt;E' consentito inserire comandi sia in quest'area &lt;i&gt;sia&lt;/i&gt; nel codice Lua, verranno inviati &lt;b&gt;prima&lt;/b&gt;questi e poi sarà eseguito il codice.&lt;/p&gt;</translation>
+      <source>&lt;p&gt;Type in one or more commands you want the alias to send directly to the game if the keys entered match the pattern. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="174"/>
@@ -5044,9 +5044,8 @@ Utilizzi</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="294"/>
       <source>&lt;p&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
 &lt;p&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;/p&gt;</source>
-      <comment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevent language: &apos;but only the English form is considered the official version of the license, so the following is reproduced in that language:&apos; to replace &apos;which is reproduced below:&apos;...</comment>
-      <translation>&lt;p&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
-&lt;p&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;/p&gt;</translation>
+      <comment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevant language: &apos;but only the English form is considered the official version of the license, so the following is reproduced in that language:&apos; to replace &apos;which is reproduced below:&apos;...</comment>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="590"/>
@@ -5320,22 +5319,22 @@ Utilizzi</translation>
       <translation>Nome del gioco: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1272"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1009"/>
       <source>This profile is currently loaded - close it before changing the connection parameters.</source>
       <translation>Questo profilo è attualmente caricato - devi chiuderlo prima di cambiare i parametri di connessione.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2127"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1697"/>
       <source>The %1 character is not permitted. Use one of the following:</source>
       <translation>Il carattere %1 non è consentito. Utilizza uno dei seguenti:</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2150"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1720"/>
       <source>You have to enter a number. Other characters are not permitted.</source>
       <translation>Devi inserire un numero. Non sono consentiti altri caratteri.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2139"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1709"/>
       <source>This profile name is already in use.</source>
       <translation>Questo nome profilo è già in uso.</translation>
     </message>
@@ -5432,96 +5431,96 @@ Utilizzi</translation>
       <translation>Cancella &apos;%1&apos;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1319"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1056"/>
       <source>Discord integration not available on this platform</source>
       <translation>Integrazione di Discord non disponibile su questa piattaforma</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1325"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1062"/>
       <source>Discord integration not supported by game</source>
       <translation>Integrazione di Discord non supportata dal gioco</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1328"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1065"/>
       <source>Check to enable Discord integration</source>
       <translation>Seleziona per abilitare l'integrazione con Discord</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1707"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1302"/>
       <source>Reset icon</source>
       <comment>Reset the custom picture for this profile in the connection dialog and show the default one instead</comment>
       <translation>Reimposta icona</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1710"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1305"/>
       <source>Set custom icon</source>
       <comment>Set a custom picture to show for the profile in the connection dialog</comment>
       <translation>Imposta icona personalizzata</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1714"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1309"/>
       <source>Set custom color</source>
       <comment>Set a custom color to show for the profile in the connection dialog</comment>
       <translation>Imposta colore personalizzato</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1727"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1322"/>
       <source>Select custom image for profile (should be 120x30)</source>
       <translation>Seleziona immagine personalizzata per il profilo (dimensioni 120x30 pixel)</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1727"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1322"/>
       <source>Images (%1)</source>
       <translation>Immagini (%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2160"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1730"/>
       <source>Port number must be above zero and below 65535.</source>
       <translation>Il numero di porta deve essere superiore a 0 e inferiore a 65535.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2180"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1750"/>
       <source>Mudlet can not load support for secure connections.</source>
       <translation>Mudlet non può caricare il supporto per connessioni sicure.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2202"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1772"/>
       <source>Please enter the URL or IP address of the Game server.</source>
       <translation>Inserire l'URL o l'indirizzo IP del server di gioco.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2212"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1782"/>
       <source>SSL connections require the URL of the Game server.</source>
       <translation>Le connessioni SSL richiedono l'URL del server di gioco.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2229"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1799"/>
       <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Carica il profilo senza connetterti al gioco.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2245"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1815"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Per favore imposta un nome profilo valido, l'indirizzo e la porta del server di gioco prima del caricamento.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2250"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1820"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Per favore imposta un nome profilo valido, l'indirizzo e la porta del server di gioco prima del caricamento.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2303"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1873"/>
       <source>&lt;p&gt;Click to hide the password; it will also hide if another profile is selected.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Fai clic per nascondere la password; verrà nascosta automaticamente se selezioni un altro profilo.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2307"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1877"/>
       <source>&lt;p&gt;Click to reveal the password for this profile.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Fai clic per mostrare la password di questo profilo.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2168"/>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2171"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1738"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1741"/>
       <source>Mudlet is not configured for secure connections.</source>
       <translation>Mudlet non è configurato per connessioni sicure.</translation>
     </message>
@@ -5755,11 +5754,6 @@ Utilizzi</translation>
       <translation>Icona</translation>
     </message>
     <message>
-      <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
-      <source>Package Exporter (experimental)</source>
-      <translation>Esportatore Package (sperimentale)</translation>
-    </message>
-    <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="162"/>
       <source>Add icon</source>
       <translation>Aggiungi Icona</translation>
@@ -5808,6 +5802,11 @@ Utilizzi</translation>
       <location filename="../src/ui/dlgPackageExporter.ui" line="304"/>
       <source>Does this package make use of other packages? List them here as requirements. Press &apos;Delete&apos; to remove a package</source>
       <translation>Questo package fa uso di altri package? Elencali qui come requisiti. Premi &apos;Elimina&apos; per rimuovere un package</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
+      <source>Package Exporter</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="414"/>
@@ -6044,11 +6043,6 @@ Utilizzi</translation>
       <location filename="../src/dlgProfilePreferences.cpp" line="217"/>
       <source>&lt;p&gt;Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being of &lt;i&gt;Ambiguous&lt;/i&gt; width when drawn in a font with a so-called &lt;i&gt;fixed&lt;/i&gt; pitch; in fact such text is &lt;i&gt;duo-spaced&lt;/i&gt; when not using a proportional font. These symbols can be drawn using either a half or the whole space of a full character. By default Mudlet tries to chose the right width automatically but you can override the setting for each profile.&lt;/p&gt;&lt;p&gt;This control has three settings:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;narrow&lt;/i&gt;&apos; = Draw ambiguous width characters in a single &apos;space&apos;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;wide&lt;/i&gt;&apos; = Draw ambiguous width characters two &apos;spaces&apos; wide.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use &apos;wide&apos; setting for MUD Server encodings of &lt;b&gt;Big5&lt;/b&gt;, &lt;b&gt;GBK&lt;/b&gt; or &lt;b&gt;GBK18030&lt;/b&gt; and &apos;narrow&apos; for all others.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This is a temporary arrangement and will probably change when Mudlet gains full support for languages other than English.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;Alcuni MUD asiatici utilizzano glifi (caratteri) che Unicode classifica come di larghezza &lt;i&gt;ambigua&lt;/i&gt; quando scritti con un carattere a larghezza &lt;i&gt;fissa&lt;/i&gt;;questi glifi occupano &lt;i&gt;due spazi&lt;/i&gt; quando non viene usato un font di larghezza variabile, ovvero possono essere disegnati usando mezzo oppure uno spazio occupato da un carattere normale. Mudlet tenta di individuare la larghezza corretta automaticamente, ma puoi cambiare questa impostazione in ogni profilo.&lt;/p&gt;&lt;p&gt;Questa opzione ha tre possibili valori:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Disattivo&lt;/b&gt; &apos;&lt;i&gt;compatto&lt;/i&gt;&apos; = Disegna i caratteri di larghezza ambigua in un singolo &apos;spazio&apos;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Attivo&lt;/b&gt; &apos;&lt;i&gt;ampio&lt;/i&gt;&apos; = Disegna i caratteri di larghezza ambigua in due &apos;spazi&apos;. &lt;/li&gt;&lt;li&gt;&lt;b&gt;Parzialmente attivo&lt;/b&gt; &lt;i&gt;(Predefinito) &apos;auto&apos;&lt;/i&gt; = Utilizza la &apos;larghezza&apos; definita nella codifica specificata dal Server del MUD in caso di &lt;b&gt;Big5&lt;/b&gt;, &lt;b&gt;GBK&lt;/b&gt; o &lt;b&gt;GBK18030&lt;/b&gt; e &apos;compatto&apos; per tutti gli altri.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;Questa è una soluzione temporanea e probabilmente cambierà quando Mudlet supporterà completamente gli alfabeti non latini.&lt;/i&gt;&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="236"/>
-      <source>&lt;p&gt;Some Desktop Environments tell Qt applications like Mudlet whether they should shown icons on menus, others, however do not. This control allows the user to override the setting, if needed, as follows:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;off&lt;/i&gt;&apos; = Prevent menus from being drawn with icons.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;on&lt;/i&gt;&apos; = Allow menus to be drawn with icons.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use the setting that the system provides.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This setting is only processed when individual menus are created and changes may not propogate everywhere until Mudlet is restarted.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Alcuni sistemi operativi indicano ad applicazioni che usano Qt, come Mudlet, se mostrare le icone nei menù oppure nasconderle. Questa opzione permette, quando necessario, di forzare delle impostazioni specifiche:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Disattivo&lt;/b&gt; &apos;&lt;i&gt;off&lt;/i&gt;&apos; = Impedisci ai menù di visualizzare le icone.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Attivo&lt;/b&gt; &apos;&lt;i&gt;on&lt;/i&gt;&apos; = Forza i menù a mostrare le icone.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Parzialmente attivo&lt;/b&gt; &lt;i&gt;(Predefinito) &apos;auto&apos;&lt;/i&gt; = Usa le impostazioni fornite dal sistema operativo.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;Questa impostazione viene controllata solo durante la creazione dei menù, quindi i cambiamenti potrebbero non essere visibili fino al riavvio di Mudlet.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="293"/>
@@ -6385,6 +6379,11 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
       <location filename="../src/dlgProfilePreferences.cpp" line="229"/>
       <source>&lt;p&gt;Enable a context (right click) menu action on any console/user window that, when the mouse cursor is hovered over it, will display the UTF-16 and UTF-8 items that make up each Unicode codepoint on the &lt;b&gt;first&lt;/b&gt; line of any selection.&lt;/p&gt;&lt;p&gt;This utility feature is intended to help the user identify any grapheme (visual equivalent to a &lt;i&gt;character&lt;/i&gt;) that a Game server may send even if it is composed of multiple bytes as any non-ASCII character will be in the Lua sub-system which uses the UTF-8 encoding system.&lt;p&gt;</source>
       <translation>&lt;p&gt;Abilita un'azione del menù contestuale (tasto destro del mouse) di ogni console/finestra utente. Quando il puntatore passa sopra questa voce, sarà mostrata la versione UTF-16 e UTF-8 della mappa caratteri unicode della &lt;b&gt;prima&lt;/b&gt; linea della selezione.&lt;/p&gt;&lt;p&gt;Questa funzionalità server per aiutare ad identificare ogni grafene (equivalente visivo di un &lt;i&gt;carattere&lt;/i&gt;) che un server di gioco potrebbe inviare anche se composto da caratteri multi-byte (caratteri non-ASCII) come lo vedrebbe il sistema Lua che utilizza una codifica UTF-8.&lt;p&gt;</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="236"/>
+      <source>&lt;p&gt;Some Desktop Environments tell Qt applications like Mudlet whether they should shown icons on menus, others, however do not. This control allows the user to override the setting, if needed, as follows:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;off&lt;/i&gt;&apos; = Prevent menus from being drawn with icons.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;on&lt;/i&gt;&apos; = Allow menus to be drawn with icons.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use the setting that the system provides.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This setting is only processed when individual menus are created and changes may not propagate everywhere until Mudlet is restarted.&lt;/i&gt;&lt;/p&gt;</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="571"/>
@@ -7233,18 +7232,6 @@ Non saranno salvate modifiche sul disco fisso, quindi andranno perse in caso di 
       <translation>Debug</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="580"/>
-      <source>Editor Toolbar - %1 - Actions</source>
-      <comment>This is the toolbar that is initally placed at the top of the editor.</comment>
-      <translation>Barra degli strumenti Editor - %1 - Azioni</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="616"/>
-      <source>Editor Toolbar - %1 - Items</source>
-      <comment>This is the toolbar that is initally placed at the left side of the editor.</comment>
-      <translation>Barra degli strumenti Editor - %1 - Elementi</translation>
-    </message>
-    <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="682"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="685"/>
       <source>Search Options</source>
@@ -7926,6 +7913,18 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
       <translation>Mostra/Nascondi la Console di Debug (Ctrl+0) -&gt; il sistema potrebbe essere &lt;b&gt;&lt;i&gt;rallentato&lt;/i&gt;&lt;/b&gt;.</translation>
     </message>
     <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="580"/>
+      <source>Editor Toolbar - %1 - Actions</source>
+      <comment>This is the toolbar that is initially placed at the top of the editor.</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="616"/>
+      <source>Editor Toolbar - %1 - Items</source>
+      <comment>This is the toolbar that is initially placed at the left side of the editor.</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="692"/>
       <source>Match case precisely</source>
       <translation>Maiuscole/minuscole</translation>
@@ -8306,8 +8305,8 @@ dalla GUI)</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
-      <source>&lt;p&gt;Type in one or more commands you want the key to send directly to the game when pressed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Inserisci uno o più comandi che vuoi siano inviati direttamente al gioco quando premi la relativa combinazione di tasti. (Opzionale)&lt;/p&gt;&lt;p&gt;Per inviare comandi più complessi che dipendono o necessitano di variabili dovresti utilizzare &lt;i&gt;invece&lt;/i&gt; la sezione sottostante per il codice Lua.&lt;/p&gt;&lt;p&gt;E' consentito inserire comandi sia in quest'area &lt;i&gt;sia&lt;/i&gt; nel codice Lua, verranno inviati &lt;b&gt;prima&lt;/b&gt;questi e poi sarà eseguito il codice.&lt;/p&gt;</translation>
+      <source>&lt;p&gt;Type in one or more commands you want the key to send directly to the game when pressed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="53"/>
@@ -8548,6 +8547,11 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <translation>&lt;p&gt;Installa o rimuove le raccolte (condivise o sincronizzate) di elementi lua di Mudlet (moduli).&lt;/p&gt;</translation>
     </message>
     <message>
+      <location filename="../src/ui/main_window.ui" line="282"/>
+      <source>Package exporter</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/ui/main_window.ui" line="285"/>
       <source>&lt;p&gt;Gather and bundle up collections of Mudlet Lua items and other reasources into a module.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Raccoglie e raggruppa le raccolte di elementi Lua di Mudlet e altre risorse in un modulo.&lt;/p&gt;</translation>
@@ -8674,11 +8678,6 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <location filename="../src/ui/main_window.ui" line="274"/>
       <source>Module manager</source>
       <translation>Gestione moduli</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/main_window.ui" line="282"/>
-      <source>Package exporter (experimental)</source>
-      <translation>Esportatore package (sperimentale)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="299"/>
@@ -9173,11 +9172,6 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <source>Packages (exp.)</source>
       <comment>exp. stands for experimental; shortened so it doesn&apos;t make buttons huge in the main interface</comment>
       <translation>Package (sperimentale)</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="456"/>
-      <source>Package Exporter (experimental)</source>
-      <translation>Esportatore Package (sperimentale)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="478"/>
@@ -10045,16 +10039,6 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <translation>Vietnamita (Vietnam)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="944"/>
-      <source>Vietnamese (DauCu varient - old-style diacritics)</source>
-      <translation>Vietnamita (varietà DauCu - diacritici vecchio stile)</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="945"/>
-      <source>Vietnamese (DauMoi varient - new-style diacritics)</source>
-      <translation>Vietnamita (varietà DauCu - diacritici nuovo stile)</translation>
-    </message>
-    <message>
       <location filename="../src/mudlet.cpp" line="946"/>
       <source>Walloon</source>
       <translation>Vallone</translation>
@@ -10090,12 +10074,12 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <translation>Zulu</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4356"/>
+      <location filename="../src/mudlet.cpp" line="4375"/>
       <source>Hide tray icon</source>
       <translation>Nascondi Icona nell'Area di Notifica</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4361"/>
+      <location filename="../src/mudlet.cpp" line="4380"/>
       <source>Quit Mudlet</source>
       <translation>Esci da Mudlet</translation>
     </message>
@@ -10248,6 +10232,11 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <translation>Gestione Moduli</translation>
     </message>
     <message>
+      <location filename="../src/mudlet.cpp" line="456"/>
+      <source>Package Exporter</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/mudlet.cpp" line="466"/>
       <source>Replay</source>
       <translation>Replay</translation>
@@ -10269,16 +10258,26 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="501"/>
-      <location filename="../src/mudlet.cpp" line="3475"/>
+      <location filename="../src/mudlet.cpp" line="3494"/>
       <source>About</source>
       <translation>Altro</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="502"/>
-      <location filename="../src/mudlet.cpp" line="3458"/>
+      <location filename="../src/mudlet.cpp" line="3477"/>
       <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
       <translation>&lt;p&gt;Informati su questa versione di Mudlet, le persone che l'hanno creato e la licenza con cui puoi condividerlo.&lt;/p&gt;</translation>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="944"/>
+      <source>Vietnamese (DauCu variant - old-style diacritics)</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="945"/>
+      <source>Vietnamese (DauMoi variant - new-style diacritics)</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="954"/>
@@ -10547,7 +10546,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1592"/>
-      <location filename="../src/mudlet.cpp" line="2886"/>
+      <location filename="../src/mudlet.cpp" line="2905"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Carica un replay di Mudlet.&lt;/p&gt;</translation>
     </message>
@@ -10567,50 +10566,50 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <translation>*.dat</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2653"/>
+      <location filename="../src/mudlet.cpp" line="2672"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
       <translation>[  OK  ]  - Profilo &quot;%1&quot; caricato in modalità offline.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2788"/>
+      <location filename="../src/mudlet.cpp" line="2807"/>
       <source>&lt;p&gt;Cannot load a replay as one is already in progress in this or another profile.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Impossibile caricare una replay perchè è già in corso una riproduzione in questo o un altro profilo.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2805"/>
+      <location filename="../src/mudlet.cpp" line="2824"/>
       <source>Faster</source>
       <translation>Più veloce</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2808"/>
+      <location filename="../src/mudlet.cpp" line="2827"/>
       <source>&lt;p&gt;Replay each step with a shorter time interval between steps.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Riproduci ogni passaggio con un intervallo di esecuzione più breve.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2812"/>
+      <location filename="../src/mudlet.cpp" line="2831"/>
       <source>Slower</source>
       <translation>Più lento</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2815"/>
+      <location filename="../src/mudlet.cpp" line="2834"/>
       <source>&lt;p&gt;Replay each step with a longer time interval between steps.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Riproduci ogni passaggio con un intervallo di esecuzione più lugo.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2825"/>
-      <location filename="../src/mudlet.cpp" line="2894"/>
-      <location filename="../src/mudlet.cpp" line="2907"/>
+      <location filename="../src/mudlet.cpp" line="2844"/>
+      <location filename="../src/mudlet.cpp" line="2913"/>
+      <location filename="../src/mudlet.cpp" line="2926"/>
       <source>Speed: X%1</source>
       <translation>Velocità: X%1</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2832"/>
-      <location filename="../src/mudlet.cpp" line="2849"/>
+      <location filename="../src/mudlet.cpp" line="2851"/>
+      <location filename="../src/mudlet.cpp" line="2868"/>
       <source>Time: %1</source>
       <translation>Tempo: %1</translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3469"/>
+      <location filename="../src/mudlet.cpp" line="3488"/>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
       <translation>
@@ -10619,7 +10618,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       </translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3487"/>
+      <location filename="../src/mudlet.cpp" line="3506"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
       <translation>
@@ -10628,7 +10627,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       </translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3492"/>
+      <location filename="../src/mudlet.cpp" line="3511"/>
       <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
       <translation>
@@ -10637,12 +10636,12 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       </translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3517"/>
+      <location filename="../src/mudlet.cpp" line="3536"/>
       <source>Update installed - restart to apply</source>
       <translation>Aggiornamento installato - riavvia per completare</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3553"/>
+      <location filename="../src/mudlet.cpp" line="3572"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
       <translation>[ WARN ] - Impossibile avviare il file di replay, un altro potrebbe già essere in esecuzione,
@@ -11643,6 +11642,16 @@ you can use it but there could be issues with aligning columns of text</source>
       <translation>Chat</translation>
     </message>
     <message>
+      <location filename="../src/ui/profile_preferences.ui" line="3195"/>
+      <source>Username for logging into the proxy if required</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="3211"/>
+      <source>Password for logging into the proxy if required</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/ui/profile_preferences.ui" line="3250"/>
       <source>Special options needed for some older game drivers (needs client restart to take effect)</source>
       <translation>Opzioni avanzate utilizzate da alcuni vecchi giochi (è necessario il riavvio di Mudlet)</translation>
@@ -12055,19 +12064,9 @@ you can use it but there could be issues with aligning columns of text</source>
       <translation>porta</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3195"/>
-      <source>Username for logging into the proxy if requred</source>
-      <translation>Nome utente per accedere al proxy se richiesto</translation>
-    </message>
-    <message>
       <location filename="../src/ui/profile_preferences.ui" line="3201"/>
       <source>username (optional)</source>
       <translation>nome utente (opzionale)</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3211"/>
-      <source>Password for logging into the proxy if requred</source>
-      <translation>Password per accedere al proxy se richiesto</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3217"/>
@@ -12661,6 +12660,11 @@ o script LUA</translation>
       <translation>Comando:</translation>
     </message>
     <message>
+      <location filename="../src/ui/timers_main_area.ui" line="74"/>
+      <source>&lt;p&gt;Type in one or more commands you want the timer to send directly to the game when the time has elapsed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/ui/timers_main_area.ui" line="134"/>
       <source>&lt;p&gt;milliseconds&lt;/p&gt;</source>
       <translation>&lt;p&gt;millisecondi&lt;/p&gt;</translation>
@@ -12674,11 +12678,6 @@ o script LUA</translation>
       <location filename="../src/ui/timers_main_area.ui" line="39"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your timer, offset-timer or timer group. This will be displayed in the timer tree.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Scegli un nome chiaro, idealmente univoco, per il timer o il gruppo di timer. Sarà utilizzato nella vista ad albero dei timer.&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/timers_main_area.ui" line="74"/>
-      <source>&lt;p&gt;Type in one or more commands you want the timer to send directly to the game when the time has elapsed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Inserisci uno o più comandi che vuoi siano inviati direttamente al gioco quando scade il timer. (Opzionale)&lt;/p&gt;&lt;p&gt;Per inviare comandi più complessi che dipendono o necessitano di variabili dovresti utilizzare &lt;i&gt;invece&lt;/i&gt; la sezione sottostante per il codice Lua.&lt;/p&gt;&lt;p&gt;E' consentito inserire comandi sia in quest'area &lt;i&gt;sia&lt;/i&gt; nel codice Lua, verranno inviati &lt;b&gt;prima&lt;/b&gt;questi e poi sarà eseguito il codice.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="77"/>
@@ -12767,6 +12766,11 @@ o script LUA</translation>
       <location filename="../src/ui/triggers_main_area.ui" line="111"/>
       <source>Command:</source>
       <translation>Comando:</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/triggers_main_area.ui" line="124"/>
+      <source>&lt;p&gt;Type in one or more commands you want the trigger to send directly to the game if it fires. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="127"/>
@@ -12872,11 +12876,6 @@ o script LUA</translation>
       <translation>&lt;p&gt;Scegli un nome chiaro, idealmente univoco, per il trigger o il gruppo di trigger. Sarà utilizzato nella vista ad albero dei trigger.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/triggers_main_area.ui" line="124"/>
-      <source>&lt;p&gt;Type in one or more commands you want the trigger to send directly to the game if it fires. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Inserisci uno o più comandi che vuoi siano inviati direttamente al gioco quando viene attivato il trigger. (Opzionale)&lt;/p&gt;&lt;p&gt;Per inviare comandi più complessi che dipendono o necessitano di variabili dovresti utilizzare &lt;i&gt;invece&lt;/i&gt; la sezione sottostante per il codice Lua.&lt;/p&gt;&lt;p&gt;E' consentito inserire comandi sia in quest'area &lt;i&gt;sia&lt;/i&gt; nel codice Lua, verranno inviati &lt;b&gt;prima&lt;/b&gt;questi e poi sarà eseguito il codice.&lt;/p&gt;</translation>
-    </message>
-    <message>
       <location filename="../src/ui/triggers_main_area.ui" line="247"/>
       <source>&lt;p&gt;Within how many lines must all conditions be true to fire the trigger?&lt;/p&gt;</source>
       <translation>&lt;bp&gt;Entro quante righe devono verificarsi tutte le condizioni per attivare il trigger?&lt;b/p&gt;</translation>
@@ -12949,11 +12948,6 @@ o script LUA</translation>
       <translation>&lt;p&gt;Imposta qui il nome della &lt;i&gt;variabile globale&lt;/i&gt; o della &lt;i&gt;voce nella tabella&lt;/i&gt;. Il nome deve iniziare con una lettera, ma può contenere sia lettere che numeri.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="138"/>
-      <source>&lt;p&gt;Tables can store values either in a list, and/or a hashmap.&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;list&lt;/b&gt;, &lt;i&gt;unique indexed keys&lt;/i&gt; represent values - so you can have values at &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;map&lt;/b&gt; {a.k.a. an &lt;i&gt;associative array}&lt;/i&gt;, &lt;i&gt;unique keys&lt;/i&gt; represent values - so you can have values under any identifier you would like (theoretically even a function or other lua entity although this GUI only supports strings).&lt;/p&gt;&lt;p&gt;This, for a newly created table (group) selects whenever you would like your table to be an indexed or an associative one.&lt;/p&gt;&lt;p&gt;In other cases it displays other entities (&lt;span style=&quot; font-style:italic;&quot;&gt;functions&lt;/span&gt;) which cannot be modifed from here.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
       <location filename="../src/ui/vars_main_area.ui" line="51"/>
       <location filename="../src/ui/vars_main_area.ui" line="145"/>
       <source>Auto-Type</source>
@@ -12963,6 +12957,11 @@ o script LUA</translation>
       <location filename="../src/ui/vars_main_area.ui" line="128"/>
       <source>Variable name ...</source>
       <translation>Nome variabile ...</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/vars_main_area.ui" line="138"/>
+      <source>&lt;p&gt;Tables can store values either in a list, and/or a hashmap.&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;list&lt;/b&gt;, &lt;i&gt;unique indexed keys&lt;/i&gt; represent values - so you can have values at &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;map&lt;/b&gt; {a.k.a. an &lt;i&gt;associative array}&lt;/i&gt;, &lt;i&gt;unique keys&lt;/i&gt; represent values - so you can have values under any identifier you would like (theoretically even a function or other lua entity although this GUI only supports strings).&lt;/p&gt;&lt;p&gt;This, for a newly created table (group) selects whenever you would like your table to be an indexed or an associative one.&lt;/p&gt;&lt;p&gt;In other cases it displays other entities (&lt;span style=&quot; font-style:italic;&quot;&gt;functions&lt;/span&gt;) which cannot be modified from here.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="150"/>
