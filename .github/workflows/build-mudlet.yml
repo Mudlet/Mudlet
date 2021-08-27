@@ -287,6 +287,9 @@ jobs:
         run-luarocks install --local argparse
         run-luarocks install --local lunajson
 
+        # Lua-based tests
+        run-luarocks install --local busted
+
         # necessary for Qt multimedia and modern Qt
         if [ "${RUNNER_OS}" = "Linux" ]; then
           sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 -y
