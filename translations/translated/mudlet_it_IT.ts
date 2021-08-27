@@ -5045,7 +5045,8 @@ Utilizzi</translation>
       <source>&lt;p&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
 &lt;p&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;/p&gt;</source>
       <comment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevant language: &apos;but only the English form is considered the official version of the license, so the following is reproduced in that language:&apos; to replace &apos;which is reproduced below:&apos;...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;b/p&gt;
+&lt;bp&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="590"/>
@@ -5806,7 +5807,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>Esportatore package</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="414"/>
@@ -7916,13 +7917,13 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
       <location filename="../src/dlgTriggerEditor.cpp" line="580"/>
       <source>Editor Toolbar - %1 - Actions</source>
       <comment>This is the toolbar that is initially placed at the top of the editor.</comment>
-      <translation type="unfinished"/>
+      <translation>Barra degli strumenti Editor - %1 - Azioni</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="616"/>
       <source>Editor Toolbar - %1 - Items</source>
       <comment>This is the toolbar that is initially placed at the left side of the editor.</comment>
-      <translation type="unfinished"/>
+      <translation>Barra degli strumenti Editor - %1 - Elementi</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="692"/>
@@ -10234,7 +10235,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/mudlet.cpp" line="456"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>Esportatore package</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="466"/>
