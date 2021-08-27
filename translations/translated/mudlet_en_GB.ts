@@ -5711,7 +5711,7 @@ Count</translation>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>Package Exporter</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="414"/>
@@ -10110,7 +10110,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="456"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>Package Exporter</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="466"/>
