@@ -417,31 +417,45 @@ describe("should always pass", function()
 -- Good Luck.</script>
 			<eventHandlerList />
 		</Script>
-			<Script isActive="yes" isFolder="no">
-				<name>quitMudletAfterTests</name>
-				<packageName></packageName>
-				<script>function quitMudletAfterTests()
+		<Script isActive="yes" isFolder="no">
+			<name>quitMudletAfterTests</name>
+			<packageName></packageName>
+			<script>function quitMudletAfterTests()
   local quitMudlet = os.getenv("QUIT_MUDLET_AFTER_TESTS")
   if quitMudlet then
     ioprint("All tests complete, shutting down Mudlet")
     closeMudlet()
   end
 end</script>
-				<eventHandlerList>
-					<string>testsComplete</string>
-				</eventHandlerList>
-			</Script>
-			<Script isActive="yes" isFolder="no">
-				<name>testQuittingMudlet</name>
-				<packageName></packageName>
-				<script>function testQuittingMudlet()
-  ioprint("Mudlet loaded, waiting 5s before raising 'testsComplete'...")
-  tempTimer(5, function() raiseEvent("testsComplete") end)
+			<eventHandlerList>
+				<string>testsComplete</string>
+			</eventHandlerList>
+		</Script>
+		<Script isActive="yes" isFolder="no">
+			<name>autoRunTests</name>
+			<packageName></packageName>
+			<script>function autoRunTests()
+  local runTests = os.getenv("AUTORUN_BUSTED_TESTS")
+  if not runTests then
+    ioprint("Not setup to auto-run tests.")
+    return
+  end
+  ioprint("Setup to auto-run tests - commencing.")
+  
+  if not bustedState.isBustedAvailable() then
+    ioprint("Busted not available - double-check that it's installed properly.")
+    return
+  end
+  
+  bustedState.setup({matches[2]})
+  bustedState.runTests()
+  
+  raiseEvent("testsComplete")
 end</script>
-				<eventHandlerList>
-					<string>sysLoadEvent</string>
-				</eventHandlerList>
-			</Script>
+			<eventHandlerList>
+				<string>sysLoadEvent</string>
+			</eventHandlerList>
+		</Script>
 	</ScriptPackage>
 	<KeyPackage />
 	<HelpPackage>
