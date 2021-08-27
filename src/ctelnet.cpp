@@ -745,6 +745,9 @@ bool cTelnet::socketOutRaw(std::string& data)
 
 void cTelnet::checkNAWS()
 {
+    if (mpHost.isNull()) {
+        return;
+    }
     int naws_x = (mpHost->mScreenWidth < mpHost->mWrapAt) ? mpHost->mScreenWidth : mpHost->mWrapAt;
     int naws_y = mpHost->mScreenHeight;
     if ((naws_y > 0) && (myOptionState[static_cast<size_t>(OPT_NAWS)]) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
