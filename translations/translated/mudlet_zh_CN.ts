@@ -4959,7 +4959,8 @@ Count</source>
       <source>&lt;p&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
 &lt;p&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;/p&gt;</source>
       <comment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevant language: &apos;but only the English form is considered the official version of the license, so the following is reproduced in that language:&apos; to replace &apos;which is reproduced below:&apos;...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet 最初由Heiko Köhn、KoenhnHeiko@googlemail.com编写。&lt;/p&gt;
+&lt;p&gt;Mudlet 在 GPL 许可证版本2 下发布，下面是转载：&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="590"/>
@@ -5720,7 +5721,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>包导出器</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="414"/>
@@ -7813,13 +7814,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="580"/>
       <source>Editor Toolbar - %1 - Actions</source>
       <comment>This is the toolbar that is initially placed at the top of the editor.</comment>
-      <translation type="unfinished"/>
+      <translation>编辑器工具栏 - %1 - 操作</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="616"/>
       <source>Editor Toolbar - %1 - Items</source>
       <comment>This is the toolbar that is initially placed at the left side of the editor.</comment>
-      <translation type="unfinished"/>
+      <translation>编辑器工具栏 - %1 - 项</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="692"/>
@@ -10123,7 +10124,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="456"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>包导出器</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="466"/>
