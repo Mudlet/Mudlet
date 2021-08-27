@@ -4816,7 +4816,8 @@ Count</source>
       <source>&lt;p&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
 &lt;p&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;/p&gt;</source>
       <comment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevant language: &apos;but only the English form is considered the official version of the license, so the following is reproduced in that language:&apos; to replace &apos;which is reproduced below:&apos;...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Mudlet ha sido programado por Heiko Köhn, KoehnHeiko@googlemail.com.&lt;b/p&gt;
+&lt;bp&gt;Mudlet ha sido publicado bajo la versión 2 de la licencia GPL, cuya única versión oficial es la redactada en inglés, la cual se reproduce a continuación:&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="590"/>
@@ -5575,7 +5576,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>Exportador de paquetes</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="414"/>
@@ -9939,7 +9940,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="456"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>Exportador de paquetes</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="466"/>
