@@ -3823,7 +3823,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="266"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Введите одну или несколько команд, которые вы хотите чтобы кнопка послала в игру когда она нажата. (Необязательно)&lt;b/p&gt;&lt;bp&gt;Если это кнопка &lt;bi&gt;с нажатием&lt;b/i&gt;, то она отправляется только тогда, когда кнопка переходит из состояния &lt;bi&gt;вверх&lt;b/i&gt; в состояние &lt;bi&gt;вниз&lt;b/i&gt; .&lt;b/p&gt;&lt;bp&gt;Для отправки более сложных команд, которые могут зависеть от переменных в этом профиле скрипт Lua должен быть введен &lt;bi&gt;вместо&lt;b/i&gt; в области редактора ниже. Все, что вводится здесь, буквально, просто отправляется на игровой сервер.&lt;b/p&gt;&lt;bp&gt;Можно использовать как это &lt;bi&gt;и&lt;b/i&gt; скрипт Lua - команда тут будет отправлена &lt;bb&gt;до того, как будет запущен скрипт&lt;b/b&gt; .&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="286"/>
@@ -8529,7 +8529,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="282"/>
       <source>Package exporter</source>
-      <translation type="unfinished"/>
+      <translation>Экспортер пакетов</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="285"/>
@@ -10246,12 +10246,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="944"/>
       <source>Vietnamese (DauCu variant - old-style diacritics)</source>
-      <translation type="unfinished"/>
+      <translation>Вьетнамский (вариант DauCu - диакритика старого стиля)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="945"/>
       <source>Vietnamese (DauMoi variant - new-style diacritics)</source>
-      <translation type="unfinished"/>
+      <translation>Вьетнамский (DauMoi вариант - новый-стиль диакритики)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="954"/>
@@ -11624,12 +11624,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3195"/>
       <source>Username for logging into the proxy if required</source>
-      <translation type="unfinished"/>
+      <translation>Имя пользователя для входа в прокси, если требуется</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3211"/>
       <source>Password for logging into the proxy if required</source>
-      <translation type="unfinished"/>
+      <translation>Пароль для входа в прокси, если требуется</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3250"/>
