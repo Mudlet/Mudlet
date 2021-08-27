@@ -323,8 +323,8 @@ jobs:
       shell: bash
 
     # we need to be in the right place for LuaGlobals.lua to load
-    - name: (Linux) Prep binary for running
-      if: runner.os == 'Linux'
+    - name: Prep binary for running tests
+      if: matrix.run_tests == 'true'
       run: cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
       shell: bash
 
