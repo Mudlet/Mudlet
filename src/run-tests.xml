@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE MudletPackage>
 <MudletPackage version="1.001">
-  <TriggerPackage />
-  <TimerPackage />
-  <AliasPackage>
-    <Alias isActive="yes" isFolder="no">
-      <name>Run Tests</name>
-      <script>-- Alias to run busted tests, which should be sufficient
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>Run Tests</name>
+			<script>-- Alias to run busted tests, which should be sufficient
 -- for simple cases.
 --
 -- IT DOES NOT WORK WITHOUT SOME SETUP - YOU NEED BUSTED INSTALLED
@@ -34,26 +34,17 @@ else
   bustedState.setup({matches[2]})
 end
 bustedState.runTests()</script>
-      <command></command>
-      <packageName></packageName>
-      <regex>^runTests(?: (.*))?$</regex>
-    </Alias>
-  </AliasPackage>
-  <ActionPackage />
-  <ScriptPackage>
-    <name>test</name>
-    <packageName></packageName>
-    <script>-------------------------------------------------
---         Put your Lua functions here.        --
---                                             --
--- Note that you can also use external Scripts --
--------------------------------------------------
-</script>
-    <eventHandlerList />
-    <Script isActive="no" isFolder="no">
-      <name>test scripts</name>
-      <packageName></packageName>
-		<script>-- Checks to see if the "busted" package is available.
+			<command></command>
+			<packageName></packageName>
+			<regex>^runTests(?: (.*))?$</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage>
+		<Script isActive="no" isFolder="no">
+			<name>test scripts</name>
+			<packageName></packageName>
+			<script>-- Checks to see if the "busted" package is available.
 
 bustedState = bustedState or {}
 function bustedState.isBustedAvailable()
@@ -78,7 +69,7 @@ end
 -- languages supported are dictated by busted, not mudlet.
 -- For adding more options, you will likely have to look at
 -- the busted code.
-local options = {}  
+local options = {}
 
 -- BEGIN user modifiable options
 
@@ -102,17 +93,6 @@ options.defaultPatterns = {"_spec"}
 
 if bustedState.isBustedAvailable() then
   local path = require 'pl.path'
-  local pathTable = getMudletLuaDefaultPaths()
-  if type(pathTable) == 'table' then
-    for _, v in pairs(pathTable) do
-      if path.isdir(v) then
-        if path.isdir(v .. "/tests") then
-		    options.defaultFiles = {v .. "/tests"}
-          break
-        end
-      end
-    end
-  end
 end
 options.defaultFiles = options.defaultFiles or {"."}
 
@@ -122,7 +102,7 @@ bustedState.verbose = options.verbose
 bustedState.recursive = options.recursive
 bustedState.patternsTable = bustedState.patternsTable or options.defaultPatterns
 bustedState.filesTable = bustedState.filesTable or options.defaultFiles
-  
+
 
 if bustedState.isBustedAvailable() then
   busted = busted or require 'busted.core'()
@@ -194,7 +174,7 @@ end
 --   used will be used again.
 -- If either table is empty, it will be reset to the default value.
 
--- The default filesTable is a system dependant directory containing some
+-- The default filesTable is a system dependent directory containing some
 --   tests.
 -- The default patternsTable is {"_spec"}, so in a directory, only
 --   lua files with _spec in their name will be run. If you want
@@ -256,7 +236,7 @@ function bustedState.setup( filesTable, patternsTable )
   end
 
   -- if this is not the first time we have run setup, we need to clean
-  -- out the previous set of tests.    
+  -- out the previous set of tests.
   if bustedState.setupRun then
     local oldctx = busted.context.get()
     busted.context.clear()
@@ -267,7 +247,7 @@ function bustedState.setup( filesTable, patternsTable )
     root = busted.context.get()
     busted.safe_publish('suite', { 'suite', 'reset' }, root, 1, 1)
   end
-  bustedState.setupRun = true  
+  bustedState.setupRun = true
 
   local testFileLoader = testFileLoader or require 'busted.modules.test_file_loader'(busted, {'lua'})
   testFileLoader(bustedState.filesTable, bustedState.patternsTable, {
@@ -285,7 +265,7 @@ end -- bustedState.setup()
 -- This will run the tests which were loaded with bustedState.setup().
 -- When mudlet is first started, bustedState.setup() must be run
 --   before bustedState.runTests()
--- It does not reload the tests, so if the tests were edited after 
+-- It does not reload the tests, so if the tests were edited after
 --   bustedState.setup() was run, the changes will not take effect
 --   until bustedState.setup() is re-run.
 -- It does, however, run against the current state of mudlet. So if you
@@ -298,7 +278,7 @@ function bustedState.runTests()
     return
   end
   -- Some cleanup is needed if busted has run already
-  -- it doesn't really clean up after itself.  
+  -- it doesn't really clean up after itself.
   if bustedState.runTestsRun then
     local tablex = require 'pl.tablex'
     local root = busted.context.get()
@@ -322,11 +302,11 @@ function bustedState.runTests()
 
   -- redirect io.write() to main screen temporarily
   -- this could have side-effects if other threads or the test cases use
-  -- io.write() (which normally writes to the command line) before we 
+  -- io.write() (which normally writes to the command line) before we
   -- reset it once the tests are done.
   oldiowrite = io.write
   io.write = function (...)
-    echo(...) 
+    echo(...)
   end
 
   -- this is the actual busted call that runs the tests, which were
@@ -335,17 +315,17 @@ function bustedState.runTests()
 
   io.write = oldiowrite
 end -- bustedState.runTests</script>
-      <eventHandlerList />
-    </Script>
-    <Script isActive="no" isFolder="no">
-      <name>README</name>
-      <packageName></packageName>
-      <script>-- This is the set of mudlet scripts to allow running Busted tests from
+			<eventHandlerList />
+		</Script>
+		<Script isActive="no" isFolder="no">
+			<name>README</name>
+			<packageName></packageName>
+			<script>-- This is the set of mudlet scripts to allow running Busted tests from
 -- within the hosted lua environment of Mudlet.
 -- Busted is "a unit testing framework with a focus on being easy to use."
 -- It is written by olivine Labs, and documentation can be found on
 -- their website: https://olivinelabs.com/busted/
--- 
+--
 -- Using busted within Mudlet's hosted environment allows you to test
 -- lua functions defined within the environment, both user created functions
 -- (You can test your scripts!) and builtin functions.
@@ -359,7 +339,7 @@ end -- bustedState.runTests</script>
 -- On unix see:  https://luarocks.org/#quick-start
 -- On Windows see: https://github.com/luarocks/luarocks/wiki/Installation-instructions-for-Windows
 --
--- You can test that you have luarocks installed by typing 
+-- You can test that you have luarocks installed by typing
 -- 'luarocks --version' (no quotes) on a command prompt (your computer
 -- command line, not Mudlet) then hit enter.
 --
@@ -388,7 +368,7 @@ describe("should always pass", function()
 -- know the working directory.
 --
 -- If you change the assert line in the above file to 'assert.truthy(nil)' and run
--- it again, you shold see the results of a failing test.
+-- it again, you should see the results of a failing test.
 --
 -- Now try 'assert.truthy(string.find(getMudletHomeDir(), "[mM]udlet"))'
 -- to see a successful test that shows busted tests are able to access
@@ -414,7 +394,7 @@ describe("should always pass", function()
 -- First, there's the initialization section, which runs whenever the
 -- scripts are loaded, and it is re-run when the item is edited. This is
 -- where you can modify some settings and defaults. Read the comments
--- and folow instructions.
+-- and follow instructions.
 --
 -- Second, there's the bustedState.setup() function. This actually loads
 -- the tests into the busted table. This needs to be re-run whenever you
@@ -435,11 +415,36 @@ describe("should always pass", function()
 -- 'runTests'
 --
 -- Good Luck.</script>
-      <eventHandlerList />
-    </Script>
-  </ScriptPackage>
-  <KeyPackage />
-  <VariablePackage>
-    <HiddenVariables />
-  </VariablePackage>
+			<eventHandlerList />
+		</Script>
+			<Script isActive="yes" isFolder="no">
+				<name>quitMudletAfterTests</name>
+				<packageName></packageName>
+				<script>function quitMudletAfterTests()
+  local quitMudlet = os.getenv("QUIT_MUDLET_AFTER_TESTS")
+  if quitMudlet then
+    ioprint("All tests complete, shutting down Mudlet")
+    closeMudlet()
+  end
+end</script>
+				<eventHandlerList>
+					<string>testsComplete</string>
+				</eventHandlerList>
+			</Script>
+			<Script isActive="yes" isFolder="no">
+				<name>testQuittingMudlet</name>
+				<packageName></packageName>
+				<script>function testQuittingMudlet()
+  ioprint("Mudlet loaded, waiting 5s before raising 'testsComplete'...")
+  tempTimer(5, function() raiseEvent("testsComplete") end)
+end</script>
+				<eventHandlerList>
+					<string>sysLoadEvent</string>
+				</eventHandlerList>
+			</Script>
+	</ScriptPackage>
+	<KeyPackage />
+	<HelpPackage>
+		<helpURL></helpURL>
+	</HelpPackage>
 </MudletPackage>

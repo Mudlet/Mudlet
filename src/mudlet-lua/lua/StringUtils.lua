@@ -128,9 +128,11 @@ if _VERSION == "Lua 5.1" then
   end
 end
 
-function f(str)
+-- long and inconvenient variable name is to help avoid collisions
+-- str (what it was before) was causing f("Hello {str}") to return "Hello Hello {str}"
+function f(supersecretstringvariablenocollision)
   local outer_env = _ENV or getfenv(1)
-  return (str:gsub("%b{}", function(block)
+  return (supersecretstringvariablenocollision:gsub("%b{}", function(block)
     local code = block:match("{(.*)}")
     local exp_env = {}
     setmetatable(exp_env, {

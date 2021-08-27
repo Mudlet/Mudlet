@@ -419,9 +419,14 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
     mErrorLogFile.setFileName(logFileName);
     mErrorLogFile.open(QIODevice::Append);
-    // This is NOW used (for map
-    // file auditing and other issues)
+     /*
+     * Mudlet will log messages in ASCII, but force a universal (UTF-8) encoding
+     * since user-content can contain anything and someone else reviewing
+     * such logs need not have the same default encoding which would be used
+     * otherwise - note that this must be done AFTER setDevice(...):
+     */
     mErrorLogStream.setDevice(&mErrorLogFile);
+    mErrorLogStream.setCodec(QTextCodec::codecForName("UTF-8"));
 
     QTimer::singleShot(0, this, [this]() {
         qDebug() << "Host::Host() - restore map case 4 {QTimer::singleShot(0)} lambda.";
@@ -1973,9 +1978,17 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
     QStringList strings;
     if (configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&configFile);
+        /*
+         * We also have to explicit set the codec to use whilst reading the file
+         * as otherwise QTextCodec::codecForLocale() is used which might be a
+         * local8Bit codec that thus will not handle all the characters
+         * contained in Unicode:
+         */
+        in.setCodec(QTextCodec::codecForName("UTF-8"));
         while (!in.atEnd()) {
             strings += in.readLine();
         }
+        configFile.close();
     }
 
     lua_State* L = luaL_newstate();
@@ -2501,7 +2514,7 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
     }
 
     if (dictionaryChanged) {
-        // This will propogate the changes in the two flags to the main
+        // This will propagate the changes in the two flags to the main
         // TConsole's copies of them - although setProfileSpellDictionary() is
         // also called in the main TConsole constructor:
         mpConsole->setProfileSpellDictionary();
@@ -2850,7 +2863,7 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
             return {true, QString()};
         }
     } else if (pC) {
-        // CHECK: The absence of an explict return statement in this block means that
+        // CHECK: The absence of an explicit return statement in this block means that
         // reusing an existing mini console causes the lua function to seem to
         // fail - is this as per Wiki?
         // This part was causing problems with UserWindows
@@ -3699,7 +3712,7 @@ bool Host::commitLayoutUpdates(bool flush)
         for (auto pToolBar : mToolbarLayoutChanges) {
             // Under some circumstances there is NOT a
             // pToolBar->property("layoutChanged") and examining that
-            // non-existant variant to see if it was true or false causes seg. faults!
+            // non-existent variant to see if it was true or false causes seg. faults!
             if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
                 qWarning().nospace().noquote() << "host::commitLayoutUpdates() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
             } else if (pToolBar->property("layoutChanged").toBool()) {

@@ -315,12 +315,26 @@ jobs:
       run: curl -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
 
+    # we need to be in the right place for LuaGlobals.lua to load
+    - name: (Linux) Prep binary for running
+      if: runner.os == 'Linux'
+      run: cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
+      shell: bash
+
     - name: (Linux) Run Lua tests
       if: runner.os == 'Linux'
       timeout-minutes: 5
       uses: GabrielBB/xvfb-action@v1.5
       with:
-        run: ${{runner.workspace}}/b/ninja/src/mudlet --profile Achaea
+        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test"
+      env:
+        AUTORUN_BUSTED_TESTS: 'true'
+        QUIT_MUDLET_AFTER_TESTS: 'true'
+
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      if: failure()
+      timeout-minutes: 15
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         QUIT_MUDLET_AFTER_TESTS: 'true'
