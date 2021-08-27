@@ -1690,6 +1690,8 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
     buffer.append(msg, 0, msg.size(), fgColor, bgColor);
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
+
+    qDebug() << mConsoleName << msg;
 }
 
 void TConsole::printSystemMessage(const QString& msg)
