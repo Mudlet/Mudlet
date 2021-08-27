@@ -3109,7 +3109,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1973"/>
       <source>{variation selector 1}</source>
       <comment>Unicode U+FE00 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 1}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1974"/>
