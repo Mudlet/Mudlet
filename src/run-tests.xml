@@ -441,15 +441,16 @@ end</script>
     return
   end
   ioprint("Setup to auto-run tests - commencing.")
-  
+
   if not bustedState.isBustedAvailable() then
     ioprint("Busted not available - double-check that it's installed properly.")
+    raiseEvent("testsComplete")
     return
   end
-  
-  bustedState.setup({matches[2]})
+
+  bustedState.setup()
   bustedState.runTests()
-  
+
   raiseEvent("testsComplete")
 end</script>
 			<eventHandlerList>
