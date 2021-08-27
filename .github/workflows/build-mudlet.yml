@@ -23,6 +23,7 @@ jobs:
             compiler: gcc_64
             qt: '5.14.2'
             deploy: 'deploy'
+            run_tests: 'true'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
@@ -264,8 +265,8 @@ jobs:
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-
       if: runner.os == 'Linux' || runner.os == 'macOS'
 
-    - name: (Linux/macOS) package Mudlet
-      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
+    - name: (Linux/macOS) install dependencies for packaging/tests
+      if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
 
@@ -290,8 +291,14 @@ jobs:
         if [ "${RUNNER_OS}" = "Linux" ]; then
           sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 -y
         fi
+      env:
+        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+        RUNNER_OS: ${{runner.os}}
+        DEPLOY: ${{matrix.deploy}}
 
-        ${{github.workspace}}/CI/travis.after_success.sh
+    - name: (Linux/macOS) package Mudlet
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
+      run: ${{github.workspace}}/CI/travis.after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
@@ -321,8 +328,8 @@ jobs:
       run: cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
       shell: bash
 
-    - name: (Linux) Run Lua tests
-      if: runner.os == 'Linux'
+    - name: Run Lua tests
+      if: matrix.run_tests == 'true'
       timeout-minutes: 5
       uses: GabrielBB/xvfb-action@v1.5
       with:
@@ -338,20 +345,6 @@ jobs:
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         QUIT_MUDLET_AFTER_TESTS: 'true'
-
-    - name: Take a screenshot
-      # Mudlet should self shut down in the previous action, ideally
-      if: always()
-      uses: OrbitalOwen/desktop-screenshot-action@0.1
-      with:
-        file-name: 'desktop.jpg'
-
-    - name: Upload screenshot
-      if: always()
-      uses: actions/upload-artifact@v2
-      with:
-        name: Screenshot
-        path: 'desktop.jpg'
 
     - name: (windows) Show relevant logs logs
       if: failure() && runner.os == 'Windows'
