@@ -176,8 +176,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<p>This will create a string called 'foo' with 'bar' as its value.</p>"
                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
-    QString mUnknownIdText = tr("<p>ID: <b>?</b></p>");
-    QString mIdText = tr("<p>ID: <b>%1</b></p>");
+    mUnknownIdText = tr("<p>ID: <b>?</b></p>");
+    mIdText = tr("<p>ID: <b>%1</b></p>");
 
     setUnifiedTitleAndToolBarOnMac(true); //MAC OSX: make window moveable
     const QString hostName{mpHost->getName()};
@@ -2570,6 +2570,7 @@ void dlgTriggerEditor::recursiveSearchKeys(TKey* pTriggerParent, const QString& 
 
 void dlgTriggerEditor::delete_alias()
 {
+    mpAliasMainArea->label_id->setText(mUnknownIdText);
     QTreeWidgetItem* pItem = treeWidget_aliases->currentItem();
     if (!pItem) {
         return;
@@ -2591,6 +2592,7 @@ void dlgTriggerEditor::delete_alias()
 
 void dlgTriggerEditor::delete_action()
 {
+    mpActionsMainArea->label_id->setText(mUnknownIdText);
     QTreeWidgetItem* pItem = treeWidget_actions->currentItem();
     if (!pItem) {
         return;
@@ -2648,6 +2650,7 @@ void dlgTriggerEditor::delete_variable()
 
 void dlgTriggerEditor::delete_script()
 {
+    mpScriptsMainArea->label_id->setText(mUnknownIdText);
     QTreeWidgetItem* pItem = treeWidget_scripts->currentItem();
     if (!pItem) {
         return;
@@ -2669,6 +2672,7 @@ void dlgTriggerEditor::delete_script()
 
 void dlgTriggerEditor::delete_key()
 {
+    mpKeysMainArea->label_id->setText(mUnknownIdText);
     QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
     if (!pItem) {
         return;
@@ -2691,6 +2695,7 @@ void dlgTriggerEditor::delete_key()
 
 void dlgTriggerEditor::delete_trigger()
 {
+    mpTriggersMainArea->label_id->setText(mUnknownIdText);
     QTreeWidgetItem* pItem = treeWidget_triggers->currentItem();
     if (!pItem) {
         return;
@@ -2713,6 +2718,7 @@ void dlgTriggerEditor::delete_trigger()
 
 void dlgTriggerEditor::delete_timer()
 {
+    mpTimersMainArea->label_id->setText(mUnknownIdText);
     QTreeWidgetItem* pItem = treeWidget_timers->currentItem();
     if (!pItem) {
         return;
@@ -5035,7 +5041,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
     mpTriggersMainArea->pushButtonBgColor->setStyleSheet(QString());
     mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, QVariant());
     mpTriggersMainArea->spinBox_lineMargin->setValue(1);
-    mpTriggersMainArea->label_id->setText(mIdText.arg(ID));
+    mpTriggersMainArea->label_id->setText(mUnknownIdText);
 
     int ID = pItem->data(0, Qt::UserRole).toInt();
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(ID);
