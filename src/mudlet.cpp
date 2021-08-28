@@ -2649,7 +2649,6 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     }
 
     // install default packages
-    qDebug() << "Installing" << packagesToInstallList;
     for (int i = 0; i < packagesToInstallList.size(); i++) {
         pHost->installPackage(packagesToInstallList[i], 0);
     }

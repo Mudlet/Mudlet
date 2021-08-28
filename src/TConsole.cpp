@@ -1682,7 +1682,7 @@ void TConsole::print(const QString& msg)
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    qDebug().nospace().noquote() << QStringLiteral("[%1] %2").arg(mConsoleName, msg);
+    qDebug().nospace().noquote() << QStringLiteral("%1| %2").arg(mConsoleName, msg);
 }
 
 // printDebug(QColor& c, QColor& d, const QString& msg) was functionally the
@@ -1693,7 +1693,7 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    qDebug().nospace().noquote() << QStringLiteral("[%1] %2").arg(mConsoleName, msg);
+    qDebug().nospace().noquote() << QStringLiteral("%1| %2").arg(mConsoleName, msg);
 }
 
 void TConsole::printSystemMessage(const QString& msg)
