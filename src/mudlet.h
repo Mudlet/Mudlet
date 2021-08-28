@@ -326,6 +326,8 @@ public:
     void refreshTabBar();
 
     bool firstLaunch = false;
+    // mirror everything shown in any console to stdout. Helpful for CI environments
+    bool mirrorToStdout = false;
     // Needed to work around a (likely only Windows) issue:
     QString mBG_ONLY_STYLESHEET;
     QString mTEXT_ON_BG_STYLESHEET;
