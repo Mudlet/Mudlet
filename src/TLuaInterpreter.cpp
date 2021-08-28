@@ -5032,7 +5032,7 @@ int TLuaInterpreter::getAreaRooms(lua_State* L)
     while (itAreaRoom.hasNext()) {
         lua_pushnumber(L, ++i);
         // We should have started at 1 but past code had incorrectly started
-        // with a zero index and we must maintain compatibilty with code written
+        // with a zero index and we must maintain compatibility with code written
         // for that
         lua_pushnumber(L, itAreaRoom.next());
         lua_settable(L, -3);
@@ -5074,7 +5074,7 @@ int TLuaInterpreter::getAreaExits(lua_State* L)
 
     lua_newtable(L);
     if (n < 2 || (n > 1 && !isFullDataRequired)) {
-        // Replicate original implimentation
+        // Replicate original implementation
         QList<int> areaExits = pA->getAreaExitRoomIds();
         if (areaExits.size() > 1) {
             std::sort(areaExits.begin(), areaExits.end());
@@ -5143,7 +5143,7 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
     }
 
     if (!host.mpMap->gotoRoom(targetRoomId)) {
-        int totalWeight = host.assemblePath(); // Needed if unsucessful to clear lua speedwalk tables
+        int totalWeight = host.assemblePath(); // Needed if unsuccessful to clear lua speedwalk tables
         Q_UNUSED(totalWeight);
         return warnArgumentValue(L, __func__, QStringLiteral("no path found from current room to room with id %1").arg(targetRoomId), true);
     }
@@ -5168,7 +5168,7 @@ int TLuaInterpreter::getPath(lua_State* L)
     }
 
     bool ret = host.mpMap->gotoRoom(originRoomId, targetRoomId);
-    int totalWeight = host.assemblePath(); // Needed even if unsucessful, to clear lua tables then
+    int totalWeight = host.assemblePath(); // Needed even if unsuccessful, to clear lua tables then
     if (ret) {
         lua_pushboolean(L, true);
         lua_pushnumber(L, totalWeight);
@@ -5786,11 +5786,11 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
     }
     // We have already validated output to contain a 2 byte payload so we
     // should not need to worry about the "encoding" in this use of
-    // socketOutRaw(...) - with the exception of handling any occurance of
+    // socketOutRaw(...) - with the exception of handling any occurrence of
     // 0xFF as either of the bytes to send - however Aardwolf does not use
     // *THAT* value so, though it is probably okay to not worry about the
     // need to "escape" it to get it through the telnet protocol unscathed
-    // it is trival to fix:
+    // it is trivial to fix:
     output = mudlet::replaceString(output, "\xff", "\xff\xff");
     host.mTelnet.socketOutRaw(output);
     lua_pushboolean(L, true);
@@ -5799,7 +5799,7 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
 
 // Internal helper function for two following functions:
 // returns 0 and a pointer to the TAction with the ID or
-//   the first one found with the name as the index item on sucess.
+//   the first one found with the name as the index item on success.
 // returns a non-zero number and a nullptr on failure (the first is the number
 //   of items on the stack for the caller to return to ITS caller).
 // does NOT return (normally) if the index item on the stack is not a number or
@@ -6294,7 +6294,7 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
         int value = lua_tointeger(L, s);
         if (value == TTrigger::scmIgnored && lua_gettop(L) < 2) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "invalid ANSI color number %1, it cannot be used (to ignore the foreground color) if the background color is ommitted")
+                "invalid ANSI color number %1, it cannot be used (to ignore the foreground color) if the background color is omitted")
                 .arg(value));
         }
         // At present we limit the range to (Trigger::scmIgnored),
@@ -7298,7 +7298,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         }
         // Strangely, previous code allowed this command to create a NEW area's name
         // with this ID, but without a TArea instance to accompany it (the latter was/is
-        // instantiated as needed when a room is moved to the relevent area...) and we
+        // instantiated as needed when a room is moved to the relevant area...) and we
         // need to continue to allow this - Slysven
         //        else if (!host.mpMap->mpRoomDB->getAreaIDList().contains(id)) {
         //            return warnArgumentValue(L, __func__, QStringLiteral(
@@ -8120,7 +8120,7 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
     int roomID = getVerifiedInt(L, __func__, 1, "room id");
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
-    if (!pR) { //if the room doesnt exist return nil
+    if (!pR) { //if the room doesn't exist return nil
         return warnArgumentValue(L, __func__, QStringLiteral("room %1 doesn't exist").arg(roomID));
     }
     lua_newtable(L); //return table customLines[]
@@ -8435,8 +8435,8 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
     }
     // Turns out that an empty key IS possible, but if this changes this should be uncommented
     //        if (key.isEmpty()) {
-    //            // If the user accidently supplied an white-space only or empty key
-    //            // string we don't do anything, but we, sucessfully, fail to do it... 8-)
+    //            // If the user accidentally supplied an white-space only or empty key
+    //            // string we don't do anything, but we, successfully, fail to do it... 8-)
     //            lua_pushboolean( L, false );
     //        }
     /*      else */ if (pR->userData.contains(key)) {
@@ -8988,7 +8988,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
     // appear in the TRoomDB::areaNamesMap...
     bool result = host.mpMap->setRoomArea(id, areaId, false);
     if (result) {
-        // As a sucessfull result WILL change the area a room is in then the map
+        // As a successful result WILL change the area a room is in then the map
         // should be updated.  The GUI code that modifies room(s) areas already
         // includes such a call to update the mapper.
         if (host.mpMap->mpMapper) {
@@ -9018,7 +9018,7 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
     }
     bool result = host.mpMap->setRoomArea(id, -1, false);
     if (result) {
-        // As a sucessfull result WILL change the area a room is in then the map
+        // As a successful result WILL change the area a room is in then the map
         // should be updated.  The GUI code that modifies room(s) areas already
         // includes such a call to update the mapper.
         if (host.mpMap->mpMapper) {
@@ -10673,7 +10673,7 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 
     bool isToShowDefaultArea = getVerifiedBool(L, __func__, 1, "isToShowDefaultArea");
     if (host.mpMap->mpMapper) {
-        // If we are reenabled the display of the default area
+        // If we are re-enabling the display of the default area
         // AND the mapper was showing the default area
         // the area widget will NOT be showing the correct area name afterwards
         bool isAreaWidgetInNeedOfResetting = false;
@@ -10697,7 +10697,7 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerAnonymousEventHandler
 // The function below is mostly unused now as it is overwritten in lua.
-// The overwriting function poses as a transperant proxy and internally uses
+// The overwriting function poses as a transparent proxy and internally uses
 // this function to get called events.
 int TLuaInterpreter::registerAnonymousEventHandler(lua_State* L)
 {
@@ -13457,7 +13457,7 @@ static lua_State* newstate()
 // No documentation available in wiki - internal function
 static void storeHostInLua(lua_State* L, Host* h);
 
-// No documentation available in wiki - internal helper funtion
+// No documentation available in wiki - internal helper function
 // On success will swap out any messages in the queue and replace them
 // with its success message, on failure will just append...
 bool TLuaInterpreter::loadLuaModule(QQueue<QString>& resultMsgsQueue, const QString& requirement, const QString& failureConsequence, const QString& description, const QString& luaModuleId)
@@ -14032,9 +14032,9 @@ void TLuaInterpreter::initLuaGlobals()
      *     QString if needed for a placeholder for following arguments)
      * 4 - string describing the module (optional, for alternatives may be
      *     different and reflect the luarock name for the particular
-     *     alternative, when ommitted or a null/empty QString the second
+     *     alternative, when omitted or a null/empty QString the second
      *     argument is used instead)
-     * 5 - string used in Lua as the identifier for the loaded module/libary,
+     * 5 - string used in Lua as the identifier for the loaded module/library,
      *     passed as X in the lua 'X = require("name")' (optional, in which
      *     case nothing is put before the "require" in that usage and the module
      *     assumes whatever Lua name it offers).
@@ -14395,6 +14395,17 @@ QString TLuaInterpreter::readScriptFile(const QString& path) const
     }
 
     QTextStream in(&file);
+    in.setCodec(QTextCodec::codecForName("UTF-8"));
+
+    /*
+     * FIXME: Qt Documentation for this method reports:
+     * "Reads the entire content of the stream, and returns it as a QString.
+     * Avoid this function when working on large files, as it will consume a
+     * significant amount of memory.
+     *
+     * Calling readLine() is better if you do not know how much data is
+     * available."
+     */
     QString text = in.readAll();
     file.close();
 
@@ -14587,7 +14598,7 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
     TKey* pT;
 
     if (parent.isEmpty()) {
-        pT = new TKey("a", mpHost); // The use of "a" seems a bit arbitary...!
+        pT = new TKey("a", mpHost); // The use of "a" seems a bit arbitrary...!
     } else {
         TKey* pP = mpHost->getKeyUnit()->findFirstKey(parent);
         if (!pP) {
@@ -15236,7 +15247,7 @@ void TLuaInterpreter::updateAnsi16ColorsInTable()
     // Okay so now we point ourselves at the wanted table:
     lua_setfield(L, LUA_GLOBALSINDEX, "color_table");
 
-    // Now we can add/update the items we need to, though it is a bit repetative:
+    // Now we can add/update the items we need to, though it is a bit repetitive:
     QColor color = mpHost->mBlack;
     insertColorTableEntry(L, color, QStringLiteral("ansi_000"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_black"));
@@ -15348,13 +15359,13 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
 
         lua_createtable(L, 3, 0);
 
-        lua_pushnumber(L, 51 * r);
+        lua_pushnumber(L, r == 0 ? 0 : (r - 1) * 40 + 95);
         lua_rawseti(L, -2, 1);
 
-        lua_pushnumber(L, 51 * g);
+        lua_pushnumber(L, g == 0 ? 0 : (g - 1) * 40 + 95);
         lua_rawseti(L, -2, 2);
 
-        lua_pushnumber(L, 51 * b);
+        lua_pushnumber(L, b == 0 ? 0 : (b - 1) * 40 + 95);
         lua_rawseti(L, -2, 3);
 
         lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
@@ -15371,39 +15382,7 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
     for (int i = 232; i < 256; ++i) {
         lua_createtable(L, 3, 0);
 
-        int value = 128;
-        // Divide the range 0 to 255 into 23 + 1 values to give a 24 value
-        // greyscale - this is lifted from TBuffer::decodeSGR{3|4}8() - and
-        // we really ought to refactor things so we only have this in one common
-        // place:
-        switch (i) {
-            case 232:   value =   0; break; //   0.000
-            case 233:   value =  11; break; //  11.087
-            case 234:   value =  22; break; //  22.174
-            case 235:   value =  33; break; //  33.261
-            case 236:   value =  44; break; //  44.348
-            case 237:   value =  55; break; //  55.435
-            case 238:   value =  67; break; //  66.522
-            case 239:   value =  78; break; //  77.609
-            case 240:   value =  89; break; //  88.696
-            case 241:   value = 100; break; //  99.783
-            case 242:   value = 111; break; // 110.870
-            case 243:   value = 122; break; // 121.957
-            case 244:   value = 133; break; // 133.043
-            case 245:   value = 144; break; // 144.130
-            case 246:   value = 155; break; // 155.217
-            case 247:   value = 166; break; // 166.304
-            case 248:   value = 177; break; // 177.391
-            case 249:   value = 188; break; // 188.478
-            case 250:   value = 200; break; // 199.565
-            case 251:   value = 211; break; // 210.652
-            case 252:   value = 222; break; // 221.739
-            case 253:   value = 233; break; // 232.826
-            case 254:   value = 244; break; // 243.913
-            case 255:   value = 255; break; // 255.000
-            default:
-            Q_UNREACHABLE(); // We should not have a case outside of the range 232 to 255
-        }
+        int value = (i - 232) * 10 + 8;
 
         lua_pushnumber(L, value);
         lua_rawseti(L, -2, 1);
@@ -15427,7 +15406,7 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
 
 // Internal function - Creates a table for useful information from the http
 // response. It creates an empty table, calls upon other functions to
-// add things to it, and then returns a key to where it is in the lua registery.
+// add things to it, and then returns a key to where it is in the lua registry.
 int TLuaInterpreter::createHttpResponseTable(QNetworkReply* reply)
 {
     lua_State* L = pGlobalLua;

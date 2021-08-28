@@ -850,7 +850,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                         customLinesColor.insert(itCustomLineColor.key().toLower(), QColor(itCustomLineColor.value().at(0), itCustomLineColor.value().at(1), itCustomLineColor.value().at(2)));
                     }
                     // Otherwise we will fixup both empty
-                    // itCustomLineColor.value() entites AND altogether missing
+                    // itCustomLineColor.value() entities AND altogether missing
                     // ones outside of the while() {...}:
                 } else {
                     if (itCustomLineColor.value().count() > 2) {
@@ -2106,7 +2106,7 @@ void TRoom::writeJsonCustomExitLine(QJsonObject& exitObj, const QString& directi
         const QPointF point{points.at(i)};
         customLinePointCoordinateArray.append(static_cast<double>(point.x()));
         customLinePointCoordinateArray.append(static_cast<double>(point.y()));
-        // We might wish to consider storing a z in the future to accomodate 3D
+        // We might wish to consider storing a z in the future to accommodate 3D
         // custom lines...!
         const QJsonValue customLinePointCoordinatesValue{customLinePointCoordinateArray};
         customLinePointsArray.append(customLinePointCoordinatesValue);
@@ -2157,7 +2157,7 @@ void TRoom::readJsonCustomExitLine(const QJsonObject& exitObj, const QString& di
             QPointF point{customLinePointCoordinateArray.at(0).toDouble(), customLinePointCoordinateArray.at(1).toDouble()};
 
             // We might wish to consider if there is a z in the future to
-            // accomodate 3D custom lines...!
+            // accommodate 3D custom lines...!
             points.append(point);
         }
     }

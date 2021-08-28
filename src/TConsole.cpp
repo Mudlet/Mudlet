@@ -85,7 +85,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mWrapAt = 50;
     } else {
         if (mType & (ErrorConsole|SubConsole|UserWindow)) {
-            // Orginally this was for TConsole instances with a parent pointer
+            // Originally this was for TConsole instances with a parent pointer
             // This branch for: UserWindows, SubConsole, ErrorConsole
             // mIsSubConsole was true for these
             mMainFrameTopHeight = 0;
@@ -93,7 +93,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
             mMainFrameLeftWidth = 0;
             mMainFrameRightWidth = 0;
         } else if (mType & (MainConsole|Buffer)) {
-            // Orginally this was for TConsole instances without a parent pointer
+            // Originally this was for TConsole instances without a parent pointer
             // This branch for: Buffers, MainConsole
             // mIsSubConsole was false for these
             mMainFrameTopHeight = mpHost->mBorderTopHeight;
@@ -517,6 +517,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     if (mType & MainConsole) {
         mpButtonMainLayer->setVisible(!mpHost->getCompactInputLine());
     }
+
+    if (mType & MainConsole) {
+        mpCommandLine->adjustHeight();
+    }
 }
 
 TConsole::~TConsole()
@@ -646,6 +650,10 @@ void TConsole::refresh()
     }
 
     mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
+
+    if (mType & MainConsole) {
+        mpCommandLine->adjustHeight();
+    }
 
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     x = width();
@@ -1538,7 +1546,7 @@ bool TConsole::selectSection(int from, int to)
 }
 
 // returns whenever the selection is valid, the selection text,
-// start position, and the length of the seletion
+// start position, and the length of the selection
 std::tuple<bool, QString, int, int> TConsole::getSelection()
 {
     if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {

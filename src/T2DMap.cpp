@@ -686,9 +686,9 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
                 quint8 g = (base - (r * 36)) / 6;
                 quint8 b = (base - (r * 36)) - (g * 6);
 
-                r *= 51;
-                g *= 51;
-                b *= 51;
+                r = r == 0 ? 0 : (r - 1) * 40 + 95;
+                g = g == 0 ? 0 : (g - 1) * 40 + 95;
+                b = b == 0 ? 0 : (b - 1) * 40 + 95;
                 roomColor = QColor(r, g, b, 255);
             } else if (231 < roomEnvironment && roomEnvironment < 256) {
                 quint8 k = ((roomEnvironment - 232) * 10) + 8;
@@ -729,7 +729,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         QPointF roomCenter = QPointF(rx, ry);
         if (!isRoomSelected) {
             // CHECK: The use of a gradient fill to a white center on round
-            // rooms might look nice in some sitations but not in all:
+            // rooms might look nice in some situations but not in all:
             QRadialGradient gradient(roomCenter, roomRadius);
             gradient.setColorAt(0.85, roomColor);
             gradient.setColorAt(0, Qt::white);
@@ -746,7 +746,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         mPick = false;
         if (mStartSpeedWalk) {
             mStartSpeedWalk = false;
-            // This draws a red circle around the room that was choosen as
+            // This draws a red circle around the room that was chosen as
             // the target for the speedwalk, but it is only shown for one
             // paintEvent call and it is not obvious that it is useful, note
             // that this is the code for a room being clicked on that is
@@ -1140,7 +1140,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
                 // clang-format on
                 mStartSpeedWalk = false;
                 // This draws a red circle around the out of area exit that
-                // was choosen as the target for the speedwalk, but it is
+                // was chosen as the target for the speedwalk, but it is
                 // only shown for one paintEvent call and it is not obvious
                 // that it is useful, note that there is similar code for a
                 // room being clicked on that is WITHIN the area, that is
@@ -2990,7 +2990,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     }
 
                     auto lineProperties = new QAction(tr("Properties", "2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)"), this);
-                    // Changed seperately, because the constructor silently copies the text elsewhere
+                    // Changed separately, because the constructor silently copies the text elsewhere
                     // (tooltip and/or object name IIRC) whereas the ellipsis is meant only for display
                     lineProperties->setText(
                             tr("properties...", "2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise"));
@@ -5078,8 +5078,8 @@ void T2DMap::resizeMultiSelectionWidget()
     if (mMultiSelectionListWidget.topLevelItemCount() > 0) {
         QTreeWidgetItem* rowItem = mMultiSelectionListWidget.topLevelItem(1);
         // The following factors are tweaks to ensure that the widget shows all
-        // the rows, as the header seems bigger than the value returned, statics
-        // used to enable values to be change by debugger at runtime!
+        // the rows, as the header seems bigger than the value returned, static values
+        // used to enable values to be changed by debugger at runtime!
         static float headerFactor = 1.2;
         static float rowFactor = 1.0;
         _newHeight = headerFactor * mMultiSelectionListWidget.header()->height();

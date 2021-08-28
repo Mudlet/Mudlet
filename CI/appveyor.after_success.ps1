@@ -74,7 +74,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     New-Item "$SQUIRRELWINBIN" -ItemType "directory"
   }
 
-  Write-Output "=== Moving things to where Squirel expects them ==="
+  Write-Output "=== Moving things to where Squirrel expects them ==="
   # move everything into src\release\squirrel.windows\lib\net45\ as that's where Squirrel would like to see it
   Move-Item $Env:APPVEYOR_BUILD_FOLDER\src\release\* $SQUIRRELWINBIN
 

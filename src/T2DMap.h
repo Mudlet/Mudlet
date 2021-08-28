@@ -108,7 +108,7 @@ public:
     bool mRoomBeingMoved;
     // These are the on-screen width and height pixel numbers of the area for a
     // room symbol, (for the non-grid map mode case what gets filled in is
-    // multipled by rsize which is 1.0 to exactly fill space between adjacent
+    // multiplied by rsize which is 1.0 to exactly fill space between adjacent
     // coordinates):
     float mRoomWidth;
     float mRoomHeight;
