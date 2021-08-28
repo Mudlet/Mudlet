@@ -424,6 +424,7 @@ describe("should always pass", function()
   local quitMudlet = os.getenv("QUIT_MUDLET_AFTER_TESTS")
   if quitMudlet then
     ioprint("All tests complete, shutting down Mudlet")
+    -- closeMudlet on its own inside an event handler causes a crash
     tempTimer(0, closeMudlet)
   end
 end</script>
@@ -449,17 +450,21 @@ function autoRunTests()
     ioprint("Not setup to auto-run tests.")
     return
   end
+
   ioprint("Setup to auto-run tests - commencing.")
+
   if not bustedState.isBustedAvailable() then
     ioprint("Busted not available - double-check that it's installed properly.")
     raiseEvent("testsComplete")
     return
   end
+
   local testLocation = os.getenv("TESTS_DIRECTORY")
   if not testLocation then
     ioprint("No location for the tests provided, don't know what to run.")
     return
   end
+
   busted.subscribe(
     {'failure'},
     function(element, parent, message)
@@ -467,6 +472,7 @@ function autoRunTests()
       return nil, true
     end
   )
+
   bustedState.setup({testLocation})
   bustedState.runTests()
   raiseEvent("testsComplete")
@@ -475,11 +481,13 @@ end
 local errorLogged = false
 function logTestError()
   if errorLogged then return end
-  
+
   if getOS() == "linux" then
     file = io.open("/tmp/busted-tests-failed", "w")
     file:write("Lua busted tests failed")
     file:close()
+  else
+    ioprint("Tests failed, but did not know how to log the error for "..getOS())
   end
   errorLogged = true
 end</script>
