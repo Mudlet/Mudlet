@@ -140,7 +140,6 @@ bool TScript::compileScript()
         return true;
     } else {
         mOK_code = false;
-        qDebug() << "error compiling script" << mName << mFuncName << error;
         setError(error);
         return false;
     }

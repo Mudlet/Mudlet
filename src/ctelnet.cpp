@@ -2322,7 +2322,6 @@ void cTelnet::postMessage(QString msg)
         }
 
         QStringList body = messageStack.first().split(QChar('\n'));
-        qDebug() << "   " << body.join('\n');
 
         qint8 openBraceIndex = body.at(0).indexOf(QLatin1String("["));
         qint8 closeBraceIndex = body.at(0).indexOf(QLatin1String("]"));
