@@ -1485,6 +1485,7 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
 
     // add the new widget in
     profiles_tree_widget->addItem(pItem);
+    pItem->setIcon(customIcon(profile_name, std::nullopt));
     profiles_tree_widget->setCurrentItem(pItem);
 
     profile_name_entry->setText(profile_name);
