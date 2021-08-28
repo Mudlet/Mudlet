@@ -432,37 +432,56 @@ end</script>
 			</eventHandlerList>
 		</Script>
 		<Script isActive="yes" isFolder="no">
-			<name>autoRunTests</name>
+			<name>autoRunTestsEvent</name>
 			<packageName></packageName>
-			<script>function autoRunTests()
+			<script>function autoRunTestsEvent()
+  tempTimer(
+    1,
+    function()
+      autoRunTests()
+    end
+  )
+end
+
+function autoRunTests()
   local runTests = os.getenv("AUTORUN_BUSTED_TESTS")
   if not runTests then
     ioprint("Not setup to auto-run tests.")
     return
   end
   ioprint("Setup to auto-run tests - commencing.")
-
   if not bustedState.isBustedAvailable() then
     ioprint("Busted not available - double-check that it's installed properly.")
     raiseEvent("testsComplete")
     return
   end
-
   local testLocation = os.getenv("TESTS_DIRECTORY")
   if not testLocation then
     ioprint("No location for the tests provided, don't know what to run.")
     return
   end
-
-  busted.subscribe({ 'failure' }, function(element, parent, message)
-      setEnv("GITHUB_ENV", "BUSTED_TESTS_FAILED=true")
+  busted.subscribe(
+    {'failure'},
+    function(element, parent, message)
+      logTestError()
       return nil, true
-    end)
-
+    end
+  )
   bustedState.setup({testLocation})
   bustedState.runTests()
-
   raiseEvent("testsComplete")
+end
+
+local errorLogged = false
+function logTestError()
+  if errorLogged then return end
+  
+  if getOS() == "linux" then
+    file = io.open("/tmp/busted-tests-failed", "w")
+    file:write("Lua busted tests failed")
+    file:close()
+  end
+  errorLogged = true
 end</script>
 			<eventHandlerList>
 				<string>sysLoadEvent</string>

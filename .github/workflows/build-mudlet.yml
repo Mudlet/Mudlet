@@ -343,8 +343,11 @@ jobs:
         QUIT_MUDLET_AFTER_TESTS: 'true'
 
     - name: Passed Lua tests
-      if: env.BUSTED_TESTS_FAILED == 'true'
-      run: exit 1
+      run: |
+        if [ -e /tmp/busted-tests-failed ]
+        then
+          exit 1
+        fi
 
     - name: Setup tmate session
       uses: mxschmitt/action-tmate@v3
