@@ -346,6 +346,7 @@ jobs:
       run: |
         if [ -e /tmp/busted-tests-failed ]
         then
+          echo "Lua tests failed - see the action above for detailed output."
           exit 1
         fi
 
