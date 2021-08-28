@@ -455,7 +455,7 @@ end</script>
   end
 
   busted.subscribe({ 'failure' }, function(element, parent, message)
-      os.setenv("GITHUB_ENV", "BUSTED_TESTS_FAILED=true")
+      setEnv("GITHUB_ENV", "BUSTED_TESTS_FAILED=true")
       return nil, true
     end)
 
