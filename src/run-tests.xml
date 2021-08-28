@@ -424,7 +424,7 @@ describe("should always pass", function()
   local quitMudlet = os.getenv("QUIT_MUDLET_AFTER_TESTS")
   if quitMudlet then
     ioprint("All tests complete, shutting down Mudlet")
-    closeMudlet()
+    tempTimer(0, closeMudlet)
   end
 end</script>
 			<eventHandlerList>
