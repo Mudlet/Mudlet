@@ -348,7 +348,7 @@ jobs:
 
     - name: Setup tmate session
       uses: mxschmitt/action-tmate@v3
-      if: failure()
+      if: always()
       timeout-minutes: 15
       env:
         AUTORUN_BUSTED_TESTS: 'true'
