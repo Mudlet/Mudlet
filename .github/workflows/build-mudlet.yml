@@ -339,6 +339,7 @@ jobs:
         run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test"
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
 
     - name: Setup tmate session

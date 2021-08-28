@@ -448,7 +448,13 @@ end</script>
     return
   end
 
-  bustedState.setup()
+  local testLocation = os.getenv("TESTS_DIRECTORY")
+  if not testLocation then
+    ioprint("No location for the tests provided, don't know what to run.")
+    return
+  end
+
+  bustedState.setup({testLocation})
   bustedState.runTests()
 
   raiseEvent("testsComplete")
