@@ -176,6 +176,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<p>This will create a string called 'foo' with 'bar' as its value.</p>"
                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
+    QString mUnknownIdText = tr("<p>ID: <b>?</b></p>");
+    QString mIdText = tr("<p>ID: <b>%1</b></p>");
+
     setUnifiedTitleAndToolBarOnMac(true); //MAC OSX: make window moveable
     const QString hostName{mpHost->getName()};
     setWindowTitle(tr("%1 - Editor").arg(hostName));
@@ -5032,6 +5035,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
     mpTriggersMainArea->pushButtonBgColor->setStyleSheet(QString());
     mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, QVariant());
     mpTriggersMainArea->spinBox_lineMargin->setValue(1);
+    mpTriggersMainArea->label_id->setText(mIdText.arg(ID));
 
     int ID = pItem->data(0, Qt::UserRole).toInt();
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(ID);
@@ -5172,6 +5176,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
             showError(pT->getError());
         }
 
+        mpTriggersMainArea->label_id->setText(mIdText.arg(ID));
+
     } else {
         // No details to show - as will be the case if the top item (ID = 0) is
         // selected - so show the help message:
@@ -5204,6 +5210,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem* pItem)
     mpAliasMainArea->lineEdit_alias_pattern->clear();
     mpAliasMainArea->lineEdit_alias_command->clear();
     clearDocument(mpSourceEditorEdbee); // Alias Select
+    mpAliasMainArea->label_id->setText(mUnknownIdText);
 
     mpAliasMainArea->lineEdit_alias_name->setText(pItem->text(0));
     int ID = pItem->data(0, Qt::UserRole).toInt();
@@ -5222,6 +5229,8 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem* pItem)
         if (!pT->state()) {
             showError(pT->getError());
         }
+
+        mpAliasMainArea->label_id->setText(mIdText.arg(ID));
 
     } else {
         // No details to show - as will be the case if the top item (ID = 0) is
@@ -5255,6 +5264,7 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem* pItem)
     mpKeysMainArea->lineEdit_key_binding->clear();
     mpKeysMainArea->lineEdit_key_name->clear();
     clearDocument(mpSourceEditorEdbee); // Key Select
+    mpKeysMainArea->label_id->setText(mUnknownIdText);
 
     mpKeysMainArea->lineEdit_key_binding->setText(pItem->text(0));
     int ID = pItem->data(0, Qt::UserRole).toInt();
@@ -5273,6 +5283,9 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem* pItem)
         if (!pT->state()) {
             showError(pT->getError());
         }
+
+        mpKeysMainArea->label_id->setText(mIdText.arg(ID));
+
     } else {
         // No details to show - as will be the case if the top item (ID = 0) is
         // selected - so show the help message:
@@ -5607,6 +5620,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem* pItem)
     mpActionsMainArea->comboBox_action_bar_orientation->setCurrentIndex(0);
     mpActionsMainArea->comboBox_action_button_rotation->setCurrentIndex(0);
     mpActionsMainArea->spinBox_action_bar_columns->setValue(1);
+    mpActionsMainArea->label_id->setText(mUnknownIdText);
 
     mpCurrentActionItem = pItem; //remember what has been clicked to save it
     // ID will be 0 for the root of the treewidget and it is not appropriate
@@ -5688,6 +5702,9 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem* pItem)
         if (!pT->state()) {
             showError(pT->getError());
         }
+
+        mpActionsMainArea->label_id->setText(mIdText.arg(ID));
+
     } else {
         // On root of treewidget_actions: - show help message instead
         mpActionsMainArea->hide();
@@ -5746,6 +5763,8 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem* pItem)
     mpScriptsMainArea->lineEdit_script_name->clear();
     mpScriptsMainArea->listWidget_script_registered_event_handlers->clear();
     mpScriptsMainArea->lineEdit_script_name->setText(pItem->text(0));
+    mpScriptsMainArea->label_id->setText(mUnknownIdText);
+
     int ID = pItem->data(0, Qt::UserRole).toInt();
     TScript* pT = mpHost->getScriptUnit()->getScript(ID);
     if (pT) {
@@ -5765,6 +5784,7 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem* pItem)
             showError(pT->getError());
         }
 
+        mpScriptsMainArea->label_id->setText(mIdText.arg(ID));
     } else {
         // No details to show - as will be the case if the top item (ID = 0) is
         // selected - so show the help message:
@@ -5801,6 +5821,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
     mpTimersMainArea->timeEdit_timer_seconds->setTime(QTime(0, 0, 0, 0));
     mpTimersMainArea->timeEdit_timer_msecs->setTime(QTime(0, 0, 0, 0));
     mpTimersMainArea->lineEdit_timer_name->setText(pItem->text(0));
+    mpTimersMainArea->label_id->setText(mUnknownIdText);
 
     int ID = pItem->data(0, Qt::UserRole).toInt();
     TTimer* pT = mpHost->getTimerUnit()->getTimer(ID);
@@ -5826,6 +5847,9 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
         if (!pT->state()) {
             showError(pT->getError());
         }
+
+        mpTimersMainArea->label_id->setText(mIdText.arg(ID));
+
     } else {
         // No details to show - as will be the case if the top item (ID = 0) is
         // selected - so show the help message:
@@ -6732,7 +6756,7 @@ void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
 
 void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
 {
-    Q_UNUSED(pE);
+    Q_UNUSED(pE)
 
     saveOpenChanges();
 }

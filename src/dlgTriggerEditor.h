@@ -517,6 +517,9 @@ private:
     QString msgInfoAddButton;
     QString msgInfoAddVar;
     QString msgInfoAddKey;
+
+    QString mUnknownIdText;
+    QString mIdText;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

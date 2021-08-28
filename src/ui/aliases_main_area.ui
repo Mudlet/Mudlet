@@ -39,7 +39,7 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="1" colspan="3">
+   <item row="0" column="1" colspan="2">
     <widget class="QLineEdit" name="lineEdit_alias_name">
      <property name="minimumSize">
       <size>
@@ -55,6 +55,19 @@
      </property>
      <property name="toolTip">
       <string>choose a unique name for your alias; it will show in the tree and is needed for scripting.</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="3">
+    <widget class="QLabel" name="label_id">
+     <property name="text">
+      <string>&lt;p&gt;ID: &lt;b&gt;?&lt;/b&gt;&lt;/p&gt;</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="textInteractionFlags">
+      <set>Qt::TextSelectableByMouse</set>
      </property>
     </widget>
    </item>
