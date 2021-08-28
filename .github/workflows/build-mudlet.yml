@@ -342,6 +342,10 @@ jobs:
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
 
+    - name: Passed Lua tests
+      if: env.BUSTED_TESTS_FAILED == 'true'
+      run: exit 1
+
     - name: Setup tmate session
       uses: mxschmitt/action-tmate@v3
       if: failure()
