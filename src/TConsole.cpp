@@ -1673,6 +1673,8 @@ void TConsole::print(const char* txt)
 {
     QString msg(txt);
     print(msg);
+
+    qDebug() << mConsoleName << txt;
 }
 
 // echoUserWindow(const QString& msg) was a redundant wrapper around this method:
@@ -1681,6 +1683,8 @@ void TConsole::print(const QString& msg)
     buffer.append(msg, 0, msg.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
+
+    qDebug() << mConsoleName << msg;
 }
 
 // printDebug(QColor& c, QColor& d, const QString& msg) was functionally the
