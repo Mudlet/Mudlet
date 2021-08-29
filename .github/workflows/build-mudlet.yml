@@ -132,7 +132,7 @@ jobs:
         # add new tap to brew for installing gon
         brew tap mitchellh/gon
         # these aren't available or don't work well in vcpkg
-        brew install automake autoconf pkg-config libzzip libzip ccache luarocks expect mitchellh/gon/gon
+        brew install pkg-config libzzip libzip ccache luarocks expect mitchellh/gon/gon
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
