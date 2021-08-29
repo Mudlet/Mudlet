@@ -350,15 +350,6 @@ jobs:
           exit 1
         fi
 
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      if: always()
-      timeout-minutes: 15
-      env:
-        AUTORUN_BUSTED_TESTS: 'true'
-        TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
-        QUIT_MUDLET_AFTER_TESTS: 'true'
-
     - name: (windows) Show relevant logs logs
       if: failure() && runner.os == 'Windows'
       run: |
