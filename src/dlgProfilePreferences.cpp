@@ -183,7 +183,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     tabWidget->setCurrentIndex(0);
 
     // To be moved to a slot that is used on GUI language change when that gets
-    // implimented:
+    // implemented:
 
     // Set the tooltip on the containing widget so both the label and the
     // control have the same tool-tip:
@@ -240,7 +240,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                              "<li><b>Checked</b> '<i>on</i>' = Allow menus to be drawn with icons.</li>"
                                              "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
                                              "<p><i>This setting is only processed when individual menus are created and changes may not "
-                                             "propogate everywhere until Mudlet is restarted.</i></p>"));
+                                             "propagate everywhere until Mudlet is restarted.</i></p>"));
 
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
@@ -406,7 +406,7 @@ void dlgProfilePreferences::disableHostDetails()
 
     // on tab_mapper:
     // most of groupBox_mapFiles is disabled but there is ONE checkBox that
-    // is accessable because it is application wide - so disable EVERYTHING
+    // is accessible because it is application wide - so disable EVERYTHING
     // else that is not already disabled:
     label_saveMap->setEnabled(false);
     pushButton_saveMap->setEnabled(false);
@@ -485,7 +485,7 @@ void dlgProfilePreferences::enableHostDetails()
 
     // on tab_mapper:
     // most of groupBox_mapFiles is disabled but there is ONE checkBox that
-    // is accessable because it is application wide - so disable EVERYTHING
+    // is accessible because it is application wide - so disable EVERYTHING
     // else that is not already disabled:
     label_saveMap->setEnabled(true);
     pushButton_saveMap->setEnabled(true);
@@ -614,7 +614,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
         }
 
-        // Reenable sorting now we have populated the widget:
+        // Re-enable sorting now we have populated the widget:
         dictList->setSortingEnabled(true);
         // Actually do the sort:
         dictList->sortItems();
@@ -804,7 +804,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     hidePasswordMigrationLabel();
 
-    //doubleclick ignore
+    //double-click ignore
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
     while (it.hasNext()) {
@@ -1632,8 +1632,7 @@ void dlgProfilePreferences::setCommandBgColor()
 void dlgProfilePreferences::setFontSize()
 {
     mFontSize = fontSize->currentIndex() + 1;
-    // delay setting pHost->mDisplayFont until save is clicked by the user.
-    //setDisplayFont();
+    setDisplayFont();
 }
 
 void dlgProfilePreferences::setDisplayFont()
@@ -2300,7 +2299,7 @@ void dlgProfilePreferences::copyMap()
     mudlet::self()->requestProfilesToReloadMaps(toProfilesRoomIdMap.keys());
     // GOTCHA: keys() is a QList<QString>, however, though it IS equivalent to a
     // QStringList in many ways, the SLOT/SIGNAL system treats them as different
-    // - I thinK - so use QList<QString> thoughout the SIGNAL/SLOT links Slysven!
+    // - I thinK - so use QList<QString> throughout the SIGNAL/SLOT links Slysven!
     label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
     QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 
@@ -2332,7 +2331,7 @@ void dlgProfilePreferences::slot_setLogDir()
      * QFileDialog constructors."
      *
      * That warning suggests *bad things* would happen if the "Save" button or
-     * the widget title bar close button was pressed on the Profile Preferrences
+     * the widget title bar close button was pressed on the Profile Preferences
      * dialog while the directory selector is open...!
      */
     // Seems to return "." when Cancel is hit:
@@ -3508,7 +3507,7 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont & font)
 
 // These next two prevent BOTH controls being set to never to prevent the lose
 // of access to the setting/controls completely - once there is a profile loaded
-// access to the settings/controls can be overriden by a context menu action on
+// access to the settings/controls can be overridden by a context menu action on
 // any TConsole instance:
 void dlgProfilePreferences::slot_changeShowMenuBar(int newIndex)
 {
@@ -3602,7 +3601,7 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
                                       .scaled(iconBackground.width(), iconBackground.height(), Qt::KeepAspectRatioByExpanding));
             painter.fillRect(0, 0, iconBackground.width(), iconBackground.height(), disabledColor);
             painter.end();
-            // Because the button is disabled we have to explictly force our
+            // Because the button is disabled we have to explicitly force our
             // icon to be used for that state otherwise the built-in icon engine
             // will assume our image is for the normal state and grey it out
             // completely by automagic means instead of making use of the
@@ -3756,7 +3755,7 @@ void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
 
     // Now change the displayed texts that are translated - importantly this
     // is done so that the message that says "restart Mudlet to finish changing
-    // the language" is shown in the newly selected langauge - on the basis that
+    // the language" is shown in the newly selected language - on the basis that
     // it is the one the user understands rather than the currently used one.
     retranslateUi(this);
 
