@@ -110,7 +110,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # dependencies needed for vcpkg specifically
-        brew install automake autoconf 
+        brew install automake autoconf
 
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v7
