@@ -101,16 +101,6 @@ jobs:
     - name: Use CMake 3.20.1
       uses: lukka/get-cmake@v3.20.1
 
-    # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
-    - name: Restore from cache and run vcpkg
-      uses: lukka/run-vcpkg@v7
-      env:
-        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
-      with:
-        vcpkgArguments: '@${{env.vcpkgResponseFile}}'
-        vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
-        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
-
     - name: (macOS) Install non-vcpkg dependencies
       if: runner.os == 'macOS'
       env:
@@ -199,6 +189,16 @@ jobs:
 
         CheckAndInstallZlib
         CheckAndInstallLibzip
+
+    # this depends on the previous steps above for dependencies
+    - name: Restore from cache and run vcpkg
+      uses: lukka/run-vcpkg@v7
+      env:
+        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
+      with:
+        vcpkgArguments: '@${{env.vcpkgResponseFile}}'
+        vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
+        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
 
     - name: (Linux Clang) change compiler
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
