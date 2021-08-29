@@ -323,13 +323,6 @@ jobs:
       run: curl -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
 
-    - name: Upload GitHub Actions artifact of vcpkg build logs
-      if: failure()
-      uses: actions/upload-artifact@v2
-      with:
-        name: vcpkg-logs-${{ runner.os }}
-        path: ${{ github.workspace }}/3rdparty/vcpkg/buildtrees/**/*.log
-
     - name: (windows) Show relevant setup logs
       if: failure() && runner.os == 'Windows'
       run: |
