@@ -140,7 +140,7 @@ void dlgPackageExporter::appendToDetails(const QString& what, const QString& val
         // Insert a leading linefeed at the start as some zip utilities prefix
         // the first line with, say something like "Comment: " which does not
         // look so good when immediately followed by "Package name:". For
-        // Similiar layout reasons, indent all the comment entries by, say,
+        // similar layout reasons, indent all the comment entries by, say,
         // four spaces in the next chunk of code.
         mPackageComment.append(QChar::LineFeed);
     }
@@ -633,7 +633,7 @@ QString dlgPackageExporter::copyNewImagesToTmp(const QString& tempPath) const
 // purge images from tmp which are no longer used by the description
 void dlgPackageExporter::cleanupUnusedImages(const QString& tempPath, const QString& plainDescription)
 {
-    static QRegularExpression imagesInUsePattern(R"(\$packagePath\/\.mudlet\/description_images\/(.+?)\")");
+    static QRegularExpression imagesInUsePattern(R"(\$packagePath\/\.mudlet\/description_images\/(.+?)\.)");
     QStringList imagesInUse;
     QRegularExpressionMatchIterator i = imagesInUsePattern.globalMatch(plainDescription);
     while (i.hasNext()) {
@@ -645,7 +645,7 @@ void dlgPackageExporter::cleanupUnusedImages(const QString& tempPath, const QStr
     QDirIterator allImagesCopied(QStringLiteral("%1.mudlet/description_images").arg(tempPath), QDir::Files);
     while (allImagesCopied.hasNext()) {
         QFileInfo copiedImage(allImagesCopied.next());
-        if (!imagesInUse.contains(copiedImage.fileName())) {
+        if (!imagesInUse.contains(copiedImage.baseName())) {
             if (!QFile(copiedImage.absoluteFilePath()).remove()) {
                 qDebug() << "couldn't remove unused image" << copiedImage.fileName();
             }

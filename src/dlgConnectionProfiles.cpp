@@ -399,7 +399,7 @@ void dlgConnectionProfiles::slot_update_autoreconnect(int state)
 }
 
 // This gets called when the QCheckBox that it is connect-ed to gets its
-// checked state set programatically AS WELL as when the user clicks on it:
+// checked state set programmatically AS WELL as when the user clicks on it:
 void dlgConnectionProfiles::slot_update_discord_optin(int state)
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
@@ -878,83 +878,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     QString host_url = readProfileData(profile_name, QStringLiteral("url"));
     if (host_url.isEmpty()) {
         // Host to connect to, see below for port
-        if (profile_name == QStringLiteral("Avalon.de")) {
-            host_url = QStringLiteral("avalon.mud.de");
-        }
-        if (profile_name == QStringLiteral("God Wars II")) {
-            host_url = QStringLiteral("godwars2.org");
-        }
-        if (profile_name == QStringLiteral("Materia Magica")) {
-            host_url = QStringLiteral("materiamagica.com");
-        }
-        if (profile_name == QStringLiteral("BatMUD")) {
-            host_url = QStringLiteral("batmud.bat.org");
-        }
-        if (profile_name == QStringLiteral("Aardwolf")) {
-            host_url = QStringLiteral("aardmud.org");
-        }
-        if (profile_name == QStringLiteral("Achaea")) {
-            host_url = QStringLiteral("achaea.com");
-        }
-        if (profile_name == QStringLiteral("Aetolia")) {
-            host_url = QStringLiteral("aetolia.com");
-        }
-        if (profile_name == QStringLiteral("Lusternia")) {
-            host_url = QStringLiteral("lusternia.com");
-        }
-        if (profile_name == QStringLiteral("Imperian")) {
-            host_url = QStringLiteral("imperian.com");
-        }
-        if (profile_name == QStringLiteral("Realms of Despair")) {
-            host_url = QStringLiteral("realmsofdespair.com");
-        }
-        if (profile_name == QStringLiteral("ZombieMUD")) {
-            host_url = QStringLiteral("zombiemud.org");
-        }
-        if (profile_name == QStringLiteral("Carrion Fields")) {
-            host_url = QStringLiteral("carrionfields.net");
-        }
-        if (profile_name == QStringLiteral("Cleft of Dimensions")) {
-            host_url = QStringLiteral("cleftofdimensions.net");
-        }
-        if (profile_name == QStringLiteral("3Scapes")) {
-            host_url = QStringLiteral("3k.org");
-        }
-        if (profile_name == QStringLiteral("3Kingdoms")) {
-            host_url = QStringLiteral("3k.org");
-        }
-        if (profile_name == QStringLiteral("Slothmud")) {
-            host_url = QStringLiteral("slothmud.org");
-        }
-        if (profile_name == QStringLiteral("WoTMUD")) {
-            host_url = QStringLiteral("game.wotmud.org");
-        }
-        if (profile_name == QStringLiteral("Midnight Sun 2")) {
-            host_url = QStringLiteral("midnightsun2.org");
-        }
-        if (profile_name == QStringLiteral("Luminari")) {
-            host_url = QStringLiteral("luminarimud.com");
-        }
-        if (profile_name == QStringLiteral("StickMUD")) {
-            host_url = QStringLiteral("stickmud.com");
-        }
-        if (profile_name == QStringLiteral("Clessidra")) {
-            host_url = QStringLiteral("mud.clessidra.it");
-        }
-        if (profile_name == QStringLiteral("Reinos de Leyenda")) {
-            host_url = QStringLiteral("reinosdeleyenda.es");
-        }
-        if (profile_name == QStringLiteral("Fierymud")) {
-            host_url = QStringLiteral("fierymud.org");
-        }
-        if (profile_name == QStringLiteral("Mudlet self-test")) {
-            host_url = QStringLiteral("mudlet.org");
-        }
-        if (profile_name == QStringLiteral("CoreMUD")) {
-            host_url = QStringLiteral("coremud.org");
-        }
-        if (profile_name == QStringLiteral("Legends of the Jedi")) {
-            host_url = QStringLiteral("legendsofthejedi.com");
+        const auto it = mudlet::scmDefaultGames.constFind(profile_name);
+        if (it != mudlet::scmDefaultGames.cend()) {
+            host_url = it->hostUrl;
         }
     }
     host_name_entry->setText(host_url);
@@ -968,125 +894,10 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     }
 
     if (host_port.isEmpty()) {
-        if (profile_name == QStringLiteral("Avalon.de")) {
-            //host_url = QStringLiteral("avalon.mud.de");
-            host_port = QStringLiteral("23");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("God Wars II")) {
-            //host_url = QStringLiteral("godwars2.org");
-            host_port = QStringLiteral("3000");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("Materia Magica")) {
-            //host_url = QStringLiteral("materiamagica.com");
-            host_port = QStringLiteral("23");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("BatMUD")) {
-            //host_url = QStringLiteral("batmud.bat.org");
-            host_port = QStringLiteral("23");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("Aardwolf")) {
-            //host_url = QStringLiteral("aardmud.org");
-            host_port = QStringLiteral("4000");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("Achaea")) {
-            //host_url = QStringLiteral("achaea.com");
-            host_port = QStringLiteral("23");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("Aetolia")) {
-            //host_url = QStringLiteral("aetolia.com");
-            host_port = QStringLiteral("23");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("Lusternia")) {
-            //host_url = QStringLiteral("lusternia.com");
-            host_port = QStringLiteral("23");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("Imperian")) {
-            //host_url = QStringLiteral("imperian.com");
-            host_port = QStringLiteral("23");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("Realms of Despair")) {
-            //host_url = QStringLiteral("realmsofdespair.com");
-            host_port = QStringLiteral("4000");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("ZombieMUD")) {
-            //host_url = QStringLiteral("zombiemud.org");
-            host_port = QStringLiteral("23");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("Carrion Fields")) {
-            host_port = QStringLiteral("4449");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("Cleft of Dimensions")) {
-            host_port = QStringLiteral("4354");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("3Scapes")) {
-            //host_url = QStringLiteral("3k.org");
-            host_port = QStringLiteral("3200");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("3Kingdoms")) {
-            //host_url = QStringLiteral("3k.org");
-            host_port = QStringLiteral("3000");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("Slothmud")) {
-            //host_url = QStringLiteral("slothmud.org");
-            host_port = QStringLiteral("6101");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("WoTMUD")) {
-            //host_url = QStringLiteral("game.wotmud.org");
-            host_port = QStringLiteral("2224");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("Midnight Sun 2")) {
-            //host_url = QStringLiteral("midnightsun2.org");
-            host_port = QStringLiteral("3000");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("Luminari")) {
-            //host_url = QStringLiteral("luminarimud.com");
-            host_port = QStringLiteral("4100");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("StickMUD")) {
-            host_port = QStringLiteral("7680");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("Clessidra")) {
-            host_port = QStringLiteral("4000");
-        }
-        if (profile_name == QStringLiteral("Reinos de Leyenda")) {
-            //host_url = QStringLiteral("reinosdeleyenda.es");
-            host_port = QStringLiteral("23");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("Fierymud")) {
-            host_port = QStringLiteral("4000");
-        }
-        if (profile_name == QStringLiteral("CoreMUD")) {
-            host_port = QStringLiteral("4000");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("Legends of the Jedi")) {
-            host_port = QStringLiteral("5656");
-            port_ssl_tsl->setChecked(false);
-        }
-        if (profile_name == QStringLiteral("Mudlet self-test")) {
-            host_port = QStringLiteral("23");
-            port_ssl_tsl->setChecked(false);
+        const auto it = mudlet::scmDefaultGames.constFind(profile_name);
+        if (it != mudlet::scmDefaultGames.cend()) {
+            host_port = QString::number(it->port);
+            port_ssl_tsl->setChecked(it->tlsEnabled);
         }
     }
 
@@ -1142,83 +953,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     val = readProfileData(profile_name, QStringLiteral("website"));
     if (val.isEmpty()) {
-        if (profile_name == QStringLiteral("Avalon.de")) {
-            val = QStringLiteral("<center><a href='http://avalon.mud.de'>http://avalon.mud.de</a></center>");
-        }
-        if (profile_name == QStringLiteral("God Wars II")) {
-            val = QStringLiteral("<center><a href='http://www.godwars2.org'>http://www.godwars2.org</a></center>");
-        }
-        if (profile_name == QStringLiteral("Materia Magica")) {
-            val = QStringLiteral("<center><a href='http://www.materiamagica.com'>http://www.materiamagica.com</a></center>");
-        }
-        if (profile_name == QStringLiteral("BatMUD")) {
-            val = QStringLiteral("<center><a href='http://www.bat.org'>http://www.bat.org</a></center>");
-        }
-        if (profile_name == QStringLiteral("Aardwolf")) {
-            val = QStringLiteral("<center><a href='http://www.aardwolf.com/'>http://www.aardwolf.com</a></center>");
-        }
-        if (profile_name == QStringLiteral("Achaea")) {
-            val = QStringLiteral("<center><a href='http://www.achaea.com/'>http://www.achaea.com</a></center>");
-        }
-        if (profile_name == QStringLiteral("Realms of Despair")) {
-            val = QStringLiteral("<center><a href='http://www.realmsofdespair.com/'>http://www.realmsofdespair.com</a></center>");
-        }
-        if (profile_name == QStringLiteral("ZombieMUD")) {
-            val = QStringLiteral("<center><a href='http://www.zombiemud.org/'>http://www.zombiemud.org</a></center>");
-        }
-        if (profile_name == QStringLiteral("Carrion Fields")) {
-            val = QStringLiteral("<center><a href='http://www.carrionfields.net'>www.carrionfields.net</a></center>");
-        }
-        if (profile_name == QStringLiteral("Cleft of Dimensions")) {
-            val = QStringLiteral("<center><a href='https://www.cleftofdimensions.net/'>cleftofdimensions.net</a></center>");
-        }
-        if (profile_name == QStringLiteral("Aetolia")) {
-            val = QStringLiteral("<center><a href='http://www.aetolia.com/'>http://www.aetolia.com</a></center>");
-        }
-        if (profile_name == QStringLiteral("Lusternia")) {
-            val = QStringLiteral("<center><a href='http://www.lusternia.com/'>http://www.lusternia.com</a></center>");
-        }
-        if (profile_name == QStringLiteral("Imperian")) {
-            val = QStringLiteral("<center><a href='http://www.imperian.com/'>http://www.imperian.com</a></center>");
-        }
-        if (profile_name == QStringLiteral("3Scapes")) {
-            val = QStringLiteral("<center><a href='http://www.3scapes.org/'>http://www.3scapes.org</a></center>");
-        }
-        if (profile_name == QStringLiteral("3Kingdoms")) {
-            val = QStringLiteral("<center><a href='http://www.3k.org/'>http://www.3k.org</a></center>");
-        }
-        if (profile_name == QStringLiteral("Slothmud")) {
-            val = QStringLiteral("<center><a href='http://www.slothmud.org/'>http://www.slothmud.org/</a></center>");
-        }
-        if (profile_name == QStringLiteral("WoTMUD")) {
-            val = QStringLiteral("<center><a href='http://www.wotmud.org/'>Main website</a></center>\n"
-                                 "<center><a href='http://www.wotmod.org/'>Forums</a></center>");
-        }
-        if (profile_name == QStringLiteral("Midnight Sun 2")) {
-            val = QStringLiteral("<center><a href='http://midnightsun2.org/'>http://midnightsun2.org/</a></center>");
-        }
-        if (profile_name == QStringLiteral("Luminari")) {
-            val = QStringLiteral("<center><a href='http://www.luminarimud.com/'>http://www.luminarimud.com/</a></center>");
-        }
-        if (profile_name == QStringLiteral("StickMUD")) {
-            val = QStringLiteral("<center><a href='http://www.stickmud.com/'>stickmud.com</a></center>");
-        }
-        if (profile_name == QStringLiteral("Clessidra")) {
-            val = QStringLiteral("<center><a href='http://www.clessidra.it/'>http://www.clessidra.it</a></center>");
-        }
-        if (profile_name == QStringLiteral("Fierymud")) {
-            val = QStringLiteral("<center><a href='https://www.fierymud.org/'>https://www.fierymud.org</a></center>");
-        }
-        if (profile_name == QStringLiteral("Reinos de Leyenda")) {
-            val = QStringLiteral("<center><a href='https://www.reinosdeleyenda.es/'>Main website</a></center>\n"
-                                 "<center><a href='https://www.reinosdeleyenda.es/foro/'>Forums</a></center>\n"
-                                 "<center><a href='https://wiki.reinosdeleyenda.es/'>Wiki</a></center>\n");
-        }
-        if (profile_name == QStringLiteral("CoreMUD")) {
-            val = QStringLiteral("<center><a href='https://coremud.org/'>coremud.org</a></center>");
-        }
-        if (profile_name == QStringLiteral("Legends of the Jedi")) {
-            val = QStringLiteral("<center><a href='https://www.legendsofthejedi.com/'>legendsofthejedi.com</a></center>");
+        const auto it = mudlet::scmDefaultGames.constFind(profile_name);
+        if (it != mudlet::scmDefaultGames.cend()) {
+            val = it->websiteInfo;
         }
     }
     website_entry->setText(val);
@@ -1362,166 +1099,22 @@ void dlgConnectionProfiles::fillout_form()
     }
 
     profiles_tree_widget->setIconSize(QSize(120, 30));
-    QString mudServer, description;
+    QString description;
     QListWidgetItem* pItem;
 
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(QStringLiteral("deletedDefaultMuds"), QStringList()).toStringList();
+    const auto defaultGames = mudlet::scmDefaultGames.keys();
 
-    mudServer = QStringLiteral("Avalon.de");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("avalon.mud.de"), 0, mudServer), QStringLiteral(":/icons/avalon.png"));
+    for (auto& game : defaultGames) {
+        if (!deletedDefaultMuds.contains(game)) {
+            pItem = new QListWidgetItem();
+            setupMudProfile(pItem, game, getDescription(mudlet::scmDefaultGames[game].hostUrl, mudlet::scmDefaultGames[game].port, game), mudlet::scmDefaultGames[game].icon);
+        }
     }
-
-    mudServer = QStringLiteral("Achaea");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("achaea.com"), 0, mudServer), QStringLiteral(":/icons/achaea_120_30.png"));
-    }
-
-    mudServer = QStringLiteral("3Kingdoms");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("3k.org"), 3000, mudServer), QStringLiteral(":/icons/3klogo.png"));
-    }
-
-    mudServer = QStringLiteral("3Scapes");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("3k.org"), 3200, mudServer), QStringLiteral(":/icons/3slogo.png"));
-    }
-
-    mudServer = QStringLiteral("Lusternia");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("lusternia.com"), 0, mudServer), QStringLiteral(":/icons/lusternia_120_30.png"));
-    }
-
-    mudServer = QStringLiteral("BatMUD");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("batmud.bat.org"), 0, mudServer), QStringLiteral(":/icons/batmud_mud.png"));
-    }
-
-    mudServer = QStringLiteral("God Wars II");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("godwars2.org"), 0, mudServer), QStringLiteral(":/icons/gw2.png"));
-    }
-
-    mudServer = QStringLiteral("Slothmud");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("slothmud.org"), 0, mudServer), QStringLiteral(":/icons/Slothmud.png"));
-    }
-
-    mudServer = QStringLiteral("Aardwolf");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("aardmud.org"), 0, mudServer), QStringLiteral(":/icons/aardwolf_mud.png"));
-    }
-
-    mudServer = QStringLiteral("Materia Magica");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("materiamagica.com"), 0, mudServer), QStringLiteral(":/materiaMagicaIcon"));
-    }
-
-    mudServer = QStringLiteral("Realms of Despair");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("realmsofdespair.com"), 0, mudServer), QStringLiteral(":/icons/120x30RoDLogo.png"));
-    }
-
-    mudServer = QStringLiteral("ZombieMUD");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("zombiemud.org"), 0, mudServer), QStringLiteral(":/icons/zombiemud.png"));
-    }
-
-    mudServer = QStringLiteral("Aetolia");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("aetolia.com"), 0, mudServer), QStringLiteral(":/icons/aetolia_120_30.png"));
-    }
-
-    mudServer = QStringLiteral("Imperian");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("imperian.com"), 0, mudServer), QStringLiteral(":/icons/imperian_120_30.png"));
-    }
-
-    mudServer = QStringLiteral("WoTMUD");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("game.wotmud.org"), 0, mudServer), QStringLiteral(":/icons/wotmudicon.png"));
-    }
-
-    mudServer = QStringLiteral("Midnight Sun 2");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("midnightsun2.org"), 0, mudServer), QStringLiteral(":/icons/midnightsun2.png"));
-    }
-
-    mudServer = QStringLiteral("Luminari");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("luminari_icon.com"), 0, mudServer), QStringLiteral(":/icons/luminari_icon.png"));
-    }
-
-    mudServer = QStringLiteral("StickMUD");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("stickmud.com"), 0, mudServer), QStringLiteral(":/icons/stickmud_icon.jpg"));
-    }
-
-    mudServer = QStringLiteral("Clessidra");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("clessidra.it"), 0, mudServer), QStringLiteral(":/icons/clessidra.jpg"));
-    }
-
-    mudServer = QStringLiteral("Reinos de Leyenda");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("reinosdeleyenda.es"), 0, mudServer), QStringLiteral(":/icons/reinosdeleyenda_mud.png"));
-    }
-
-
-    mudServer = QStringLiteral("Fierymud");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("fierymud.org"), 0, mudServer), QStringLiteral(":/icons/fiery_mud.png"));
-    }
-
-    mudServer = QStringLiteral("Carrion Fields");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("carrionfields.net"), 0, mudServer), QStringLiteral(":/icons/carrionfields.png"));
-    }
-
-    mudServer = QStringLiteral("Cleft of Dimensions");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("cleftofdimensions.net"), 0, mudServer), QStringLiteral(":/icons/cleftofdimensions.png"));
-    }
-
-    mudServer = QStringLiteral("CoreMUD");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("coremud.org"), 0, mudServer), QStringLiteral(":/icons/coremud_icon.jpg"));
-    }
-
-    mudServer = QStringLiteral("Legends of the Jedi");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("legendsofthejedi.com"), 0, mudServer), QStringLiteral(":/icons/legendsofthejedi_120x30.png"));
-    }
-
 
 #if defined(QT_DEBUG)
-    mudServer = QStringLiteral("Mudlet self-test");
+    QString mudServer = QStringLiteral("Mudlet self-test");
     if (!deletedDefaultMuds.contains(mudServer) && !mProfileList.contains(mudServer)) {
         mProfileList.append(mudServer);
         pItem = new QListWidgetItem();
@@ -1585,6 +1178,8 @@ void dlgConnectionProfiles::fillout_form()
 
 void dlgConnectionProfiles::setProfileIcon() const
 {
+    const QStringList defaultGames = mudlet::scmDefaultGames.keys();
+
     for (int i = 0; i < mProfileList.size(); i++) {
         const QString& profileName = mProfileList.at(i);
         if (profileName.isEmpty()) {
@@ -1598,7 +1193,7 @@ void dlgConnectionProfiles::setProfileIcon() const
             // necessarily case preserving for file names so any tests on them
             // should be case insensitive
             // skip creating icons for default MUDs as they are already created above
-            if (mudlet::scmDefaultGames.contains(profileName, Qt::CaseInsensitive)) {
+            if (defaultGames.contains(profileName, Qt::CaseInsensitive)) {
                 continue;
             }
 
@@ -1768,7 +1363,7 @@ void dlgConnectionProfiles::slot_reset_custom_icon()
 void dlgConnectionProfiles::slot_password_saved(QKeychain::Job* job)
 {
     if (job->error()) {
-        qWarning() << "dlgConnectionProfiles::slot_password_saved ERROR: couldn't save password for" << job->property("profile") << "; error was:" << job->errorString();
+        qWarning() << "dlgConnectionProfiles::slot_password_saved ERROR: couldn't save password for" << job->property("profile").toString() << "; error was:" << job->errorString();
     }
 
     job->deleteLater();
@@ -1777,7 +1372,7 @@ void dlgConnectionProfiles::slot_password_saved(QKeychain::Job* job)
 void dlgConnectionProfiles::slot_password_deleted(QKeychain::Job* job)
 {
     if (job->error()) {
-        qWarning() << "dlgConnectionProfiles::slot_password_deleted ERROR: couldn't delete password for" << job->property("profile") << "; error was:" << job->errorString();
+        qWarning() << "dlgConnectionProfiles::slot_password_deleted ERROR: couldn't delete password for" << job->property("profile").toString() << "; error was:" << job->errorString();
     }
 
     job->deleteLater();
@@ -1890,6 +1485,7 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
 
     // add the new widget in
     profiles_tree_widget->addItem(pItem);
+    pItem->setIcon(customIcon(profile_name, std::nullopt));
     profiles_tree_widget->setCurrentItem(pItem);
 
     profile_name_entry->setText(profile_name);
@@ -2073,33 +1669,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     }
 
     if (preInstallPackages) {
-        auto gameUrl = pHost->getUrl().toLower();
-        const QHash<QString, QStringList> defaultScripts = {
-                {QStringLiteral(":/run-lua-code-v4.xml"), {QStringLiteral("*")}},
-                {QStringLiteral(":/echo.xml"), {QStringLiteral("*")}},
-                {QStringLiteral(":/deleteOldProfiles.xml"), {QStringLiteral("*")}},
-                {QStringLiteral(":/CF-loader.xml"), {QStringLiteral("carrionfields.net")}},
-                {QStringLiteral(":/run-tests.xml"), {QStringLiteral("mudlet.org")}},
-                {QStringLiteral(":/mudlet-mapper.xml"),
-                 {QStringLiteral("aetolia.com"),
-                  QStringLiteral("achaea.com"),
-                  QStringLiteral("lusternia.com"),
-                  QStringLiteral("imperian.com"),
-                  QStringLiteral("starmourn.com"),
-                  QStringLiteral("stickmud.com")}},
-        };
-
-        QHashIterator<QString, QStringList> i(defaultScripts);
-        while (i.hasNext()) {
-            i.next();
-            if (i.value().first() == QLatin1String("*") || i.value().contains(gameUrl)) {
-                mudlet::self()->packagesToInstallList.append(i.key());
-            }
-        }
-
-        if (!mudlet::self()->packagesToInstallList.contains(QStringLiteral(":/mudlet-mapper.xml"))) {
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
-        }
+        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
     }
 
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
@@ -2350,6 +1920,10 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
     profiles_tree_widget->addItem(pItem);
     if (!hasCustomIcon(mudServer)) {
         QPixmap p(iconFileName);
+        if (p.isNull()) {
+            qWarning() << mudServer << "doesn't have a valid icon";
+            return;
+        }
         if (p.width() != 120) {
             pItem->setIcon(p.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
         } else {

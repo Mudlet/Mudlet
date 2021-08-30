@@ -1326,7 +1326,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             // the hovered() signal can be *problematic* - as hitting a
             // breakpoint - or getting an OS signal (like a Segment Violation)
             // can hang not only Mudlet but also Qt Creator and possibly even
-            // your Desktop - though for *nix users swithing to a console and
+            // your Desktop - though for *nix users switching to a console and
             // killing the gdb debugger instance run by Qt Creator will restore
             // normality.
             connect(mpContextMenuAnalyser, &QAction::hovered, this, &TTextEdit::slot_analyseSelection);
@@ -1773,7 +1773,7 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
     // Convert to degrees:
     delta /= 8.0;
     // Allow the control key to introduce a speed up - but also allow it to be
-    // overriden by a shift key to slow the scroll down to one line/character
+    // overridden by a shift key to slow the scroll down to one line/character
     // per click:
     delta.rx() *= (e->modifiers() & Qt::ShiftModifier ? 1.0 : (e->modifiers() & Qt::ControlModifier ? xSpeedUp : 3.0));
     delta.ry() *= (e->modifiers() & Qt::ShiftModifier ? 1.0 : (e->modifiers() & Qt::ControlModifier ? ySpeedUp : 3.0));
@@ -1904,7 +1904,7 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
         quint16 value = first.unicode();
         switch (value) {
         case 0x003c:                    return htmlCenter(QStringLiteral("&lt;")); break; // As '<' gets interpreted as an opening HTML tag we have to handle it specially
-        case 0x003e:                    return htmlCenter(QStringLiteral("&gt;")); break; // '>' does not seem to get interpreted as a closing HTML tag but for symetry it is probably best to also handle it in the same way
+        case 0x003e:                    return htmlCenter(QStringLiteral("&gt;")); break; // '>' does not seem to get interpreted as a closing HTML tag but for symmetry it is probably best to also handle it in the same way
         case QChar::Tabulation:         return htmlCenter(tr("{tab}", "Unicode U+0009 codepoint.")); break;
         case QChar::LineFeed:           return htmlCenter(tr("{line-feed}", "Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.")); break;
         case QChar::CarriageReturn:     return htmlCenter(tr("{carriage-return}", "Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.")); break;

@@ -338,7 +338,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
     } else if (!(mAcceptableEncodings.contains(newEncoding) || mAcceptableEncodings.contains("M_" + newEncoding))) {
         // Not in list (even with a "M_" prefix that indicates the relevant
         // QTextCodec is actually one of our own TTextCodecs) - so reject it
-        // Since we want to hide the implimentation detail that some of the
+        // Since we want to hide the implementation detail that some of the
         // encoding names could have a "M_"  prefix we will need to preprocess
         // the list of encodings.
         // Since the mAcceptableEncodings list is unchanging once it has been
@@ -725,7 +725,7 @@ bool cTelnet::socketOutRaw(std::string& data)
         if (chunkWritten < 0) {
             // -1 is the sentinel (error) value but any other negative value
             // would not make sense and it would break the cast to the
-            // (unsigned) std::size_t type in the next code fragement!
+            // (unsigned) std::size_t type in the next code fragment!
             return false;
         }
 
@@ -1199,7 +1199,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
             triedToEnable[idxOption] = false;
         } else {
             if (!hisOptionState[idxOption]) {
-                //only if this is not set; if it's set, something's wrong wth the server
+                //only if this is not set; if it's set, something's wrong with the server
                 //(according to telnet specification, option announcement may not be
                 //unless explicitly requested)
 
@@ -1851,7 +1851,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
     } //end switch 1
 
     // raise sysTelnetEvent for all unhandled protocols
-    // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reaons
+    // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reasons
     if (command[1] != TN_GA && command[1] != TN_EOR) {
         auto type = static_cast<unsigned char>(command[1]);
         auto telnetOption = static_cast<unsigned char>(command[2]);
@@ -2322,7 +2322,7 @@ void cTelnet::atcpComposerSave(QString txt)
 // following prefix.
 // Prefixes are made uppercase.
 // Will store messages if the TConsole on which they are to be placed is not yet
-// in existance as happens during startup, then pumps them out in order of
+// in existence as happens during startup, then pumps them out in order of
 // arrival once a message arrives when the TConsole DOES exist.
 void cTelnet::postMessage(QString msg)
 {
@@ -3058,7 +3058,7 @@ QByteArray cTelnet::decodeBytes(const char* bytes)
 // encoding and cooks any 0xff bytes by doubling them to get them through Telnet
 // protocol handling in the Server - this is needed, at least, for the following
 //  characters in the following encodings which WILL become the 0xff value:
-// 'ÿ' {U+00FF Latin small letter y with diaresis} ==> ISO 8859-1/9/14/15/16
+// 'ÿ' {U+00FF Latin small letter y with diaeresis} ==> ISO 8859-1/9/14/15/16
 // '˙' {U+02D9 Dot above}                          ==> ISO 8859-2/3/4
 // 'џ' {U+045F Cyrillic small letter dzhe}         ==> ISO 8859-5
 // 'ĸ' {U+0138 Latin small letter kra}             ==> ISO 8859-10

@@ -735,7 +735,7 @@ private:
     bool mEnableUserDictionary;
     bool mUseSharedDictionary;
 
-    // These hold values that are needed in the TMap clas which are saved with
+    // These hold values that are needed in the TMap class which are saved with
     // the profile - but which cannot be kept there as that class is not
     // necessarily instantiated when the profile is read.
     // Base color(s) for the player room in the mappers:

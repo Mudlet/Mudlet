@@ -892,11 +892,11 @@ void XMLimport::readHostPackage(Host* pHost)
     if (qFuzzyCompare(1.0 + pHost->mRoomSize, 1.0)) {
         // The value is a float/double and the prior code using "== 0" is a BAD
         // THING to do with non-integer number types!
-        pHost->mRoomSize = 0.5; // Same value as is in Host class initalizer list
+        pHost->mRoomSize = 0.5; // Same value as is in Host class initializer list
     }
     pHost->mLineSize = attributes().value(QStringLiteral("mLineSize")).toString().toDouble();
     if (qFuzzyCompare(1.0 + pHost->mLineSize, 1.0)) {
-        pHost->mLineSize = 10.0; // Same value as is in Host class initalizer list
+        pHost->mLineSize = 10.0; // Same value as is in Host class initializer list
     }
     pHost->mBubbleMode = attributes().value(QStringLiteral("mBubbleMode")) == YES;
     pHost->mMapViewOnly = attributes().value(QStringLiteral("mMapViewOnly")) == YES;
@@ -1197,7 +1197,7 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
                 readIntegerList(pT->mRegexCodePropertyList, pT->getName());
                 if (Q_UNLIKELY(pT->mRegexCodeList.count() != pT->mRegexCodePropertyList.count())) {
                     qWarning().nospace() << "XMLimport::readTriggerGroup(...) ERROR: "
-                                            "mis-match in regexCode details for Trigger: "
+                                            "mismatch in regexCode details for Trigger: "
                                          << pT->getName() << " there were " << pT->mRegexCodeList.count() << " 'regexCodeList' sub-elements and " << pT->mRegexCodePropertyList.count()
                                          << " 'regexCodePropertyList' sub-elements so "
                                             "something is broken!";
@@ -1792,7 +1792,7 @@ void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<i
             }
 
         } else {
-            // Must advance the pattern interator if it isn't a colour pattern
+            // Must advance the pattern iterator if it isn't a colour pattern
             itPattern.next();
         }
     }

@@ -23,7 +23,7 @@
 /*
  * Eventually these should be defined for whole application to force explicit
  * definition of all strings as:
- * EITHER: QStringLiteral("<string>") for internal non-user visable use not
+ * EITHER: QStringLiteral("<string>") for internal non-user visible use not
  * subject to translation
  * OR: tr("<string>") for GUI or other user visible strings that need to be
  * handled by the translation system {or qApp->translate("<classname>",
@@ -157,7 +157,7 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
                                                              "a valid number; if left like this, this exit will be deleted when &lt;i&gt;save&lt;/i&gt; is clicked.")));
         }
 
-        mpEditItem = nullptr; //This will cause a new PE to be opened, it will also be zeroed on the first time this funciton is called
+        mpEditItem = nullptr; //This will cause a new PE to be opened, it will also be zeroed on the first time this function is called
         mEditColumn = -1;
     }
 
@@ -303,7 +303,7 @@ void dlgRoomExits::save()
         if (pR->hasExitStub(dirCode)) { // And ensure that stub exit is cleared if set
             pR->setExitStub(dirCode, false);
         }
-        if (weight_nw->value()) { // And store any weighing specifed
+        if (weight_nw->value()) { // And store any weighing specified
             pR->setExitWeight(exitKey, weight_nw->value());
         } else {
             pR->setExitWeight(exitKey, 0);
@@ -657,7 +657,7 @@ void dlgRoomExits::save()
 
     // return value from checkedId() is -1 for no radio button in group checked,
     //   and then more negative values starting from -2 for each button that was
-    //   created without an explict Id, any attempt to set a different Id using
+    //   created without an explicit Id, any attempt to set a different Id using
     //   setId() seems to fail for me :(
     if (doortype_nw->checkedId() < -1) {
         pR->setDoor(QStringLiteral("nw"), -2 - doortype_nw->checkedId());
@@ -1337,7 +1337,7 @@ void dlgRoomExits::slot_stub_nw_stateChanged(int state)
         doortype_closed_nw->setEnabled(false);
         doortype_locked_nw->setEnabled(false);
         doortype_none_nw->setChecked(true);
-        //  similarly as there won't be a valid exit or a stub exit at theis point disable/reset the door type controls
+        //  similarly as there won't be a valid exit or a stub exit at this point disable/reset the door type controls
         weight_nw->setEnabled(false);
         weight_nw->setValue(0); // Prevent a weight to be set/changed on a also
     }
@@ -1771,7 +1771,7 @@ void dlgRoomExits::initExit(int roomId,
     } else {                                             //No exit is set on initialisation
         exitLineEdit->setText(QString());                //Nothing to put in exitID box
         exitLineEdit->setStyleSheet(QString());
-        noRoute->setEnabled(false); //Disable lock control, can't lock a non-existant exit..
+        noRoute->setEnabled(false); //Disable lock control, can't lock a non-existent exit..
         noRoute->setChecked(false); //.. and ensure there isn't one
         weight->setEnabled(false);  //Disable exit weight control...
         weight->setValue(0);        //And reset to default value (which will now cause the room's one to be used
@@ -1788,7 +1788,7 @@ void dlgRoomExits::initExit(int roomId,
             exitLineEdit->setEnabled(true);
             exitLineEdit->setToolTip(singleParagraph.arg(tr("Set the number of the room %1 of this one, will be blue for a valid number or red for invalid.").arg(exitText)));
             stub->setChecked(false);
-            none->setEnabled(false); //Disable door type controls, can't lock a non-existant exit..
+            none->setEnabled(false); //Disable door type controls, can't lock a non-existent exit..
             open->setEnabled(false); //.. and ensure the "none" one is set if it ever gets enabled
             closed->setEnabled(false);
             locked->setEnabled(false);

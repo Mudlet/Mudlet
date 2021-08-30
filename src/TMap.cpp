@@ -598,7 +598,7 @@ void TMap::initGraph()
     unsigned int roomCount = 0;
     unsigned int edgeCount = 0;
     QSet<unsigned int> unUsableRoomSet;
-    // Keep track of the unusuable rather than the useable ones because that is
+    // Keep track of the unusable rather than the usable ones because that is
     // hopefully a MUCH smaller set in normal situations!
     QHashIterator<int, TRoom*> itRoom = mpRoomDB->getRoomMap();
     while (itRoom.hasNext()) {
@@ -822,7 +822,7 @@ void TMap::initGraph()
             }
         } // End of while(itSpecialExit.hasNext())
 
-        // Now we have eliminated possibe duplicate and useless edges we can create and
+        // Now we have eliminated possible duplicate and useless edges we can create and
         // insert the remainder into the BGL graph:
         QHashIterator<unsigned int, route> itRoute = bestRoutes;
         while (itRoute.hasNext()) {
@@ -841,7 +841,7 @@ void TMap::initGraph()
 
     mMapGraphNeedsUpdate = false;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
-             << "other NOT useable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
+             << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
 }
 
 bool TMap::findPath(int from, int to)
@@ -860,7 +860,7 @@ bool TMap::findPath(int from, int to)
     // passed, the data is empty - and valid for THAT case!
 
     if (from == to) {
-        return true; // Take a short-cut for trival "already there" case!
+        return true; // Take a short-cut for trivial "already there" case!
     }
 
     TRoom* pFrom = mpRoomDB->getRoom(from);
@@ -2876,7 +2876,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         // "colorRGBA"
         writeJsonColor(customEnvColorObj, itCustomEnvColor.value());
         customEnvColorObj.insert(QLatin1String("id"), QJsonValue{itCustomEnvColor.key()});
-        // Covert the customEnvColorObj into a QJsonValue:
+        // Convert the customEnvColorObj into a QJsonValue:
         const QJsonValue customEnvColorValue{customEnvColorObj};
         // Now append this object onto the array:
         customEnvColorArray.append(customEnvColorValue);
