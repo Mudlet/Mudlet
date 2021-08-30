@@ -463,7 +463,7 @@ void TMap::audit()
                         // Note that two of the last three arguments here
                         // (false, 40.0) are not the defaults (true, 30.0) used
                         // now:
-                        int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50);
+                        int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50, std::nullopt);
                         if (newID > -1) {
                             if (mudlet::self()->showMapAuditErrors()) {
                                 QString msg = tr("[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.").arg(areaID).arg(i);
@@ -2053,7 +2053,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     return true;
 }
 
-int TMap::createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, qreal zoom, int fontSize)
+int TMap::createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, qreal zoom, int fontSize, std::optional<QString> fontName)
 {
     auto pA = mpRoomDB->getArea(area);
     if (!pA) {
@@ -2082,7 +2082,10 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     QPen lpen;
     lpen.setColor(label.fgColor);
     QFont font;
-    font.setPointSize(fontSize); //good: font size = 50, zoom = 30.0
+    font.setPointSize(fontSize);
+    if (fontName.has_value()) {
+        font.setFamily(fontName.value());
+    }
     lp.setRenderHint(QPainter::TextAntialiasing, true);
     lp.setPen(lpen);
     lp.setFont(font);
