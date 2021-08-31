@@ -2067,7 +2067,6 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     TMapLabel label;
     label.text = text;
     label.bgColor = bg;
-    label.bgColor.setAlpha(50);
     label.fgColor = fg;
     label.size = QSizeF(100, 100);
     label.pos = QVector3D(x, y, z);
