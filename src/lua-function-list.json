@@ -462,7 +462,7 @@
     "tempBeginOfLineTrigger": "tempBeginOfLineTrigger(part of line, code, expireAfter)",
     "tempButton": "tempButton(toolbar name, button text, orientation)",
     "tempButtonToolbar": "tempButtonToolbar(name, location, orientation)",
-    "tempColorTrigger": "tempColorTrigger(foregroundColor, backgroundColor, code, expireAfter)",
+    "tempColorTrigger": "tempColorTrigger(foregroundColor, backgroundColor, TEST CODE, expireAfter)",
     "tempComplexRegexTrigger": "tempComplexRegexTrigger(name, regex, code, multiline, fg color, bg color, filter, match all, highlight fg color, highlight bg color, play sound file, fire length, line delta, expireAfter)",
     "tempExactMatchTrigger": "tempExactMatchTrigger(exact line, code, expireAfter)",
     "tempKey": "tempKey([modifier], key code, lua code)",
