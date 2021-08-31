@@ -255,6 +255,13 @@ jobs:
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
+    - name: Upload GitHub Actions artifact of vcpkg build logs
+      if: failure()
+      uses: actions/upload-artifact@v2
+      with:
+        name: vcpkg-logs-${{ runner.os }}
+        path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
+
     - name: (Linux/macOS) check ccache stats post build
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: ccache --show-stats
