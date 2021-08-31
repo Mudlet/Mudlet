@@ -2081,11 +2081,7 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     lp.fillRect(lr, label.bgColor);
     QPen lpen;
     lpen.setColor(label.fgColor);
-    QFont font;
-    font.setPointSize(fontSize);
-    if (fontName.has_value()) {
-        font.setFamily(fontName.value());
-    }
+    QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
     lp.setRenderHint(QPainter::TextAntialiasing, true);
     lp.setPen(lpen);
     lp.setFont(font);
