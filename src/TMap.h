@@ -77,7 +77,7 @@ public:
     void mapClear();
     int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop);
     int createMapLabel(int area,
-                       QString text,
+                       const QString& text,
                        float x,
                        float y,
                        float z,
