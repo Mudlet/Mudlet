@@ -2053,7 +2053,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     return true;
 }
 
-int TMap::createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, qreal zoom, int fontSize, std::optional<QString> fontName)
+int TMap::createMapLabel(int area, const QString& text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, qreal zoom, int fontSize, std::optional<QString> fontName)
 {
     auto pA = mpRoomDB->getArea(area);
     if (!pA) {
