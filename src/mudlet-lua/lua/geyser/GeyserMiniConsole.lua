@@ -217,8 +217,10 @@ function Geyser.MiniConsole:setFontSize(size)
   if size then
     self.parent.setFontSize(self, size)
   end
-
   setMiniConsoleFontSize(self.name, size)
+  if self.autoWrap then
+    self:resetAutoWrap()
+  end
 end
 
 --- Appends copied selection to this miniconsole.
