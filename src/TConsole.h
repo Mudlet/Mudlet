@@ -295,7 +295,6 @@ protected:
 private:
     ConsoleType mType = UnknownType;
     QSize mOldSize;
-    bool mirrorToStdout = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

@@ -112,8 +112,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     setAttribute(Qt::WA_DeleteOnClose);
     setAttribute(Qt::WA_OpaquePaintEvent); //was disabled
 
-    mirrorToStdout = mudlet::self()->mirrorToStdout;
-
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Expanding);
     QSizePolicy sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -1684,7 +1682,7 @@ void TConsole::print(const QString& msg)
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    if (Q_UNLIKELY(mirrorToStdout)) {
+    if (Q_UNLIKELY(mudlet::self()->mirrorToStdOut())) {
         qDebug().nospace().noquote() << QStringLiteral("%1| %2").arg(mConsoleName, msg);
     }
 }
@@ -1697,7 +1695,7 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    if (Q_UNLIKELY(mirrorToStdout)) {
+    if (Q_UNLIKELY(mudlet::self()->mirrorToStdOut())) {
         qDebug().nospace().noquote() << QStringLiteral("%1| %2").arg(mConsoleName, msg);
     }
 }

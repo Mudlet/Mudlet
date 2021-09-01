@@ -326,8 +326,6 @@ public:
     void refreshTabBar();
 
     bool firstLaunch = false;
-    // mirror everything shown in any console to stdout. Helpful for CI environments
-    bool mirrorToStdout = false;
     // Needed to work around a (likely only Windows) issue:
     QString mBG_ONLY_STYLESHEET;
     QString mTEXT_ON_BG_STYLESHEET;
@@ -431,6 +429,9 @@ public:
 
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
+
+    static void setMirrorState(const bool state) { mMirrorToStdOut = state; }
+    static bool mirrorToStdOut() { return mMirrorToStdOut; }
 
     struct GameDetails {
         QString hostUrl;
@@ -708,6 +709,9 @@ private:
 
     // Whether multi-view is in effect:
     bool mMultiView;
+
+    // mirror everything shown in any console to stdout. Helpful for CI environments
+    static bool mMirrorToStdOut;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
