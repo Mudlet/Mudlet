@@ -711,7 +711,7 @@ private:
     bool mMultiView;
 
     // mirror everything shown in any console to stdout. Helpful for CI environments
-    static bool mMirrorToStdOut;
+    inline static bool mMirrorToStdOut;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
