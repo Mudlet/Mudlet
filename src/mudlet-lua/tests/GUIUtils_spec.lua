@@ -250,7 +250,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
     it("Should return nil + error if handed garbage: closestColor(true)", function()
       local expectedErr = "Could not parse your parameters into RGB coordinates.\n"
-      local actual, actualErr = closestColor({500, 0, 1})
+      local actual, actualErr = closestColor(true)
       assert.is_nil(actual)
       assert.equals(expectedErr, actualErr)
     end)
