@@ -9064,12 +9064,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="802"/>
       <source>Dzongkha</source>
-      <translation type="unfinished"/>
+      <translation>Dzongkha</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="803"/>
       <source>Dzongkha (Bhutan)</source>
-      <translation type="unfinished"/>
+      <translation>Dzongkha (Bhutan)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="809"/>
@@ -9386,13 +9386,13 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="874"/>
       <location filename="../src/mudlet.cpp" line="879"/>
       <source>Guarani</source>
-      <translation type="unfinished"/>
+      <translation>Guarani</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="875"/>
       <location filename="../src/mudlet.cpp" line="880"/>
       <source>Guarani (Paraguay)</source>
-      <translation type="unfinished"/>
+      <translation>Guarani (Paraguay)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="876"/>
@@ -9457,12 +9457,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="891"/>
       <source>Indonesian</source>
-      <translation type="unfinished"/>
+      <translation>Indonesian</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="892"/>
       <source>Indonesian (Indonesia)</source>
-      <translation type="unfinished"/>
+      <translation>Indonesian (Indonesia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="893"/>
@@ -9563,12 +9563,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="912"/>
       <source>Latvian</source>
-      <translation type="unfinished"/>
+      <translation>Latvian</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="913"/>
       <source>Latvian (Latvia)</source>
-      <translation type="unfinished"/>
+      <translation>Latvian (Latvia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="914"/>
@@ -10191,7 +10191,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="982"/>
       <source>Turkish (Turkey)</source>
-      <translation type="unfinished"/>
+      <translation>Turkish (Turkey)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="992"/>
