@@ -2370,7 +2370,7 @@ function closestColor(r,g,b)
     local nr = tonumber(r)
     local ng = tonumber(g)
     local nb = tonumber(b)
-    if not nr or not ng or not nb then
+    if not nr or not ng or not nb or (nr < 0 or nr > 255) or (ng < 0 or ng > 255) or (nb < 0 or nb > 255) then
       return nil, f"Could not parse {r},{g},{b} into a set of RGB coordinates to look for.\n"
     end
     rgb = {nr,ng,nb}
