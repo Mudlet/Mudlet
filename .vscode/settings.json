@@ -1,7 +1,7 @@
 {
     "cmake.configureOnOpen": true,
     "cmake.configureSettings": {
-        "CMAKE_TOOLCHAIN_FILE": "${workspaceFolder}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        //"CMAKE_TOOLCHAIN_FILE": "${workspaceFolder}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake"
       },
       "Lua.runtime.version": "Lua 5.1"
 }
