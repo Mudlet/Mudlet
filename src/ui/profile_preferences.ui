@@ -3493,7 +3493,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="6" column="0">
            <widget class="QLabel" name="label_networkPackerTimeout">
             <property name="text">
-             <string>Network packet timeout:</string>
+             <string>Network packet timeout (milli-seconds):</string>
             </property>
             <property name="buddy">
              <cstring>spinBox_networkPacketTimeout</cstring>
@@ -3503,11 +3503,10 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="6" column="1">
            <widget class="QSpinBox" name="spinBox_networkPacketTimeout">
             <property name="toolTip">
-             <string>&lt;p&gt;On Game Servers which do not use GA &lt;i&gt;go-ahead&lt;/i&gt; signalling this sets how long Mudlet will wait for further network packets before assuming that there is not any more to arrive. The default is 300 milli-seconds. Larger values will help to prevent &lt;i&gt;packet fragmentation&lt;/i&gt; but can make Mudlet seem less responsive to incoming Game text; smaller values may make Mudlet seem to handle such text faster but runs the risk of breaking what is supposed to be a single piece of text or out-of-band game data into multiple chunks. This can break triggers or OOB features.&lt;/p&gt;
-&lt;p&gt;&lt;i&gt;Adjustment of this control is &lt;b&gt;NOT&lt;/b&gt; recommended unless needed and tested for particular network conditions and MUD Game servers.&lt;/i&gt;&lt;/p&gt;</string>
+             <string>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) / End-of-record (&lt;tt&gt;EOR&lt;/t&gt;) signalling are Telnet enhancements that tell Mudlet when the Game Server is done sending a piece of text. On Game Servers which do not provide &lt;tt&gt;GA&lt;/tt&gt; or &lt;tt&gt;EOR&lt;/tt&gt; this option controls how long Mudlet will wait for further network packets (i.e. text or other &amp;quot;out-of-band&amp;quot; &lt;tt&gt;OOB&lt;/tt&gt; data) to arrive. The default is 300 milli-seconds. Larger values will help to prevent unintended linebreaks in the middle of big pieces of text which may break triggers; smaller values may make Mudlet seem more responsive to incoming text but runs a risk of breaking up text (or more problematically &lt;tt&gt;OOB&lt;/tt&gt; data).&lt;/p&gt;&lt;p&gt;&lt;i&gt;Adjustment of this persistent per-profile control is &lt;b&gt;NOT&lt;/b&gt; recommended unless you understand what it is doing and why it might be helpful. Fine-tuning is likely to depend on particular network conditions and MUD Game servers and a lower (shorter wait) setting that works for one user may not be long enough for others.&lt;/i&gt;&lt;/p&gt;</string>
             </property>
             <property name="suffix">
-             <string> milli-seconds</string>
+             <string/>
             </property>
             <property name="minimum">
              <number>10</number>

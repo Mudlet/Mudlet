@@ -284,7 +284,7 @@ private:
     QByteArray mEncoding;
     QTimer* mpPostingTimer;
     // We do not directly adjust the interval for the above because doing so
-    // while it is active changes the timerId which might have unforseen
+    // while it is active changes the timerId which might have unforeseen
     // effects - so instead we change the following and the revised value is
     // then used the next time the timer is stopped and then started:
     int mTimeOut = 300;
