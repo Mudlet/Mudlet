@@ -2334,3 +2334,45 @@ end
 function resetMapWindowTitle()
   return setMapWindowTitle("")
 end
+
+--- This function takes in a color and returns the closest color from color_table. The following all return "ansi_001"
+--- closest_color({127,0,0})
+--- closest_color(127,0,0)
+--- closest_color("#7f0000")
+--- closest_color("|c7f0000")
+--- closest_color("<127,0,0>")
+function closest_color(r,g,b)
+  local rtype = type(r)
+  local rgb
+  if rtype == "table" then
+    rgb = r
+  elseif rtype == "string" and not tonumber(r) then
+    if color_table[r] then
+      return r
+    end
+    rgb = {Geyser.Color.parse(r)}
+    if rgb[1] == nil then
+      return nil, f"Could not parse {r} into a set of RGB coordinates to look for.\n"
+    end
+  elseif rtype == "number" or tonumber(r) then
+    local nr = tonumber(r)
+    local ng = tonumber(g)
+    local nb = tonumber(b)
+    if not nr or not ng or not nb then
+      return nil, f"Could not parse {r},{g},{b} into a set of RGB coordinates to look for.\n"
+    end
+    rgb = {nr,ng,nb}
+  else
+    return nil, f"Could not parse your parameters into RGB coordinates."
+  end
+  local least_distance = math.huge
+  local cname = ""
+  for name, color in pairs(color_table) do
+    local color_distance = math.sqrt((color[1] - rgb[1]) ^ 2 + (color[2] - rgb[2]) ^ 2 + (color[3] - rgb[3]) ^ 2)
+    if color_distance < least_distance then
+      least_distance = color_distance
+      cname = name
+    end
+  end
+  return cname
+end
