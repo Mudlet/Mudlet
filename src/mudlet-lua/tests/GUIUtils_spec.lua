@@ -183,6 +183,79 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
   end)
 
+  describe("Tests the functionality of closestColor", function()
+    it("Should handle a table of {R,G,B} components: closestColor({R,G,B})", function()
+      local expected = "ansi_001"
+      local actual = closestColor({127,0,0})
+      assert.equals(expected, actual)
+    end)
+
+    it("Should handle separate R,G,B parameters: closestColor(R,G,B)", function()
+      local expected = "ansi_001"
+      local actual = closestColor(127,0,0)
+      assert.equals(expected, actual)
+    end)
+
+    it("Should handle a decho color string: closestColor('<R,G,B>')", function()
+      local expected = "ansi_001"
+      local actual = closestColor({127,0,0})
+      assert.equals(expected, actual)
+    end)
+
+    it("Should handle an hecho # color string: closestColor('#RRGGBB')", function()
+      local expected = "ansi_001"
+      local actual = closestColor("#7f0000")
+      assert.equals(expected, actual)
+    end)
+
+    it("Should handle an hecho |c color string: closestColor('|cRRGGBB')", function()
+      local expected = "ansi_001"
+      local actual = closestColor("|c7f0000")
+      assert.equals(expected, actual)
+    end)
+
+    it("Should handle return the parameter if it's an entry in color_table: closestColor('purple')", function()
+      local expected = "purple"
+      local actual = closestColor("purple")
+      assert.equals(expected, actual)
+    end)
+
+    it("Should return nil + error if handed garbage: closestColor('asdf')", function()
+      local expectedErr = "Could not parse asdf into a set of RGB coordinates to look for.\n"
+      local actual, actualErr = closestColor("asdf")
+      assert.is_nil(actual)
+      assert.equals(expectedErr, actualErr)
+    end)
+
+    it("Should return nil + error if handed garbage: closestColor({'tea', 1, 1})", function()
+      local expectedErr = "Could not parse tea,1,1 into RGB coordinates to look for.\n"
+      local actual, actualErr = closestColor({'tea', 1, 1})
+      assert.is_nil(actual)
+      assert.equals(expectedErr, actualErr)
+    end)
+
+    it("Should return nil + error if handed garbage: closestColor({1, 1})", function()
+      local expectedErr = "Could not parse 1,1 into RGB coordinates to look for.\n"
+      local actual, actualErr = closestColor({1, 1})
+      assert.is_nil(actual)
+      assert.equals(expectedErr, actualErr)
+    end)
+
+    it("Should return nil + error if handed garbage: closestColor({500, 0, 1})", function()
+      local expectedErr = "Could not parse 500,0,1 into RGB coordinates to look for.\n"
+      local actual, actualErr = closestColor({500, 0, 1})
+      assert.is_nil(actual)
+      assert.equals(expectedErr, actualErr)
+    end)
+
+    it("Should return nil + error if handed garbage: closestColor(true)", function()
+      local expectedErr = "Could not parse your parameters into RGB coordinates.\n"
+      local actual, actualErr = closestColor({500, 0, 1})
+      assert.is_nil(actual)
+      assert.equals(expectedErr, actualErr)
+    end)
+  end)
+
   describe("Tests the functionality of _Echoes.Process()", function()
     it("Should parse hex patterns correctly", function()
       assert.are.same(

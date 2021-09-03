@@ -2336,16 +2336,28 @@ function resetMapWindowTitle()
 end
 
 --- This function takes in a color and returns the closest color from color_table. The following all return "ansi_001"
---- closest_color({127,0,0})
---- closest_color(127,0,0)
---- closest_color("#7f0000")
---- closest_color("|c7f0000")
---- closest_color("<127,0,0>")
-function closest_color(r,g,b)
+--- closestColor({127,0,0})
+--- closestColor(127,0,0)
+--- closestColor("#7f0000")
+--- closestColor("|c7f0000")
+--- closestColor("<127,0,0>")
+function closestColor(r,g,b)
   local rtype = type(r)
   local rgb
   if rtype == "table" then
-    rgb = r
+    rgb = {}
+    local tmp = r
+    local err = f"Could not parse {table.concat(tmp, ',')} into RGB coordinates to look for.\n"
+    if #tmp ~= 3 then
+      return nil, err
+    end
+    for index,coord in ipairs(tmp) do
+      local num = tonumber(coord)
+      if not num or num < 0 or num > 255 then
+        return nil, err
+      end
+      rgb[index] = num
+    end
   elseif rtype == "string" and not tonumber(r) then
     if color_table[r] then
       return r
@@ -2363,7 +2375,7 @@ function closest_color(r,g,b)
     end
     rgb = {nr,ng,nb}
   else
-    return nil, f"Could not parse your parameters into RGB coordinates."
+    return nil, f"Could not parse your parameters into RGB coordinates.\n"
   end
   local least_distance = math.huge
   local cname = ""
