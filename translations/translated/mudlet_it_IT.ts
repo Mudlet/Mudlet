@@ -9188,12 +9188,12 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/mudlet.cpp" line="802"/>
       <source>Dzongkha</source>
-      <translation type="unfinished"/>
+      <translation>Dzongkha</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="803"/>
       <source>Dzongkha (Bhutan)</source>
-      <translation type="unfinished"/>
+      <translation>Dzongkha (Bhutan)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="809"/>
@@ -9510,13 +9510,13 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <location filename="../src/mudlet.cpp" line="874"/>
       <location filename="../src/mudlet.cpp" line="879"/>
       <source>Guarani</source>
-      <translation type="unfinished"/>
+      <translation>Guarani</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="875"/>
       <location filename="../src/mudlet.cpp" line="880"/>
       <source>Guarani (Paraguay)</source>
-      <translation type="unfinished"/>
+      <translation>Guarani (Paraguay)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="876"/>
@@ -9581,12 +9581,12 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/mudlet.cpp" line="891"/>
       <source>Indonesian</source>
-      <translation type="unfinished"/>
+      <translation>Indonesiano</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="892"/>
       <source>Indonesian (Indonesia)</source>
-      <translation type="unfinished"/>
+      <translation>Indonesiano (Indonesia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="893"/>
@@ -9687,12 +9687,12 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/mudlet.cpp" line="912"/>
       <source>Latvian</source>
-      <translation type="unfinished"/>
+      <translation>Lettone</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="913"/>
       <source>Latvian (Latvia)</source>
-      <translation type="unfinished"/>
+      <translation>Lettone (Lettonia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="914"/>
@@ -10315,7 +10315,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/mudlet.cpp" line="982"/>
       <source>Turkish (Turkey)</source>
-      <translation type="unfinished"/>
+      <translation>Turco (Turchia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="992"/>
