@@ -137,7 +137,7 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
-          <layout class="QFormLayout" name="formLayout_metadata">
+          <layout class="QGridLayout" name="gridLayout_metadata">
            <property name="leftMargin">
             <number>0</number>
            </property>
