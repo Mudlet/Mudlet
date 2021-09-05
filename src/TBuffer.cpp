@@ -353,15 +353,15 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 {
     // What can appear in a CSI Parameter String (Ps) byte or at least for it
     // to be something we can handle:
-    const QByteArray cParameter("0123456789;:");
+    const QByteArray cParameter = QByteArrayLiteral("0123456789;:");
     // What can appear in the initial position of a CSI Parameter String (Ps) byte:
-    const QByteArray cParameterInitial("0123456789;:<=>?");
+    const QByteArray cParameterInitial = QByteArrayLiteral("0123456789;:<=>?");
     // What can appear in a CSI Intermediate byte (includes a quote character in
     // the middle of the text here which has to be escaped with a backslash):
-    const QByteArray cIntermediate(" !\"#$%&'()*+,-./");
+    const QByteArray cIntermediate = QByteArrayLiteral(" !\"#$%&'()*+,-./");
     // What can appear in a CSI final byte position - (includes a backslash
     // which has to be doubled to include it in here):
-    const QByteArray cFinal("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+    const QByteArray cFinal = QByteArrayLiteral("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
 
     // As well as enabling the prepending of left-over bytes from last packet
     // from the MUD server this may help in high frequency interactions to
