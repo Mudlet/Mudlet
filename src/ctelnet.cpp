@@ -1933,14 +1933,8 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
 
 void cTelnet::setGMCPVariables(const QByteArray& msg)
 {
-    QString transcodedMsg;
-    if (mpOutOfBandDataIncomingCodec) {
-        // Message is encoded
-        transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
-    } else {
-        // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = msg;
-    }
+    // JSON is always utf8
+    QString transcodedMsg{std::move(msg)};
 
     QString packageMessage;
     QString data;
