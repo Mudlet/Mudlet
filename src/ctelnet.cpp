@@ -1933,7 +1933,7 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
 
 void cTelnet::setGMCPVariables(const QByteArray& msg)
 {
-    // JSON is always utf8
+    // JSON (and thus the GMCP data) is always utf8
     QString transcodedMsg(msg);
 
     QString packageMessage;
