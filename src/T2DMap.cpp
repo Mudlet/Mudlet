@@ -2414,6 +2414,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* e)
     //move map with left mouse button + ALT (->
     if (mpMap->mLeftDown) {
         mpMap->mLeftDown = false;
+        mpMap->m2DPanMode = false;
         unsetCursor();
     }
 
@@ -4230,21 +4231,13 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
     }
     if (mpMap->m2DPanMode) {
         int x = event->x();
-        int y = height() - event->y();
-        if ((mpMap->m2DPanXStart - x) > 1) {
-            slot_shiftRight();
-            mpMap->m2DPanXStart = x;
-        } else if ((mpMap->m2DPanXStart - x) < -1) {
-            slot_shiftLeft();
-            mpMap->m2DPanXStart = x;
-        }
-        if ((mpMap->m2DPanYStart - y) > 1) {
-            slot_shiftDown();
-            mpMap->m2DPanYStart = y;
-        } else if ((mpMap->m2DPanYStart - y) < -1) {
-            slot_shiftUp();
-            mpMap->m2DPanYStart = y;
-        }
+        int y = event->y();
+        mShiftMode = true;
+        mOx = mOx + (mpMap->m2DPanXStart - x) / mRoomWidth;
+        mOy = mOy + (mpMap->m2DPanYStart - y) / mRoomHeight;
+        mpMap->m2DPanYStart = y;
+        mpMap->m2DPanXStart = x;
+        update();
         return;
     }
 
