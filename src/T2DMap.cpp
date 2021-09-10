@@ -4233,10 +4233,10 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         int x = event->x();
         int y = event->y();
         mShiftMode = true;
-        mOx = mOx + (mpMap->m2DPanXStart - float(x)) / mRoomWidth;
-        mOy = mOy + (mpMap->m2DPanYStart - float(y)) / mRoomHeight;
-        mpMap->m2DPanYStart = float(y);
-        mpMap->m2DPanXStart = float(x);
+        mOx = mOx + (mpMap->m2DPanXStart - static_cast<float>(x)) / mRoomWidth;
+        mOy = mOy + (mpMap->m2DPanYStart - static_cast<float>(y)) / mRoomHeight;
+        mpMap->m2DPanYStart = static_cast<float>(y);
+        mpMap->m2DPanXStart = static_cast<float>(x);
         update();
         return;
     }
