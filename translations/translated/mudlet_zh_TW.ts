@@ -4509,7 +4509,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
       <source>&lt;p&gt;The room this special exit leads to.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;此房間的特殊出口通往 &lt;/p&gt;</translation>
+      <translation>&lt;p&gt;此房間的特殊出口通往&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
