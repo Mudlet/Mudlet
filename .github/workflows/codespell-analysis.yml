@@ -21,4 +21,4 @@ jobs:
           check_filenames: true
           skip: ./.git,./3rdparty,./translations,./src/fonts,./src/mudlet-lua/lua/utf8_filenames.lua,./squish-tests,*.aff,*.dic,*.ts
           ignore_words_file: ./.github/codespell-wordlist.txt
-          builtin: 'clear,code,rare,informal,names'
+          builtin: 'clear,code,rare,informal,names,en-GB_to_en-US'
