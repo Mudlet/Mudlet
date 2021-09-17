@@ -95,7 +95,6 @@ T2DMap::T2DMap(QWidget* parent)
 , mMultiRect()
 , mPopupMenu()
 , mNewMoveAction()
-, mMapInfoRect()
 , mFontHeight(20)
 , mShowRoomID(false)
 , gzoom(20)
@@ -2281,17 +2280,16 @@ int T2DMap::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset,
     font.setItalic(properties.isItalic);
 
     int infoHeight = mFontHeight; // Account for first iteration
-    QRect testRect;
     // infoRect has a 10 margin on either side and on top to widget frame.
-    mMapInfoRect = QRect(xOffset, yOffset, width() - 10 - xOffset, infoHeight);
-    testRect = painter.boundingRect(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
+    auto mMapInfoRect = QRect(xOffset, yOffset, width() - xOffset * 2, infoHeight);
+    auto testRect = painter.boundingRect(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height(), Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
     mMapInfoRect.setHeight(testRect.height() + 10);
 
     // Restore Grey translucent background, was useful for debugging!
     painter.fillRect(mMapInfoRect, QColor(150, 150, 150, 120));
     painter.setPen(properties.color);
     painter.setFont(font);
-    painter.drawText(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 10, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
+    painter.drawText(testRect.left(), testRect.top(), testRect.width(), testRect.height(), Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
     //forget about font size changing and bolding/italicisation:
     painter.restore();
 
