@@ -58,6 +58,7 @@
     "createStopWatch": "createStopWatch([name], [start immediately])",
     "creplace": "creplace([window, ]text)",
     "creplaceLine": "creplaceLine ([window], text)",
+    "customHTTP": "customHTTP(method, url, headersTable)",
     "debugc": "debugc(content)",
     "decho": "decho ([name of console,] text)",
     "dechoLink": "dechoLink([windowName], text, command, hint, true)",
