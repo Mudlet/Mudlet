@@ -481,7 +481,7 @@ public:
                                  "<center><a href='https://wiki.reinosdeleyenda.es/'>Wiki</a></center>\n", ":/icons/reinosdeleyenda_mud.png"}},
         {"Fierymud", {"fierymud.org", 4000, false, "<center><a href='https://www.fierymud.org/'>https://www.fierymud.org</a></center>", ":/icons/fiery_mud.png"}},
         // {"Mudlet self-test", {"mudlet.org", 23, false,}},
-        {"CoreMUD", {"coremud.org", 4000, false, "<center><a href='https://coremud.org/'>coremud.org</a></center>", ":/icons/coremud_icon.jpg"}},
+        {"CoreMUD", {"coremud.org", 4020, true, "<center><a href='https://coremud.org/'>coremud.org</a></center>", ":/icons/coremud_icon.jpg"}},
         {"Legends of the Jedi", {"legendsofthejedi.com", 5656, false, "<center><a href='https://www.legendsofthejedi.com/'>legendsofthejedi.com</a></center>", ":/icons/legendsofthejedi_120x30.png"}},
     };
     // clang-format on
