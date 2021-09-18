@@ -132,10 +132,10 @@ public:
     void downloadMap(const QString& remoteUrl = QString(), const QString& localFileName = QString());
 
     // like 'downloadMap' but for local files:
-    bool importMap(QFile&, QString* errMsg = Q_NULLPTR);
+    bool importMap(QFile&, QString* errMsg = nullptr);
 
     // Used at end of downloadMap(...) OR as part of importMap(...)
-    bool readXmlMapFile(QFile&, QString* errMsg = Q_NULLPTR);
+    bool readXmlMapFile(QFile&, QString* errMsg = nullptr);
 
     // Use progress dialog for post-download operations.
     void reportStringToProgressDialog(QString);
