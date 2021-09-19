@@ -2554,11 +2554,11 @@ void mudlet::doAutoLogin(const QString& profile_name)
     if (entries.isEmpty()) {
         preInstallPackages = true;
 
-        const auto it = mudlet::scmDefaultGames.constFind(profile_name);
-        if (it != mudlet::scmDefaultGames.cend()) {
-            pHost->setUrl(it->hostUrl);
-            pHost->setPort(it->port);
-            pHost->mSslTsl = it->tlsEnabled;
+        const auto it = mudlet::scmDefaultGames.find(profile_name);
+        if (it != mudlet::scmDefaultGames.end()) {
+            pHost->setUrl(it.value().hostUrl);
+            pHost->setPort(it.value().port);
+            pHost->mSslTsl = it.value().tlsEnabled;
         }
     } else {
         QFile file(QStringLiteral("%1/%2").arg(folder, entries.at(0)));
