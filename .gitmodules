@@ -16,9 +16,6 @@
 [submodule "3rdparty/vcpkg"]
 	path = 3rdparty/vcpkg
 	url = https://github.com/microsoft/vcpkg
-[submodule "3rdparty/--force"]
-	path = 3rdparty/--force
-	url = https://github.com/mandeepsandhu/qt-ordered-map
 [submodule "3rdparty/qt-ordered-map"]
 	path = 3rdparty/qt-ordered-map
 	url = https://github.com/mandeepsandhu/qt-ordered-map
