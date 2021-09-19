@@ -439,7 +439,7 @@ public:
     };
 
     // clang-format off
-    inline static const QHash<QString, GameDetails> scmDefaultGames = {
+    inline static const QMap<QString, GameDetails> scmDefaultGames = {
         {"3Scapes", {
             "3k.org",   // address to connect to
             3200,       // port to connect on

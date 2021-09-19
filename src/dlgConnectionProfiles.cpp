@@ -1104,14 +1104,18 @@ void dlgConnectionProfiles::fillout_form()
 
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(QStringLiteral("deletedDefaultMuds"), QStringList()).toStringList();
-    const auto defaultGames = mudlet::scmDefaultGames.keys();
 
-    for (auto& game : defaultGames) {
+    auto iterator = mudlet::scmDefaultGames.constBegin();
+    while (iterator != mudlet::scmDefaultGames.constEnd()) {
+        const auto& game = iterator.key();
+        qDebug() << "processing" << game;
         if (!deletedDefaultMuds.contains(game)) {
             pItem = new QListWidgetItem();
             setupMudProfile(pItem, game, getDescription(mudlet::scmDefaultGames[game].hostUrl, mudlet::scmDefaultGames[game].port, game), mudlet::scmDefaultGames[game].icon);
         }
+        ++iterator;
     }
+
 
 #if defined(QT_DEBUG)
     QString mudServer = QStringLiteral("Mudlet self-test");
