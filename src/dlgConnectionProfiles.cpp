@@ -878,9 +878,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     QString host_url = readProfileData(profile_name, QStringLiteral("url"));
     if (host_url.isEmpty()) {
         // Host to connect to, see below for port
-        const auto it = mudlet::scmDefaultGames.constFind(profile_name);
-        if (it != mudlet::scmDefaultGames.cend()) {
-            host_url = it->hostUrl;
+        const auto it = mudlet::scmDefaultGames.find(profile_name);
+        if (it != mudlet::scmDefaultGames.end()) {
+            host_url = it.value().hostUrl;
         }
     }
     host_name_entry->setText(host_url);
@@ -894,10 +894,10 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     }
 
     if (host_port.isEmpty()) {
-        const auto it = mudlet::scmDefaultGames.constFind(profile_name);
-        if (it != mudlet::scmDefaultGames.cend()) {
-            host_port = QString::number(it->port);
-            port_ssl_tsl->setChecked(it->tlsEnabled);
+        const auto it = mudlet::scmDefaultGames.find(profile_name);
+        if (it != mudlet::scmDefaultGames.end()) {
+            host_port = QString::number(it.value().port);
+            port_ssl_tsl->setChecked(it.value().tlsEnabled);
         }
     }
 
@@ -953,9 +953,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     val = readProfileData(profile_name, QStringLiteral("website"));
     if (val.isEmpty()) {
-        const auto it = mudlet::scmDefaultGames.constFind(profile_name);
-        if (it != mudlet::scmDefaultGames.cend()) {
-            val = it->websiteInfo;
+        const auto it = mudlet::scmDefaultGames.find(profile_name);
+        if (it != mudlet::scmDefaultGames.end()) {
+            val = it.value().websiteInfo;
         }
     }
     website_entry->setText(val);
