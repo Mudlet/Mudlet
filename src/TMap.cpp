@@ -2515,7 +2515,7 @@ void TMap::slot_downloadCancel()
     postMessage(alertMsg);
     if (mpProgressDialog) {
         mpProgressDialog->deleteLater();
-        mpProgressDialog = Q_NULLPTR; // Must reset this so it can be reused
+        mpProgressDialog = nullptr; // Must reset this so it can be reused
     }
     if (mpNetworkReply) {
         mpNetworkReply->abort(); // Will indirectly cause error() AND replyFinished signals to be sent
@@ -2539,13 +2539,13 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
 {
     auto cleanup = [this, reply](){
         reply->deleteLater();
-        mpNetworkReply = Q_NULLPTR;
+        mpNetworkReply = nullptr;
 
         // We don't delete the progress dialog until here as we now use it to inform
         // about post-download operations
 
         mpProgressDialog->deleteLater();
-        mpProgressDialog = Q_NULLPTR; // Must reset this so it can be reused
+        mpProgressDialog = nullptr; // Must reset this so it can be reused
 
         mLocalMapFileName.clear();
         mExpectedFileSize = 0;
@@ -2617,7 +2617,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
                     // Since the download is complete but we do not offer to
                     // cancel the required post-processing we should now hide
                     // the cancel/abort button:
-                    mpProgressDialog->setCancelButton(Q_NULLPTR);
+                    mpProgressDialog->setCancelButton(nullptr);
 
                     // The action to parse the XML file has been refactored to
                     // a separate method so that it can be shared with the
