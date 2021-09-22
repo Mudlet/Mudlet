@@ -1,10 +1,7 @@
 name: "Auto-format C++ code"
 
 on:
-  pull_request_target:
-    paths:
-    - '**.cpp'
-    - '**.h'
+  push:
 
 jobs:
   clang-format:
