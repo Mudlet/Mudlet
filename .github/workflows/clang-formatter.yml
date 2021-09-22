@@ -2,6 +2,7 @@ name: "Auto-format C++ code"
 
 on:
   pull_request_target:
+    types: [opened, edited, synchronize, reopened]
     paths:
     - '**.cpp'
     - '**.h'
