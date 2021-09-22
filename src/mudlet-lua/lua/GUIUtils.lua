@@ -1786,16 +1786,16 @@ function ansi2decho(text, ansi_default_color)
       elseif tag < 16 then
         rgb = lightColours[tag - 8]
       elseif tag < 232 then
-        tag = tag - 16 -- because color 1-15 behave like normal ANSI colors
-
-        r = floor(tag / 36)
-        g = floor((tag - (r * 36)) / 6)
-        b = floor((tag - (r * 36)) - (g * 6))
-        rgb = { r == 0 and 0 or (r - 1) * 40 + 95,
-                g == 0 and 0 or (r - 1) * 40 + 95,
-                b == 0 and 0 or (r - 1) * 40 + 95 }
+        tag = tag - 16 -- because color 1-15 behave like normal ANSI colors      
+        local b = tag % 6
+        local g = (tag - b) / 6 % 6
+        local r = (tag - b - g * 6) / 36 % 6
+        b = b ~= 0 and b * 40 + 55 or 0
+        r = r ~= 0 and r * 40 + 55 or 0
+        g = g ~= 0 and g * 40 + 55 or 0
+        rgb = { r, g, b }
       else
-        local component = tag - 232 * 10 + 8
+        local component = (tag - 232) * 10 + 8
         rgb = { component, component, component }
       end
 
