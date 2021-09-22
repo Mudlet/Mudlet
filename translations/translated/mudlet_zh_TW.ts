@@ -4080,7 +4080,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="424"/>
       <source>Set to Grayscale value</source>
-      <translation type="unfinished"/>
+      <translation>設定為灰階值</translation>
     </message>
   </context>
   <context>
@@ -4197,7 +4197,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="598"/>
       <source>Make Mudlet use a secure SSL/TLS protocol instead of an unencrypted one</source>
-      <translation type="unfinished"/>
+      <translation>讓 Mudlet 使用安全的 SSL/TLS 協定，而不是未加密的協定</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="604"/>
@@ -4252,7 +4252,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="716"/>
       <source>Automatically start this profile when Mudlet is run</source>
-      <translation type="unfinished"/>
+      <translation>執行 Mudlet 時自動啟動此設定檔</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="729"/>
@@ -4509,7 +4509,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
       <source>&lt;p&gt;The room this special exit leads to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;此房間的特殊出口通往&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
@@ -4884,13 +4884,13 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="225"/>
       <source>Helped develop and debug the Lua API.</source>
       <comment>about:John Dahlström</comment>
-      <translation type="unfinished"/>
+      <translation>幫助開發和調試 Lua API。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="228"/>
       <source>Contributed several improvements and new features for Geyser.</source>
       <comment>about:Beliaar</comment>
-      <translation type="unfinished"/>
+      <translation>為 Geyser 提供了幾項改進和新功能。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="231"/>
@@ -5189,7 +5189,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="375"/>
       <source>All color options are showing.</source>
-      <translation type="unfinished"/>
+      <translation>顯示所有色彩選項。</translation>
     </message>
   </context>
   <context>
@@ -5212,7 +5212,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1697"/>
       <source>The %1 character is not permitted. Use one of the following:</source>
-      <translation type="unfinished"/>
+      <translation>不允許使用 %1 字元。可以使用下列其中一項：</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1720"/>
@@ -5222,12 +5222,12 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1709"/>
       <source>This profile name is already in use.</source>
-      <translation type="unfinished"/>
+      <translation>設定檔名稱已經被使用。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="509"/>
       <source>Could not rename your profile data on the computer.</source>
-      <translation type="unfinished"/>
+      <translation>無法重新命名電腦上的設定檔。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="110"/>
@@ -5263,7 +5263,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="138"/>
       <source>copy profile settings</source>
-      <translation type="unfinished"/>
+      <translation>複製設定檔</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="139"/>
@@ -5319,7 +5319,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1056"/>
       <source>Discord integration not available on this platform</source>
-      <translation type="unfinished"/>
+      <translation>此平台上無法使用 Discord</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1062"/>
@@ -5352,7 +5352,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1322"/>
       <source>Select custom image for profile (should be 120x30)</source>
-      <translation type="unfinished"/>
+      <translation>選擇設定檔的自訂圖片（應為 120x30）</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1322"/>
@@ -5367,7 +5367,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1750"/>
       <source>Mudlet can not load support for secure connections.</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet 無法載入安全連線的支援。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1772"/>
@@ -5599,7 +5599,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="68"/>
       <source>Check items to export</source>
-      <translation type="unfinished"/>
+      <translation>勾選要匯出的項目</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="95"/>
@@ -5739,7 +5739,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="109"/>
       <source>update installed package</source>
-      <translation type="unfinished"/>
+      <translation>更新已安裝的套件</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="110"/>
@@ -5783,7 +5783,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="472"/>
       <source>Please enter the package name.</source>
-      <translation type="unfinished"/>
+      <translation>請輸入套件名稱。</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="510"/>
@@ -6056,7 +6056,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2037"/>
       <source>Could not load map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>無法從 %1 載入地圖。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2054"/>
@@ -7124,7 +7124,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="745"/>
       <source>What</source>
       <comment>Heading for the fourth column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>什麼</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="792"/>
@@ -7611,7 +7611,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8841"/>
       <source>Format All</source>
-      <translation type="unfinished"/>
+      <translation>格式化全部</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8844"/>
