@@ -1790,10 +1790,10 @@ function ansi2decho(text, ansi_default_color)
         local b = tag % 6
         local g = (tag - b) / 6 % 6
         local r = (tag - b - g * 6) / 36 % 6
-        b = b and b * 40 + 55 or 0
-        r = r and r * 40 + 55 or 0
-        g = g and g * 40 + 55 or 0
-        rgb = { r, g, b}
+        b = b ~= 0 and b * 40 + 55 or 0
+        r = r ~= 0 and r * 40 + 55 or 0
+        g = g ~= 0 and g * 40 + 55 or 0
+        rgb = { r, g, b }
       else
         local component = (tag - 232) * 10 + 8
         rgb = { component, component, component }
