@@ -1051,6 +1051,7 @@ void TCommandLine::historyMove(MoveDirection direction)
         mAutoCompletionCount += shift;
         handleAutoCompletion();
     }
+    adjustHeight();
 }
 
 void TCommandLine::slot_clearSelection(bool yes)
