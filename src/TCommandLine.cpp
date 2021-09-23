@@ -1046,7 +1046,6 @@ void TCommandLine::historyMove(MoveDirection direction)
         } else {
             moveCursor(QTextCursor::End);
         }
-        adjustHeight();
     } else {
         mAutoCompletionCount += shift;
         handleAutoCompletion();
