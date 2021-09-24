@@ -1605,49 +1605,6 @@ end</script>
 						<integer>1</integer>
 					</regexCodePropertyList>
 				</Trigger>
-				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-					<name>City has orb of confinement</name>
-					<script>local orbTable = mmp.getAchaeaOrbTable()
-local areaID = getRoomArea(mmp.currentroom) or 0
-if areaID == 0 or mmp.game ~= "achaea" then
-  return
-end
---don't know where we are
-for city, areas in pairs(orbTable) do
-  if table.contains(areas, areaID) then
-    if not mmp.settings["orb" .. city] then
-      mmp.settings:setOption("orb" .. city, true)
-      mmp.inside = true
-      raiseEvent("mmapper went inside")
-      if mmp.autowalking then
-        mmp.gotoRoom(mmp.speedWalkPath[#mmp.speedWalkPath])
-      end
-    end
-    return
-  end
-end
-if mmp.autowalking then
-  mmp.stop()
-end</script>
-					<triggerType>0</triggerType>
-					<conditonLineDelta>0</conditonLineDelta>
-					<mStayOpen>0</mStayOpen>
-					<mCommand></mCommand>
-					<packageName></packageName>
-					<mFgColor>#ff0000</mFgColor>
-					<mBgColor>#ffff00</mBgColor>
-					<mSoundFile></mSoundFile>
-					<colorTriggerFgColor>#000000</colorTriggerFgColor>
-					<colorTriggerBgColor>#000000</colorTriggerBgColor>
-					<regexCodeList>
-						<string>A shimmering orb covers the city</string>
-						<string>A shimmering orb covers the city, preventing you from rising to the skies.</string>
-					</regexCodeList>
-					<regexCodePropertyList>
-						<integer>2</integer>
-						<integer>3</integer>
-					</regexCodePropertyList>
-				</Trigger>
 			</TriggerGroup>
 			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>Aetolia</name>
@@ -3779,6 +3736,38 @@ end</script>
 					</regexCodePropertyList>
 				</Trigger>
 			</TriggerGroup>
+			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>City has orb of confinement</name>
+				<script>local areaID = getRoomArea(mmp.currentroom) or 0
+
+if areaID == 0 or not (mmp.game == "achaea") then return end --don't know where we are
+
+local area = mmp.cleanAreaName(areaID):lower()
+if not mmp.settings["orb"..area] then
+	mmp.settings:setOption("orb"..area,true)
+	mmp.inside = true
+	raiseEvent("mmapper went inside")
+end
+</script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList>
+					<string>A shimmering orb covers the city</string>
+					<string>A shimmering orb covers the city, preventing you from rising to the skies.</string>
+				</regexCodeList>
+				<regexCodePropertyList>
+					<integer>2</integer>
+					<integer>3</integer>
+				</regexCodePropertyList>
+			</Trigger>
 		</TriggerGroup>
 	</TriggerPackage>
 	<TimerPackage>
@@ -4667,6 +4656,13 @@ mmp.echo(
 					<regex>^feature create (.+?)(?: char (.+))?$</regex>
 				</Alias>
 				<Alias isActive="yes" isFolder="no">
+					<name>List map features</name>
+					<script>mmp.listMapFeatures()</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^feature list$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
 					<name>Add map feature to room</name>
 					<script>mmp.roomCreateMapFeature(matches[3], matches[2] == "" and mmp.currentroom or tonumber(matches[2]))</script>
 					<command></command>
@@ -4916,13 +4912,6 @@ end</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^(?:mc|map create) ?(on|off)?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>List map features</name>
-				<script>mmp.listMapFeatures()</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^feature list$</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Save a map</name>
@@ -5310,23 +5299,6 @@ mmp.echo("All astral nodes have been "..(matches[2]:lower()=="on" and "" or "un"
 --                                             --
 -- Note that you can also use external Scripts --
 -------------------------------------------------
-local spairs = spairs or function(tbl, order)
-  local keys = table.keys(tbl)
-  if order then
-    table.sort(keys, function(a,b) return order(tbl, a, b) end)
-  else
-    table.sort(keys)
-  end
-
-  local i = 0
-  return function()
-    i = i + 1
-    if keys[i] then
-      return keys[i], tbl[keys[i]]
-    end
-  end
-end
-
 
 function createOption(startingValue, onChangeFunc, allowedVarTypes, use, checkOption, games)
 	if allowedVarTypes then -- make sure our starting Value follows type rules
@@ -5500,7 +5472,7 @@ mmp.lagtable = {
         time = 10
     }
 }
-local newversion = "21.9.1"
+local newversion = "21.4.1"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo(
@@ -5634,9 +5606,6 @@ function mmp.startup()
     createOption(false, mmp.setUniverse, {"boolean"}, "Use Universe Tarot?", nil, {achaea = true})
   private_settings["gare"] =
     createOption(false, mmp.setGare, {"boolean"}, "Use Gare?", nil, {achaea = true})
-  --Wings pathfinding improvements
-  private_settings["betterwings"]=  
-    createOption(true, mmp.setBetterWings, {"boolean"}, "Use Better Wings pathfinding?", nil, {achaea = true})
   --Achaea Orb of Confinement
   private_settings["orbashtan"] =
     createOption(
@@ -6778,7 +6747,24 @@ registerAnonymousEventHandler("mmp clear externals", "mmp.removeWings")</script>
 					<packageName></packageName>
 					<script>registerAnonymousEventHandler("mmp link externals", "mmp.addWingsAchaea")
 
-
+function mmp.orbed()
+	-- orb of confinement - PapaGuacamole
+  local areaID = getRoomArea(mmp.currentroom)
+  return
+		(mmp.game == "achaea" and
+  		(
+    		(mmp.settings.orbashtan and areaID == 49) or
+    		(mmp.settings.orbcyrene and areaID == 57) or
+    		(mmp.settings.orbeleusis and areaID == 51) or
+    		(mmp.settings.orbhashan and areaID == 55) or
+    		(mmp.settings.orbmhaldor and areaID == 44) or
+    		(
+    			mmp.settings.orbtargossas and
+    			((mmp.settings.crowdmap and areaID == 368) or (not mmp.settings.crowdmap and areaID == 271))
+    		)
+  		)
+		)
+end
 
 function mmp.addWingsAchaea()
   --Trimmed down version of the original function, meant to only be used for wings. (Where the command varies based on several MCONFIGS)
@@ -6956,276 +6942,6 @@ function mmp.addWingsAchaea()
   --clears the path cache so it calculates a new route.
   mmp.clearpathcache()
 end</script>
-					<eventHandlerList />
-				</Script>
-				<Script isActive="yes" isFolder="no">
-					<name>Achaea betterWings</name>
-					<packageName></packageName>
-					<script>--builds a table based on current orb settings, then returns a function which can be used to quickly check that table.
-
-local function orbedBlackList()
-  local bannedAreas = {}
-  local areaTable = mmp.getAchaeaOrbTable()
-  for org, areas in pairs(areaTable) do
-    for _, area in pairs(areas) do
-      bannedAreas[area] = mmp.settings["orb" .. org]
-    end
-  end
-  return
-    function(roomId)
-      return not bannedAreas[getRoomArea(roomId)]
-    end
-end
-
---searches for closest room that meets requirements.
---does stuff to handle weighted rooms, locked rooms, special exits.
-
-local function closestOutdoors(startRoom)
---visited is rooms which have already been found by the search.
-  local visited = {[startRoom] = true}
-  --checking is the rooms that it is currently checking to see if they meet the desired conditions.
-  local checking = {[startRoom] = true}
-  --nextCheck is a list of rooms which will be checked once the algorithm is finished with the rooms in checking.
-  local nextCheck = {}
-  --weightedRooms contains rooms with greater than 1 weight, so that they can be handled differently.
-  local weightedRooms = {}
-  local orbed = orbedBlackList()
-  
-  --functions for handling weighted rooms.
-  local function addWeighted(room, weight)
-    if not weightedRooms[room] or weight &lt; weightedRooms[room] then
-      weightedRooms[room] = weight
-    end
-  end
-
-  --this function subtracts 1 from every room weight in the weighted room list.
-  --if they hit zero then it will add them to the checking table and removes them from weightedRooms
-
-  local function reduceWeights()
-    --display(weightedRooms)
-    local toDelete = {}
-    for room, weight in pairs(weightedRooms) do
-      weightedRooms[room] = weightedRooms[room] - 1
-      if weightedRooms[room] &lt;= 0 then
-        if not visited[room] then
-          checking[room] = true
-          visited[room] = true
-        end
-        toDelete[room] = true
-      end
-    end
-    --cleans up the weighted stuff.
-    for room, _ in pairs(toDelete) do
-      weightedRooms[room] = nil
-    end
-  end
-
-  local stopwatch = createStopWatch()
-  startStopWatch(stopwatch)
-  --only willing to search for 500ms. Will abort in longer cases,
-  while getStopWatchTime(stopwatch) &lt; .5 do
-    for room, val in pairs(checking) do
-      --if these conditions are met, returns a roomid and exits out.
-      --probably doesn't work great on weird planes, as thei
-      if getRoomUserData(room, "outdoors") == "y" and orbed(room) then
-        return room
-      end
-      local weights = getExitWeights(room)
-      --loops through all exits in the room, doing stuff.
-      for direction, destRoom in pairs(getRoomExits(room)) do
-        if not hasExitLock(room, direction) and not visited[destRoom] then
-          --if the exit+roomweight is higher than 1 (the default, for 1 room weight + 0 exit weight), then do a room weight subroutine
-          if
-            (((weights[direction] or 0) + getRoomWeight(destRoom)) &gt; 1) and not roomLocked(destRoom)
-          then
-            addWeighted(destRoom, (weights[direction] or 0) + getRoomWeight(destRoom))
-          else
-            --add it to visited, so it doesn't double back on it in the future.
-            visited[destRoom] = true
-            --if it's not locked, add it to nextCheck, which are the rooms that it searches through next cycle.
-            --if it is locked, just ignore it.
-            if not roomLocked(destRoom) then
-              nextCheck[destRoom] = true
-            end
-          end
-        end
-      end
-      --same as above loop, but for specialExits
-      for destRoom, specialExits in pairs(getSpecialExits(room)) do
-        for specialExit, locked in pairs(specialExits) do
-          if locked == "0" and not visited[destRoom] then
-            if
-              (((weights[direction] or 0) + getRoomWeight(destRoom)) &gt; 1) and
-              not roomLocked(destRoom)
-            then
-              addWeighted(destRoom, (weights[direction] or 0) + getRoomWeight(destRoom))
-            else
-              visited[destRoom] = true
-            end
-            if not roomLocked(destRoom) then
-              nextCheck[destRoom] = true
-            end
-          end
-        end
-      end
-    end
-    --replaces checking with the next set of rooms to check, and clears nextCheck.
-    checking, nextCheck = nextCheck, {}
-    reduceWeights()
-    --if no rooms on checking and weightedRooms, exits out.
-    --If no rooms in checking but there are rooms in weightedRooms, it will iterate down the weights until something is in checking.
-    if not next(checking) then
-      if next(weightedRooms) then
-        while next(weightedRooms) and not next(checking) do
-          reduceWeights()
-        end
-      else
-        return
-      end
-    end
-  end
-end
-
---does the actual linking and stuff. Mostly copied over from the main wings script.
---however, half of the checks have been removed because they were already done in the process
---of searching for a valid outdoors room.
-
-local function linkWingsRemote(room)
-  local function getcmd(word)
-    return
-      mmp.settings.removewings and
-      string.format(
-        [[script:sendAll("wear wings", "say *%s %s", "remove wings", false)]],
-        (mmp.settings.winglanguage and mmp.settings.winglanguage or ""),
-        word
-      ) or
-      string.format(
-        [[script:send("say *%s %s", false)]],
-        (mmp.settings.winglanguage and mmp.settings.winglanguage or ""),
-        word
-      )
-  end
-
-  --decided to pull this out and set it as a local variable instead of calling it 20x throughout the script.
-  local area = getRoomArea(room)
-  --sarapis wings
-  if (mmp.settings.duanathar or mmp.settings.duanatharan or mmp.settings.duantahar) then
-    if mmp.oncontinent(area, "Main") then
-      if mmp.settings.duanatharan then
-        mmp.tempSpecialExit(room, 4882, getcmd("duanatharan"))
-        mmp.tempSpecialExit(room, 3885, getcmd("duanathar"))
-      elseif mmp.settings.duantahar then
-        mmp.tempSpecialExit(room, 42319, getcmd("duanathar"))
-        mmp.tempSpecialExit(room, 4882, getcmd("duanatharan"))
-      else
-        mmp.tempSpecialExit(room, 3885, getcmd("duanathar"))
-      end
-      --Meropis Wings
-    elseif mmp.oncontinent(area, "Meropis") then
-      if mmp.settings.duanatharan then
-        mmp.tempSpecialExit(room, 51603, getcmd("duanatharan"))
-        mmp.tempSpecialExit(room, 51188, getcmd("duanathar"))
-      elseif mmp.settings.duantahar then
-        mmp.tempSpecialExit(room, 42319, getcmd("duanathar"))
-        mmp.tempSpecialExit(room, 51603, getcmd("duanatharan"))
-      else
-        mmp.tempSpecialExit(room, 51188, getcmd("duanathar"))
-      end
-    end
-  end
-  --island wings
-  if
-    mmp.settings.duanatharic and
-    (
-      mmp.oncontinent(area, "Main") or
-      mmp.oncontinent(area, "Arcadia") or
-      mmp.oncontinent(area, "Outer") or
-      mmp.oncontinent(area, "Meropis") or
-      mmp.oncontinent(area, "Island") or
-      mmp.oncontinent(area, "North")
-    )
-  then
-    mmp.tempSpecialExit(room, 47571, getcmd("duanatharic"))
-  end
-  if mmp.settings.harness then
-    -- eastern isles
-    if mmp.oncontinent(area, "Eastern_Isles") then
-      mmp.tempSpecialExit(room, 54231, "Shake Harness")
-      -- northern isles
-    elseif mmp.oncontinent(area, "Northen_Isles") then
-      mmp.tempSpecialExit(room, 48719, "Shake Harness")
-      -- western isles
-    elseif mmp.oncontinent(area, "Western_Isles") then
-      mmp.tempSpecialExit(room, 54632, "Shake Harness")
-    end
-  end
-  if mmp.settings.soar then
-    --Sarapis soar.
-    if mmp.oncontinent(area, "Main") then
-      if
-        gmcp.Char.Status.class == "air Elemental Lord" or
-        gmcp.Char.Status.class == "air Elemental Lady"
-      then
-        mmp.tempSpecialExit(room, 4882, "aero soar high", 10)
-        -- duanatharan
-        mmp.tempSpecialExit(room, 3885, "aero soar low", 10)
-        -- duanathar
-        mmp.tempSpecialExit(room, 54173, "aero soar stratosphere", 10)
-        -- Stratosphere!
-      end
-      --Meropis soar
-    elseif mmp.oncontinent(area, "Meropis") then
-      if
-        gmcp.Char.Status.class == "air Elemental Lord" or
-        gmcp.Char.Status.class == "air Elemental Lady"
-      then
-        mmp.tempSpecialExit(room, 51603, "aero soar high", 10)
-        -- duanatharan
-        mmp.tempSpecialExit(room, 51188, "aero soar low", 10)
-        -- duanathar
-        mmp.tempSpecialExit(room, 54173, "aero soar stratosphere", 10)
-        -- Stratosphere!
-      end
-    end
-  end
-end
-
---is called when you do pathfinding.
-
-function mmp.achaeaBetterWings()
-  --if you're not on achaea, or the crowdmap is not enabled, or the room you're in is flagged as outdoors, exit out.
-  if
-    (mmp.game ~= "achaea") or
-    (not mmp.settings.betterwings) or
-    (not mmp.settings.crowdmap) or
-    (getRoomUserData(mmp.currentroom, "outdoors") == "y" and orbedBlackList()(mmp.currentroom))
-  then
-    return
-  end
-  --if none of the shortcut items are enabled, return.
-  if
-    not (
-      mmp.settings.duanathar or
-      mmp.settings.duantahar or
-      mmp.settings.duanatharan or
-      mmp.settings.soar or
-      mmp.settings.harness or
-      mmp.settings.duanatharic
-    )
-  then
-    return
-  end
-  --find closest room, if that function returned something useful, call above function to create temporary remote special exits depending on settings.
-  local closestRoom = closestOutdoors(mmp.currentroom)
-  if closestRoom then
-      if mmp.debug then
-        mmp.echo("Closest outdoors room found at " .. closestRoom)
-      end
-    linkWingsRemote(closestRoom)
-  end
-end
-
-registerAnonymousEventHandler("mmp link externals", "mmp.achaeaBetterWings")</script>
 					<eventHandlerList />
 				</Script>
 				<Script isActive="yes" isFolder="no">
@@ -8014,32 +7730,11 @@ end</script>
   end
 end
 
-function mmp.roomFind(query, lines)
+function mmp.roomFind(query)
   if query:ends('.') then
     query = query:sub(1, -2)
   end
-  local defaultLine = 30 -- this could this to a setting instead of a static number
   local result = mmp.searchRoom(query)
-  if lines == 'all' then
-    lines = table.size(result)
-  end
-  lines = (lines ~= '') and tonumber(lines) or defaultLine 
-  
-  --create a new table (roomsTable) with keys and add areas to the table
-  local roomsTable = {}
-  for k, v in pairs(result) do
-    --not all rooms have an area associated with it in mmp.areatabler so need to either remove those or add one
-    local a = mmp.areatabler[getRoomArea(k)] or "unknown"
-    roomsTable[#roomsTable + 1] = {num = k, area = a, name = v}
-  end
-  --sort roomsTable by area name
-  table.sort(
-    roomsTable,
-    function(a, b)
-      return a.area &lt; b.area
-    end
-  )
-  --start displaying info
   if type(result) == "string" or not next(result) then
     cecho("&lt;grey&gt;You have no recollection of any room with that name.")
     return
@@ -8053,39 +7748,35 @@ function mmp.roomFind(query, lines)
     return mmp.oncontinent(getRoomArea(roomid), "Main") and '' or ' (Meropis)'
   end
 
-  local i = 1
   if not tonumber(select(2, next(result))) then
-    cecho(string.format("&lt;white&gt; %-10s%-40s%s\n", "ROOM ID", "ROOM NAME", "ROOM AREA"))
-    for _, v in ipairs(roomsTable) do
-      if i &gt; lines then
-        break
-      end
-      roomid = tonumber(v.num)
-      roomname = v.name
-      roomarea = v.area
+    -- old style
+    for roomid, roomname in pairs(result) do
+      roomid = tonumber(roomid)
+      cecho(string.format("  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (", tostring(roomname)))
       cechoLink(
-        string.format("&lt;" .. mmp.settings.echocolour .. "&gt; %-10s", roomid),
+        "&lt;" .. mmp.settings.echocolour .. "&gt;" .. roomid,
         'mmp.gotoRoom(' .. roomid .. ')',
         string.format("Go to %s (%s)", roomid, tostring(roomname)),
         true
       )
-      cecho(string.format("&lt;LightSlateGray&gt;%-40s", string.sub(tostring(roomname), 1, 39)))
-      cechoLink(
+      cecho(
         string.format(
-          "&lt;DarkSlateGrey&gt;%s%s&lt;DarkSlateGrey&gt;\n",
+          "&lt;DarkSlateGrey&gt;) in &lt;LightSlateGray&gt;%s%s&lt;DarkSlateGrey&gt;.",
           mmp.cleanAreaName(tostring(mmp.areatabler[getRoomArea(roomid)])),
           showmeropis(roomid)
-        ),
+        )
+      )
+      fg("DarkSlateGrey")
+      echoLink(
+        " &gt; Show path\n",
         [[mmp.echoPath(mmp.currentroom, ]] .. roomid .. [[)]],
         "Display directions from here to " .. roomname,
         true
       )
       resetFormat()
-      i = i + 1
     end
   else
     -- new style
-    --- not sure what this new area code is but it doesn't seem to fire
     for roomname, roomid in pairs(result) do
       roomid = tonumber(roomid)
       cecho(string.format("  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (", tostring(roomname)))
@@ -8112,19 +7803,7 @@ function mmp.roomFind(query, lines)
       resetFormat()
     end
   end
-  if table.size(result) &lt;= lines then
-    cecho(string.format("&lt;DarkSlateGrey&gt;%d rooms found.\n", table.size(result)))
-  else
-    lastRoomQuery = query
-    cechoLink(
-      string.format(
-        "&lt;DarkSlateGrey&gt;%d of %d rooms shown. Click to see all rooms.\n", lines, table.size(result)
-      ),
-      'mmp.roomFind(lastRoomQuery, "all")',
-      string.format("Show all %d rooms.", table.size(result)),
-      true
-    )
-  end
+  cecho(string.format("  &lt;DarkSlateGrey&gt;%d rooms found.\n", table.size(result)))
 end
 
 function mmp.echoRoomList(areaname, exact)
@@ -9226,16 +8905,7 @@ function mmp.setKey()
 
   if mmp.settings.key then mmp.echo("Okay, will see about using your Infernal Key whenever it's quicker")
   else mmp.echo("Won't use the Infernal Key anymore.") end
-end
-
-function mmp.setBetterWings()
-  if mmp.settings.betterwings then
-    mmp.echo("Okay, will use improved pathfinding for wings and other fast travel artefacts")
-  else
-    mmp.echo("Okay, will use the original pathfinding for travel artefacts")
-  end
-end
-</script>
+end</script>
 					<eventHandlerList />
 				</Script>
 				<Script isActive="yes" isFolder="no">
@@ -10432,16 +10102,13 @@ function mmp_mapping_newroom(_, num)
           end
           -- check indoors status
           local indoors = table.contains(gmcp.Room.Info.details, "indoors")
-          if indoors and (getRoomUserData(num, "indoors") == '' or getRoomUserData(num,"outdoors") ~= '') then
+          if indoors and getRoomUserData(num, "indoors") == '' then
             setRoomUserData(num, "indoors", "y")
-            clearRoomUserDataItem(num, "outdoors")
             s = s .. (#s &gt; 0 and " " or "") .. "Updated room to be indoors."
-          elseif not indoors and (getRoomUserData(num, "indoors") ~= '' or getRoomUserData(num, "outdoors") == '') then
-            clearRoomUserDataItem(num, "indoors")
-            setRoomUserData(num, "outdoors", "y")
+          elseif not indoors and getRoomUserData(num, "indoors") ~= '' then
+            setRoomUserData(num, "indoors", "")
             s = s .. (#s &gt; 0 and " " or "") .. "Updated room to be outdoors."
           end
-
           -- check server area name (Achaea only for now)
           if mmp.game == "achaea" then
             local serverArea = gmcp.Room.Info.area
@@ -10768,46 +10435,7 @@ registerAnonymousEventHandler("started speedwalk", "mmp.UnwearShackle")</script>
 					<Script isActive="yes" isFolder="no">
 						<name>mmapper_achaea_orb_of_confinement</name>
 						<packageName></packageName>
-						<script>--returns a table depending on current crowdmap settings. Functionized so that these tables will only have to be stored in one location.
-function mmp.getAchaeaOrbTable()
-  return
-  --first table is areas in each org for the crowdmap, second is for the game provided map.
-    mmp.settings.crowdmap and
-    {
-      ashtan = {49, 53},
-      cyrene = {57, 59, 62, 63, 68, 70},
-      eleusis = {51},
-      hashan = {55, 56, 267},
-      mhaldor = {44, 40, 48},
-      targossas = {368},
-    } or
-    {
-      ashtan = {49, 53, 54, 60},
-      cyrene = {57, 62, 67, 174, 189, 292, 293, 294},
-      eleusis = {51},
-      hashan = {55, 56},
-      mhaldor = {44, 48, 295, 296, 297},
-      targossas = {271, 277, 298, 299, 300},
-    }
-end
-
---roomID is optional, if not it will default to current room. Returns true if you're in an area covered by the orb of confinement.
-function mmp.orbed(roomID)
-  if mmp.game ~= "achaea" then
-    return false
-  end
-  local orbTable = mmp.getAchaeaOrbTable()
-  --first table is the areas in the city for the crowdmap, second is for the game provided map.
-  local areaID = getRoomArea(roomID or mmp.currentroom)
-  for city, areaTable in pairs(orbTable) do
-    if table.contains(areaTable, areaID) then
-      return mmp.settings["orb" .. city]
-    end
-  end
-  return false
-end
-
-function mmp.setOrb(city)
+						<script>function mmp.setOrb(city)
   mmp.clearpathcache()
   if mmp.settings["orb"..city:lower()] then
     mmp.echo("Orb of Confinement set as &lt;green&gt;ACTIVE&lt;reset&gt; for " .. city:title())
