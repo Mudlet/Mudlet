@@ -285,6 +285,7 @@ bool TCommandLine::event(QEvent* event)
             if ((ke->modifiers() & allModifiers) == Qt::ShiftModifier) {
                 textCursor().insertBlock();
                 ke->accept();
+                adjustHeight();
                 return true;
 
             }
