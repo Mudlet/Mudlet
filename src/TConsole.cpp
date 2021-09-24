@@ -27,7 +27,6 @@
 
 
 #include "Host.h"
-#include "TAccessibleConsole.h"
 #include "TCommandLine.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
@@ -42,6 +41,8 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QAccessibleInterface>
+#include <QAccessibleWidget>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
@@ -76,8 +77,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mControlCharacterMode(pH->getControlCharacterMode())
 , mType(type)
 {
-    QAccessible::installFactory(TAccessibleConsole::consoleFactory);
-
     auto ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
     ps->setContext(Qt::WidgetShortcut);

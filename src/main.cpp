@@ -3,6 +3,7 @@
  *   Copyright (C) 2013-2014, 2016-2021 by Stephen Lyons                   *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
+ *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -38,6 +39,7 @@
 #include <QStringListIterator>
 #include "post_guard.h"
 #include "AltFocusMenuBarDisable.h"
+#include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
 
 using namespace std::chrono_literals;
@@ -170,6 +172,7 @@ int main(int argc, char* argv[])
 
     auto app = qobject_cast<QApplication*>(new QApplication(argc, argv));
 
+    QAccessible::installFactory(TAccessibleConsole::consoleFactory);
     QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
 
 #if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
