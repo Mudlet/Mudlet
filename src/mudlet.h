@@ -65,6 +65,9 @@
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
 
+// how to use: https://github.com/mandeepsandhu/qt-ordered-map/blob/master/tests/functional/testorderedmap.cpp
+#include <../3rdparty/qt-ordered-map/src/orderedmap.h>
+
 // for system physical memory info
 #if defined(Q_OS_WIN32)
 #include <Windows.h>
@@ -439,7 +442,12 @@ public:
     };
 
     // clang-format off
-    inline static const QHash<QString, GameDetails> scmDefaultGames = {
+    inline static const OrderedMap<QString, GameDetails> scmDefaultGames = {
+        {"Avalon.de", {"avalon.mud.de", 23, false,
+                        "<center><a href='http://avalon.mud.de'>http://avalon.mud.de</a></center>",
+                        ":/icons/avalon.png"}},
+        {"Achaea", {"achaea.com", 23, false, "<center><a href='http://www.achaea.com/'>http://www.achaea.com</a></center>", ":/icons/achaea_120_30.png"}},
+        {"3Kingdoms", {"3k.org", 3200, false, "<center><a href='http://www.3k.org/'>http://www.3k.org</a></center>", ":/icons/3klogo.png"}},
         {"3Scapes", {
             "3k.org",   // address to connect to
             3200,       // port to connect on
@@ -449,27 +457,21 @@ public:
             // path to the profile icon
             ":/icons/3slogo.png"
         }},
-        {"Avalon.de", {"avalon.mud.de", 23, false,
-                        "<center><a href='http://avalon.mud.de'>http://avalon.mud.de</a></center>",
-                        ":/icons/avalon.png"}},
+        {"Lusternia", {"lusternia.com", 23, false, "<center><a href='http://www.lusternia.com/'>http://www.lusternia.com</a></center>", ":/icons/lusternia_120_30.png"}},
+        {"BatMUD", {"batmud.bat.org", 23, false, "<center><a href='http://www.bat.org'>http://www.bat.org</a></center>", ":/icons/batmud_mud.png"}},
+
         {"God Wars II", {"godwars2.org", 3000, false,
                         "<center><a href='http://www.godwars2.org'>http://www.godwars2.org</a></center>",
                         ":/icons/gw2.png"}},
+        {"Slothmud", {"slothmud.org", 6101, false, "<center><a href='http://www.slothmud.org/'>http://www.slothmud.org/</a></center>", ":/icons/Slothmud.png"}},
+        {"Aardwolf", {"aardmud.org", 4000, false, "<center><a href='http://www.aardwolf.com/'>http://www.aardwolf.com</a></center>", ":/icons/aardwolf_mud.png"}},
         {"Materia Magica", {"materiamagica.com", 23, false,
                         "<center><a href='http://www.materiamagica.com'>http://www.materiamagica.com</a></center>",
                         ":/materiaMagicaIcon"}},
-        {"BatMUD", {"batmud.bat.org", 23, false, "<center><a href='http://www.bat.org'>http://www.bat.org</a></center>", ":/icons/batmud_mud.png"}},
-        {"Aardwolf", {"aardmud.org", 4000, false, "<center><a href='http://www.aardwolf.com/'>http://www.aardwolf.com</a></center>", ":/icons/aardwolf_mud.png"}},
-        {"Achaea", {"achaea.com", 23, false, "<center><a href='http://www.achaea.com/'>http://www.achaea.com</a></center>", ":/icons/achaea_120_30.png"}},
-        {"Aetolia", {"aetolia.com", 23, false, "<center><a href='http://www.aetolia.com/'>http://www.aetolia.com</a></center>", ":/icons/aetolia_120_30.png"}},
-        {"Lusternia", {"lusternia.com", 23, false, "<center><a href='http://www.lusternia.com/'>http://www.lusternia.com</a></center>", ":/icons/lusternia_120_30.png"}},
-        {"Imperian", {"imperian.com", 23, false, "<center><a href='http://www.imperian.com/'>http://www.imperian.com</a></center>", ":/icons/imperian_120_30.png"}},
         {"Realms of Despair", {"realmsofdespair.com", 4000, false, "<center><a href='http://www.realmsofdespair.com/'>http://www.realmsofdespair.com</a></center>", ":/icons/120x30RoDLogo.png"}},
         {"ZombieMUD", {"zombiemud.org", 23, false, "<center><a href='http://www.zombiemud.org/'>http://www.zombiemud.org</a></center>", ":/icons/zombiemud.png"}},
-        {"Carrion Fields", {"carrionfields.net", 4449, false, "<center><a href='http://www.carrionfields.net'>www.carrionfields.net</a></center>", ":/icons/carrionfields.png"}},
-        {"Cleft of Dimensions", {"cleftofdimensions.net", 4354, false, "<center><a href='https://www.cleftofdimensions.net/'>cleftofdimensions.net</a></center>", ":/icons/cleftofdimensions.png"}},
-        {"3Kingdoms", {"3k.org", 3200, false, "<center><a href='http://www.3k.org/'>http://www.3k.org</a></center>", ":/icons/3klogo.png"}},
-        {"Slothmud", {"slothmud.org", 6101, false, "<center><a href='http://www.slothmud.org/'>http://www.slothmud.org/</a></center>", ":/icons/Slothmud.png"}},
+        {"Aetolia", {"aetolia.com", 23, false, "<center><a href='http://www.aetolia.com/'>http://www.aetolia.com</a></center>", ":/icons/aetolia_120_30.png"}},
+        {"Imperian", {"imperian.com", 23, false, "<center><a href='http://www.imperian.com/'>http://www.imperian.com</a></center>", ":/icons/imperian_120_30.png"}},
         {"WoTMUD", {"game.wotmud.org", 2224, false, "<center><a href='http://www.wotmud.org/'>Main website</a></center>\n"
                                  "<center><a href='http://www.wotmod.org/'>Forums</a></center>", ":/icons/wotmudicon.png"}},
         {"Midnight Sun 2", {"midnightsun2.org", 3000, false, "<center><a href='http://midnightsun2.org/'>http://midnightsun2.org/</a></center>", ":/icons/midnightsun2.png"}},
@@ -481,8 +483,10 @@ public:
                                  "<center><a href='https://wiki.reinosdeleyenda.es/'>Wiki</a></center>\n", ":/icons/reinosdeleyenda_mud.png"}},
         {"Fierymud", {"fierymud.org", 4000, false, "<center><a href='https://www.fierymud.org/'>https://www.fierymud.org</a></center>", ":/icons/fiery_mud.png"}},
         // {"Mudlet self-test", {"mudlet.org", 23, false,}},
-        {"CoreMUD", {"coremud.org", 4000, false, "<center><a href='https://coremud.org/'>coremud.org</a></center>", ":/icons/coremud_icon.jpg"}},
+        {"Carrion Fields", {"carrionfields.net", 4449, false, "<center><a href='http://www.carrionfields.net'>www.carrionfields.net</a></center>", ":/icons/carrionfields.png"}},
+        {"Cleft of Dimensions", {"cleftofdimensions.net", 4354, false, "<center><a href='https://www.cleftofdimensions.net/'>cleftofdimensions.net</a></center>", ":/icons/cleftofdimensions.png"}},
         {"Legends of the Jedi", {"legendsofthejedi.com", 5656, false, "<center><a href='https://www.legendsofthejedi.com/'>legendsofthejedi.com</a></center>", ":/icons/legendsofthejedi_120x30.png"}},
+        {"CoreMUD", {"coremud.org", 4020, true, "<center><a href='https://coremud.org/'>coremud.org</a></center>", ":/icons/coremud_icon.jpg"}},
     };
     // clang-format on
 
