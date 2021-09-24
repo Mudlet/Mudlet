@@ -13995,6 +13995,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addMouseEvent", TLuaInterpreter::addMouseEvent);
     lua_register(pGlobalLua, "removeMouseEvent", TLuaInterpreter::removeMouseEvent);
     lua_register(pGlobalLua, "getMouseEvents", TLuaInterpreter::getMouseEvents);
+    lua_register(pGlobalLua, "setMudletConfig", TLuaInterpreter::setMudletConfig);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -15833,5 +15834,108 @@ int TLuaInterpreter::getMouseEvents(lua_State * L)
         // Add the mapEvent object to the result table
         lua_setfield(L, -2, it.key().toUtf8().constData());
     }
+    return 1;
+}
+
+int TLuaInterpreter::setMudletConfig(lua_State * L)
+{
+    QString key = getVerifiedString(L, __func__, 1, "key");
+    if (key.isEmpty()) {
+        return warnArgumentValue(L, __func__, "you must provide key");
+    }
+
+    int success = []() 
+    { 
+        lua_pushboolean(L, true);
+        return 1;
+    };
+
+    Host& host = getHostFromLua(L);
+    if (host.mpMap && host.mpMap->mpMapper) {
+        if (key == "mapperRoomSize") {
+            host.mpMap->mpMapper->slot_setRoomSize(getVerifiedInt(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == "mapperExitSize") {
+            host.mpMap->mpMapper->slot_setExitSize(getVerifiedInt(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == "mapperRoundRooms") {
+            host.mpMap->mpMapper->slot_toggleRoundRooms(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == "mapperShowRoomIds") {
+            host.mpMap->mpMapper->slot_setShowRoomIds(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == "mapperShowMapInfo") {
+            host.mMapInfoContributors.insert(getVerifiedString(L, __func__, 2, "value"));
+            host.mpMap->mpMapper->slot_updateInfoContributors();
+            return success();
+        }
+        if (key == "mapperHideMapInfo") {
+            host.mMapInfoContributors.remove(getVerifiedString(L, __func__, 2, "value"));
+            host.mpMap->mpMapper->slot_updateInfoContributors();
+            return success();
+        }
+        if (key == "mapperShow3dView") {
+            host.mpMap->mpMapper->slot_toggle3DView(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == "mapperPanelVisible") {
+            host.mpMap->mpMapper->slot_setMapperPanelVisible(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == "mapperShowRoomBorders") {
+            host.mMapperShowRoomBorders = (getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == "generalEnableGMCP") {
+            host.mEnableGMCP = getVerifiedBool(L, __func__, 2, "value");
+            return success();
+        }
+        if (key == "generalEnableMSDP") {
+            host.mEnableMSDP = getVerifiedBool(L, __func__, 2, "value");
+            return success();
+        }
+        if (key == "generalEnableMSSP") {
+            host.mEnableMSSP = getVerifiedBool(L, __func__, 2, "value");
+            return success();
+        }
+        if (key == "generalEnableMSP") {
+            host.mEnableMSP = getVerifiedBool(L, __func__, 2, "value");
+            return success();
+        }
+        if (key == "inputLineStrictUnixEndings") {
+            host.mUSE_UNIX_EOL = getVerifiedBool(L, __func__, 2, "value");
+            return success();
+        }
+        if (key == "inputLineCommandSeparator") {
+            host.mCommandSeparator = getVerifiedString(L, __func__, 2, "value");
+            return success();
+        }
+        if (key == "mainDisplayFixUnnecessaryLinebreaks") {
+            host.set_USE_IRE_DRIVER_BUGFIX(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == "specialForceCompressionOff") {
+            host.mFORCE_NO_COMPRESSION = getVerifiedBool(L, __func__, 2, "value");
+            return success();
+        }
+        if (key == "specialForceGAOff") {
+            host.mFORCE_GA_OFF = getVerifiedBool(L, __func__, 2, "value");
+            return success();
+        }
+        if (key == "specialForceCharsetNegotiationOff") {
+            host.mFORCE_CHARSET_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
+            return success();
+        }
+        if (key == "specialForceMxpNegotiationOff") {
+            host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
+            return success();
+        }
+    }
+
+    lua_pushboolean(L, false);
     return 1;
 }
