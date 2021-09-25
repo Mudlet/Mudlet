@@ -3408,7 +3408,7 @@ you can use it but there could be issues with aligning columns of text</string>
              </font>
             </property>
             <property name="text">
-             <string>TextLabel</string>
+             <string notr="true" extracomment="This text does not need to be translated as it is overwritten when used by the associated C++ class dlgProfilePreferences">{Password migration message to be inserted here}</string>
             </property>
            </widget>
           </item>
@@ -3493,29 +3493,35 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="6" column="0">
            <widget class="QLabel" name="label_networkPackerTimeout">
             <property name="text">
-             <string>Network packet timeout (milli-seconds):</string>
+             <string>Additional text wait time:</string>
             </property>
             <property name="buddy">
-             <cstring>spinBox_networkPacketTimeout</cstring>
+             <cstring>doubleSpinBox_networkPacketTimeout</cstring>
             </property>
            </widget>
           </item>
           <item row="6" column="1">
-           <widget class="QSpinBox" name="spinBox_networkPacketTimeout">
+           <widget class="QDoubleSpinBox" name="doubleSpinBox_networkPacketTimeout">
             <property name="toolTip">
-             <string>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) / &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/t&gt;) signalling are Telnet enhancements that tell Mudlet when the Game Server is done sending a piece of text. On Game Servers which do not provide &lt;tt&gt;GA&lt;/tt&gt; or &lt;tt&gt;EOR&lt;/tt&gt; this option controls how long Mudlet will wait for further network packets (i.e. text or other &amp;quot;out-of-band&amp;quot; &lt;tt&gt;OOB&lt;/tt&gt; data) to arrive. The default is 300 milli-seconds. Larger values will help to prevent unintended linebreaks in the middle of big pieces of text which may break triggers; smaller values can make Mudlet seem more responsive to incoming text but runs a risk of breaking up text (or more problematically &lt;tt&gt;OOB&lt;/tt&gt; data).&lt;/p&gt;&lt;p&gt;&lt;i&gt;Adjustment of this persistent per-profile control is &lt;b&gt;NOT&lt;/b&gt; recommended unless you understand what it is doing and why it might be helpful. Fine-tuning is likely to depend on particular network conditions and MUD Game servers and a lower (shorter wait) setting that works for one user may not be long enough for others.&lt;/i&gt;&lt;/p&gt;</string>
+             <string>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) and &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) signalling tells Mudlet when the game server is done sending text. On games that do not provide &lt;tt&gt;GA&lt;/tt&gt; or &lt;tt&gt;EOR&lt;/tt&gt;, this option controls how long Mudlet will wait for more text to arrive. Greater values will help reduce the risk that Mudlet will split a large piece of text (with unintended line-breaks in the middle) which can stop some triggers from working. Lesser values increases the risk of text getting broken up, but may make the game feel more responsive.&lt;/p&gt;&lt;p&gt;&lt;i&gt;The default value, which was what Mudlet used before this control was added, is 0.300 Seconds.&lt;/i&gt;&lt;/p&gt;</string>
+            </property>
+            <property name="suffix">
+             <string extracomment="For most locales a space should be included so that the text is separated from the number!"> Seconds</string>
+            </property>
+            <property name="decimals">
+             <number>3</number>
             </property>
             <property name="minimum">
-             <number>10</number>
+             <double>0.010000000000000</double>
             </property>
             <property name="maximum">
-             <number>500</number>
+             <double>0.500000000000000</double>
             </property>
             <property name="singleStep">
-             <number>10</number>
+             <double>0.010000000000000</double>
             </property>
             <property name="value">
-             <number>300</number>
+             <double>0.300000000000000</double>
             </property>
            </widget>
           </item>
@@ -3678,6 +3684,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_copyMap</tabstop>
   <tabstop>buttonDownloadMap</tabstop>
   <tabstop>mMapperUseAntiAlias</tabstop>
+  <tabstop>checkbox_mMapperShowRoomBorders</tabstop>
   <tabstop>checkBox_isOnlyMapSymbolFontToBeUsed</tabstop>
   <tabstop>comboBox_playerRoomStyle</tabstop>
   <tabstop>checkBox_showDefaultArea</tabstop>
@@ -3688,6 +3695,8 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_playerRoomSecondaryColor</tabstop>
   <tabstop>spinBox_playerRoomInnerDiameter</tabstop>
   <tabstop>pushButton_foreground_color_2</tabstop>
+  <tabstop>pushButton_roomBorderColor</tabstop>
+  <tabstop>pushButton_background_color_2</tabstop>
   <tabstop>pushButton_black_2</tabstop>
   <tabstop>pushButton_red_2</tabstop>
   <tabstop>pushButton_green_2</tabstop>
@@ -3696,7 +3705,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_magenta_2</tabstop>
   <tabstop>pushButton_cyan_2</tabstop>
   <tabstop>pushButton_white_2</tabstop>
-  <tabstop>pushButton_background_color_2</tabstop>
   <tabstop>pushButton_Lblack_2</tabstop>
   <tabstop>pushButton_Lred_2</tabstop>
   <tabstop>pushButton_Lgreen_2</tabstop>
@@ -3740,6 +3748,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_expectCSpaceIdInColonLessMColorCode</tabstop>
   <tabstop>comboBox_store_passwords_in</tabstop>
   <tabstop>timeEdit_timerDebugOutputMinimumInterval</tabstop>
+  <tabstop>doubleSpinBox_networkPacketTimeout</tabstop>
  </tabstops>
  <resources>
   <include location="../mudlet.qrc"/>

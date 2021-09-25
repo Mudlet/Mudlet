@@ -1002,7 +1002,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
-    spinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout());
+    doubleSpinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout() / 1000.0);
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -1084,7 +1084,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
     connect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_logFileNameFormatChange);
     connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml);
-    connect(spinBox_networkPacketTimeout, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPostingTimeout);
+    connect(doubleSpinBox_networkPacketTimeout, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPostingTimeout);
 
     //Security tab
 
@@ -3912,12 +3912,12 @@ void dlgProfilePreferences::setPlayerRoomColor(QPushButton* b, QColor& c)
     }
 }
 
-void dlgProfilePreferences::slot_setPostingTimeout(const int timeout)
+void dlgProfilePreferences::slot_setPostingTimeout(const double timeout)
 {
     Host* pHost = mpHost;
     if (!pHost) {
         return;
     }
 
-    pHost->mTelnet.setPostingTimeout(timeout);
+    pHost->mTelnet.setPostingTimeout(qRound(1000.0 * timeout));
 }
