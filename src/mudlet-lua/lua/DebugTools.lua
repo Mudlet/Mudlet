@@ -376,3 +376,46 @@ function display(...)
     echo((inspect(arg[1]) or 'nil') .. '\n')
   end
 end
+
+local function printX(options)
+  local func = options.func or debugc
+  local showTrace = options.showTrace
+  local msg = options.msg or ""
+  local halt = options.halt
+  local stackTable = debug.traceback():gsub("\t", "  "):gsub("%[string ",""):split("\n")
+  table.remove(stackTable,2)
+  table.remove(stackTable,2)
+  local level = #stackTable + 1
+  local dinfo = debug.getinfo(level)
+  local header = string.format("(%s:line %s)", dinfo.source, dinfo.currentline)
+  if halt then
+    header = "\n" .. header
+  end
+  local traceback = showTrace and "\n" .. table.concat(stackTable, "\n") or ""
+  msg = string.format("%s %s%s", halt and "" or header, msg, traceback)
+  if halt then
+    func(msg, level)
+  end
+  func(msg)
+end
+
+function printError(msg, showTrace, haltExecution)
+  local func = haltExecution and error or errorc
+  local options = {
+    msg = msg,
+    showTrace = showTrace,
+    halt = haltExecution,
+    func = func,
+  }
+  printX(options)
+end
+
+function printDebug(msg, showTrace)
+  local options = {
+    msg = msg,
+    showTrace = showTrace,
+    halt = false,
+    func = debugc
+  }
+  printX(options)
+end
