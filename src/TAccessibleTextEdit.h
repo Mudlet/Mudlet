@@ -60,7 +60,6 @@ public:
     }
 
     TTextEdit* textEdit() const;
-    QAccessible::Role role() const;
     QAccessible::State state() const;
     int lineForOffset(int offset) const;
     int columnForOffset(int offset) const;

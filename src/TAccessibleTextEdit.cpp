@@ -29,11 +29,6 @@ TTextEdit* TAccessibleTextEdit::textEdit() const
     return static_cast<TTextEdit*>(object());
 }
 
-QAccessible::Role TAccessibleTextEdit::role() const
-{
-    return QAccessible::StaticText;
-}
-
 QAccessible::State TAccessibleTextEdit::state() const
 {
     QAccessible::State s = QAccessibleWidget::state();
