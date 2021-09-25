@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -56,8 +56,8 @@ class IRC_MODEL_EXPORT IrcUserModel : public QAbstractListModel
     Q_PROPERTY(Qt::SortOrder sortOrder READ sortOrder WRITE setSortOrder)
 
 public:
-    explicit IrcUserModel(QObject* parent = 0);
-    virtual ~IrcUserModel();
+    explicit IrcUserModel(QObject* parent = nullptr);
+    ~IrcUserModel() override;
 
     IrcChannel* channel() const;
     void setChannel(IrcChannel* channel);
@@ -84,14 +84,16 @@ public:
     QModelIndex index(IrcUser* user) const;
     IrcUser* user(const QModelIndex& index) const;
 
-    QHash<int, QByteArray> roleNames() const;
-    int rowCount(const QModelIndex& parent = QModelIndex()) const;
-    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
-    QModelIndex index(int row, int column = 0, const QModelIndex& parent = QModelIndex()) const;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    QHash<int, QByteArray> roleNames() const override;
+#endif
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+    QModelIndex index(int row, int column = 0, const QModelIndex& parent = QModelIndex()) const override;
 
 public Q_SLOTS:
     void clear();
-    void sort(int column = 0, Qt::SortOrder order = Qt::AscendingOrder);
+    void sort(int column = 0, Qt::SortOrder order = Qt::AscendingOrder) override;
     void sort(Irc::SortMethod method, Qt::SortOrder order = Qt::AscendingOrder);
 
 Q_SIGNALS:

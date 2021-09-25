@@ -646,13 +646,18 @@ end
 
 
 
---- Replace the whole with a string you'd like.
+--- Replace an entire line with a string you'd like.
 ---
 --- @see deleteLine
-function replaceLine(what)
-  selectString(line, 1)
+function replaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+    text = window
+  else
+    selectCurrentLine(window)
+  end
   replace("")
-  insertText(what)
+  insertText(text)
 end
 
 
@@ -781,28 +786,28 @@ local rgbToHsv = function(r, g, b)
   local max, min = math.max(r, g, b), math.min(r, g, b)
   local h, s, v
   v = max
-  
+
   local d = max - min
-  if max == 0 then 
-    s = 0 
-  else 
-    s = d / max 
+  if max == 0 then
+    s = 0
+  else
+    s = d / max
   end
-  
+
   if max == min then
     h = 0 -- achromatic
   else
     if max == r then
       h = (g - b) / d
       if g < b then h = h + 6 end
-    elseif max == g then 
+    elseif max == g then
       h = (b - r) / d + 2
-    elseif max == b then 
+    elseif max == b then
       h = (r - g) / d + 4
     end
     h = h / 6
   end
-  
+
   return h, s, v
 end
 
@@ -811,12 +816,12 @@ end
 local step = function(r,g,b)
   local lum = math.sqrt( .241 * r + .691 * g + .068 * b )
   local reps = 8
-  
+
   local h, s, v = rgbToHsv(r,g,b)
-  
+
   local h2 = math.floor(h * reps)
   local v2 = math.floor(v * reps)
-  if h2 % 2 == 1 then 
+  if h2 % 2 == 1 then
     v2 = reps - v2
     lum = reps - lum
   end
@@ -859,7 +864,7 @@ function showColors(...)
       sort = val
     end
   end
-  
+
   local colors = {}
   for k, v in pairs(color_table) do
     local color = {}
@@ -870,11 +875,11 @@ function showColors(...)
       table.insert(colors,color)
     end
   end
-  
-  if sort then 
+
+  if sort then
     table.sort(colors, sortColorsByName)
   else
-    table.sort(colors,sortColorsByHue) 
+    table.sort(colors,sortColorsByHue)
   end
   local i = 1
   for _, k in ipairs(colors) do
@@ -976,15 +981,15 @@ if rex then
   _Echos = {
     Patterns = {
       Hex = {
-        [[(\x5c?(?:#|\|c)(?:[0-9a-fA-F]{6})?(?:,[0-9a-fA-F]{6,})?)|(\|r|#r)]],
+        [[(\x5c?(?:#|\|c)?(?:[0-9a-fA-F]{6}|(?:#,|\|c,)[0-9a-fA-F]{6,8})(?:,[0-9a-fA-F]{6,8})?)|(?:\||#)(\/?[biru])]],
         rex.new [[(?:#|\|c)(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?)?]],
       },
       Decimal = {
-        [[(<[0-9,:]+>)|(<r>)]],
+        [[(<[0-9,:]+>)|<(/?[biru])>]],
         rex.new [[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}),?([0-9]{1,3})?)?>]],
       },
       Color = {
-        [[(<[a-zA-Z0-9_,:]+>)]],
+        [[(</?[a-zA-Z0-9_,:]+>)]],
         rex.new [[<([a-zA-Z0-9_]+)?(?:[:,](?=>))?(?:[:,]([a-zA-Z0-9_]+))?>]],
       },
       Ansi = {
@@ -1010,8 +1015,20 @@ if rex then
         if s then
           t[#t + 1] = s
         end
-        if r then
+        if r == 'r' then
           t[#t + 1] = "\27reset"
+        elseif r == "b" then
+          t[#t + 1] = "\27bold"
+        elseif r == "/b" then
+          t[#t + 1] = "\27boldoff"
+        elseif r == "i" then
+          t[#t + 1] = "\27italics"
+        elseif r == "/i" then
+          t[#t + 1] = "\27italicsoff"
+        elseif r == "u" then
+          t[#t + 1] = "\27underline"
+        elseif r == "/u" then
+          t[#t + 1] = "\27underlineoff"
         end
         if c then
           if style == 'Hex' or style == 'Decimal' then
@@ -1047,8 +1064,20 @@ if rex then
             -- pass it into the text stream then
             t[#t + 1] = ((fr or br) and color or c)
           elseif style == 'Color' then
-            if c == "<reset>" then
+            if c == "<reset>" or c == "<r>" then
               t[#t + 1] = "\27reset"
+            elseif c == "<b>" then
+              t[#t + 1] = "\27bold"
+            elseif c == "</b>" then
+              t[#t + 1] = "\27boldoff"
+            elseif c == "<i>" then
+              t[#t + 1] = "\27italics"
+            elseif c == "</i>" then
+              t[#t + 1] = "\27italicsoff"
+            elseif c == "<u>" then
+              t[#t + 1] = "\27underline"
+            elseif c == "</u>" then
+              t[#t + 1] = "\27underlineoff"
             else
               local fcolor, bcolor = _Echos.Patterns[style][2]:match(c)
               local color = {}
@@ -1090,7 +1119,9 @@ if rex then
     local out, reset
     local args = { ... }
     local n = #args
-    
+
+    assert(type(args[1]) == 'string', style:sub(1,1):lower() .. func .. ': bad argument #1, string expected, got '..type(args[1])..'!)')
+
     if string.find(func, "Link") then
       if n < 3 then
         error 'Insufficient arguments, usage: ([window, ] string, command, hint)'
@@ -1115,7 +1146,7 @@ if rex then
       else
         error 'Improper arguments, usage: ([window, ] string, {commands}, {hints})'
       end
-      
+
     else
       if args[1] and args[2] and args[1] ~= "main" then
         win, str = args[1], args[2]
@@ -1126,16 +1157,14 @@ if rex then
       end
     end
     win = win or "main"
-    
+
     out = function(...)
       _G[func](...)
     end
-    
+
     local t = _Echos.Process(str, style)
-    
     deselect(win)
     resetFormat(win)
-    if not str then error(style:sub(1,1):lower() .. func .. ": bad argument #1, string expected, got nil",3) end
     for _, v in ipairs(t) do
       if type(v) == 'table' then
         if v.fg then
@@ -1147,6 +1176,18 @@ if rex then
           ba = ba or 255
           setBgColor(win, br, bg, bb, ba)
         end
+      elseif v == "\27bold" then
+        setBold(win, true)
+      elseif v == "\27boldoff" then
+        setBold(win, false)
+      elseif v == "\27italics" then
+        setItalics(win, true)
+      elseif v == "\27italicsoff" then
+        setItalics(win, false)
+      elseif v == "\27underline" then
+        setUnderline(win, true)
+      elseif v == "\27underlineoff" then
+        setUnderline(win, false)
       elseif v == "\27reset" then
         resetFormat(win)
       else
@@ -1275,7 +1316,7 @@ if rex then
   function cechoLink(...)
     xEcho("Color", "echoLink", ...)
   end
-	
+
   --- Inserts a link with embedded color name information at the current position
   ---
   --- @usage cinsertLink([window, ] string, command, hint)
@@ -1335,7 +1376,7 @@ if rex then
   function hechoPopup(...)
     xEcho("Hex", "echoPopup", ...)
   end
-	
+
   --- Echos a popup with embedded color name information.
   ---
   --- @usage cinsertPopup([window, ] string, {commands}, {hints})
@@ -1688,7 +1729,7 @@ end
 local colours = {
   [0] = { 0, 0, 0 }, -- black
   [1] = { 128, 0, 0 }, -- red
-  [2] = { 0, 179, 0 }, -- green
+  [2] = { 0, 128, 0 }, -- green
   [3] = { 128, 128, 0 }, -- yellow
   [4] = { 0, 0, 128 }, --blue
   [5] = { 128, 0, 128 }, -- magenta
@@ -1705,35 +1746,6 @@ local lightColours = {
   [5] = { 255, 0, 255 }, -- magenta
   [6] = { 0, 255, 255 }, -- cyan
   [7] = { 255, 255, 255 }, -- white
-}
-
--- black + 23 tone grayscale up to white
--- The values are to be used for each of te r, g and b values
-local grayscaleComponents = {
-  [0] = 0,
-  [1] = 11,
-  [2] = 22,
-  [3] = 33,
-  [4] = 44,
-  [5] = 55,
-  [6] = 67,
-  [7] = 78,
-  [8] = 89,
-  [9] = 100,
-  [10] = 111,
-  [11] = 122,
-  [12] = 133,
-  [13] = 144,
-  [14] = 155,
-  [15] = 166,
-  [16] = 177,
-  [17] = 188,
-  [18] = 200,
-  [19] = 211,
-  [20] = 222,
-  [21] = 233,
-  [22] = 244,
-  [23] = 255
 }
 
 local ansiPattern = rex.new("\\e\\[([0-9:;]+?)m")
@@ -1774,14 +1786,16 @@ function ansi2decho(text, ansi_default_color)
       elseif tag < 16 then
         rgb = lightColours[tag - 8]
       elseif tag < 232 then
-        tag = tag - 16 -- because color 1-15 behave like normal ANSI colors
-
-        r = floor(tag / 36)
-        g = floor((tag - (r * 36)) / 6)
-        b = floor((tag - (r * 36)) - (g * 6))
-        rgb = { r * 51, g * 51, b * 51 }
+        tag = tag - 16 -- because color 1-15 behave like normal ANSI colors      
+        local b = tag % 6
+        local g = (tag - b) / 6 % 6
+        local r = (tag - b - g * 6) / 36 % 6
+        b = b ~= 0 and b * 40 + 55 or 0
+        r = r ~= 0 and r * 40 + 55 or 0
+        g = g ~= 0 and g * 40 + 55 or 0
+        rgb = { r, g, b }
       else
-        local component = grayscaleComponents[tag - 232]
+        local component = (tag - 232) * 10 + 8
         rgb = { component, component, component }
       end
 
@@ -2037,6 +2051,18 @@ function creplace(window, text)
   xReplace(window, text, 'c')
 end
 
+--- version of replaceLine function that allows for color, by way of cinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function creplaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+  else
+    selectCurrentLine(window)
+  end
+  creplace(window, text)
+end
+
 --- version of replace function that allows for color, by way of dinsertText
 --- @param windowName Optional name of the window to replace on
 --- @param text The text to replace the selection with.
@@ -2044,11 +2070,35 @@ function dreplace(window, text)
   xReplace(window, text, 'd')
 end
 
+--- version of replaceLine function that allows for color, by way of dinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function dreplaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+  else
+    selectCurrentLine(window)
+  end
+  dreplace(window, text)
+end
+
 --- version of replace function that allows for color, by way of hinsertText
 --- @param windowName Optional name of the window to replace on
 --- @param text The text to replace the selection with.
 function hreplace(window, text)
   xReplace(window, text, 'h')
+end
+
+--- version of replaceLine function that allows for color, by way of hinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function hreplaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+  else
+    selectCurrentLine(window)
+  end
+  hreplace(window, text)
 end
 
 function resetLabelToolTip(label)
@@ -2069,7 +2119,7 @@ function resizeMapWidget(width, height)
   openMapWidget(-1, -1, width, height)
 end
 
--- 
+--
 -- functions to manipulate room label display and offsets
 --
 -- get offset of room's label (x,y)
@@ -2080,7 +2130,7 @@ function getRoomNameOffset(room)
   local d = getRoomUserData(room, "room.ui_nameOffset")
   if d == nil or d == "" then return 0,0 end
   local split = {}
-  for w in string.gfind(d, '[%.%d]+') do split[#split+1] = tonumber(w) end 
+  for w in string.gfind(d, '[%.%d]+') do split[#split+1] = tonumber(w) end
   if #split == 1 then return 0,split[1] end
   if #split >= 2 then return split[1],split[2] end
   return 0,0
@@ -2112,16 +2162,19 @@ function setRoomNameVisible(room, flag)
   setRoomUserData(room, "room.ui_showName", flag and "1" or "0")
 end
 
---wrapper for createButton 
+--wrapper for createButton
 -- createButton is deprecated better use createLabel instead
 createButton = createLabel
 
 -- Internal function used by copy2html and copy2decho
 local function copy2color(name,win,str,inst)
-  local line = getCurrentLine(win or "main")
-  if (not str and line == "ERROR: mini console does not exist") or type(str) == "number" then
+  local line,err = getCurrentLine(win or "main")
+  if err ~= nil then
     win, str, inst = "main", win, str
-    line = getCurrentLine(win)
+    line,err = getCurrentLine(win)
+    if err ~= nil then
+      error(err)
+    end
   end
   win = win or "main"
   str = str or line
@@ -2149,7 +2202,7 @@ local function copy2color(name,win,str,inst)
       r,g,b = getFgColor()
       rb,gb,bb = getBgColor()
     end
-    
+
     if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
       cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
       result = string.format(style, result and (result..endspan) or "", r, g, b, rb, gb, bb, line:sub(index, index))
@@ -2246,64 +2299,32 @@ end
 -- This wrapper gives callback functions the possibility to be used like
 -- setCallBackFunction (name,function as string,args)
 -- it is used by setLabelCallBack functions and setCmdLineAction
-local function setActionCallback(callbackFunc, name, func, ...)
+local function setActionCallback(callbackFunc, funcName, name, func, ...)
   local nr = arg.n + 1
   arg.n = arg.n + 1
   if type(func) == "string" then
     func = loadstring("return "..func.."(...)")
   end
-  assert(type(func) == 'function', '<setActionCallback: bad argument #2 type (function expected, got '..type(func)..'!)>')
+  assert(type(func) == 'function', string.format('<%s: bad argument #2 type (function expected, got %s!)>', funcName, type(func)))
   if nr > 1 then
-    return callbackFunc(name, 
-    function(event) 
-      if not event then 
-        arg.n = nr - 1 
-      end 
-      arg[nr] = event 
-      func(unpack_w_nil(arg)) 
+    return callbackFunc(name,
+    function(event)
+      if not event then
+        arg.n = nr - 1
+      end
+      arg[nr] = event
+      func(unpack_w_nil(arg))
     end )
-  end 
-  callbackFunc(name, func) 
+  end
+  return callbackFunc(name, func)
 end
 
-local setLC = setLC or setLabelClickCallback
-function setLabelClickCallback (...)
-  setActionCallback(setLC, ...)
-end
+local callBackFunc ={"setLabelClickCallback", "setLabelReleaseCallback", "setLabelMoveCallback", "setLabelWheelCallback", "setLabelOnEnter", "setLabelOnLeave", "setCmdLineAction"}
 
-local setLDC = setLDC or setLabelDoubleClickCallback
-function setLabelDoubleClickCallback (...)
-  setActionCallback(setLDC, ...)
-end
-
-local setLRC = setLRC or setLabelReleaseCallback
-function setLabelReleaseCallback(...)
-  setActionCallback(setLRC, ...)
-end
-
-local setLMC = setLMC or setLabelMoveCallback
-function setLabelMoveCallback(...)
-  setActionCallback(setLMC, ...)
-end
-
-local setLWC = setLWC or setLabelWheelCallback
-function setLabelWheelCallback(...)
-  setActionCallback(setLWC, ...)
-end
-
-local setOnE = setOnE or setLabelOnEnter
-function setLabelOnEnter(...)
-  setActionCallback(setOnE, ...)
-end
-
-local setOnL = setOnL or setLabelOnLeave
-function setLabelOnLeave(...)
-  setActionCallback(setOnL,...)
-end
-
-local setCmdLA = setCmdLA or setCmdLineAction
-function setCmdLineAction(...)
-  setActionCallback(setCmdLA,...)
+for i = 1, #callBackFunc do
+  local funcName = callBackFunc[i]
+  local callBackFunction = _G[funcName]
+  _G[funcName] = function(...) return setActionCallback(callBackFunction, funcName, ...) end
 end
 
 function resetUserWindowTitle(windowname)
@@ -2312,4 +2333,58 @@ end
 
 function resetMapWindowTitle()
   return setMapWindowTitle("")
+end
+
+--- This function takes in a color and returns the closest color from color_table. The following all return "ansi_001"
+--- closestColor({127,0,0})
+--- closestColor(127,0,0)
+--- closestColor("#7f0000")
+--- closestColor("|c7f0000")
+--- closestColor("<127,0,0>")
+function closestColor(r,g,b)
+  local rtype = type(r)
+  local rgb
+  if rtype == "table" then
+    rgb = {}
+    local tmp = r
+    local err = f"Could not parse {table.concat(tmp, ',')} into RGB coordinates to look for.\n"
+    if #tmp ~= 3 then
+      return nil, err
+    end
+    for index,coord in ipairs(tmp) do
+      local num = tonumber(coord)
+      if not num or num < 0 or num > 255 then
+        return nil, err
+      end
+      rgb[index] = num
+    end
+  elseif rtype == "string" and not tonumber(r) then
+    if color_table[r] then
+      return r
+    end
+    rgb = {Geyser.Color.parse(r)}
+    if rgb[1] == nil then
+      return nil, f"Could not parse {r} into a set of RGB coordinates to look for.\n"
+    end
+  elseif rtype == "number" or tonumber(r) then
+    local nr = tonumber(r)
+    local ng = tonumber(g)
+    local nb = tonumber(b)
+    if not nr or not ng or not nb or (nr < 0 or nr > 255) or (ng < 0 or ng > 255) or (nb < 0 or nb > 255) then
+      return nil, f"Could not parse {r},{g},{b} into a set of RGB coordinates to look for.\n"
+    end
+    rgb = {nr,ng,nb}
+  else
+    return nil, f"Could not parse your parameters into RGB coordinates.\n"
+  end
+  local least_distance = math.huge
+  local cname = ""
+  for name, color in pairs(color_table) do
+    local color_distance = math.sqrt((color[1] - rgb[1]) ^ 2 + (color[2] - rgb[2]) ^ 2 + (color[3] - rgb[3]) ^ 2)
+    if color_distance < least_distance then
+      least_distance = color_distance
+      cname = name
+    end
+  end
+  return cname
 end

@@ -26,15 +26,16 @@
 
 #include "pre_guard.h"
 #include <chrono>
-#include <QDesktopWidget>
+#include <QCommandLineParser>
 #include <QDir>
 #if defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
 #include <QMessageBox>
 #endif // defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
 #include <QPainter>
+#include <QScreen>
 #include <QSplashScreen>
-#include <QCommandLineParser>
 #include "post_guard.h"
+#include "AltFocusMenuBarDisable.h"
 
 using namespace std::chrono_literals;
 
@@ -174,7 +175,7 @@ int main(int argc, char* argv[])
     QCommandLineOption showVersion(QStringList() << "v" << "version", QCoreApplication::translate("main", "Display version and exit"));
     parser.addOption(showVersion);
 
-    QCommandLineOption beQuiet(QStringList() << "q" << "quiet", QCoreApplication::translate("main", "Display help and exit"));
+    QCommandLineOption beQuiet(QStringList() << "q" << "quiet", QCoreApplication::translate("main", "Don't show the splash screen when starting"));
     parser.addOption(beQuiet);
 
     parser.parse(app->arguments());
@@ -249,7 +250,8 @@ int main(int argc, char* argv[])
 #endif // ! defined(QT_DEBUG)
         texts << QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)\n",
              "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion());
-        texts << QCoreApplication::translate("main", "Copyright © 2008-2020  Mudlet developers\n");
+        // PLACEMARKER: Date-stamp needing annual update
+        texts << QCoreApplication::translate("main", "Copyright © 2008-2021  Mudlet developers\n");
         texts << QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html\n");
         texts << QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
                                                      "There is NO WARRANTY, to the extent permitted by law.\n");
@@ -313,7 +315,7 @@ int main(int argc, char* argv[])
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2020");
+        QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2021");
         QFont font(QStringLiteral("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
@@ -327,14 +329,19 @@ int main(int argc, char* argv[])
         copyrightTextLayout.draw(&painter, QPointF(0, 0));
     }
     QPixmap pixmap = QPixmap::fromImage(splashImage);
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    // Specifying the screen here seems to help to put the splash screen on the
+    // same monitor that the main application window will be put upon on first
+    // run, in some situations the two can otherwise get to be different which
+    // is misleading unhelpful to a new user...!
+    QSplashScreen splash(qApp->primaryScreen(), pixmap);
+#else
     QSplashScreen splash(pixmap);
+#endif
     if (show_splash) {
         splash.show();
     }
     app->processEvents();
-
-    // seed random number generator (should be done once per lifetime)
-    qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
 
     QString homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
     QDir dir;
@@ -453,11 +460,20 @@ int main(int argc, char* argv[])
     mudlet::start();
 
     if (first_launch) {
-        // give Mudlet window decent size - most of the screen on non-HiDPI displays
-        auto desktop = qApp->desktop();
-        auto initialSpace = desktop->availableGeometry(desktop->screenNumber());
-        mudlet::self()->resize(initialSpace.width() * 3 / 4, initialSpace.height() * 3 / 4);
-        mudlet::self()->move(initialSpace.width() / 8, initialSpace.height() / 8);
+        // give Mudlet window decent size - most of the screen on non-HiDPI
+        // displays, on which ever screen it is started up on if it is a virtual
+        // multi-screen setup:
+        auto pScreen = qApp->primaryScreen();
+        // This is the coordinates of the WHOLE of the screen in pixels, for a
+        // virtual desktop - this is likely to be a subset of the virtual
+        // desktop. However it may also include parts that are used by the OS
+        // for taskbars, etc.
+        const QRect geometry = pScreen->geometry();
+        // The available size within the above that does not include the
+        // reserved parts:
+        const QSize availableSize = pScreen->availableSize();
+        mudlet::self()->resize(availableSize.width() * 3 / 4, availableSize.height() * 3 / 4);
+        mudlet::self()->move(geometry.left() + (availableSize.width() / 8), geometry.top() + availableSize.height() / 8);
     }
 
     if (show_splash) {
@@ -480,11 +496,10 @@ int main(int argc, char* argv[])
         if (mudlet::self()->storingPasswordsSecurely()) {
             mudlet::self()->migratePasswordsToSecureStorage();
         }
-
-        mudlet::self()->updateMudletDiscordInvite();
     });
 
     app->restoreOverrideCursor();
+    app->setStyle(new AltFocusMenuBarDisable());
 
     // NOTE: Must restore cursor - BEWARE DEBUGGERS if you terminate application
     // without doing/reaching this restore - it can be quite hard to accurately
@@ -505,19 +520,19 @@ bool runUpdate()
     QFileInfo seenUpdatedInstaller(QCoreApplication::applicationDirPath() + QStringLiteral("/new-mudlet-setup-seen.exe"));
     QDir updateDir;
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
-        if (!updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
-            qWarning() << "Couldn't delete previous installer";
+        if (seenUpdatedInstaller.exists() && !updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
+            qWarning() << "Couldn't delete previous installer: " << seenUpdatedInstaller;
         }
 
         if (!updateDir.rename(updatedInstaller.absoluteFilePath(), seenUpdatedInstaller.absoluteFilePath())) {
-            qWarning() << "Failed to prep installer: couldn't rename it";
+            qWarning() << "Failed to prep installer: couldn't move" << updatedInstaller.absoluteFilePath() << "to" << seenUpdatedInstaller.absoluteFilePath();
         }
 
         QProcess::startDetached(seenUpdatedInstaller.absoluteFilePath());
         return true;
     } else if (seenUpdatedInstaller.exists() && !updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
-         // no new updater and only the old one? Then we're restarting from an update: delete the old installer
-        qWarning() << "Couldn't delete old uninstaller";
+        // no new updater and only the old one? Then we're restarting from an update: delete the old installer
+        qWarning() << "Couldn't delete old uninstaller: " << seenUpdatedInstaller;
     }
     return false;
 }

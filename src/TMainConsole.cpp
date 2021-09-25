@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -41,32 +41,33 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
-#include <QRegularExpression>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QTextBoundaryFinder>
 #include <QTextCodec>
+#include <QTextStream>
 #include <QPainter>
 #include "post_guard.h"
 
+
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 : TConsole(pH, TConsole::MainConsole, parent)
-, mSpellDic()
+, mClipboard(pH)
+, mLogToLogFile(false)
+, mEnableUserDictionary(true)
+, mUseSharedDictionary(false)
 , mpHunspell_system(nullptr)
 , mpHunspell_shared(nullptr)
 , mpHunspell_profile(nullptr)
 , mpHunspellCodec_system(nullptr)
-, mLogFileName(QString(""))
-, mLogToLogFile(false)
 {
     // During first use where mIsDebugConsole IS true mudlet::self() is null
     // then - but we rely on that flag to avoid having to also test for a
     // non-null mudlet::self() - the connect(...) will produce a debug
     // message and not make THAT connection should it indeed be null but it
     // is not fatal...
-    // So, this SHOULD be the main profile mUpperPane - Slysven
-    connect(mudlet::self(), &mudlet::signal_profileMapReloadRequested, this, &TConsole::slot_reloadMap, Qt::UniqueConnection);
-    connect(this, &TConsole::signal_newDataAlert, mudlet::self(), &mudlet::slot_newDataOnHost, Qt::UniqueConnection);
+    connect(mudlet::self(), &mudlet::signal_profileMapReloadRequested, this, &TMainConsole::slot_reloadMap, Qt::UniqueConnection);
+    connect(this, &TMainConsole::signal_newDataAlert, mudlet::self(), &mudlet::slot_newDataOnHost, Qt::UniqueConnection);
 
     // Load up the spelling dictionary from the system:
     setSystemSpellDictionary(mpHost->getSpellDic());
@@ -75,6 +76,9 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     // absence of files for the first run in a new profile or from an older
     // Mudlet version:
     setProfileSpellDictionary();
+
+    // Ensure the QWidget has the profile name embedded into it
+    setProperty("HostName", pH->getName());
 }
 
 TMainConsole::~TMainConsole()
@@ -117,7 +121,7 @@ std::pair<bool, QString> TMainConsole::setUserWindowStyleSheet(const QString& na
         pW->setStyleSheet(userWindowStyleSheet);
         return {true, QString()};
     }
-    return {false, QStringLiteral("userwindow name \"%1\" not found").arg(name)};
+    return {false, QStringLiteral("userwindow name '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name, const QString& styleSheet)
@@ -132,12 +136,12 @@ std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name,
         pN->setStyleSheet(styleSheet);
         return {true, QString()};
     }
-    return {false, QStringLiteral("command-line name \"%1\" not found").arg(name)};
+    return {false, QStringLiteral("command-line name '%1' not found").arg(name)};
 }
 
 void TMainConsole::toggleLogging(bool isMessageEnabled)
 {
-    // CHECKME: This path seems suspicious, it is shared amoungst ALL profiles
+    // CHECKME: This path seems suspicious, it is shared amongst ALL profiles
     // but the action is "Per Profile"...!
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("autolog")));
     QDateTime logDateTime = QDateTime::currentDateTime();
@@ -485,7 +489,7 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
         pC->setContentsMargins(0, 0, 0, 0);
         pC->move(x, y);
 
-        pC->setMiniConsoleFontSize(12);
+        pC->setFontSize(12);
         pC->show();
 
         return pC;
@@ -513,6 +517,7 @@ TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name
         pL->setContentsMargins(0, 0, 0, 0);
         pL->move(x, y);
         pL->show();
+        mpHost->setBackgroundColor(name, 32, 32, 32, 255);
         return pL;
     } else {
         return nullptr;
@@ -544,7 +549,7 @@ std::pair<bool, QString> TMainConsole::deleteLabel(const QString& name)
     }
 
     // Message is of the form needed for a Lua API function call run-time error
-    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+    return {false, QStringLiteral("label name '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> TMainConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
@@ -562,7 +567,7 @@ std::pair<bool, QString> TMainConsole::setLabelToolTip(const QString& name, cons
     }
 
     // Message is of the form needed for a Lua API function call run-time error
-    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+    return {false, QStringLiteral("label name '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> TMainConsole::setLabelCursor(const QString& name, int shape)
@@ -578,11 +583,11 @@ std::pair<bool, QString> TMainConsole::setLabelCursor(const QString& name, int s
         } else if (shape == -1) {
             pL->unsetCursor();
         } else {
-            return {false, QStringLiteral("cursor shape \"%1\" not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum").arg(shape)};
+            return {false, QStringLiteral("cursor shape '%1' not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum").arg(shape)};
         }
         return {true, QString()};
     }
-    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+    return {false, QStringLiteral("label name '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY)
@@ -606,9 +611,12 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
         return {true, QString()};
     }
 
-    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+    return {false, QStringLiteral("label name '%1' not found").arg(name)};
 }
 
+// Called from TLuaInterpreter::createMapper(...) to create a map in a TConsole,
+// Host::showHideOrCreateMapper(...) {formerly also called
+// createMapper(...)} is used in other cases to make a map in a QDockWidget:
 std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
 {
     auto pW = mDockWidgetMap.value(windowname);
@@ -640,6 +648,7 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
             mpMapper->mp2dMap->init();
             mpMapper->updateAreaComboBox();
             mpMapper->resetAreaComboBoxToPlayerRoomArea();
+            mpMapper->show();
         }
 
         mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
@@ -708,6 +717,7 @@ bool TMainConsole::setBackgroundImage(const QString& name, const QString& path)
     }
 }
 
+// Does NOT act on the TMainConsole itself:
 bool TMainConsole::setBackgroundColor(const QString& name, int r, int g, int b, int alpha)
 {
     auto pC = mSubConsoleMap.value(name);
@@ -773,25 +783,21 @@ bool TMainConsole::lowerWindow(const QString& name)
 
     if (pC) {
         pC->lower();
-        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
     if (pL) {
         pL->lower();
-        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->lower();
-        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
     if (pN) {
         pN->lower();
-        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
@@ -1032,7 +1038,7 @@ std::pair<bool, QString> TMainConsole::setUserWindowTitle(const QString& name, c
 
     auto pC = mSubConsoleMap.value(name);
     if (!pC) {
-        return {false, QStringLiteral("user window name \"%1\" not found").arg(name)};
+        return {false, QStringLiteral("user window name '%1' not found").arg(name)};
     }
 
     // If it does not have an mType of UserWindow then it does not in a
@@ -1074,4 +1080,277 @@ bool TMainConsole::setTextFormat(const QString& name, const QColor& fgColor, con
     }
 
     return false;
+}
+
+void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool isFromServer)
+{
+    mProcessingTimer.restart();
+    mTriggerEngineMode = true;
+    buffer.translateToPlainText(incomingSocketData, isFromServer);
+    mTriggerEngineMode = false;
+
+    // dequeues MXP events and raise them through the LuaInterpreter
+    // TODO: move this somewhere else more appropriate
+    auto& mxpEventQueue = mpHost->mMxpClient.mMxpEvents;
+    while (!mxpEventQueue.isEmpty()) {
+        const auto& event = mxpEventQueue.dequeue();
+        mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions);
+    }
+
+    double processT = mProcessingTimer.elapsed() / 1000.0;
+    if (mpHost->mTelnet.mGA_Driver) {
+        mpLineEdit_networkLatency->setText(tr("N:%1 S:%2",
+                                              // intentional comment to separate arguments
+                                              "The first argument 'N' represents the 'N'etwork latency; the second 'S' the "
+                                              "'S'ystem (processing) time")
+                                                   .arg(mpHost->mTelnet.networkLatencyTime, 0, 'f', 3)
+                                                   .arg(processT, 0, 'f', 3));
+    } else {
+        mpLineEdit_networkLatency->setText(tr("<no GA> S:%1",
+                                              // intentional comment to separate arguments
+                                              "The argument 'S' represents the 'S'ystem (processing) time, in this situation "
+                                              "the Game Server is not sending \"GoAhead\" signals so we cannot deduce the "
+                                              "network latency...")
+                                                   .arg(processT, 0, 'f', 3));
+    }
+    // Modify the tab text if this is not the currently active host - this
+    // method is only used on the "main" console so no need to filter depending
+    // on TConsole types:
+
+    emit signal_newDataAlert(mProfileName);
+}
+
+void TMainConsole::runTriggers(int line)
+{
+    mUserCursor.setY(line);
+    mIsPromptLine = buffer.promptBuffer.at(line);
+    mEngineCursor = line;
+    mUserCursor.setX(0);
+    mCurrentLine = buffer.line(line);
+    mpHost->getLuaInterpreter()->set_lua_string(cmLuaLineVariable, mCurrentLine);
+    mCurrentLine.append('\n');
+
+    if (mudlet::debugMode) {
+        TDebug(Qt::darkGreen, Qt::black) << "new line arrived:" >> mpHost;
+        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << mCurrentLine << "\n" >> mpHost;
+    }
+    mpHost->incomingStreamProcessor(mCurrentLine, line);
+    mIsPromptLine = false;
+
+    //FIXME: rewrite: if lines above the current line get deleted -> redraw clean slice
+    //       otherwise just delete
+}
+
+void TMainConsole::finalize()
+{
+    mUpperPane->showNewLines();
+    mLowerPane->showNewLines();
+}
+
+// TODO: It may be worth considering moving the (now) three following methods
+// to the TMap class...?
+bool TMainConsole::saveMap(const QString& location, int saveVersion)
+{
+    QDir dir_map;
+    QString filename_map;
+    QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+
+    if (location.isEmpty()) {
+        filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
+    } else {
+        filename_map = location;
+    }
+
+    if (!dir_map.exists(directory_map)) {
+        dir_map.mkpath(directory_map);
+    }
+    QFile file_map(filename_map);
+    if (file_map.open(QIODevice::WriteOnly)) {
+        QDataStream out(&file_map);
+        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
+        mpHost->mpMap->serialize(out, saveVersion);
+        file_map.close();
+        return true;
+    }
+
+    return false;
+}
+
+bool TMainConsole::loadMap(const QString& location)
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        // Check for valid mpHost pointer (mpHost was/is/will be a QPoint<Host>
+        // in later software versions and is a weak pointer until used
+        // (I think - Slysven ?)
+        return false;
+    }
+
+    if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
+        // No map or map currently loaded - so try and created mapper
+        // but don't load a map here by default, we do that below and it may not
+        // be the default map anyhow
+        pHost->showHideOrCreateMapper(false);
+    }
+
+    if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
+        // And that failed so give up
+        return false;
+    }
+
+    pHost->mpMap->mapClear();
+
+    qDebug() << "TMainConsole::loadMap() - restore map case 1.";
+    pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(1) report"), true);
+    QDateTime now(QDateTime::currentDateTime());
+
+    bool result = false;
+    if (pHost->mpMap->restore(location)) {
+        pHost->mpMap->audit();
+        pHost->mpMap->mpMapper->mp2dMap->init();
+        pHost->mpMap->mpMapper->updateAreaComboBox();
+        pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+        pHost->mpMap->mpMapper->show();
+        result = true;
+    } else {
+        pHost->mpMap->mpMapper->mp2dMap->init();
+        pHost->mpMap->mpMapper->updateAreaComboBox();
+        pHost->mpMap->mpMapper->show();
+    }
+
+    if (location.isEmpty()) {
+        pHost->mpMap->pushErrorMessagesToFile(tr("Loading map(1) at %1 report").arg(now.toString(Qt::ISODate)), true);
+    } else {
+        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Loading map(1) "%1" at %2 report)").arg(location, now.toString(Qt::ISODate)), true);
+    }
+
+    pHost->mpMap->update();
+
+    return result;
+}
+
+// Used by TLuaInterpreter::loadMap() and dlgProfilePreferences for import/load
+// of files ending in ".xml"
+// The TLuaInterpreter::loadMap() supplies a pointer to an error Message which
+// it requires in the event of an error (it should be written in a structure
+// to match "loadMap: XXXXX." format) - the presence of a non-null pointer here
+// should be used to suppress the writing of error messages direct to the
+// console - if possible!
+bool TMainConsole::importMap(const QString& location, QString* errMsg)
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        // Check for valid mpHost pointer (mpHost was/is/will be a QPoint<Host>
+        // in later software versions and is a weak pointer until used
+        // (I think - Slysven ?)
+        if (errMsg) {
+            *errMsg = QStringLiteral("loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!");
+        }
+        return false;
+    }
+
+    if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
+        // No map or mapper currently loaded/present - so try and create mapper
+        pHost->showHideOrCreateMapper(false);
+    }
+
+    if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
+        // And that failed so give up
+        if (errMsg) {
+            *errMsg = QStringLiteral("loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!");
+        }
+        return false;
+    }
+
+    // Dump any outstanding map errors from past activities that had not yet
+    // been logged...
+    qDebug() << "TMainConsole::importingMap() - importing map case 1.";
+    pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map importing(1) report"), true);
+    QDateTime now(QDateTime::currentDateTime());
+
+    bool result = false;
+
+    QFileInfo fileInfo(location);
+    QString filePathNameString;
+    if (!fileInfo.filePath().isEmpty()) {
+        if (fileInfo.isRelative()) {
+            // Resolve the name relative to the profile home directory:
+            filePathNameString = QDir::cleanPath(mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileInfo.filePath()));
+        } else {
+            if (fileInfo.exists()) {
+                filePathNameString = fileInfo.canonicalFilePath(); // Cannot use canonical path if file doesn't exist!
+            } else {
+                filePathNameString = fileInfo.absoluteFilePath();
+            }
+        }
+    }
+
+    QFile file(filePathNameString);
+    if (!file.exists()) {
+        if (!errMsg) {
+            QString infoMsg = tr("[ ERROR ]  - Map file not found, path and name used was:\n"
+                                 "%1.")
+                                      .arg(filePathNameString);
+            pHost->postMessage(infoMsg);
+        } else {
+            // error message for lua loadMap()
+            *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
+                         "\"%1\" was not found).")
+                              .arg(filePathNameString);
+        }
+        return false;
+    }
+
+    if (file.open(QFile::ReadOnly | QFile::Text)) {
+        if (!errMsg) {
+            QString infoMsg = tr("[ INFO ]  - Map file located and opened, now parsing it...");
+            pHost->postMessage(infoMsg);
+        }
+
+        result = pHost->mpMap->importMap(file, errMsg);
+
+        file.close();
+        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Importing map(1) "%1" at %2 report)").arg(location, now.toString(Qt::ISODate)));
+    } else {
+        if (!errMsg) {
+            QString infoMsg = tr(R"([ INFO ]  - Map file located but it could not opened, please check permissions on:"%1".)").arg(filePathNameString);
+            pHost->postMessage(infoMsg);
+        } else {
+            *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
+                         "\"%1\" could not be opened for reading).")
+                              .arg(filePathNameString);
+        }
+        return false;
+    }
+
+    pHost->mpMap->update();
+
+    return result;
+}
+
+void TMainConsole::slot_reloadMap(QList<QString> profilesList)
+{
+    Host* pHost = getHost();
+    if (!pHost) {
+        return;
+    }
+
+    if (!profilesList.contains(mProfileName)) {
+        qDebug() << "TMainConsole::slot_reloadMap(" << profilesList << ") request received but we:" << mProfileName << "are not mentioned - so we are ignoring it...!";
+        return;
+    }
+
+    QString infoMsg = tr("[ INFO ]  - Map reload request received from system...");
+    pHost->postMessage(infoMsg);
+
+    QString outcomeMsg;
+    if (loadMap(QString())) {
+        outcomeMsg = tr("[  OK  ]  - ... System Map reload request completed.");
+    } else {
+        outcomeMsg = tr("[ WARN ]  - ... System Map reload request failed.");
+    }
+
+    pHost->postMessage(outcomeMsg);
 }

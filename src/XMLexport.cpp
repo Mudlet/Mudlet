@@ -44,77 +44,77 @@
 
 XMLexport::XMLexport( Host * pH )
 : mpHost( pH )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+, mpTrigger( nullptr )
+, mpTimer( nullptr )
+, mpAlias( nullptr )
+, mpAction( nullptr )
+, mpScript( nullptr )
+, mpKey( nullptr )
 {
 }
 
 XMLexport::XMLexport( TTrigger * pT )
-: mpHost( Q_NULLPTR )
+: mpHost( nullptr )
 , mpTrigger( pT )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+, mpTimer( nullptr )
+, mpAlias( nullptr )
+, mpAction( nullptr )
+, mpScript( nullptr )
+, mpKey( nullptr )
 {
 }
 
 XMLexport::XMLexport( TTimer * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
+: mpHost( nullptr )
+, mpTrigger( nullptr )
 , mpTimer( pT )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+, mpAlias( nullptr )
+, mpAction( nullptr )
+, mpScript( nullptr )
+, mpKey( nullptr )
 {
 }
 
 XMLexport::XMLexport( TAlias * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
+: mpHost( nullptr )
+, mpTrigger( nullptr )
+, mpTimer( nullptr )
 , mpAlias( pT )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+, mpAction( nullptr )
+, mpScript( nullptr )
+, mpKey( nullptr )
 {
 }
 
 XMLexport::XMLexport( TAction * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
+: mpHost( nullptr )
+, mpTrigger( nullptr )
+, mpTimer( nullptr )
+, mpAlias( nullptr )
 , mpAction( pT )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+, mpScript( nullptr )
+, mpKey( nullptr )
 {
 }
 
 XMLexport::XMLexport( TScript * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
+: mpHost( nullptr )
+, mpTrigger( nullptr )
+, mpTimer( nullptr )
+, mpAlias( nullptr )
+, mpAction( nullptr )
 , mpScript( pT )
-, mpKey( Q_NULLPTR )
+, mpKey( nullptr )
 {
 }
 
 XMLexport::XMLexport( TKey * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
+: mpHost( nullptr )
+, mpTrigger( nullptr )
+, mpTimer( nullptr )
+, mpAlias( nullptr )
+, mpAction( nullptr )
+, mpScript( nullptr )
 , mpKey( pT )
 {
 }
@@ -332,11 +332,11 @@ bool XMLexport::saveXmlFile(QFile& file)
 {
     std::stringstream saveStringStream(std::ios::out);
     // Remember, the mExportDoc is the data in the form of a pugi::xml_document
-    // instance - the save method needs a stream that impliments the
+    // instance - the save method needs a stream that implements the
     // std::ostream interface into which it can push the data:
     mExportDoc.save(saveStringStream);
     // We need to do our own replacement of ASCII control characters that are
-    // not valid in XML verison 1.0 and that means we cannot use the pugixml
+    // not valid in XML version 1.0 and that means we cannot use the pugixml
     // file methods as it does that in a different way which is not helpful
     // as we do not use that library for READING the XML files - so convert
     // the data to a std::string :
@@ -404,16 +404,20 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     mpHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     host.append_attribute("mEnableUserDictionary") = enableUserDictionary ? "yes" : "no";
     host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
-    host.append_attribute("mShowInfo") = pHost->mShowInfo ? "yes" : "no";
+    if (pHost->mMapInfoContributors.isEmpty()) {
+        host.append_attribute("mShowInfo") = "no";
+    }
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
     host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
+    host.append_attribute("mMapperShowRoomBorders") = pHost->mMapperShowRoomBorders ? "yes" : "no";
     host.append_attribute("mFORCE_MXP_NEGOTIATION_OFF") = pHost->mFORCE_MXP_NEGOTIATION_OFF ? "yes" : "no";
     host.append_attribute("mFORCE_CHARSET_NEGOTIATION_OFF") = pHost->mFORCE_CHARSET_NEGOTIATION_OFF ? "yes" : "no";
     host.append_attribute("enableTextAnalyzer") = pHost->mEnableTextAnalyzer ? "yes" : "no";
     host.append_attribute("mRoomSize") = QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mLineSize") = QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mBubbleMode") = pHost->mBubbleMode ? "yes" : "no";
+    host.append_attribute("mMapViewOnly") = pHost->mMapViewOnly ? "yes" : "no";
     host.append_attribute("mShowRoomIDs") = pHost->mShowRoomID ? "yes" : "no";
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
@@ -429,7 +433,6 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mProxyPort") = QString::number(pHost->mProxyPort).toUtf8().constData();
     host.append_attribute("mProxyUsername") = pHost->mProxyUsername.toUtf8().constData();
     host.append_attribute("mProxyPassword") = pHost->mProxyPassword.toUtf8().constData();
-    host.append_attribute("mAutoReconnect") = pHost->mAutoReconnect ? "yes" : "no";
     host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
     host.append_attribute("mSslIgnoreExpired") = pHost->mSslIgnoreExpired ? "yes" : "no";
     host.append_attribute("mSslIgnoreSelfSigned") = pHost->mSslIgnoreSelfSigned ? "yes" : "no";
@@ -527,6 +530,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
 
         host.append_child("mFgColor2").text().set(pHost->mFgColor_2.name().toUtf8().constData());
         host.append_child("mBgColor2").text().set(pHost->mBgColor_2.name().toUtf8().constData());
+        host.append_child("mRoomBorderColor").text().set(pHost->mRoomBorderColor.name().toUtf8().constData());
         host.append_child("mBlack2").text().set(pHost->mBlack_2.name().toUtf8().constData());
         host.append_child("mLightBlack2").text().set(pHost->mLightBlack_2.name().toUtf8().constData());
         host.append_child("mRed2").text().set(pHost->mRed_2.name().toUtf8().constData());
@@ -550,6 +554,14 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         // with older version of Mudlet
         host.append_child("mLineSize").text().set(QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData());
         host.append_child("mRoomSize").text().set(QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData());
+    }
+    {
+        auto mapInfoContributors = host.append_child("mMapInfoContributors");
+        QSetIterator<QString> iterator(pHost->mMapInfoContributors);
+        while (iterator.hasNext()) {
+            auto mapInfoContributor = mapInfoContributors.append_child("mapInfoContributor");
+            mapInfoContributor.text().set(iterator.next().toUtf8().constData());
+        }
     }
 
     {
@@ -726,25 +738,25 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     return false;
 }
 
-bool XMLexport::exportPackage(const QString& exportFileName)
+bool XMLexport::exportPackage(const QString& exportFileName, bool ignoreModuleMember)
 {
     auto mudletPackage = writeXmlHeader();
 
-    if (writeGenericPackage(mpHost, mudletPackage)) {
+    if (writeGenericPackage(mpHost, mudletPackage, ignoreModuleMember)) {
         return saveXml(exportFileName);
     }
 
     return false;
 }
 
-bool XMLexport::writeGenericPackage(Host* pHost, pugi::xml_node& mudletPackage)
+bool XMLexport::writeGenericPackage(Host* pHost, pugi::xml_node& mudletPackage, bool ignoreModuleMember)
 {
-    writeTriggerPackage(pHost, mudletPackage, true);
-    writeTimerPackage(pHost, mudletPackage, true);
-    writeAliasPackage(pHost, mudletPackage, true);
-    writeActionPackage(pHost, mudletPackage, true);
-    writeScriptPackage(pHost, mudletPackage, true);
-    writeKeyPackage(pHost, mudletPackage, true);
+    writeTriggerPackage(pHost, mudletPackage, ignoreModuleMember);
+    writeTimerPackage(pHost, mudletPackage, ignoreModuleMember);
+    writeAliasPackage(pHost, mudletPackage, ignoreModuleMember);
+    writeActionPackage(pHost, mudletPackage, ignoreModuleMember);
+    writeScriptPackage(pHost, mudletPackage, ignoreModuleMember);
+    writeKeyPackage(pHost, mudletPackage, ignoreModuleMember);
     // variables weren't previously exported as a generic package
     writeVariablePackage(pHost, mudletPackage);
 
@@ -1151,7 +1163,7 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, c
 {
 
     QStringList results;
-    QRegularExpression regex = QRegularExpression(QStringLiteral("(^ANSI_COLORS_F{(\\d+|IGNORE|DEFAULT)}_B{(\\d+|IGNORE|DEFAULT)}$"));
+    QRegularExpression regex = QRegularExpression(QStringLiteral("^ANSI_COLORS_F{(\\d+|IGNORE|DEFAULT)}_B{(\\d+|IGNORE|DEFAULT)}$"));
     QStringListIterator itPattern(patternList);
     QListIterator<int> itType(typeList);
     while (itPattern.hasNext() && itType.hasNext()) {

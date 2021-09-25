@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016, 2019-2020 by Stephen Lyons                  *
+ *   Copyright (C) 2014, 2016, 2019-2021 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -44,73 +44,14 @@
 #define GL_MULTISAMPLE 0x809D
 #endif
 
-bool ortho;
-bool selectionMode = false;
-bool mPanMode = false;
-float xpos = 0, ypos = 0, zpos = 0, xrot = 0, yrot = 0, angle = 0.0, mPanXStart = 0, mPanYStart = 0;
-float zmax, zmin;
 
-GLWidget::GLWidget(QWidget *parent)
+GLWidget::GLWidget(TMap* pMap, Host* pHost, QWidget *parent)
 : QOpenGLWidget(parent)
-, mShowInfo()
-, dehnung()
-, mTarget()
+, mpMap(pMap)
+, mpHost(pHost)
 {
-    mpMap = nullptr;
-    xDist = 0.0;
-    yDist = 0.0;
-    zDist = 0.0;
-    xRot = 1.0;
-    yRot = 5.0;
-    zRot = 10.0;
-    ortho = false; //true;
-    xDist = 0;
-    yDist = 0;
-    zDist = -1;
-    mScale = 1.0;
-    zmax = 9999999.0;
-    zmin = 9999999.0;
-    mShowTopLevels = 9999999;
-    mShowBottomLevels = 999999;
     setAttribute(Qt::WA_OpaquePaintEvent);
-    is2DView = false;
-    mShiftMode = false;
-    mAID = 0;
-    mRID = 0;
-    mOx = 0;
-    mOy = 0;
-    mOz = 0;
 }
-
-
-GLWidget::GLWidget(TMap* pM, QWidget* parent)
-: QOpenGLWidget(parent)
-, mShowInfo()
-, xRot()
-, yRot()
-, zRot()
-, xDist()
-, yDist()
-, zDist()
-, dehnung()
-, mShowTopLevels()
-, mShowBottomLevels()
-, mScale()
-, mTarget()
-{
-    mpHost = nullptr;
-    mpMap = pM;
-    is2DView = false;
-    mShiftMode = false;
-    mAID = 0;
-    mRID = 0;
-    mOx = 0;
-    mOy = 0;
-    mOz = 0;
-}
-
-
-GLWidget::~GLWidget() = default;
 
 QSize GLWidget::minimumSizeHint() const
 {
@@ -127,118 +68,106 @@ static void qNormalizeAngle(int& angle)
     angle /= 10;
 }
 
-void GLWidget::fullView()
+void GLWidget::slot_showAllLevels()
 {
-    mShowTopLevels = 9999999;
+    mShowTopLevels = 999999;
     mShowBottomLevels = 999999;
     update();
 }
 
 
-void GLWidget::shiftDown()
+void GLWidget::slot_shiftDown()
 {
     mShiftMode = true;
     mOy--;
     update();
 }
 
-void GLWidget::shiftUp()
+void GLWidget::slot_shiftUp()
 {
     mShiftMode = true;
     mOy++;
     update();
 }
 
-void GLWidget::shiftLeft()
+void GLWidget::slot_shiftLeft()
 {
     mShiftMode = true;
     mOx--;
     update();
 }
 
-void GLWidget::shiftRight()
+void GLWidget::slot_shiftRight()
 {
     mShiftMode = true;
     mOx++;
     update();
 }
-void GLWidget::shiftZup()
+
+void GLWidget::slot_shiftZup()
 {
     mShiftMode = true;
     mOz++;
     update();
 }
 
-void GLWidget::shiftZdown()
+void GLWidget::slot_shiftZdown()
 {
     mShiftMode = true;
     mOz--;
     update();
 }
 
-void GLWidget::showInfo()
-{
-    mShowInfo = !mShowInfo;
-    update();
-}
-
-
-void GLWidget::singleView()
+void GLWidget::slot_singleLevelView()
 {
     mShowTopLevels = 0;
     mShowBottomLevels = 0;
     update();
 }
 
-void GLWidget::increaseTop()
+void GLWidget::slot_showMoreUpperLevels()
 {
     mShowTopLevels += 1;
     update();
 }
 
-void GLWidget::reduceTop()
+void GLWidget::slot_showLessUpperLevels()
 {
-    if (mShowTopLevels <= 0) {
-        mShowTopLevels = abs(zmax);
-    }
-    if (abs(mShowTopLevels) > abs(zmax)) {
-        mShowTopLevels = abs(zmax);
-    }
     mShowTopLevels--;
+    if (mShowTopLevels < 0) {
+        mShowTopLevels = 0;
+    }
     update();
 }
 
-void GLWidget::increaseBottom()
+void GLWidget::slot_showMoreLowerLevels()
 {
     mShowBottomLevels++;
     update();
 }
 
-void GLWidget::reduceBottom()
+void GLWidget::slot_showLessLowerLevels()
 {
-    if (mShowBottomLevels <= 0) {
-        mShowBottomLevels = abs(zmin);
-    }
-    if (abs(mShowBottomLevels) > abs(zmin)) {
-        mShowBottomLevels = abs(zmin);
-    }
     mShowBottomLevels--;
+    if (mShowBottomLevels < 0) {
+        mShowBottomLevels = 0;
+    }
     update();
 }
 
-void GLWidget::defaultView()
+void GLWidget::slot_defaultView()
 {
+    // Do not attempt to change between 2D and 3D map modes as the button to
+    // activate this slot is only visible in the 3D mode anyhow!
     xRot = 1.0;
     yRot = 5.0;
     zRot = 10.0;
     mScale = 1.0;
     is2DView = false;
-    setVisible(!isVisible());
-    mpMap->mpMapper->mp2dMap->setVisible(!mpMap->mpMapper->mp2dMap->isVisible());
     update();
 }
 
-void GLWidget::sideView()
+void GLWidget::slot_sideView()
 {
     xRot = 7.0;
     yRot = -10.0;
@@ -248,82 +177,49 @@ void GLWidget::sideView()
     update();
 }
 
-void GLWidget::topView()
+void GLWidget::slot_topView()
 {
     xRot = 0.0;
     yRot = 0.0;
     zRot = 15.0;
     mScale = 1.0;
+    // This is the ONLY place this value is set:
     is2DView = true;
     update();
 }
 
-
-void GLWidget::goRoom(const QString& s)
-{
-}
-
-void GLWidget::setScale(int angle)
+void GLWidget::slot_setScale(int angle)
 {
     mScale = 150 / ((float)angle + 300);
     makeCurrent();
     resizeGL(width(), height());
     doneCurrent();
     update();
-    return;
 }
 
-void GLWidget::setXRotation(int angle)
+void GLWidget::slot_setCameraPositionX(int angle)
 {
     qNormalizeAngle(angle);
     xRot = angle;
     is2DView = false;
     update();
-    return;
 }
 
-void GLWidget::setYRotation(int angle)
+void GLWidget::slot_setCameraPositionY(int angle)
 {
     qNormalizeAngle(angle);
     yRot = angle;
     is2DView = false;
     update();
-    return;
 }
 
-void GLWidget::setZRotation(int angle)
+void GLWidget::slot_setCameraPositionZ(int angle)
 {
     qNormalizeAngle(angle);
     zRot = angle;
     is2DView = false;
     update();
-    return;
 }
-
-void GLWidget::setXDist(int angle)
-{
-    xDist = angle;
-    is2DView = false;
-    update();
-    return;
-}
-
-void GLWidget::setYDist(int angle)
-{
-    yDist = angle;
-    is2DView = false;
-    update();
-    return;
-}
-
-void GLWidget::setZDist(int angle)
-{
-    zDist = angle;
-    is2DView = false;
-    update();
-    return;
-}
-
 
 void GLWidget::initializeGL()
 {
@@ -385,7 +281,18 @@ void GLWidget::paintGL()
 #endif
             painter.setFont(QFont("Bitstream Vera Sans Mono", 30));
             painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
-            painter.drawText(width() / 3, height() / 2, "no map or no valid position on map");
+
+            QString message;
+            if (mpMap->mpRoomDB) {
+                if (mpMap->mpRoomDB->isEmpty()) {
+                    message = tr("No rooms in the map - load another one, or start mapping from scratch to begin.");
+                } else {
+                    message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size());
+                }
+            } else {
+                message = tr("You do not have a map yet - load one, or start mapping from scratch to begin.");
+            }
+            painter.drawText(0, 0, (width() -1), (height() -1), Qt::AlignCenter | Qt::TextWordWrap, message);
             painter.end();
 
             glLoadIdentity();
@@ -432,7 +339,7 @@ void GLWidget::paintGL()
     GLfloat ambientLight[] = {0.403, 0.403, 0.403, 1.0};
     GLfloat ambientLight2[] = {0.4501, 0.4501, 0.4501, 1.0};
 
-    //GLfloat specularLight[] = {.01, .01, .01, 1.};//TODO: fuer ich-sphere
+    //GLfloat specularLight[] = {.01, .01, .01, 1.};//TODO: for me-sphere
     GLfloat light0Pos[] = {5000.0, 4000.0, 1000.0, 0};
     GLfloat light1Pos[] = {5000.0, 1000.0, 1000.0, 0};
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
@@ -446,8 +353,6 @@ void GLWidget::paintGL()
     glLightfv(GL_LIGHT1, GL_POSITION, light1Pos);
     glBlendFunc(GL_SRC_ALPHA, GL_SRC_COLOR); //GL_ONE_MINUS_SRC_ALPHA);
     glLoadIdentity();
-
-    dehnung = 4.0;
 
     glDisable(GL_FOG);
     glEnable(GL_BLEND);
@@ -703,66 +608,67 @@ void GLWidget::paintGL()
                         quads++;
                         glBegin(GL_QUADS);
                         glNormal3f(0.57735, -0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
                         glNormal3f(0.57735, -0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                         glNormal3f(0.57735, 0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, 0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
                         glNormal3f(0.57735, -0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
 
                         glNormal3f(-0.57735, 0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(0.57735, 0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(0.57735, -0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                         glNormal3f(0.57735, 0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(0.57735, 0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(0.57735, -0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
                         glNormal3f(0.57735, -0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                         glNormal3f(-0.57735, 0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, 0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
 
                         glNormal3f(0.57735, 0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, 0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, 0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(0.57735, 0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glEnd();
-                        //drauf
+
+                        //on top
                         float mc3[] = {0.2, 0.2, 0.6, 1.0};
                         int env = pExit->environment;
-                        if (mpMap->envColors.contains(env)) {
-                            env = mpMap->envColors[env];
+                        if (mpMap->mEnvColors.contains(env)) {
+                            env = mpMap->mEnvColors[env];
                         } else {
-                            if (!mpMap->customEnvColors.contains(env)) {
+                            if (!mpMap->mCustomEnvColors.contains(env)) {
                                 env = 1;
                             }
                         }
@@ -880,7 +786,7 @@ void GLWidget::paintGL()
                             mc3[3] = 0.2;
                             break;
                         default: //user defined room color
-                            if (!mpMap->customEnvColors.contains(env)) {
+                            if (!mpMap->mCustomEnvColors.contains(env)) {
                                 if (16 < env && env < 232)
                                 {
                                     quint8 base = env - 16;
@@ -888,9 +794,9 @@ void GLWidget::paintGL()
                                     quint8 g = (base - (r * 36)) / 6;
                                     quint8 b = (base - (r * 36)) - (g * 6);
 
-                                    r = r * 51;
-                                    g = g * 51;
-                                    b = b * 51;
+                                    r = r == 0 ? 0 : (r - 1) * 40 + 95;
+                                    g = g == 0 ? 0 : (g - 1) * 40 + 95;
+                                    b = b == 0 ? 0 : (b - 1) * 40 + 95;
                                     glColor4ub(r, g, b, 200);
                                     mc3[0] = r / 255.0;
                                     mc3[1] = g / 255.0;
@@ -906,7 +812,7 @@ void GLWidget::paintGL()
                                 }
                                 break;
                             }
-                            QColor& _c = mpMap->customEnvColors[env];
+                            QColor& _c = mpMap->mCustomEnvColors[env];
                             glColor4ub(_c.red(), _c.green(), _c.blue(), 25);
                             mc3[0] = _c.redF();
                             mc3[1] = _c.greenF();
@@ -943,58 +849,58 @@ void GLWidget::paintGL()
 
                         glBegin(GL_QUADS);
                         glNormal3f(0.57735, -0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
                         glNormal3f(0.57735, -0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                         glNormal3f(0.57735, 0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, 0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
                         glNormal3f(0.57735, -0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
 
                         glNormal3f(-0.57735, 0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(0.57735, 0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(0.57735, -0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                         glNormal3f(0.57735, 0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(0.57735, 0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(0.57735, -0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
                         glNormal3f(0.57735, -0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                         glNormal3f(-0.57735, 0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, 0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
 
                         glNormal3f(0.57735, 0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, 0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, 0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(0.57735, 0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glEnd();
                     }
                 }
@@ -1112,67 +1018,67 @@ void GLWidget::paintGL()
                         quads++;
                         glBegin(GL_QUADS);
                         glNormal3f(0.57735, -0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
                         glNormal3f(0.57735, -0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                         glNormal3f(0.57735, 0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, 0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
                         glNormal3f(0.57735, -0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
 
                         glNormal3f(-0.57735, 0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(0.57735, 0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(0.57735, -0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                         glNormal3f(0.57735, 0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(0.57735, 0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(0.57735, -0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
                         glNormal3f(0.57735, -0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                         glNormal3f(-0.57735, 0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, 0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
 
                         glNormal3f(0.57735, 0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, 0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, 0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(0.57735, 0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glEnd();
 
-                        //drauf
+                        //on top
                         float mc3[] = {0.2, 0.2, 0.6, 0.2};
                         int env = pExit->environment;
-                        if (mpMap->envColors.contains(env)) {
-                            env = mpMap->envColors[env];
+                        if (mpMap->mEnvColors.contains(env)) {
+                            env = mpMap->mEnvColors[env];
                         } else {
-                            if (!mpMap->customEnvColors.contains(env)) {
+                            if (!mpMap->mCustomEnvColors.contains(env)) {
                                 env = 1;
                             }
                         }
@@ -1290,7 +1196,7 @@ void GLWidget::paintGL()
                             mc3[3] = 0.2;
                             break;
                         default: //user defined room color
-                            if (!mpMap->customEnvColors.contains(env)) {
+                            if (!mpMap->mCustomEnvColors.contains(env)) {
                                 if (16 < env && env < 232)
                                 {
                                     quint8 base = env - 16;
@@ -1298,9 +1204,9 @@ void GLWidget::paintGL()
                                     quint8 g = (base - (r * 36)) / 6;
                                     quint8 b = (base - (r * 36)) - (g * 6);
 
-                                    r = r * 51;
-                                    g = g * 51;
-                                    b = b * 51;
+                                    r = r == 0 ? 0 : (r - 1) * 40 + 95;
+                                    g = g == 0 ? 0 : (g - 1) * 40 + 95;
+                                    b = b == 0 ? 0 : (b - 1) * 40 + 95;
                                     glColor4ub(r, g, b, 200);
                                     mc3[0] = r / 255.0;
                                     mc3[1] = g / 255.0;
@@ -1316,7 +1222,7 @@ void GLWidget::paintGL()
                                 }
                                 break;
                             }
-                            QColor& _c = mpMap->customEnvColors[env];
+                            QColor& _c = mpMap->mCustomEnvColors[env];
                             glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                             mc3[0] = _c.redF();
                             mc3[1] = _c.greenF();
@@ -1353,58 +1259,58 @@ void GLWidget::paintGL()
 
                         glBegin(GL_QUADS);
                         glNormal3f(0.57735, -0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
                         glNormal3f(0.57735, -0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                         glNormal3f(0.57735, 0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, 0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
                         glNormal3f(0.57735, -0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
 
                         glNormal3f(-0.57735, 0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(0.57735, 0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(0.57735, -0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                         glNormal3f(0.57735, 0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(0.57735, 0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(0.57735, -0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
                         glNormal3f(0.57735, -0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                         glNormal3f(-0.57735, 0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(-0.57735, 0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, -0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
 
                         glNormal3f(0.57735, 0.57735, -0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, 0.57735, -0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                         glNormal3f(-0.57735, 0.57735, 0.57735);
-                        glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glNormal3f(0.57735, 0.57735, 0.57735);
-                        glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                        glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                         glEnd();
                     }
                 }
@@ -1505,67 +1411,67 @@ void GLWidget::paintGL()
                 quads++;
                 glBegin(GL_QUADS);
                 glNormal3f(0.57735, -0.57735, 0.57735);
-                glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
                 glNormal3f(-0.57735, -0.57735, 0.57735);
-                glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
                 glNormal3f(-0.57735, -0.57735, -0.57735);
-                glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
                 glNormal3f(0.57735, -0.57735, -0.57735);
-                glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
 
 
                 glNormal3f(0.57735, 0.57735, 0.57735);
-                glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                 glNormal3f(-0.57735, 0.57735, 0.57735);
-                glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                 glNormal3f(-0.57735, -0.57735, 0.57735);
-                glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
                 glNormal3f(0.57735, -0.57735, 0.57735);
-                glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
 
                 glNormal3f(-0.57735, 0.57735, -0.57735);
-                glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                 glNormal3f(0.57735, 0.57735, -0.57735);
-                glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                 glNormal3f(0.57735, -0.57735, -0.57735);
-                glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
                 glNormal3f(-0.57735, -0.57735, -0.57735);
-                glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                 glNormal3f(0.57735, 0.57735, -0.57735);
-                glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                 glNormal3f(0.57735, 0.57735, 0.57735);
-                glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                 glNormal3f(0.57735, -0.57735, 0.57735);
-                glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
                 glNormal3f(0.57735, -0.57735, -0.57735);
-                glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                 glNormal3f(-0.57735, 0.57735, 0.57735);
-                glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                 glNormal3f(-0.57735, 0.57735, -0.57735);
-                glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                 glNormal3f(-0.57735, -0.57735, -0.57735);
-                glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
                 glNormal3f(-0.57735, -0.57735, 0.57735);
-                glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
 
                 glNormal3f(0.57735, 0.57735, -0.57735);
-                glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                 glNormal3f(-0.57735, 0.57735, -0.57735);
-                glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                 glNormal3f(-0.57735, 0.57735, 0.57735);
-                glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                 glNormal3f(0.57735, 0.57735, 0.57735);
-                glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                 glEnd();
 
                 float mc3[] = {0.2, 0.2, 0.6, 0.2};
                 int env = pR->environment;
-                if (mpMap->envColors.contains(env)) {
-                    env = mpMap->envColors[env];
+                if (mpMap->mEnvColors.contains(env)) {
+                    env = mpMap->mEnvColors[env];
                 } else {
-                    if (!mpMap->customEnvColors.contains(env)) {
+                    if (!mpMap->mCustomEnvColors.contains(env)) {
                         env = 1;
                     }
                 }
@@ -1684,7 +1590,7 @@ void GLWidget::paintGL()
                     mc3[3] = 0.2;
                     break;
                 default: //user defined room color
-                    if (!mpMap->customEnvColors.contains(env)) {
+                    if (!mpMap->mCustomEnvColors.contains(env)) {
                         if (16 < env && env < 232)
                         {
                             quint8 base = env - 16;
@@ -1692,9 +1598,9 @@ void GLWidget::paintGL()
                             quint8 g = (base - (r * 36)) / 6;
                             quint8 b = (base - (r * 36)) - (g * 6);
 
-                            r = r * 51;
-                            g = g * 51;
-                            b = b * 51;
+                            r = r == 0 ? 0 : (r - 1) * 40 + 95;
+                            g = g == 0 ? 0 : (g - 1) * 40 + 95;
+                            b = b == 0 ? 0 : (b - 1) * 40 + 95;
                             glColor4ub(r, g, b, 200);
                             mc3[0] = r / 255.0;
                             mc3[1] = g / 255.0;
@@ -1710,7 +1616,7 @@ void GLWidget::paintGL()
                         }
                         break;
                     }
-                    QColor& _c = mpMap->customEnvColors[env];
+                    QColor& _c = mpMap->mCustomEnvColors[env];
                     glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                     mc3[0] = _c.redF();
                     mc3[1] = _c.greenF();
@@ -1738,58 +1644,58 @@ void GLWidget::paintGL()
 
                 glBegin(GL_QUADS);
                 glNormal3f(0.57735, -0.57735, 0.57735);
-                glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
                 glNormal3f(-0.57735, -0.57735, 0.57735);
-                glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
                 glNormal3f(-0.57735, -0.57735, -0.57735);
-                glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
                 glNormal3f(0.57735, -0.57735, -0.57735);
-                glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                 glNormal3f(0.57735, 0.57735, 0.57735);
-                glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                 glNormal3f(-0.57735, 0.57735, 0.57735);
-                glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                 glNormal3f(-0.57735, -0.57735, 0.57735);
-                glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
                 glNormal3f(0.57735, -0.57735, 0.57735);
-                glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
 
                 glNormal3f(-0.57735, 0.57735, -0.57735);
-                glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                 glNormal3f(0.57735, 0.57735, -0.57735);
-                glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                 glNormal3f(0.57735, -0.57735, -0.57735);
-                glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
                 glNormal3f(-0.57735, -0.57735, -0.57735);
-                glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                 glNormal3f(0.57735, 0.57735, -0.57735);
-                glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                 glNormal3f(0.57735, 0.57735, 0.57735);
-                glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                 glNormal3f(0.57735, -0.57735, 0.57735);
-                glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
                 glNormal3f(0.57735, -0.57735, -0.57735);
-                glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
 
                 glNormal3f(-0.57735, 0.57735, 0.57735);
-                glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                 glNormal3f(-0.57735, 0.57735, -0.57735);
-                glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                 glNormal3f(-0.57735, -0.57735, -0.57735);
-                glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
                 glNormal3f(-0.57735, -0.57735, 0.57735);
-                glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
 
                 glNormal3f(0.57735, 0.57735, -0.57735);
-                glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
                 glNormal3f(-0.57735, 0.57735, -0.57735);
-                glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+                glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
                 glNormal3f(-0.57735, 0.57735, 0.57735);
-                glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
                 glNormal3f(0.57735, 0.57735, 0.57735);
-                glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+                glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
                 glEnd();
 
                 continue;
@@ -1810,66 +1716,66 @@ void GLWidget::paintGL()
             quads++;
             glBegin(GL_QUADS);
             glNormal3f(0.57735, -0.57735, 0.57735);
-            glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
             glNormal3f(-0.57735, -0.57735, 0.57735);
-            glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
             glNormal3f(-0.57735, -0.57735, -0.57735);
-            glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
             glNormal3f(0.57735, -0.57735, -0.57735);
-            glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
 
             glNormal3f(0.57735, 0.57735, 0.57735);
-            glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
             glNormal3f(-0.57735, 0.57735, 0.57735);
-            glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
             glNormal3f(-0.57735, -0.57735, 0.57735);
-            glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
             glNormal3f(0.57735, -0.57735, 0.57735);
-            glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
 
             glNormal3f(-0.57735, 0.57735, -0.57735);
-            glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
             glNormal3f(0.57735, 0.57735, -0.57735);
-            glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
             glNormal3f(0.57735, -0.57735, -0.57735);
-            glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
             glNormal3f(-0.57735, -0.57735, -0.57735);
-            glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
 
             glNormal3f(0.57735, 0.57735, -0.57735);
-            glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
             glNormal3f(0.57735, 0.57735, 0.57735);
-            glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
             glNormal3f(0.57735, -0.57735, 0.57735);
-            glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
             glNormal3f(0.57735, -0.57735, -0.57735);
-            glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
 
             glNormal3f(-0.57735, 0.57735, 0.57735);
-            glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
             glNormal3f(-0.57735, 0.57735, -0.57735);
-            glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
             glNormal3f(-0.57735, -0.57735, -0.57735);
-            glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
             glNormal3f(-0.57735, -0.57735, 0.57735);
-            glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
 
             glNormal3f(0.57735, 0.57735, -0.57735);
-            glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
             glNormal3f(-0.57735, 0.57735, -0.57735);
-            glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
             glNormal3f(-0.57735, 0.57735, 0.57735);
-            glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
             glNormal3f(0.57735, 0.57735, 0.57735);
-            glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
 
             glEnd();
 
             int env = pR->environment;
-            if (mpMap->envColors.contains(env)) {
-                env = mpMap->envColors[env];
+            if (mpMap->mEnvColors.contains(env)) {
+                env = mpMap->mEnvColors[env];
             } else {
-                if (!mpMap->customEnvColors.contains(env)) {
+                if (!mpMap->mCustomEnvColors.contains(env)) {
                     env = 1;
                 }
             }
@@ -1987,7 +1893,7 @@ void GLWidget::paintGL()
                 mc3[3] = 255.0 / 255.0;
                 break;
             default: //user defined room color
-                if (!mpMap->customEnvColors.contains(env)) {
+                if (!mpMap->mCustomEnvColors.contains(env)) {
                     if (16 < env && env < 232)
                     {
                         quint8 base = env - 16;
@@ -1995,9 +1901,9 @@ void GLWidget::paintGL()
                         quint8 g = (base - (r * 36)) / 6;
                         quint8 b = (base - (r * 36)) - (g * 6);
 
-                        r = r * 51;
-                        g = g * 51;
-                        b = b * 51;
+                        r = r == 0 ? 0 : (r - 1) * 40 + 95;
+                        g = g == 0 ? 0 : (g - 1) * 40 + 95;
+                        b = b == 0 ? 0 : (b - 1) * 40 + 95;
                         glColor4ub(r, g, b, 200);
                         mc3[0] = r / 255.0;
                         mc3[1] = g / 255.0;
@@ -2013,7 +1919,7 @@ void GLWidget::paintGL()
                     }
                     break;
                 }
-                QColor& _c = mpMap->customEnvColors[env];
+                QColor& _c = mpMap->mCustomEnvColors[env];
                 glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                 mc3[0] = _c.redF();
                 mc3[1] = _c.greenF();
@@ -2034,6 +1940,7 @@ void GLWidget::paintGL()
                     glTranslatef(0.5 * rx, 0.5 * ry, 5.0 * (rz + 0.25));
                 }
             } else {
+                // This is the only place this flag is used:
                 if (is2DView) {
                     glScalef(0.090, 0.090, 0.020);
                     glTranslatef(1.1111111 * rx, 1.1111111 * ry, 5.0 * (rz + 0.25)); //+0.4
@@ -2044,58 +1951,58 @@ void GLWidget::paintGL()
             }
             glBegin(GL_QUADS);
             glNormal3f(0.57735, -0.57735, 0.57735);
-            glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
             glNormal3f(-0.57735, -0.57735, 0.57735);
-            glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
             glNormal3f(-0.57735, -0.57735, -0.57735);
-            glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
             glNormal3f(0.57735, -0.57735, -0.57735);
-            glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
 
             glNormal3f(0.57735, 0.57735, 0.57735);
-            glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
             glNormal3f(-0.57735, 0.57735, 0.57735);
-            glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
             glNormal3f(-0.57735, -0.57735, 0.57735);
-            glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
             glNormal3f(0.57735, -0.57735, 0.57735);
-            glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
 
             glNormal3f(-0.57735, 0.57735, -0.57735);
-            glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
             glNormal3f(0.57735, 0.57735, -0.57735);
-            glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
             glNormal3f(0.57735, -0.57735, -0.57735);
-            glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
             glNormal3f(-0.57735, -0.57735, -0.57735);
-            glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
 
             glNormal3f(0.57735, 0.57735, -0.57735);
-            glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
             glNormal3f(0.57735, 0.57735, 0.57735);
-            glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
             glNormal3f(0.57735, -0.57735, 0.57735);
-            glVertex3f(1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(1.0 / scale, -1.0 / scale, 1.0 / scale);
             glNormal3f(0.57735, -0.57735, -0.57735);
-            glVertex3f(1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(1.0 / scale, -1.0 / scale, -1.0 / scale);
 
             glNormal3f(-0.57735, 0.57735, 0.57735);
-            glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
             glNormal3f(-0.57735, 0.57735, -0.57735);
-            glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
             glNormal3f(-0.57735, -0.57735, -0.57735);
-            glVertex3f(-1.0 / dehnung, -1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(-1.0 / scale, -1.0 / scale, -1.0 / scale);
             glNormal3f(-0.57735, -0.57735, 0.57735);
-            glVertex3f(-1.0 / dehnung, -1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(-1.0 / scale, -1.0 / scale, 1.0 / scale);
 
             glNormal3f(0.57735, 0.57735, -0.57735);
-            glVertex3f(1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(1.0 / scale, 1.0 / scale, -1.0 / scale);
             glNormal3f(-0.57735, 0.57735, -0.57735);
-            glVertex3f(-1.0 / dehnung, 1.0 / dehnung, -1.0 / dehnung);
+            glVertex3f(-1.0 / scale, 1.0 / scale, -1.0 / scale);
             glNormal3f(-0.57735, 0.57735, 0.57735);
-            glVertex3f(-1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(-1.0 / scale, 1.0 / scale, 1.0 / scale);
             glNormal3f(0.57735, 0.57735, 0.57735);
-            glVertex3f(1.0 / dehnung, 1.0 / dehnung, 1.0 / dehnung);
+            glVertex3f(1.0 / scale, 1.0 / scale, 1.0 / scale);
             glEnd();
 
             glColor4ub(128, 128, 128, 255);
@@ -2104,21 +2011,21 @@ void GLWidget::paintGL()
             glBegin(GL_TRIANGLES);
 
             if (pR->getDown() > -1) {
-                glVertex3f(0.0, -0.95 / dehnung, 0.0);
-                glVertex3f(0.95 / dehnung, -0.25 / dehnung, 0.0);
-                glVertex3f(-0.95 / dehnung, -0.25 / dehnung, 0.0);
+                glVertex3f(0.0, -0.95 / scale, 0.0);
+                glVertex3f(0.95 / scale, -0.25 / scale, 0.0);
+                glVertex3f(-0.95 / scale, -0.25 / scale, 0.0);
             }
             if (pR->getUp() > -1) {
-                glVertex3f(0.0, 0.95 / dehnung, 0.0);
-                glVertex3f(-0.95 / dehnung, 0.25 / dehnung, 0.0);
-                glVertex3f(0.95 / dehnung, 0.25 / dehnung, 0.0);
+                glVertex3f(0.0, 0.95 / scale, 0.0);
+                glVertex3f(-0.95 / scale, 0.25 / scale, 0.0);
+                glVertex3f(0.95 / scale, 0.25 / scale, 0.0);
             }
             glEnd();
 
 //            if (mpMap->rooms[pArea->rooms[i]]->out > -1) {
 //                glBegin( GL_LINE_LOOP );
 //                for (int angle=0; angle<360; angle += 1 ) {
-//                    glVertex3f((0.5 + sin((float)angle) * 0.25)/dehnung, ( cos((float)angle) * 0.25)/dehnung, 0.0);
+//                    glVertex3f((0.5 + sin((float)angle) * 0.25)/scale, ( cos((float)angle) * 0.25)/scale, 0.0);
 //                }
 //                glEnd();
 //            }
@@ -2128,7 +2035,7 @@ void GLWidget::paintGL()
 //                glBegin(GL_TRIANGLE_FAN);
 //                glVertex3f(0.0, 0.0, 0.0);
 //                for (int angle=0; angle<=360; angle += 5) {
-//                    glVertex3f((sin((float)angle)*0.25)/dehnung, (cos((float)angle)*0.25)/dehnung, 0.0);
+//                    glVertex3f((sin((float)angle)*0.25)/scale, (cos((float)angle)*0.25)/scale, 0.0);
 //                }
 //                glEnd();
 //            }
@@ -2145,20 +2052,19 @@ void GLWidget::resizeGL(int w, int h)
     glViewport(0, 0, (GLint)w, (GLint)h);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    if (!ortho) {
-        gluPerspective(60 * mScale, (GLfloat)w / (GLfloat)h, 0.0001, 10000.0);
-    } else {
-        gluOrtho2D(0.0, (GLdouble)w, 0.0, (GLdouble)h);
-    }
+    gluPerspective(60 * mScale, (GLfloat)w / (GLfloat)h, 0.0001, 10000.0);
     glMatrixMode(GL_MODELVIEW);
 }
 
 void GLWidget::mousePressEvent(QMouseEvent* event)
 {
     mudlet::self()->activateProfile(mpHost);
+    if (!mpMap||!mpMap->mpRoomDB) {
+        return;
+    }
     if (event->buttons() & Qt::LeftButton) {
         int x = event->x();
-        int y = height() - event->y(); //opengl ursprungspunkt liegt unten links
+        int y = height() - event->y(); // the opengl origin is at bottom left
         GLuint buff[16] = {0};
         GLint hits;
         GLint view[4];
@@ -2176,11 +2082,9 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         glMatrixMode(GL_MODELVIEW);
         doneCurrent();
         mTarget = -22;
-        selectionMode = true;
         makeCurrent();
         paintGL();
         doneCurrent();
-        selectionMode = false;
         makeCurrent();
         glMatrixMode(GL_PROJECTION);
         glPopMatrix();
@@ -2188,7 +2092,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
 
         for (int i = 0; i < hits; i++) {
             mTarget = buff[i * 4 + 3];
-            //TODO: Mehrfachbelegungen
+            //TODO: multiple assignments
             //            unsigned int minZ = buff[i * 4 + 1];
             //            unsigned int maxZ = buff[i * 4 + 2];
         }
@@ -2226,21 +2130,24 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
 
 void GLWidget::mouseMoveEvent(QMouseEvent* event)
 {
+    if (!mpMap||!mpMap->mpRoomDB) {
+        return;
+    }
     if (mPanMode) {
         int x = event->x();
-        int y = height() - event->y(); //opengl ursprungspunkt liegt unten links
+        int y = height() - event->y(); // the opengl origin is at bottom left
         if ((mPanXStart - x) > 1) {
-            shiftRight();
+            slot_shiftRight();
             mPanXStart = x;
         } else if ((mPanXStart - x) < -1) {
-            shiftLeft();
+            slot_shiftLeft();
             mPanXStart = x;
         }
         if ((mPanYStart - y) > 1) {
-            shiftUp();
+            slot_shiftUp();
             mPanYStart = y;
         } else if ((mPanYStart - y) < -1) {
-            shiftDown();
+            slot_shiftDown();
             mPanYStart = y;
         }
     }
@@ -2248,38 +2155,31 @@ void GLWidget::mouseMoveEvent(QMouseEvent* event)
 
 void GLWidget::mouseReleaseEvent(QMouseEvent* event)
 {
+    Q_UNUSED(event)
     mPanMode = false;
 }
 
 void GLWidget::wheelEvent(QWheelEvent* e)
 {
-    //int delta = e->delta() / 8 / 15;
-    if (e->delta() < 0) {
+    int xDelta = qRound(e->angleDelta().x() / (8.0 * 15.0));
+    int yDelta = qRound(e->angleDelta().y() / (8.0 * 15.0));
+    bool used = false;
+    if (yDelta) {
         if (abs(mScale) < 0.3) {
-            mScale -= 0.01;
+            mScale += 0.01 * yDelta;
         } else {
-            mScale -= 0.03;
+            mScale += 0.03 * yDelta;
         }
         makeCurrent();
         resizeGL(width(), height());
         doneCurrent();
         update();
-        e->accept();
-        return;
+        used = true;
     }
-    if (e->delta() > 0) {
-        if (abs(mScale) < 0.3) {
-            mScale += 0.01;
-        } else {
-            mScale += 0.03;
-        }
-        makeCurrent();
-        resizeGL(width(), height());
-        doneCurrent();
-        update();
-        e->accept();
-        return;
-    }
-    e->ignore();
-    return;
+
+    // Space for future use of xDelta - depending on what that is the update
+    // may need to be moved out of the yDelta part
+    Q_UNUSED(xDelta)
+
+    e->setAccepted(used);
 }

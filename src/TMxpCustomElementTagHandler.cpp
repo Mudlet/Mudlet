@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -59,8 +60,9 @@ TMxpTagHandlerResult TMxpCustomElementTagHandler::handleEndTag(TMxpContext& ctx,
         mCurrentFlagName.clear();
     }
 
-    if (el.definition.isEmpty())
+    if (el.definition.isEmpty()) {
         return MXP_TAG_HANDLED; //NO DEFINITION
+    }
 
 
     // generates closing tags in the reverse order
@@ -126,6 +128,7 @@ QString TMxpCustomElementTagHandler::mapAttributes(const TMxpElement& element, c
 }
 void TMxpCustomElementTagHandler::configFlag(TMxpClient& client, MxpStartTag* tag, const TMxpElement& el)
 {
+    Q_UNUSED(client)
     mCurrentFlagName = el.name;
     parseFlagAttributes(tag, el);
     mCurrentFlagContent.clear();

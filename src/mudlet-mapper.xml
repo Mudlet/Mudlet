@@ -78,6 +78,8 @@
 			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>Too quick</name>
 				<script>if mmp.autowalking then
+  mmp.hasty = true
+  mmp.setmovetimer(0.5)
   mmp.deleteLineP()
 end</script>
 				<triggerType>0</triggerType>
@@ -331,10 +333,10 @@ disableTrigger"Mudlet Mapper prompt trigger"</script>
 				<colorTriggerFgColor>#000000</colorTriggerFgColor>
 				<colorTriggerBgColor>#000000</colorTriggerBgColor>
 				<regexCodeList>
-					<string>return isPrompt()</string>
+					<string></string>
 				</regexCodeList>
 				<regexCodePropertyList>
-					<integer>4</integer>
+					<integer>7</integer>
 				</regexCodePropertyList>
 			</Trigger>
 			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
@@ -453,7 +455,7 @@ mmp.echo("We're connected to Achaea.")</script>
 					</regexCodePropertyList>
 					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 						<name>Local farsee</name>
-						<script>mmp.locateAndEcho(matches[3], matches[2])</script>
+						<script>mmp.locateAndEcho(matches[3], matches[2], gmcp.Room.Info.area)</script>
 						<triggerType>0</triggerType>
 						<conditonLineDelta>0</conditonLineDelta>
 						<mStayOpen>0</mStayOpen>
@@ -681,10 +683,10 @@ raiseEvent("mmapper updated pdb")</script>
 						<colorTriggerFgColor>#000000</colorTriggerFgColor>
 						<colorTriggerBgColor>#000000</colorTriggerBgColor>
 						<regexCodeList>
-							<string>return isPrompt()</string>
+							<string></string>
 						</regexCodeList>
 						<regexCodePropertyList>
-							<integer>4</integer>
+							<integer>7</integer>
 						</regexCodePropertyList>
 					</Trigger>
 				</Trigger>
@@ -900,10 +902,10 @@ enableTrigger("Angel sense")</script>
 						<colorTriggerFgColor>#000000</colorTriggerFgColor>
 						<colorTriggerBgColor>#000000</colorTriggerBgColor>
 						<regexCodeList>
-							<string>return isPrompt()</string>
+							<string></string>
 						</regexCodeList>
 						<regexCodePropertyList>
-							<integer>4</integer>
+							<integer>7</integer>
 						</regexCodePropertyList>
 					</Trigger>
 				</Trigger>
@@ -1026,10 +1028,10 @@ enableTrigger("Angel sense")</script>
 						<colorTriggerFgColor>#000000</colorTriggerFgColor>
 						<colorTriggerBgColor>#000000</colorTriggerBgColor>
 						<regexCodeList>
-							<string>return isPrompt()</string>
+							<string></string>
 						</regexCodeList>
 						<regexCodePropertyList>
-							<integer>4</integer>
+							<integer>7</integer>
 						</regexCodePropertyList>
 					</Trigger>
 				</Trigger>
@@ -1148,10 +1150,10 @@ raiseEvent("mmapper updated pdb")</script>
 						<colorTriggerFgColor>#000000</colorTriggerFgColor>
 						<colorTriggerBgColor>#000000</colorTriggerBgColor>
 						<regexCodeList>
-							<string>return isPrompt()</string>
+							<string></string>
 						</regexCodeList>
 						<regexCodePropertyList>
-							<integer>4</integer>
+							<integer>7</integer>
 						</regexCodePropertyList>
 					</Trigger>
 				</Trigger>
@@ -1240,10 +1242,10 @@ raiseEvent("mmapper updated pdb")</script>
 						<colorTriggerFgColor>#000000</colorTriggerFgColor>
 						<colorTriggerBgColor>#000000</colorTriggerBgColor>
 						<regexCodeList>
-							<string>return isPrompt()</string>
+							<string></string>
 						</regexCodeList>
 						<regexCodePropertyList>
-							<integer>4</integer>
+							<integer>7</integer>
 						</regexCodePropertyList>
 					</Trigger>
 				</Trigger>
@@ -1306,10 +1308,10 @@ raiseEvent("mmapper updated pdb")</script>
 						<colorTriggerFgColor>#000000</colorTriggerFgColor>
 						<colorTriggerBgColor>#000000</colorTriggerBgColor>
 						<regexCodeList>
-							<string>return isPrompt()</string>
+							<string></string>
 						</regexCodeList>
 						<regexCodePropertyList>
-							<integer>4</integer>
+							<integer>7</integer>
 						</regexCodePropertyList>
 					</Trigger>
 				</Trigger>
@@ -1503,10 +1505,10 @@ enableTrigger("Shadow preeminence")</script>
 						<colorTriggerFgColor>#000000</colorTriggerFgColor>
 						<colorTriggerBgColor>#000000</colorTriggerBgColor>
 						<regexCodeList>
-							<string>return isPrompt()</string>
+							<string></string>
 						</regexCodeList>
 						<regexCodePropertyList>
-							<integer>4</integer>
+							<integer>7</integer>
 						</regexCodePropertyList>
 					</Trigger>
 				</Trigger>
@@ -1562,6 +1564,46 @@ end</script>
 							<integer>1</integer>
 						</regexCodePropertyList>
 					</Trigger>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Aero Whisper</name>
+					<script>mmp.locateAndEcho(matches[3], matches[2], matches[4])</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^Whispering a request to the omnipresent winds, you sense that (\w+) is at (.+), in (.+)\.$</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Soulmark Scry</name>
+					<script>mmp.locateAndEcho(matches[3], matches[2])</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^Questing for the mark placed upon h(?:is|er) soul, you determine that (\w+) can be found at (.+)\.$</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
 				</Trigger>
 			</TriggerGroup>
 			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
@@ -1750,10 +1792,10 @@ raiseEvent("mmapper updated pdb")</script>
 						<colorTriggerFgColor>#000000</colorTriggerFgColor>
 						<colorTriggerBgColor>#000000</colorTriggerBgColor>
 						<regexCodeList>
-							<string>return isPrompt()</string>
+							<string></string>
 						</regexCodeList>
 						<regexCodePropertyList>
-							<integer>4</integer>
+							<integer>7</integer>
 						</regexCodePropertyList>
 					</Trigger>
 				</Trigger>
@@ -1863,10 +1905,10 @@ raiseEvent("mmapper updated pdb")</script>
 						<colorTriggerFgColor>#000000</colorTriggerFgColor>
 						<colorTriggerBgColor>#000000</colorTriggerBgColor>
 						<regexCodeList>
-							<string>return isPrompt()</string>
+							<string></string>
 						</regexCodeList>
 						<regexCodePropertyList>
-							<integer>4</integer>
+							<integer>7</integer>
 						</regexCodePropertyList>
 					</Trigger>
 				</Trigger>
@@ -2478,10 +2520,10 @@ cecho("&lt;orange_red&gt;)")</script>
 						<colorTriggerFgColor>#000000</colorTriggerFgColor>
 						<colorTriggerBgColor>#000000</colorTriggerBgColor>
 						<regexCodeList>
-							<string>return isPrompt()</string>
+							<string></string>
 						</regexCodeList>
 						<regexCodePropertyList>
-							<integer>4</integer>
+							<integer>7</integer>
 						</regexCodePropertyList>
 					</Trigger>
 				</Trigger>
@@ -2501,7 +2543,7 @@ cecho("&lt;orange_red&gt;)")</script>
 					<regexCodeList />
 					<regexCodePropertyList />
 					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-						<name>Succesful transverse</name>
+						<name>Successful transverse</name>
 						<script>if mmp.game~= "lusternia" then return end
 if validTransverse then
   mmp.registerTransverseExit()
@@ -2546,7 +2588,7 @@ validTransverse = false</script>
 						</regexCodePropertyList>
 					</Trigger>
 					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-						<name>Succesful pathfind</name>
+						<name>Successful pathfind</name>
 						<script>if mmp.game~= "lusternia" then return end
 if validTransverse then
   mmp.clearPathfind()
@@ -2592,6 +2634,29 @@ validTransverse = false</script>
 						</regexCodePropertyList>
 					</Trigger>
 				</TriggerGroup>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Forced Movement</name>
+					<script>if mmp.autowalking then
+  mmp.hasty = true
+  mmp.setmovetimer(0.5)
+end</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>The soft ground around you suddenly gives way and you find yourself sliding down a muddy embankment, ending up in an undignified heap on the floor of a dark chamber.</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>3</integer>
+					</regexCodePropertyList>
+				</Trigger>
 			</TriggerGroup>
 			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>Imperian</name>
@@ -3078,10 +3143,10 @@ mmp.correctLiftFloor = nil</script>
 							<colorTriggerFgColor>#000000</colorTriggerFgColor>
 							<colorTriggerBgColor>#000000</colorTriggerBgColor>
 							<regexCodeList>
-								<string>return isPrompt()</string>
+								<string></string>
 							</regexCodeList>
 							<regexCodePropertyList>
-								<integer>4</integer>
+								<integer>7</integer>
 							</regexCodePropertyList>
 						</Trigger>
 					</Trigger>
@@ -3435,7 +3500,7 @@ mmp.echo("We're connected to StickMUD.")</script>
 						<colorTriggerFgColor>#000000</colorTriggerFgColor>
 						<colorTriggerBgColor>#000000</colorTriggerBgColor>
 						<regexCodeList>
-							<string>^The door to the (\w+) is closed forcefully fromthe other side and the sound of a bolt being slammed home makes your lack of admittance clear\.$</string>
+							<string>^The door to the (\w+) is closed forcefully from the other side and the sound of a bolt being slammed home makes your lack of admittance clear\.$</string>
 						</regexCodeList>
 						<regexCodePropertyList>
 							<integer>1</integer>
@@ -3477,12 +3542,12 @@ mmp.echo("We're connected to StickMUD.")</script>
 					<colorTriggerBgColor>#000000</colorTriggerBgColor>
 					<regexCodeList>
 						<string>You open the door to the</string>
-						<string>return isPrompt()</string>
+						<string></string>
 						<string>^The door to the \w+ closes with a click\.$</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>2</integer>
-						<integer>4</integer>
+						<integer>7</integer>
 						<integer>1</integer>
 					</regexCodePropertyList>
 				</Trigger>
@@ -3508,6 +3573,8 @@ mmp.echo("We're connected to StickMUD.")</script>
 						<string>You push against the door in vain as you try to open it.</string>
 						<string>You do not have access to open this door.</string>
 						<string>The door beeps quietly. It appears to be locked.</string>
+						<string>This (?:walnut|pine|oak|iron|reinforced) door has been magically locked shut\.</string>
+						<string>You are not carrying a key for this (?:walnut|pine|oak|iron|reinforced) door\.</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>3</integer>
@@ -3516,6 +3583,8 @@ mmp.echo("We're connected to StickMUD.")</script>
 						<integer>3</integer>
 						<integer>3</integer>
 						<integer>3</integer>
+						<integer>1</integer>
+						<integer>1</integer>
 					</regexCodePropertyList>
 				</Trigger>
 				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
@@ -3533,9 +3602,11 @@ mmp.echo("We're connected to StickMUD.")</script>
 					<colorTriggerBgColor>#000000</colorTriggerBgColor>
 					<regexCodeList>
 						<string>The door is locked.</string>
+						<string>The (?:walnut|pine|oak|iron|reinforced) door is locked\.</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>3</integer>
+						<integer>1</integer>
 					</regexCodePropertyList>
 				</Trigger>
 				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
@@ -3555,7 +3626,7 @@ mmp.echo("We're connected to StickMUD.")</script>
 						<string>There is a door in the way, to the</string>
 						<string>There is a door in the way.</string>
 						<string>A closed door is in the way. You need to OPEN DOOR</string>
-						<string>There is an? (walnut|pine|oak|iron|reinforced) door in the way.</string>
+						<string>There is an? (?:walnut|pine|oak|iron|reinforced) door in the way.</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>2</integer>
@@ -3583,12 +3654,13 @@ mmp.echo("We're connected to StickMUD.")</script>
 				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 					<name>Worm sources</name>
 					<script>deleteLine()
-local from = multimatches[2][2]
-local to = multimatches[2][3]
-
-cecho("\nYou see connections between "..from.." (")
-mmp.echonums(from)
-cecho(") and "..to.." (")
+local from,fromhouse = multimatches[2][2]:gsub(" %(house%)","")
+local to,tohouse = multimatches[2][3]:gsub(" %(house%)","")
+if fromhouse &gt;= 1 then fromhouse = " (house)" else fromhouse = "" end
+if tohouse &gt;= 1 then tohouse = " (house)" else tohouse = "" end
+cecho("\nYou see a connection between ".. from .. fromhouse .. " (")
+mmp.echonums(from, gmcp.Room.Info.area)
+cecho(") and "..to..tohouse.." (")
 mmp.echonums(to)
 cecho(")")
 </script>
@@ -3655,10 +3727,12 @@ end</script>
 					<regexCodeList>
 						<string>You see exits</string>
 						<string>You see a single exit</string>
+						<string>There are no obvious exits.</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>2</integer>
 						<integer>2</integer>
+						<integer>3</integer>
 					</regexCodePropertyList>
 				</Trigger>
 			</TriggerGroup>
@@ -3806,7 +3880,8 @@ end
 local val = matches[4]
 if val == "true" or val == "yes" or val == "on" then val = true end
 if val == "false" or val == "no" or val == "off" then val = false end
-
+local numberVal = tonumber(val)
+val = numberVal and numberVal or val
 mmp.settings:setOption(matches[3], val)</script>
 				<command></command>
 				<packageName></packageName>
@@ -4639,7 +4714,7 @@ for key in pairs(getRooms()) do
   if char ~= "" then
     if translation[char] then
       if not mmp.roomCreateMapFeature(translation[char], key) then
-			  mmp.echo("An error occured when migrating room characters, see messages above for details. Migration incomplete!")
+			  mmp.echo("An error occurred when migrating room characters, see messages above for details. Migration incomplete!")
 			  return
 			end
     end
@@ -4840,53 +4915,91 @@ end</script>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Save a map</name>
-				<script>local function s(loc)
-    if not saveMap(loc) then
-      mmp.echo("Couldn't save the map :(")
-    else
-      if loc ~= "" then mmp.echo("Map saved.") else mmp.echo("Saved the default map.") end
-    end
+				<script>local function s(location, format)
+  local savednormal, savedjson = "not saved", "not saved"
+  if format == "json" then
+    savedjson = saveJsonMap(location)
+  elseif format == "all" then
+    savedjson = saveJsonMap(location)
+    savednormal = saveMap(location)
+  elseif format == nil or format == "" then
+    savednormal = saveMap(location)
+  end
+  
+  if savednormal == nil then
+    mmp.echo("Couldn't save the map :(")
+  elseif savednormal == true then
+    mmp.echo(location ~= "" and "Map saved." or "Saved the default map.")
+  end
+  if savedjson == nil then
+    mmp.echo("Couldn't save the JSON map :(")
+  elseif savedjson == true then
+    mmp.echo(location ~= "" and "Map saved in JSON." or "Saved the default map in JSON.")
+  end
 end
 
-if not saveMap then
-  mmp.echo("Your Mudlet can't save maps. Please upgrade it!")
+if matches[2] and (matches[2] == "json" or matches[2] == "all") and not saveJsonMap then
+  mmp.echo("Your Mudlet can't save maps in JSON, please upgrade first.")
+  return
+end
+if matches[3] and matches[3] == "custom" then
+  s(
+    invokeFileDialog(false, "Please select the folder to save the map in and hit Open") ..
+    "/Mudlet map from " ..
+    os.date("%A %d, %b '%y") ..
+    ".dat",
+    matches[2]
+  )
+elseif matches[3] then
+  s(getMudletHomeDir() .. "/map/" .. matches[3], matches[2])
 else
-  if matches[2] and matches[2] == "custom" then
-    s(invokeFileDialog(false, "Please select the folder to save the map in and hit Open").."/Mudlet map from "..os.date("%A %d, %b '%y")..".dat")
-  elseif matches[2] then
-	s(getMudletHomeDir().."/map/"..matches[2])
-  else
-    s("")
-  end
+  s("", matches[2])
 end</script>
 				<command></command>
 				<packageName></packageName>
-				<regex>^map save(?: (.+))?$</regex>
+				<regex>^map save(?: (json|all))?(?: (.+))?$</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Load a map</name>
 				<script>local function s(loc)
-    if not loadMap(loc) then
-      mmp.echo("Couldn't load the map :(")
+  if string.ends(loc, ".json") and not loadJsonMap then
+    mmp.echo("Your Mudlet can't load maps in JSON, please upgrade first.")
+    return
+  end
+  
+  local allok = true
+  if string.ends(loc, ".json") then
+    allok = loadJsonMap(loc)
+  else
+    allok = loadMap(loc)
+  end
+  
+  if not allok then
+    mmp.echo("Couldn't load the map :(")
+  else
+    mmp.lockWormholes();
+    mmp.lockSewers();
+    mmp.lockPebble();
+    if mmp.settings.waterwalk then
+      mmp.enableWaterWalk()
     else
-      mmp.lockWormholes(); mmp.lockSewers(); mmp.lockPebble();
-      if mmp.settings.waterwalk then mmp.enableWaterWalk() else mmp.disableWaterWalk() end
-
-      if loc ~= "" then mmp.echo("Map loaded.") else mmp.echo("Loaded the default map.") end
-      raiseEvent("mmapper updated map")
+      mmp.disableWaterWalk()
     end
+    if loc ~= "" then
+      mmp.echo("Map loaded.")
+    else
+      mmp.echo("Loaded the default map.")
+    end
+    raiseEvent("mmapper updated map")
+  end
 end
 
-if not loadMap then
-  mmp.echo("Your Mudlet can't load maps. Please upgrade it!")
+if matches[2] and matches[2] == "custom" then
+  s(invokeFileDialog(true, "Please select the map file and click Open to load it"))
+elseif matches[2] then
+  s(getMudletHomeDir() .. "/map/" .. matches[2])
 else
-  if matches[2] and matches[2] == "custom" then
-    s(invokeFileDialog(true, "Please select the map file and click Open to load it"))
-  elseif matches[2] then
-	s(getMudletHomeDir().."/map/"..matches[2])
-  else
-    s("")
-  end
+  s("")
 end</script>
 				<command></command>
 				<packageName></packageName>
@@ -5028,18 +5141,6 @@ end</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^(small|big|biggest)map(?: (\d+))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>^make maps$</name>
-				<script>local c = 0
-for _, id in pairs(getAreaTable()) do
-  tempTimer(c*.5, [[exportAreaImage(]]..id..[[)]])
-  c = c + 1
-end
-mmp.echo("Done!")</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^make maps$</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Set debug mode</name>
@@ -5216,7 +5317,6 @@ function createOption(startingValue, onChangeFunc, allowedVarTypes, use, checkOp
 		use = use or "",
 		games = games,
 		checkOption = checkOption or function() return true end
-      
 	}
 
 	return option
@@ -5243,13 +5343,13 @@ function createOptionsTable(defaultTable)
 
 	function proxyTable:showAllOptions(game)
 		proxyTable.disp("Available options: \n")
-		for k, v in pairs(self[index]) do
+		for k, v in spairs(self[index]) do
 			if not game or not v.games or v.games[game] then
 				self.dispOption(k, v)
 			end
 		end
 		echo("\n")
-		for k, v in pairs(self["_customOptions"]) do
+		for k, v in spairs(self["_customOptions"]) do
 			self.dispOption(k, v)
 		end
 
@@ -5350,7 +5450,29 @@ speedWalkCounter = 0
 mmp.speedWalk = mmp.speedWalk or {}
 mmp.speedWalkPath = mmp.speedWalkPath or {}
 mmp.speedWalkDir = mmp.speedWalkDir or {}
-local newversion = "20.10.1"
+mmp.lagtable = {
+    [1] = {
+        description = "Normal, default level.",
+        time = 0.5
+    },
+    [2] = {
+        description = "Decent, but slightly laggy.",
+        time = 1
+    },
+    [3] = {
+        description = "Noticeably laggy with occasional spikes.",
+        time = 2
+    },
+    [4] = {
+        description = "Bad. Terrible. Terribad.",
+        time = 5
+    },
+    [5] = {
+        description = "Carrier Pigeon",
+        time = 10
+    }
+}
+local newversion = "21.4.1"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo(
@@ -5381,7 +5503,7 @@ function mmp.startup()
   private_settings["crowdmap"] =
     createOption(
       false,
-      mmp.chageMapSource,
+      mmp.changeMapSource,
       {"boolean"},
       "Use a crowd-sourced map instead of IREs default?",
       nil,
@@ -5389,6 +5511,8 @@ function mmp.startup()
     )
   private_settings["showcmds"] =
     createOption(true, mmp.changeBoolFunc, {"boolean"}, "Show walking commands?")
+  private_settings["laglevel"] =
+    createOption(1, mmp.changeLaglevel, {"number"}, "How laggy is your connection, (fast 1&lt;-&gt;5 slow)?", mmp.verifyLaglevel)
   private_settings["slowwalk"] =
     createOption(
       false, mmp.setSlowWalk, {"boolean"}, "Walk slowly instead of as quick as possible?"
@@ -5912,12 +6036,14 @@ function mmp.setmovetimer(time)
   if mmp.movetimer then
     killTimer(mmp.movetimer)
   end
-  if mmp.settings.slowwalk then
+  if mmp.settings.slowwalk and not mmp.hasty then
     return
   end
+  local laglevel = mmp.settings.laglevel or 1
+  time = time or mmp.lagtable[laglevel].time
   mmp.movetimer =
     tempTimer(
-      getNetworkLatency() + (time or 0.5),
+      getNetworkLatency() + time,
       function()
         mmp.movetimer = false
         mmp.move()
@@ -5947,7 +6073,7 @@ function mmp.move()
   if string.starts(cmd, "script:") then
     cmd = string.gsub(cmd, "script:", "")
     loadstring(cmd)()
-    if mmp.settings.showcmds then
+    if mmp.settings.showcmds and not mmp.hasty then
       cecho(
         string.format(
           "&lt;red&gt;(&lt;maroon&gt;%d - &lt;dark_slate_grey&gt;%s&lt;red&gt;)",
@@ -5956,9 +6082,10 @@ function mmp.move()
         )
       )
     end
+    mmp.hasty = false
   else
     send(cmd, false)
-    if mmp.settings.showcmds then
+    if mmp.settings.showcmds and not mmp.hasty then
       cecho(
         string.format(
           "&lt;red&gt;(&lt;maroon&gt;%d - &lt;dark_slate_grey&gt;%s&lt;red&gt;)",
@@ -5967,6 +6094,7 @@ function mmp.move()
         )
       )
     end
+    mmp.hasty = false
   end
 end
 
@@ -5993,6 +6121,7 @@ function mmp.swim()
       )
     )
   end
+  mmp.hasty = true
   mmp.setmovetimer(2.5)
 end
 
@@ -6011,6 +6140,7 @@ function mmp.enterGrate()
       )
     )
   end
+  mmp.hasty = true
   mmp.setmovetimer(2.5)
 end
 
@@ -6037,6 +6167,7 @@ function mmp.openDoor()
       )
     )
   end
+  mmp.hasty = true
   mmp.setmovetimer(getNetworkLatency())
 end
 
@@ -6063,6 +6194,7 @@ function mmp.unlockDoor()
       )
     )
   end
+  mmp.hasty = true
   mmp.setmovetimer(getNetworkLatency())
 end
 
@@ -6235,10 +6367,10 @@ function speedwalking(event, num)
     mmp.autowalking = false
   elseif mmp.speedWalkPath[speedWalkCounter] == num then
     speedWalkCounter = speedWalkCounter + 1
-    mmp.move()
+    tempPromptTrigger(mmp.move, 1)
   elseif mmp.game == "imperian" and madeflight then
     mmp.echo("We began flying!")
-    mmp.move()
+    tempPromptTrigger(mmp.move, 1)
   elseif
     #mmp.speedWalkPath &gt; 0 and
     not mmp.ferry_rooms[num] and
@@ -6316,7 +6448,8 @@ function doSpeedWalk(dashtype)
     echo(": ")
     speedWalkCounter = 1
     if mmp.canmove() then
-      mmp.move()
+      mmp.hasty = true
+      mmp.setmovetimer(0.1)
     else
       echo("(when we get balance back / aren't hindered)")
     end
@@ -6379,7 +6512,7 @@ function mmp.fixPath(rFrom, rTo, dashtype)
         end
       end
       if repCount &gt; 1 then
-        -- Found direction repitition. Calculate dash path.
+        -- Found direction repetition. Calculate dash path.
         local exits = getRoomExits(mmp.speedWalkPath[index + (repCount - 1)])
         local pname = ""
         for word in mmp.speedWalkDir[index]:gmatch("%w") do
@@ -7287,7 +7420,7 @@ end</script>
 				<Script isActive="yes" isFolder="no">
 					<name>Locating &amp; echoing functions</name>
 					<packageName></packageName>
-					<script>local function filterRooms(rooms, area)
+					<script>function mmp.filterRooms(rooms, area)
   local unassignedRooms = {}
   local areaRooms = {}
   for roomnum, roomname in pairs(rooms) do
@@ -7306,7 +7439,7 @@ end
 function mmp.echonums(roomname, area)
   local t = mmp.searchRoomExact(roomname)
   if area then
-    t = filterRooms(t, area)
+    t = mmp.filterRooms(t, area)
   end
   if not next(t) then
     echo("?")
@@ -7388,7 +7521,7 @@ end
 function mmp.locateAndEcho(room, person, area)
   local t = mmp.searchRoomExact(room)
   if area then
-    t = filterRooms(t, area)
+    t = mmp.filterRooms(t, area)
   end
   echo("  (")
   mmp.echonums(room, area)
@@ -8076,7 +8209,7 @@ function mmp.roomLabel(input)
   if tk[1] and color_table[tk[1]] then
     fg = table.remove(tk, 1)
   end
-  -- next: is this a backround color?
+  -- next: is this a background color?
   if tk[1] and color_table[tk[1]] then
     bg = table.remove(tk, 1)
   end
@@ -8411,6 +8544,17 @@ function mmp.changeEchoColour()
     mmp.echo("Now displaying echos in &lt;"..mmp.settings.echocolour.."&gt;"..mmp.settings.echocolour )
 end
 
+function mmp.changeLaglevel()
+    local laglevel = mmp.settings.laglevel
+    local laginfo = mmp.lagtable[laglevel]
+    mmp.echo(string.format("Lag level set to [%d]: %s (%ss timer)", laglevel, laginfo.description, tostring(laginfo.time)))
+end
+
+function mmp.verifyLaglevel(value)
+  if mmp.lagtable[value] then return true end
+  return false
+end
+
 function mmp.lockPathways()
   local lock = mmp.settings.lockpathways and true or false
   mmp.doLock("pathways", lock, "pathfind")
@@ -8490,7 +8634,7 @@ function mmp.setGare()
   else mmp.echo("Won't use Gare anymore.") end
 end
 
-function mmp.chageMapSource()
+function mmp.changeMapSource()
   local use = mmp.settings.crowdmap and true or false
   if use and not (mmp.game == "achaea" or mmp.game == "starmourn" or mmp.game == "lusternia" or mmp.game == "stickmud") then
     mmp.echo("Sorry - the crowdsourced map is only available for use in Achaea, Starmourn, Lusternia and StickMUD. If you'd like to help start one for your game, please post at http://forums.mudlet.org/viewtopic.php?f=13&amp;t=1696. If you are playing one of the games, then it is likely that you just downloaded the script - and it doesn't know what you are playing. Reconnect and it'll know.")
@@ -9848,7 +9992,7 @@ function mmp_mapping_newroom(_, num)
                       s ..
                       (#s &gt; 0 and " " or "") ..
                       string.format(
-                        "Failed to link %d withh %d via %s exit for some reason :/", num, id, exit
+                        "Failed to link %d with %d via %s exit for some reason :/", num, id, exit
                       )
                   end
                 end
@@ -9901,7 +10045,7 @@ function mmp_mapping_newroom(_, num)
                       s ..
                       (#s &gt; 0 and " " or "") ..
                       string.format(
-                        "Failed to link %d withh %d via %s exit for some reason :/", num, id, exit
+                        "Failed to link %d with %d via %s exit for some reason :/", num, id, exit
                       )
                   end
                   local exit = mmp.anytoshort(mmp.ranytolong(exit))
@@ -9921,7 +10065,7 @@ function mmp_mapping_newroom(_, num)
                       s ..
                       (#s &gt; 0 and " " or "") ..
                       string.format(
-                        "Failed to link %d withh %d via %s exit for some reason :/", num, id, exit
+                        "Failed to link %d with %d via %s exit for some reason :/", num, id, exit
                       )
                   end
                 end

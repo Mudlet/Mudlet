@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -89,8 +89,8 @@ public:
         Monitor
     };
 
-    explicit IrcCommand(QObject* parent = 0);
-    virtual ~IrcCommand();
+    explicit IrcCommand(QObject* parent = nullptr);
+    ~IrcCommand() override;
 
     IrcConnection* connection() const;
     IrcNetwork* network() const;

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -155,7 +155,7 @@ QString Irc::codeToString(int code)
 QString Irc::nickFromPrefix(const QString& prefix)
 {
     QString nick;
-    IrcMessagePrivate::parsePrefix(prefix, &nick, 0, 0);
+    IrcMessagePrivate::parsePrefix(prefix, &nick, nullptr, nullptr);
     return nick;
 }
 
@@ -172,7 +172,7 @@ QString Irc::nickFromPrefix(const QString& prefix)
 QString Irc::identFromPrefix(const QString& prefix)
 {
     QString ident;
-    IrcMessagePrivate::parsePrefix(prefix, 0, &ident, 0);
+    IrcMessagePrivate::parsePrefix(prefix, nullptr, &ident, nullptr);
     return ident;
 }
 
@@ -189,7 +189,7 @@ QString Irc::identFromPrefix(const QString& prefix)
 QString Irc::hostFromPrefix(const QString& prefix)
 {
     QString host;
-    IrcMessagePrivate::parsePrefix(prefix, 0, 0, &host);
+    IrcMessagePrivate::parsePrefix(prefix, nullptr, nullptr, &host);
     return host;
 }
 

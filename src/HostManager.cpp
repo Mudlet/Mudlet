@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2016, 2018, 2020 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,7 +23,6 @@
 #include "HostManager.h"
 
 #include "mudlet.h"
-
 
 bool HostManager::deleteHost(const QString& hostname)
 {
@@ -65,17 +65,6 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
     return true;
 }
 
-QStringList HostManager::getHostList()
-{
-    QStringList strlist;
-    const QList<QString> hostList = mHostPool.keys(); // As this is a QMap the list will be sorted alphabetically
-    if (!hostList.isEmpty()) {
-        strlist << hostList;
-    }
-
-    return strlist;
-}
-
 int HostManager::getHostCount()
 {
     return mHostPool.count();
@@ -107,13 +96,11 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event, con
 
     int i = 0;
     QList<int> beforeSendingHost;
-    int sendingHost = -1;
     QList<int> afterSendingHost;
     while (i < hostList.size()) {
         if (hostList.at(i) && hostList.at(i) != pHost) {
             beforeSendingHost.append(i++);
         } else if (hostList.at(i) && hostList.at(i) == pHost) {
-            sendingHost = i++;
             break;
         } else {
             i++;
@@ -140,3 +127,34 @@ Host* HostManager::getHost(const QString& hostname)
     Host* pHost = mHostPool.value(hostname).data();
     return pHost;
 }
+
+HostManager::Iter::Iter(HostManager* manager, bool at_start)
+{
+    if (at_start) {
+        it = manager->mHostPool.begin();
+    } else {
+        it = manager->mHostPool.end();
+    }
+}
+
+bool HostManager::Iter::operator== (const Iter& other)
+{
+    return it == other.it;
+}
+
+bool HostManager::Iter::operator!= (const Iter& other)
+{
+    return it != other.it;
+}
+
+HostManager::Iter& HostManager::Iter::operator++()
+{
+    it++;
+    return *this;
+}
+
+QSharedPointer<Host> HostManager::Iter::operator*()
+{
+    return *it;
+}
+

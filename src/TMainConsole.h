@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2020 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2021 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -39,14 +39,11 @@
 
 class TMainConsole : public TConsole
 {
+    Q_OBJECT
+
 public:
     explicit TMainConsole(Host*, QWidget* parent = nullptr);
     ~TMainConsole();
-
-    QMap<QString, TConsole*> mSubConsoleMap;
-    QMap<QString, TDockWidget*> mDockWidgetMap;
-    QMap<QString, TCommandLine*> mSubCommandLineMap;
-    QMap<QString, TLabel*> mLabelMap;
 
     void resetMainConsole();
 
@@ -98,12 +95,39 @@ public:
     QPair<bool, QString> addWordToSet(const QString&);
     QPair<bool, QString> removeWordFromSet(const QString&);
     bool isUsingSharedDictionary() const { return mUseSharedDictionary; }
+    void toggleLogging(bool);
+    void printOnDisplay(std::string&, bool isFromServer = false);
+    void runTriggers(int);
+    void finalize();
+    bool saveMap(const QString&, int saveVersion = 0);
+    bool loadMap(const QString&);
+    bool importMap(const QString&, QString* errMsg = nullptr);
 
+
+    QMap<QString, TConsole*> mSubConsoleMap;
+    QMap<QString, TDockWidget*> mDockWidgetMap;
+    QMap<QString, TCommandLine*> mSubCommandLineMap;
+    QMap<QString, TLabel*> mLabelMap;
+    TBuffer mClipboard;
     QFile mLogFile;
     QString mLogFileName;
     QTextStream mLogStream;
     bool mLogToLogFile;
-    void toggleLogging(bool);
+
+
+public slots:
+    // Used by mudlet class as told by "Profile Preferences"
+    // =>"Copy Map" in another profile to inform a list of
+    // profiles - asynchronously - to load in an updated map
+    void slot_reloadMap(QList<QString>);
+
+
+signals:
+    // Raised when new data is incoming to trigger Alert handling in mudlet
+    // class, second argument is true for a lower priority indication when
+    // locally produced information is painted into main console
+    void signal_newDataAlert(const QString&, bool isLowerPriorityChange = false);
+
 
 private:
     // Was public in Host class but made private there and cloned to here

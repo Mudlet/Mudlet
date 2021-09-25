@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -29,7 +30,9 @@ class TMxpEntityTagHandler : public TMxpTagHandler
 {
 public:
     bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override {
-        return tag->isNamed("!ENTITY") || tag->isNamed("!EN");
+        Q_UNUSED(ctx)
+        Q_UNUSED(client)
+        return tag->isNamed(QStringLiteral("!ENTITY")) || tag->isNamed(QStringLiteral("!EN"));
     }
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;

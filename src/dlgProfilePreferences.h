@@ -102,6 +102,7 @@ public slots:
     void setColorLightWhite2();
     void setFgColor2();
     void setBgColor2();
+    void setRoomBorderColor();
     void resetColors2();
 
     // Map.
@@ -149,7 +150,7 @@ private slots:
     void slot_changeMenuBarVisibility(const mudlet::controlsVisibility);
     void slot_changeToolBarVisibility(const mudlet::controlsVisibility);
     void slot_changeShowIconsOnMenus(const Qt::CheckState);
-    void slot_changeGuiLanguage(const QString&);
+    void slot_changeGuiLanguage(int);
     void slot_passwords_location_changed(int);
     void slot_changePlayerRoomStyle(const int);
     void slot_setPlayerRoomPrimaryColor();
@@ -181,6 +182,7 @@ private:
     void generateDiscordTooltips();
     void hidePasswordMigrationLabel();
     void setupPasswordsMigration();
+    QString mapSaveLoadDirectory(Host* pHost);
 
     int mFontSize;
     QPointer<Host> mpHost;

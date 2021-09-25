@@ -1,10 +1,6 @@
 name: Update texts for translators
 
 on:
-  push:
-    branches:
-      - 'release-**'
-
   schedule:
     - cron: '0 0 * * fri'
 
@@ -13,7 +9,7 @@ on:
 jobs:
   update-and-commit-text:
     runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
+    if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
     - uses: actions/checkout@v2
       with:

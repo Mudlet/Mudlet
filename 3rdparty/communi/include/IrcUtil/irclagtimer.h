@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -47,8 +47,8 @@ class IRC_UTIL_EXPORT IrcLagTimer : public QObject
     Q_PROPERTY(IrcConnection* connection READ connection WRITE setConnection)
 
 public:
-    explicit IrcLagTimer(QObject* parent = 0);
-    virtual ~IrcLagTimer();
+    explicit IrcLagTimer(QObject* parent = nullptr);
+    ~IrcLagTimer() override;
 
     IrcConnection* connection() const;
     void setConnection(IrcConnection* connection);

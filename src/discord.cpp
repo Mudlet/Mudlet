@@ -41,7 +41,7 @@ Discord::Discord(QObject* parent)
 , mLoaded{}
 // For details see https://discord.com/developers/docs/rich-presence/how-to#initialization
 // Initialise with a nullptr one with Mudlet's own ID
-// N. B. for testing the following MUDs have registered:
+// NB: for testing the following MUDs have registered:
 // "midmud"  is "460618737712889858", has "server-icon", "exventure" and "mudlet" icons
 // "carinus" is "438335628942376960", has "server-icon" and "mudlet" icons
 // "wotmud"  is "464945517156106240", has "mudlet", "ajar_(red|green|yellow|blue|white|grey|brown)"
@@ -53,10 +53,12 @@ Discord::Discord(QObject* parent)
               {"luminari", {"luminarimud.com"}},
               {"achaea", {"achaea.com", "iron-ach.ironrealms.com"}},
               {"aetolia", {"aetolia.com", "iron-aet.ironrealms.com"}},
-              {"imperian", {"imperian.com", " iron-imp.ironrealms.com"}},
+              {"imperian", {"imperian.com", "iron-imp.ironrealms.com"}},
               {"lusternia", {"lusternia.com", "iron-lus.ironrealms.com"}},
               {"starmourn", {"starmourn.com"}},
-              {"stickmud", {"stickmud.com"}}}
+              {"stickmud", {"stickmud.com"}},
+              {"clessidra", {"clessidra.it", "mud.clessidra.it"}}
+            }
 {
 #if defined(Q_OS_WIN64)
     // Only defined on 64 bit Windows
@@ -382,7 +384,7 @@ void Discord::UpdatePresence()
     }
 
     // Coverity thinks that pDiscordPresence could be a nullptr here, which
-    // would be bad {CID 1473922} so lets test for that and abort:
+    // would be bad {CID 1473922} so let's test for that and abort:
     if (!pDiscordPresence) {
         qCritical().noquote() << "Discord::UpdatePresence() CRITICAL - pDiscordPresence is unexpectedly a nullptr, unable to proceed with this procedure, please report this to Mudlet Makers!";
         return;
@@ -484,7 +486,7 @@ QString Discord::deduceGameName(const QString& address)
         fragments.removeLast();
         otherName = fragments.join(QLatin1String("."));
         if (otherName.startsWith(QLatin1String("game."))) {
-            // WoTMUD type case - so take remaing term in the middle of original
+            // WoTMUD type case - so take remaining term in the middle of original
             otherName = otherName.split(QChar('.')).last();
             break;
         } else if (otherName.startsWith(QLatin1String("www."))) {

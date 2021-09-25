@@ -8,14 +8,14 @@ on:
 jobs:
   update-iremapper-source:
     runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
+    if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
       - uses: actions/checkout@v2
         with:
           ref: development
 
       - name: Download latest IRE mapper
-        uses: carlosperate/download-file-action@v1.0.0
+        uses: carlosperate/download-file-action@v1.0.3
         with:
           file-url: https://raw.githubusercontent.com/IRE-Mudlet-Mapping/ire-mapping-script/gh-pages/downloads/mudlet-mapper.xml
           file-name: mudlet-mapper.xml
@@ -49,50 +49,10 @@ jobs:
           commit-message: (autocommit) Updated IRE mapping script to latest upstream
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
 
-  update-edbee-fork:
-    runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: development
-          submodules: true
-          fetch-depth: 0
-
-      - name: update submodule to latest
-        run: git submodule update --remote 3rdparty/edbee-lib/
-
-      # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
-      # to see in github UI's if PR creation was skipped when we have an explicit pre-check
-      - name: check if we have any updates
-        id: getdiff
-        run: |
-          lines_changed=$(git diff --patch --unified=0 3rdparty/edbee-lib/ | wc --lines)
-          echo "$lines_changed lines changed."
-          echo ::set-output name=lines_changed::$lines_changed
-
-      - name: send in a pull request
-        uses: gr2m/create-or-update-pull-request-action@v1.x
-        if: steps.getdiff.outputs.lines_changed > 0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          title: "Update edbee to latest in our fork"
-          body: |
-            #### Brief overview of PR changes/additions
-            :crown: An automated PR to update edbee to its latest version in our fork.
-            #### Motivation for adding to Mudlet
-            Get new features, bugfixes, improvements! Stay modern.
-            #### Other info (issues closed, discussion etc)
-            _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-edbee-lib-${{ github.sha }}
-          path: 3rdparty/edbee-lib
-          commit-message: (autocommit) Updated edbee-lib submodule to latest in our fork
-          author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
 
   update-sparkle-glue-fork:
     runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
+    if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -133,7 +93,7 @@ jobs:
 
   update-dblsqd-fork:
     runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
+    if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -172,50 +132,9 @@ jobs:
           commit-message: (autocommit) Updated dblsqd submodule to latest in our fork
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
 
-  update-qtkeychain-fork:
-    runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: development
-          submodules: true
-          fetch-depth: 0
-
-      - name: update submodule to latest
-        run: git submodule update --remote 3rdparty/qtkeychain/
-
-      # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
-      # to see in github UI's if PR creation was skipped when we have an explicit pre-check
-      - name: check if we have any updates
-        id: getdiff
-        run: |
-          lines_changed=$(git diff --patch --unified=0 3rdparty/qtkeychain/ | wc --lines)
-          echo "$lines_changed lines changed."
-          echo ::set-output name=lines_changed::$lines_changed
-
-      - name: send in a pull request
-        uses: gr2m/create-or-update-pull-request-action@v1.x
-        if: steps.getdiff.outputs.lines_changed > 0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          title: "Update qtkeychain to latest in our fork"
-          body: |
-            #### Brief overview of PR changes/additions
-            :crown: An automated PR to update qtkeychain to its latest version in our fork.
-            #### Motivation for adding to Mudlet
-            Get new features, bugfixes, improvements! Stay modern.
-            #### Other info (issues closed, discussion etc)
-            _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-qtkeychain-${{ github.sha }}
-          path: 3rdparty/qtkeychain
-          commit-message: (autocommit) Updated qtkeychain submodule to latest in our fork
-          author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
-
   update-lcf-source-51:
     runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
+    if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -257,9 +176,10 @@ jobs:
           commit-message: (autocommit) Updated lcf submodule to latest upstream 5.1 branch
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
 
-  update-whidecharwidth-source:
+  update-widecharwidth-source:
     runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
+    # Disabled for the time being due to https://github.com/Mudlet/Mudlet/pull/4299
+    if: ${{ github.repository_owner == 'Mudlet' && false }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -292,7 +212,7 @@ jobs:
             Better emoji and symbol support! This file helps us tell if a particular character is 0, 1, or 2 widths wide so we can show it correctly in the display.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-lcf-${{ github.sha }}
+          branch: update-widechar-width-${{ github.sha }}
           path: src/
           commit-message: (autocommit) Update widechar_width.h to latest upstream
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"

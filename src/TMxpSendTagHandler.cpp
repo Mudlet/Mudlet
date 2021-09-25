@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,7 +21,6 @@
 #include "TMxpClient.h"
 #include "TStringUtils.h"
 
-TMxpSendTagHandler::TMxpSendTagHandler() : TMxpSingleTagHandler("SEND"), mLinkId(0), mIsHrefInContent(false) {}
 TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
     //    if (tag->hasAttr("EXPIRE") && tag->getAttr(0).isNamed("EXPIRE"))
@@ -64,6 +64,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 
     return MXP_TAG_HANDLED;
 }
+
 QString TMxpSendTagHandler::extractHref(MxpStartTag* tag)
 {
     if (tag->getAttributesCount() == 0) {
@@ -102,6 +103,8 @@ QString TMxpSendTagHandler::extractHint(MxpStartTag* tag)
 
 TMxpTagHandlerResult TMxpSendTagHandler::handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag)
 {
+    Q_UNUSED(ctx)
+    Q_UNUSED(tag)
     if (mIsHrefInContent) {
         updateHrefInLinks(client);
     }

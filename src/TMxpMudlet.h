@@ -1,5 +1,9 @@
+#ifndef MUDLET_TMXPMUDLET_H
+#define MUDLET_TMXPMUDLET_H
+
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -16,8 +20,6 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef MUDLET_TMXPMUDLET_H
-#define MUDLET_TMXPMUDLET_H
 
 #include "TEntityResolver.h"
 #include "TLinkStore.h"
@@ -34,27 +36,22 @@ class TMediaData;
 
 class TMxpMudlet : public TMxpClient
 {
-    inline static const QString scmVersion = QStringLiteral(APP_VERSION APP_BUILD);
-
-    Host* mpHost;
-
-    bool mLinkMode;
-
 public:
-    // Shouldn't be here, look for a better solution
-    QQueue<TMxpEvent> mMxpEvents;
-
-    TMxpMudlet(Host* pHost);
+    TMxpMudlet(Host* pHost)
+    : isBold(false)
+    , isItalic(false)
+    , isUnderline(false)
+    , mpHost(pHost)
+    , mLinkMode(false)
+    {}
 
     QString getVersion() override;
 
     void sendToServer(QString& str) override;
 
     void setLinkMode(bool val) override { mLinkMode = val; }
-
     bool isInLinkMode() const { return mLinkMode; }
 
-    QList<QColor> fgColors, bgColors;
     void pushColor(const QString& fgColor, const QString& bgColor) override;
 
     void popColor() override;
@@ -71,7 +68,11 @@ public:
     const QColor& getBgColor() { return bgColors.last(); }
 
     // TODO: implement support for fonts?
-    void pushFont(const QString& fontFace, const QString& fontSize) override {}
+    void pushFont(const QString& fontFace, const QString& fontSize) override {
+        Q_UNUSED(fontFace)
+        Q_UNUSED(fontSize)
+    }
+
     void popFont() override {}
 
     int setLink(const QStringList& links, const QStringList& hints) override;
@@ -81,25 +82,47 @@ public:
     void playMedia(TMediaData& mediaData) override;
     void stopMedia(TMediaData& mediaData) override;
 
-    bool isBold, isItalic, isUnderline;
-
     void setBold(bool bold) override { isBold = bold; }
     void setItalic(bool italic) override { isItalic = italic; }
     void setUnderline(bool underline) override { isUnderline = underline; }
 
-    void setFlag(const QString& elementName, const QMap<QString, QString>& values, const QString& content) override
-    {
+    void setFlag(const QString& elementName, const QMap<QString, QString>& values, const QString& content) override {
+        Q_UNUSED(elementName)
+        Q_UNUSED(values)
+        Q_UNUSED(content)
         // TODO: raise mxp event
     }
 
-    void publishEntity(const QString& name, const QString& value) override {}
+    void publishEntity(const QString& name, const QString& value) override {
+        Q_UNUSED(name)
+        Q_UNUSED(value)
+    }
 
-    void setVariable(const QString& name, const QString& value) override {}
+    void setVariable(const QString& name, const QString& value) override {
+        Q_UNUSED(name)
+        Q_UNUSED(value)
+    }
 
     TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) override;
 
     void enqueueMxpEvent(MxpStartTag* tag);
     TLinkStore& getLinkStore();
+
+    QList<QColor> fgColors;
+    QList<QColor> bgColors;
+
+    // Shouldn't be here, look for a better solution
+    QQueue<TMxpEvent> mMxpEvents;
+
+    bool isBold;
+    bool isItalic;
+    bool isUnderline;
+
+private:
+    inline static const QString scmVersion = QStringLiteral(APP_VERSION APP_BUILD);
+
+    Host* mpHost;
+    bool mLinkMode;
 };
 
 #endif //MUDLET_TMXPMUDLET_H

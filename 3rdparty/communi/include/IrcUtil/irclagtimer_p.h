@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -46,7 +46,7 @@ class IrcLagTimerPrivate : public QObject,  public IrcMessageFilter
 public:
     IrcLagTimerPrivate();
 
-    bool messageFilter(IrcMessage* msg);
+    bool messageFilter(IrcMessage* msg) override;
     bool processPongReply(IrcPongMessage* msg);
 
     void _irc_connected();
@@ -56,11 +56,12 @@ public:
     void updateTimer();
     void updateLag(qint64 value);
 
-    IrcLagTimer* q_ptr;
-    IrcConnection* connection;
+    IrcLagTimer* q_ptr = nullptr;
+    IrcConnection* connection = nullptr;
     QTimer timer;
     int interval;
-    qint64 lag;
+    int pendingPings = 0;
+    qint64 lag = -1;
 };
 
 IRC_END_NAMESPACE

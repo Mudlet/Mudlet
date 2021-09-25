@@ -11,11 +11,12 @@
 	"runArgs": [ "--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined", "--init" ],
 
 	// Set *default* container specific settings.json values on container create.
-	"settings": { 
+	"settings": {
 		"terminal.integrated.shell.linux": "/bin/bash"
 	},
 
 	// Add the IDs of extensions you want installed when the container is created.
+	// update list in .vscode/extensions.json
 	"extensions": [
 		"ms-vscode.cpptools",
 		"ms-vscode.cmake-tools"
@@ -25,7 +26,7 @@
 	"forwardPorts": [5900, 5901, 6080],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "gcc -v",
+	"postCreateCommand": "git submodule update --init",
 
 	// Comment out this line to run as root instead.
 	"remoteUser": "vscode",

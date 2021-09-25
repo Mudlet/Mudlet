@@ -44,8 +44,6 @@ public slots:
     void slot_triggerTypeComboBoxChanged(const int);
 
 
-private:
-    QAction* mAction_typeIndication;
 };
 
 #endif // MUDLET_DLGTRIGGERPATTERNEDIT_H

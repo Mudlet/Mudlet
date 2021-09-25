@@ -2,9 +2,9 @@
 
 set +e
 shopt -s expand_aliases
-#Removed boost as first item as a temporary workaroud to prevent trying to
+#Removed boost as first item as a temporary workaround to prevent trying to
 #upgrade to boost version 1.68.0 which has not been bottled yet...
-BREWS="cmake hunspell libzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
+BREWS="luarocks cmake hunspell libzip lua51 pcre pkg-config qt5 yajl ccache pugixml"
 OUTDATED_BREWS=$(brew outdated)
 
 for i in $BREWS; do

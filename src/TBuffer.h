@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2018 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2018, 2020 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -82,10 +82,19 @@ public:
     };
     Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
 
-    TChar();
+    // Default constructor - the default argument means it can be used with no
+    // supplied arguments, but it must NOT be marked 'explicit' so as to allow
+    // this:
+    TChar(Host* pH = nullptr);
+    // A non-default constructor:
     TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkIndex = 0);
-    TChar(Host*);
+    // User defined copy-constructor:
     TChar(const TChar&);
+    // Under the rule of three, because we have a user defined copy-constructor,
+    // we should also have a destructor and an assignment operator but they can,
+    // in this case, be default ones:
+    TChar& operator=(const TChar&) = default;
+    ~TChar() = default;
 
     bool operator==(const TChar&);
     void setColors(const QColor& newForeGroundColor, const QColor& newBackGroundColor) {
@@ -141,7 +150,7 @@ public:
     int wrapLine(int startLine, int screenWidth, int indentSize, TChar& format);
     void log(int, int);
     int skipSpacesAtBeginOfLine(const int row, const int column);
-    void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format);
+    void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference = QVector<int>());
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0,  int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
     QString& line(int n);
@@ -153,7 +162,7 @@ public:
     bool deleteLine(int);
     bool deleteLines(int from, int to);
     bool applyAttribute(const QPoint& P_begin, const QPoint& P_end, const TChar::AttributeFlags attributes, const bool state);
-    bool applyLink(const QPoint& P_begin, const QPoint& P_end, const QStringList& linkFunction, const QStringList& linkHist);
+    bool applyLink(const QPoint& P_begin, const QPoint& P_end, const QStringList& linkFunction, const QStringList& linkHist, QVector<int> luaReference = QVector<int>());
     bool applyFgColor(const QPoint&, const QPoint&, const QColor&);
     bool applyBgColor(const QPoint&, const QPoint&, const QColor&);
     void appendBuffer(const TBuffer& chunk);
@@ -196,8 +205,7 @@ public:
 
     int mCursorY;
 
-
-    // State of MXP systen:
+    // State of MXP system:
     bool mEchoingText;
 
 

@@ -191,7 +191,9 @@ QString TTextCodec_437::convertToUnicode(const char *in, int length, ConverterSt
     }
 
     // If we get here and headerDone is false then we need to insert the BOM
-    result += QChar::ByteOrderMark;
+    if (!headerDone) {
+        result += QChar::ByteOrderMark;
+    }
     for (int i = 0; i < length; ++i) {
         unsigned char ch = in[i];
         if (ch < 0x80) {
@@ -221,7 +223,9 @@ QString TTextCodec_667::convertToUnicode(const char *in, int length, ConverterSt
     }
 
     // If we get here and headerDone is false then we need to insert the BOM
-    result += QChar::ByteOrderMark;
+    if (!headerDone) {
+        result += QChar::ByteOrderMark;
+    }
     for (int i = 0; i < length; ++i) {
         unsigned char ch = in[i];
         if (ch < 0x80) {
@@ -251,7 +255,9 @@ QString TTextCodec_737::convertToUnicode(const char *in, int length, ConverterSt
     }
 
     // If we get here and headerDone is false then we need to insert the BOM
-    result += QChar::ByteOrderMark;
+    if (!headerDone) {
+        result += QChar::ByteOrderMark;
+    }
     for (int i = 0; i < length; ++i) {
         unsigned char ch = in[i];
         if (ch < 0x80) {
@@ -285,7 +291,9 @@ QString TTextCodec_869::convertToUnicode(const char *in, int length, ConverterSt
     }
 
     // If we get here and headerDone is false then we need to insert the BOM
-    result += QChar::ByteOrderMark;
+    if (!headerDone) {
+        result += QChar::ByteOrderMark;
+    }
     for (int i = 0; i < length; ++i) {
         unsigned char ch = in[i];
         if (ch < 0x80) {
@@ -316,7 +324,7 @@ QString TTextCodec_869::convertToUnicode(const char *in, int length, ConverterSt
 // * consider the second of the three int state_data[3] array and if castable to
 //   a (bool) false, i.e. zero we should remove a BOM if the IgnoreHeader flag
 //   is not set and it is present at the start of the data. If there is no state
-//   we should remove such a BOM at the begining of "in" for all calls.
+//   we should remove such a BOM at the beginning of "in" for all calls.
 // * if ConvertInvalidToNull is set we are to convert invalid individual QChars
 //   to nulls or if NOT set do what other encoders do and insert a '?' as we
 //   should if there is no state
@@ -332,7 +340,7 @@ QByteArray TTextCodec_437::convertFromUnicode(const QChar *in, int length, Conve
     QByteArray result;
 
     if (!length) {
-        // Avoid extra tests elsewere on an empty Unicode string
+        // Avoid extra tests elsewhere on an empty Unicode string
         return {};
     }
 
@@ -353,7 +361,7 @@ QByteArray TTextCodec_437::convertFromUnicode(const QChar *in, int length, Conve
     } else {
         if (in[i] == QChar::ByteOrderMark) {
             ++i;
-            // Redundent but keeps things simpler if debugging.
+            // Redundant but keeps things simpler if debugging.
             --remainingChars;
         }
     }
@@ -436,7 +444,7 @@ QByteArray TTextCodec_667::convertFromUnicode(const QChar *in, int length, Conve
     QByteArray result;
 
     if (!length) {
-        // Avoid extra tests elsewere on an empty Unicode string
+        // Avoid extra tests elsewhere on an empty Unicode string
         return {};
     }
 
@@ -457,7 +465,7 @@ QByteArray TTextCodec_667::convertFromUnicode(const QChar *in, int length, Conve
     } else {
         if (in[i] == QChar::ByteOrderMark) {
             ++i;
-            // Redundent but keeps things simpler if debugging.
+            // Redundant but keeps things simpler if debugging.
             --remainingChars;
         }
     }
@@ -540,7 +548,7 @@ QByteArray TTextCodec_737::convertFromUnicode(const QChar *in, int length, Conve
     QByteArray result;
 
     if (!length) {
-        // Avoid extra tests elsewere on an empty Unicode string
+        // Avoid extra tests elsewhere on an empty Unicode string
         return {};
     }
 
@@ -561,7 +569,7 @@ QByteArray TTextCodec_737::convertFromUnicode(const QChar *in, int length, Conve
     } else {
         if (in[i] == QChar::ByteOrderMark) {
             ++i;
-            // Redundent but keeps things simpler if debugging.
+            // Redundant but keeps things simpler if debugging.
             --remainingChars;
         }
     }
@@ -644,7 +652,7 @@ QByteArray TTextCodec_869::convertFromUnicode(const QChar *in, int length, Conve
     QByteArray result;
 
     if (!length) {
-        // Avoid extra tests elsewere on an empty Unicode string
+        // Avoid extra tests elsewhere on an empty Unicode string
         return {};
     }
 
@@ -665,7 +673,7 @@ QByteArray TTextCodec_869::convertFromUnicode(const QChar *in, int length, Conve
     } else {
         if (in[i] == QChar::ByteOrderMark) {
             ++i;
-            // Redundent but keeps things simpler if debugging.
+            // Redundant but keeps things simpler if debugging.
             --remainingChars;
         }
     }

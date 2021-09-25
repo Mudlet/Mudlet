@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -63,8 +63,8 @@ class IRC_MODEL_EXPORT IrcBufferModel : public QAbstractListModel
     Q_PROPERTY(bool monitorEnabled READ isMonitorEnabled WRITE setMonitorEnabled NOTIFY monitorEnabledChanged)
 
 public:
-    explicit IrcBufferModel(QObject* parent = 0);
-    virtual ~IrcBufferModel();
+    explicit IrcBufferModel(QObject* parent = nullptr);
+    ~IrcBufferModel() override;
 
     IrcConnection* connection() const;
     void setConnection(IrcConnection* connection);
@@ -100,10 +100,12 @@ public:
     QModelIndex index(IrcBuffer* buffer) const;
     IrcBuffer* buffer(const QModelIndex& index) const;
 
-    QHash<int, QByteArray> roleNames() const;
-    int rowCount(const QModelIndex& parent = QModelIndex()) const;
-    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
-    QModelIndex index(int row, int column = 0, const QModelIndex& parent = QModelIndex()) const;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    QHash<int, QByteArray> roleNames() const override;
+#endif
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+    QModelIndex index(int row, int column = 0, const QModelIndex& parent = QModelIndex()) const override;
 
     IrcBuffer* bufferPrototype() const;
     void setBufferPrototype(IrcBuffer* prototype);
@@ -123,7 +125,7 @@ public:
 public Q_SLOTS:
     void clear();
     void receiveMessage(IrcMessage* message);
-    void sort(int column = 0, Qt::SortOrder order = Qt::AscendingOrder);
+    void sort(int column = 0, Qt::SortOrder order = Qt::AscendingOrder) override;
     void sort(Irc::SortMethod method, Qt::SortOrder order = Qt::AscendingOrder);
 
 Q_SIGNALS:

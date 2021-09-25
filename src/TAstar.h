@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2010-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2015, 2020 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -100,8 +100,8 @@ public:
     astar_goal_visitor(Vertex goal) : m_goal(goal) {}
 
     template <class Graph>
-    void examine_vertex(Vertex u, Graph& g)
-    {
+    void examine_vertex(Vertex u, Graph& g) {
+        Q_UNUSED(g)
         if (u == m_goal) {
             throw found_goal();
         }

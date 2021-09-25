@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -66,6 +66,7 @@ public:
 
     void open();
     void reconnect();
+    void setConnectionCount(int count);
     void setNick(const QString& nick);
     void setStatus(IrcConnection::Status status);
     void setInfo(const QHash<QString, QString>& info);
@@ -78,14 +79,14 @@ public:
         return connection->d_ptr.data();
     }
 
-    IrcConnection* q_ptr;
+    IrcConnection* q_ptr = nullptr;
     QByteArray encoding;
-    IrcNetwork* network;
-    IrcProtocol* protocol;
-    QAbstractSocket* socket;
+    IrcNetwork* network = nullptr;
+    IrcProtocol* protocol = nullptr;
+    QAbstractSocket* socket = nullptr;
     QString host;
-    int port;
-    int currentServer;
+    int port = 6667;
+    int currentServer = -1;
     QStringList servers;
     QString userName;
     QString nickName;
@@ -95,17 +96,18 @@ public:
     QString displayName;
     QVariantMap userData;
     QTimer reconnecter;
+    int connectionCount = 0;
     QString saslMechanism;
     QVariantMap ctcpReplies;
-    bool enabled;
-    IrcConnection::Status status;
+    bool enabled = true;
+    IrcConnection::Status status = IrcConnection::Inactive;
     QList<QByteArray> pendingData;
     QList<QObject*> commandFilters;
     QList<QObject*> messageFilters;
     QStack<QObject*> activeCommandFilters;
     QSet<int> replies;
-    bool pendingOpen;
-    bool closed;
+    bool pendingOpen = false;
+    bool closed = false;
 };
 
 IRC_END_NAMESPACE

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -106,7 +106,7 @@ public:
     Q_DECLARE_FLAGS(Flags, Flag)
 
     Q_INVOKABLE explicit IrcMessage(IrcConnection* connection);
-    virtual ~IrcMessage();
+    ~IrcMessage() override;
 
     IrcConnection* connection() const;
     IrcNetwork* network() const;
@@ -156,7 +156,7 @@ public:
     Q_INVOKABLE QByteArray toData() const;
     Q_INVOKABLE static IrcMessage* fromData(const QByteArray& data, IrcConnection* connection);
     Q_INVOKABLE static IrcMessage* fromParameters(const QString& prefix, const QString& command, const QStringList& parameters, IrcConnection* connection);
-    Q_INVOKABLE IrcMessage* clone(QObject *parent = 0) const;
+    Q_INVOKABLE IrcMessage* clone(QObject *parent = nullptr) const;
 
 protected:
     QScopedPointer<IrcMessagePrivate> d_ptr;
@@ -176,7 +176,7 @@ public:
 
     QString account() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcAccountMessage)
@@ -196,7 +196,7 @@ public:
     bool isReply() const;
     bool isAway() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcAwayMessage)
@@ -217,7 +217,7 @@ public:
 
     QList<IrcMessage*> messages() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcBatchMessage)
@@ -235,7 +235,7 @@ public:
     QString subCommand() const;
     QStringList capabilities() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcCapabilityMessage)
@@ -251,7 +251,7 @@ public:
 
     QString error() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcErrorMessage)
@@ -269,7 +269,7 @@ public:
     QString user() const;
     QString host() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcHostChangeMessage)
@@ -289,7 +289,7 @@ public:
     QString channel() const;
     bool isReply() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcInviteMessage)
@@ -309,7 +309,7 @@ public:
     QString account() const;
     QString realName() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcJoinMessage)
@@ -329,7 +329,7 @@ public:
     QString user() const;
     QString reason() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcKickMessage)
@@ -358,7 +358,7 @@ public:
     enum Kind { Channel, User };
     Kind kind() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcModeMessage)
@@ -374,7 +374,7 @@ public:
 
     QStringList lines() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcMotdMessage)
@@ -392,7 +392,7 @@ public:
     QString channel() const;
     QStringList names() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcNamesMessage)
@@ -410,7 +410,7 @@ public:
     QString oldNick() const;
     QString newNick() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcNickMessage)
@@ -434,7 +434,7 @@ public:
     bool isPrivate() const;
     bool isReply() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcNoticeMessage)
@@ -452,7 +452,7 @@ public:
     int code() const;
     bool isComposed() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcNumericMessage)
@@ -470,7 +470,7 @@ public:
     QString channel() const;
     QString reason() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcPartMessage)
@@ -486,7 +486,7 @@ public:
 
     QString argument() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcPingMessage)
@@ -502,7 +502,7 @@ public:
 
     QString argument() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcPongMessage)
@@ -528,7 +528,7 @@ public:
     bool isAction() const;
     bool isRequest() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcPrivateMessage)
@@ -544,7 +544,7 @@ public:
 
     QString reason() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcQuitMessage)
@@ -564,7 +564,7 @@ public:
     QString topic() const;
     bool isReply() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcTopicMessage)
@@ -598,7 +598,7 @@ public:
     QStringList channels() const;
     QString awayReason() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcWhoisMessage)
@@ -620,7 +620,7 @@ public:
     QString info() const;
     QString account() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcWhowasMessage)
@@ -644,7 +644,7 @@ public:
     bool isServOp() const;
     QString realName() const;
 
-    bool isValid() const;
+    bool isValid() const override;
 
 private:
     Q_DISABLE_COPY(IrcWhoReplyMessage)

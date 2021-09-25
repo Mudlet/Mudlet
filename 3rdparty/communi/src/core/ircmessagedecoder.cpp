@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -27,19 +27,17 @@
 */
 
 #include "ircmessagedecoder_p.h"
+#include "irccore_p.h"
 #include <IrcGlobal>
 #include <QSet>
 
 #ifndef IRC_DOXYGEN
-extern "C" {
-    int IsUTF8Text(const char* utf8, int len);
-}
 
 IRC_BEGIN_NAMESPACE
 
 IRC_CORE_EXPORT bool irc_is_supported_encoding(const QByteArray& encoding)
 {
-    static QSet<QByteArray> codecs = QTextCodec::availableCodecs().toSet();
+    static QSet<QByteArray> codecs = IrcPrivate::listToSet(QTextCodec::availableCodecs());
     return codecs.contains(encoding);
 }
 
@@ -55,16 +53,22 @@ IrcMessageDecoder::~IrcMessageDecoder()
 
 QString IrcMessageDecoder::decode(const QByteArray& data, const QByteArray& encoding) const
 {
-    QTextCodec* codec = 0;
-    if (IsUTF8Text(data, data.length())) {
-        codec = QTextCodec::codecForName("UTF-8");
-    } else {
-        QByteArray name = codecForData(data);
-        codec = QTextCodec::codecForName(name);
+    if (data.isEmpty())
+        return QString();
+
+    static const QTextCodec *utf8Codec = QTextCodec::codecForName("UTF-8");
+    if (utf8Codec) {
+        QTextCodec::ConverterState state;
+        QString utf8 = utf8Codec->toUnicode(data, data.length(), &state);
+        if (state.invalidChars == 0)
+            return utf8;
     }
 
-    if (!codec)
-        codec = QTextCodec::codecForName(encoding);
+    QTextCodec *defaultCodec = QTextCodec::codecForName(encoding);
+    if (!defaultCodec)
+        defaultCodec = QTextCodec::codecForName("UTF-8");
+
+    QTextCodec* codec = QTextCodec::codecForUtfText(data, defaultCodec);
     Q_ASSERT(codec);
     return codec->toUnicode(data);
 }

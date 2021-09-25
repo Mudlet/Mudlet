@@ -26,6 +26,13 @@
 #include "mudlet.h"
 #include "TTimer.h"
 
+TimerUnit::~TimerUnit()
+{
+    for (auto&& timer : qAsConst(mQTimerSet)) {
+        delete timer;
+    }
+}
+
 void TimerUnit::_uninstall(TTimer* pChild, const QString& packageName)
 {
     std::list<TTimer*>* childrenList = pChild->mpMyChildrenList;
@@ -98,7 +105,7 @@ void TimerUnit::addTimerRootNode(TTimer* pT, int parentPosition, int childPositi
     }
 
     mTimerMap.insert(pT->getID(), pT);
-    // kein lookup table eintrag siehe addTimer()
+    // no lookup table entry - see addTimer()
 }
 
 void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)

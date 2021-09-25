@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017, 2021 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -57,6 +57,14 @@ TAlias::~TAlias()
         return;
     }
     mpHost->getAliasUnit()->unregisterAlias(this);
+
+    if (isTemporary()) {
+        if (mScript.isEmpty()) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        } else {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        }
+    }
 }
 
 void TAlias::setName(const QString& name)
@@ -65,7 +73,7 @@ void TAlias::setName(const QString& name)
         mpHost->getAliasUnit()->mLookupTable.remove(mName, this);
     }
     mName = name;
-    mpHost->getAliasUnit()->mLookupTable.insertMulti(name, this);
+    mpHost->getAliasUnit()->mLookupTable.insert(name, this);
 }
 
 bool TAlias::match(const QString& toMatch)
@@ -126,7 +134,7 @@ bool TAlias::match(const QString& toMatch)
         qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
     } else {
         if (mudlet::debugMode) {
-            TDebug(QColor(Qt::cyan), QColor(Qt::black)) << "Alias name=" << mName << "(" << mRegexCode << ") matched.\n" >> 0;
+            TDebug(Qt::cyan, Qt::black) << "Alias name=" << mName << "(" << mRegexCode << ") matched.\n" >> mpHost;
         }
     }
 
@@ -146,8 +154,8 @@ bool TAlias::match(const QString& toMatch)
         captureList.push_back(match);
         posList.push_back(ovector[2 * i]);
         if (mudlet::debugMode) {
-            TDebug(QColor(Qt::darkCyan), QColor(Qt::black)) << "Alias: capture group #" << (i + 1) << " = " >> 0;
-            TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "<" << match.c_str() << ">\n" >> 0;
+            TDebug(Qt::darkCyan, Qt::black) << "Alias: capture group #" << (i + 1) << " = " >> mpHost;
+            TDebug(Qt::darkMagenta, Qt::black) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
         }
     }
     pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMECOUNT, &namecount);
@@ -166,7 +174,7 @@ bool TAlias::match(const QString& toMatch)
             tabptr += name_entry_size;
         }
     }
-    //TODO: add named groups seperately later as Lua::namedGroups
+    //TODO: add named groups separately later as Lua::namedGroups
     for (;;) {
         int options = 0;
         int start_offset = ovector[1];
@@ -207,8 +215,8 @@ bool TAlias::match(const QString& toMatch)
             captureList.push_back(match);
             posList.push_back(ovector[2 * i]);
             if (mudlet::debugMode) {
-                TDebug(QColor(Qt::darkCyan), QColor(Qt::black)) << "capture group #" << (i + 1) << " = " >> 0;
-                TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "<" << match.c_str() << ">\n" >> 0;
+                TDebug(Qt::darkCyan, Qt::black) << "capture group #" << (i + 1) << " = " >> mpHost;
+                TDebug(Qt::darkMagenta, Qt::black) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
             }
         }
     }
@@ -255,8 +263,8 @@ void TAlias::compileRegex()
     if (re == nullptr) {
         mOK_init = false;
         if (mudlet::debugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> 0;
-            TDebug(QColor(Qt::red), QColor(Qt::gray)) << R"(in: ")" << mRegexCode << "\"\n" >> 0;
+            TDebug(Qt::white, Qt::red) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
+            TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in: ")" << mRegexCode << "\"\n" >> mpHost;
         }
         setError(QStringLiteral("<b><font color='blue'>%1</font></b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)", error)));
     } else {
@@ -280,7 +288,7 @@ void TAlias::compileAll()
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
         if (mudlet::debugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: Lua compile error. compiling script of alias:" << mName << "\n" >> 0;
+            TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of alias:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
     }
@@ -295,7 +303,7 @@ void TAlias::compile()
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
             if (mudlet::debugMode) {
-                TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: Lua compile error. compiling script of alias:" << mName << "\n" >> 0;
+                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of alias:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }

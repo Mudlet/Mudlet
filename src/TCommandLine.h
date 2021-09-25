@@ -41,6 +41,11 @@ class TCommandLine : public QPlainTextEdit //QLineEdit
 {
     Q_OBJECT
 
+    enum MoveDirection {
+        MOVE_UP,
+        MOVE_DOWN
+    };
+
 public:
     enum CommandLineTypeFlag {
         UnknownType = 0x0,     // Should not be encountered but left as a trap value
@@ -62,11 +67,20 @@ public:
     void resetAction();
     void releaseFunc(const int, const int);
     CommandLineType getType() const { return mType; }
+    void addSuggestion(const QString&);
+    void removeSuggestion(const QString&);
+    void clearSuggestions();
+    void adjustHeight();
 
     int mActionFunction = 0;
     QPalette mRegularPalette;
     QString mCommandLineName;
 
+public slots:
+    void slot_popupMenu();
+    void slot_addWord();
+    void slot_removeWord();
+    void slot_clearSelection(bool yes);
 
 private:
     bool event(QEvent*) override;
@@ -74,15 +88,15 @@ private:
     void handleAutoCompletion();
     void spellCheck();
     void handleTabCompletion(bool);
-    void historyUp(QKeyEvent*);
-    void historyDown(QKeyEvent*);
+    void historyMove(MoveDirection);
     void enterCommand(QKeyEvent*);
-    void adjustHeight();
     void processNormalKey(QEvent*);
     bool keybindingMatched(QKeyEvent*);
-    CommandLineType mType;
+    void spellCheckWord(QTextCursor& c);
+    bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
 
     QPointer<Host> mpHost;
+    CommandLineType mType;
     KeyUnit* mpKeyUnit;
     TConsole* mpConsole;
     QString mLastCompletion;
@@ -90,15 +104,6 @@ private:
     int mAutoCompletionCount;
     QString mTabCompletionTyped;
     bool mUserKeptOnTyping;
-
-
-public slots:
-    void slot_popupMenu();
-    void slot_addWord();
-    void slot_removeWord();
-
-
-private:
     int mHistoryBuffer;
     QStringList mHistoryList;
     QString mSelectedText;
@@ -106,12 +111,12 @@ private:
     QString mTabCompletionOld;
     QPoint mPopupPosition;
     QString mSpellCheckedWord;
+    bool mSpellChecking = false;
     int mSystemDictionarySuggestionsCount;
     int mUserDictionarySuggestionsCount;
     char** mpSystemSuggestionsList;
     char** mpUserSuggestionsList;
-    void spellCheckWord(QTextCursor& c);
-    bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
+    QSet<QString> commandLineSuggestions;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)

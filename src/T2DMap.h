@@ -23,6 +23,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "dlgRoomSymbol.h"
 
 #include "pre_guard.h"
 #include <QCache>
@@ -39,6 +40,7 @@ class Host;
 class TArea;
 class TMap;
 class TRoom;
+class MapInfoProperties;
 
 class QCheckBox;
 class QComboBox;
@@ -55,11 +57,8 @@ class T2DMap : public QWidget
 public:
     Q_DISABLE_COPY(T2DMap)
     explicit T2DMap(QWidget* parent = nullptr);
-    void paintMap();
     void setMapZoom(qreal zoom);
-    QColor getColor(int id);
     void init();
-    void exportAreaImage(int);
     void paintEvent(QPaintEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent* event) override;
@@ -81,10 +80,15 @@ public:
     void createLabel(QRectF labelRectangle);
     // Clears cache so new symbols are built at next paintEvent():
     void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
-    void addSymbolToPixmapCache(const QString, const bool);
+    void addSymbolToPixmapCache(const QString, const QString, const QColor, const bool);
+    void setPlayerRoomStyle(const int style);
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    // This is NOT used as a slot in newer versions
+    void switchArea(const QString& newAreaName);
+#endif
 
 
-    TMap* mpMap;
+    TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
     qreal xyzoom;
     int mRX;
@@ -104,7 +108,7 @@ public:
     bool mRoomBeingMoved;
     // These are the on-screen width and height pixel numbers of the area for a
     // room symbol, (for the non-grid map mode case what gets filled in is
-    // multipled by rsize which is 1.0 to exactly fill space between adjacent
+    // multiplied by rsize which is 1.0 to exactly fill space between adjacent
     // coordinates):
     float mRoomWidth;
     float mRoomHeight;
@@ -134,7 +138,6 @@ public:
     qreal mOy;
     int mOz;
     bool mShiftMode;
-    bool mShowInfo;
     QComboBox* arealist_combobox;
     QPointer<QDialog> mpCustomLinesDialog;
     int mCustomLinesRoomFrom;
@@ -153,6 +156,10 @@ public:
 
     bool mBubbleMode;
     bool mMapperUseAntiAlias;
+
+    // Controls if the mapper is in view-only mode
+    bool mMapViewOnly = true;
+
     bool mLabelHighlighted;
     bool mMoveLabel;
     int mCustomLineSelectedRoom;
@@ -162,7 +169,6 @@ public:
     bool mSizeLabel;
     bool isCenterViewCall;
     QString mHelpMsg;
-    void setPlayerRoomStyle(const int style);
 
 public slots:
     void slot_roomSelectionChanged();
@@ -171,17 +177,22 @@ public slots:
     void slot_deleteLabel();
     void slot_editLabel();
     void slot_setPlayerLocation();
+    void slot_toggleMapViewOnly();
     void slot_createLabel();
     void slot_customLineColor();
-    void shiftZup();
-    void shiftZdown();
-    void slot_switchArea(const QString&);
+    void slot_shiftZup();
+    void slot_shiftZdown();
+#if (QT_VERSION) < (QT_VERSION_CHECK(5, 15, 0))
+    // This is ONLY used as a slot in older versions
+    void slot_switchArea(const QString& newAreaName);
+#endif
     void toggleShiftMode();
-    void shiftUp();
-    void shiftDown();
-    void shiftLeft();
-    void shiftRight();
-    void slot_setSymbol();
+    void slot_shiftUp();
+    void slot_shiftDown();
+    void slot_shiftLeft();
+    void slot_shiftRight();
+    void slot_showSymbolSelection();
+    void slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();
     void slot_defineNewColor();
@@ -211,12 +222,14 @@ public slots:
     void slot_newMap();
 
 private:
+    void updateSelectionWidget();
     void resizeMultiSelectionWidget();
     std::pair<int, int> getMousePosition();
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
     void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, bool showRoomNames, const int, const float, const float, const bool);
-    void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const bool showingCurrentArea, QColor& infoColor);
+    void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const int displayAreaId, QColor& infoColor);
+    int paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties);
     void paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
 
@@ -253,6 +266,7 @@ private:
 
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;
+    dlgRoomSymbol* mpDlgRoomSymbol = nullptr;
 
 private slots:
     void slot_createRoom();

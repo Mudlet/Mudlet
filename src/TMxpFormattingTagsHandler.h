@@ -1,5 +1,9 @@
+#ifndef MUDLET_TMXPFORMATTINGTAGSHANDLER_H
+#define MUDLET_TMXPFORMATTINGTAGSHANDLER_H
+
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,15 +21,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_TMXPFORMATTINGTAGSHANDLER_H
-#define MUDLET_TMXPFORMATTINGTAGSHANDLER_H
-
 #include "TMxpTagHandler.h"
 
 class TMxpFormattingTagsHandler : public TMxpTagHandler
 {
 public:
-    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag);
+    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override;
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 

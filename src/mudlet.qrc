@@ -34,7 +34,9 @@
         <file>icons/carrionfields.png</file>
         <file>icons/chronometer.png</file>
         <file>icons/clessidra.jpg</file>
+        <file>icons/cleftofdimensions.png</file>
         <file>icons/configure.png</file>
+        <file>icons/coremud_icon.jpg</file>
         <file>icons/dash-dot-dot-line.png</file>
         <file>icons/dash-dot-line.png</file>
         <file>icons/dash-line.png</file>
@@ -115,6 +117,7 @@
         <file>icons/imperian_120_30.png</file>
         <file>icons/import.png</file>
         <file>icons/internet-telephony.png</file>
+        <file>icons/legendsofthejedi_120x30.png</file>
         <file>icons/luminari_icon.png</file>
         <file>icons/lusternia_120_30.png</file>
         <file>icons/media-optical.png</file>
@@ -190,7 +193,6 @@
         <file>Mudlet_splashscreen_ptb.png</file>
         <file>run-lua-code-v4.xml</file>
         <file>run-tests.xml</file>
-        <file>send-text-to-all-games.xml</file>
         <file>ui/custom_lines.ui</file>
         <file>ui/custom_lines_properties.ui</file>
         <file>ui/delete_profile_confirmation.ui</file>

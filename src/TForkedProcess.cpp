@@ -2,6 +2,7 @@
  *   Copyright (C) 2009 by Benjamin Lerman - mudlet@ambre.net              *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Christer Oscarsson-christer.oscarsson@gmail.com *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -62,7 +63,7 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* interpreter, lua_State* L) : QPr
     connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, &TForkedProcess::slotFinish);
     connect(this, &QProcess::readyReadStandardOutput, this, &TForkedProcess::slotReceivedData);
 
-    setReadChannelMode(QProcess::MergedChannels);
+    setProcessChannelMode(QProcess::MergedChannels);
     start(prog, args, QIODevice::ReadWrite);
     waitForStarted();
     running = true;

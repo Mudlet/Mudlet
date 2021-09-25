@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -41,28 +41,28 @@ IRC_BEGIN_NAMESPACE
 
 struct IrcParameterInfo
 {
-    IrcParameterInfo() : optional(false), channel(false), current(false), multi(false) { }
-    bool optional;
-    bool channel;
-    bool current;
-    bool multi;
+    IrcParameterInfo()  { }
+    bool optional = false;
+    bool channel = false;
+    bool current = false;
+    bool multi = false;
     QString value;
     QString syntax;
 };
 
 struct IrcCommandInfo
 {
-    IrcCommandInfo() : type(IrcCommand::Custom), min(0), max(0) { }
+    IrcCommandInfo()  { }
 
     QString fullSyntax()
     {
         return command + QLatin1Char(' ') + syntax;
     }
 
-    IrcCommand::Type type;
+    IrcCommand::Type type = IrcCommand::Custom;
     QString command;
     QString syntax;
-    int min, max;
+    int min = 0, max = 0;
     QList<IrcParameterInfo> params;
 };
 
@@ -75,8 +75,8 @@ public:
     static IrcCommandInfo parseSyntax(IrcCommand::Type type, const QString& syntax);
     IrcCommand* parseCommand(const IrcCommandInfo& command, const QString& input) const;
     bool processParameters(const IrcCommandInfo& command, const QString& input, QStringList* params) const;
-    bool processCommand(QString* input, int* removed = 0) const;
-    bool processMessage(QString* input, int* removed = 0) const;
+    bool processCommand(QString* input, int* removed = nullptr) const;
+    bool processMessage(QString* input, int* removed = nullptr) const;
     bool onChannel() const;
 
     static IrcCommandParserPrivate* get(IrcCommandParser* parser)
@@ -84,7 +84,7 @@ public:
         return parser->d_func();
     }
 
-    bool tolerant;
+    bool tolerant = false;
     QString target;
     QStringList triggers;
     QStringList channels;

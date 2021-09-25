@@ -1,0 +1,127 @@
+name: 🔍 Check improvements with Mudlet's C++ style guide
+
+on:
+  pull_request_target:
+    paths:
+    - '**.cpp'
+    - '**.h'
+
+jobs:
+  compile-mudlet:
+    name: ${{matrix.buildname}}
+    runs-on: ${{matrix.os}}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-20.04
+            buildname: 'clang-tidy'
+            triplet: x64-linux
+            compiler: clang_64
+            qt: '5.14.1'
+
+    env:
+      BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
+      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
+
+    steps:
+    - name: Checkout Mudlet source code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+        # https://github.com/ZedThree/clang-tidy-review/issues/10
+        ref: ${{ github.event.pull_request.head.sha }}
+        # https://github.community/t/github-actions-are-severely-limited-on-prs/18179/17?u=vadi2
+        repository: ${{github.event.pull_request.head.repo.full_name}}
+
+    - name: Restore Qt cache
+      uses: actions/cache@v2.1.6
+      id: cache-qt
+      with:
+        path: ${{github.workspace}}/Qt/${{matrix.qt}}
+        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+      with:
+        version: ${{matrix.qt}}
+        dir: ${{github.workspace}}
+        cached: ${{steps.cache-qt.outputs.cache-hit}}
+        aqtversion: '==1.1.2'
+
+    - name: Restore Boost cache
+      uses: actions/cache@v2.1.6
+      id: cache-boost
+      with:
+        path: ${{env.BOOST_ROOT}}
+        key: boost
+
+    - name: Install Boost
+      if: steps.cache-boost.outputs.cache-hit != 'true'
+      run: |
+        if [ "$OS" == "Windows_NT" ]; then
+          # fix up paths to be forward slashes consistently
+          BOOST_ROOT=$(echo $BOOST_ROOT | sed 's/\\/\//g')
+        fi
+        mkdir -p $BOOST_ROOT
+        curl --progress-bar --location --output $BOOST_ROOT/download.tar.bz2 $BOOST_URL
+        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar.bz2 -y -bd
+        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar -y -bd
+        cd $BOOST_ROOT && cp -r boost_*/* .
+        rm -rf boost_*/* download.tar.bz2 download.tar
+      shell: bash
+
+    # workaround a poor interaction between github actions/cmake/vcpkg, see https://github.com/lukka/run-vcpkg/issues/88#issuecomment-885758902
+    - name: Use CMake 3.20.1
+      uses: lukka/get-cmake@v3.20.1
+
+    # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
+    - name: Restore from cache and run vcpkg
+      uses: lukka/run-vcpkg@v7
+      env:
+        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
+      with:
+        vcpkgArguments: '@${{env.vcpkgResponseFile}}'
+        vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
+        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
+
+    - name: (Linux) Install non-vcpkg dependencies
+      if: runner.os == 'Linux'
+      run: |
+        # Install from vcpkg everything we can for cross-platform consistency
+        # If not available, use other methods
+        sudo apt-get install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev -y
+
+        echo "Skipping generation of translation stats, so not installing lua-yajl."
+
+    - name: Generate compile_commands.json
+      uses: lukka/run-cmake@v3
+      with:
+        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+        useVcpkgToolchainFile: true
+        # has to be the github workspace, not the runner workspace, for the docker-based clang-tidy-review
+        buildDirectory: '${{github.workspace}}/b/ninja'
+        cmakeAppendedArgs: >-
+          -DCMAKE_GLOBAL_AUTOGEN_TARGET=ON
+          -G Ninja
+          -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
+          -DVCPKG_APPLOCAL_DEPS=OFF
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        buildWithCMakeArgs: >-
+          --target autogen
+
+    - name: Check C++ changes against style guide
+      uses: ZedThree/clang-tidy-review@v0.7.0
+      id: static_analysis
+      with:
+        build_dir: 'b/ninja' # path is relative to checkout directory
+        # PLACEMARKER: list of clang-tidy checks
+        clang_tidy_checks: '-*,performance-*,readability-*,bugprone-*,clang-analyzer-*,cppcoreguidelines-*,mpi-*,misc-*,-readability-implicit-bool-conversion,-readability-qualified-auto,-cppcoreguidelines-owning-memory,-cppcoreguidelines-avoid-magic-numbers,-readability-magic-numbers,-readability-static-accessed-through-instance,-cppcoreguidelines-pro-type-static-cast-downcast,-bugprone-suspicious-enum-usage,-readability-uppercase-literal-suffix,-cppcoreguidelines-avoid-non-const-global-variables,-cppcoreguidelines-pro-bounds-array-to-pointer-decay,-misc-no-recursion,-readability-isolate-declaration,-cppcoreguidelines-pro-type-vararg,-misc-non-private-member-variables-in-classes,-performance-no-automatic-move,-readability-avoid-const-params-in-decls,-cppcoreguidelines-non-private-member-variables-in-classes'
+        # the action doesn't see system-level libraries, need to replicate them here
+        apt_packages: 'pkg-config,libzip-dev,libglu1-mesa-dev,libpulse-dev'
+
+    - name: Passed C++ style guide checks
+      if: steps.static_analysis.outputs.total_comments > 0
+      run: exit 1

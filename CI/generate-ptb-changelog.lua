@@ -8,11 +8,11 @@ local argparse = require "argparse"
 local lunajson = require "lunajson"
 
 -- don't load all of LuaGlobal, as that requires yajl installed
-local builddir_env = os.getenv("TRAVIS_BUILD_DIR")
-if builddir_env then
-  -- the script struggles to load the load files relatively in Travis
-  loadfile(builddir_env.. "/src/mudlet-lua/lua/StringUtils.lua")()
-  loadfile(builddir_env.."/src/mudlet-lua/lua/TableUtils.lua")()
+local github_workspace = os.getenv("GITHUB_WORKSPACE")
+if github_workspace then
+  -- the script struggles to load the load files relatively in CI
+  loadfile(github_workspace.. "/src/mudlet-lua/lua/StringUtils.lua")()
+  loadfile(github_workspace.."/src/mudlet-lua/lua/TableUtils.lua")()
 else
   loadfile("../src/mudlet-lua/lua/StringUtils.lua")()
   loadfile("../src/mudlet-lua/lua/TableUtils.lua")()
@@ -63,7 +63,14 @@ function extract_released_sha1s(input)
 end
 
 function extract_historical_sha1s()
-  local history = string.split(os.capture("git log --pretty=%H -n "..MAX_COMMITS_PER_CHANGELOG))
+  local history, command
+  if github_workspace then
+    command = string.format("git log --pretty=%%H -n %d %s", MAX_COMMITS_PER_CHANGELOG, os.getenv("GITHUB_SHA"))
+    history = string.split(os.capture(command))
+  else
+    command = "git log --pretty=%H -n "..MAX_COMMITS_PER_CHANGELOG
+    history = string.split(os.capture(command))
+  end
 
   local t = {}
   for _, sha1 in ipairs(history) do

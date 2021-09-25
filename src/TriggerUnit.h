@@ -40,7 +40,7 @@ class TriggerUnit
     friend class XMLimport;
 
 public:
-    TriggerUnit(Host* pHost) : mpHost(pHost), mMaxID(0), statsPatterns(), mModuleMember() { initStats(); }
+    TriggerUnit(Host* pHost) : statsPatterns(), mpHost(pHost), mMaxID(0), mModuleMember() { initStats(); }
 
     std::list<TTrigger*> getTriggerRootNodeList()
     {

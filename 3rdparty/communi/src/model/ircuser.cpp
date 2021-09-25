@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -102,7 +102,7 @@ IrcUser::IrcUser(QObject* parent)
 {
     Q_D(IrcUser);
     d->q_ptr = this;
-    d->channel = 0;
+    d->channel = nullptr;
     d->away = false;
     d->servOp = false;
 }

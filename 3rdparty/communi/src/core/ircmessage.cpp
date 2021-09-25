@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -33,6 +33,7 @@
 #include "ircmessagecomposer_p.h"
 #include "ircnetwork_p.h"
 #include "irccommand.h"
+#include "irccore_p.h"
 #include "irc.h"
 #include <QMetaEnum>
 #include <QVariant>
@@ -314,7 +315,7 @@ IrcConnection* IrcMessage::connection() const
 IrcNetwork* IrcMessage::network() const
 {
     Q_D(const IrcMessage);
-    return d->connection ? d->connection->network() : 0;
+    return d->connection ? d->connection->network() : nullptr;
 }
 
 /*!
@@ -689,7 +690,7 @@ void IrcMessage::setTag(const QString& name, const QVariant& value)
  */
 IrcMessage* IrcMessage::fromData(const QByteArray& data, IrcConnection* connection)
 {
-    IrcMessage* message = 0;
+    IrcMessage* message = nullptr;
     IrcMessageData md = IrcMessageData::fromData(data);
     const QMetaObject* metaObject = irc_command_meta_object(md.command);
     if (metaObject) {
@@ -711,7 +712,7 @@ IrcMessage* IrcMessage::fromData(const QByteArray& data, IrcConnection* connecti
  */
 IrcMessage* IrcMessage::fromParameters(const QString& prefix, const QString& command, const QStringList& parameters, IrcConnection* connection)
 {
-    IrcMessage* message = 0;
+    IrcMessage* message = nullptr;
     const QMetaObject* metaObject = irc_command_meta_object(command);
     if (metaObject) {
         message = qobject_cast<IrcMessage*>(metaObject->newInstance(Q_ARG(IrcConnection*, connection)));
@@ -989,7 +990,7 @@ QStringList IrcCapabilityMessage::capabilities() const
     QStringList caps;
     QStringList params = d->params();
     if (params.count() > 2)
-        caps = params.last().split(QLatin1Char(' '), QString::SkipEmptyParts);
+        caps = params.last().split(QLatin1Char(' '), Qt::SkipEmptyParts);
     return caps;
 }
 
@@ -2130,7 +2131,7 @@ bool IrcWhoisMessage::isSecure() const
 QStringList IrcWhoisMessage::channels() const
 {
     Q_D(const IrcMessage);
-    return d->params().value(8).split(QLatin1Char(' '), QString::SkipEmptyParts);
+    return d->params().value(8).split(QLatin1Char(' '), Qt::SkipEmptyParts);
 }
 
 /*!

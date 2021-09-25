@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -49,8 +49,8 @@ class IRC_UTIL_EXPORT IrcCompleter : public QObject
     Q_ENUMS(Direction)
 
 public:
-    explicit IrcCompleter(QObject* parent = 0);
-    virtual ~IrcCompleter();
+    explicit IrcCompleter(QObject* parent = nullptr);
+    ~IrcCompleter() override;
 
     enum Direction {
         Forward,

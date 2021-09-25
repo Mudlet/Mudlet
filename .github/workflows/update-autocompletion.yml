@@ -8,15 +8,15 @@ on:
 jobs:
   update-autocompletion:
     runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
+    if: ${{ github.repository_owner == 'Mudlet' }}
 
     steps:
     - uses: actions/checkout@v2
-    - uses: leafo/gh-actions-lua@v5
+    - uses: leafo/gh-actions-lua@v8
       with:
         luaVersion: "5.1.5"
-    - uses: actions/setup-node@v1.1.0
-    - uses: leafo/gh-actions-luarocks@v2
+    - uses: actions/setup-node@v2.4.0
+    - uses: leafo/gh-actions-luarocks@v4
 
     - name: install Lua dependencies
       run: |
