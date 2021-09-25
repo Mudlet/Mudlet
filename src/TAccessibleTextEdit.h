@@ -60,9 +60,6 @@ public:
     }
 
     TTextEdit* textEdit() const;
-    QAccessibleInterface* childAt(int x, int y) const;
-    int childCount() const;
-    int indexOfChild(const QAccessibleInterface* child) const;
     QAccessible::Role role() const;
     QAccessible::State state() const;
     int lineForOffset(int offset) const;
