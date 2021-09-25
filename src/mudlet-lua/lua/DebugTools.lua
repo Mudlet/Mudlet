@@ -377,12 +377,15 @@ function display(...)
   end
 end
 
+-- undocumented, internal function
 local function printX(options)
   local func = options.func or debugc
   local showTrace = options.showTrace
   local msg = options.msg or ""
   local halt = options.halt
   local stackTable = debug.traceback():gsub("\t", "  "):gsub("%[string ",""):split("\n")
+  -- the table.removes below remove the printX and printError or printDebug calls from the stacktrace
+  -- decided to do this as they aren't the information the user is likely to be interested in
   table.remove(stackTable,2)
   table.remove(stackTable,2)
   local level = #stackTable + 1
@@ -399,6 +402,7 @@ local function printX(options)
   func(msg)
 end
 
+-- Documentation: https://wiki.mudlet.org/index.php?title=Manual:Lua_Functions#printError
 function printError(msg, showTrace, haltExecution)
   local func = haltExecution and error or errorc
   local options = {
@@ -410,6 +414,7 @@ function printError(msg, showTrace, haltExecution)
   printX(options)
 end
 
+-- Documentation: https://wiki.mudlet.org/index.php?title=Manual:Lua_Functions#printDebug
 function printDebug(msg, showTrace)
   local options = {
     msg = msg,
