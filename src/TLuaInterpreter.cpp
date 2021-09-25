@@ -7702,6 +7702,9 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     float zoom = 30.0;
     bool showOnTop = true;
     bool noScaling = true;
+    QString fontName;
+    int foregroundTransparency = 255;
+    int backgroundTransparency = 50;
 
     int args = lua_gettop(L);
     int area = getVerifiedInt(L, __func__, 1, "areaID");
@@ -7725,9 +7728,18 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
             }
         }
     }
+    if (args > 15) {
+        fontName = getVerifiedString(L, __func__, 16, "fontName", true);
+    }
+    if (args > 16) {
+        foregroundTransparency = getVerifiedInt(L, __func__, 17, "foregroundTransparency", true);
+    }
+    if (args > 17) {
+        backgroundTransparency = getVerifiedInt(L, __func__, 18, "backgroundTransparency", true);
+    }
 
     Host& host = getHostFromLua(L);
-    lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb), QColor(bgr, bgg, bgb), showOnTop, noScaling, zoom, fontSize));
+    lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb, foregroundTransparency), QColor(bgr, bgg, bgb, backgroundTransparency), showOnTop, noScaling, zoom, fontSize, fontName));
     return 1;
 }
 
