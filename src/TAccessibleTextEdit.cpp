@@ -35,6 +35,7 @@ QAccessible::State TAccessibleTextEdit::state() const
     s.selectableText = true;
     s.multiLine = true;
     s.focusable = true;
+    s.marqueed = true; // The object displays scrolling contents, e.g. a log view.
 
     return s;
 }
