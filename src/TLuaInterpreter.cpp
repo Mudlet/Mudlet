@@ -15844,8 +15844,8 @@ int TLuaInterpreter::setMudletConfig(lua_State * L)
         return warnArgumentValue(L, __func__, "you must provide key");
     }
 
-    int success = []() 
-    { 
+    auto success = [&]()
+    {
         lua_pushboolean(L, true);
         return 1;
     };
