@@ -60,7 +60,7 @@ public:
     }
 
     TTextEdit* textEdit() const;
-    QAccessible::State state() const;
+    QAccessible::State state() const override;
     int lineForOffset(int offset) const;
     int columnForOffset(int offset) const;
     void selection(int selectionIndex, int *startOffset, int *endOffset) const override;
