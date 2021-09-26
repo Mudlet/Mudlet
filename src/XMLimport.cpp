@@ -931,6 +931,15 @@ void XMLimport::readHostPackage(Host* pHost)
         mudlet::self()->dactionInputLine->setChecked(compactInputLine);
     }
 
+    if (attributes().hasAttribute(QLatin1String("NetworkPacketTimeout"))) {
+        // These limits are also hard coded into the QSpinBox used to adjust
+        // this setting in the preferences:
+        pHost->mTelnet.setPostingTimeout(qBound(10, attributes().value(QLatin1String("NetworkPacketTimeout")).toInt(), 500));
+    } else {
+        // The default value, also used up to Mudlet 4.12.0:
+        pHost->mTelnet.setPostingTimeout(300);
+    }
+
     while (!atEnd()) {
         readNext();
 
