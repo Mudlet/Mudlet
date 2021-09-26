@@ -607,7 +607,7 @@ mudlet::mudlet()
     reconnectKeySequence = QKeySequence(Qt::Key_R, Qt::CTRL);
 #else
     triggersKeySequence = QKeySequence(Qt::Key_E, Qt::ALT);
-    showMapKeySequence = QKeySequence(Qt::Key_M, Qt::ALT );
+    showMapKeySequence = QKeySequence(Qt::Key_M, Qt::ALT);
     inputLineKeySequence = QKeySequence(Qt::Key_L, Qt::ALT);
     optionsKeySequence = QKeySequence(Qt::Key_P, Qt::ALT);
     notepadKeySequence = QKeySequence(Qt::Key_N, Qt::ALT);
