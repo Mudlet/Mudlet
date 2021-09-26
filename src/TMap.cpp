@@ -463,7 +463,7 @@ void TMap::audit()
                         // Note that two of the last three arguments here
                         // (false, 40.0) are not the defaults (true, 30.0) used
                         // now:
-                        int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50);
+                        int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50, std::nullopt);
                         if (newID > -1) {
                             if (mudlet::self()->showMapAuditErrors()) {
                                 QString msg = tr("[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.").arg(areaID).arg(i);
@@ -598,7 +598,7 @@ void TMap::initGraph()
     unsigned int roomCount = 0;
     unsigned int edgeCount = 0;
     QSet<unsigned int> unUsableRoomSet;
-    // Keep track of the unusuable rather than the useable ones because that is
+    // Keep track of the unusable rather than the usable ones because that is
     // hopefully a MUCH smaller set in normal situations!
     QHashIterator<int, TRoom*> itRoom = mpRoomDB->getRoomMap();
     while (itRoom.hasNext()) {
@@ -822,7 +822,7 @@ void TMap::initGraph()
             }
         } // End of while(itSpecialExit.hasNext())
 
-        // Now we have eliminated possibe duplicate and useless edges we can create and
+        // Now we have eliminated possible duplicate and useless edges we can create and
         // insert the remainder into the BGL graph:
         QHashIterator<unsigned int, route> itRoute = bestRoutes;
         while (itRoute.hasNext()) {
@@ -841,7 +841,7 @@ void TMap::initGraph()
 
     mMapGraphNeedsUpdate = false;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
-             << "other NOT useable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
+             << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
 }
 
 bool TMap::findPath(int from, int to)
@@ -860,7 +860,7 @@ bool TMap::findPath(int from, int to)
     // passed, the data is empty - and valid for THAT case!
 
     if (from == to) {
-        return true; // Take a short-cut for trival "already there" case!
+        return true; // Take a short-cut for trivial "already there" case!
     }
 
     TRoom* pFrom = mpRoomDB->getRoom(from);
@@ -1018,8 +1018,8 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         saveVersion = 0;
     } else if (saveVersion > mMaxVersion) {
         saveVersion = mMaxVersion;
-         QString errMsg = tr("[ ERROR ] - The format {%1} you are trying to save the map with is too new\n"
-                             "for this version of Mudlet. Supported are only formats up to version {%2}.")
+         QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too new\n"
+                             "for this version of Mudlet. Supported are only formats up to version %2.")
                                  .arg(QString::number(saveVersion), QString::number(mMaxVersion));
         appendErrorMsgWithNoLf(errMsg, false);
         postMessage(errMsg);
@@ -1034,8 +1034,8 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     }
 
     if (mSaveVersion != mVersion) {
-        QString message = tr("[ ALERT ] - Saving map in a format {%1} that is different than the one it was\n"
-                             "loaded as {%2}. This may be an issue if you want to share the resulting\n"
+        QString message = tr("[ ALERT ] - Saving map in format version \"%1\" that is different than \"%2\" which\n"
+                             "it was loaded as. This may be an issue if you want to share the resulting\n"
                              "map with others relying on the original format.")
                                   .arg(mSaveVersion)
                                   .arg(mVersion);
@@ -1044,8 +1044,8 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     }
 
     if (mSaveVersion != mDefaultVersion) {
-        QString message = tr("[ WARN ]  - Saving map in a format {%1} different from the\n"
-                             "recommended format {%2} for this version of Mudlet.")
+        QString message = tr("[ WARN ]  - Saving map in format version \"%1\" different from the\n"
+                             "recommended map version %2 for this version of Mudlet.")
                                   .arg(mSaveVersion)
                                   .arg(mDefaultVersion);
         appendErrorMsgWithNoLf(message, false);
@@ -1374,9 +1374,96 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     return true;
 }
 
+// file is expected to be linked to a file name but not be opened; ifs is not
+// expected to be linked to any IODevice. On success file will be opened and
+// ifs will be part way through it (has read the first 4 bytes which encode the
+// map file version). On failure both will be in the same states as initial one:
+bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
+{
+    int version = 0;
+    if (!file.open(QFile::ReadOnly)) {
+        QString errMsg = tr(R"([ ERROR ] - Unable to open map file for reading: "%1"!)").arg(file.fileName());
+        appendErrorMsg(errMsg, false);
+        postMessage(errMsg);
+        return false;
+    }
+
+    ifs.setDevice(&file);
+    // Is the RUN-TIME version of the Qt libraries equal to or more than
+    // Qt 5.13.0? Then force things to use the backwards compatible format
+    // - for us - of Qt 5.12.0 - this is needed because the way that the
+    // QFont class is stored in a binary format has changed at 5.13 and it
+    // causes crashes when a new version of the Qt libraries tries to read
+    // the older format:
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        // 18 is the enum value corresponding to QDataStream::Qt_5_12 which
+        // we want to force to be used but we cannot use the enum directly
+        // because it will not be defined in older versions of the Qt
+        // library when the code is compilated:
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
+    ifs >> version;
+    if ((version < 1) || (version > 127)) {
+        QString errMsg = tr("[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates\n"
+                            "its format version seems to be \"%1\" and that doesn't make sense. The file is:\n"
+                            "\"%2\".")
+                                 .arg(version)
+                                 .arg(file.fileName());
+        appendErrorMsgWithNoLf(errMsg);
+        postMessage(errMsg);
+        QString infoMsg = tr("[ INFO ]  - Ignoring this unlikely map file.");
+        appendErrorMsgWithNoLf(infoMsg);
+        postMessage(infoMsg);
+        ifs.setDevice(nullptr);
+        file.close();
+        return false;
+    }
+    if (version > mMaxVersion) {
+        QString errMsg = tr("[ ALERT ] - Map file is too new. Its format version \"%1\" is higher than this version of\n"
+                            "Mudlet can handle (%2)! The file is:\n\"%3\".")
+                                 .arg(version)
+                                 .arg(mMaxVersion)
+                                 .arg(file.fileName());
+        appendErrorMsgWithNoLf(errMsg);
+        postMessage(errMsg);
+        QString infoMsg = tr("[ INFO ]  - You will need to update your Mudlet to read the map file.");
+        appendErrorMsgWithNoLf(infoMsg);
+        postMessage(infoMsg);
+        ifs.setDevice(nullptr);
+        file.close();
+        return false;
+    }
+
+    if (version < 4) {
+        QString alertMsg = tr("[ ALERT ] - Map file is really old. Its format version \"%1\" is so ancient that\n"
+                              "this version of Mudlet may not gain enough information from\n"
+                              "it but it will try! The file is: \"%2\".")
+                                   .arg(version)
+                                   .arg(file.fileName());
+        appendErrorMsgWithNoLf(alertMsg, false);
+        postMessage(alertMsg);
+        QString infoMsg = tr("[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!\n"
+                             "There is so much data that it DOES NOT have that you could be\n"
+                             "better off starting again...");
+        appendErrorMsgWithNoLf(infoMsg, false);
+        postMessage(infoMsg);
+    } else {
+        // Less than (but not less than 4) or equal to default version
+        QString infoMsg = tr("[ INFO ]  - Reading map. Format version: %1. File:\n"
+                             "\"%2\",\n"
+                             "please wait...").arg(version).arg(file.fileName());
+        appendErrorMsg(tr(R"([ INFO ]  - Reading map. Format version: %1. File: "%2".)").arg(version).arg(file.fileName()), false);
+        postMessage(infoMsg);
+    }
+    mVersion = version;
+    mSaveVersion = mDefaultVersion; // Make the save version the default one - unless the user intervenes
+
+    return true;
+}
+
 bool TMap::restore(QString location, bool downloadIfNotFound)
 {
-    qDebug() << "TMap::restore(" << location << ") INFO: restoring map of Profile:" << mProfileName << " URL:" << mpHost->getUrl();
+    qDebug().noquote().nospace() << "TMap::restore(\"" << location << "\") INFO: restoring map of Profile: \"" << mProfileName << "\" URL: " << mpHost->getUrl();
 
     QElapsedTimer _time;
     _time.start();
@@ -1386,73 +1473,69 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
     if (location.isEmpty()) {
         folder = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
         QDir dir(folder);
-        dir.setSorting(QDir::Time);
-        entries = dir.entryList(QDir::Files, QDir::Time);
+        QStringList filters;
+        filters << QStringLiteral("*.[dD][aA][tT]");
+        filters << QStringLiteral("*.[jJ][sS][oO][nN]");
+        entries = dir.entryList(filters, QDir::Files, QDir::Time);
     }
 
     bool canRestore = true;
-    if (!entries.empty() || !location.isEmpty()) {
-        QFile file(location.isEmpty() ? QStringLiteral("%1/%2").arg(folder, entries.at(0)) : location);
+    if (entries.empty() && location.isEmpty()) {
+        canRestore = false;
+    }
 
-        if (!file.open(QFile::ReadOnly)) {
-            QString errMsg = tr(R"([ ERROR ] - Unable to open (for reading) map file: "%1"!)").arg(file.fileName());
-            appendErrorMsg(errMsg, false);
-            postMessage(errMsg);
-            return false;
-        }
+    QDataStream ifs;
+    QFile file;
+    if (canRestore && (!entries.empty() || !location.isEmpty())) {
+        // We get to here if there is one or more entries OR location is
+        // supplied - if the latter then there is only one file to consider but
+        // if the former we may have to check more than one to find a valid
+        // map file:
+        bool foundValidFile = false;
+        if (location.isEmpty()) {
+            // Look through the entries:
+            QStringListIterator itFileName(entries);
+            auto fileName = QStringLiteral("%1/%2").arg(folder, itFileName.next());
+            if (!fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
+                file.setFileName(fileName);
+                if (validatePotentialMapFile(file, ifs)) {
+                    foundValidFile = true;
+                }
 
-        QDataStream ifs(&file);
-        // Is the RUN-TIME version of the Qt libraries equal to or more than
-        // Qt 5.13.0? Then force things to use the backwards compatible format
-        // - for us - of Qt 5.12.0 - this is needed because the way that the
-        // QFont class is stored in a binary format has changed at 5.13 and it
-        // causes crashes when a new version of the Qt libraries tries to read
-        // the older format:
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            // 18 is the enum value corresponding to QDataStream::Qt_5_12 which
-            // we want to force to be used but we cannot use the enum directly
-            // because it will not be defined in older versions of the Qt
-            // library when the code is compilated:
-            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
-        ifs >> mVersion;
-        if (mVersion > mMaxVersion) {
-            QString errMsg = tr("[ ERROR ] - Map file is too new, its file format (%1) is higher than this version of\n"
-                                "Mudlet can handle (%2)!  The file is:\n\"%3\".")
-                                     .arg(mVersion)
-                                     .arg(mMaxVersion)
-                                     .arg(file.fileName());
-            appendErrorMsgWithNoLf(errMsg);
-            postMessage(errMsg);
-            QString infoMsg = tr("[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an\n"
-                                 "older format.");
-            appendErrorMsgWithNoLf(infoMsg);
-            postMessage(infoMsg);
-            file.close();
-            return false;
-        } else if (mVersion < 4) {
-            QString alertMsg = tr("[ ALERT ] - Map file is really old, its file format (%1) is so ancient that\n"
-                                  "this version of Mudlet may not gain enough information from\n"
-                                  "it but it will try!  The file is: \"%2\".")
-                                       .arg(mVersion)
-                                       .arg(file.fileName());
-            appendErrorMsgWithNoLf(alertMsg, false);
-            postMessage(alertMsg);
-            QString infoMsg = tr("[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!\n"
-                                 "There is so much data that it DOES NOT have that you could be\n"
-                                 "better off starting again...");
-            appendErrorMsgWithNoLf(infoMsg, false);
-            postMessage(infoMsg);
-            canRestore = false;
-            mSaveVersion = mDefaultVersion; // Make the save version the default one - unless the user intervenes
+            } else {
+                if (auto [isOk, message] = readJsonMapFile(fileName, true); !isOk) {
+                   // Failed to read the JSON file
+                   QString errMsg = tr("[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:\n"
+                                       "%1; the file is:\n"
+                                       "\"%2\".").arg(message, fileName);
+                   appendErrorMsgWithNoLf(errMsg);
+                   postMessage(errMsg);
+                   QString infoMsg = tr("[ INFO ]  - Ignoring this map file.");
+                   appendErrorMsgWithNoLf(infoMsg);
+                   postMessage(infoMsg);
+               } else {
+                   // immediately leave on success:
+                   return true;
+               }
+           }
+
+           // Allow for somethings to be updated - especially on Windows?
+           qApp->processEvents();
         } else {
-            // Less than (but not less than 4) or equal to default version
-            QString infoMsg = tr("[ INFO ]  - Reading map (format version:%1) file:\n\"%2\",\nplease wait...").arg(mVersion).arg(file.fileName());
-            appendErrorMsg(tr(R"([ INFO ]  - Reading map (format version:%1) file: "%2".)").arg(mVersion).arg(file.fileName()), false);
-            postMessage(infoMsg);
-            mSaveVersion = mDefaultVersion; // Make the save version the default one - unless the user intervenes
+            file.setFileName(location);
+            if (validatePotentialMapFile(file, ifs)) {
+                foundValidFile = true;
+            }
         }
+        if (!foundValidFile) {
+            canRestore = false;
+        }
+    } else if (canRestore && !location.isEmpty()) {
+        file.setFileName(location);
+        canRestore = validatePotentialMapFile(file, ifs);
+    }
 
+    if (canRestore) {
         // As all but the room reading have version checks the fact that sub-4
         // files will still be parsed despite canRestore being false is probably OK
         if (mVersion >= 4) {
@@ -1520,12 +1603,12 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                                                                           |QFont::PreferNoShaping
                                                                           ));
         if (mVersion >= 14) {
-            int areaSize;
+            int areaSize = 0;
             ifs >> areaSize;
             // restore area table
             for (int i = 0; i < areaSize; i++) {
                 auto pA = new TArea(this, mpRoomDB);
-                int areaID;
+                int areaID = 0;
                 ifs >> areaID;
                 if (mVersion >= 18) {
                     // In version 18 changed from QList<int> to QSet<int> as the later is
@@ -1611,7 +1694,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             // with each other's saved value
             ifs >> mRoomIdHash;
         } else if (mVersion >= 12) {
-            int oldRoomId;
+            int oldRoomId = 0;
             ifs >> oldRoomId;
             mRoomIdHash[mProfileName] = oldRoomId;
         }
@@ -1630,7 +1713,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 int areaLabelCounter = 0;
                 auto pA = mpRoomDB->getArea(areaID);
                 while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
-                    int labelID;
+                    int labelID = 0;
                     ifs >> labelID;
                     TMapLabel label;
                     if (mVersion >= 12) {
@@ -1667,7 +1750,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         }
 
         while (!ifs.atEnd()) {
-            int i;
+            int i = 0;
             ifs >> i;
             auto pT = new TRoom(mpRoomDB);
             pT->restore(ifs, i, mVersion);
@@ -1692,8 +1775,8 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         mCustomEnvColors[272] = mpHost->mLightBlack_2;
 
         QString okMsg = tr("[ INFO ]  - Successfully read the map file (%1s), checking some\n"
-                                        "consistency details..." )
-                            .arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
+                           "consistency details..." )
+                                .arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
 
         postMessage(okMsg);
         appendErrorMsgWithNoLf(okMsg);
@@ -1750,7 +1833,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     QFile file(QStringLiteral("%1/%2").arg(folder, entries.at(0)));
 
     if (!file.open(QFile::ReadOnly)) {
-        QString errMsg = tr(R"([ ERROR ] - Unable to open (for reading) map file: "%1"!)").arg(file.fileName());
+        QString errMsg = tr(R"([ ERROR ] - Unable to open map file for reading: "%1"!)").arg(file.fileName());
         appendErrorMsg(errMsg, false);
         postMessage(errMsg);
         return false;
@@ -1766,7 +1849,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
     ifs >> otherProfileVersion;
 
-    QString infoMsg = tr(R"([ INFO ]  - Checking map file: "%1", format version:%2...)").arg(file.fileName()).arg(otherProfileVersion);
+    QString infoMsg = tr(R"([ INFO ]  - Checking map file "%1", format version "%2".)").arg(file.fileName()).arg(otherProfileVersion);
     appendErrorMsg(infoMsg, false);
     if (mudlet::self()->showMapAuditErrors()) {
         postMessage(infoMsg);
@@ -1970,7 +2053,8 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     return true;
 }
 
-int TMap::createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, qreal zoom, int fontSize)
+//NOLINT(readability-make-member-function-const)
+int TMap::createMapLabel(int area, const QString& text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, qreal zoom, int fontSize, std::optional<QString> fontName)
 {
     auto pA = mpRoomDB->getArea(area);
     if (!pA) {
@@ -1984,7 +2068,6 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     TMapLabel label;
     label.text = text;
     label.bgColor = bg;
-    label.bgColor.setAlpha(50);
     label.fgColor = fg;
     label.size = QSizeF(100, 100);
     label.pos = QVector3D(x, y, z);
@@ -1998,8 +2081,7 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     lp.fillRect(lr, label.bgColor);
     QPen lpen;
     lpen.setColor(label.fgColor);
-    QFont font;
-    font.setPointSize(fontSize); //good: font size = 50, zoom = 30.0
+    QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
     lp.setRenderHint(QPainter::TextAntialiasing, true);
     lp.setPen(lpen);
     lp.setFont(font);
@@ -2433,7 +2515,7 @@ void TMap::slot_downloadCancel()
     postMessage(alertMsg);
     if (mpProgressDialog) {
         mpProgressDialog->deleteLater();
-        mpProgressDialog = Q_NULLPTR; // Must reset this so it can be reused
+        mpProgressDialog = nullptr; // Must reset this so it can be reused
     }
     if (mpNetworkReply) {
         mpNetworkReply->abort(); // Will indirectly cause error() AND replyFinished signals to be sent
@@ -2457,13 +2539,13 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
 {
     auto cleanup = [this, reply](){
         reply->deleteLater();
-        mpNetworkReply = Q_NULLPTR;
+        mpNetworkReply = nullptr;
 
         // We don't delete the progress dialog until here as we now use it to inform
         // about post-download operations
 
         mpProgressDialog->deleteLater();
-        mpProgressDialog = Q_NULLPTR; // Must reset this so it can be reused
+        mpProgressDialog = nullptr; // Must reset this so it can be reused
 
         mLocalMapFileName.clear();
         mExpectedFileSize = 0;
@@ -2535,7 +2617,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
                     // Since the download is complete but we do not offer to
                     // cancel the required post-processing we should now hide
                     // the cancel/abort button:
-                    mpProgressDialog->setCancelButton(Q_NULLPTR);
+                    mpProgressDialog->setCancelButton(nullptr);
 
                     // The action to parse the XML file has been refactored to
                     // a separate method so that it can be shared with the
@@ -2650,7 +2732,12 @@ void TMap::setRoomNamesShown(bool shown)
 std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 {
     QString destination{dest};
-    if (!dest.endsWith(QLatin1String(".json"), Qt::CaseInsensitive)) {
+
+    if (destination.isEmpty()) {
+        destination = mudlet::getMudletPath(mudlet::profileDateTimeStampedJsonMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
+    }
+
+    if (!destination.endsWith(QLatin1String(".json"), Qt::CaseInsensitive)) {
         destination.append(QLatin1String(".json"));
     }
 
@@ -2788,7 +2875,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         // "colorRGBA"
         writeJsonColor(customEnvColorObj, itCustomEnvColor.value());
         customEnvColorObj.insert(QLatin1String("id"), QJsonValue{itCustomEnvColor.key()});
-        // Covert the customEnvColorObj into a QJsonValue:
+        // Convert the customEnvColorObj into a QJsonValue:
         const QJsonValue customEnvColorValue{customEnvColorObj};
         // Now append this object onto the array:
         customEnvColorArray.append(customEnvColorValue);
@@ -2833,19 +2920,26 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
                 ((file.error() == QFileDevice::NoError) ? QString() : QStringLiteral("could not export file, reason: %1").arg(file.errorString()))};
 }
 
-std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
+// The translatable messages are used within this file and do not need to
+// mention the file concerned whereas the untranslated messages are used by the
+// Lua sub-system and do need to report the file:
+std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool translatableTexts, const bool allowUserCancellation)
 {
     const QString oldDefaultAreaName{mDefaultAreaName};
     const QString oldUnnamedName{mUnnamedAreaName};
 
     if (mpProgressDialog) {
-        return {false, QStringLiteral("import or export already in progress")};
+        return {false, (translatableTexts
+                    ? tr("import or export already in progress")
+                    : QStringLiteral("import or export already in progress"))};
     }
 
     QFile file(source);
     if (!file.open(QFile::ReadOnly)) {
         qWarning().noquote().nospace() << "TMap::readJsonMapFile(...) WARNING - Could not open JSON file \"" << source << "\".";
-        return {false, QStringLiteral("could not open file \"%1\"").arg(source)};
+        return {false, (translatableTexts
+                    ? tr("could not open file")
+                    : QStringLiteral("could not open file \"%1\"").arg(source))};
     }
 
     QByteArray mapData = file.readAll();
@@ -2853,13 +2947,18 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     QJsonParseError jsonErr;
     QJsonDocument doc(QJsonDocument::fromJson(mapData, &jsonErr));
     if (jsonErr.error != QJsonParseError::NoError) {
-        return {false, QStringLiteral("could not parse file \"%1\", reason: \"%2\" at offset %3")
-                    .arg(source, jsonErr.errorString(), QString::number(jsonErr.offset))};
+        return {false, (translatableTexts
+                    ? tr("could not parse file, reason: \"%1\" at offset %2")
+                      .arg(jsonErr.errorString(), QString::number(jsonErr.offset))
+                    : QStringLiteral("could not parse file \"%1\", reason: \"%2\" at offset %3")
+                      .arg(source, jsonErr.errorString(), QString::number(jsonErr.offset)))};
     }
 
     if (doc.isEmpty()) {
         qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - no Json file data detected, this is not a Mudlet JSON map file.";
-        return {false, QStringLiteral("empty Json file, no map data detected")};
+        return {false, (translatableTexts
+                    ? tr("empty Json file, no map data detected")
+                    : QStringLiteral("empty Json file, no map data detected"))};
     }
 
     // Read all the base level stuff:
@@ -2871,16 +2970,22 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
             // We only handle 1.000f right now (0.001f was borked, 0.002f
             // didn't include room symbol color, 0.003 is the same as 1.000
             // but the numbered was changed for release into the wild):
-            qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was found: " << formatVersion << "and it is not okay.";
-            return {false, QStringLiteral("invalid version: %1 detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0'))};
+            qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information \"" << formatVersion << "\" was found, and it is not okay.";
+            return {false, (translatableTexts
+                        ? tr("invalid format version \"%1\" detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0'))
+                        : QStringLiteral("invalid format version \"%1\" detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0')))};
         }
     } else {
-        qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was not found, this is not likely to be a Mudlet JSON map file.";
-        return {false, QStringLiteral("no version number detected")};
+        qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was not found. This is not likely to be a Mudlet JSON map file.";
+        return {false, (translatableTexts
+                    ? tr("no format version detected")
+                    : QStringLiteral("no format version detected"))};
     }
 
     if (!mapObj.contains(QLatin1String("areas")) || !mapObj.value(QLatin1String("areas")).isArray()) {
-        return {false, QStringLiteral("no areas detected")};
+        return {false, (translatableTexts
+                    ? tr("no areas detected")
+                    : QStringLiteral("no areas detected"))};
     }
 
     mProgressDialogAreasTotal = qRound(mapObj[QLatin1String("areaCount")].toDouble());
@@ -2898,7 +3003,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
                                                         QString::number(mProgressDialogRoomsTotal),
                                                         QLatin1String("0"),
                                                         QString::number(mProgressDialogLabelsTotal)),
-                                           tr("Abort"),
+                                           (allowUserCancellation ? tr("Abort") : QString()),
                                            0,
                                            mProgressDialogRoomsTotal,
                                            mpHost->mpConsole);
@@ -2950,7 +3055,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     if (mapObj.contains(QLatin1String("customEnvColors")) && mapObj.value(QLatin1String("customEnvColors")).isArray()) {
         const QJsonArray customEnvColorArray = mapObj.value(QLatin1String("customEnvColors")).toArray();
         if (!customEnvColorArray.isEmpty()) {
-            for (auto customEnvColorValue : qAsConst(customEnvColorArray)) {
+            for (const auto& customEnvColorValue : qAsConst(customEnvColorArray)) {
                 const QJsonObject customEnvColorObj{customEnvColorValue.toObject()};
                 if (customEnvColorObj.contains(QLatin1String("id"))
                     && ((customEnvColorObj.contains(QLatin1String("color32RGBA")) && customEnvColorObj.value(QLatin1String("color32RGBA")).isArray())
@@ -2980,15 +3085,17 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     TRoomDB* pNewRoomDB = new TRoomDB(this);
     bool abort = false;
     for (int i = 0, total = mapObj.value(QLatin1String("areas")).toArray().count(); i < total; ++i) {
-        TArea* pArea = new TArea(this, pNewRoomDB);
+        std::unique_ptr<TArea> pArea = std::make_unique<TArea>(this, pNewRoomDB);
         auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i);
         ++mProgressDialogAreasCount;
         if (incrementJsonProgressDialog(false, true, 0)) {
-            abort = true;
+            if (allowUserCancellation) {
+                abort = true;
+            }
             break;
         }
         // This will populate the TRoomDB::areas and TRoomDB::areaNameMap:
-        pNewRoomDB->addArea(pArea, id, name);
+        pNewRoomDB->addArea(pArea.release(), id, name);
     }
     if (abort) {
         mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
@@ -2997,7 +3104,9 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
         mDefaultAreaName = oldDefaultAreaName;
         mUnnamedAreaName = oldUnnamedName;
         delete pNewRoomDB;
-        return {false, QStringLiteral("aborted by user")};
+        return {false, (translatableTexts
+                    ? tr("aborted by user")
+                    : QStringLiteral("aborted by user"))};
     }
 
     mCustomEnvColors.swap(customEnvColors);
@@ -3022,13 +3131,11 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     // This is it - the point at which the new map gets activated:
     TRoomDB* pOldRoomDB = mpRoomDB;
     mpRoomDB = pNewRoomDB;
-    audit();
-    if (mpMapper) {
-        mpMapper->mp2dMap->init();
-        mpMapper->updateAreaComboBox();
-        mpMapper->resetAreaComboBoxToPlayerRoomArea();
-        mpMapper->show();
-        update();
+    // Need to update the master copy of these details in the Host class:
+    mpHost->setPlayerRoomStyleDetails(mPlayerRoomStyle, mPlayerRoomOuterDiameterPercentage, mPlayerRoomInnerDiameterPercentage, mPlayerRoomOuterColor, mPlayerRoomInnerColor);
+    // And redraw the indicator if a 2D map is being shown:
+    if (mpMapper && mpMapper->mp2dMap) {
+        mpMapper->mp2dMap->setPlayerRoomStyle(mPlayerRoomStyle);
     }
     delete pOldRoomDB;
     mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
@@ -3222,9 +3329,9 @@ QColor TMap::getColor(int id)
                 quint8 g = (base - (r * 36)) / 6;
                 quint8 b = (base - (r * 36)) - (g * 6);
 
-                r = r * 51;
-                g = g * 51;
-                b = b * 51;
+                r = r == 0 ? 0 : (r - 1) * 40 + 95;
+                g = g == 0 ? 0 : (g - 1) * 40 + 95;
+                b = b == 0 ? 0 : (b - 1) * 40 + 95;
                 color = QColor(r, g, b, 255);
             } else if (231 < env && env < 256) {
                 quint8 k = ((env - 232) * 10) + 8;

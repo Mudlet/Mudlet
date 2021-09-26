@@ -1,7 +1,8 @@
 name: 🔨 Build Mudlet
 on:
   push:
-    branches: [master, development]
+    branches: [master, development, release-*]
+    tags: [Mudlet-*]
   pull_request:
   workflow_dispatch:
   schedule:
@@ -16,17 +17,17 @@ jobs:
       matrix:
         include:
           # oldest OS supported for maximum compatibility of built AppImage
-          - os: ubuntu-16.04
+          - os: ubuntu-18.04
             buildname: 'ubuntu / gcc'
             triplet: x64-linux
             compiler: gcc_64
-            qt: '5.15.2'
+            qt: '5.14.2'
             deploy: 'deploy'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
-            qt: '5.15.2'
+            qt: '5.14.2'
           - os: ubuntu-latest
             buildname: 'ubuntu / qt 5.11'
             triplet: x64-linux
@@ -36,13 +37,13 @@ jobs:
             buildname: 'macos / c++ tests'
             triplet: x64-osx
             compiler: clang_64
-            qt: '5.15.2'
+            qt: '5.14.2'
             deploy: 'deploy'
           - os: windows-2019
             buildname: 'windows'
             triplet: x64-mingw-dynamic
             # compiler: flag not used in windows pipeline
-            qt: '5.15.2'
+            qt: '5.14.2'
             deploy: 'deploy'
 
     env:
@@ -58,7 +59,7 @@ jobs:
         fetch-depth: 0
 
     - name: Restore Qt cache
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.6
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
@@ -69,12 +70,13 @@ jobs:
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
-        arch: win64_mingw81 # this key is relevant only for windows
+        arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
         aqtversion: '==1.1.2'
 
+
     - name: Restore Boost cache
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.6
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
@@ -95,7 +97,21 @@ jobs:
         rm -rf boost_*/* download.tar.bz2 download.tar
       shell: bash
 
-    # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
+    # workaround a poor interaction between github actions/cmake/vcpkg, see https://github.com/lukka/run-vcpkg/issues/88#issuecomment-885758902
+    - name: Use CMake 3.20.1
+      uses: lukka/get-cmake@v3.20.1
+
+    - name: (macOS) Install non-vcpkg dependencies (1/2)
+      if: runner.os == 'macOS'
+      env:
+        HOMEBREW_NO_ANALYTICS: "ON"
+        HOMEBREW_NO_AUTO_UPDATE: "ON"
+        HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
+        HOMEBREW_NO_INSTALL_CLEANUP: "ON"
+      run: |
+        # dependencies needed for vcpkg specifically
+        brew install automake autoconf
+
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v7
       env:
@@ -105,7 +121,7 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
 
-    - name: (macOS) Install non-vcpkg dependencies
+    - name: (macOS) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'macOS'
       env:
         HOMEBREW_NO_ANALYTICS: "ON"
@@ -113,8 +129,10 @@ jobs:
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
+        # add new tap to brew for installing gon
+        brew tap mitchellh/gon
         # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip ccache luarocks expect
+        brew install pkg-config libzzip libzip ccache luarocks expect mitchellh/gon/gon
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
@@ -142,6 +160,8 @@ jobs:
     - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
       run: |
+        sudo apt-get update
+
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
         sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 -y
@@ -204,7 +224,7 @@ jobs:
         echo "WITH_FONTS=no" >> $GITHUB_ENV
 
     - name: (Linux/macOS) restore ccache
-      uses: pat-s/always-upload-cache@v2.1.3
+      uses: pat-s/always-upload-cache@v2.1.5
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
@@ -229,12 +249,18 @@ jobs:
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: >-
-          --target test
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
           -DVCPKG_APPLOCAL_DEPS=OFF
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
+
+    - name: Upload GitHub Actions artifact of vcpkg build logs
+      if: failure()
+      uses: actions/upload-artifact@v2
+      with:
+        name: vcpkg-logs-${{ runner.os }}
+        path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
 
     - name: (Linux/macOS) check ccache stats post build
       if: runner.os == 'Linux' || runner.os == 'macOS'
@@ -246,7 +272,7 @@ jobs:
       run: ctest --output-on-failure
 
     - name: (Linux/macOS) restore Luarocks for packaging
-      uses: actions/cache@v2
+      uses: actions/cache@v2.1.6
       with:
         path: $HOME/.luarocks
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}
@@ -289,6 +315,8 @@ jobs:
         DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
         MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
+        AC_USERNAME: ${{secrets.APPLE_USERNAME}}
+        AC_PASSWORD: ${{secrets.APPLE_PASSWORD}}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v2
@@ -302,7 +330,7 @@ jobs:
       run: curl -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
 
-    - name: (windows) Show relevant logs logs
+    - name: (windows) Show relevant setup logs
       if: failure() && runner.os == 'Windows'
       run: |
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"

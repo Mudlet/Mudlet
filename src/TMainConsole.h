@@ -101,7 +101,7 @@ public:
     void finalize();
     bool saveMap(const QString&, int saveVersion = 0);
     bool loadMap(const QString&);
-    bool importMap(const QString&, QString* errMsg = Q_NULLPTR);
+    bool importMap(const QString&, QString* errMsg = nullptr);
 
 
     QMap<QString, TConsole*> mSubConsoleMap;

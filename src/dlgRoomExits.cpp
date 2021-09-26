@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2016, 2021 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -22,7 +23,7 @@
 /*
  * Eventually these should be defined for whole application to force explicit
  * definition of all strings as:
- * EITHER: QStringLiteral("<string>") for internal non-user visable use not
+ * EITHER: QStringLiteral("<string>") for internal non-user visible use not
  * subject to translation
  * OR: tr("<string>") for GUI or other user visible strings that need to be
  * handled by the translation system {or qApp->translate("<classname>",
@@ -156,7 +157,7 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
                                                              "a valid number; if left like this, this exit will be deleted when &lt;i&gt;save&lt;/i&gt; is clicked.")));
         }
 
-        mpEditItem = nullptr; //This will cause a new PE to be opened, it will also be zeroed on the first time this funciton is called
+        mpEditItem = nullptr; //This will cause a new PE to be opened, it will also be zeroed on the first time this function is called
         mEditColumn = -1;
     }
 
@@ -293,21 +294,22 @@ void dlgRoomExits::save()
 
     QString exitKey = QStringLiteral("nw");
     int dirCode = DIR_NORTHWEST;
+    auto pExit = originalExits.value(dirCode);
     if (nw->isEnabled() && !nw->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(nw->text().toInt()) != nullptr) {
         // There IS a valid exit on the dialogue in this direction
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination != nw->text().toInt()) {
+        if (pExit && pExit->destination != nw->text().toInt()) {
             pR->setExit(nw->text().toInt(), dirCode); // Destination is different - so store it
         }
         if (pR->hasExitStub(dirCode)) { // And ensure that stub exit is cleared if set
             pR->setExitStub(dirCode, false);
         }
-        if (weight_nw->value()) { // And store any weighing specifed
+        if (weight_nw->value()) { // And store any weighing specified
             pR->setExitWeight(exitKey, weight_nw->value());
         } else {
             pR->setExitWeight(exitKey, 0);
         }
     } else { // No valid exit on the dialogue
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
+        if (pExit && pExit->destination > 0) {
             pR->setExit(-1, dirCode); // Destination has been deleted so ensure the value for no exit is stored
         }
         if (stub_nw->isChecked() != pR->hasExitStub(dirCode)) {
@@ -323,8 +325,9 @@ void dlgRoomExits::save()
 
     exitKey = QStringLiteral("n");
     dirCode = DIR_NORTH;
+    pExit = originalExits.value(dirCode);
     if (n->isEnabled() && !n->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != nullptr) {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination != n->text().toInt()) {
+        if (pExit && pExit->destination != n->text().toInt()) {
             pR->setExit(n->text().toInt(), dirCode);
         }
         if (pR->hasExitStub(dirCode)) {
@@ -336,7 +339,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
+        if (pExit && pExit->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_n->isChecked() != pR->hasExitStub(dirCode)) {
@@ -351,8 +354,9 @@ void dlgRoomExits::save()
 
     exitKey = QStringLiteral("ne");
     dirCode = DIR_NORTHEAST;
+    pExit = originalExits.value(dirCode);
     if (ne->isEnabled() && !ne->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != nullptr) {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination != ne->text().toInt()) {
+        if (pExit && pExit->destination != ne->text().toInt()) {
             pR->setExit(ne->text().toInt(), dirCode);
         }
         if (pR->hasExitStub(dirCode)) {
@@ -364,7 +368,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
+        if (pExit && pExit->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_ne->isChecked() != pR->hasExitStub(dirCode)) {
@@ -379,8 +383,9 @@ void dlgRoomExits::save()
 
     exitKey = QStringLiteral("up");
     dirCode = DIR_UP;
+    pExit = originalExits.value(dirCode);
     if (up->isEnabled() && !up->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != nullptr) {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination != up->text().toInt()) {
+        if (pExit && pExit->destination != up->text().toInt()) {
             pR->setExit(up->text().toInt(), dirCode);
         }
         if (pR->hasExitStub(dirCode)) {
@@ -392,7 +397,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
+        if (pExit && pExit->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_up->isChecked() != pR->hasExitStub(dirCode)) {
@@ -407,8 +412,9 @@ void dlgRoomExits::save()
 
     exitKey = QStringLiteral("w");
     dirCode = DIR_WEST;
+    pExit = originalExits.value(dirCode);
     if (w->isEnabled() && !w->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != nullptr) {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination != w->text().toInt()) {
+        if (pExit && pExit->destination != w->text().toInt()) {
             pR->setExit(w->text().toInt(), dirCode);
         }
         if (pR->hasExitStub(dirCode)) {
@@ -420,7 +426,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
+        if (pExit && pExit->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_w->isChecked() != pR->hasExitStub(dirCode)) {
@@ -435,8 +441,9 @@ void dlgRoomExits::save()
 
     exitKey = QStringLiteral("e");
     dirCode = DIR_EAST;
+    pExit = originalExits.value(dirCode);
     if (e->isEnabled() && !e->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != nullptr) {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination != e->text().toInt()) {
+        if (pExit && pExit->destination != e->text().toInt()) {
             pR->setExit(e->text().toInt(), dirCode);
         }
         if (pR->hasExitStub(dirCode)) {
@@ -448,7 +455,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
+        if (pExit && pExit->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_e->isChecked() != pR->hasExitStub(dirCode)) {
@@ -463,8 +470,9 @@ void dlgRoomExits::save()
 
     exitKey = QStringLiteral("down");
     dirCode = DIR_DOWN;
+    pExit = originalExits.value(dirCode);
     if (down->isEnabled() && !down->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != nullptr) {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination != down->text().toInt()) {
+        if (pExit && pExit->destination != down->text().toInt()) {
             pR->setExit(down->text().toInt(), dirCode);
         }
         if (pR->hasExitStub(dirCode)) {
@@ -476,7 +484,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
+        if (pExit && pExit->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_down->isChecked() != pR->hasExitStub(dirCode)) {
@@ -491,8 +499,9 @@ void dlgRoomExits::save()
 
     exitKey = QStringLiteral("sw");
     dirCode = DIR_SOUTHWEST;
+    pExit = originalExits.value(dirCode);
     if (sw->isEnabled() && !sw->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != nullptr) {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination != sw->text().toInt()) {
+        if (pExit && pExit->destination != sw->text().toInt()) {
             pR->setExit(sw->text().toInt(), dirCode);
         }
         if (pR->hasExitStub(dirCode)) {
@@ -504,7 +513,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
+        if (pExit && pExit->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_sw->isChecked() != pR->hasExitStub(dirCode)) {
@@ -519,8 +528,9 @@ void dlgRoomExits::save()
 
     exitKey = QStringLiteral("s");
     dirCode = DIR_SOUTH;
+    pExit = originalExits.value(dirCode);
     if (s->isEnabled() && !s->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != nullptr) {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination != s->text().toInt()) {
+        if (pExit && pExit->destination != s->text().toInt()) {
             pR->setExit(s->text().toInt(), dirCode);
         }
         if (pR->hasExitStub(dirCode)) {
@@ -532,7 +542,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
+        if (pExit && pExit->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_s->isChecked() != pR->hasExitStub(dirCode)) {
@@ -547,8 +557,9 @@ void dlgRoomExits::save()
 
     exitKey = QStringLiteral("se");
     dirCode = DIR_SOUTHEAST;
+    pExit = originalExits.value(dirCode);
     if (se->isEnabled() && !se->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != nullptr) {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination != se->text().toInt()) {
+        if (pExit && pExit->destination != se->text().toInt()) {
             pR->setExit(se->text().toInt(), dirCode);
         }
         if (pR->hasExitStub(dirCode)) {
@@ -560,7 +571,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
+        if (pExit && pExit->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_se->isChecked() != pR->hasExitStub(dirCode)) {
@@ -575,8 +586,9 @@ void dlgRoomExits::save()
 
     exitKey = QStringLiteral("in");
     dirCode = DIR_IN;
+    pExit = originalExits.value(dirCode);
     if (in->isEnabled() && !in->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != nullptr) {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination != in->text().toInt()) {
+        if (pExit && pExit->destination != in->text().toInt()) {
             pR->setExit(in->text().toInt(), dirCode);
         }
         if (pR->hasExitStub(dirCode)) {
@@ -588,7 +600,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
+        if (pExit && pExit->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_in->isChecked() != pR->hasExitStub(dirCode)) {
@@ -603,8 +615,9 @@ void dlgRoomExits::save()
 
     exitKey = QStringLiteral("out");
     dirCode = DIR_OUT;
+    pExit = originalExits.value(dirCode);
     if (out->isEnabled() && !out->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != nullptr) {
-        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination != out->text().toInt()) {
+        if (pExit && pExit->destination != out->text().toInt()) {
             pR->setExit(out->text().toInt(), dirCode);
         }
         if (pR->hasExitStub(dirCode)) {
@@ -616,8 +629,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        auto exit = originalExits.value(dirCode);
-        if (exit && exit->destination > 0) {
+        if (pExit && pExit->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_out->isChecked() != pR->hasExitStub(dirCode)) {
@@ -645,7 +657,7 @@ void dlgRoomExits::save()
 
     // return value from checkedId() is -1 for no radio button in group checked,
     //   and then more negative values starting from -2 for each button that was
-    //   created without an explict Id, any attempt to set a different Id using
+    //   created without an explicit Id, any attempt to set a different Id using
     //   setId() seems to fail for me :(
     if (doortype_nw->checkedId() < -1) {
         pR->setDoor(QStringLiteral("nw"), -2 - doortype_nw->checkedId());
@@ -1325,7 +1337,7 @@ void dlgRoomExits::slot_stub_nw_stateChanged(int state)
         doortype_closed_nw->setEnabled(false);
         doortype_locked_nw->setEnabled(false);
         doortype_none_nw->setChecked(true);
-        //  similarly as there won't be a valid exit or a stub exit at theis point disable/reset the door type controls
+        //  similarly as there won't be a valid exit or a stub exit at this point disable/reset the door type controls
         weight_nw->setEnabled(false);
         weight_nw->setValue(0); // Prevent a weight to be set/changed on a also
     }
@@ -1759,7 +1771,7 @@ void dlgRoomExits::initExit(int roomId,
     } else {                                             //No exit is set on initialisation
         exitLineEdit->setText(QString());                //Nothing to put in exitID box
         exitLineEdit->setStyleSheet(QString());
-        noRoute->setEnabled(false); //Disable lock control, can't lock a non-existant exit..
+        noRoute->setEnabled(false); //Disable lock control, can't lock a non-existent exit..
         noRoute->setChecked(false); //.. and ensure there isn't one
         weight->setEnabled(false);  //Disable exit weight control...
         weight->setValue(0);        //And reset to default value (which will now cause the room's one to be used
@@ -1776,7 +1788,7 @@ void dlgRoomExits::initExit(int roomId,
             exitLineEdit->setEnabled(true);
             exitLineEdit->setToolTip(singleParagraph.arg(tr("Set the number of the room %1 of this one, will be blue for a valid number or red for invalid.").arg(exitText)));
             stub->setChecked(false);
-            none->setEnabled(false); //Disable door type controls, can't lock a non-existant exit..
+            none->setEnabled(false); //Disable door type controls, can't lock a non-existent exit..
             open->setEnabled(false); //.. and ensure the "none" one is set if it ever gets enabled
             closed->setEnabled(false);
             locked->setEnabled(false);
@@ -1836,7 +1848,9 @@ void dlgRoomExits::init(int id)
         it.next();
         int id_to = it.value();
         QString dir = it.key();
-        originalSpecialExits[dir] = new TExit();
+        auto pSpecialExit = new TExit();
+        // It should be impossible for this not to be valid:
+        Q_ASSERT_X(pSpecialExit, "dlgRoomExits::init(...)", "failed to generate a new TExit");
         auto pI = new QTreeWidgetItem(specialExits);
         TRoom* pExitToRoom = mpHost->mpMap->mpRoomDB->getRoom(id_to);
         //0 exit roomID
@@ -1859,15 +1873,15 @@ void dlgRoomExits::init(int id)
             pI->setForeground(0, QColor(Qt::red));
             pI->setToolTip(0, singleParagraph.arg(tr("Room Id is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number.")));
         }
-        originalSpecialExits.value(dir)->destination = id_to;
+        pSpecialExit->destination = id_to;
         //1 locked (or more properly "No route") - setCheckedState
         //automagically makes it a CheckBox!!!
         if (pR->hasSpecialExitLock(dir)) {
             pI->setCheckState(1, Qt::Checked);
-            originalSpecialExits.value(dir)->hasNoRoute = true;
+            pSpecialExit->hasNoRoute = true;
         } else {
             pI->setCheckState(1, Qt::Unchecked);
-            originalSpecialExits.value(dir)->hasNoRoute = false;
+            pSpecialExit->hasNoRoute = false;
         }
         pI->setToolTip(1, singleParagraph.arg(tr("Prevent a route being created via this exit, equivalent to an infinite exit weight.")));
 
@@ -1879,7 +1893,7 @@ void dlgRoomExits::init(int id)
         }
         pI->setTextAlignment(2, Qt::AlignRight);
         pI->setToolTip(2, singleParagraph.arg(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
-        originalSpecialExits.value(dir)->weight = pI->text(2).toInt();
+        pSpecialExit->weight = pI->text(2).toInt();
 
 
         //3-6 hold a buttongroup of 4, ideally QRadioButtons, to select a door type
@@ -1917,16 +1931,16 @@ void dlgRoomExits::init(int id)
             default:
                 qWarning().nospace().noquote() << "dlgRoomExits::init(" << id << ") WARNING - unexpected (special exit) doors[" << dir << "] value:" << pR->doors[dir] << " found!";
             }
-            originalSpecialExits.value(dir)->door = specialDoor;
+            pSpecialExit->door = specialDoor;
+            originalSpecialExits[dir] = pSpecialExit;
         }
 
         //7 holds the script/name
         pI->setText(7, dir);
         // Not relevant for special exits but better initialise it
-        auto exit = originalSpecialExits.value(dir);
-        if (exit) {
-            exit->hasStub = false;
-        }
+        pSpecialExit->hasStub = false;
+
+
     }
     mRoomID = id;
     button_save->setEnabled( false );

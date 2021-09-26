@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020 by Stephen Lyons             #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2021 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -23,14 +23,14 @@
 
 ############################################################################
 #                                                                          #
-#    NOTICE: FreeBSD is not an officially supported platform as such;      #
-#    the work on getting it working has been done by myself, and other     #
-#    developers, unless they have explicitly said so, are not able to      #
-#    address issues relating specifically to that Operating System.        #
-#    Nevertheless users of FreeBSD are equally welcome to contribute       #
-#    to the development of Mudlet - bugfixes and enhancements are          #
-#    welcome from all!                                                     #
-#                                           Stephen Lyons, February 2018   #
+#    NOTICE: FreeBSD and GNU/Hurd are not officially supported platforms   #
+#    as such; the work on getting them working has been done by myself,    #
+#    and other developers, unless they have explicitly said so, are not    #
+#    able to address issues relating specifically to these Operating       #
+#    Systems. Nevertheless users of either are equally welcome to          #
+#    contribute to the development of Mudlet - bugfixes and enhancements   #
+#    are welcome from all!                                                 #
+#                         Stephen Lyons, February 2018, updated March 2021 #
 #                                                                          #
 ############################################################################
 
@@ -89,7 +89,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.11.2
+VERSION = 4.13.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -150,8 +150,8 @@ isEmpty( FONT_TEST ) | !equals(FONT_TEST, "NO" ) {
     # It would be nice if we could automate the download and extraction of all
     # the font and associate documentation (but NOT the "sources" sub-directory)
     # contents into the ./src/fonts/ directory structure only if this option is
-    # set to ON; however that would be plaform specific and add more complexity
-    # and it is not obvious that there is a demand to do this currenly.
+    # set to ON; however that would be platform specific and add more complexity
+    # and it is not obvious that there is a demand to do this currently.
 }
 
 ######################### Auto Updater setting detection #########,#############
@@ -215,7 +215,7 @@ isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
 # from the executable's location will be used.  Mudlet will now moan and ask
 # the user to find them if the files (and specifically the <10KByte
-# "LuaGlobal.lua" one) is not accessable (read access only required) during
+# "LuaGlobal.lua" one) is not accessible (read access only required) during
 # startup.  The precise directory is remembered once found (and stored in the
 # Mudlet configuration file as "systemLuaFilePath") but if the installer places
 # the files in the place documented here the user will not be bothered by this.
@@ -279,13 +279,12 @@ unix:!macx {
     contains( DEFINES, INCLUDE_MAIN_BUILD_SYSTEM ) {
         # For CI builds or users/developers using the setup-windows-sdk.ps1 method:
         isEmpty( MINGW_BASE_DIR_TEST ) {
-            MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw810_32"
+            MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw730_32"
         }
         LIBS +=  \
             -L"$${MINGW_BASE_DIR_TEST}\\bin" \
-            -L"$${MINGW_BASE_DIR_TEST}\\lib" \
             -llua51 \
-            -llibhunspell-1.6
+            -lhunspell-1.6
 
         INCLUDEPATH += \
              "C:\\Libraries\\boost_1_71_0" \
@@ -414,6 +413,10 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
+    !exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
+        message("git submodule for required Qt ordered map source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${PWD}\.. & git submodule update --init 3rdparty/qt-ordered-map")
+    }
     contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
             message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
@@ -428,6 +431,10 @@ win32 {
     !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
+    }
+    !exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
+        message("git submodule for required Qt ordered map source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qt-ordered-map")
     }
     contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
@@ -473,6 +480,10 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
 }
 
+!exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
+    error("Cannot locate Qt ordered map submodule source code, build abandoned!")
+}
+
 contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
     exists("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri") {
         include("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri")
@@ -491,7 +502,7 @@ contains( DEFINES, INCLUDE_UPDATER ) {
 
     macx {
         # We do not actually have to do anything to include it here - it is
-        # pulled in by the Sparkle complation below
+        # pulled in by the Sparkle compilation below
         !exists("$${PWD}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
             error("Cannot locate Sparkle glue library submodule source code, build abandoned!")
         }
@@ -841,7 +852,7 @@ TRANSLATIONS = $$files(../translations/translated/*.ts)
 #
 # Select Qt Creator's "Project" Side tab and under the "Build and Run" top tab
 # choose your Build Kit's "Run"->"Run Settings" ensure you have a "Make" step
-# that - if you are NOT runnning QT Creator as root, which is the safest way
+# that - if you are NOT running QT Creator as root, which is the safest way
 # (i.e safe = NOT root) - against:
 # "Override <path to?>/make" has the entry: "/usr/bin/sudo"
 # without the quotes, assuming /usr/bin is the location of "sudo"
@@ -1484,7 +1495,7 @@ OTHER_FILES += \
 
 # Unix Makefile installer:
 # lua file installation, needs install, sudo, and a setting in /etc/sudo.conf
-# or via enviromental variable SUDO_ASKPASS to something like ssh-askpass
+# or via environmental variable SUDO_ASKPASS to something like ssh-askpass
 # to provide a graphic password requestor needed to install software
 unix:!macx {
 # say what we want to get installed by "make install" (executed by 'deployment' step):
@@ -1558,6 +1569,10 @@ unix:!macx {
 
 
 DISTFILES += \
+    ../docker/Dockerfile \
+    ../docker/docker-compose.override.linux.yml \
+    ../docker/docker-compose.yml \
+    CF-loader.xml \
     CMakeLists.txt \
     .clang-format \
     ../.github/pr-labeler.yml \
@@ -1596,6 +1611,8 @@ DISTFILES += \
     ../CI/appveyor.set-build-info.ps1 \
     ../CI/appveyor.functions.ps1 \
     ../CI/appveyor.build.ps1 \
+    mudlet-lua/lua/generic-mapper/generic_mapper.xml \
+    mudlet-lua/lua/generic-mapper/versions.lua \
     mudlet-lua/lua/ldoc.css \
     mudlet-lua/genDoc.sh \
     mudlet-lua/tests/README.md \

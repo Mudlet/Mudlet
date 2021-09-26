@@ -181,7 +181,7 @@ void dlgModuleManager::slot_module_clicked(QTableWidgetItem* pItem)
     QTableWidgetItem* entry = mModuleTable->item(i, 0);
     QTableWidgetItem* checkStatus = mModuleTable->item(i, 2);
     QTableWidgetItem* itemPriority = mModuleTable->item(i, 1);
-    //  Not used programatically now: QTableWidgetItem* itemPath = moduleTable->item(i, 3);
+    //  Not used programmatically now: QTableWidgetItem* itemPath = moduleTable->item(i, 3);
     if (!entry || !checkStatus || !itemPriority || !mpHost->mInstalledModules.contains(entry->text())) {
         mModuleHelpButton->setDisabled(true);
         if (checkStatus) {

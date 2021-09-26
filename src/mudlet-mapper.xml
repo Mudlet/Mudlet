@@ -2543,7 +2543,7 @@ cecho("&lt;orange_red&gt;)")</script>
 					<regexCodeList />
 					<regexCodePropertyList />
 					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-						<name>Succesful transverse</name>
+						<name>Successful transverse</name>
 						<script>if mmp.game~= "lusternia" then return end
 if validTransverse then
   mmp.registerTransverseExit()
@@ -2588,7 +2588,7 @@ validTransverse = false</script>
 						</regexCodePropertyList>
 					</Trigger>
 					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-						<name>Succesful pathfind</name>
+						<name>Successful pathfind</name>
 						<script>if mmp.game~= "lusternia" then return end
 if validTransverse then
   mmp.clearPathfind()
@@ -3500,7 +3500,7 @@ mmp.echo("We're connected to StickMUD.")</script>
 						<colorTriggerFgColor>#000000</colorTriggerFgColor>
 						<colorTriggerBgColor>#000000</colorTriggerBgColor>
 						<regexCodeList>
-							<string>^The door to the (\w+) is closed forcefully fromthe other side and the sound of a bolt being slammed home makes your lack of admittance clear\.$</string>
+							<string>^The door to the (\w+) is closed forcefully from the other side and the sound of a bolt being slammed home makes your lack of admittance clear\.$</string>
 						</regexCodeList>
 						<regexCodePropertyList>
 							<integer>1</integer>
@@ -4714,7 +4714,7 @@ for key in pairs(getRooms()) do
   if char ~= "" then
     if translation[char] then
       if not mmp.roomCreateMapFeature(translation[char], key) then
-			  mmp.echo("An error occured when migrating room characters, see messages above for details. Migration incomplete!")
+			  mmp.echo("An error occurred when migrating room characters, see messages above for details. Migration incomplete!")
 			  return
 			end
     end
@@ -4920,8 +4920,8 @@ end</script>
   if format == "json" then
     savedjson = saveJsonMap(location)
   elseif format == "all" then
-    savednormal = saveMap(location)
     savedjson = saveJsonMap(location)
+    savednormal = saveMap(location)
   elseif format == nil or format == "" then
     savednormal = saveMap(location)
   end
@@ -5460,7 +5460,7 @@ mmp.lagtable = {
         time = 1
     },
     [3] = {
-        description = "Noticably laggy with occasional spikes.",
+        description = "Noticeably laggy with occasional spikes.",
         time = 2
     },
     [4] = {
@@ -5472,7 +5472,7 @@ mmp.lagtable = {
         time = 10
     }
 }
-local newversion = "21.3.1"
+local newversion = "21.4.1"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo(
@@ -6512,7 +6512,7 @@ function mmp.fixPath(rFrom, rTo, dashtype)
         end
       end
       if repCount &gt; 1 then
-        -- Found direction repitition. Calculate dash path.
+        -- Found direction repetition. Calculate dash path.
         local exits = getRoomExits(mmp.speedWalkPath[index + (repCount - 1)])
         local pname = ""
         for word in mmp.speedWalkDir[index]:gmatch("%w") do
@@ -8209,7 +8209,7 @@ function mmp.roomLabel(input)
   if tk[1] and color_table[tk[1]] then
     fg = table.remove(tk, 1)
   end
-  -- next: is this a backround color?
+  -- next: is this a background color?
   if tk[1] and color_table[tk[1]] then
     bg = table.remove(tk, 1)
   end
@@ -9992,7 +9992,7 @@ function mmp_mapping_newroom(_, num)
                       s ..
                       (#s &gt; 0 and " " or "") ..
                       string.format(
-                        "Failed to link %d withh %d via %s exit for some reason :/", num, id, exit
+                        "Failed to link %d with %d via %s exit for some reason :/", num, id, exit
                       )
                   end
                 end
@@ -10045,7 +10045,7 @@ function mmp_mapping_newroom(_, num)
                       s ..
                       (#s &gt; 0 and " " or "") ..
                       string.format(
-                        "Failed to link %d withh %d via %s exit for some reason :/", num, id, exit
+                        "Failed to link %d with %d via %s exit for some reason :/", num, id, exit
                       )
                   end
                   local exit = mmp.anytoshort(mmp.ranytolong(exit))
@@ -10065,7 +10065,7 @@ function mmp_mapping_newroom(_, num)
                       s ..
                       (#s &gt; 0 and " " or "") ..
                       string.format(
-                        "Failed to link %d withh %d via %s exit for some reason :/", num, id, exit
+                        "Failed to link %d with %d via %s exit for some reason :/", num, id, exit
                       )
                   end
                 end
