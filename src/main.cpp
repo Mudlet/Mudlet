@@ -175,7 +175,7 @@ int main(int argc, char* argv[])
     QCommandLineOption showVersion(QStringList() << "v" << "version", QCoreApplication::translate("main", "Display version and exit"));
     parser.addOption(showVersion);
 
-    QCommandLineOption beQuiet(QStringList() << "q" << "quiet", QCoreApplication::translate("main", "Display help and exit"));
+    QCommandLineOption beQuiet(QStringList() << "q" << "quiet", QCoreApplication::translate("main", "Don't show the splash screen when starting"));
     parser.addOption(beQuiet);
 
     parser.parse(app->arguments());
@@ -519,19 +519,19 @@ bool runUpdate()
     QFileInfo seenUpdatedInstaller(QCoreApplication::applicationDirPath() + QStringLiteral("/new-mudlet-setup-seen.exe"));
     QDir updateDir;
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
-        if (!updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
-            qWarning() << "Couldn't delete previous installer";
+        if (seenUpdatedInstaller.exists() && !updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
+            qWarning() << "Couldn't delete previous installer: " << seenUpdatedInstaller;
         }
 
         if (!updateDir.rename(updatedInstaller.absoluteFilePath(), seenUpdatedInstaller.absoluteFilePath())) {
-            qWarning() << "Failed to prep installer: couldn't rename it";
+            qWarning() << "Failed to prep installer: couldn't move" << updatedInstaller.absoluteFilePath() << "to" << seenUpdatedInstaller.absoluteFilePath();
         }
 
         QProcess::startDetached(seenUpdatedInstaller.absoluteFilePath());
         return true;
     } else if (seenUpdatedInstaller.exists() && !updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
-         // no new updater and only the old one? Then we're restarting from an update: delete the old installer
-        qWarning() << "Couldn't delete old uninstaller";
+        // no new updater and only the old one? Then we're restarting from an update: delete the old installer
+        qWarning() << "Couldn't delete old uninstaller: " << seenUpdatedInstaller;
     }
     return false;
 }

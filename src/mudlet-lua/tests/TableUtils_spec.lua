@@ -488,7 +488,7 @@ describe("Tests TableUtils.lua functions", function()
       end
     end)
 
-    it("should retrun nil if the item is not found in the table", function()
+    it("should return nil if the item is not found in the table", function()
       local tbl = {
         "one",
         2,

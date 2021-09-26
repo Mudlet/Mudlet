@@ -5,7 +5,7 @@
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
- *   Copyright (C) 2011-2020 by Vadim Peretokin - vperetokin@gmail.com     *
+ *   Copyright (C) 2011-2021 by Vadim Peretokin - vperetokin@gmail.com     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -88,6 +88,7 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::Close) {
         mudlet::debugMode = false;
+        mudlet::self()->refreshTabBar();
         return QObject::eventFilter(obj, event);
     } else {
         return QObject::eventFilter(obj, event);
@@ -183,7 +184,7 @@ mudlet::mudlet()
 , mCopyAsImageTimeout{3}
 , mUsingMudletDictionaries(false)
 , mpDlgProfilePreferences(nullptr)
-, mainPane(nullptr)
+, mpWidget_profileContainer(nullptr)
 , mIsGoingDown(false)
 , mMenuBarVisibility(visibleAlways)
 , mToolbarVisibility(visibleAlways)
@@ -277,7 +278,6 @@ mudlet::mudlet()
     menuHelp->setToolTipsVisible(true);
     menuAbout->setToolTipsVisible(true);
 
-    mudlet::debugMode = false;
     setAttribute(Qt::WA_DeleteOnClose);
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(version);
@@ -303,25 +303,23 @@ mudlet::mudlet()
     mpTabBar->setTabsClosable(true);
     mpTabBar->setAutoHide(true);
     connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_close_profile_requested);
-    // TODO: Do not enable this option currently - although the user can drag
-    // the tabs, the underlying main TConsoles do not move with multiview enabled
-    mpTabBar->setMovable(false);
+    mpTabBar->setMovable(true);
     connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
+    connect(mpTabBar, &QTabBar::tabMoved, this, &mudlet::slot_tabMoved);
     auto layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0, 0, 0, 0);
     layoutTopLevel->addWidget(mpTabBar);
-    mainPane = new QWidget(frame);
+    mpWidget_profileContainer = new QWidget(frame);
     QPalette mainPalette;
-    mainPane->setPalette(mainPalette);
-    mainPane->setAutoFillBackground(true);
-    mainPane->setFocusPolicy(Qt::NoFocus);
-    layoutTopLevel->addWidget(mainPane);
-    auto layout = new QHBoxLayout(mainPane);
-    layout->setContentsMargins(0, 0, 0, 0);
+    mpWidget_profileContainer->setPalette(mainPalette);
+    mpWidget_profileContainer->setContentsMargins(0, 0, 0, 0);
+    mpWidget_profileContainer->setSizePolicy(sizePolicy);
+    mpWidget_profileContainer->setFocusPolicy(Qt::NoFocus);
+    mpWidget_profileContainer->setAutoFillBackground(true);
+    layoutTopLevel->addWidget(mpWidget_profileContainer);
+    mpHBoxLayout_profileContainer = new QHBoxLayout(mpWidget_profileContainer);
+    mpHBoxLayout_profileContainer->setContentsMargins(0, 0, 0, 0);
 
-    mainPane->setContentsMargins(0, 0, 0, 0);
-    mainPane->setSizePolicy(sizePolicy);
-    mainPane->setFocusPolicy(Qt::NoFocus);
 
     QFile file_autolog(getMudletPath(mainDataItemPath, QStringLiteral("autolog")));
     if (file_autolog.exists()) {
@@ -445,16 +443,16 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionNotes)->setObjectName(mpActionNotes->objectName());
 
     mpButtonPackageManagers = new QToolButton(this);
-    mpButtonPackageManagers->setText(tr("Package Manager"));
+    mpButtonPackageManagers->setText(tr("Packages (exp.)"));
     mpButtonPackageManagers->setObjectName(QStringLiteral("package_manager"));
     mpButtonPackageManagers->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonPackageManagers->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonPackageManagers->setAutoRaise(true);
     mpMainToolBar->addWidget(mpButtonPackageManagers);
 
-    mpActionPackageManager = new QAction(tr("Package Manager"), this);
+    mpActionPackageManager = new QAction(tr("Package Manager (experimental)"), this);
     mpActionPackageManager->setIcon(QIcon(QStringLiteral(":/icons/package-manager.png")));
-    mpActionPackageManager->setIconText(tr("Package Manager"));
+    mpActionPackageManager->setIconText(tr("Packages (exp.)", "exp. stands for experimental; shortened so it doesn't make buttons huge in the main interface"));
     mpActionPackageManager->setObjectName(QStringLiteral("package_manager"));
 
     mpActionModuleManager = new QAction(tr("Module Manager"), this);
@@ -516,7 +514,6 @@ mudlet::mudlet()
 
     disableToolbarButtons();
 
-    QFont mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     if (mEnableFullScreenMode) {
         showFullScreen();
         QAction* actionFullScreeniew = new QAction(QIcon(QStringLiteral(":/icons/dialog-cancel.png")), tr("Toggle Full Screen View"), this);
@@ -526,17 +523,10 @@ mudlet::mudlet()
         mpMainToolBar->widgetForAction(actionFullScreeniew)->setObjectName(actionFullScreeniew->objectName());
         connect(actionFullScreeniew, &QAction::triggered, this, &mudlet::toggleFullScreenView);
     }
-    // This is the only place the tabBar font is set and it influences the
-    // height of the tabs used - since we now want to adjust the appearance of
-    // the tab if it is not the active one and new data has arrived to show in
-    // the related profile - make the font size a little larger that the 6 it
-    // once was so that it is a bit more obvious when it changes:
-    QFont mdiFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
-    setFont(mainFont);
-    mainPane->setFont(mainFont);
-    mpTabBar->setFont(mdiFont);
 
-    mainPane->show();
+    QFont mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
+    mpWidget_profileContainer->setFont(mainFont);
+    mpWidget_profileContainer->show();
 
     connect(mpActionConnect.data(), &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
     connect(mpActionHelp.data(), &QAction::triggered, this, &mudlet::show_help_dialog);
@@ -716,7 +706,7 @@ void mudlet::loadMaps()
     // QMap<T1, T2>::value(const T1&) where the parameter has been previously
     // been converted to all-lower case:
     // From https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes:
-    // More useful is the cross-referenced (Country <-> Languges):
+    // More useful is the cross-referenced (Country <-> Languages):
     // https://www.unicode.org/cldr/charts/latest/supplemental/language_territory_information.html
     // Initially populated from the dictionaries provided within the Debian
     // GNU/Linux distribution:
@@ -779,6 +769,8 @@ void mudlet::loadMaps()
                                   {QStringLiteral("de_de_frami"), tr("German (Germany/Belgium/Luxemburg, revised by F M Baumann)")},
                                   {QStringLiteral("de_li"), tr("German (Liechtenstein)")},
                                   {QStringLiteral("de_lu"), tr("German (Luxembourg)")},
+                                  {QStringLiteral("dz"), tr("Dzongkha")},
+                                  {QStringLiteral("dz_bt"), tr("Dzongkha (Bhutan)")},
                                   {QStringLiteral("el"), tr("Greek")},
                                   {QStringLiteral("el_gr"), tr("Greek (Greece)")},
                                   {QStringLiteral("en"), tr("English")},
@@ -836,6 +828,8 @@ void mudlet::loadMaps()
                                   {QStringLiteral("eu"), tr("Basque")},
                                   {QStringLiteral("eu_es"), tr("Basque (Spain)")},
                                   {QStringLiteral("eu_fr"), tr("Basque (France)")},
+                                  {QStringLiteral("fi"), tr("Finnish")},
+                                  {QStringLiteral("fi_fi"), tr("Finnish")},
                                   {QStringLiteral("fr"), tr("French")},
                                   {QStringLiteral("fr_be"), tr("French (Belgium)")},
                                   {QStringLiteral("fr_ca"), tr("French (Catalan)")},
@@ -847,8 +841,13 @@ void mudlet::loadMaps()
                                   {QStringLiteral("gd_gb"), tr("Gaelic (United Kingdom {Scots})")},
                                   {QStringLiteral("gl"), tr("Galician")},
                                   {QStringLiteral("gl_es"), tr("Galician (Spain)")},
+                                  {QStringLiteral("gn"), tr("Guarani")},
+                                  {QStringLiteral("gn_py"), tr("Guarani (Paraguay)")},
                                   {QStringLiteral("gu"), tr("Gujarati")},
                                   {QStringLiteral("gu_in"), tr("Gujarati (India)")},
+                                  // Debian uses gug instead of gn for some reason:
+                                  {QStringLiteral("gug"), tr("Guarani")},
+                                  {QStringLiteral("gug_py"), tr("Guarani (Paraguay)")},
                                   {QStringLiteral("he"), tr("Hebrew")},
                                   {QStringLiteral("he_il"), tr("Hebrew (Israel)")},
                                   {QStringLiteral("hi"), tr("Hindi")},
@@ -859,6 +858,8 @@ void mudlet::loadMaps()
                                   {QStringLiteral("hu_hu"), tr("Hungarian (Hungary)")},
                                   {QStringLiteral("hy"), tr("Armenian")},
                                   {QStringLiteral("hy_am"), tr("Armenian (Armenia)")},
+                                  {QStringLiteral("id"), tr("Indonesian")},
+                                  {QStringLiteral("id_id"), tr("Indonesian (Indonesia)")},
                                   {QStringLiteral("ie"), tr("Interlingue", "formerly known as Occidental, and not to be mistaken for Interlingua")},
                                   {QStringLiteral("is"), tr("Icelandic")},
                                   {QStringLiteral("is_is"), tr("Icelandic (Iceland)")},
@@ -878,6 +879,8 @@ void mudlet::loadMaps()
                                   {QStringLiteral("lo_la"), tr("Lao (Laos)")},
                                   {QStringLiteral("lt"), tr("Lithuanian")},
                                   {QStringLiteral("lt_lt"), tr("Lithuanian (Lithuania)")},
+                                  {QStringLiteral("lv"), tr("Latvian")},
+                                  {QStringLiteral("lv_lv"), tr("Latvian (Latvia)")},
                                   {QStringLiteral("ml"), tr("Malayalam")},
                                   {QStringLiteral("ml_in"), tr("Malayalam (India)")},
                                   {QStringLiteral("nb"), tr("Norwegian Bokmål")},
@@ -933,7 +936,6 @@ void mudlet::loadMaps()
                                   {QStringLiteral("sw"), tr("Swahili")},
                                   {QStringLiteral("sw_ke"), tr("Swahili (Kenya)")},
                                   {QStringLiteral("sw_tz"), tr("Swahili (Tanzania)")},
-                                  {QStringLiteral("tr_TR"), tr("Turkish")},
                                   {QStringLiteral("te"), tr("Telugu")},
                                   {QStringLiteral("te_in"), tr("Telugu (India)")},
                                   {QStringLiteral("th"), tr("Thai")},
@@ -946,6 +948,8 @@ void mudlet::loadMaps()
                                   {QStringLiteral("tn"), tr("Tswana")},
                                   {QStringLiteral("tn_bw"), tr("Tswana (Botswana)")},
                                   {QStringLiteral("tn_za"), tr("Tswana (South Africa)")},
+                                  {QStringLiteral("tr"), tr("Turkish")},
+                                  {QStringLiteral("tr_tr"), tr("Turkish (Turkey)")},
                                   {QStringLiteral("ts"), tr("Tsonga")},
                                   {QStringLiteral("ts_za"), tr("Tsonga (South Africa)")},
                                   {QStringLiteral("uk"), tr("Ukrainian")},
@@ -955,8 +959,8 @@ void mudlet::loadMaps()
                                   {QStringLiteral("ve"), tr("Venda")},
                                   {QStringLiteral("vi"), tr("Vietnamese")},
                                   {QStringLiteral("vi_vn"), tr("Vietnamese (Vietnam)")},
-                                  {QStringLiteral("vi_daucu"), tr("Vietnamese (DauCu varient - old-style diacritics)")},
-                                  {QStringLiteral("vi_daumoi"), tr("Vietnamese (DauMoi varient - new-style diacritics)")},
+                                  {QStringLiteral("vi_daucu"), tr("Vietnamese (DauCu variant - old-style diacritics)")},
+                                  {QStringLiteral("vi_daumoi"), tr("Vietnamese (DauMoi variant - new-style diacritics)")},
                                   {QStringLiteral("wa"), tr("Walloon")},
                                   {QStringLiteral("xh"), tr("Xhosa")},
                                   {QStringLiteral("yi"), tr("Yiddish")},
@@ -1076,7 +1080,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
                     percentageTranslated = 0;
                 }
             }
-            // PLACEMARKER: Start of locale codes to native language decoding - insert an entry here for any futher Mudlet supported languages
+            // PLACEMARKER: Start of locale codes to native language decoding - insert an entry here for any further Mudlet supported languages
             translation currentTranslation(percentageTranslated);
             if (!languageCode.compare(QLatin1String("en_US"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = QStringLiteral("English (American)");
@@ -1108,6 +1112,8 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 currentTranslation.mNativeName = QStringLiteral("Português (Brasil)");
             } else if (!languageCode.compare(QLatin1String("tr_TR"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = QStringLiteral("Türkçe");
+            } else if (!languageCode.compare(QLatin1String("fi_FI"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("Suomeksi");
             } else {
                 currentTranslation.mNativeName = languageCode;
             }
@@ -1115,7 +1121,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
             mTranslationsMap.insert(languageCode, currentTranslation);
         } else {
             // This is very unlikely to be reached as it means that a file that
-            // matched the naming to be a Mudlet translation file was not infact
+            // matched the naming to be a Mudlet translation file was not in fact
             // one...
             qDebug().noquote().nospace() << "    no Mudlet translation found for locale code: \"" << languageCode << "\".";
         }
@@ -1147,7 +1153,7 @@ void mudlet::scanForQtTranslations(const QString& path)
              * IS detected.
              *
              * So although we can note the load of a given pathFileName is
-             * sucessful it might not be exactly what it seems to be!
+             * successful it might not be exactly what it seems to be!
              */
             translation current = itTranslation.value();
             current.mQtTranslationFileName = translationFileName;
@@ -1254,11 +1260,6 @@ void mudlet::slot_package_exporter()
         return;
     }
     auto d = new dlgPackageExporter(this, pH);
-    // don't show the dialog if the user cancelled the wizard
-    if (d->mXmlPathFileName.isEmpty()) {
-        return;
-    }
-
     d->show();
 }
 
@@ -1352,6 +1353,9 @@ void mudlet::slot_tab_changed(int tabID)
         mpCurrentActiveHost = nullptr;
         return;
     }
+    if (mpCurrentActiveHost && (mpCurrentActiveHost.data() == pHost)) {
+        return;
+    }
 
     // Reset the tab back to "normal" to undo the effect of it having its style
     // changed on new data:
@@ -1360,9 +1364,16 @@ void mudlet::slot_tab_changed(int tabID)
     mpTabBar->setTabUnderline(tabID, false);
 
     if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
-        mpCurrentActiveHost->mpConsole->hide();
+        if (!mMultiView) {
+            // We only have to hide the current tab if NOT in multi-view mode:
+            mpCurrentActiveHost->mpConsole->hide();
+        }
         mpCurrentActiveHost = &*pHost;
+
     } else {
+        // no Host or it's TMainConsole instance - so it is maybe being
+        // destroyed or something like that, it cannot be valid so forget it
+        // being the "current" profile in focus:
         mpCurrentActiveHost = nullptr;
         for (auto pH : mHostManager) {
             if (pH->mpConsole) {
@@ -1371,14 +1382,17 @@ void mudlet::slot_tab_changed(int tabID)
             }
         }
         if (!mpCurrentActiveHost) {
+            // No profiles (Host instances) left - so bail out:
             return;
         }
     }
 
+    // CHECK: This *seems* to be redundant - further investigation needed to be sure:
     if (!mpCurrentActiveHost->mpConsole) {
         mpCurrentActiveHost = nullptr;
         return;
     }
+
     mpCurrentActiveHost->mpConsole->show();
     mpCurrentActiveHost->mpConsole->repaint();
     mpCurrentActiveHost->mpConsole->refresh();
@@ -1407,7 +1421,9 @@ void mudlet::slot_tab_changed(int tabID)
         }
         if (mMultiView) {
             for (auto pHost: mHostManager) {
-                if (pHost->mpConsole) {
+                if (pHost->mpConsole && (pHost != mpCurrentActiveHost.data())) {
+                    // We skip showing the current tab as we have already done
+                    // a more thorough refreshment of that one...
                     pHost->mpConsole->show();
                 }
             }
@@ -1458,7 +1474,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     //update the main window title when we spawn a new tab
     setWindowTitle(pH->getName() + " - " + version);
 
-    mainPane->layout()->addWidget(pConsole);
+    mpHBoxLayout_profileContainer->addWidget(pConsole);
     if (mpCurrentActiveHost) {
         mpCurrentActiveHost->mpConsole->hide();
     }
@@ -1712,12 +1728,6 @@ Host* mudlet::getActiveHost()
     }
 }
 
-void mudlet::addSubWindow(TConsole* pConsole)
-{
-    mainPane->layout()->addWidget(pConsole);
-    pConsole->show(); //NOTE: this is important for Apple OSX otherwise the console isnt displayed
-}
-
 void mudlet::closeEvent(QCloseEvent* event)
 {
     for (auto pHost : mHostManager) {
@@ -1923,9 +1933,8 @@ void mudlet::setMenuBarVisibility(const controlsVisibility state)
 // This only adjusts the visibility as appropriate
 void mudlet::adjustMenuBarVisibility()
 {
-    // Are there any profiles loaded?
-    if ((mHostManager.getHostCount() && mMenuBarVisibility & visibleAlways)
-            || (mMenuBarVisibility & visibleMaskNormally)) {
+    const int hostCount = mHostManager.getHostCount();
+    if ((hostCount < 1 && (mMenuBarVisibility & visibleAlways)) || (hostCount >= 1 && (mMenuBarVisibility & visibleMaskNormally))) {
         menuBar()->show();
     } else {
         menuBar()->hide();
@@ -1948,8 +1957,8 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 {
     if (!isVisible && mMenuBarVisibility == visibleNever) {
         // Only need to worry about it DIS-appearing if the menu bar is not showing
-        int hostCount = mHostManager.getHostCount();
-        if ((hostCount < 2 && (mToolbarVisibility & visibleAlways)) || (hostCount >= 2 && (mToolbarVisibility & visibleMaskNormally))) {
+        const int hostCount = mHostManager.getHostCount();
+        if ((hostCount < 1 && (mToolbarVisibility & visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & visibleMaskNormally))) {
             mpMainToolBar->show();
         }
     }
@@ -1957,9 +1966,8 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 
 void mudlet::adjustToolBarVisibility()
 {
-    // Are there any profiles loaded?
-    if ((mHostManager.getHostCount() && mToolbarVisibility & visibleAlways)
-            || (mToolbarVisibility & visibleMaskNormally)) {
+    const int hostCount = mHostManager.getHostCount();
+    if ((hostCount < 1 && (mToolbarVisibility & visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & visibleMaskNormally))) {
         mpMainToolBar->show();
     } else {
         mpMainToolBar->hide();
@@ -2279,7 +2287,7 @@ void mudlet::slot_show_help_dialog_forum()
 
 void mudlet::slot_show_help_dialog_irc()
 {
-    QDesktopServices::openUrl(QUrl("https://webchat.freenode.net/?channels=mudlet"));
+    QDesktopServices::openUrl(QUrl("https://web.libera.chat/?channel=#mudlet"));
 }
 
 void mudlet::slot_mapper()
@@ -2433,6 +2441,9 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 void mudlet::startAutoLogin(const QString& cliProfile)
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    hostList += mudlet::scmDefaultGames.keys();
+    hostList << QStringLiteral("Mudlet self-test");
+    hostList.removeDuplicates();
     bool openedProfile = false;
 
     for (auto& pHost : hostList) {
@@ -2451,19 +2462,34 @@ void mudlet::startAutoLogin(const QString& cliProfile)
 // credit to https://github.com/DigitalInBlue/Celero/blob/master/src/Memory.cpp
 int64_t mudlet::getPhysicalMemoryTotal()
 {
-#ifdef WIN32
+#if defined(Q_OS_WIN32)
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memInfo);
     return static_cast<int64_t>(memInfo.ullTotalPhys);
-#elif defined(__unix__) || defined(__unix) || defined(unix)
-    // Prefer sysctl() over sysconf() except sysctl() HW_REALMEM and HW_PHYSMEM
-    // return static_cast<int64_t>(sysconf(_SC_PHYS_PAGES)) * static_cast<int64_t>(sysconf(_SC_PAGE_SIZE));
-    struct sysinfo memInfo;
-    sysinfo(&memInfo);
-    int64_t total = memInfo.totalram;
-    return total * static_cast<int64_t>(memInfo.mem_unit);
-#elif defined(__APPLE__)
+#elif defined(Q_OS_HURD)
+    // GNU/Hurd does not have a sysinfo struct  yet:
+    errno = 0;
+    int64_t pageSize = sysconf(_SC_PAGESIZE);
+    if (pageSize < 0) {
+        if (errno) {
+            qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - error returned from sysconf(_SC_PAGESIZE); errno: " << errno;
+        } else {
+            qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - indeterminent limit returned from sysconf(_SC_PAGESIZE).";
+        }
+        return -1;
+    }
+    int64_t pageCount = sysconf(_SC_PHYS_PAGES);
+    if (pageCount < 0) {
+        if (errno) {
+            qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - error returned from sysconf(_SC_PHYS_PAGES); errno: " << errno;
+        } else {
+            qDebug().nospace().noquote() << "mudlet::getPhysicalMemoryTotal() WARNING - indeterminent limit returned from sysconf(_SC_PHYS_PAGES).";
+        }
+        return -1;
+    }
+    return pageSize * pageCount;
+#elif defined(Q_OS_MACOS)
     int mib[2];
     mib[0] = CTL_HW;
     mib[1] = HW_MEMSIZE;
@@ -2477,6 +2503,14 @@ int64_t mudlet::getPhysicalMemoryTotal()
     }
 
     return -1;
+#elif defined(Q_OS_UNIX)
+    // Including both GNU/Linux and FreeBSD:
+    // Prefer sysctl() over sysconf() except sysctl() HW_REALMEM and HW_PHYSMEM
+    // return static_cast<int64_t>(sysconf(_SC_PHYS_PAGES)) * static_cast<int64_t>(sysconf(_SC_PAGE_SIZE));
+    struct sysinfo memInfo;
+    sysinfo(&memInfo);
+    int64_t total = memInfo.totalram;
+    return total * static_cast<int64_t>(memInfo.mem_unit);
 #else
     return -1;
 #endif
@@ -2537,13 +2571,28 @@ void mudlet::doAutoLogin(const QString& profile_name)
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    if (!entries.isEmpty()) {
+    bool preInstallPackages = false;
+    if (entries.isEmpty()) {
+        preInstallPackages = true;
+
+        const auto it = mudlet::scmDefaultGames.find(profile_name);
+        if (it != mudlet::scmDefaultGames.end()) {
+            pHost->setUrl(it.value().hostUrl);
+            pHost->setPort(it.value().port);
+            pHost->mSslTsl = it.value().tlsEnabled;
+        }
+    } else {
         QFile file(QStringLiteral("%1/%2").arg(folder, entries.at(0)));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         importer.importPackage(&file); // TODO: Missing false return value handler
         pHost->refreshPackageFonts();
+
+        // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
+        if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
+            preInstallPackages = true;
+        }
     }
 
     pHost->setLogin(readProfileData(profile_name, QStringLiteral("login")));
@@ -2552,6 +2601,10 @@ void mudlet::doAutoLogin(const QString& profile_name)
     // This settings also need to be configured, note that the only time not to
     // save the setting is on profile loading:
     pHost->mTelnet.setEncoding(readProfileData(profile_name, QStringLiteral("encoding")).toUtf8(), false);
+
+    if (preInstallPackages) {
+        mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
+    }
 
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
@@ -2756,7 +2809,7 @@ void mudlet::toggleFullScreenView()
 bool mudlet::replayStart()
 {
     // Do not proceed if there is a problem with the main toolbar (it isn't there)
-    // OR if there is already a replay toolbar in existance (a replay is already
+    // OR if there is already a replay toolbar in existence (a replay is already
     // in progress)...
     if (!mpMainToolBar || mpToolBarReplay) {
         return false;
@@ -2929,7 +2982,7 @@ void mudlet::playSound(const QString& s, int soundVolume)
 
         if (!pPlayer) {
             /* It (should) be impossible to ever reach this */
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("Play sound: unable to create new QMediaPlayer object\n") >> 0;
+            TDebug(Qt::white, Qt::red) << QStringLiteral("Play sound: unable to create new QMediaPlayer object\n") >> pHost;
             return;
         }
 
@@ -3266,6 +3319,10 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         // Takes two extra arguments (profile name, dataTime stamp) that returns
         // the pathFile name for a dateTime stamped map file:
         return QStringLiteral("%1/.config/mudlet/profiles/%2/map/%3map.dat").arg(QDir::homePath(), extra1, extra2);
+    case profileDateTimeStampedJsonMapPathFileName:
+        // Takes two extra arguments (profile name, dataTime stamp) that returns
+        // the pathFile name for a dateTime stamped JSON map file:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/map/%3map.json").arg(QDir::homePath(), extra1, extra2);
     case profileMapPathFileName:
         // Takes two extra arguments (profile name, mapFileName) that returns
         // the pathFile name for any map file:
@@ -3514,13 +3571,13 @@ void mudlet::showChangelogIfUpdated()
 bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pErrMsg)
 {
     // Do not proceed if there is a problem with the main toolbar (it isn't there)
-    // OR if there is already a replay toolbar in existance (a replay is already
+    // OR if there is already a replay toolbar in existence (a replay is already
     // in progress)...
     if (!mpMainToolBar || mpToolBarReplay) {
         // This was in (bool) ctelnet::loadReplay(const QString&, QString*)
         // but is needed here to prevent getting into there otherwise a lua call
         // to start a replay would mess up (QFile) ctelnet::replayFile for a
-        // replay already in progess in the SAME profile.  Technically there
+        // replay already in progress in the SAME profile.  Technically there
         // could be a very small chance of a race condition if a lua call of
         // loadReplay happens at the same time as a file was selected for a
         // replay after the toolbar/menu command to do a reaply for the same
@@ -3830,6 +3887,7 @@ bool mudlet::scanDictionaryFile(QFile& dict, int& oldWC, QHash<QString, unsigned
     }
 
     QTextStream ds(&dict);
+    ds.setCodec(QTextCodec::codecForName("UTF-8"));
     QString dictionaryLine;
     ds.readLineInto(&dictionaryLine);
 
@@ -3889,7 +3947,7 @@ bool mudlet::scanDictionaryFile(QFile& dict, int& oldWC, QHash<QString, unsigned
 bool mudlet::overwriteDictionaryFile(QFile& dict, const QStringList& wl)
 {
     // (Re)Open the file to write out the cleaned/new contents
-    // QFile::WriteOnly automatically implies QFile::Truncate in the abscence of
+    // QFile::WriteOnly automatically implies QFile::Truncate in the absence of
     // certain other flags:
     if (!dict.open(QFile::WriteOnly|QFile::Text)) {
         qWarning().nospace().noquote() << "mudlet::overwriteDictionaryFile(...) ERROR - failed to open dictionary file (for writing): \"" << dict.fileName() << "\" reason: " << dict.errorString();
@@ -3897,6 +3955,7 @@ bool mudlet::overwriteDictionaryFile(QFile& dict, const QStringList& wl)
     }
 
     QTextStream ds(&dict);
+    ds.setCodec(QTextCodec::codecForName("UTF-8"));
     ds << qMax(0, wl.count());
     if (!wl.isEmpty()) {
       ds << QChar(QChar::LineFeed);
@@ -3920,6 +3979,7 @@ int mudlet::getDictionaryWordCount(QFile &dict)
     }
 
     QTextStream ds(&dict);
+    ds.setCodec(QTextCodec::codecForName("UTF-8"));
     QString dictionaryLine;
     // Read the header line containing the word count:
     ds.readLineInto(&dictionaryLine);
@@ -3966,6 +4026,7 @@ bool mudlet::overwriteAffixFile(QFile& aff, QHash<QString, unsigned int>& gc)
     }
 
     QTextStream as(&aff);
+    as.setCodec(QTextCodec::codecForName("UTF-8"));
     as << affixLines.join(QChar::LineFeed).toUtf8();
     as << QChar(QChar::LineFeed);
     as.flush();
@@ -4060,7 +4121,7 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
     // to confuse our add/remove code.  We just need the SET line to force the
     // Hunspell API to be UTF-8 and the TRY line to allow for searching for
     // completions. Anyhow we now need to keep the copy of the word list ourself
-    // to allow for persistant editing of it as it is not possible to obtain it
+    // to allow for persistent editing of it as it is not possible to obtain it
     // from the Hunspell library:
 
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
@@ -4350,4 +4411,82 @@ void mudlet::setupTrayIcon()
     connect(exitAction, &QAction::triggered, this, &mudlet::close);
     menu->addAction(exitAction);
     mTrayIcon.setContextMenu(menu);
+}
+
+void mudlet::slot_tabMoved(const int oldPos, const int newPos)
+{
+    Q_UNUSED(newPos)
+    Q_UNUSED(oldPos)
+    const QStringList& tabNamesInOrder = mpTabBar->tabNames();
+    int itemsCount = mpHBoxLayout_profileContainer->count();
+    Q_ASSERT_X(itemsCount == tabNamesInOrder.count(), "mudlet::slot_tabMoved(...)", "mismatch in count of tabs and TMainConsoles");
+    QMap<QString, QLayoutItem*> layoutItemMap;
+    // Gather the QLayoutItem pointers for each TMainConsole and store them
+    // against their profile name:
+    for (int profileIndex = 0, total = mpHBoxLayout_profileContainer->count(); profileIndex < total; ++profileIndex) {
+        auto pLayoutItem = mpHBoxLayout_profileContainer->itemAt(profileIndex);
+        auto pWidget = pLayoutItem->widget();
+        if (pWidget) {
+            auto name = pWidget->property("HostName").toString();
+            layoutItemMap.insert(name, pLayoutItem);
+        }
+    }
+    // Now go through all the names, pull the associated QLayoutItem from the
+    // layout and then re-add each of them at the end in turn - once we have
+    // gone through them all it will mean that they are in the same order as the
+    // tabs:
+    for (int index = 0; index < itemsCount; ++index) {
+        const auto& wantedTabName = tabNamesInOrder.at(index);
+        auto pLayoutItem = layoutItemMap.value(wantedTabName);
+        // This will remove the item from wherever it is in the layout:
+        mpHBoxLayout_profileContainer->removeItem(pLayoutItem);
+        // This will re-add the item to the end of the layout:
+        mpHBoxLayout_profileContainer->addItem(pLayoutItem);
+    }
+}
+
+void mudlet::refreshTabBar()
+{
+    for (const auto& pHost : mHostManager) {
+        QString hostName = pHost->getName();
+        if (debugMode) {
+            mpTabBar->applyPrefixToDisplayedText(hostName, TDebug::getTag(pHost.data()));
+        } else {
+            mpTabBar->applyPrefixToDisplayedText(hostName);
+        }
+    }
+}
+
+//NOLINT(readability-convert-member-functions-to-static)
+// doesn't make sense to make it static since it modifies a class variable
+void mudlet::setupPreInstallPackages(const QString& gameUrl)
+{
+    const QHash<QString, QStringList> defaultScripts = {
+        // clang-format off
+        // scripts to pre-install for a profile      games this applies to, * means all games
+        {QStringLiteral(":/run-lua-code-v4.xml"),    {QStringLiteral("*")}},
+        {QStringLiteral(":/echo.xml"),               {QStringLiteral("*")}},
+        {QStringLiteral(":/deleteOldProfiles.xml"),  {QStringLiteral("*")}},
+        {QStringLiteral(":/CF-loader.xml"),          {QStringLiteral("carrionfields.net")}},
+        {QStringLiteral(":/run-tests.xml"),          {QStringLiteral("mudlet.org")}},
+        {QStringLiteral(":/mudlet-mapper.xml"),      {QStringLiteral("aetolia.com"),
+                                                      QStringLiteral("achaea.com"),
+                                                      QStringLiteral("lusternia.com"),
+                                                      QStringLiteral("imperian.com"),
+                                                      QStringLiteral("starmourn.com"),
+                                                      QStringLiteral("stickmud.com")}},
+        // clang-format on
+    };
+
+    QHashIterator<QString, QStringList> i(defaultScripts);
+    while (i.hasNext()) {
+        i.next();
+        if (i.value().first() == QLatin1String("*") || i.value().contains(gameUrl)) {
+            mudlet::self()->packagesToInstallList.append(i.key());
+        }
+    }
+
+    if (!mudlet::self()->packagesToInstallList.contains(QStringLiteral(":/mudlet-mapper.xml"))) {
+        mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
+    }
 }

@@ -26,6 +26,8 @@
 
 #include "pre_guard.h"
 #include <QDialog>
+#include <QTableWidget>
+#include <QTextBrowser>
 #include "post_guard.h"
 
 class Host;
@@ -41,17 +43,23 @@ public:
     Q_DISABLE_COPY(dlgPackageManager)
     explicit dlgPackageManager(QWidget* parent, Host*);
     ~dlgPackageManager();
+    void resetPackageTable();
 
 private slots:
     void slot_install_package();
-    void slot_uninstall_package();
+    void slot_remove_packages();
+    void slot_item_clicked(QTableWidgetItem*);
+    void slot_toggle_remove_button();
 
 private:
     Ui::package_manager* ui;
     Host* mpHost;
-    QListWidget* mPackageList;
-    QPushButton* mUninstallButton;
+    QTableWidget* mPackageTable;
+    QTableWidget* mDetailsTable;
+    QTextBrowser* mDescription;
     QPushButton* mInstallButton;
+    QPushButton* mRemoveButton;
+    void fillAdditionalDetails(const QMap<QString, QString>&);
 };
 
 #endif

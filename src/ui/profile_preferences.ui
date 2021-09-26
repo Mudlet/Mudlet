@@ -1116,7 +1116,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="1" column="0">
            <widget class="QCheckBox" name="checkBox_USE_SMALL_SCREEN">
             <property name="toolTip">
-             <string>&lt;p&gt;Select this option for better compatability if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;</string>
+             <string>&lt;p&gt;Select this option for better compatibility if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Use Mudlet on a netbook with a small screen</string>
@@ -3200,7 +3200,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="0" column="3">
            <widget class="QLineEdit" name="lineEdit_proxyUsername">
             <property name="toolTip">
-             <string>Username for logging into the proxy if requred</string>
+             <string>Username for logging into the proxy if required</string>
             </property>
             <property name="text">
              <string/>
@@ -3216,7 +3216,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="0" column="4">
            <widget class="QLineEdit" name="lineEdit_proxyPassword">
             <property name="toolTip">
-             <string>Password for logging into the proxy if requred</string>
+             <string>Password for logging into the proxy if required</string>
             </property>
             <property name="echoMode">
              <enum>QLineEdit::Password</enum>

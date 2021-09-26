@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -45,8 +45,10 @@
 #include <QShortcut>
 #include <QTextBoundaryFinder>
 #include <QTextCodec>
+#include <QTextStream>
 #include <QPainter>
 #include "post_guard.h"
+
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 : TConsole(pH, TConsole::MainConsole, parent)
@@ -74,6 +76,9 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     // absence of files for the first run in a new profile or from an older
     // Mudlet version:
     setProfileSpellDictionary();
+
+    // Ensure the QWidget has the profile name embedded into it
+    setProperty("HostName", pH->getName());
 }
 
 TMainConsole::~TMainConsole()
@@ -136,7 +141,7 @@ std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name,
 
 void TMainConsole::toggleLogging(bool isMessageEnabled)
 {
-    // CHECKME: This path seems suspicious, it is shared amoungst ALL profiles
+    // CHECKME: This path seems suspicious, it is shared amongst ALL profiles
     // but the action is "Per Profile"...!
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("autolog")));
     QDateTime logDateTime = QDateTime::currentDateTime();
@@ -643,6 +648,7 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
             mpMapper->mp2dMap->init();
             mpMapper->updateAreaComboBox();
             mpMapper->resetAreaComboBoxToPlayerRoomArea();
+            mpMapper->show();
         }
 
         mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
@@ -1125,8 +1131,8 @@ void TMainConsole::runTriggers(int line)
     mCurrentLine.append('\n');
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::darkGreen), QColor(Qt::black)) << "new line arrived:" >> 0;
-        TDebug(QColor(Qt::lightGray), QColor(Qt::black)) << mCurrentLine << "\n" >> 0;
+        TDebug(Qt::darkGreen, Qt::black) << "new line arrived:" >> mpHost;
+        TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << mCurrentLine << "\n" >> mpHost;
     }
     mpHost->incomingStreamProcessor(mCurrentLine, line);
     mIsPromptLine = false;
@@ -1274,7 +1280,7 @@ bool TMainConsole::importMap(const QString& location, QString* errMsg)
             filePathNameString = QDir::cleanPath(mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileInfo.filePath()));
         } else {
             if (fileInfo.exists()) {
-                filePathNameString = fileInfo.canonicalFilePath(); // Cannot use cannonical path if file doesn't exist!
+                filePathNameString = fileInfo.canonicalFilePath(); // Cannot use canonical path if file doesn't exist!
             } else {
                 filePathNameString = fileInfo.absoluteFilePath();
             }

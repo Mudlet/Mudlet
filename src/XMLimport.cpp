@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -23,6 +23,7 @@
 #include "XMLimport.h"
 
 
+#include "dlgMapper.h"
 #include "LuaInterface.h"
 #include "TConsole.h"
 #include "TMap.h"
@@ -38,13 +39,13 @@
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)
 , mPackageName(QString())
-, mpTrigger(Q_NULLPTR)
-, mpTimer(Q_NULLPTR)
-, mpAlias(Q_NULLPTR)
-, mpKey(Q_NULLPTR)
-, mpAction(Q_NULLPTR)
-, mpScript(Q_NULLPTR)
-, mpVar(Q_NULLPTR)
+, mpTrigger(nullptr)
+, mpTimer(nullptr)
+, mpAlias(nullptr)
+, mpKey(nullptr)
+, mpAction(nullptr)
+, mpScript(nullptr)
+, mpVar(nullptr)
 , gotTrigger(false)
 , gotTimer(false)
 , gotAlias(false)
@@ -174,6 +175,10 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
             } else if (name() == "map") {
                 readMap();
                 mpHost->mpMap->audit();
+                mpHost->mpMap->mpMapper->mp2dMap->init();
+                mpHost->mpMap->mpMapper->updateAreaComboBox();
+                mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+                mpHost->mpMap->mpMapper->show();
             } else {
                 qDebug().nospace() << "XMLimport::importPackage(...) ERROR: "
                                       "unrecognised element with name: "
@@ -421,10 +426,12 @@ void XMLimport::readAreas()
 
 void XMLimport::readArea()
 {
-    int id = attributes().value(QStringLiteral("id")).toString().toInt();
-    QString name = attributes().value(QStringLiteral("name")).toString();
+    if (attributes().hasAttribute(QStringLiteral("id"))) {
+        int id = attributes().value(QStringLiteral("id")).toString().toInt();
+        QString name = attributes().value(QStringLiteral("name")).toString();
 
-    mpHost->mpMap->mpRoomDB->addArea(id, name);
+        mpHost->mpMap->mpRoomDB->addArea(id, name);
+    }
 }
 
 void XMLimport::readRooms(QMultiHash<int, int>& areaRoomsHash)
@@ -885,11 +892,11 @@ void XMLimport::readHostPackage(Host* pHost)
     if (qFuzzyCompare(1.0 + pHost->mRoomSize, 1.0)) {
         // The value is a float/double and the prior code using "== 0" is a BAD
         // THING to do with non-integer number types!
-        pHost->mRoomSize = 0.5; // Same value as is in Host class initalizer list
+        pHost->mRoomSize = 0.5; // Same value as is in Host class initializer list
     }
     pHost->mLineSize = attributes().value(QStringLiteral("mLineSize")).toString().toDouble();
     if (qFuzzyCompare(1.0 + pHost->mLineSize, 1.0)) {
-        pHost->mLineSize = 10.0; // Same value as is in Host class initalizer list
+        pHost->mLineSize = 10.0; // Same value as is in Host class initializer list
     }
     pHost->mBubbleMode = attributes().value(QStringLiteral("mBubbleMode")) == YES;
     pHost->mMapViewOnly = attributes().value(QStringLiteral("mMapViewOnly")) == YES;
@@ -1093,6 +1100,7 @@ void XMLimport::readHostPackage(Host* pHost)
             }
         }
     }
+    mpHost->loadPackageInfo();
 }
 
 bool XMLimport::readDefaultTrueBool(QString name) {
@@ -1189,7 +1197,7 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
                 readIntegerList(pT->mRegexCodePropertyList, pT->getName());
                 if (Q_UNLIKELY(pT->mRegexCodeList.count() != pT->mRegexCodePropertyList.count())) {
                     qWarning().nospace() << "XMLimport::readTriggerGroup(...) ERROR: "
-                                            "mis-match in regexCode details for Trigger: "
+                                            "mismatch in regexCode details for Trigger: "
                                          << pT->getName() << " there were " << pT->mRegexCodeList.count() << " 'regexCodeList' sub-elements and " << pT->mRegexCodePropertyList.count()
                                          << " 'regexCodePropertyList' sub-elements so "
                                             "something is broken!";
@@ -1488,7 +1496,7 @@ int XMLimport::readScriptGroup(TScript* pParent)
             } else if (name() == "script") {
                 QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
-                    qDebug().nospace() << "XMLimport::readScriptGroup(...): ERROR: can not compile script's lua code for: " << pT->getName();
+                    qDebug().nospace().noquote() << "XMLimport::readScriptGroup(...) ERROR - can not compile script's lua code for \"" << pT->getName() << "\"; reason: " << pT->getError() << ".";
                 }
             } else if (name() == "eventHandlerList") {
                 readStringList(pT->mEventHandlerList);
@@ -1784,7 +1792,7 @@ void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<i
             }
 
         } else {
-            // Must advance the pattern interator if it isn't a colour pattern
+            // Must advance the pattern iterator if it isn't a colour pattern
             itPattern.next();
         }
     }

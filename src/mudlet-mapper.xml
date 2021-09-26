@@ -2543,7 +2543,7 @@ cecho("&lt;orange_red&gt;)")</script>
 					<regexCodeList />
 					<regexCodePropertyList />
 					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-						<name>Succesful transverse</name>
+						<name>Successful transverse</name>
 						<script>if mmp.game~= "lusternia" then return end
 if validTransverse then
   mmp.registerTransverseExit()
@@ -2588,7 +2588,7 @@ validTransverse = false</script>
 						</regexCodePropertyList>
 					</Trigger>
 					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-						<name>Succesful pathfind</name>
+						<name>Successful pathfind</name>
 						<script>if mmp.game~= "lusternia" then return end
 if validTransverse then
   mmp.clearPathfind()
@@ -3500,7 +3500,7 @@ mmp.echo("We're connected to StickMUD.")</script>
 						<colorTriggerFgColor>#000000</colorTriggerFgColor>
 						<colorTriggerBgColor>#000000</colorTriggerBgColor>
 						<regexCodeList>
-							<string>^The door to the (\w+) is closed forcefully fromthe other side and the sound of a bolt being slammed home makes your lack of admittance clear\.$</string>
+							<string>^The door to the (\w+) is closed forcefully from the other side and the sound of a bolt being slammed home makes your lack of admittance clear\.$</string>
 						</regexCodeList>
 						<regexCodePropertyList>
 							<integer>1</integer>
@@ -4714,7 +4714,7 @@ for key in pairs(getRooms()) do
   if char ~= "" then
     if translation[char] then
       if not mmp.roomCreateMapFeature(translation[char], key) then
-			  mmp.echo("An error occured when migrating room characters, see messages above for details. Migration incomplete!")
+			  mmp.echo("An error occurred when migrating room characters, see messages above for details. Migration incomplete!")
 			  return
 			end
     end
@@ -4915,53 +4915,91 @@ end</script>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Save a map</name>
-				<script>local function s(loc)
-    if not saveMap(loc) then
-      mmp.echo("Couldn't save the map :(")
-    else
-      if loc ~= "" then mmp.echo("Map saved.") else mmp.echo("Saved the default map.") end
-    end
+				<script>local function s(location, format)
+  local savednormal, savedjson = "not saved", "not saved"
+  if format == "json" then
+    savedjson = saveJsonMap(location)
+  elseif format == "all" then
+    savedjson = saveJsonMap(location)
+    savednormal = saveMap(location)
+  elseif format == nil or format == "" then
+    savednormal = saveMap(location)
+  end
+  
+  if savednormal == nil then
+    mmp.echo("Couldn't save the map :(")
+  elseif savednormal == true then
+    mmp.echo(location ~= "" and "Map saved." or "Saved the default map.")
+  end
+  if savedjson == nil then
+    mmp.echo("Couldn't save the JSON map :(")
+  elseif savedjson == true then
+    mmp.echo(location ~= "" and "Map saved in JSON." or "Saved the default map in JSON.")
+  end
 end
 
-if not saveMap then
-  mmp.echo("Your Mudlet can't save maps. Please upgrade it!")
+if matches[2] and (matches[2] == "json" or matches[2] == "all") and not saveJsonMap then
+  mmp.echo("Your Mudlet can't save maps in JSON, please upgrade first.")
+  return
+end
+if matches[3] and matches[3] == "custom" then
+  s(
+    invokeFileDialog(false, "Please select the folder to save the map in and hit Open") ..
+    "/Mudlet map from " ..
+    os.date("%A %d, %b '%y") ..
+    ".dat",
+    matches[2]
+  )
+elseif matches[3] then
+  s(getMudletHomeDir() .. "/map/" .. matches[3], matches[2])
 else
-  if matches[2] and matches[2] == "custom" then
-    s(invokeFileDialog(false, "Please select the folder to save the map in and hit Open").."/Mudlet map from "..os.date("%A %d, %b '%y")..".dat")
-  elseif matches[2] then
-	s(getMudletHomeDir().."/map/"..matches[2])
-  else
-    s("")
-  end
+  s("", matches[2])
 end</script>
 				<command></command>
 				<packageName></packageName>
-				<regex>^map save(?: (.+))?$</regex>
+				<regex>^map save(?: (json|all))?(?: (.+))?$</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Load a map</name>
 				<script>local function s(loc)
-    if not loadMap(loc) then
-      mmp.echo("Couldn't load the map :(")
+  if string.ends(loc, ".json") and not loadJsonMap then
+    mmp.echo("Your Mudlet can't load maps in JSON, please upgrade first.")
+    return
+  end
+  
+  local allok = true
+  if string.ends(loc, ".json") then
+    allok = loadJsonMap(loc)
+  else
+    allok = loadMap(loc)
+  end
+  
+  if not allok then
+    mmp.echo("Couldn't load the map :(")
+  else
+    mmp.lockWormholes();
+    mmp.lockSewers();
+    mmp.lockPebble();
+    if mmp.settings.waterwalk then
+      mmp.enableWaterWalk()
     else
-      mmp.lockWormholes(); mmp.lockSewers(); mmp.lockPebble();
-      if mmp.settings.waterwalk then mmp.enableWaterWalk() else mmp.disableWaterWalk() end
-
-      if loc ~= "" then mmp.echo("Map loaded.") else mmp.echo("Loaded the default map.") end
-      raiseEvent("mmapper updated map")
+      mmp.disableWaterWalk()
     end
+    if loc ~= "" then
+      mmp.echo("Map loaded.")
+    else
+      mmp.echo("Loaded the default map.")
+    end
+    raiseEvent("mmapper updated map")
+  end
 end
 
-if not loadMap then
-  mmp.echo("Your Mudlet can't load maps. Please upgrade it!")
+if matches[2] and matches[2] == "custom" then
+  s(invokeFileDialog(true, "Please select the map file and click Open to load it"))
+elseif matches[2] then
+  s(getMudletHomeDir() .. "/map/" .. matches[2])
 else
-  if matches[2] and matches[2] == "custom" then
-    s(invokeFileDialog(true, "Please select the map file and click Open to load it"))
-  elseif matches[2] then
-	s(getMudletHomeDir().."/map/"..matches[2])
-  else
-    s("")
-  end
+  s("")
 end</script>
 				<command></command>
 				<packageName></packageName>
@@ -5103,18 +5141,6 @@ end</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^(small|big|biggest)map(?: (\d+))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>^make maps$</name>
-				<script>local c = 0
-for _, id in pairs(getAreaTable()) do
-  tempTimer(c*.5, [[exportAreaImage(]]..id..[[)]])
-  c = c + 1
-end
-mmp.echo("Done!")</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^make maps$</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Set debug mode</name>
@@ -5434,7 +5460,7 @@ mmp.lagtable = {
         time = 1
     },
     [3] = {
-        description = "Noticably laggy with occasional spikes.",
+        description = "Noticeably laggy with occasional spikes.",
         time = 2
     },
     [4] = {
@@ -5446,7 +5472,7 @@ mmp.lagtable = {
         time = 10
     }
 }
-local newversion = "21.2.1"
+local newversion = "21.4.1"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo(
@@ -6486,7 +6512,7 @@ function mmp.fixPath(rFrom, rTo, dashtype)
         end
       end
       if repCount &gt; 1 then
-        -- Found direction repitition. Calculate dash path.
+        -- Found direction repetition. Calculate dash path.
         local exits = getRoomExits(mmp.speedWalkPath[index + (repCount - 1)])
         local pname = ""
         for word in mmp.speedWalkDir[index]:gmatch("%w") do
@@ -8183,7 +8209,7 @@ function mmp.roomLabel(input)
   if tk[1] and color_table[tk[1]] then
     fg = table.remove(tk, 1)
   end
-  -- next: is this a backround color?
+  -- next: is this a background color?
   if tk[1] and color_table[tk[1]] then
     bg = table.remove(tk, 1)
   end
@@ -9966,7 +9992,7 @@ function mmp_mapping_newroom(_, num)
                       s ..
                       (#s &gt; 0 and " " or "") ..
                       string.format(
-                        "Failed to link %d withh %d via %s exit for some reason :/", num, id, exit
+                        "Failed to link %d with %d via %s exit for some reason :/", num, id, exit
                       )
                   end
                 end
@@ -10019,7 +10045,7 @@ function mmp_mapping_newroom(_, num)
                       s ..
                       (#s &gt; 0 and " " or "") ..
                       string.format(
-                        "Failed to link %d withh %d via %s exit for some reason :/", num, id, exit
+                        "Failed to link %d with %d via %s exit for some reason :/", num, id, exit
                       )
                   end
                   local exit = mmp.anytoshort(mmp.ranytolong(exit))
@@ -10039,7 +10065,7 @@ function mmp_mapping_newroom(_, num)
                       s ..
                       (#s &gt; 0 and " " or "") ..
                       string.format(
-                        "Failed to link %d withh %d via %s exit for some reason :/", num, id, exit
+                        "Failed to link %d with %d via %s exit for some reason :/", num, id, exit
                       )
                   end
                 end

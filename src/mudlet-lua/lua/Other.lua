@@ -5,7 +5,8 @@
 mudlet = mudlet or {}
 mudlet.supports = {
   coroutines = true,
-  namedPatterns = true
+  namedPatterns = true,
+  osVersion = true
 }
 
 -- enforce uniform locale so scripts don't get
@@ -30,7 +31,7 @@ setmetatable( _G, {
 
 
 
---- Mudlet's support for ATCP. This is primarily available on IRE-based MUDs, but Mudlets impelementation is generic enough
+--- Mudlet's support for ATCP. This is primarily available on IRE-based MUDs, but Mudlet's implementation is generic enough
 --- such that any it should work on others. <br/><br/>
 ---
 --- The latest ATCP data is stored in the atcp table. Whenever new data arrives, the previous is overwritten. An event is also
@@ -115,7 +116,7 @@ SavedVariables = {}
 ---   send ("wield shield")
 ---   send ("say ha!")
 ---   </pre>
---- @usage Use sendAll and do not echo sent commnad on the main window.
+--- @usage Use sendAll and do not echo sent command on the main window.
 ---   <pre>
 ---   sendAll("stand", "wield shield", "say ha!", false)
 ---   </pre>
@@ -296,7 +297,7 @@ end
 ---  Functions are saved via string.dump, so make sure it has no upvalues <br/>
 ---  References are saved <br/>
 ---
---- @usage Saves the globals table (minus some lua enviroment stuffs) into a file (only Mudlet should use this).
+--- @usage Saves the globals table (minus some lua environment stuff) into a file (only Mudlet should use this).
 ---   <pre>
 ---   table.save(file)
 ---   </pre>
@@ -415,12 +416,55 @@ end
 
 
 
+--- local functions used for pausing/resuming a speedwalk
+local speedwalkTimerID
+local speedwalkDelay
+local speedwalkList
+local speedwalkShow
+
+--- Stops a speedwalk and clears the walklist
+function stopSpeedwalk()
+  local active = pauseSpeedwalk()
+  if active then 
+    speedwalkList = {}
+    return true
+  end
+  return nil, "stopSpeedwalk(): no active speedwalk found"
+end
+
+
+
+--- pauses a running speedwalk, but leaves the walklist intact in case you want to resume
+function pauseSpeedwalk()
+  if speedwalkTimerID then
+    killTimer(speedwalkTimerID)
+    speedwalkTimerID = false
+    return true
+  end
+  return nil, "pauseSpeedwalk(): no active speedwalk found"
+end
+
+
+
+--- Resumes a paused speedwalk
+function resumeSpeedwalk()
+  if speedwalkTimerID then
+    return nil, "resumeSpeedwalk(): attempted to resume an already running speedwalk"
+  end
+  if not speedwalkList or table.is_empty(speedwalkList) then
+    return nil, "resumeSpeedwalk(): attempted to resume a speedwalk but no active speedwalk found"
+  end
+  speedwalktimer(speedwalkList, speedwalkDelay, speedwalkShow)
+  return true
+end
+
+
 --- <b><u>TODO</u></b> speedwalktimer()
 function speedwalktimer(walklist, walkdelay, show)
   send(walklist[1], show)
   table.remove(walklist, 1)
   if #walklist > 0 then
-    tempTimer(walkdelay, function()
+    speedwalkTimerID = tempTimer(walkdelay, function()
       speedwalktimer(walklist, walkdelay, show)
     end)
   end
@@ -433,6 +477,8 @@ function speedwalk(dirString, backwards, delay, show)
   local dirString = dirString:lower()
   local walkdelay = delay
   if show ~= false then show = true end
+  speedwalkShow = show
+  speedwalkDelay = delay
   local walklist = {}
   local long_dir = {north = 'n', south = 's', east = 'e', west = 'w', up = 'u', down = 'd'}
   for k,v in pairs(long_dir) do
@@ -474,6 +520,7 @@ function speedwalk(dirString, backwards, delay, show)
     end
   end
   if walkdelay then
+    speedwalkList = walklist
     speedwalktimer(walklist, walkdelay, show)
   end
 end
@@ -726,7 +773,7 @@ do
   -- to the right functions.
   local handlers = {}
 
-  -- Remember highest hander ID to avoid ID reuse.
+  -- Remember highest handler ID to avoid ID reuse.
   local highestHandlerId = 0
   -- Helps us finding the right event handler from an ID.
   local handlerIdsToHandlers = {}
@@ -925,13 +972,6 @@ function killtimeframe(vname)
     end
     timeframetable[vname] = nil
   end
-end
-
--- replace line from MUD with colour-tagged string
-creplaceLine = function(str)
-	selectString(line,1)
-	replace("")
-	cinsertText(str)
 end
 
 function translateTable(data, language)

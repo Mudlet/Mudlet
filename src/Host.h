@@ -300,7 +300,8 @@ public:
     bool installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);
     bool removeDir(const QString&, const QString&);
-    void readPackageConfig(const QString&, QString&);
+    void readPackageConfig(const QString&, QString&, bool);
+    QString getPackageConfig(const QString&, bool isModule = false);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
@@ -360,6 +361,7 @@ public:
     bool closeWindow(const QString&);
     bool echoWindow(const QString&, const QString&);
     bool pasteWindow(const QString& name);
+    void loadPackageInfo();
     bool setCmdLineAction(const QString&, const int);
     bool resetCmdLineAction(const QString&);
     bool setLabelClickCallback(const QString&, const int);
@@ -510,6 +512,8 @@ public:
 
     // search engine URL prefix to search query
     QMap<QString, QString> mSearchEngineData;
+    QMap<QString, QMap<QString, QString>> mPackageInfo;
+    QMap<QString, QMap<QString, QString>> mModuleInfo;
     QString mSearchEngineName;
 
     // trigger/alias/script/etc ID whose Lua code to show when previewing a theme
@@ -613,6 +617,9 @@ public:
     QList<QString> mDockLayoutChanges;
     QList<TToolBar*> mToolbarLayoutChanges;
 
+    // string list: 0 - event name, 1 - display label, 2 - tooltip text
+    QMap<QString, QStringList> mConsoleActions;
+
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
@@ -639,6 +646,7 @@ private:
     void thankForUsingPTB();
     void toggleMapperVisibility();
     void createMapper(const bool);
+    void removePackageInfo(const QString &packageName, const bool);
 
     QFont mDisplayFont;
     QStringList mModulesToSync;
@@ -726,7 +734,7 @@ private:
     bool mEnableUserDictionary;
     bool mUseSharedDictionary;
 
-    // These hold values that are needed in the TMap clas which are saved with
+    // These hold values that are needed in the TMap class which are saved with
     // the profile - but which cannot be kept there as that class is not
     // necessarily instantiated when the profile is read.
     // Base color(s) for the player room in the mappers:

@@ -179,7 +179,7 @@ jobs:
   update-widecharwidth-source:
     runs-on: ubuntu-latest
     # Disabled for the time being due to https://github.com/Mudlet/Mudlet/pull/4299
-    if: ${{ github.repository_owner == 'Mudlet' }} && false
+    if: ${{ github.repository_owner == 'Mudlet' && false }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -212,7 +212,7 @@ jobs:
             Better emoji and symbol support! This file helps us tell if a particular character is 0, 1, or 2 widths wide so we can show it correctly in the display.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-lcf-${{ github.sha }}
+          branch: update-widechar-width-${{ github.sha }}
           path: src/
           commit-message: (autocommit) Update widechar_width.h to latest upstream
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"

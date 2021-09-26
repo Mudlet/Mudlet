@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -35,11 +36,11 @@ class TRoom;
 class TExit
 {
 public:
-    bool hasNoRoute;
-    bool hasStub;
-    int destination;
-    int door;
-    int weight;
+    bool hasNoRoute = false;
+    bool hasStub = false;
+    int destination = 0;
+    int door = 0;
+    int weight = 0;
 
     friend bool operator==( TExit &a, TExit &b )
     {

@@ -141,7 +141,7 @@ void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
         QString values;
         // to update this we need to iterate the entire entranceMap and remove invalid
         // connections. I'm not sure if this is efficient for every update, and given
-        // that we check for rooms existance when the map is used, we'll deal with
+        // that we check for rooms existence when the map is used, we'll deal with
         // possible spurious exits for now.
         // entranceMap.remove(id); // <== not what is wanted
         // We need to remove all values == id NOT keys == id, so try and do that
@@ -177,7 +177,7 @@ void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
 // this is call by TRoom destructor only
 bool TRoomDB::__removeRoom(int id)
 {
-    static QMultiHash<int, int> _entranceMap; // Make it persistant - for multiple room deletions
+    static QMultiHash<int, int> _entranceMap; // Make it persistent - for multiple room deletions
     static bool isBulkDelete = false;
     // Gets set / reset by mpTempRoomDeletionSet being non-null, used to setup
     // _entranceMap the first time around for multi-room deletions
@@ -309,7 +309,7 @@ void TRoomDB::removeRoom(QSet<int>& ids)
     mpTempRoomDeletionSet = &ids; // Will activate "bulk room deletion" code
                                   // When used by TLuaInterpreter::deleteArea()
                                   // via removeArea(int) the list of rooms to
-                                  // delete - as suppplied by the reference
+                                  // delete - as supplied by the reference
                                   // type argument IS NOT CONSTANT - it is
                                   // ALTERED by TArea::removeRoom( int room )
                                   // for each room that is removed
@@ -654,7 +654,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     }
 
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-    // Check for existance of all areas needed by rooms
+    // Check for existence of all areas needed by rooms
     QList<int> areaIdsFromRoomsList{areaRoomMultiHash.uniqueKeys()};
     QSet<int> areaIdSet{areaIdsFromRoomsList.begin(), areaIdsFromRoomsList.end()};
 
@@ -666,7 +666,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         areaIdSet.unite(areaIdsFromAreaNamesSet);
     }
 #else
-    // Check for existance of all areas needed by rooms
+    // Check for existence of all areas needed by rooms
     QSet<int> areaIdSet = areaRoomMultiHash.keys().toSet();
 
     // START OF TASK 3
@@ -722,14 +722,14 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     if (!missingAreasNeeded.isEmpty()) {
         if (mudlet::self()->showMapAuditErrors()) {
             QString alertMsg = tr("[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
-                                  " Look for further messsages related to the rooms that are supposed\n"
+                                  " Look for further messages related to the rooms that are supposed\n"
                                   " to be in this/these area(s)...",
                                   "Making use of %n to allow quantity dependent message form 8-) !",
                                   missingAreasNeeded.count());
             mpMap->postMessage(alertMsg);
         }
         mpMap->appendErrorMsgWithNoLf(tr("[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
-                                         " Look for further messsages related to the rooms that is/are supposed to\n"
+                                         " Look for further messages related to the rooms that is/are supposed to\n"
                                          " be in this/these area(s)...",
                                          "Making use of %n to allow quantity dependent message form 8-) !",
                                          missingAreasNeeded.count()),
@@ -778,7 +778,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             mpMap->postMessage(alertMsg);
         }
         mpMap->appendErrorMsg(tr("[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!"
-                                 "  Look for further messsages related to this for each affected area ...")
+                                 "  Look for further messages related to this for each affected area ...")
                                       .arg(areaRemapping.count()),
                               true);
 
@@ -857,7 +857,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             mpMap->postMessage(alertMsg);
         }
         mpMap->appendErrorMsg(tr("[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!"
-                                 "  Look for further messsages related to this for each affected room ...")
+                                 "  Look for further messages related to this for each affected room ...")
                                       .arg(roomRemapping.count()),
                               true);
 
@@ -934,7 +934,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             // Exit stubs:
             int _listCount = pR->exitStubs.count();
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-            // These next few constuction of a QSet from a QList or vice versa
+            // These next few construction of a QSet from a QList or vice versa
             // are probably safe as both iterators refer to the SAME instance
             // that is persistent:
             QSet<int> _set{pR->exitStubs.begin(), pR->exitStubs.end()};
@@ -1267,7 +1267,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
             // A single unnamed area found
             alertText = tr("[ ALERT ] - An empty area name was detected in the Map file!");
             // Use OK for this one because it is the last part and indicates the
-            // sucessful end of something, whereas INFO is an intermediate step
+            // successful end of something, whereas INFO is an intermediate step
             informativeText = tr("[  OK  ]  - Due to some situations not being checked in the past, Mudlet had\n"
                                  "allowed the map to have an area with no name. This can make some\n"
                                  "things confusing and is now disallowed.\n"
@@ -1315,7 +1315,7 @@ void TRoomDB::setAreaRooms(const int areaId, const QSet<int>& roomIds)
 {
     TArea* pA = areas.value(areaId);
     if (!pA) {
-        qWarning() << "TRoomDB::setAreaRooms(" << areaId << ", ... ) ERROR - Non-existant area Id given...!";
+        qWarning() << "TRoomDB::setAreaRooms(" << areaId << ", ... ) ERROR - Non-existent area Id given...!";
         return;
     }
 

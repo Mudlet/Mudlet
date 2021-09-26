@@ -1341,7 +1341,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             // the hovered() signal can be *problematic* - as hitting a
             // breakpoint - or getting an OS signal (like a Segment Violation)
             // can hang not only Mudlet but also Qt Creator and possibly even
-            // your Desktop - though for *nix users swithing to a console and
+            // your Desktop - though for *nix users switching to a console and
             // killing the gdb debugger instance run by Qt Creator will restore
             // normality.
             connect(mpContextMenuAnalyser, &QAction::hovered, this, &TTextEdit::slot_analyseSelection);
@@ -1367,6 +1367,17 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             popup->addAction(actionRestoreMainToolBar);
         }
 
+        // Add user actions
+        QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
+        while (it.hasNext()) {
+            it.next();
+            QStringList actionInfo = it.value();
+            const QString &actionName = actionInfo.at(1);
+            QAction * action = new QAction(actionName, this);
+            action->setToolTip(actionInfo.at(2));
+            popup->addAction(action);
+            connect(action, &QAction::triggered, this, [this, actionName] { slot_mouseAction(actionName); });
+        }
         popup->popup(mapToGlobal(event->pos()), action);
         event->accept();
         return;
@@ -1778,7 +1789,7 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
     // Convert to degrees:
     delta /= 8.0;
     // Allow the control key to introduce a speed up - but also allow it to be
-    // overriden by a shift key to slow the scroll down to one line/character
+    // overridden by a shift key to slow the scroll down to one line/character
     // per click:
     delta.rx() *= (e->modifiers() & Qt::ShiftModifier ? 1.0 : (e->modifiers() & Qt::ControlModifier ? xSpeedUp : 3.0));
     delta.ry() *= (e->modifiers() & Qt::ShiftModifier ? 1.0 : (e->modifiers() & Qt::ControlModifier ? ySpeedUp : 3.0));
@@ -1909,7 +1920,7 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
         quint16 value = first.unicode();
         switch (value) {
         case 0x003c:                    return htmlCenter(QStringLiteral("&lt;")); break; // As '<' gets interpreted as an opening HTML tag we have to handle it specially
-        case 0x003e:                    return htmlCenter(QStringLiteral("&gt;")); break; // '>' does not seem to get interpreted as a closing HTML tag but for symetry it is probably best to also handle it in the same way
+        case 0x003e:                    return htmlCenter(QStringLiteral("&gt;")); break; // '>' does not seem to get interpreted as a closing HTML tag but for symmetry it is probably best to also handle it in the same way
         case QChar::Tabulation:         return htmlCenter(tr("{tab}", "Unicode U+0009 codepoint.")); break;
         case QChar::LineFeed:           return htmlCenter(tr("{line-feed}", "Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.")); break;
         case QChar::CarriageReturn:     return htmlCenter(tr("{carriage-return}", "Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.")); break;
@@ -1958,7 +1969,7 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
         case 0x206D:                    return htmlCenter(tr("{activate arabic form-shaping}", "Unicode U+206D codepoint.")); break;
         case 0x206E:                    return htmlCenter(tr("{national digit shapes}", "Unicode U+206E codepoint.")); break;
         case 0x206F:                    return htmlCenter(tr("{nominal Digit shapes}", "Unicode U+206F codepoint.")); break;
-        case 0x3000:                    return htmlCenter(tr("{ideaographic space}", "Unicode U+3000 codepoint - ideaographic (CJK Wide) space")); break;
+        case 0x3000:                    return htmlCenter(tr("{ideographic space}", "Unicode U+3000 codepoint - ideographic (CJK Wide) space")); break;
         case 0xFE00:                    return htmlCenter(tr("{variation selector 1}", "Unicode U+FE00 codepoint.")); break;
         case 0xFE01:                    return htmlCenter(tr("{variation selector 2}", "Unicode U+FE01 codepoint.")); break;
         case 0xFE02:                    return htmlCenter(tr("{variation selector 3}", "Unicode U+FE02 codepoint.")); break;
@@ -2131,7 +2142,7 @@ void TTextEdit::slot_analyseSelection()
                 // just for that number (and not the rest of the resultant String):
                 // &#8232; is the Unicode Line Separator
                 utf16Vals.append(
-                        QStringLiteral("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</centre>&#8232;<center>(0x%3:0x%4)</center></td>")
+                        QStringLiteral("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
                                 .arg(QString::number(columnsToUse))
                                 .arg(QStringLiteral("%1").arg(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1)), 4, 16, zero).toUpper())
                                 .arg(mpBuffer->lineBuffer.at(line).at(index).unicode(), 4, 16, zero)
@@ -2400,6 +2411,29 @@ void TTextEdit::slot_changeDebugShowAllProblemCodepoints(const bool state)
     if (mShowAllCodepointIssues != state) {
         mShowAllCodepointIssues = state;
     }
+}
+
+void TTextEdit::slot_mouseAction(const QString &uniqueName)
+{
+    TEvent event {};
+    QStringList mouseEvent = mpHost->mConsoleActions[uniqueName];
+    event.mArgumentList.append(mouseEvent[0]);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(uniqueName);
+
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(mpConsole->mConsoleName);
+
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(mPA.x()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(mPA.y()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(mPB.x()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(mPB.y()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mpHost->raiseEvent(event);
 }
 
 // Originally this was going to be part of the destructor - but it was unable

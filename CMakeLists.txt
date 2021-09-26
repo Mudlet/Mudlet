@@ -21,14 +21,14 @@
 
 ############################################################################
 #                                                                          #
-#    NOTICE: FreeBSD is not an officially supported platform as such;      #
-#    the work on getting it working has been done by myself, and other     #
-#    developers, unless they have explicitly said so, are not able to      #
-#    address issues relating specifically to that Operating System.        #
-#    Nevertheless users of FreeBSD are equally welcome to contribute       #
-#    to the development of Mudlet - bugfixes and enhancements are          #
-#    welcome from all!                                                     #
-#                                           Stephen Lyons, February 2018   #
+#    NOTICE: FreeBSD and GNU/Hurd are not officially supported platforms   #
+#    as such; the work on getting them working has been done by myself,    #
+#    and other developers, unless they have explicitly said so, are not    #
+#    able to address issues relating specifically to these Operating       #
+#    Systems. Nevertheless users of either are equally welcome to          #
+#    contribute to the development of Mudlet - bugfixes and enhancements   #
+#    are welcome from all!                                                 #
+#                         Stephen Lyons, February 2018, updated March 2021 #
 #                                                                          #
 ############################################################################
 
@@ -83,7 +83,7 @@ endif()
 # IMPORTANT: To insure consistency please ensure the SAME of the first two
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 4.11.1)
+set(APP_VERSION 4.13.1)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
                                          STREQUAL "")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
@@ -136,6 +136,10 @@ endif()
 git_submodule_init(
   CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"
   READABLE_NAME "lua code formatter source code")
+
+git_submodule_init(
+  CHECK_FILE "3rdparty/qt-orordered-map/src/orderedmap.h" SUBMODULE_PATH "3rdparty/qt-ordered-map"
+  READABLE_NAME "Qt ordered map source code")
 
 if(USE_UPDATER)
   git_submodule_init(CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt" SUBMODULE_PATH

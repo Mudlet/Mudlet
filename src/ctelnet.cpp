@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2014, 2017-2019, 2021 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
@@ -164,7 +164,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     connect(mTimerPass, &QTimer::timeout, this, &cTelnet::slot_send_pass);
 
     mpDownloader = new QNetworkAccessManager(this);
-    connect(mpDownloader, &QNetworkAccessManager::finished, this, &cTelnet::replyFinished);
+    connect(mpDownloader, &QNetworkAccessManager::finished, this, &cTelnet::slot_replyFinished);
 }
 
 void cTelnet::reset()
@@ -338,7 +338,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
     } else if (!(mAcceptableEncodings.contains(newEncoding) || mAcceptableEncodings.contains("M_" + newEncoding))) {
         // Not in list (even with a "M_" prefix that indicates the relevant
         // QTextCodec is actually one of our own TTextCodecs) - so reject it
-        // Since we want to hide the implimentation detail that some of the
+        // Since we want to hide the implementation detail that some of the
         // encoding names could have a "M_"  prefix we will need to preprocess
         // the list of encodings.
         // Since the mAcceptableEncodings list is unchanging once it has been
@@ -725,7 +725,7 @@ bool cTelnet::socketOutRaw(std::string& data)
         if (chunkWritten < 0) {
             // -1 is the sentinel (error) value but any other negative value
             // would not make sense and it would break the cast to the
-            // (unsigned) std::size_t type in the next code fragement!
+            // (unsigned) std::size_t type in the next code fragment!
             return false;
         }
 
@@ -813,26 +813,38 @@ void cTelnet::sendTelnetOption(char type, char option)
 }
 
 
-void cTelnet::replyFinished(QNetworkReply* reply)
+void cTelnet::slot_replyFinished(QNetworkReply* reply)
 {
     mpProgressDialog->close();
 
+    if (reply != mpPackageDownloadReply) {
+        qWarning().nospace().noquote() << "cTelnet::slot_replyFinished(QNetworkReply*) ERROR - download finished, but it wasn't the one we are expecting";
+        reply->deleteLater();
+    } else {
+        // don't process if download was aborted
+        if (reply->error() != QNetworkReply::NoError) {
+            reply->deleteLater();
+            mpPackageDownloadReply = nullptr;
+            return;
+        }
 
-    QFile file(mServerPackage);
-    file.open(QFile::WriteOnly);
-    file.write(reply->readAll());
-    file.flush();
-    file.close();
-    mpHost->installPackage(mServerPackage, 0);
-    QString packageName = mServerPackage.section("/", -1);
-    packageName.replace(".zip", "");
-    packageName.replace("trigger", "");
-    packageName.replace("xml", "");
-    packageName.replace(".mpackage", "");
-    packageName.replace('/', "");
-    packageName.replace('\\', "");
-    packageName.replace('.', "");
-    mpHost->mServerGUI_Package_name = packageName;
+        QFile file(mServerPackage);
+        file.open(QFile::WriteOnly);
+        file.write(reply->readAll());
+        file.flush();
+        file.close();
+        reply->deleteLater();
+        mpPackageDownloadReply = nullptr;
+        mpHost->installPackage(mServerPackage, 0);
+        QString packageName = mServerPackage.section("/", -1);
+        packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
+        packageName.remove(QLatin1String(".trigger"), Qt::CaseInsensitive);
+        packageName.remove(QLatin1String(".xml"), Qt::CaseInsensitive);
+        packageName.remove(QLatin1String(".mpackage"), Qt::CaseInsensitive);
+        packageName.remove(QLatin1Char('/'));
+        packageName.remove(QLatin1Char('\\'));
+        mpHost->mServerGUI_Package_name = packageName;
+    }
 }
 
 void cTelnet::setDownloadProgress(qint64 got, qint64 tot)
@@ -1176,7 +1188,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
             triedToEnable[idxOption] = false;
         } else {
             if (!hisOptionState[idxOption]) {
-                //only if this is not set; if it's set, something's wrong wth the server
+                //only if this is not set; if it's set, something's wrong with the server
                 //(according to telnet specification, option announcement may not be
                 //unless explicitly requested)
 
@@ -1190,11 +1202,15 @@ void cTelnet::processTelnetCommand(const std::string& command)
                     hisOptionState[idxOption] = true;
                 } else if ((option == OPT_COMPRESS) || (option == OPT_COMPRESS2)) {
                     //these are handled separately, as they're a bit special
-                    if (mpHost->mFORCE_NO_COMPRESSION || ((option == OPT_COMPRESS) && (hisOptionState[static_cast<int>(OPT_COMPRESS2)]))) {
+                    if (mpHost->mFORCE_NO_COMPRESSION) {
+                        sendTelnetOption(TN_DONT, option);
+                        hisOptionState[idxOption] = false;
+                        qDebug().nospace().noquote() << "Rejecting MCCP v" << (option == OPT_COMPRESS ? "1" : "2") << ", because the 'Force compression off' option is enabled.";
+                    } else if ((option == OPT_COMPRESS) && (hisOptionState[static_cast<int>(OPT_COMPRESS2)])) {
                         //protocol says: reject MCCP v1 if you have previously accepted MCCP v2...
                         sendTelnetOption(TN_DONT, option);
                         hisOptionState[idxOption] = false;
-                        qDebug() << "Rejecting MCCP v1, because v2 has already been negotiated or FORCE COMPRESSION OFF is set to ON.";
+                        qDebug() << "Rejecting MCCP v1, because v2 has already been negotiated.";
                     } else {
                         sendTelnetOption(TN_DO, option);
                         hisOptionState[idxOption] = true;
@@ -1666,9 +1682,10 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 mpHost->updateProxySettings(mpDownloader);
                 auto request = QNetworkRequest(QUrl(url));
                 mudlet::self()->setNetworkRequestDefaults(url, request);
-                QNetworkReply* reply = mpDownloader->get(request);
+                mpPackageDownloadReply = mpDownloader->get(request);
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
-                connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+                connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+                connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
                 mpProgressDialog->show();
             }
             return;
@@ -1817,7 +1834,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
     } //end switch 1
 
     // raise sysTelnetEvent for all unhandled protocols
-    // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reaons
+    // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reasons
     if (command[1] != TN_GA && command[1] != TN_EOR) {
         auto type = static_cast<unsigned char>(command[1]);
         auto telnetOption = static_cast<unsigned char>(command[2]);
@@ -1916,14 +1933,8 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
 
 void cTelnet::setGMCPVariables(const QByteArray& msg)
 {
-    QString transcodedMsg;
-    if (mpOutOfBandDataIncomingCodec) {
-        // Message is encoded
-        transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
-    } else {
-        // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = msg;
-    }
+    // JSON (and thus the GMCP data) is always utf8
+    QString transcodedMsg(msg);
 
     QString packageMessage;
     QString data;
@@ -2033,9 +2044,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpHost->updateProxySettings(mpDownloader);
         auto request = QNetworkRequest(QUrl(url));
         mudlet::self()->setNetworkRequestDefaults(url, request);
-        QNetworkReply* reply = mpDownloader->get(request);
+        mpPackageDownloadReply = mpDownloader->get(request);
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
-        connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+        connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+        connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
         mpProgressDialog->show();
         return;
     } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"), Qt::CaseInsensitive)) {
@@ -2188,7 +2200,8 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
                 } else if (mspVAR == "U") {
                     mediaData.setMediaUrl(mspVAL);
                 } else {
-                    return; // Invalid MSP.
+                    qDebug() << "MSP: tag" << mspVAR << "isn't one we understand";
+                    continue; // robustness principle: ignore anything we don't understand
                 }
             }
         }
@@ -2286,7 +2299,7 @@ void cTelnet::atcpComposerSave(QString txt)
 // following prefix.
 // Prefixes are made uppercase.
 // Will store messages if the TConsole on which they are to be placed is not yet
-// in existance as happens during startup, then pumps them out in order of
+// in existence as happens during startup, then pumps them out in order of
 // arrival once a message arrives when the TConsole DOES exist.
 void cTelnet::postMessage(QString msg)
 {
@@ -3022,7 +3035,7 @@ QByteArray cTelnet::decodeBytes(const char* bytes)
 // encoding and cooks any 0xff bytes by doubling them to get them through Telnet
 // protocol handling in the Server - this is needed, at least, for the following
 //  characters in the following encodings which WILL become the 0xff value:
-// 'ÿ' {U+00FF Latin small letter y with diaresis} ==> ISO 8859-1/9/14/15/16
+// 'ÿ' {U+00FF Latin small letter y with diaeresis} ==> ISO 8859-1/9/14/15/16
 // '˙' {U+02D9 Dot above}                          ==> ISO 8859-2/3/4
 // 'џ' {U+045F Cyrillic small letter dzhe}         ==> ISO 8859-5
 // 'ĸ' {U+0138 Latin small letter kra}             ==> ISO 8859-10
