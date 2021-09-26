@@ -601,9 +601,16 @@ void Host::updateModuleZips()
             auto writer = new XMLexport(this);
             writers.insert(filename_xml, writer);
             writer->writeModuleXML(moduleName, filename_xml);
-
-            struct zip_source* s = zip_source_file(zipFile, filename_xml.toStdString().c_str(), 0, 0);
-            err = zip_file_add(zipFile, QString(moduleName + ".xml").toStdString().c_str(), s, ZIP_FL_ENC_UTF_8|ZIP_FL_OVERWRITE);
+            int xmlIndex = zip_name_locate(zipFile, QStringLiteral("%1.xml").arg(moduleName).toUtf8().constData(), ZIP_FL_ENC_GUESS);
+            zip_delete(zipFile, xmlIndex);
+            struct zip_source* s = zip_source_file(zipFile, filename_xml.toUtf8().constData(), 0, -1);
+            if (mudlet::debugMode && s == nullptr) {
+                TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to open xml file \"%1\" to save to module %2. Error message was: \"%3\".",
+                                                                 // Intentional comment to separate arguments
+                                                                 "This error message will appear when the xml file cannot be added to the module for some reason.")
+                                                                      .arg(filename_xml, zipName, zip_strerror(zipFile));
+            }
+            err = zip_file_add(zipFile, QStringLiteral("%1.xml").arg(moduleName).toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE);
 
             if (zipFile) {
                 err = zip_close(zipFile);
