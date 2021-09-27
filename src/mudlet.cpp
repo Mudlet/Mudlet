@@ -594,29 +594,29 @@ mudlet::mudlet()
 
     // we historically use Alt on Windows and Linux, but that is uncomfortable on macOS
 #if defined(Q_OS_MACOS)
-    triggersKeySequence = QKeySequence(Qt::Key_E, Qt::CTRL);
-    showMapKeySequence = QKeySequence(Qt::Key_M, Qt::CTRL);
-    inputLineKeySequence = QKeySequence(Qt::Key_L, Qt::CTRL);
-    optionsKeySequence = QKeySequence(Qt::Key_P, Qt::CTRL);
-    notepadKeySequence = QKeySequence(Qt::Key_N, Qt::CTRL);
-    packagesKeySequence = QKeySequence(Qt::Key_O, Qt::CTRL);
-    modulesKeySequence = QKeySequence(Qt::Key_I, Qt::CTRL);
-    multiViewKeySequence = QKeySequence(Qt::Key_V, Qt::CTRL, Qt::ALT);
-    connectKeySequence = QKeySequence(Qt::Key_C, Qt::CTRL, Qt::ALT);
-    disconnectKeySequence = QKeySequence(Qt::Key_D, Qt::CTRL);
-    reconnectKeySequence = QKeySequence(Qt::Key_R, Qt::CTRL);
+    triggersKeySequence = QKeySequence(Qt::CTRL | Qt::Key_E);
+    showMapKeySequence = QKeySequence(Qt::CTRL | Qt::Key_M);
+    inputLineKeySequence = QKeySequence(Qt::CTRL | Qt::Key_L);
+    optionsKeySequence = QKeySequence(Qt::CTRL | Qt::Key_P);
+    notepadKeySequence = QKeySequence(Qt::CTRL | Qt::Key_N);
+    packagesKeySequence = QKeySequence(Qt::CTRL | Qt::Key_O);
+    modulesKeySequence = QKeySequence(Qt::CTRL | Qt::Key_I);
+    multiViewKeySequence = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_V);
+    connectKeySequence = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_C);
+    disconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_D);
+    reconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_R);
 #else
-    triggersKeySequence = QKeySequence(Qt::Key_E, Qt::ALT);
-    showMapKeySequence = QKeySequence(Qt::Key_M, Qt::ALT);
-    inputLineKeySequence = QKeySequence(Qt::Key_L, Qt::ALT);
-    optionsKeySequence = QKeySequence(Qt::Key_P, Qt::ALT);
-    notepadKeySequence = QKeySequence(Qt::Key_N, Qt::ALT);
-    packagesKeySequence = QKeySequence(Qt::Key_O, Qt::ALT);
-    modulesKeySequence = QKeySequence(Qt::Key_I, Qt::ALT);
-    multiViewKeySequence = QKeySequence(Qt::Key_V, Qt::ALT);
-    connectKeySequence = QKeySequence(Qt::Key_C, Qt::ALT);
-    disconnectKeySequence = QKeySequence(Qt::Key_D, Qt::ALT);
-    reconnectKeySequence = QKeySequence(Qt::Key_R, Qt::ALT);
+    triggersKeySequence = QKeySequence(Qt::ALT | Qt::Key_E);
+    showMapKeySequence = QKeySequence(Qt::ALT | Qt::Key_M);
+    inputLineKeySequence = QKeySequence(Qt::ALT | Qt::Key_L);
+    optionsKeySequence = QKeySequence(Qt::ALT | Qt::Key_P);
+    notepadKeySequence = QKeySequence(Qt::ALT | Qt::Key_N);
+    packagesKeySequence = QKeySequence(Qt::ALT | Qt::Key_O);
+    modulesKeySequence = QKeySequence(Qt::ALT | Qt::Key_I);
+    multiViewKeySequence = QKeySequence(Qt::ALT | Qt::Key_V);
+    connectKeySequence = QKeySequence(Qt::ALT | Qt::Key_C);
+    disconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_D);
+    reconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_R);
 #endif
     connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_update_shortcuts);
 
