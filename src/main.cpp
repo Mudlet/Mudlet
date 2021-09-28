@@ -178,6 +178,9 @@ int main(int argc, char* argv[])
     QCommandLineOption beQuiet(QStringList() << "q" << "quiet", QCoreApplication::translate("main", "Don't show the splash screen when starting"));
     parser.addOption(beQuiet);
 
+    QCommandLineOption mirrorToStdout(QStringList() << "m" << "mirror", QCoreApplication::translate("main", "Mirror output of all consoles to STDOUT"));
+    parser.addOption(mirrorToStdout);
+
     parser.parse(app->arguments());
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
@@ -480,6 +483,7 @@ int main(int argc, char* argv[])
         splash.finish(mudlet::self());
     }
 
+    mudlet::self()->mMirrorToStdOut = parser.isSet(mirrorToStdout);
     mudlet::self()->show();
 
     mudlet::self()->startAutoLogin(cliProfile);
