@@ -152,7 +152,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     // initialize telnet session
     reset();
 
-    mpPostingTimer->setInterval(300); //FIXME
+    mpPostingTimer->setInterval(mTimeOut);
     connect(mpPostingTimer, &QTimer::timeout, this, &cTelnet::slot_timerPosting);
 
     mTimerLogin = new QTimer(this);
@@ -1933,14 +1933,8 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
 
 void cTelnet::setGMCPVariables(const QByteArray& msg)
 {
-    QString transcodedMsg;
-    if (mpOutOfBandDataIncomingCodec) {
-        // Message is encoded
-        transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
-    } else {
-        // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = msg;
-    }
+    // JSON (and thus the GMCP data) is always utf8
+    QString transcodedMsg(msg);
 
     QString packageMessage;
     QString data;
@@ -2427,6 +2421,9 @@ void cTelnet::postMessage(QString msg)
 void cTelnet::gotPrompt(std::string& mud_data)
 {
     mpPostingTimer->stop();
+    if (mpPostingTimer->interval() != mTimeOut) {
+        mpPostingTimer->setInterval(mTimeOut);
+    }
     mMudData += mud_data;
 
     if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
@@ -2476,6 +2473,9 @@ void cTelnet::gotRest(std::string& mud_data)
         if (i != std::string::npos) {
             mMudData += mud_data.substr(0, i + 1);
             postData();
+            if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
+                mpPostingTimer->setInterval(mTimeOut);
+            }
             mpPostingTimer->start();
             mIsTimerPosting = true;
             if (i + 1 < mud_data.size()) {
@@ -2486,6 +2486,9 @@ void cTelnet::gotRest(std::string& mud_data)
         } else {
             mMudData += mud_data;
             if (!mIsTimerPosting) {
+                if (mpPostingTimer->interval() != mTimeOut) {
+                    mpPostingTimer->setInterval(mTimeOut);
+                }
                 mpPostingTimer->start();
                 mIsTimerPosting = true;
             }
@@ -3059,5 +3062,12 @@ std::string cTelnet::encodeAndCookBytes(const std::string& data)
         // std::string::c_str() converts the std::string into a char array WITH
         // a garenteed terminating null byte.
         return mudlet::replaceString(data, "\xff", "\xff\xff");
+    }
+}
+
+void cTelnet::setPostingTimeout(const int timeout)
+{
+    if (mTimeOut != timeout) {
+        mTimeOut = timeout;
     }
 }

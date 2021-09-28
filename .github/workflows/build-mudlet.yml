@@ -102,7 +102,17 @@ jobs:
     - name: Use CMake 3.20.1
       uses: lukka/get-cmake@v3.20.1
 
-    # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
+    - name: (macOS) Install non-vcpkg dependencies (1/2)
+      if: runner.os == 'macOS'
+      env:
+        HOMEBREW_NO_ANALYTICS: "ON"
+        HOMEBREW_NO_AUTO_UPDATE: "ON"
+        HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
+        HOMEBREW_NO_INSTALL_CLEANUP: "ON"
+      run: |
+        # dependencies needed for vcpkg specifically
+        brew install automake autoconf
+
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v7
       env:
@@ -112,7 +122,7 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
 
-    - name: (macOS) Install non-vcpkg dependencies
+    - name: (macOS) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'macOS'
       env:
         HOMEBREW_NO_ANALYTICS: "ON"
@@ -248,6 +258,13 @@ jobs:
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
+    - name: Upload GitHub Actions artifact of vcpkg build logs
+      if: failure()
+      uses: actions/upload-artifact@v2
+      with:
+        name: vcpkg-logs-${{ runner.os }}
+        path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
+
     - name: (Linux/macOS) check ccache stats post build
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: ccache --show-stats
@@ -350,7 +367,7 @@ jobs:
           exit 1
         fi
 
-    - name: (windows) Show relevant logs logs
+    - name: (windows) Show relevant setup logs
       if: failure() && runner.os == 'Windows'
       run: |
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
