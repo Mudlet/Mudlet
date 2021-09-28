@@ -463,7 +463,7 @@ void TMap::audit()
                         // Note that two of the last three arguments here
                         // (false, 40.0) are not the defaults (true, 30.0) used
                         // now:
-                        int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50);
+                        int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50, std::nullopt);
                         if (newID > -1) {
                             if (mudlet::self()->showMapAuditErrors()) {
                                 QString msg = tr("[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.").arg(areaID).arg(i);
@@ -2053,7 +2053,8 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     return true;
 }
 
-int TMap::createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, qreal zoom, int fontSize)
+//NOLINT(readability-make-member-function-const)
+int TMap::createMapLabel(int area, const QString& text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, qreal zoom, int fontSize, std::optional<QString> fontName)
 {
     auto pA = mpRoomDB->getArea(area);
     if (!pA) {
@@ -2067,7 +2068,6 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     TMapLabel label;
     label.text = text;
     label.bgColor = bg;
-    label.bgColor.setAlpha(50);
     label.fgColor = fg;
     label.size = QSizeF(100, 100);
     label.pos = QVector3D(x, y, z);
@@ -2081,8 +2081,7 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     lp.fillRect(lr, label.bgColor);
     QPen lpen;
     lpen.setColor(label.fgColor);
-    QFont font;
-    font.setPointSize(fontSize); //good: font size = 50, zoom = 30.0
+    QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
     lp.setRenderHint(QPainter::TextAntialiasing, true);
     lp.setPen(lpen);
     lp.setFont(font);
@@ -2516,7 +2515,7 @@ void TMap::slot_downloadCancel()
     postMessage(alertMsg);
     if (mpProgressDialog) {
         mpProgressDialog->deleteLater();
-        mpProgressDialog = Q_NULLPTR; // Must reset this so it can be reused
+        mpProgressDialog = nullptr; // Must reset this so it can be reused
     }
     if (mpNetworkReply) {
         mpNetworkReply->abort(); // Will indirectly cause error() AND replyFinished signals to be sent
@@ -2540,13 +2539,13 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
 {
     auto cleanup = [this, reply](){
         reply->deleteLater();
-        mpNetworkReply = Q_NULLPTR;
+        mpNetworkReply = nullptr;
 
         // We don't delete the progress dialog until here as we now use it to inform
         // about post-download operations
 
         mpProgressDialog->deleteLater();
-        mpProgressDialog = Q_NULLPTR; // Must reset this so it can be reused
+        mpProgressDialog = nullptr; // Must reset this so it can be reused
 
         mLocalMapFileName.clear();
         mExpectedFileSize = 0;
@@ -2618,7 +2617,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
                     // Since the download is complete but we do not offer to
                     // cancel the required post-processing we should now hide
                     // the cancel/abort button:
-                    mpProgressDialog->setCancelButton(Q_NULLPTR);
+                    mpProgressDialog->setCancelButton(nullptr);
 
                     // The action to parse the XML file has been refactored to
                     // a separate method so that it can be shared with the

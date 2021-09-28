@@ -39,13 +39,13 @@
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)
 , mPackageName(QString())
-, mpTrigger(Q_NULLPTR)
-, mpTimer(Q_NULLPTR)
-, mpAlias(Q_NULLPTR)
-, mpKey(Q_NULLPTR)
-, mpAction(Q_NULLPTR)
-, mpScript(Q_NULLPTR)
-, mpVar(Q_NULLPTR)
+, mpTrigger(nullptr)
+, mpTimer(nullptr)
+, mpAlias(nullptr)
+, mpKey(nullptr)
+, mpAction(nullptr)
+, mpScript(nullptr)
+, mpVar(nullptr)
 , gotTrigger(false)
 , gotTimer(false)
 , gotAlias(false)
@@ -931,6 +931,15 @@ void XMLimport::readHostPackage(Host* pHost)
         mudlet::self()->dactionInputLine->setChecked(compactInputLine);
     }
 
+    if (attributes().hasAttribute(QLatin1String("NetworkPacketTimeout"))) {
+        // These limits are also hard coded into the QSpinBox used to adjust
+        // this setting in the preferences:
+        pHost->mTelnet.setPostingTimeout(qBound(10, attributes().value(QLatin1String("NetworkPacketTimeout")).toInt(), 500));
+    } else {
+        // The default value, also used up to Mudlet 4.12.0:
+        pHost->mTelnet.setPostingTimeout(300);
+    }
+
     while (!atEnd()) {
         readNext();
 
@@ -1496,7 +1505,7 @@ int XMLimport::readScriptGroup(TScript* pParent)
             } else if (name() == "script") {
                 QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
-                    qDebug().nospace() << "XMLimport::readScriptGroup(...): ERROR: can not compile script's lua code for: " << pT->getName();
+                    qDebug().nospace().noquote() << "XMLimport::readScriptGroup(...) ERROR - can not compile script's lua code for \"" << pT->getName() << "\"; reason: " << pT->getError() << ".";
                 }
             } else if (name() == "eventHandlerList") {
                 readStringList(pT->mEventHandlerList);
