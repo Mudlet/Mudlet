@@ -45,7 +45,6 @@ jobs:
             triplet: x64-mingw-dynamic
             # compiler: flag not used in windows pipeline
             qt: '5.14.2'
-            deploy: 'deploy'
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
