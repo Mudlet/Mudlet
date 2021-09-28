@@ -89,7 +89,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.12.0
+VERSION = 4.13.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -413,6 +413,10 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
+    !exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
+        message("git submodule for required Qt ordered map source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${PWD}\.. & git submodule update --init 3rdparty/qt-ordered-map")
+    }
     contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
             message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
@@ -427,6 +431,10 @@ win32 {
     !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
+    }
+    !exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
+        message("git submodule for required Qt ordered map source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qt-ordered-map")
     }
     contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
@@ -470,6 +478,10 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
 
 !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
+}
+
+!exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
+    error("Cannot locate Qt ordered map submodule source code, build abandoned!")
 }
 
 contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
