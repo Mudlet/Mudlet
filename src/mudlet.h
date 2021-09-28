@@ -430,8 +430,8 @@ public:
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
 
-    static void setMirrorState(const bool state) { mMirrorToStdOut = state; }
-    static bool mirrorToStdOut() { return mMirrorToStdOut; }
+    // mirror everything shown in any console to stdout. Helpful for CI environments
+    inline static bool mMirrorToStdOut;
 
     struct GameDetails {
         QString hostUrl;
@@ -709,9 +709,6 @@ private:
 
     // Whether multi-view is in effect:
     bool mMultiView;
-
-    // mirror everything shown in any console to stdout. Helpful for CI environments
-    inline static bool mMirrorToStdOut;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

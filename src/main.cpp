@@ -483,7 +483,7 @@ int main(int argc, char* argv[])
         splash.finish(mudlet::self());
     }
 
-    mudlet::self()->setMirrorState(parser.isSet(mirrorToStdout));
+    mudlet::self()->mMirrorToStdOut = parser.isSet(mirrorToStdout);
     mudlet::self()->show();
 
     mudlet::self()->startAutoLogin(cliProfile);

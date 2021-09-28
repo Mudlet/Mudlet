@@ -1682,7 +1682,7 @@ void TConsole::print(const QString& msg)
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    if (Q_UNLIKELY(mudlet::self()->mirrorToStdOut())) {
+    if (Q_UNLIKELY(mudlet::self()->mMirrorToStdOut)) {
         qDebug().nospace().noquote() << QStringLiteral("%1| %2").arg(mConsoleName, msg);
     }
 }
@@ -1695,7 +1695,7 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    if (Q_UNLIKELY(mudlet::self()->mirrorToStdOut())) {
+    if (Q_UNLIKELY(mudlet::self()->mMirrorToStdOut)) {
         qDebug().nospace().noquote() << QStringLiteral("%1| %2").arg(mConsoleName, msg);
     }
 }
