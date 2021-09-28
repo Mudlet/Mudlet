@@ -7122,7 +7122,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="181"/>
       <source>%1 - Editor</source>
-      <translation type="unfinished"/>
+      <translation>%1 - 编辑器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="466"/>
@@ -7599,7 +7599,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8409"/>
       <source>Ctrl+0</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+0</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8436"/>
@@ -7724,43 +7724,43 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="422"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8391"/>
       <source>Ctrl+1</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="427"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8393"/>
       <source>Ctrl+2</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="432"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8395"/>
       <source>Ctrl+3</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+3</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="437"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8397"/>
       <source>Ctrl+4</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+4</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="442"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8399"/>
       <source>Ctrl+5</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+5</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="447"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8401"/>
       <source>Ctrl+6</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+6</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="452"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8403"/>
       <source>Ctrl+7</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+7</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="456"/>
@@ -7771,7 +7771,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="457"/>
       <source>Show/Hide the errors console in the bottom right of this editor.</source>
-      <translation type="unfinished"/>
+      <translation>在编辑器的右下方显示/隐藏错误控制台。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="458"/>
@@ -8445,7 +8445,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="282"/>
       <source>Package exporter</source>
-      <translation type="unfinished"/>
+      <translation>包导出器</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="285"/>
@@ -9077,12 +9077,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="802"/>
       <source>Dzongkha</source>
-      <translation type="unfinished"/>
+      <translation>宗喀语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="803"/>
       <source>Dzongkha (Bhutan)</source>
-      <translation type="unfinished"/>
+      <translation>宗喀语(不丹)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="809"/>
@@ -9338,7 +9338,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="861"/>
       <location filename="../src/mudlet.cpp" line="862"/>
       <source>Finnish</source>
-      <translation type="unfinished"/>
+      <translation>芬兰语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="863"/>
@@ -9399,13 +9399,13 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="874"/>
       <location filename="../src/mudlet.cpp" line="879"/>
       <source>Guarani</source>
-      <translation type="unfinished"/>
+      <translation>瓜拉尼语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="875"/>
       <location filename="../src/mudlet.cpp" line="880"/>
       <source>Guarani (Paraguay)</source>
-      <translation type="unfinished"/>
+      <translation>瓜拉尼语(巴拉圭)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="876"/>
@@ -9470,12 +9470,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="891"/>
       <source>Indonesian</source>
-      <translation type="unfinished"/>
+      <translation>印度尼西亚语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="892"/>
       <source>Indonesian (Indonesia)</source>
-      <translation type="unfinished"/>
+      <translation>印度尼西亚语 (印度尼西亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="893"/>
@@ -9576,12 +9576,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="912"/>
       <source>Latvian</source>
-      <translation type="unfinished"/>
+      <translation>拉脱维亚语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="913"/>
       <source>Latvian (Latvia)</source>
-      <translation type="unfinished"/>
+      <translation>拉脱维亚语 (拉脱维亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="914"/>
@@ -10204,17 +10204,17 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="982"/>
       <source>Turkish (Turkey)</source>
-      <translation type="unfinished"/>
+      <translation>土耳其语(土耳其)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="992"/>
       <source>Vietnamese (DauCu variant - old-style diacritics)</source>
-      <translation type="unfinished"/>
+      <translation>越南语(DauCu varient -旧式变语)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="993"/>
       <source>Vietnamese (DauMoi variant - new-style diacritics)</source>
-      <translation type="unfinished"/>
+      <translation>越南语(DauCu varient -新式变语)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1002"/>
