@@ -433,6 +433,9 @@ public:
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
 
+    // mirror everything shown in any console to stdout. Helpful for CI environments
+    inline static bool mMirrorToStdOut;
+
     struct GameDetails {
         QString hostUrl;
         int port;
