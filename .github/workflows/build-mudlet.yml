@@ -18,7 +18,7 @@ jobs:
         include:
           # oldest OS supported for maximum compatibility of built AppImage
           - os: ubuntu-18.04
-            buildname: 'ubuntu / gcc'
+            buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
             qt: '5.14.2'
