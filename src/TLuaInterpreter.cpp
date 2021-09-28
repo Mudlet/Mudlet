@@ -13995,7 +13995,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addMouseEvent", TLuaInterpreter::addMouseEvent);
     lua_register(pGlobalLua, "removeMouseEvent", TLuaInterpreter::removeMouseEvent);
     lua_register(pGlobalLua, "getMouseEvents", TLuaInterpreter::getMouseEvents);
-    lua_register(pGlobalLua, "setEnv", TLuaInterpreter::setEnv);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -15755,16 +15754,6 @@ int TLuaInterpreter::addFileWatch(lua_State * L)
     }
 
     lua_pushboolean(L, host.getLuaInterpreter()->mpFileSystemWatcher->addPath(path));
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setEnv
-int TLuaInterpreter::setEnv(lua_State * L)
-{
-    auto variable = getVerifiedString(L, __func__, 1, "environment variable");
-    auto data = getVerifiedString(L, __func__, 2, "data");
-
-    lua_pushboolean(L, qputenv(variable.toLatin1().constData(), data.toLatin1().constData()));
     return 1;
 }
 
