@@ -8455,7 +8455,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="316"/>
       <source>&lt;p&gt;Hide / show the search area and buttons at the bottom of the screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;隐藏/显示屏幕底部的搜索区域和按钮。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="321"/>
@@ -8538,7 +8538,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/ui/main_window.ui" line="216"/>
       <location filename="../src/ui/main_window.ui" line="253"/>
       <source>&lt;p&gt;Opens a built-in IRC chat.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;打开一个内置的IRC聊天室。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="221"/>
@@ -10762,7 +10762,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="302"/>
       <source>&lt;p&gt;Enables MSP - provides Mud Sound Protocol messages during game play for supported games&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;启用MSP - 在游戏过程中为支持的游戏提供Mud Sound Protocol信息。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="345"/>
@@ -11163,7 +11163,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="232"/>
       <source>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;如果 Mudlet 已最小化并且新数据到达，则显示工具栏通知。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="246"/>
@@ -11578,12 +11578,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3195"/>
       <source>Username for logging into the proxy if required</source>
-      <translation type="unfinished"/>
+      <translation>用于登录代理的用户名（如果需要）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3211"/>
       <source>Password for logging into the proxy if required</source>
-      <translation type="unfinished"/>
+      <translation>用于登录代理的密码 ( 如果需要)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3250"/>
