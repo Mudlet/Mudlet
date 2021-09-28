@@ -353,7 +353,7 @@ jobs:
       timeout-minutes: 5
       uses: GabrielBB/xvfb-action@v1.5
       with:
-        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test"
+        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
