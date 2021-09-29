@@ -256,6 +256,19 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
+  describe("Tests the functionality of copy2decho", function()
+    it ("Should return an empty string if line == ''", function()
+      local oldgcl = getCurrentLine
+      _G.getCurrentLine = spy.new(function()
+        return ""
+      end)
+      local expected = ""
+      local actual = copy2decho()
+      assert.equals(expected, actual)
+      _G.getCurrentLine = oldgcl
+    end)
+  end)
+
   describe("Tests the functionality of _Echoes.Process()", function()
     it("Should parse hex patterns correctly", function()
       assert.are.same(
