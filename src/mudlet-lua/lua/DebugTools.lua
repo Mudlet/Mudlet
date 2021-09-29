@@ -377,10 +377,16 @@ function display(...)
   end
 end
 
-local errorc = errorc -- capture to local for internal use
-_G.errorc = nil       -- and set to nil since it is internal only for the following functions.
+local errc
+-- leave errorc in the global table if and only if this is the mudlet self-test profile for running Busted tests
+-- this is because we need to spy on it to for testing.
+if getProfileName() ~= "Mudlet self-test" then
+  errc = errorc
+  _G.errorc = nil       -- and set to nil since it is internal only for the following functions.
+end
 -- undocumented, internal function
 local function printX(options)
+  local errorc = errc and errc or errorc
   local func = options.func or debugc
   local showTrace = options.showTrace
   local msg = options.msg or ""
@@ -411,7 +417,7 @@ end
 
 -- Documentation: https://wiki.mudlet.org/index.php?title=Manual:Lua_Functions#printError
 function printError(msg, showTrace, haltExecution)
-  local func = haltExecution and error or errorc
+  local func = haltExecution and error or (errc and errc or errorc) -- if running automated tests, errc is undefined, use the exposed global.
   local options = {
     msg = msg,
     showTrace = showTrace,
