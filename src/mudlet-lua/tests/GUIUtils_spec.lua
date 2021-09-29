@@ -265,6 +265,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local expected = ""
       local actual = copy2decho()
       assert.equals(expected, actual)
+      assert.spy(_G.getCurrentLine).was.called()
       _G.getCurrentLine = oldgcl
     end)
   end)
