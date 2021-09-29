@@ -5539,7 +5539,7 @@ int TLuaInterpreter::setUnderline(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#errorc
+// No documentation available in wiki - internal function used by printError in DebugTools.lua
 int TLuaInterpreter::errorc(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -5549,18 +5549,19 @@ int TLuaInterpreter::errorc(lua_State* L)
         return 0;
     }
     QString luaErrorText;
-    if (n > 1) {
-        for (int i = 0; i < n; ++i) {
-            luaErrorText += QStringLiteral(" (%1) %2").arg(QString::number(i + 1), lua_tostring(L, i + 1));
-        }
+    QString luaFunctionInfo;
+    luaErrorText = QStringLiteral(" %1").arg(lua_tostring(L, 1));
+    if (n == 2) {
+        luaFunctionInfo = QStringLiteral("%1").arg(lua_tostring(L, 2));
     } else {
-        // n == 1
-        luaErrorText = QStringLiteral(" %1").arg(lua_tostring(L, 1));
+        luaFunctionInfo = QStringLiteral(" <no debug data available> ");
     }
+    luaFunctionInfo.append(QChar::LineFeed);
     luaErrorText.append(QChar::LineFeed);
     if (host.mpEditorDialog) {
-        host.mpEditorDialog->mpErrorConsole->print(QLatin1String("[ERROR:]"), QColor(Qt::blue), QColor(Qt::black));
-        host.mpEditorDialog->mpErrorConsole->print(luaErrorText, QColor(Qt::red), QColor(Qt::black));
+        host.mpEditorDialog->mpErrorConsole->print(QLatin1String("[ERROR:] "), QColor(Qt::blue), QColor(Qt::black));
+        host.mpEditorDialog->mpErrorConsole->print(luaFunctionInfo, QColor(Qt::green), QColor(Qt::black));
+        host.mpEditorDialog->mpErrorConsole->print(QStringLiteral("         %1").arg(luaErrorText), QColor(Qt::red), QColor(Qt::black));
     }
 
     if (host.mEchoLuaErrors) {
@@ -5569,7 +5570,8 @@ int TLuaInterpreter::errorc(lua_State* L)
         }
         host.mpConsole->print(QStringLiteral("[  LUA  ] - "), QColor(80,160,255), QColor(Qt::black));
         host.mpConsole->print(QStringLiteral("ERROR: "), QColor(Qt::blue), QColor(Qt::black));
-        host.mpConsole->print(QStringLiteral("%1").arg(luaErrorText), QColor(200,50,42), QColor(Qt::black));
+        host.mpConsole->print(QStringLiteral("%1").arg(luaFunctionInfo), QColor(Qt::green), QColor(Qt::black));
+        host.mpConsole->print(QStringLiteral("           %1").arg(luaErrorText), QColor(200,50,42), QColor(Qt::black));
     }
     return 0;
 }

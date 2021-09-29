@@ -377,6 +377,8 @@ function display(...)
   end
 end
 
+local errorc = errorc -- capture to local for internal use
+_G.errorc = nil       -- and set to nil since it is internal only for the following functions.
 -- undocumented, internal function
 local function printX(options)
   local func = options.func or debugc
@@ -395,11 +397,16 @@ local function printX(options)
     header = "\n" .. header
   end
   local traceback = showTrace and "\n" .. table.concat(stackTable, "\n") or ""
-  msg = string.format("%s %s%s", halt and "" or header, msg, traceback)
-  if halt then
-    func(msg, level)
+  if func ~= errorc then
+    msg = string.format("%s %s%s", halt and "" or header, msg, traceback)
+    if halt then
+      func(msg, level)
+    end
+    func(msg)
+    return
   end
-  func(msg)
+  msg = msg .. traceback
+  func(msg, header)
 end
 
 -- Documentation: https://wiki.mudlet.org/index.php?title=Manual:Lua_Functions#printError
