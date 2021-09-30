@@ -1483,14 +1483,14 @@ int XMLimport::readScriptPackage()
 
 int XMLimport::readScriptGroup(TScript* pParent)
 {
-    auto pT = new TScript(pParent, mpHost);
+    auto script = new TScript(pParent, mpHost);
 
-    pT->setIsFolder(attributes().value(QStringLiteral("isFolder")) == YES);
-    mpHost->getScriptUnit()->registerScript(pT);
-    pT->setIsActive(attributes().value(QStringLiteral("isActive")) == YES);
+    script->setIsFolder(attributes().value(QStringLiteral("isFolder")) == YES);
+    mpHost->getScriptUnit()->registerScript(script);
+    script->setIsActive(attributes().value(QStringLiteral("isActive")) == YES);
 
     if (module) {
-        pT->mModuleMember = true;
+        script->mModuleMember = true;
     }
 
     while (!atEnd()) {
@@ -1499,26 +1499,26 @@ int XMLimport::readScriptGroup(TScript* pParent)
             break;
         } else if (isStartElement()) {
             if (name() == "name") {
-                pT->mName = readElementText();
+                script->mName = readElementText();
             } else if (name() == "packageName") {
-                pT->mPackageName = readElementText();
+                script->mPackageName = readElementText();
             } else if (name() == "script") {
                 QString tempScript = readScriptElement();
-                if (!pT->setScript(tempScript)) {
-                    qDebug().nospace().noquote() << "XMLimport::readScriptGroup(...) ERROR - can not compile script's lua code for \"" << pT->getName() << "\"; reason: " << pT->getError() << ".";
+                if (!script->setScript(tempScript)) {
+                    qDebug().nospace().noquote() << "XMLimport::readScriptGroup(...) ERROR - can not compile script's lua code for \"" << script->getName() << "\"; reason: " << script->getError() << ".";
                 }
             } else if (name() == "eventHandlerList") {
-                readStringList(pT->mEventHandlerList);
-                pT->setEventHandlerList(pT->mEventHandlerList);
+                readStringList(script->mEventHandlerList);
+                script->setEventHandlerList(script->mEventHandlerList);
             } else if (name() == "ScriptGroup" || name() == "Script") {
-                readScriptGroup(pT);
+                readScriptGroup(script);
             } else {
                 readUnknownScriptElement();
             }
         }
     }
 
-    return pT->getID();
+    return script->getID();
 }
 
 int XMLimport::readKeyPackage()
