@@ -2179,6 +2179,10 @@ local function copy2color(name,win,str,inst)
   win = win or "main"
   str = str or line
   inst = inst or 1
+  if str == "" then
+    -- happens when you try to use copy2decho() on an empty line
+    return ""
+  end
   local start, len = selectString(win, str, inst), #str
   if not start then
     error(name..": string not found",3)
