@@ -1598,7 +1598,7 @@ bool Host::installPackage(const QString& fileName, int module)
     // As the pointed to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
     // pointer just in case we accidentally reenter this method in the future.
-    QDialog* pUnzipDialog = Q_NULLPTR;
+    QDialog* pUnzipDialog = nullptr;
 
     //     Module notes:
     //     For the module install, a module flag of 0 is a package,
@@ -1677,7 +1677,7 @@ bool Host::installPackage(const QString& fileName, int module)
 
         auto successful = mudlet::unzip(fileName, _dest, _tmpDir);
         pUnzipDialog->deleteLater();
-        pUnzipDialog = Q_NULLPTR;
+        pUnzipDialog = nullptr;
         if (!successful) {
             return false;
         }
@@ -1820,7 +1820,7 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     bool result = true;
     QDir dir(dirName);
     if (dir.exists(dirName)) {
-        Q_FOREACH (QFileInfo info, dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
+        for (QFileInfo &info : dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
             // prevent recursion outside of the original branch
             if (info.isDir() && info.absoluteFilePath().startsWith(originalPath)) {
                 result = removeDir(info.absoluteFilePath(), originalPath);
