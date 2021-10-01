@@ -2589,7 +2589,7 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
                 if (hasRoomWithNumberAsId) {
                     if (hasExitStubWithNumberAsDirection) {
                         return warnArgumentValue(
-                                L, __func__, QStringLiteral("%1 is too ambiguous a number to parse into a toID or a direction code as both are valid in this case").arg(lua_tonumber(L, 2)));
+                                L, __func__, QStringLiteral("%1 is too ambiguous a number to parse into a toID or a direction code as both are valid in this case. If this is a direction, try providing it as a string").arg(lua_tonumber(L, 2)));
                     }
                     // else - usable as only one of the two flags is set:
                     hasToRoomId = true;
