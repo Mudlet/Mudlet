@@ -106,6 +106,48 @@ describe("tests the functionality of the gmod module", function()
     end)
   end)
 
-  describe("gmod.printModules", function()
+  describe("gmod.printModules([user])", function()
+    local user = "testUser"
+    local module = "OogaBoogaFakeModule"
+    local gp
+    local ce
+    before_each(function()
+      gp = spy.on(gmod, "print")
+      ce = stub(_G, "cecho")
+    end)
+    after_each(function()
+      gmod.print:revert()
+      cecho:revert()
+    end)
+
+    it("Should include an enabled module in its output", function()
+      gmod.enableModule(user, module)
+      gmod.printModules()
+      assert.spy(gp).was_called()
+      assert.stub(ce).was_called()
+      assert.stub(ce).was_called_with(match.has_match(module))
+      gmod.disableModule(user, module) -- cleanup
+    end)
+
+    it("Should not include a module in its output if it is disabled", function()
+      gmod.enableModule(user, module)
+      gmod.disableModule(user, module)
+      gmod.printModules()
+      assert.stub(ce).was_not_called_with(match.has_match(module))
+    end)
+
+    it("Should only print a specific user's enabled modules when called with a user", function()
+      local user2 = user .. "2"
+      local module2 = module .. "2"
+      gmod.enableModule(user, module)
+      gmod.enableModule(user2, module2)
+      gmod.printModules(user)
+      assert.stub(ce).was_not_called_with(match.has_match(module2))
+      assert.stub(ce).was_not_called_with(match.has_match(user2))
+      assert.stub(ce).was_called_with(match.has_match(user))
+      assert.stub(ce).was_called_with(match.has_match(module))
+      gmod.disableModule(user, module)
+      gmod.disableModule(user2, module2)
+    end)
   end)
 end)
