@@ -8365,7 +8365,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/main.cpp" line="181"/>
       <source>Mirror output of all consoles to STDOUT</source>
-      <translation type="unfinished"/>
+      <translation>Выводить текст всех консолей в STDOUT</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="191"/>
@@ -12123,7 +12123,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3506"/>
       <source>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) and &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) signalling tells Mudlet when the game server is done sending text. On games that do not provide &lt;tt&gt;GA&lt;/tt&gt; or &lt;tt&gt;EOR&lt;/tt&gt;, this option controls how long Mudlet will wait for more text to arrive. Greater values will help reduce the risk that Mudlet will split a large piece of text (with unintended line-breaks in the middle) which can stop some triggers from working. Lesser values increases the risk of text getting broken up, but may make the game feel more responsive.&lt;/p&gt;&lt;p&gt;&lt;i&gt;The default value, which was what Mudlet used before this control was added, is 0.300 Seconds.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) и &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) сигнализация сообщает Mudlet, когда сервер игры закончил отправку текста. В играх, которые не предоставляют &lt;tt&gt;GA&lt;/tt&gt; или &lt;tt&gt;EOR&lt;/tt&gt;, этот параметр контролирует, как долго Mudlet будет ждать, пока придет еще текст. Большие значения помогут снизить риск того, что Mudlet разделит большой кусок текста (с непреднамеренными разрывами строк в середине), что может остановить работу некоторых триггеров. Меньшие значения увеличивают риск разрыва текста, но могут сделать игру более отзывчивой.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Значение по умолчанию, которое использовалось Mudlet до добавления этого элемента управления, равно 0,300 секунды.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3509"/>
