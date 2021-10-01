@@ -11984,7 +11984,7 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/profile_preferences.ui" line="3509"/>
       <source> seconds</source>
       <extracomment>For most locales a space should be included so that the text is separated from the number!</extracomment>
-      <translation type="unfinished"/>
+      <translation> 秒</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3579"/>
