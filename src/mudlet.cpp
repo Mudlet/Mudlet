@@ -763,6 +763,8 @@ void mudlet::loadMaps()
                                   {QStringLiteral("de_de_frami"), tr("German (Germany/Belgium/Luxemburg, revised by F M Baumann)")},
                                   {QStringLiteral("de_li"), tr("German (Liechtenstein)")},
                                   {QStringLiteral("de_lu"), tr("German (Luxembourg)")},
+                                  {QStringLiteral("dz"), tr("Dzongkha")},
+                                  {QStringLiteral("dz_bt"), tr("Dzongkha (Bhutan)")},
                                   {QStringLiteral("el"), tr("Greek")},
                                   {QStringLiteral("el_gr"), tr("Greek (Greece)")},
                                   {QStringLiteral("en"), tr("English")},
@@ -833,8 +835,13 @@ void mudlet::loadMaps()
                                   {QStringLiteral("gd_gb"), tr("Gaelic (United Kingdom {Scots})")},
                                   {QStringLiteral("gl"), tr("Galician")},
                                   {QStringLiteral("gl_es"), tr("Galician (Spain)")},
+                                  {QStringLiteral("gn"), tr("Guarani")},
+                                  {QStringLiteral("gn_py"), tr("Guarani (Paraguay)")},
                                   {QStringLiteral("gu"), tr("Gujarati")},
                                   {QStringLiteral("gu_in"), tr("Gujarati (India)")},
+                                  // Debian uses gug instead of gn for some reason:
+                                  {QStringLiteral("gug"), tr("Guarani")},
+                                  {QStringLiteral("gug_py"), tr("Guarani (Paraguay)")},
                                   {QStringLiteral("he"), tr("Hebrew")},
                                   {QStringLiteral("he_il"), tr("Hebrew (Israel)")},
                                   {QStringLiteral("hi"), tr("Hindi")},
@@ -845,6 +852,8 @@ void mudlet::loadMaps()
                                   {QStringLiteral("hu_hu"), tr("Hungarian (Hungary)")},
                                   {QStringLiteral("hy"), tr("Armenian")},
                                   {QStringLiteral("hy_am"), tr("Armenian (Armenia)")},
+                                  {QStringLiteral("id"), tr("Indonesian")},
+                                  {QStringLiteral("id_id"), tr("Indonesian (Indonesia)")},
                                   {QStringLiteral("ie"), tr("Interlingue", "formerly known as Occidental, and not to be mistaken for Interlingua")},
                                   {QStringLiteral("is"), tr("Icelandic")},
                                   {QStringLiteral("is_is"), tr("Icelandic (Iceland)")},
@@ -864,6 +873,8 @@ void mudlet::loadMaps()
                                   {QStringLiteral("lo_la"), tr("Lao (Laos)")},
                                   {QStringLiteral("lt"), tr("Lithuanian")},
                                   {QStringLiteral("lt_lt"), tr("Lithuanian (Lithuania)")},
+                                  {QStringLiteral("lv"), tr("Latvian")},
+                                  {QStringLiteral("lv_lv"), tr("Latvian (Latvia)")},
                                   {QStringLiteral("ml"), tr("Malayalam")},
                                   {QStringLiteral("ml_in"), tr("Malayalam (India)")},
                                   {QStringLiteral("nb"), tr("Norwegian Bokmål")},
@@ -919,7 +930,6 @@ void mudlet::loadMaps()
                                   {QStringLiteral("sw"), tr("Swahili")},
                                   {QStringLiteral("sw_ke"), tr("Swahili (Kenya)")},
                                   {QStringLiteral("sw_tz"), tr("Swahili (Tanzania)")},
-                                  {QStringLiteral("tr_TR"), tr("Turkish")},
                                   {QStringLiteral("te"), tr("Telugu")},
                                   {QStringLiteral("te_in"), tr("Telugu (India)")},
                                   {QStringLiteral("th"), tr("Thai")},
@@ -932,6 +942,8 @@ void mudlet::loadMaps()
                                   {QStringLiteral("tn"), tr("Tswana")},
                                   {QStringLiteral("tn_bw"), tr("Tswana (Botswana)")},
                                   {QStringLiteral("tn_za"), tr("Tswana (South Africa)")},
+                                  {QStringLiteral("tr"), tr("Turkish")},
+                                  {QStringLiteral("tr_tr"), tr("Turkish (Turkey)")},
                                   {QStringLiteral("ts"), tr("Tsonga")},
                                   {QStringLiteral("ts_za"), tr("Tsonga (South Africa)")},
                                   {QStringLiteral("uk"), tr("Ukrainian")},
@@ -1915,9 +1927,8 @@ void mudlet::setMenuBarVisibility(const controlsVisibility state)
 // This only adjusts the visibility as appropriate
 void mudlet::adjustMenuBarVisibility()
 {
-    // Are there any profiles loaded?
-    if ((mHostManager.getHostCount() && mMenuBarVisibility & visibleAlways)
-            || (mMenuBarVisibility & visibleMaskNormally)) {
+    const int hostCount = mHostManager.getHostCount();
+    if ((hostCount < 1 && (mMenuBarVisibility & visibleAlways)) || (hostCount >= 1 && (mMenuBarVisibility & visibleMaskNormally))) {
         menuBar()->show();
     } else {
         menuBar()->hide();
@@ -1940,8 +1951,8 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 {
     if (!isVisible && mMenuBarVisibility == visibleNever) {
         // Only need to worry about it DIS-appearing if the menu bar is not showing
-        int hostCount = mHostManager.getHostCount();
-        if ((hostCount < 2 && (mToolbarVisibility & visibleAlways)) || (hostCount >= 2 && (mToolbarVisibility & visibleMaskNormally))) {
+        const int hostCount = mHostManager.getHostCount();
+        if ((hostCount < 1 && (mToolbarVisibility & visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & visibleMaskNormally))) {
             mpMainToolBar->show();
         }
     }
@@ -1949,9 +1960,8 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 
 void mudlet::adjustToolBarVisibility()
 {
-    // Are there any profiles loaded?
-    if ((mHostManager.getHostCount() && mToolbarVisibility & visibleAlways)
-            || (mToolbarVisibility & visibleMaskNormally)) {
+    const int hostCount = mHostManager.getHostCount();
+    if ((hostCount < 1 && (mToolbarVisibility & visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & visibleMaskNormally))) {
         mpMainToolBar->show();
     } else {
         mpMainToolBar->hide();
@@ -2558,11 +2568,11 @@ void mudlet::doAutoLogin(const QString& profile_name)
     if (entries.isEmpty()) {
         preInstallPackages = true;
 
-        const auto it = mudlet::scmDefaultGames.constFind(profile_name);
-        if (it != mudlet::scmDefaultGames.cend()) {
-            pHost->setUrl(it->hostUrl);
-            pHost->setPort(it->port);
-            pHost->mSslTsl = it->tlsEnabled;
+        const auto it = mudlet::scmDefaultGames.find(profile_name);
+        if (it != mudlet::scmDefaultGames.end()) {
+            pHost->setUrl(it.value().hostUrl);
+            pHost->setPort(it.value().port);
+            pHost->mSslTsl = it.value().tlsEnabled;
         }
     } else {
         QFile file(QStringLiteral("%1/%2").arg(folder, entries.at(0)));

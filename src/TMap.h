@@ -42,9 +42,10 @@
 #include <QPointer>
 #include <QSizeF>
 #include <QVector3D>
+#include <stdlib.h>
+#include <optional>
 #include "post_guard.h"
 
-#include <stdlib.h>
 
 class dlgMapper;
 class Host;
@@ -75,7 +76,18 @@ public:
     ~TMap();
     void mapClear();
     int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop);
-    int createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop = true, bool noScaling = true, qreal zoom = 30.0, int fontSize = 50);
+    int createMapLabel(int area,
+                       const QString& text,
+                       float x,
+                       float y,
+                       float z,
+                       QColor fg,
+                       QColor bg,
+                       bool showOnTop = true,
+                       bool noScaling = true,
+                       qreal zoom = 30.0,
+                       int fontSize = 50,
+                       std::optional<QString> fontName = std::nullopt);
     void deleteMapLabel(int area, int labelID);
     bool addRoom(int id = 0);
     bool setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations = false);
@@ -122,10 +134,10 @@ public:
     void downloadMap(const QString& remoteUrl = QString(), const QString& localFileName = QString());
 
     // like 'downloadMap' but for local files:
-    bool importMap(QFile&, QString* errMsg = Q_NULLPTR);
+    bool importMap(QFile&, QString* errMsg = nullptr);
 
     // Used at end of downloadMap(...) OR as part of importMap(...)
-    bool readXmlMapFile(QFile&, QString* errMsg = Q_NULLPTR);
+    bool readXmlMapFile(QFile&, QString* errMsg = nullptr);
 
     // Use progress dialog for post-download operations.
     void reportStringToProgressDialog(QString);
