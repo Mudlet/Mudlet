@@ -1960,21 +1960,8 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
 
                     if (!getUserDataBool(room->userData, ROOM_UI_DONTSHOWAREAEXITNAME, false)) {
                         QPointF areaExitNameOffset = parseOffsetString(room->userData.value(ROOM_UI_AREAEXITNAMEOFFSET + "." + itk.key()));
-                        int exitRoomId = -1;
-                        QMapIterator<int, QString> otherExitIt = room->getOtherMap();
-                        while (otherExitIt.hasNext()) {
-                            otherExitIt.next();
-                            if (otherExitIt.value().startsWith(QLatin1String("0")) || otherExitIt.value().startsWith(QLatin1String("1"))) {
-                                if (otherExitIt.value().mid(1) == itk.key()) {
-                                    exitRoomId = otherExitIt.key();
-                                    break;
-                                }
-                            } else if (otherExitIt.value() == itk.key()) {
-                                exitRoomId = otherExitIt.key();
-                                break;
-                            }
-                        }
-                        if (exitRoomId > -1) {
+                        int exitRoomId = room->getSpecialExits().value(itk.key());
+                        if (exitRoomId > 0) {
                             auto pExitRoom = mpMap->mpRoomDB->getRoom(exitRoomId);
                             if (pExitRoom && pExitRoom->getArea() != mAreaID) {
                                 QRectF rectExitAreaName(0, 0, 250, 30);
