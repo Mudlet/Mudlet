@@ -373,7 +373,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
     if (minDistanceRoom) {
         auto pToR = mpRoomDB->getRoom(minDistanceRoom);
         if (!pToR) {
-            // Technically this should be redundent as we have already checked
+            // Technically this should be redundant as we have already checked
             // that this room existed in the above while() loop!
             return QStringLiteral("nearest room in the indicated direction (%1) does not exist").arg(minDistanceRoom);
         }
