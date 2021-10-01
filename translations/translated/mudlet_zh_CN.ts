@@ -7787,7 +7787,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="462"/>
       <source>Generate a statistics summary display on the main profile console.</source>
-      <translation type="unfinished"/>
+      <translation>在主配置控制台生成一个统计摘要显示</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="463"/>
@@ -8268,12 +8268,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/main.cpp" line="178"/>
       <source>Don&apos;t show the splash screen when starting</source>
-      <translation type="unfinished"/>
+      <translation>启动时不显示闪屏</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="181"/>
       <source>Mirror output of all consoles to STDOUT</source>
-      <translation type="unfinished"/>
+      <translation>镜像所有控制台的输出到STDOUT</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="191"/>
@@ -8470,7 +8470,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="324"/>
       <source>&lt;p&gt;Open a link to the Mudlet server on Discord.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;在 Discord 上打开到 Mudlet 服务器的链接。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="329"/>
@@ -11210,7 +11210,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1112"/>
       <source>&lt;p&gt;Select this option for better compatibility if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;勾选此项可让你在使用上网本或其它较小屏幕的电脑型号时有更好的相容性. &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1268"/>
@@ -11563,7 +11563,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2010"/>
       <source>&lt;p&gt;This enables borders around room. Color can be set in Mapper colors tab&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;这将启用房间周围的边框。可以在 “颜色选择器” 中设置颜色&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2013"/>
@@ -12025,7 +12025,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3496"/>
       <source>Additional text wait time:</source>
-      <translation type="unfinished"/>
+      <translation>附加文本等待时间：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3506"/>
@@ -12036,7 +12036,7 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/profile_preferences.ui" line="3509"/>
       <source> seconds</source>
       <extracomment>For most locales a space should be included so that the text is separated from the number!</extracomment>
-      <translation type="unfinished"/>
+      <translation> 秒</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3579"/>
