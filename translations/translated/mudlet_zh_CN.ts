@@ -5376,7 +5376,7 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1309"/>
       <source>Set custom color</source>
       <comment>Set a custom color to show for the profile in the connection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>设置自定义颜色</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1322"/>
@@ -7776,7 +7776,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="458"/>
       <source>Show/Hide errors console</source>
-      <translation type="unfinished"/>
+      <translation>显示/隐藏错误控制台</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="458"/>
@@ -7792,7 +7792,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="463"/>
       <source>Generate statistics</source>
-      <translation type="unfinished"/>
+      <translation>生成统计</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="463"/>
