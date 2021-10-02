@@ -226,7 +226,7 @@
           <item row="0" column="0">
            <widget class="QCheckBox" name="enableDarkTheme">
             <property name="text">
-             <string>Enable DarkTheme</string>
+             <string>Use a dark theme</string>
             </property>
             <property name="toolTip">
              <string>&lt;p&gt;Changes your Mudlet Style to a Dark Fusion Style.&lt;/p&gt;</string>
