@@ -537,6 +537,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     ircHostName->setText(dlgIRC::readIrcHostName(pHost));
     ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(pHost)));
+    ircHostSecure->setChecked(dlgIRC::readIrcHostSecure(pHost));
     ircChannels->setText(dlgIRC::readIrcChannels(pHost).join(" "));
     ircNick->setText(dlgIRC::readIrcNickName(pHost));
 
@@ -2504,11 +2505,13 @@ void dlgProfilePreferences::slot_save_and_exit()
         QString oldIrcNick = dlgIRC::readIrcNickName(pHost);
         QString oldIrcHost = dlgIRC::readIrcHostName(pHost);
         QString oldIrcPort = QString::number(dlgIRC::readIrcHostPort(pHost));
+        bool oldIrcSecure = dlgIRC::readIrcHostSecure(pHost);
         QString oldIrcChannels = dlgIRC::readIrcChannels(pHost).join(" ");
 
         QString newIrcNick = ircNick->text();
         QString newIrcHost = ircHostName->text();
         QString newIrcPort = ircHostPort->text();
+        bool newIrcSecure = ircHostSecure->isChecked();
         QString newIrcChannels = ircChannels->text();
         QStringList newChanList;
         int nIrcPort = dlgIRC::DefaultHostPort;
@@ -2569,6 +2572,11 @@ void dlgProfilePreferences::slot_save_and_exit()
 
         if (oldIrcPort != newIrcPort) {
             dlgIRC::writeIrcHostPort(pHost, nIrcPort);
+            restartIrcClient = true;
+        }
+
+        if (oldIrcSecure != newIrcSecure) {
+            dlgIRC::writeIrcHostSecure(pHost, newIrcSecure);
             restartIrcClient = true;
         }
 

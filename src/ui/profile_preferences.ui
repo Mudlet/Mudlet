@@ -2626,6 +2626,13 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="3" column="0">
+           <widget class="QCheckBox" name="ircHostSecure">
+            <property name="text">
+             <string>TLS/SSL secure connection</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -3718,6 +3725,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>ircNick</tabstop>
   <tabstop>ircHostPort</tabstop>
   <tabstop>ircChannels</tabstop>
+  <tabstop>ircHostSecure</tabstop>
   <tabstop>comboBox_discordLargeIconPrivacy</tabstop>
   <tabstop>comboBox_discordSmallIconPrivacy</tabstop>
   <tabstop>checkBox_discordServerAccessToPartyInfo</tabstop>

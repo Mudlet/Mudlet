@@ -53,20 +53,24 @@ public:
 
     static QString HostNameCfgItem;
     static QString HostPortCfgItem;
+    static QString HostSecureCfgItem;
     static QString NickNameCfgItem;
     static QString ChannelsCfgItem;
     static QString DefaultHostName;
     static int DefaultHostPort;
+    static bool DefaultHostSecure;
     static QString DefaultNickName;
     static QStringList DefaultChannels;
     static int DefaultMessageBufferLimit;
 
     static QString readIrcHostName(Host* pH);
     static int readIrcHostPort(Host* pH);
+    static bool readIrcHostSecure(Host* pH);
     static QString readIrcNickName(Host* pH);
     static QStringList readIrcChannels(Host* pH);
     static QPair<bool, QString> writeIrcHostName(Host* pH, const QString& hostname);
     static QPair<bool, QString> writeIrcHostPort(Host* pH, int port);
+    static QPair<bool, QString> writeIrcHostSecure(Host* pH, bool secure);
     static QPair<bool, QString> writeIrcNickName(Host* pH, const QString& nickname);
     static QPair<bool, QString> writeIrcChannels(Host* pH, const QStringList& channels);
 
@@ -75,6 +79,7 @@ public:
     QPair<bool, QString> sendMsg(const QString& target, const QString& message);
     QString getHostName() { return mHostName; }
     int getHostPort() { return mHostPort; }
+    bool getHostSecure() { return mHostSecure; }
     QString getNickName() { return mNickName; }
     QStringList getChannels() { return mChannels; }
     QString getConnectedHost() { return mConnectedHostName; }
@@ -132,6 +137,7 @@ private:
     QString mConnectedHostName;
     QString mHostName;
     int mHostPort;
+    bool mHostSecure;
     QString mNickName;
     QString mUserName;
     QString mRealName;

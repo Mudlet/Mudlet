@@ -10859,17 +10859,21 @@ int TLuaInterpreter::getIrcServer(lua_State* L)
     Host* pHost = &getHostFromLua(L);
     QString hname;
     int hport;
+    bool hsecure;
     if (pHost->mpDlgIRC) {
         hname = pHost->mpDlgIRC->getHostName();
         hport = pHost->mpDlgIRC->getHostPort();
+        hsecure = pHost->mpDlgIRC->getHostSecure();
     } else {
         hname = dlgIRC::readIrcHostName(pHost);
         hport = dlgIRC::readIrcHostPort(pHost);
+        hsecure = dlgIRC::readIrcHostSecure(pHost);
     }
 
     lua_pushstring(L, hname.toUtf8().constData());
     lua_pushinteger(L, hport);
-    return 2;
+    lua_pushboolean(L, hsecure);
+    return 3;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getIrcChannels
