@@ -10969,6 +10969,11 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
         return warnArgumentValue(L, __func__, QStringLiteral("unable to save port, reason: %1").arg(result.second));
     }
 
+    result = dlgIRC::writeIrcHostSecure(pHost, secure);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, QStringLiteral("unable to save secure, reason: %1").arg(result.second));
+    }
+
     lua_pushboolean(L, true);
     lua_pushnil(L);
     return 2;
