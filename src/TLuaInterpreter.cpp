@@ -10941,6 +10941,8 @@ int TLuaInterpreter::setIrcNick(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setIrcServer
 int TLuaInterpreter::setIrcServer(lua_State* L)
 {
+    int args = lua_gettop(L);
+    int secure = false;
     int port = 6667;
     std::string addr = getVerifiedString(L, __func__, 1, "hostname").toStdString();
     if (addr.empty()) {
@@ -10951,6 +10953,9 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
         if (port > 65535 || port < 1) {
             return warnArgumentValue(L, __func__, QStringLiteral("invalid port number %1 given, if supplied it must be in range 1 to 65535").arg(port));
         }
+    }
+    if (args > 2) {
+        secure = getVerifiedBool(L, __func__, 3, "secure {default = false}", true);
     }
 
     Host* pHost = &getHostFromLua(L);
