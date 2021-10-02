@@ -17,12 +17,20 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#ifndef MUDLET_ALTFOCUSMENUBARDISABLE_H
+#define MUDLET_ALTFOCUSMENUBARDISABLE_H
+
 #include <QProxyStyle>
+#include <QStyleFactory>
 
 class AltFocusMenuBarDisable : public QProxyStyle
 {
+    Q_OBJECT
 
 public:
+    AltFocusMenuBarDisable();
+    explicit AltFocusMenuBarDisable(const QString &style);
     int styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const;
-
 };
+
+#endif

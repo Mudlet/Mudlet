@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2020 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,20 +17,20 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "AltFocusMenuBarDisable.h"
+#ifndef MUDLET_DARKTHEME_H
+#define MUDLET_DARKTHEME_H
 
-AltFocusMenuBarDisable::AltFocusMenuBarDisable()
+#include <QProxyStyle>
+#include <QStyleFactory>
+
+class DarkTheme : public QProxyStyle
 {
-    setObjectName(baseStyle()->objectName());
-}
+    Q_OBJECT
 
-AltFocusMenuBarDisable::AltFocusMenuBarDisable(const QString &style) : QProxyStyle(QStyleFactory::create(style)) {}
+public:
+    DarkTheme();
+    explicit DarkTheme(QStyle* style);
+    void polish(QPalette& palette) override;
+};
 
-int AltFocusMenuBarDisable::styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const
-{
-    if (styleHint == QStyle::SH_MenuBar_AltKeyNavigation) {
-        return 0;
-    }
-
-    return QProxyStyle::styleHint(styleHint, opt, widget, returnData);
-}
+#endif // end MUDLET_DARKTHEME_H

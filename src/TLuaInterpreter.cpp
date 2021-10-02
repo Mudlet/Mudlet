@@ -62,6 +62,7 @@
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QTableWidget>
+#include <QToolTip>
 #include <QFileInfo>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
