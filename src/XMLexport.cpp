@@ -483,7 +483,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
                 QStringList entry = it.value();
                 mInstalledModules.append_child("filepath").text().set(entry.at(0).toUtf8().constData());
                 mInstalledModules.append_child("globalSave").text().set(entry.at(1).toUtf8().constData());
-                pHost->modulesToWrite.insert(it.key(), entry);
+                if (entry.at(1).toInt()) {
+                    pHost->modulesToWrite.insert(it.key(), entry);
+                }
                 mInstalledModules.append_child("priority").text().set(QString::number(pHost->mModulePriorities.value(it.key())).toUtf8().constData());
             }
         }
