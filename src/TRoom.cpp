@@ -101,7 +101,7 @@ QString TRoom::dirCodeToDisplayName(const int dirCode) const
     }
 }
 
-QString TRoom::dirCodeToString(const int dirCode) const
+/*static*/ QString TRoom::dirCodeToString(const int dirCode)
 {
     switch (dirCode) {
     case DIR_NORTH:     return QLatin1String("north");

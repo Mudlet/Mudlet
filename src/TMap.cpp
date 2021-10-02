@@ -264,86 +264,245 @@ int compSign(int a, int b)
     return (a < 0) == (b < 0);
 }
 
-void TMap::connectExitStub(int roomId, int dirType)
+// Will connect the exit stub in the indicated direction to a suitable room
+// i.e. in the "right" (x,y,z) location AND with a stub in the reverse direction
+// IN THE SAME AREA as the fromRoomId numbered room and also create the exit in
+// the reverse direction from the other room - otherwise it will report the
+// reason why it cannot.
+QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType)
 {
-    TRoom* pR = mpRoomDB->getRoom(roomId);
-    if (!pR) {
-        return;
+    Q_ASSERT_X(unitVectors.contains(dirType), "TMap::connectExitStubByDirection(...)", "there is no unitVector.value() for the given dirType");
+    Q_ASSERT_X(reverseDirections.contains(dirType), "TMap::connectExitStubByDirection(...)", "there is no reverseDirections.value() for the given dirType");
+
+    TRoom* pFromR = mpRoomDB->getRoom(fromRoomId);
+    if (!pFromR) {
+        return QStringLiteral("fromID (%1) does not exist").arg(fromRoomId);
     }
-    int area = pR->getArea();
-    int minDistance = 999999;
-    int minDistanceRoom = 0, meanSquareDistance = 0;
-    if (!unitVectors.contains(dirType)) {
-        return;
+    int area = pFromR->getArea();
+    // This will get converted to a positive value on first use:
+    int minDistance = -1;
+    int minDistanceRoom = 0;
+    int meanSquareDistance = 0;
+
+    if (!pFromR->exitStubs.contains(dirType)) {
+        return QStringLiteral("fromID (%1) does not have an exit stub in the given direction '%2' (%3)")
+                .arg(QString::number(fromRoomId), TRoom::dirCodeToString(dirType), QString::number(dirType));
     }
-    QVector3D unitVector = unitVectors[dirType];
-    int ux = unitVector.x(), uy = unitVector.y(), uz = unitVector.z();
-    int rx = pR->x, ry = pR->y, rz = pR->z;
-    int dx = 0, dy = 0, dz = 0;
+
+    int reverseDir = reverseDirections.value(dirType);
+    QVector3D unitVector = unitVectors.value(dirType);
+    // QVector3D is composed of floating point values so we need to round them
+    // if we want to assign them to integral variables without compiler warnings!
+    int ux = qRound(unitVector.x());
+    int uy = qRound(unitVector.y());
+    int uz = qRound(unitVector.z());
+    int rx = pFromR->x;
+    int ry = pFromR->y;
+    int rz = pFromR->z;
+    int dx = 0;
+    int dy = 0;
+    int dz = 0;
     TArea* pA = mpRoomDB->getArea(area);
     if (!pA) {
-        return;
+        return QStringLiteral("fromID (%1) room does not have an area").arg(fromRoomId);
     }
+
     QSetIterator<int> itRoom(pA->getAreaRooms());
     while (itRoom.hasNext()) {
-        pR = mpRoomDB->getRoom(itRoom.next());
-        if (!pR) {
+        auto toRoom = itRoom.next();
+        auto pToR = mpRoomDB->getRoom(toRoom);
+        if (!pToR || pToR->getId() == fromRoomId) {
             continue;
         }
-        if (pR->getId() == roomId) {
+
+        // New test - does this room have a stub exit in the wanted reverse
+        // direction:
+        if (!pToR->exitStubs.contains(reverseDir)) {
             continue;
         }
+
         if (uz) {
-            dz = pR->z - rz;
+            dz = pToR->z - rz;
             if (!compSign(dz, uz) || !dz) {
                 continue;
             }
+
         } else {
             //to avoid lower/upper floors from stealing stubs
-            if (pR->z != rz) {
+            if (pToR->z != rz) {
                 continue;
             }
         }
+
         if (ux) {
-            dx = pR->x - rx;
-            if (!compSign(dx, ux) || !dx) //we do !dx to make sure we have a component in the desired direction
-            {
+            dx = pToR->x - rx;
+            if (!compSign(dx, ux) || !dx) {
+                //we do !dx pRto make sure we have a component in the desired direction
                 continue;
             }
+
         } else {
             //to avoid rooms on same plane from stealing stubs
-            if ((int)pR->x != rx) {
+            if (pToR->x != rx) {
                 continue;
             }
         }
+
         if (uy) {
-            dy = pR->y - ry;
+            dy = pToR->y - ry;
             //if the sign is the SAME here we keep it b/c we flip our y coordinate.
             if (compSign(dy, uy) || !dy) {
                 continue;
             }
+
         } else {
             //to avoid rooms on same plane from stealing stubs
-            if (pR->y != ry) {
+            if (pToR->y != ry) {
                 continue;
             }
         }
+
         meanSquareDistance = dx * dx + dy * dy + dz * dz;
-        if (meanSquareDistance < minDistance) {
-            minDistanceRoom = pR->getId();
+        if (Q_UNLIKELY(minDistance == -1) || (meanSquareDistance < minDistance)) {
+            // The first alternative above is the initialisaton case:
+            minDistanceRoom = toRoom;
             minDistance = meanSquareDistance;
         }
     }
+
     if (minDistanceRoom) {
-        pR = mpRoomDB->getRoom(minDistanceRoom);
-        if (!pR) {
-            return;
+        auto pToR = mpRoomDB->getRoom(minDistanceRoom);
+        if (!pToR) {
+            // Technically this should be redundant as we have already checked
+            // that this room existed in the above while() loop!
+            return QStringLiteral("nearest room in the indicated direction (%1) does not exist").arg(minDistanceRoom);
         }
-        if (pR->exitStubs.contains(reverseDirections[dirType])) {
-            setExit(roomId, minDistanceRoom, dirType);
-            setExit(minDistanceRoom, roomId, reverseDirections[dirType]);
-        }
+
+        setExit(fromRoomId, minDistanceRoom, dirType);
+        setExit(minDistanceRoom, fromRoomId, reverseDirections.value(dirType));
+        return {};
     }
+
+    return QStringLiteral("fromID (%1) does not have another room in the indicated direction '%2' (%3) with an exit stub in the reverse direction to connect to in its area").arg(QString::number(fromRoomId), TRoom::dirCodeToString(dirType), QString::number(dirType));
+}
+
+// Will connect an exit stub from the fromRoomId numbered room to the toRoomId
+// numbered room and also connect the corresponding stub exit in the reverse
+// direction of the toRoomId room back to the fromRoomId provided the second
+// room has a stub in the reverse direction.
+// Unlike the connectExitStubByDirection(...) method the relative placement of
+// the two rooms is not considered - and indeed the toRoomId room need not be
+// IN THE SAME AREA as the fromRoomId numbered room - otherwise it will report
+// the reason why it cannot.
+// It will only work if there is a single matching pair of stub exits between
+// the two rooms - if there are more than one it will fail and invite the
+// use of the Lua function with three arguments that include a direction and
+// thus use connectExitStubByDirectionAndToId(...) instead:
+QString TMap::connectExitStubByToId(const int fromRoomId, const int toRoomId)
+{
+    auto pFromR = mpRoomDB->getRoom(fromRoomId);
+    if (!pFromR) {
+        return QStringLiteral("fromID (%1) does not exist").arg(fromRoomId);
+    }
+
+    if (toRoomId == fromRoomId) {
+        return QStringLiteral("fromID and toID are the same (%1)").arg(fromRoomId);
+    }
+
+    auto pToR = mpRoomDB->getRoom(toRoomId);
+    if (!pToR) {
+        return QStringLiteral("toID (%1) room does not exist").arg(toRoomId);
+    }
+
+    if (pFromR->exitStubs.isEmpty()) {
+        return QStringLiteral("fromID (%1) does not have any stub exits").arg(fromRoomId);
+    }
+
+    if (pToR->exitStubs.isEmpty()) {
+        return QStringLiteral("toID (%1) does not have any stub exits").arg(toRoomId);
+    }
+
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    QSet<int> fromRoomStubs{pFromR->exitStubs.cbegin(), pFromR->exitStubs.cend()};
+#else
+    QSet<int> fromRoomStubs{pFromR->exitStubs.toSet()};
+#endif
+    QListIterator<int> itToRoomStubs{pToR->exitStubs};
+    QSet<int> toReverseStubDirections;
+    while (itToRoomStubs.hasNext()) {
+        auto direction = itToRoomStubs.next();
+        Q_ASSERT_X(reverseDirections.contains(direction), "TMap::connectExitStubByToId(...)", "there is no reverseDirections.value() for a particular direction encountered");
+        toReverseStubDirections.insert(reverseDirections.value(direction));
+    }
+
+    QSet<int> usableStubDirections{fromRoomStubs};
+    usableStubDirections.detach();
+    usableStubDirections = usableStubDirections.intersect(toReverseStubDirections);
+    // Now we need to count how big this set is:
+    if (usableStubDirections.isEmpty()) {
+        return QStringLiteral("no pairs of reverse stubs found between rooms %1 and %2").arg(QString::number(fromRoomId), QString::number(toRoomId));
+    }
+    if (usableStubDirections.count() > 1) {
+        QStringList useableStubDirectionTexts;
+        QSetIterator<int> itUseableStub(usableStubDirections);
+        while (itUseableStub.hasNext()) {
+            auto direction = itUseableStub.next();
+            useableStubDirectionTexts << QStringLiteral("'%1' (%2)").arg(TRoom::dirCodeToString(direction), QString::number(direction));
+        }
+        return QStringLiteral("multiple pairs of reverse stubs found between rooms %1 and %2, please try again with the three argument function and one of the follow directions: %3")
+                .arg(QString::number(fromRoomId), QString::number(toRoomId), useableStubDirectionTexts.join(QLatin1String(", ")));
+    }
+
+    // else we must have just one direction:
+    int usableStubDirection = *(usableStubDirections.constBegin());
+    setExit(fromRoomId, toRoomId, usableStubDirection);
+    setExit(toRoomId, fromRoomId, reverseDirections.value(usableStubDirection));
+    return {};
+}
+
+// Will connect an exit stub in the indicated direction from the fromRoomId
+// numbered room to the toRoomId numbered room and also connect the
+// corresponding stub exit in the reverse direction of the toRoomId room back to
+// the fromRoomId provided the second room has a stub in the reverse direction.
+// Unlike the connectExitStubByDirection(...) method the relative placement of
+// the two rooms is not considered - and indeed the toRoomId room need not be
+// IN THE SAME AREA as the fromRoomId numbered room - otherwise it will report
+// the reason why it cannot.
+QString TMap::connectExitStubByDirectionAndToId(const int fromRoomId, const int dirType, const int toRoomId)
+{
+    Q_ASSERT_X(reverseDirections.contains(dirType), "TMap::connectExitStubByDirectionAndToId(...)", "there is no reverseDirections.value() for the given dirType");
+
+    auto pFromR = mpRoomDB->getRoom(fromRoomId);
+    if (!pFromR) {
+        return QStringLiteral("fromID (%1) does not exist").arg(fromRoomId);
+    }
+
+    if (toRoomId == fromRoomId) {
+        return QStringLiteral("fromID and toID are the same (%1)").arg(fromRoomId);
+    }
+
+    if (!pFromR->exitStubs.contains(dirType)) {
+        return QStringLiteral("fromID (%1) does not have an exit stub in the given direction '%2' (%3)")
+                .arg(QString::number(fromRoomId), TRoom::dirCodeToString(dirType), QString::number(dirType));
+    }
+
+    auto pToR = mpRoomDB->getRoom(toRoomId);
+    if (!pToR) {
+        return QStringLiteral("toID (%1) room does not exist").arg(toRoomId);
+    }
+
+    if (!pToR->exitStubs.contains(reverseDirections.value(dirType))) {
+        return QStringLiteral("toID (%1) does not have an exit stub in the reverse direction '%2' (%3) of that given '%4' (%5)")
+                .arg(QString::number(toRoomId),
+                     TRoom::dirCodeToString(reverseDirections.value(dirType)),
+                     QString::number(reverseDirections.value(dirType)),
+                     TRoom::dirCodeToString(dirType),
+                     QString::number(dirType));
+    }
+
+    setExit(fromRoomId, toRoomId, dirType);
+    setExit(toRoomId, fromRoomId, reverseDirections.value(dirType));
+    return {};
 }
 
 int TMap::createNewRoomID(int minimumId)
