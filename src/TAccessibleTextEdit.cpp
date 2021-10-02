@@ -103,17 +103,20 @@ int TAccessibleTextEdit::columnForOffset(int offset) const
  */
 void TAccessibleTextEdit::selection(int selectionIndex, int *startOffset, int *endOffset) const
 {
-    int startLine = textEdit()->mpConsole->P_begin.y();
-    int startColumn = textEdit()->mpConsole->P_begin.x();
-    int endLine = textEdit()->mpConsole->P_end.y();
-    int endColumn = textEdit()->mpConsole->P_end.x();
-
-    if ((startLine == endLine) && (startColumn == endColumn)) {
+    if (selectionIndex != 0) {
+        *startOffset = *endOffset = 0;
         return;
     }
 
-    *startOffset = startLine * textEdit()->getColumnCount() + startColumn;
-    *endOffset = endLine * textEdit()->getColumnCount() + endColumn;
+    TTextEdit* edit = textEdit();
+
+    if (edit->mSelectedRegion == QRegion(0, 0, 0, 0)) {
+        *startOffset = *endOffset = 0;
+        return;
+    }
+
+    *startOffset = offsetForPosition(edit->mPA.y(), edit->mPA.x());
+    *endOffset = offsetForPosition(edit->mPB.y(), edit->mPB.x());
 }
 
 /*
@@ -121,14 +124,7 @@ void TAccessibleTextEdit::selection(int selectionIndex, int *startOffset, int *e
  */
 int TAccessibleTextEdit::selectionCount() const
 {
-    int startLine = textEdit()->mpConsole->P_begin.y();
-    int startColumn = textEdit()->mpConsole->P_begin.x();
-    int endLine = textEdit()->mpConsole->P_end.y();
-    int endColumn = textEdit()->mpConsole->P_end.x();
-
-    int ret = ((startLine == endLine) && (startColumn == endColumn)) ? 0 : 1;
-
-    return ret;
+    return textEdit()->mSelectedRegion != QRegion(0, 0, 0, 0);
 }
 
 /*
@@ -143,7 +139,23 @@ int TAccessibleTextEdit::selectionCount() const
  */
 void TAccessibleTextEdit::addSelection(int startOffset, int endOffset)
 {
-    qWarning("Unsupported TAccessibleTextEdit::addSelection");
+    if (offsetIsInvalid(startOffset) || offsetIsInvalid(endOffset)) {
+        return;
+    }
+
+    if (startOffset > endOffset) {
+        std::swap(startOffset, endOffset);
+    }
+
+    TTextEdit *edit = textEdit();
+    edit->mPA.setX(columnForOffset(startOffset));
+    edit->mPA.setY(lineForOffset(startOffset));
+    edit->mDragStart = edit->mPA;
+    edit->mPB.setX(columnForOffset(endOffset - 1));
+    edit->mPB.setY(lineForOffset(endOffset - 1));
+    edit->mDragSelectionEnd = edit->mPB;
+
+    textEdit()->highlightSelection();
 }
 
 /*
@@ -151,7 +163,12 @@ void TAccessibleTextEdit::addSelection(int startOffset, int endOffset)
  */
 void TAccessibleTextEdit::removeSelection(int selectionIndex)
 {
-    qWarning("Unsupported TAccessibleTextEdit::removeSelection");
+    if (selectionIndex != 0) {
+        return;
+    }
+
+    textEdit()->unHighlight();
+    textEdit()->mSelectedRegion = QRegion(0, 0, 0, 0);
 }
 
 /*
@@ -161,7 +178,11 @@ void TAccessibleTextEdit::removeSelection(int selectionIndex)
  */
 void TAccessibleTextEdit::setSelection(int selectionIndex, int startOffset, int endOffset)
 {
-    qWarning("Unsupported TAccessibleTextEdit::setSelection");
+    if (selectionIndex != 0) {
+        return;
+    }
+
+    addSelection(startOffset, endOffset);
 }
 
 /*
