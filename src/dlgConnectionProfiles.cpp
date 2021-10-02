@@ -1609,10 +1609,10 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    bool preInstallPackages = false;
+    bool loadingForFirstTime = false;
     pHost->hideMudletsVariables();
     if (entries.isEmpty()) {
-        preInstallPackages = true;
+        loadingForFirstTime = true;
     } else {
         QFile file(QStringLiteral("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
         file.open(QFile::ReadOnly | QFile::Text);
@@ -1623,7 +1623,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
         // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
         if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
-            preInstallPackages = true;
+            loadingForFirstTime = true;
         }
     }
 
@@ -1668,8 +1668,9 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         mudlet::self()->mDiscord.setApplicationID(pHost, mDiscordApplicationId);
     }
 
-    if (preInstallPackages) {
+    if (loadingForFirstTime) {
         mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
+        pHost->setupIreDriverBugfix();
     }
 
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
