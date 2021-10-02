@@ -300,6 +300,7 @@ public:
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     void show_options_dialog(const QString& tab);
     void setInterfaceLanguage(const QString &languageCode);
+    void setDarkTheme(const bool &state);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     const QLocale& getUserLocale() const { return mUserLocale; }
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
@@ -432,6 +433,7 @@ public:
 
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
+    bool mDarkTheme;
 
     // mirror everything shown in any console to stdout. Helpful for CI environments
     inline static bool mMirrorToStdOut;
@@ -539,6 +541,7 @@ signals:
     void signal_setTreeIconSize(int);
     void signal_hostCreated(Host*, quint8);
     void signal_hostDestroyed(Host*, quint8);
+    void signal_enableDarkThemeChanged(bool);
     void signal_enableFulScreenModeChanged(bool);
     void signal_showMapAuditErrorsChanged(bool);
     void signal_menuBarVisibilityChanged(const controlsVisibility);
@@ -679,6 +682,8 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
+    
+    QString mDefaultStyle;
 
     // Has default form of "en_US" but can be just an ISO language code e.g. "fr" for french,
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation

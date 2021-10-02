@@ -62,6 +62,7 @@
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QTableWidget>
+#include <QToolTip>
 #include <QFileInfo>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
@@ -5537,6 +5538,43 @@ int TLuaInterpreter::setUnderline(lua_State* L)
     console->setDisplayAttributes(TChar::Underline, isAttributeEnabled);
     lua_pushboolean(L, true);
     return 1;
+}
+
+// No documentation available in wiki - internal function used by printError in DebugTools.lua
+int TLuaInterpreter::errorc(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    int n = lua_gettop(L);
+    if (!n) {
+        // Nothing to show
+        return 0;
+    }
+    QString luaErrorText;
+    QString luaFunctionInfo;
+    luaErrorText = QStringLiteral(" %1").arg(lua_tostring(L, 1));
+    if (n == 2) {
+        luaFunctionInfo = QStringLiteral("%1").arg(lua_tostring(L, 2));
+    } else {
+        luaFunctionInfo = QStringLiteral(" <no debug data available> ");
+    }
+    luaFunctionInfo.append(QChar::LineFeed);
+    luaErrorText.append(QChar::LineFeed);
+    if (host.mpEditorDialog) {
+        host.mpEditorDialog->mpErrorConsole->print(QLatin1String("[ERROR:] "), QColor(Qt::blue), QColor(Qt::black));
+        host.mpEditorDialog->mpErrorConsole->print(luaFunctionInfo, QColor(Qt::green), QColor(Qt::black));
+        host.mpEditorDialog->mpErrorConsole->print(QStringLiteral("         %1").arg(luaErrorText), QColor(Qt::red), QColor(Qt::black));
+    }
+
+    if (host.mEchoLuaErrors) {
+        if (host.mpConsole->buffer.size() > 0 && !host.mpConsole->buffer.lineBuffer.at(host.mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+            host.postMessage(QStringLiteral("\n"));
+        }
+        host.mpConsole->print(QStringLiteral("[  LUA  ] - "), QColor(80,160,255), QColor(Qt::black));
+        host.mpConsole->print(QStringLiteral("ERROR: "), QColor(Qt::blue), QColor(Qt::black));
+        host.mpConsole->print(QStringLiteral("%1").arg(luaFunctionInfo), QColor(Qt::green), QColor(Qt::black));
+        host.mpConsole->print(QStringLiteral("           %1").arg(luaErrorText), QColor(200,50,42), QColor(Qt::black));
+    }
+    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#debugc -- not #debug - compare GlobalLua
@@ -13609,6 +13647,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "paste", TLuaInterpreter::paste);
     lua_register(pGlobalLua, "pasteWindow", TLuaInterpreter::pasteWindow);
     lua_register(pGlobalLua, "debugc", TLuaInterpreter::debug);
+    lua_register(pGlobalLua, "errorc", TLuaInterpreter::errorc);
     lua_register(pGlobalLua, "showHandlerError", TLuaInterpreter::showHandlerError);
     lua_register(pGlobalLua, "setWindowWrap", TLuaInterpreter::setWindowWrap);
     lua_register(pGlobalLua, "getWindowWrap", TLuaInterpreter::getWindowWrap);

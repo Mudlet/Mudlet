@@ -159,7 +159,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         disableHostDetails();
         clearHostDetails();
     }
-
+    enableDarkTheme->setEnabled(true);
 #if defined(INCLUDE_UPDATER)
     if (mudlet::scmIsDevelopmentVersion) {
         // tick the box and make it be "un-untickable" as automatic updates are
@@ -253,6 +253,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(comboBox_menuBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowMenuBar);
     connect(comboBox_toolBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowToolBar);
 
+    if (pMudlet->mDarkTheme) {
+        enableDarkTheme->setChecked(true);
+    }
+
     // This group of signal/slot connections handles updating *this* instance of
     // the "Profile preferences" form/dialog when a *different* profile saves
     // new settings from this one - there is a further connect(...) above which
@@ -267,6 +271,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
     connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
     connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
+    connect(pMudlet, &mudlet::signal_enableDarkThemeChanged, this, &dlgProfilePreferences::slot_changeEnableDarkTheme);
 
     generateDiscordTooltips();
 
@@ -376,7 +381,10 @@ void dlgProfilePreferences::disableHostDetails()
     // groupBox_iconsAndToolbars is NOT dependent on pHost - so leave it alone
     label_encoding->setEnabled(false);
     comboBox_encoding->setEnabled(false);
-    groupBox_miscellaneous->setEnabled(false);
+    mAlertOnNewData->setEnabled(false);
+    acceptServerGUI->setEnabled(false);
+    mFORCE_SAVE_ON_EXIT->setEnabled(false);
+    acceptServerMedia->setEnabled(false);
     groupBox_protocols->setEnabled(false);
     need_reconnect_for_data_protocol->hide();
 
@@ -458,7 +466,10 @@ void dlgProfilePreferences::enableHostDetails()
     // on tab_general:
     label_encoding->setEnabled(true);
     comboBox_encoding->setEnabled(true);
-    groupBox_miscellaneous->setEnabled(true);
+    mAlertOnNewData->setEnabled(true);
+    acceptServerGUI->setEnabled(true);
+    mFORCE_SAVE_ON_EXIT->setEnabled(true);
+    acceptServerMedia->setEnabled(true);
     groupBox_protocols->setEnabled(true);
 
     // on tab_inputLine:
@@ -2710,6 +2721,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
+    pMudlet->setDarkTheme(enableDarkTheme->isChecked());
 
     mudlet::self()->mDiscord.UpdatePresence();
 
@@ -3744,6 +3756,15 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
     auto languageCode = comboBox_guiLanguage->currentData().toString();
     mudlet::self()->setInterfaceLanguage(languageCode);
     label_languageChangeWarning->show();
+}
+
+// This slot is called when the QComboBox for enabling DarkTheme
+// is changed by the user.
+void dlgProfilePreferences::slot_changeEnableDarkTheme(const bool state)
+{
+    if (enableDarkTheme->isChecked() != state) {
+        enableDarkTheme->setChecked(state);
+    }
 }
 
 // This slot is called when the mudlet singleton tells everything that the

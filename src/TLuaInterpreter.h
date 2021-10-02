@@ -346,6 +346,7 @@ public:
     static int disableKey(lua_State* L);
     static int killKey(lua_State* L);
     static int debug(lua_State* L);
+    static int errorc(lua_State* L);
     static int showHandlerError(lua_State* L);
     static int setWindowWrap(lua_State*);
     static int getWindowWrap(lua_State*);

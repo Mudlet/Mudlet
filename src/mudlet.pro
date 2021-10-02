@@ -514,6 +514,7 @@ SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
     AltFocusMenuBarDisable.cpp \
+    DarkTheme.cpp \
     ctelnet.cpp \
     discord.cpp \
     dlgAboutDialog.cpp \
@@ -622,6 +623,7 @@ HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
+    DarkTheme.h \
     ctelnet.h \
     discord.h \
     dlgAboutDialog.h \
