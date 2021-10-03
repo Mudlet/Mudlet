@@ -118,7 +118,7 @@ int TAccessibleTextEdit::selectionCount() const
  */
 void TAccessibleTextEdit::addSelection(int startOffset, int endOffset)
 {
-    qWarning() << QStringLiteral("Unsupported TAccessibleTextEdit::addSelection");
+    qWarning("Unsupported TAccessibleTextEdit::addSelection");
 }
 
 /*
@@ -126,7 +126,7 @@ void TAccessibleTextEdit::addSelection(int startOffset, int endOffset)
  */
 void TAccessibleTextEdit::removeSelection(int selectionIndex)
 {
-    qWarning() << QStringLiteral("Unsupported TAccessibleTextEdit::removeSelection");
+    qWarning("Unsupported TAccessibleTextEdit::removeSelection");
 }
 
 /*
@@ -136,7 +136,7 @@ void TAccessibleTextEdit::removeSelection(int selectionIndex)
  */
 void TAccessibleTextEdit::setSelection(int selectionIndex, int startOffset, int endOffset)
 {
-    qWarning() << QStringLiteral("Unsupported TAccessibleTextEdit::setSelection");
+    qWarning("Unsupported TAccessibleTextEdit::setSelection");
 }
 
 /*
@@ -159,7 +159,7 @@ int TAccessibleTextEdit::cursorPosition() const
  */
 void TAccessibleTextEdit::setCursorPosition(int position)
 {
-    qWarning() << QStringLiteral("Unsupported TAccessibleTextEdit::setCursorPosition");
+    qWarning("Unsupported TAccessibleTextEdit::setCursorPosition");
 }
 
 /*
@@ -206,7 +206,7 @@ QRect TAccessibleTextEdit::characterRect(int offset) const
  */
 int TAccessibleTextEdit::offsetAtPoint(const QPoint &point) const
 {
-    qWarning() << QStringLiteral("Unsupported TAccessibleTextEdit::offsetAtPoint");
+    qWarning("Unsupported TAccessibleTextEdit::offsetAtPoint");
 
     return 0;
 }
@@ -216,7 +216,7 @@ int TAccessibleTextEdit::offsetAtPoint(const QPoint &point) const
  */
 void TAccessibleTextEdit::scrollToSubstring(int startIndex, int endIndex)
 {
-    qWarning() << QStringLiteral("Unsupported TAccessibleTextEdit::scrollToSubstring");
+    qWarning("Unsupported TAccessibleTextEdit::scrollToSubstring");
 }
 
 /*
@@ -225,7 +225,7 @@ void TAccessibleTextEdit::scrollToSubstring(int startIndex, int endIndex)
  */
 QString TAccessibleTextEdit::attributes(int offset, int *startOffset, int *endOffset) const
 {
-    qWarning() << QStringLiteral("Unsupported TAccessibleTextEdit::attributes");
+    qWarning("Unsupported TAccessibleTextEdit::attributes");
 
     return QString();
 }
@@ -250,7 +250,7 @@ QString TAccessibleTextEdit::attributes(int offset, int *startOffset, int *endOf
  */
 QString TAccessibleTextEdit::textAfterOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const
 {
-    qWarning() << QStringLiteral("Unsupported TAccessibleTextEdit::textAfterOffset");
+    qWarning("Unsupported TAccessibleTextEdit::textAfterOffset");
 
     return QString();
 }
@@ -275,7 +275,7 @@ QString TAccessibleTextEdit::textAfterOffset(int offset, QAccessible::TextBounda
  */
 QString TAccessibleTextEdit::textAtOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const
 {
-    qWarning() << QStringLiteral("Unsupported TAccessibleTextEdit::textAtOffset");
+    qWarning("Unsupported TAccessibleTextEdit::textAtOffset");
 
     return QString();
 }
@@ -300,7 +300,7 @@ QString TAccessibleTextEdit::textAtOffset(int offset, QAccessible::TextBoundaryT
  */
 QString TAccessibleTextEdit::textBeforeOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const
 {
-    qWarning() << QStringLiteral("Unsupported TAccessibleTextEdit::textBeforeOffset");
+    qWarning("Unsupported TAccessibleTextEdit::textBeforeOffset");
 
     return QString();
 }
