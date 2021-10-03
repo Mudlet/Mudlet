@@ -2437,7 +2437,6 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mCommandSeparator = command_separator_lineedit->text();
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
         pHost->mAcceptServerMedia = acceptServerMedia->isChecked();
-        pHost->mUSE_IRE_DRIVER_BUGFIX = checkBox_USE_IRE_DRIVER_BUGFIX->isChecked();
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
         pHost->mEnableTextAnalyzer = checkBox_enableTextAnalyzer->isChecked();
         pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
