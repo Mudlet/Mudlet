@@ -61,7 +61,7 @@ void FontManager::loadFonts(const QString& folder)
     }
 }
 
-void FontManager::loadFont(const QString& filePath)
+void FontManager::loadFont(const QString& filePath, const QString& belongsTo)
 {
     if (fontAlreadyLoaded(filePath)) {
         return;
@@ -70,7 +70,7 @@ void FontManager::loadFont(const QString& filePath)
     auto fontID = QFontDatabase::addApplicationFont(filePath);
 
     // remember even if the font failed to load so we don't spam messages on fonts that repeat
-    rememberFont(filePath, fontID);
+    rememberFont(filePath, fontID, belongsTo);
 
     if (fontID == -1) {
         qWarning() << "FontManager::loadFont() WARNING - Could not load the font(s) in the file: " << filePath;
@@ -85,17 +85,27 @@ bool FontManager::fontAlreadyLoaded(const QString& filePath)
     QFileInfo fontFile(filePath);
     auto fileName = fontFile.fileName();
 
-    return loadedFonts.contains(fileName);
+    return loadedFontPaths.contains(fileName);
 }
 
-void FontManager::rememberFont(const QString& filePath, int fontID)
+void FontManager::rememberFont(const QString& filePath, int fontID, const QString& belongsTo)
 {
     QFileInfo fontFile(filePath);
     auto fileName = fontFile.fileName();
 
-    if (loadedFonts.contains(fileName)) {
+    if (loadedFontPaths.contains(fileName)) {
         return;
     }
 
-    loadedFonts.insert(fileName, fontID);
+    loadedFontPaths.insert(fileName, fontID);
+    loadedFontAffiliation.insert(belongsTo, fontID);
+}
+
+void FontManager::unloadFonts(const QString& belongsTo)
+{
+    const auto fontIds = loadedFontAffiliation.values(belongsTo);
+    for (const int id : fontIds) {
+        QFontDatabase::removeApplicationFont(id);
+    }
+    loadedFontAffiliation.remove(belongsTo);   
 }
