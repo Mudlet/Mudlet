@@ -79,11 +79,19 @@ public:
     QString textBeforeOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const override;
 
 private:
+    enum TextOp {
+        BeforeOffset,
+        AtOffset,
+        AfterOffset,
+    };
+
     TTextEdit* textEdit() const;
     bool offsetIsInvalid(int offset) const;
     int lineForOffset(int offset, int *lengthSoFar) const;
     int columnForOffset(int offset) const;
     int offsetForPosition(int line, int column) const;
+    QString textAroundOffset(TextOp op, int offset, QAccessible::TextBoundaryType boundaryType,
+                             int* startOffset, int* endOffset) const;
 };
 
 #endif // MUDLET_TACCESSIBLETEXTEDIT_H

@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 
+#include <QTextBoundaryFinder>
 #include "TAccessibleTextEdit.h"
 #include "TConsole.h"
 #include "mudlet.h"
@@ -316,6 +317,125 @@ QString TAccessibleTextEdit::attributes(int offset, int *startOffset, int *endOf
 }
 
 /*
+ * Auxiliary function for textAtOffset() and textAfterOffset().
+ */
+QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp op, int offset,
+                                              QAccessible::TextBoundaryType boundaryType,
+                                              int* startOffset, int* endOffset) const
+{
+    // There's no code overlap between the text*Offset() methods in this case, so
+    // NoBoundary is always handled by the caller.
+    Q_ASSERT_X(boundaryType != QAccessible::TextBoundaryType::NoBoundary,
+               "TAccessibleTextEdit::textAroundOffset", "The caller should have handled NoBoundary.");
+
+    if (boundaryType != QAccessible::TextBoundaryType::CharBoundary &&
+        boundaryType != QAccessible::TextBoundaryType::WordBoundary &&
+        boundaryType != QAccessible::TextBoundaryType::SentenceBoundary &&
+        boundaryType != QAccessible::TextBoundaryType::LineBoundary) {
+        *startOffset = *endOffset = -1;
+        return QString();
+    }
+
+    if (offsetIsInvalid(offset)) {
+        *startOffset = *endOffset = -1;
+        return QString();
+    }
+
+    const QString contents = text(QAccessible::Value);
+
+    if (boundaryType == QAccessible::TextBoundaryType::WordBoundary ||
+        boundaryType == QAccessible::TextBoundaryType::SentenceBoundary) {
+        QTextBoundaryFinder::BoundaryType type = boundaryType == QAccessible::TextBoundaryType::WordBoundary ?
+            QTextBoundaryFinder::BoundaryType::Word : QTextBoundaryFinder::BoundaryType::Sentence;
+        QTextBoundaryFinder finder = QTextBoundaryFinder(type, contents);
+        int start, end;
+
+        finder.setPosition(offset);
+
+        if (op == TAccessibleTextEdit::BeforeOffset) {
+            end = finder.toPreviousBoundary();
+            start = finder.toPreviousBoundary();
+        } else if (op == TAccessibleTextEdit::AtOffset) {
+            start = finder.toPreviousBoundary();
+            end = finder.toNextBoundary();
+        } else {
+            start = finder.toNextBoundary();
+            end = finder.toNextBoundary();
+        }
+
+        if (start == -1 || end == -1) {
+            // The documentation doesn't say what to put in startOffset and
+            // endOffset in this case.
+            *startOffset = *endOffset = 0;
+            return QString();
+        }
+
+        *startOffset = start;
+        *endOffset = end;
+
+        return contents.mid(start, end - start);
+    }
+
+    QString ret;
+    TBuffer *buffer = textEdit()->mpBuffer;
+
+    if (boundaryType == QAccessible::TextBoundaryType::CharBoundary) {
+        if (op == TAccessibleTextEdit::BeforeOffset) {
+            offset -= 1;
+        } else if (op == TAccessibleTextEdit::AfterOffset) {
+            offset += 1;
+        }
+
+        if (offset < 0 || offset >= contents.length()) {
+            // The documentation doesn't say what to put in startOffset and
+            // endOffset in this case.
+            *startOffset = *endOffset = 0;
+            return QString();
+        }
+
+        int lineNum = lineForOffset(offset);
+        QString line(buffer->line(lineNum));
+
+        ret = QString(line[columnForOffset(offset)]);
+        *startOffset = offset;
+        *endOffset = offset + 1;
+    } else {
+        // LineBoundary
+
+        int lineNum = lineForOffset(offset);
+
+        if (op == TAccessibleTextEdit::BeforeOffset) {
+            lineNum -= 1;
+        } else if (op == TAccessibleTextEdit::AfterOffset) {
+            lineNum += 1;
+        }
+
+        if (lineNum < 0 || lineNum > buffer->getLastLineNumber()) {
+            // The documentation doesn't say what to put in startOffset and
+            // endOffset in this case.
+            *startOffset = *endOffset = 0;
+            return QString();
+        }
+
+        QString line(buffer->line(lineNum));
+
+        ret = line + "\n";	// Materialize the implicit '\n' at the end of every line.
+
+        const QStringList& lineBuffer = buffer->lineBuffer;
+        *startOffset = 0;
+        for (int i = 0; i < lineNum; i++) {
+            // The text() method adds a '\n' to the end of every line, so account
+            // for it with the '+ 1' below.
+            *startOffset += lineBuffer[i].length() + 1;
+        }
+
+        *endOffset = *startOffset + ret.length();
+    }
+
+    return ret;
+}
+
+/*
  * Returns the text item of type boundaryType that is right after offset
  * offset and sets startOffset and endOffset values to the start and end
  * positions of that item; returns an empty string if there is no such an
@@ -335,9 +455,15 @@ QString TAccessibleTextEdit::attributes(int offset, int *startOffset, int *endOf
  */
 QString TAccessibleTextEdit::textAfterOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const
 {
-    qWarning("Unsupported TAccessibleTextEdit::textAfterOffset");
+    // This is the simplest case to implement, so get it over with now.
+    if (boundaryType == QAccessible::TextBoundaryType::NoBoundary) {
+        *startOffset = offset;
+        *endOffset = characterCount();
 
-    return QString();
+        return text(QAccessible::Value).mid(offset);
+    }
+
+    return textAroundOffset(TAccessibleTextEdit::AfterOffset, offset, boundaryType, startOffset, endOffset);
 }
 
 /*
@@ -358,11 +484,19 @@ QString TAccessibleTextEdit::textAfterOffset(int offset, QAccessible::TextBounda
  * used for the text length and custom implementations of this function
  * have to return the result as if the length was passed in as offset.
  */
-QString TAccessibleTextEdit::textAtOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const
+QString TAccessibleTextEdit::textAtOffset(int offset, QAccessible::TextBoundaryType boundaryType,
+                                         int *startOffset, int *endOffset) const
 {
-    qWarning("Unsupported TAccessibleTextEdit::textAtOffset");
+    // This is the simplest case to implement, so get it over with now.
+    if (boundaryType == QAccessible::TextBoundaryType::NoBoundary) {
+        // TODO: Confirm that this is indeed the expected behavior.
+        *startOffset = 0;
+        *endOffset = characterCount();
 
-    return QString();
+        return text(QAccessible::Value);
+    }
+
+    return textAroundOffset(TAccessibleTextEdit::AtOffset, offset, boundaryType, startOffset, endOffset);
 }
 
 /*
@@ -385,7 +519,13 @@ QString TAccessibleTextEdit::textAtOffset(int offset, QAccessible::TextBoundaryT
  */
 QString TAccessibleTextEdit::textBeforeOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const
 {
-    qWarning("Unsupported TAccessibleTextEdit::textBeforeOffset");
+    // This is the simplest case to implement, so get it over with now.
+    if (boundaryType == QAccessible::TextBoundaryType::NoBoundary) {
+        *startOffset = 0;
+        *endOffset = offset;
 
-    return QString();
+        return text(QAccessible::Value).left(offset);
+    }
+
+    return textAroundOffset(TAccessibleTextEdit::BeforeOffset, offset, boundaryType, startOffset, endOffset);
 }
