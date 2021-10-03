@@ -10943,8 +10943,8 @@ int TLuaInterpreter::getIrcServer(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     QString hname;
-    int hport;
-    bool hsecure;
+    int hport = 0;
+    bool hsecure = false;
     if (pHost->mpDlgIRC) {
         hname = pHost->mpDlgIRC->getHostName();
         hport = pHost->mpDlgIRC->getHostPort();

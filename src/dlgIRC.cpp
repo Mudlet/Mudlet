@@ -761,13 +761,7 @@ int dlgIRC::readIrcHostPort(Host* pH)
 bool dlgIRC::readIrcHostSecure(Host* pH)
 {
     QString secureStr = pH->readProfileData(dlgIRC::HostSecureCfgItem);
-    bool secure;
-    if (secureStr.toInt()) {
-        secure = true;
-    } else {
-        secure = false;
-    }
-    return secure;
+    return secureStr.contains(QLatin1String("true"), Qt::CaseInsensitive);
 }
 
 QString dlgIRC::readIrcNickName(Host* pH)
@@ -842,7 +836,7 @@ QPair<bool, QString> dlgIRC::writeIrcHostPort(Host* pH, int port)
 
 QPair<bool, QString> dlgIRC::writeIrcHostSecure(Host* pH, bool secure)
 {
-    return pH->writeProfileData(dlgIRC::HostSecureCfgItem, QString::number(secure));
+    return pH->writeProfileData(dlgIRC::HostSecureCfgItem, (secure ? QLatin1String("true") : QLatin1String("false")));
 }
 
 QPair<bool, QString> dlgIRC::writeIrcNickName(Host* pH, const QString& nickname)

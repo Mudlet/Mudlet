@@ -77,12 +77,12 @@ public:
     IrcConnection* connection;
     bool mReadyForSending;
     QPair<bool, QString> sendMsg(const QString& target, const QString& message);
-    QString getHostName() { return mHostName; }
-    int getHostPort() { return mHostPort; }
-    bool getHostSecure() { return mHostSecure; }
-    QString getNickName() { return mNickName; }
-    QStringList getChannels() { return mChannels; }
-    QString getConnectedHost() { return mConnectedHostName; }
+    QString getHostName() const { return mHostName; }
+    int getHostPort() const { return mHostPort; }
+    bool getHostSecure() const { return mHostSecure; }
+    QString getNickName() const { return mNickName; }
+    QStringList getChannels() const { return mChannels; }
+    QString getConnectedHost() const { return mConnectedHostName; }
     void ircRestart(bool reloadConfigs = true);
 
 private slots:
