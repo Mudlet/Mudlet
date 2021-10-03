@@ -238,6 +238,7 @@ void dlgIRC::ircRestart(bool reloadConfigs)
         connection->setNickName(mNickName);
         connection->setHost(mHostName);
         connection->setPort(mHostPort);
+        connection->setSecure(mHostSecure);
     }
 
     // queue auto-joined channels and reopen the connection.
