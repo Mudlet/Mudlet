@@ -25,38 +25,11 @@
  ***************************************************************************/
 
 #include "TTabBar.h"
-
 #include "pre_guard.h"
-#include <QStyleOption>
 #include <QPainter>
 #include <QVariant>
 #include "post_guard.h"
 
-void TStyle::drawControl(ControlElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget) const
-{
-    if (element == QStyle::CE_TabBarTab) {
-        QString tabName = mpTabBar->tabData(mpTabBar->tabAt(option->rect.center())).toString();
-        QFont font = widget->font();
-        bool isStyleChanged = false;
-        if (mBoldTabsSet.contains(tabName) || mItalicTabsSet.contains(tabName) || mUnderlineTabsSet.contains(tabName)) {
-            painter->save();
-            font.setBold(mBoldTabsSet.contains(tabName));
-            font.setItalic(mItalicTabsSet.contains(tabName));
-            font.setUnderline(mUnderlineTabsSet.contains(tabName));
-            isStyleChanged = true;
-            painter->setFont(font);
-        }
-
-        QProxyStyle::drawControl(element, option, painter, widget);
-
-        if (isStyleChanged) {
-            painter->restore();
-        }
-
-    } else {
-        QProxyStyle::drawControl(element, option, painter, widget);
-    }
-}
 
 void TStyle::setNamedTabState(const QString& tabName, const bool state, QSet<QString>& effect)
 {

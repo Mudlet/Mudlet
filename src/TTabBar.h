@@ -22,13 +22,14 @@
  ***************************************************************************/
 
 #include "pre_guard.h"
-#include <QProxyStyle>
+#include <QStylePainter>
+#include <QStyleOptionTab>
 #include <QSet>
 #include <QString>
 #include <QTabBar>
 #include "post_guard.h"
 
-class TStyle : public QProxyStyle
+class TStyle
 {
 public:
     explicit TStyle(QTabBar* bar)
@@ -36,8 +37,6 @@ public:
     {}
 
     ~TStyle() = default;
-
-    void drawControl(ControlElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget = nullptr) const;
     void setTabBold(const QString& tabName, const bool state) { setNamedTabState(tabName, state, mBoldTabsSet); }
     void setTabBold(const int index, const bool state) { setIndexedTabState(index, state, mBoldTabsSet); }
     void setTabItalic(const QString& tabName, const bool state) { setNamedTabState(tabName, state, mItalicTabsSet); }
@@ -75,9 +74,7 @@ public:
     TTabBar(QWidget* parent)
     : QTabBar(parent)
     , mStyle(qobject_cast<QTabBar*>(this))
-    {
-        setStyle(&mStyle);
-    }
+    {}
     ~TTabBar() = default;
 
     QSize tabSizeHint(int index) const;
@@ -104,6 +101,27 @@ public:
 private:
     // This instance of TStyle needs a pointer to a QTabBar on instantiation:
     TStyle mStyle;
+
+protected:
+    void paintEvent(QPaintEvent */*event*/){
+
+        QStylePainter painter(this);
+        QStyleOptionTab opt;
+
+        for(int i = 0;i < count();i++)
+        {
+            QFont font = painter.font();
+            initStyleOption(&opt,i);
+            painter.save();
+            font.setBold(tabBold(i));
+            font.setItalic(tabItalic(i));
+            font.setUnderline(tabUnderline(i));
+            painter.setFont(font);
+            painter.drawControl(QStyle::CE_TabBarTabShape, opt);
+            painter.drawControl(QStyle::CE_TabBarTabLabel,opt);
+            painter.restore();
+        }
+    }
 };
 
 #endif // TTABBAR_H
