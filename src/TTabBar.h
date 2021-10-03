@@ -108,17 +108,17 @@ protected:
         QStylePainter painter(this);
         QStyleOptionTab opt;
 
-        for(int i = 0;i < count();i++)
+        for (int i = 0; i < count(); i++)
         {
             QFont font = painter.font();
-            initStyleOption(&opt,i);
+            initStyleOption(&opt, i);
             painter.save();
             font.setBold(tabBold(i));
             font.setItalic(tabItalic(i));
             font.setUnderline(tabUnderline(i));
             painter.setFont(font);
             painter.drawControl(QStyle::CE_TabBarTabShape, opt);
-            painter.drawControl(QStyle::CE_TabBarTabLabel,opt);
+            painter.drawControl(QStyle::CE_TabBarTabLabel, opt);
             painter.restore();
         }
     }
