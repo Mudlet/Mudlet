@@ -107,5 +107,5 @@ void FontManager::unloadFonts(const QString& belongsTo)
     for (const int id : fontIds) {
         QFontDatabase::removeApplicationFont(id);
     }
-    loadedFontAffiliation.remove(belongsTo);   
+    loadedFontAffiliation.remove(belongsTo);
 }
