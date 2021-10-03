@@ -197,8 +197,22 @@ QString TAccessibleTextEdit::text(int startOffset, int endOffset) const
         return QString();
     }
 
-    QString line(textEdit()->mpBuffer->line(textEdit()->mpConsole->mUserCursor.y()));
-    QString ret(line.mid(startOffset, endOffset - startOffset));
+    int startLineNumber = lineForOffset(startOffset);
+    int startColumn = columnForOffset(startOffset);
+    int endLineNumber = lineForOffset(endOffset);
+    int endColumn = columnForOffset(endOffset);
+
+    // Get the first line of the range.
+    QString startLine(textEdit()->mpBuffer->line(startLineNumber));
+    int startLineLength = startLineNumber == endLineNumber ? endOffset - startOffset : -1;
+    QString ret(startLine.mid(startColumn, startLineLength));
+
+    // Get the other lines in the range.
+    for (int i = startLineNumber + 1; i <= endLineNumber; i++) {
+        QString line(textEdit()->mpBuffer->line(i));
+
+        ret += i == endLineNumber ? line.left(endColumn) : line;
+    }
 
     return ret;
 }
