@@ -181,3 +181,24 @@ void TTabBar::applyPrefixToDisplayedText(int index, const QString& prefix)
         QTabBar::setTabText(index, QStringLiteral("%1%2").arg(prefix, tabData(index).toString()));
     }
 }
+
+void TTabBar::paintEvent(QPaintEvent* event)
+{
+    Q_UNUSED(event);
+    QStylePainter painter(this);
+    QStyleOptionTab opt;
+
+    for (int i = 0; i < count(); i++)
+    {
+        QFont font = painter.font();
+        initStyleOption(&opt, i);
+        painter.save();
+        font.setBold(tabBold(i));
+        font.setItalic(tabItalic(i));
+        font.setUnderline(tabUnderline(i));
+        painter.setFont(font);
+        painter.drawControl(QStyle::CE_TabBarTabShape, opt);
+        painter.drawControl(QStyle::CE_TabBarTabLabel, opt);
+        painter.restore();
+    }
+}
