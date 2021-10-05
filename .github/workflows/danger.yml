@@ -6,7 +6,7 @@ on:
 jobs:
   danger:
     runs-on: ubuntu-latest
-    if: github.event_name  == 'pull_request' # only run pull requests, no really
+    #if: github.event_name  == 'pull_request' # only run pull requests, no really
     steps:
     - uses: actions/checkout@v2
       with:
