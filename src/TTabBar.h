@@ -36,7 +36,8 @@ class TTabBar : public QTabBar
 public:
     TTabBar(QWidget* parent) : QTabBar(parent) {}
     ~TTabBar() = default;
-    QSize tabSizeHint(int index) const;
+    TTabBar() = delete;
+    QSize tabSizeHint(int index) const override;
     void applyPrefixToDisplayedText(const int index, const QString& prefix = QString());
     void applyPrefixToDisplayedText(const QString& tabName, const QString& prefix = QString());
     void setTabBold(const QString& tabName, const bool state) { setNamedTabState(tabName, state, mBoldTabsSet); }
