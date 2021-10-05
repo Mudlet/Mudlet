@@ -9,6 +9,8 @@ jobs:
     if: github.event_name  == 'pull_request' # only run pull requests, no really
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
     - uses: actions/setup-ruby@v1
       with:
         ruby-version: '2.6'
