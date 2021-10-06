@@ -39,7 +39,7 @@ sourcefiles.forEach(function(filename) {
       }
     })
     if (issues.length > 0) {
-      message(`\`${filename}\` adds TODO issues: ${issues.map(iss => `[${iss}](${ISSUE_URL}/${iss})`).join(", ")}`)
+      message(`\`${filename}\` adds TODO issues: ${issues.map(iss => `[${iss}](${ISSUE_URL}/${iss})`).join(", ")}`, null, null, ":heavy_checkmark:")
     }
   })
 })
