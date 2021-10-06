@@ -22,6 +22,7 @@ if (pr_title.match(TITLE_REGEX)) {
   fail("PR title must start with `fix, `improve`, `add` or `infra` for release notes purposes.")
 }
 
+// checks sourcefile changes to ensure any new TODO items also have a Mudlet issue
 sourcefiles.forEach(function(filename) {
   let additions = danger.git.diffForFile(filename)
   additions.then(diff => {
@@ -42,10 +43,12 @@ sourcefiles.forEach(function(filename) {
   })
 })
 
+// Warns if a PR touched more than 10 source files.
 if (sourcefiles.length > 10) {
   warn(`PR makes changes to ${sourcefiles.length} source files. Double check the scope hasn't gotten out of hand`)
 }
 
+// Warns if the title is perhaps a bit verbose
 title_wordcount = pr_title.split(" ").length
 if (title_wordcount > 25) {
   warn(`PR title is ${title_wordcount} words long, double check it will make a good changelog line`)
