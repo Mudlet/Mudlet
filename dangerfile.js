@@ -19,7 +19,7 @@ if (pr_title.match(TITLE_REGEX)) {
 } else if(pr_title.match(/^\[?WIP\]?/i)) {
   fail("PR is still a WIP, do not merge")
 } else {
-  fail("PR title must start with `fix, `improve`, `add` or `infra` for release notes purposes.")
+  fail("PR title must start with `fix`, `improve`, `add` or `infra` for release notes purposes.")
 }
 
 // checks sourcefile changes to ensure any new TODO items also have a Mudlet issue
