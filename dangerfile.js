@@ -13,7 +13,8 @@ if (pr_title.match(TITLE_REGEX)) {
   const type_to_readable = {
     add: "Addition",
     fix: "Fix",
-    improve: "Improvement"
+    improve: "Improvement",
+    infra: "Infrastructure"
   }
   message(`PR type: \`${type_to_readable[title_type[0].toLowerCase()]}\``)
 } else if(pr_title.match(/^\[?WIP\]?/i)) {
