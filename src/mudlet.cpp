@@ -2384,7 +2384,8 @@ void mudlet::slot_mudlet_discord()
     openWebPage(mMudletDiscordInvite);
 }
 
-void mudlet::toggleMudletDiscordVisible(bool vis){
+void mudlet::toggleMudletDiscordVisible(bool vis)
+{
     if ( mpActionMudletDiscord->isVisible() != vis ) {
         mpActionMudletDiscord->setVisible(vis);
     }
