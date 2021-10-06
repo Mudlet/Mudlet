@@ -16,7 +16,7 @@ if (pr_title.match(TITLE_REGEX)) {
     improve: "Improvement",
     infra: "Infrastructure"
   }
-  message(`PR type: \`${type_to_readable[title_type[0].toLowerCase()]}\``, {icon: ":tada:", line: 1})
+  message(`PR type: \`${type_to_readable[title_type[0].toLowerCase()]}\``, {icon: ":heavy_check_mark:", line: 1})
 } else if(pr_title.match(/^\[?WIP\]?/i)) {
   fail("PR is still a WIP, do not merge")
 } else {
@@ -39,7 +39,7 @@ sourcefiles.forEach(function(filename) {
       }
     })
     if (issues.length > 0) {
-      message(`\`${filename}\` adds TODO issues: ${issues.map(iss => `[${iss}](${ISSUE_URL}/${iss})`).join(", ")}`,{icon: ":heavy_checkmark:"} )
+      message(`\`${filename}\` adds TODO issues: ${issues.map(iss => `[${iss}](${ISSUE_URL}/${iss})`).join(", ")}`,{icon: ":heavy_check_mark:"} )
     }
   })
 })
