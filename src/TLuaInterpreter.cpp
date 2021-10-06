@@ -10381,6 +10381,18 @@ int TLuaInterpreter::getDiscordParty(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetDiscordData
+int TLuaInterpreter::resetDiscordData(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    host.setDiscordApplicationID(QString());
+    host.clearDiscordData();
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getTime
 int TLuaInterpreter::getTime(lua_State* L)
 {
