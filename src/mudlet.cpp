@@ -218,6 +218,7 @@ mudlet::mudlet()
 , mpActionFullScreenView(nullptr)
 , mpActionHelp(nullptr)
 , mpActionDiscord(nullptr)
+, mpActionMudletDiscord(nullptr)
 , mpActionIRC(nullptr)
 , mpButtonDiscord(nullptr)
 , mpActionKeys(nullptr)
@@ -407,11 +408,18 @@ mudlet::mudlet()
     mpActionDiscord->setIconText(QStringLiteral("Discord"));
     mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
 
+    mpActionMudletDiscord = new QAction(tr("Mudlet Discord"), this);
+    mpActionMudletDiscord->setIcon(QIcon(QStringLiteral(":/icons/Discord-Logo-Color.png")));
+    mpActionMudletDiscord->setIconText(QStringLiteral("Mudlet Discord"));
+    mpActionMudletDiscord->setObjectName(QStringLiteral("openMudletDiscord"));
+    mpActionMudletDiscord->setVisible(false); // Mudlet Discord becomes visible if game has custom invite
+
     mpActionIRC = new QAction(tr("Open IRC"), this);
     mpActionIRC->setIcon(QIcon(QStringLiteral(":/icons/internet-telephony.png")));
     mpActionIRC->setObjectName(QStringLiteral("openIRC"));
 
     mpButtonDiscord->addAction(mpActionDiscord);
+    mpButtonDiscord->addAction(mpActionMudletDiscord);
     mpButtonDiscord->addAction(mpActionIRC);
     mpButtonDiscord->setDefaultAction(mpActionDiscord);
 
@@ -546,6 +554,7 @@ mudlet::mudlet()
     connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_mapper);
     connect(mpActionIRC.data(), &QAction::triggered, this, &mudlet::slot_irc);
     connect(mpActionDiscord.data(), &QAction::triggered, this, &mudlet::slot_discord);
+    connect(mpActionMudletDiscord.data(), &QAction::triggered, this, &mudlet::slot_mudlet_discord);
     connect(mpActionPackageManager.data(), &QAction::triggered, this, &mudlet::slot_package_manager);
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_package_exporter);
@@ -563,7 +572,7 @@ mudlet::mudlet()
     connect(dactionVideo, &QAction::triggered, this, &mudlet::slot_show_help_dialog_video);
     connect(dactionForum, &QAction::triggered, this, &mudlet::slot_show_help_dialog_forum);
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
-    connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_discord);
+    connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_mudlet_discord);
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
 #if defined(INCLUDE_UPDATER)
     // Show the update option if the code is present AND if this is a
@@ -1412,6 +1421,14 @@ void mudlet::slot_tab_changed(int tabID)
     setWindowTitle(mpCurrentActiveHost->getName() + " - " + version);
 
     dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
+
+    // If game has custom invite then make secondary Discord option visible.
+    bool isVis = mpActionMudletDiscord->isVisible();
+    if ( mpCurrentActiveHost->getDiscordInviteURL().isEmpty() && isVis ) {
+        mpActionMudletDiscord->setVisible(false);
+    } else if ( !isVis ) {
+        mpActionMudletDiscord->setVisible(true);
+    }
 
     // Restore the multi-view mode if it was enabled:
     if (mpTabBar->count() > 1) {
@@ -2354,7 +2371,23 @@ void mudlet::slot_irc()
 
 void mudlet::slot_discord()
 {
+    Host* pHost = getActiveHost();
+    QString invite;
+    if (pHost) {
+        invite = pHost->getDiscordInviteURL();
+    }
+    openWebPage(invite.isEmpty() ? mMudletDiscordInvite : invite);
+}
+
+void mudlet::slot_mudlet_discord()
+{
     openWebPage(mMudletDiscordInvite);
+}
+
+void mudlet::toggleMudletDiscordVisible(bool vis){
+    if ( mpActionMudletDiscord->isVisible() != vis ) {
+        mpActionMudletDiscord->setVisible(vis);
+    }
 }
 
 void mudlet::slot_reconnect()

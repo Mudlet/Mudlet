@@ -562,6 +562,7 @@ public:
     static int getAvailableFonts(lua_State* L);
     static int tempAnsiColorTrigger(lua_State*);
     static int setDiscordApplicationID(lua_State* L);
+    static int setDiscordInviteURL(lua_State* L);
     static int usingMudletsDiscordID(lua_State*);
     static int setDiscordState(lua_State*);
     static int setDiscordDetail(lua_State*);

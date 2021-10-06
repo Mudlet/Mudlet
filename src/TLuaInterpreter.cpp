@@ -10019,6 +10019,33 @@ int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
     return warnArgumentValue(L, __func__, QStringLiteral("'%1' can not be converted to the expected numeric Discord application id").arg(inputText));
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordInviteURL
+int TLuaInterpreter::setDiscordInviteURL(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    if (!lua_gettop(L)) {
+        host.setDiscordInviteURL(QString());
+        pMudlet->toggleMudletDiscordVisible(false);
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    QString inputText = getVerifiedString(L, __func__, 1, "url").trimmed();
+    if (inputText.isEmpty()) {
+        // Empty string input - to reset to default the same as the no
+        // argument case:
+        host.setDiscordInviteURL(QString());
+        pMudlet->toggleMudletDiscordVisible(false);
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    host.setDiscordInviteURL(inputText);
+    pMudlet->toggleMudletDiscordVisible(true);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#usingMudletsDiscordID
 int TLuaInterpreter::usingMudletsDiscordID(lua_State* L)
 {
@@ -14024,6 +14051,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getAvailableFonts", TLuaInterpreter::getAvailableFonts);
     lua_register(pGlobalLua, "tempAnsiColorTrigger", TLuaInterpreter::tempAnsiColorTrigger);
     lua_register(pGlobalLua, "setDiscordApplicationID", TLuaInterpreter::setDiscordApplicationID);
+    lua_register(pGlobalLua, "setDiscordInviteURL", TLuaInterpreter::setDiscordInviteURL);
     lua_register(pGlobalLua, "usingMudletsDiscordID", TLuaInterpreter::usingMudletsDiscordID);
     lua_register(pGlobalLua, "setDiscordState", TLuaInterpreter::setDiscordState);
     lua_register(pGlobalLua, "setDiscordGame", TLuaInterpreter::setDiscordGame);
