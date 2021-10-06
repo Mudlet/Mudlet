@@ -34,7 +34,7 @@ class TTabBar : public QTabBar
     Q_OBJECT
 
 public:
-    TTabBar(QWidget* parent) : QTabBar(parent) {}
+    explicit TTabBar(QWidget* parent) : QTabBar(parent) {}
     ~TTabBar() = default;
     TTabBar() = delete;
     QSize tabSizeHint(int index) const override;

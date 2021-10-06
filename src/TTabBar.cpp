@@ -188,7 +188,7 @@ void TTabBar::paintEvent(QPaintEvent* event)
     QStylePainter painter(this);
     QStyleOptionTab opt;
 
-    for (int i = 0; i < count(); i++)
+    for (int i = 0, total = count(); i < total; ++i)
     {
         QFont font = painter.font();
         initStyleOption(&opt, i);
