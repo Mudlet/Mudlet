@@ -1,5 +1,4 @@
 const {danger, fail, message, warn} = require('danger');
-const util = require('util');
 const ISSUE_REGEX = /https?:\/\/(?:www\.)?github\.com\/Mudlet\/Mudlet\/issues\/(\d+)/i
 const ISSUE_URL = "https://github.com/Mudlet/Mudlet/issues"
 const SOURCE_REGEX = /.*\.(cpp|c|h|lua)$/i
@@ -23,14 +22,11 @@ if (pr_title.match(TITLE_REGEX)) {
   fail("PR title must start with `fix, `improve`, `add` or `infra` for release notes purposes.")
 }
 
-var added_todos = {}
-var bad_todos = []
-
-sourcefiles.forEach(function(filename, index, array) {
+sourcefiles.forEach(function(filename) {
   let additions = danger.git.diffForFile(filename)
   additions.then(diff => {
     var issues = []
-    diff.added.split("\n").forEach(function(item, index, array) {
+    diff.added.split("\n").forEach(function(item) {
       if (item.includes("TODO:")) {
         let has_issue = item.match(ISSUE_REGEX)
         if (!has_issue) {
