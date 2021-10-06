@@ -142,7 +142,7 @@ function Geyser.Gauge:setAlignment(alignment)
 end
 
 --- Sets the color of the text on the gauge
--- @param color the color you want the text to be
+-- @param color the color you want the text to be. Can use color names such as "red", decho codes such as "<255,0,0>" and hex codes such as "#ff0000"
 function Geyser.Gauge:setFgColor(color)
   self.text:setFgColor(color)
 end
