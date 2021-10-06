@@ -519,7 +519,7 @@ public slots:
     void slot_irc();
     void slot_discord();
     void slot_mudlet_discord();
-    void toggleMudletDiscordVisible(bool vis);
+    void toggleMudletDiscordVisible(bool);
     void slot_package_manager();
     void slot_package_exporter();
     void slot_module_manager();
