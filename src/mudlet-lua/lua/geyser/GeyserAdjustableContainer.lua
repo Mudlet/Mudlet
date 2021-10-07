@@ -1100,7 +1100,6 @@ function Adjustable.Container:new(cons,container)
     me.goInside = true
     me.titleTxtColor = me.titleTxtColor or "green"
     me.titleText = me.titleText or me.name.." - Adjustable Container"
-    me.titleText = "&nbsp;&nbsp; "..me.titleText
     me:setTitle()
     me.lockStyle = me.lockStyle or "standard"
     me.noLimit = me.noLimit or false
