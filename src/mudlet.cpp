@@ -1424,11 +1424,10 @@ void mudlet::slot_tab_changed(int tabID)
     dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
 
     // If game has custom invite then make secondary Discord option visible.
-    bool isVis = mpActionMudletDiscord->isVisible();
-    if (isVis && mpCurrentActiveHost->getDiscordInviteURL().isEmpty()) {
-        mpActionMudletDiscord->setVisible(false);
-    } else if ( !isVis ) {
-        mpActionMudletDiscord->setVisible(true);
+    if (mpCurrentActiveHost->getDiscordInviteURL().isEmpty()) {
+        toggleMudletDiscordVisible(false);
+    } else {
+        toggleMudletDiscordVisible(true);
     }
 
     // Restore the multi-view mode if it was enabled:
