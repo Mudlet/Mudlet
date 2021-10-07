@@ -2389,8 +2389,8 @@ void mudlet::toggleMudletDiscordVisible(bool vis)
     if ( mpActionMudletDiscord->isVisible() != vis ) {
         mpActionMudletDiscord->setVisible(vis);
     }
-    if ( dactionMudletDiscord->isVisible() != vis ) {
-        dactionMudletDiscord->setVisible(vis);
+    if ( dactionDiscord->isVisible() != vis ) {
+        dactionDiscord->setVisible(vis);
     }
 }
 
