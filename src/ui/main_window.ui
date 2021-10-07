@@ -324,6 +324,9 @@
    <property name="toolTip">
     <string>&lt;p&gt;Open a link to Discord.&lt;/p&gt;</string>
    </property>
+   <property name="visible">
+    <bool>false</bool>
+   </property>
   </action>
   <action name="dactionMudletDiscord">
    <property name="text">
@@ -331,9 +334,6 @@
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Open a link to the Mudlet server on Discord.&lt;/p&gt;</string>
-   </property>
-   <property name="visible">
-    <bool>false</bool>
    </property>
   </action>
   <action name="dactionReportIssue">
