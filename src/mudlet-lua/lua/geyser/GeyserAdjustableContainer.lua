@@ -62,15 +62,15 @@ end
 --- function to give your adjustable container a new title
 -- @param text new title text
 -- @param color title text color
--- @param position title position
-function Adjustable.Container:setTitle(text, color, position)
-    self.titlePosition = position or self.titlePosition or "l"
+-- @param format title format
+function Adjustable.Container:setTitle(text, color, format)
+    self.titleFormat = format or self.titleFormat or "l"
     self.titleText = text or self.titleText or string.format("%s - Adjustable Container")
     self.titleTxtColor = color or self.titleTxtColor or "green"
     if self.locked and self.connectedContainers then
         return
     end
-    self.adjLabel:echo(string.format("&nbsp;&nbsp;%s", self.titleText), self.titleTxtColor, self.titlePosition)
+    self.adjLabel:echo(string.format("&nbsp;&nbsp;%s", self.titleText), self.titleTxtColor, self.titleFormat)
 end
 
 
