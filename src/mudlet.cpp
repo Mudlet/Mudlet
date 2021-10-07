@@ -572,7 +572,8 @@ mudlet::mudlet()
     connect(dactionVideo, &QAction::triggered, this, &mudlet::slot_show_help_dialog_video);
     connect(dactionForum, &QAction::triggered, this, &mudlet::slot_show_help_dialog_forum);
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
-    connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_mudlet_discord);
+    connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_discord);
+    connect(dactionMudletDiscord, &QAction::triggered, this, &mudlet::slot_mudlet_discord);
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
 #if defined(INCLUDE_UPDATER)
     // Show the update option if the code is present AND if this is a
@@ -2388,6 +2389,9 @@ void mudlet::toggleMudletDiscordVisible(bool vis)
 {
     if ( mpActionMudletDiscord->isVisible() != vis ) {
         mpActionMudletDiscord->setVisible(vis);
+    }
+    if ( dactionMudletDiscord->isVisible() != vis ) {
+        dactionMudletDiscord->setVisible(vis);
     }
 }
 
