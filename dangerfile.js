@@ -8,8 +8,8 @@ const sourcefiles = touched_files.filter(item => item.match(SOURCE_REGEX))
 const pr_title = danger.github.pr.title
 
 // Checks the title to make sure it matches expectations
-if (pr_title.match(TITLE_REGEX)) {
-  title_type = pr_title.match(TITLE_REGEX)
+const title_type = pr_title.match(TITLE_REGEX)
+if (title_type) {
   const type_to_readable = {
     add: "Addition",
     fix: "Fix",
@@ -25,12 +25,12 @@ if (pr_title.match(TITLE_REGEX)) {
 
 // checks sourcefile changes to ensure any new TODO items also have a Mudlet issue
 sourcefiles.forEach(function(filename) {
-  let additions = danger.git.diffForFile(filename)
+  const additions = danger.git.diffForFile(filename)
   additions.then(diff => {
-    var issues = []
+    const issues = []
     diff.added.split("\n").forEach(function(item) {
       if (item.includes("TODO:")) {
-        let has_issue = item.match(ISSUE_REGEX)
+        const has_issue = item.match(ISSUE_REGEX)
         if (!has_issue) {
           fail(`Source file ${filename} includes a TODO with no Mudlet issue link.\n  New TODO items in source files must have an accompanying github issue`)
         } else {
@@ -50,7 +50,7 @@ if (sourcefiles.length > 10) {
 }
 
 // Warns if the title is perhaps a bit verbose
-title_wordcount = pr_title.split(" ").length
+const title_wordcount = pr_title.split(" ").length
 if (title_wordcount > 25) {
   warn(`PR title is ${title_wordcount} words long, double check it will make a good changelog line`)
 }
