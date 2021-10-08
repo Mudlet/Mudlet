@@ -10027,10 +10027,13 @@ int TLuaInterpreter::setDiscordInviteURL(lua_State* L)
     // the other Discord functions have. This one is unrelated to privacy.
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
+    bool isActiveHost = (pMudlet->mpCurrentActiveHost == &host);
 
     if (!lua_gettop(L)) {
         host.setDiscordInviteURL(QString());
-        pMudlet->toggleMudletDiscordVisible(false);
+        if (isActiveHost) {
+            pMudlet->toggleMudletDiscordVisible(false);
+        }
         lua_pushboolean(L, true);
         return 1;
     }
@@ -10039,12 +10042,16 @@ int TLuaInterpreter::setDiscordInviteURL(lua_State* L)
         // Empty string input - to reset to default the same as the no
         // argument case:
         host.setDiscordInviteURL(QString());
-        pMudlet->toggleMudletDiscordVisible(false);
+        if (isActiveHost) {
+            pMudlet->toggleMudletDiscordVisible(false);
+        }
         lua_pushboolean(L, true);
         return 1;
     }
     host.setDiscordInviteURL(inputText);
-    pMudlet->toggleMudletDiscordVisible(true);
+    if (isActiveHost) {
+        pMudlet->toggleMudletDiscordVisible(true);
+    }
     lua_pushboolean(L, true);
     return 1;
 }
