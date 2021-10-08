@@ -722,49 +722,49 @@ int TLuaInterpreter::dirToNumber(lua_State* L, int position)
 {
     QString dir;
     int dirNum;
-    if (lua_isstring(L, position)) {
+    if (lua_type(L, position) == LUA_TSTRING) {
         dir = lua_tostring(L, position);
         dir = dir.toLower();
-        if (dir == QStringLiteral("n") || dir == QStringLiteral("north")) {
-            return 1;
+        if (!dir.compare(QLatin1String("n")) || !dir.compare(QLatin1String("north"))) {
+            return DIR_NORTH;
         }
-        if (dir == QStringLiteral("ne") || dir == QStringLiteral("northeast")) {
-            return 2;
+        if (!dir.compare(QLatin1String("e")) || !dir.compare(QLatin1String("east"))) {
+            return DIR_EAST;
         }
-        if (dir == QStringLiteral("nw") || dir == QStringLiteral("northwest")) {
-            return 3;
+        if (!dir.compare(QLatin1String("s")) || !dir.compare(QLatin1String("south"))) {
+            return DIR_SOUTH;
         }
-        if (dir == QStringLiteral("e") || dir == QStringLiteral("east")) {
-            return 4;
+        if (!dir.compare(QLatin1String("w")) || !dir.compare(QLatin1String("west"))) {
+            return DIR_WEST;
         }
-        if (dir == QStringLiteral("w") || dir == QStringLiteral("west")) {
-            return 5;
+        if (!dir.compare(QLatin1String("u")) || !dir.compare(QLatin1String("up"))) {
+            return DIR_UP;
         }
-        if (dir == QStringLiteral("s") || dir == QStringLiteral("south")) {
-            return 6;
+        if (!dir.compare(QLatin1String("d")) || !dir.compare(QLatin1String("down"))) {
+            return DIR_DOWN;
         }
-        if (dir == QStringLiteral("se") || dir == QStringLiteral("southeast")) {
-            return 7;
+        if (!dir.compare(QLatin1String("ne")) || !dir.compare(QLatin1String("northeast"))) {
+            return DIR_NORTHEAST;
         }
-        if (dir == QStringLiteral("sw") || dir == QStringLiteral("southwest")) {
-            return 8;
+        if (!dir.compare(QLatin1String("nw")) || !dir.compare(QLatin1String("northwest"))) {
+            return DIR_NORTHWEST;
         }
-        if (dir == QStringLiteral("u") || dir == QStringLiteral("up")) {
-            return 9;
+        if (!dir.compare(QLatin1String("se")) || !dir.compare(QLatin1String("southeast"))) {
+            return DIR_SOUTHEAST;
         }
-        if (dir == QStringLiteral("d") || dir == QStringLiteral("down")) {
-            return 10;
+        if (!dir.compare(QLatin1String("sw")) || !dir.compare(QLatin1String("southwest"))) {
+            return DIR_SOUTHWEST;
         }
-        if (dir == QStringLiteral("in")) {
-            return 11;
+        if (!dir.compare(QLatin1String("i")) || !dir.compare(QLatin1String("in"))) {
+            return DIR_IN;
         }
-        if (dir == QStringLiteral("out")) {
-            return 12;
+        if (!dir.compare(QLatin1String("o")) || !dir.compare(QLatin1String("out"))) {
+            return DIR_OUT;
         }
     }
-    if (lua_isnumber(L, position)) {
+    if (lua_type(L, position) == LUA_TNUMBER) {
         dirNum = lua_tonumber(L, position);
-        return (dirNum >= 1 && dirNum <= 12 ? dirNum : 0);
+        return (dirNum >= DIR_NORTH && dirNum <= DIR_OUT ? dirNum : 0);
     }
     return 0;
 }
@@ -2555,57 +2555,104 @@ int TLuaInterpreter::setExitStub(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#connectExitStub
 int TLuaInterpreter::connectExitStub(lua_State* L)
 {
-    int toRoom;
-    int roomsGiven = 0;
-    int roomId = getVerifiedInt(L, __func__, 1, "fromID");
+    int toRoom = 0;
+    bool hasDirection = false;
+    bool hasToRoomId = false;
+    int fromRoom = getVerifiedInt(L, __func__, 1, "fromID");
 
-    int dirType = dirToNumber(L, 2);
-    if (!dirType) {
-        lua_pushfstring(L, "connectExitStub: bad argument #2 type (toID as number or direction as number or string expected, got %s!)");
-        return lua_error(L);
-    }
-    if (!lua_isnumber(L, 3) && !lua_isstring(L, 3)) {
-        roomsGiven = 0;
-    } else {
-        roomsGiven = 1;
-        toRoom = lua_tonumber(L, 2);
-        dirType = dirToNumber(L, 3);
-        if (!dirType) {
-            lua_pushstring(L, "connectExitStub: Invalid direction entered.");
-            return lua_error(L);
-        }
-    }
     Host& host = getHostFromLua(L);
-    if (!host.mpMap) {
-        return 0;
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
-    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
-    if (!pR) {
-        lua_pushstring(L, "connectExitStub: RoomId doesn't exist");
-        return lua_error(L);
+    if (lua_gettop(L) < 2) {
+        lua_pushfstring(L, "connectExitStub: missing argument #2 (toID as number or direction as number or string expected)");
+        return lua_error(L); // lua_error() doesn't return to here!
     }
-    if (!pR->exitStubs.contains(dirType)) {
-        lua_pushstring(L, "connectExitStub: ExitStub doesn't exist");
-        return lua_error(L);
-    }
-    if (roomsGiven) {
-        TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(toRoom);
-        if (!pR_to) {
-            lua_pushstring(L, "connectExitStub: toRoom doesn't exist");
-            return lua_error(L);
-        }
-        lua_pushboolean(L, host.mpMap->setExit(roomId, toRoom, dirType));
+
+    if (lua_gettop(L) > 2) {
+        // Both toRoomID AND direction given
+        hasDirection = true;
+        hasToRoomId = true;
     } else {
-        if (!pR->exitStubs.contains(dirType)) {
-            lua_pushstring(L, "connectExitStub: ExitStub doesn't exist");
-            return lua_error(L);
+        // Only have one of toRoomID or direction given - we need to examine the
+        // argument more closely
+        if (lua_type(L, 2) == LUA_TSTRING) {
+            // It is a string so it is (we will assume) a direction
+            hasDirection = true;
+        } else if (lua_type(L, 2) == LUA_TNUMBER) {
+            int value = qRound(lua_tonumber(L, 2));
+            if (value >= DIR_OUT || value <= DIR_NORTH) {
+                // Ambiguous - look in more detail and check whether there is a
+                // a room with the given number and/or an exit stub:
+                bool hasRoomWithNumberAsId = static_cast<bool>(host.mpMap->mpRoomDB->getRoom(value));
+                auto pR = host.mpMap->mpRoomDB->getRoom(fromRoom);
+                bool hasExitStubWithNumberAsDirection = (pR && pR->exitStubs.contains(value));
+                if (hasRoomWithNumberAsId) {
+                    if (hasExitStubWithNumberAsDirection) {
+                        return warnArgumentValue(
+                                L, __func__, QStringLiteral("%1 is too ambiguous a number to parse into a toID or a direction code as both are valid in this case. If this is a direction, try providing it as a string").arg(lua_tonumber(L, 2)));
+                    }
+                    // else - usable as only one of the two flags is set:
+                    hasToRoomId = true;
+                } else {
+                    if (!hasExitStubWithNumberAsDirection) {
+                        // not usable, as neither flag is set:
+                        return warnArgumentValue(L, __func__, QStringLiteral("%1 is not valid as a toID nor a direction code").arg(lua_tonumber(L, 2)));
+                    }
+                    // else - usable as only one of the two flags is set:
+                    hasDirection = true;
+                }
+            } else {
+                // it is a number greater than 12 so it is (we will assume) a
+                // toRoomID - or it is zero or a negative number and will never
+                // work as a roomID but treat it as such so that it will trigger
+                // an invalid roomID run-time error message:
+                hasToRoomId = true;
+            }
+
+        } else {
+            errorArgumentType(L, __func__, 2, "toID or direction", "number or string");
+            return lua_error(L); // lua_error() doesn't return to here!
         }
-        host.mpMap->connectExitStub(roomId, dirType);
-        // Nothing has yet been put onto stack for a LUA return value in this case,
-        // and it should always be possible to add a stub exit, so provide a true value :
-        lua_pushboolean(L, true);
     }
+
+    // dirType will be 1 to 12 if it was parsed as one of that range as a NUMBER
+    // or an (English) STRING of one of the directions
+    int dirType = 0;
+    if (hasDirection) {
+        int argNumber = hasToRoomId ? 3 : 2;
+        dirType = dirToNumber(L, argNumber);
+        if (!dirType) {
+            return warnArgumentValue(L, __func__, QStringLiteral("argument %1 as '%2' cannot be parsed as a valid direction").arg(QString::number(argNumber), QString::fromUtf8(lua_tostring(L, argNumber))));
+        }
+    }
+
+    if (hasToRoomId) {
+        toRoom = getVerifiedInt(L, __func__, 2, "toID");
+    }
+
+    QString errMsg;
+    if (hasDirection) {
+        if (hasToRoomId) {
+            errMsg = host.mpMap->connectExitStubByDirectionAndToId(fromRoom, dirType, toRoom);
+        } else {
+            errMsg = host.mpMap->connectExitStubByDirection(fromRoom, dirType);
+        }
+
+    } else /* effectively: if (!hasDirection && hasToRoomId) */ {
+        errMsg = host.mpMap->connectExitStubByToId(fromRoom, toRoom);
+    }
+
+    if (!errMsg.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, errMsg.toUtf8().constData());
+        return 2;
+    }
+
     host.mpMap->mMapGraphNeedsUpdate = true;
+    // equivalent to a call to updateMap(L):
+    host.mpMap->update();
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -10896,18 +10943,22 @@ int TLuaInterpreter::getIrcServer(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     QString hname;
-    int hport;
+    int hport = 0;
+    bool hsecure = false;
     if (pHost->mpDlgIRC) {
         hname = pHost->mpDlgIRC->getHostName();
         hport = pHost->mpDlgIRC->getHostPort();
+        hsecure = pHost->mpDlgIRC->getHostSecure();
     } else {
         hname = dlgIRC::readIrcHostName(pHost);
         hport = dlgIRC::readIrcHostPort(pHost);
+        hsecure = dlgIRC::readIrcHostSecure(pHost);
     }
 
     lua_pushstring(L, hname.toUtf8().constData());
     lua_pushinteger(L, hport);
-    return 2;
+    lua_pushboolean(L, hsecure);
+    return 3;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getIrcChannels
@@ -10975,6 +11026,8 @@ int TLuaInterpreter::setIrcNick(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setIrcServer
 int TLuaInterpreter::setIrcServer(lua_State* L)
 {
+    int args = lua_gettop(L);
+    int secure = false;
     int port = 6667;
     std::string addr = getVerifiedString(L, __func__, 1, "hostname").toStdString();
     if (addr.empty()) {
@@ -10986,6 +11039,9 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
             return warnArgumentValue(L, __func__, QStringLiteral("invalid port number %1 given, if supplied it must be in range 1 to 65535").arg(port));
         }
     }
+    if (args > 2) {
+        secure = getVerifiedBool(L, __func__, 3, "secure {default = false}", true);
+    }
 
     Host* pHost = &getHostFromLua(L);
     QPair<bool, QString> result = dlgIRC::writeIrcHostName(pHost, QString::fromStdString(addr));
@@ -10996,6 +11052,11 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     result = dlgIRC::writeIrcHostPort(pHost, port);
     if (!result.first) {
         return warnArgumentValue(L, __func__, QStringLiteral("unable to save port, reason: %1").arg(result.second));
+    }
+
+    result = dlgIRC::writeIrcHostSecure(pHost, secure);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, QStringLiteral("unable to save secure, reason: %1").arg(result.second));
     }
 
     lua_pushboolean(L, true);
