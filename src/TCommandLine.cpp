@@ -978,7 +978,7 @@ void TCommandLine::handleTabCompletion(bool direction)
             }
             QString proposal = filterList[mTabCompletionCount];
             QString userWords = mTabCompletionTyped.left(typePosition);
-            setPlainText(QString(userWords + proposal).trimmed());
+            setPlainText(QString(userWords + proposal));
             moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
             mTabCompletionOld = toPlainText();
         }
