@@ -11230,12 +11230,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="229"/>
       <source>Use a dark theme</source>
-      <translation type="unfinished"/>
+      <translation>Dunkles Design verwenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="232"/>
       <source>&lt;p&gt;Changes your Mudlet Style to a Dark Fusion Style.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zeigt Mudlet in einem Dark Fusion Design.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="239"/>
