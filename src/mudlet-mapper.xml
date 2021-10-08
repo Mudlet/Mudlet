@@ -1687,6 +1687,44 @@ mmp.game = "aetolia"</script>
 				</Trigger>
 			</TriggerGroup>
 			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>Dragonswords</name>
+				<script></script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList />
+				<regexCodePropertyList />
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Login</name>
+					<script>raiseEvent("mmp logged in", "dragonswords")
+mmp.game = "dragonswords"
+mmp.echo("We're connected to Dragon Swords.")</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>Welcome to Dragon Swords.</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>2</integer>
+					</regexCodePropertyList>
+				</Trigger>
+			</TriggerGroup>
+			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>Lusternia</name>
 				<script></script>
 				<triggerType>0</triggerType>
@@ -5486,7 +5524,7 @@ mmp.lagtable =
     [4] = {description = "Bad. Terrible. Terribad.", time = 5},
     [5] = {description = "Carrier Pigeon", time = 10},
   }
-local newversion = "21.9.2"
+local newversion = "21.10.1"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo("Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.")
@@ -10282,6 +10320,82 @@ end</script>
 
   mmp.envidsr = {};
   for name, id in pairs(mmp.envids) do mmp.envidsr[id] = name end
+end</script>
+						<eventHandlerList>
+							<string>mmp logged in</string>
+						</eventHandlerList>
+					</Script>
+				</Script>
+				<Script isActive="yes" isFolder="no">
+					<name>Dragonswords</name>
+					<packageName></packageName>
+					<script></script>
+					<eventHandlerList />
+					<Script isActive="yes" isFolder="no">
+						<name>dragonswords_stop_speedwalk_for_wrong_dir</name>
+						<packageName></packageName>
+						<script>function dragonswords_stop_speedwalk_for_wrong_dir()
+  if mmp.game and mmp.game ~= "dragonswords" then
+    return
+  end
+  if #mmp.speedWalkPath &gt; 0 then
+    echo("The way \"" .. gmcp.Room.WrongDir .. "\" is blocked. Stopping speedwalk.")
+    mmp.stop()
+  end
+end</script>
+						<eventHandlerList>
+							<string>gmcp.Room.WrongDir</string>
+						</eventHandlerList>
+					</Script>
+					<Script isActive="yes" isFolder="no">
+						<name>register_dragonswords_envdata</name>
+						<packageName></packageName>
+						<script>function register_dragonswords_envdata(_, game)
+  if game ~= "dragonswords" then
+    return
+  end
+  mmp.envids =
+    {
+      ["inside"] = 1,
+        ["city"] = 2,
+        ["field"] = 3,
+        ["forest"] = 4,
+        ["hills"] = 5,
+        ["mountain"] = 6,
+        ["swim"] = 7,
+        ["noswim"] = 8,
+        ["underwater"] = 9,
+        ["air"] = 10,
+        ["desert"] = 11,
+        ["river"] = 12,
+        ["oceanfloor"] = 13,
+        ["underground"] = 14,
+        ["jungle"] = 15,
+        ["swamp"] = 16,
+        ["tundra"] = 17,
+        ["ice"] = 18,
+        ["ocean"] = 19,
+        ["lava"] = 20,
+        ["shore"] = 21,
+        ["tree"] = 22,
+        ["stone"] = 23,
+        ["quicksand"] = 24,
+        ["wall"] = 25,
+        ["glacier"] = 26,
+        ["exit"] = 27,
+        ["trail"] = 28,
+        ["badlands"] = 29,
+        ["grassland"] = 30,
+        ["scrub"] = 31,
+        ["barren"] = 32,
+        ["bridge"] = 33,
+        ["road"] = 34,
+    }
+  mmp.waterenvs = {}
+  mmp.envidsr = {}
+  for name, id in pairs(mmp.envids) do
+    mmp.envidsr[id] = name
+  end
 end</script>
 						<eventHandlerList>
 							<string>mmp logged in</string>
