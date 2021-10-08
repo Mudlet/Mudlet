@@ -131,6 +131,54 @@ function convert_to_html(text)
   return table.concat(t, "\n")
 end
 
+function print_sorted_changelog(changelog)
+  local chgtbl = changelog:split("\n")
+  local add, improve, fix, infra, other = {}, {}, {}, {}, {}
+  for _,line in ipairs(chgtbl) do
+    local testline = line:lower()
+    if testline:match("^add") then
+      add[#add+1] = line
+    elseif testline:match("^improve") then
+      improve[#improve+1] = line
+    elseif testline:match("^fix") then
+      fix[#fix+1] = line
+    elseif testline:match("^infra") then
+      infra[#infra+1] = line
+    else
+      other[#other+1] = line
+    end
+  end
+  local addLines = lines_to_html(table.concat(add, "\n"))
+  local improveLines = lines_to_html(table.concat(improve, "\n"))
+  local fixLines = lines_to_html(table.concat(fix, "\n"))
+  local infraLines = lines_to_html(table.concat(infra, "\n"))
+  local otherLines = lines_to_html(table.concat(other, "\n"))
+  local final_changelog = f[[
+Additions:<br>
+{addLines}
+<br>
+Improvements:<br>
+{improveLines}
+<br>
+Fixes:<br>
+{fixLines}
+<br>
+Infrastructure:<br>
+{infraLines}
+<br>
+Other:<br>
+{otherLines}
+]]
+  print(final_changelog)
+end
+
+function lines_to_html(lines)
+  if lines == "" then
+    return ""
+  end
+  return convert_to_html(lines)
+end
+
 local historical_commits = extract_historical_sha1s()
 local released_commits = extract_released_sha1s(get_releases(args.releasefile))
 local unpublished_commits = scan_commits(historical_commits, released_commits)
@@ -139,4 +187,6 @@ if table.is_empty(unpublished_commits) then print("(changelog couldn't be genera
 
 local changelog = get_changelog(unpublished_commits[#unpublished_commits], unpublished_commits[1])
 
-print(convert_to_html(changelog))
+-- print(convert_to_html(changelog))
+-- print("\n\n")
+print_sorted_changelog(changelog)
