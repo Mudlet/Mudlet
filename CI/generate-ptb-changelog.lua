@@ -29,7 +29,8 @@ local MAX_COMMITS_PER_CHANGELOG = 100
 --   retrieve list of releases and their hashes
 --   go through the list collect hashes not present in releases
 --   then get the changelog for the range of hashes
---   html-ize and return the results.
+--   then sort the changelog into categories
+--   html-ize and print the results.
 
 -- credit: https://stackoverflow.com/a/326715/72944
 function os.capture(cmd, raw)
@@ -142,7 +143,7 @@ function print_sorted_changelog(changelog)
       improve[#improve+1] = line
     elseif testline:match("^fix") then
       fix[#fix+1] = line
-    elseif testline:match("^infra") then
+    elseif testline:match("^infra") or testline:match("^%(autocommit%)") then --"(autocommit)" to catch bot PRs which may not start with "infra"
       infra[#infra+1] = line
     else
       other[#other+1] = line
@@ -154,19 +155,15 @@ function print_sorted_changelog(changelog)
   local infraLines = lines_to_html(table.concat(infra, "\n"))
   local otherLines = lines_to_html(table.concat(other, "\n"))
   local final_changelog = f[[
-Additions:<br>
+<h3>ADDITIONS:</h3>
 {addLines}
-<br>
-Improvements:<br>
+<h3>IMPROVEMENTS:</h3>
 {improveLines}
-<br>
-Fixes:<br>
+<h3>FIXES:</h3>
 {fixLines}
-<br>
-Infrastructure:<br>
+<h3>INFRASTRUCTURE:</h3>
 {infraLines}
-<br>
-Other:<br>
+<h3>OTHER:</h3>
 {otherLines}
 ]]
   print(final_changelog)
@@ -174,7 +171,7 @@ end
 
 function lines_to_html(lines)
   if lines == "" then
-    return ""
+    lines = "None"
   end
   return convert_to_html(lines)
 end
@@ -187,6 +184,4 @@ if table.is_empty(unpublished_commits) then print("(changelog couldn't be genera
 
 local changelog = get_changelog(unpublished_commits[#unpublished_commits], unpublished_commits[1])
 
--- print(convert_to_html(changelog))
--- print("\n\n")
 print_sorted_changelog(changelog)
