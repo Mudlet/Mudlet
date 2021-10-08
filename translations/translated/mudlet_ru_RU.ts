@@ -11256,7 +11256,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="229"/>
       <source>Use a dark theme</source>
-      <translation type="unfinished"/>
+      <translation>Использовать темную тему</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="232"/>
