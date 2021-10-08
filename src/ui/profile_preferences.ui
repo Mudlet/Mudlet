@@ -2636,6 +2636,16 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QCheckBox" name="ircHostSecure">
+            <property name="toolTip">
+             <string>&lt;p&gt;TLS/SSL is usually on port 6697. IRC networks often use a &lt;b&gt;+&lt;/b&gt; when listing secure ports offered.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Use a secure connection</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -3727,6 +3737,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>reset_colors_button_2</tabstop>
   <tabstop>ircHostName</tabstop>
   <tabstop>ircNick</tabstop>
+  <tabstop>ircHostSecure</tabstop>
   <tabstop>ircHostPort</tabstop>
   <tabstop>ircChannels</tabstop>
   <tabstop>comboBox_discordLargeIconPrivacy</tabstop>
