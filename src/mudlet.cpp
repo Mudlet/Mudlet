@@ -217,8 +217,6 @@ mudlet::mudlet()
 , mpActionDisconnect(nullptr)
 , mpActionFullScreenView(nullptr)
 , mpActionHelp(nullptr)
-, mpActionDiscord(nullptr)
-, mpActionMudletDiscord(nullptr)
 , mpActionIRC(nullptr)
 , mpButtonDiscord(nullptr)
 , mpActionKeys(nullptr)
@@ -408,8 +406,8 @@ mudlet::mudlet()
     mpActionDiscord->setIconText(QStringLiteral("Discord"));
     mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
 
-    mpActionMudletDiscord = new QAction(tr("Mudlet Discord"), this);
-    mpActionMudletDiscord->setIcon(QIcon(QStringLiteral(":/icons/Discord-Logo-Color.png")));
+    mpActionMudletDiscord = new QAction(tr("Open Mudlet Discord"), this);
+    mpActionMudletDiscord->setIcon(QIcon(QStringLiteral(":/icons/mudlet_discord.png")));
     mpActionMudletDiscord->setIconText(QStringLiteral("Mudlet Discord"));
     mpActionMudletDiscord->setObjectName(QStringLiteral("openMudletDiscord"));
     mpActionMudletDiscord->setVisible(false); // Mudlet Discord becomes visible if game has custom invite
