@@ -77,6 +77,8 @@ end
 --- function to reset your adjustable containers title to default
 function Adjustable.Container:resetTitle()
     self.titleText = nil
+    self.titleTxtColor = nil
+    self.titleFormat = nil
     self:setTitle()
 end
 
