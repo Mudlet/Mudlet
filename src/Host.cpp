@@ -2471,11 +2471,6 @@ void Host::setDiscordInviteURL(const QString& s)
     writeProfileData(QStringLiteral("discordInviteURL"), s);
 }
 
-const QString& Host::getDiscordInviteURL()
-{
-    return mDiscordInviteURL;
-}
-
 // Compares the current discord username and discriminator against the non-empty
 // arguments. Returns true if neither match, otherwise false.
 bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const

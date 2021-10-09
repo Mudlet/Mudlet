@@ -193,7 +193,7 @@ public:
     void            setDiscordApplicationID(const QString& s);
     const QString&  getDiscordApplicationID();
     void            setDiscordInviteURL(const QString& s);
-    const QString&  getDiscordInviteURL();
+    const QString&  getDiscordInviteURL() const { return mDiscordInviteURL; }
     void            setSpellDic(const QString&);
     const QString&  getSpellDic() { return mSpellDic; }
     void            setUserDictionaryOptions(const bool useDictionary, const bool useShared);
