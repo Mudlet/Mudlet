@@ -28,7 +28,7 @@
 #include "post_guard.h"
 
 TSplitterHandle::TSplitterHandle(Qt::Orientation orientation, TSplitter* parent)
-: QSplitterHandle(orientation, (QSplitter*)parent)
+: QSplitterHandle(orientation, qobject_cast<QSplitter*>(parent))
 {
 }
 
