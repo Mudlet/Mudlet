@@ -3902,8 +3902,7 @@ void T2DMap::slot_setExits()
         return;
     }
     if (mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId)) {
-        auto pD = new dlgRoomExits(mpHost, this);
-        pD->init(mMultiSelectionHighlightRoomId);
+        auto pD = new dlgRoomExits(mpHost, mMultiSelectionHighlightRoomId, this);
         pD->show();
         pD->raise();
     }
