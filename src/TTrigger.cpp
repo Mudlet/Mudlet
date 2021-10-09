@@ -611,7 +611,7 @@ inline void TTrigger::filter(std::string& capture, int& posOffset)
     if (capture.empty()) {
         return;
     }
-    auto * filterSubject = reinterpret_cast<char*>(malloc(capture.size() + 2048));
+    auto * filterSubject = static_cast<char*>(malloc(capture.size() + 2048));
     if (filterSubject) {
         strcpy(filterSubject, capture.c_str());
     } else {

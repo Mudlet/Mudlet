@@ -103,7 +103,7 @@ bool TAlias::match(const QString& toMatch)
 
 #if defined(Q_OS_WIN32)
     // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
-    char* subject = reinterpret_cast<char*>(malloc(strlen(toMatch.toUtf8().constData()) + 1));
+    char* subject = static_cast<char*>(malloc(strlen(toMatch.toUtf8().constData()) + 1));
     strcpy(subject, toMatch.toUtf8().constData());
 #else
     char* subject = strndup(toMatch.toUtf8().constData(), strlen(toMatch.toUtf8().constData()));

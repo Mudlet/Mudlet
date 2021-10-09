@@ -2534,16 +2534,16 @@ void cTelnet::initStreamDecompressor()
 int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
 {
     mZstream.avail_in = length;
-    mZstream.next_in = reinterpret_cast<Bytef*>(in_buffer);
+    mZstream.next_in = (Bytef*)in_buffer;
 
     mZstream.avail_out = 100000;
-    mZstream.next_out = reinterpret_cast<Bytef*>(out_buffer);
+    mZstream.next_out = (Bytef*)out_buffer;
 
     int zval = inflate(&mZstream, Z_SYNC_FLUSH);
     int outSize = 100000 - mZstream.avail_out;
 
     length = mZstream.avail_in;
-    in_buffer = reinterpret_cast<char*>(mZstream.next_in);
+    in_buffer = (char*)mZstream.next_in;
 
     if (zval == Z_STREAM_END) {
         inflateEnd(&mZstream);
