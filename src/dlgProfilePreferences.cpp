@@ -831,7 +831,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     label_mapFileSaveFormatVersion->setEnabled(false);
     if (pHost->mpMap->mMaxVersion > pHost->mpMap->mDefaultVersion || pHost->mpMap->mMinVersion < pHost->mpMap->mDefaultVersion) {
-        for (short int i = pHost->mpMap->mMinVersion; i <= pHost->mpMap->mMaxVersion; ++i) {
+        for (int i = pHost->mpMap->mMinVersion; i <= pHost->mpMap->mMaxVersion; ++i) {
             if (i == pHost->mpMap->mDefaultVersion) {
                 continue;
             }
