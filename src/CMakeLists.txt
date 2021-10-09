@@ -3,6 +3,7 @@
 #    Copyright (C) 2015-2018, 2020 by Stephen Lyons                        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
+#    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -88,13 +89,13 @@ set(mudlet_SRCS
     ShortcutsManager.cpp
     ScriptUnit.cpp
     T2DMap.cpp
+    TAccessibleTextEdit.cpp
     TAction.cpp
     TAlias.cpp
     TArea.cpp
     TBuffer.cpp
     TCommandLine.cpp
     TConsole.cpp
-    TAccessibleConsole.cpp
     TDebug.cpp
     TDockWidget.cpp
     TEasyButtonBar.cpp
@@ -230,6 +231,8 @@ set(mudlet_HDRS
     ShortcutsManager.h
     ScriptUnit.h
     T2DMap.h
+    TAccessibleConsole.h
+    TAccessibleTextEdit.h
     TAction.h
     TAlias.h
     TArea.h
@@ -237,7 +240,6 @@ set(mudlet_HDRS
     TBuffer.h
     TCommandLine.h
     TConsole.h
-    TAccessibleConsole.h
     TDebug.h
     TDockWidget.h
     TEasyButtonBar.h

@@ -4,6 +4,7 @@
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
+#    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -563,7 +564,6 @@ SOURCES += \
     TBuffer.cpp \
     TCommandLine.cpp \
     TConsole.cpp \
-    TAccessibleConsole.cpp \
     TDebug.cpp \
     TDockWidget.cpp \
     TEasyButtonBar.cpp \
@@ -613,6 +613,7 @@ SOURCES += \
     TTabBar.cpp \
     TTextCodec.cpp \
     TTextEdit.cpp \
+    TAccessibleTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
     TTreeWidget.cpp \
@@ -732,6 +733,7 @@ HEADERS += \
     TTabBar.h \
     TTextCodec.h \
     TTextEdit.h \
+    TAccessibleTextEdit.h \
     TTimer.h \
     TToolBar.h \
     TTreeWidget.h \

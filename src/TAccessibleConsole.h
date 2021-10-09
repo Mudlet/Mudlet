@@ -24,21 +24,16 @@
  ***************************************************************************/
 
 #include "TConsole.h"
-#include "TTextEdit.h"
 
 #include "pre_guard.h"
-#include <QAccessible>
-#include <QAccessibleActionInterface>
 #include <QAccessibleInterface>
-#include <QAccessibleObject>
-#include <QAccessibleTextInterface>
 #include <QAccessibleWidget>
 #include "post_guard.h"
 
-class TAccessibleConsole : public QAccessibleWidget, public QAccessibleTextInterface
+class TAccessibleConsole : public QAccessibleWidget
 {
 public:
-    explicit TAccessibleConsole(QWidget* w) : QAccessibleWidget(w, QAccessible::EditableText)
+    explicit TAccessibleConsole(QWidget* w) : QAccessibleWidget(w, QAccessible::Pane)
     {
         Q_ASSERT(isValid());
     }
@@ -53,44 +48,6 @@ public:
 
         return interface;
     }
-
-    void* interface_cast(QAccessible::InterfaceType t) override
-    {
-        if (t == QAccessible::ActionInterface) {
-            return static_cast<QAccessibleActionInterface*>(this);
-        }
-
-        if (t == QAccessible::TextInterface) {
-            return static_cast<QAccessibleTextInterface*>(this);
-        }
-
-        return QAccessibleWidget::interface_cast(t);
-    }
-
-    TConsole* display() const;
-    QAccessibleInterface* childAt(int x, int y) const;
-    int childCount() const;
-    int indexOfChild(const QAccessibleInterface *child) const;
-    QAccessible::Role role() const;
-    QAccessible::State state() const;
-    int lineForOffset(int offset) const;
-    int columnForOffset(int offset) const;
-    void selection(int selectionIndex, int *startOffset, int *endOffset) const override;
-    int selectionCount() const override;
-    void addSelection(int startOffset, int endOffset) override;
-    void removeSelection(int selectionIndex) override;
-    void setSelection(int selectionIndex, int startOffset, int endOffset) override;
-    int cursorPosition() const override;
-    void setCursorPosition(int position) override;
-    QString text(int startOffset, int endOffset) const override;
-    int characterCount() const override;
-    QRect characterRect(int offset) const override;
-    int offsetAtPoint(const QPoint &point) const override;
-    void scrollToSubstring(int startIndex, int endIndex) override;
-    QString attributes(int offset, int *startOffset, int *endOffset) const override;
-    QString textAfterOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const override;
-    QString textAtOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const override;
-    QString textBeforeOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const override;
 };
 
 #endif // MUDLET_TACCESSIBLECONSOLE_H

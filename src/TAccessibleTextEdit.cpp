@@ -21,34 +21,35 @@
  ***************************************************************************/
 
 
-#include "TAccessibleConsole.h"
+#include "TAccessibleTextEdit.h"
+#include "TConsole.h"
 
-TConsole* TAccessibleConsole::display() const
+TTextEdit* TAccessibleTextEdit::textEdit() const
 {
-    return static_cast<TConsole*>(object());
+    return static_cast<TTextEdit*>(object());
 }
 
-QAccessibleInterface* TAccessibleConsole::childAt(int x, int y) const
-{
-    return 0;
-}
-
-int TAccessibleConsole::childCount() const
+QAccessibleInterface* TAccessibleTextEdit::childAt(int x, int y) const
 {
     return 0;
 }
 
-int TAccessibleConsole::indexOfChild(const QAccessibleInterface *child) const
+int TAccessibleTextEdit::childCount() const
+{
+    return 0;
+}
+
+int TAccessibleTextEdit::indexOfChild(const QAccessibleInterface *child) const
 {
     return -1;
 }
 
-QAccessible::Role TAccessibleConsole::role() const
+QAccessible::Role TAccessibleTextEdit::role() const
 {
     return QAccessible::StaticText;
 }
 
-QAccessible::State TAccessibleConsole::state() const
+QAccessible::State TAccessibleTextEdit::state() const
 {
     QAccessible::State s = QAccessibleWidget::state();
     s.selectableText = true;
@@ -58,14 +59,14 @@ QAccessible::State TAccessibleConsole::state() const
     return s;
 }
 
-int TAccessibleConsole::lineForOffset(int offset) const
+int TAccessibleTextEdit::lineForOffset(int offset) const
 {
-    return offset / display()->mLowerPane->getColumnCount();
+    return offset / textEdit()->getColumnCount();
 }
 
-int TAccessibleConsole::columnForOffset(int offset) const
+int TAccessibleTextEdit::columnForOffset(int offset) const
 {
-    return offset % display()->mLowerPane->getColumnCount();
+    return offset % textEdit()->getColumnCount();
 }
 
 /*
@@ -75,30 +76,30 @@ int TAccessibleConsole::columnForOffset(int offset) const
  * The accessibility APIs support multiple selections. For most widgets though,
  * only one selection is supported with selectionIndex equal to 0.
  */
-void TAccessibleConsole::selection(int selectionIndex, int *startOffset, int *endOffset) const
+void TAccessibleTextEdit::selection(int selectionIndex, int *startOffset, int *endOffset) const
 {
-    int startLine = display()->P_begin.y();
-    int startColumn = display()->P_begin.x();
-    int endLine = display()->P_end.y();
-    int endColumn = display()->P_end.x();
+    int startLine = textEdit()->mpConsole->P_begin.y();
+    int startColumn = textEdit()->mpConsole->P_begin.x();
+    int endLine = textEdit()->mpConsole->P_end.y();
+    int endColumn = textEdit()->mpConsole->P_end.x();
 
     if ((startLine == endLine) && (startColumn == endColumn)) {
         return;
     }
 
-    *startOffset = startLine * display()->mLowerPane->getColumnCount() + startColumn;
-    *endOffset = endLine * display()->mLowerPane->getColumnCount() + endColumn;
+    *startOffset = startLine * textEdit()->getColumnCount() + startColumn;
+    *endOffset = endLine * textEdit()->getColumnCount() + endColumn;
 }
 
 /*
  * Returns the number of selections in this text.
  */
-int TAccessibleConsole::selectionCount() const
+int TAccessibleTextEdit::selectionCount() const
 {
-    int startLine = display()->P_begin.y();
-    int startColumn = display()->P_begin.x();
-    int endLine = display()->P_end.y();
-    int endColumn = display()->P_end.x();
+    int startLine = textEdit()->mpConsole->P_begin.y();
+    int startColumn = textEdit()->mpConsole->P_begin.x();
+    int endLine = textEdit()->mpConsole->P_end.y();
+    int endColumn = textEdit()->mpConsole->P_end.x();
 
     int ret = ((startLine == endLine) && (startColumn == endColumn)) ? 0 : 1;
 
@@ -115,7 +116,7 @@ int TAccessibleConsole::selectionCount() const
  *
  * The selection will be endOffset - startOffset characters long.
  */
-void TAccessibleConsole::addSelection(int startOffset, int endOffset)
+void TAccessibleTextEdit::addSelection(int startOffset, int endOffset)
 {
     qWarning() << QStringLiteral("Unsupported QAccessibleTextInterface::addSelection");
 }
@@ -123,7 +124,7 @@ void TAccessibleConsole::addSelection(int startOffset, int endOffset)
 /*
  * Clears the selection with index selectionIndex.
  */
-void TAccessibleConsole::removeSelection(int selectionIndex)
+void TAccessibleTextEdit::removeSelection(int selectionIndex)
 {
     qWarning() << QStringLiteral("Unsupported QAccessibleTextInterface::removeSelection");
 }
@@ -133,7 +134,7 @@ void TAccessibleConsole::removeSelection(int selectionIndex)
  *
  * See also selection(), addSelection(), and removeSelection().
  */
-void TAccessibleConsole::setSelection(int selectionIndex, int startOffset, int endOffset)
+void TAccessibleTextEdit::setSelection(int selectionIndex, int startOffset, int endOffset)
 {
     qWarning() << QStringLiteral("Unsupported QAccessibleTextInterface::setSelection");
 }
@@ -143,10 +144,10 @@ void TAccessibleConsole::setSelection(int selectionIndex, int startOffset, int e
  *
  * See also setCursorPosition().
  */
-int TAccessibleConsole::cursorPosition() const
+int TAccessibleTextEdit::cursorPosition() const
 {
-    int offset = display()->mLowerPane->getColumnCount() * display()->mUserCursor.y();
-    int ret = offset + display()->mUserCursor.x();
+    int offset = textEdit()->getColumnCount() * textEdit()->mpConsole->mUserCursor.y();
+    int ret = offset + textEdit()->mpConsole->mUserCursor.x();
 
     return ret;
 }
@@ -156,7 +157,7 @@ int TAccessibleConsole::cursorPosition() const
  *
  * See also cursorPosition().
  */
-void TAccessibleConsole::setCursorPosition(int position)
+void TAccessibleTextEdit::setCursorPosition(int position)
 {
     qWarning() << QStringLiteral("Unsupported QAccessibleTextInterface::setCursorPosition");
 }
@@ -166,9 +167,9 @@ void TAccessibleConsole::setCursorPosition(int position)
  * first character that will be returned. The endOffset is the first
  * character that will not be returned.
  */
-QString TAccessibleConsole::text(int startOffset, int endOffset) const
+QString TAccessibleTextEdit::text(int startOffset, int endOffset) const
 {
-    QString line(display()->buffer.line(display()->mUserCursor.y()));
+    QString line(textEdit()->mpBuffer->line(textEdit()->mpConsole->mUserCursor.y()));
     QString ret(line.mid(startOffset, endOffset - startOffset));
 
     return ret;
@@ -177,9 +178,9 @@ QString TAccessibleConsole::text(int startOffset, int endOffset) const
 /*
  * Returns the length of the text (total size including spaces).
  */
-int TAccessibleConsole::characterCount() const
+int TAccessibleTextEdit::characterCount() const
 {
-    int ret = display()->getLineCount() * display()->mLowerPane->getColumnCount();
+    int ret = textEdit()->mpBuffer->getLastLineNumber() * textEdit()->getColumnCount();
 
     return ret;
 }
@@ -188,14 +189,14 @@ int TAccessibleConsole::characterCount() const
  * Returns the position and size of the character at position offset in
  * screen coordinates.
  */
-QRect TAccessibleConsole::characterRect(int offset) const
+QRect TAccessibleTextEdit::characterRect(int offset) const
 {
     int row = lineForOffset(offset);
-    int col = offset - row * display()->mLowerPane->getColumnCount();
-    int fontWidth = QFontMetrics(display()->mDisplayFont).averageCharWidth();
-    int fontHeight = QFontMetrics(display()->mDisplayFont).height();
+    int col = offset - row * textEdit()->getColumnCount();
+    int fontWidth = QFontMetrics(textEdit()->mDisplayFont).averageCharWidth();
+    int fontHeight = QFontMetrics(textEdit()->mDisplayFont).height();
     QPoint position = QPoint(col * fontWidth , row * fontHeight);
-    position = display()->mapToGlobal(position);
+    position = textEdit()->mapToGlobal(position);
 
     return QRect(position, QSize(fontWidth, fontHeight));
 }
@@ -203,7 +204,7 @@ QRect TAccessibleConsole::characterRect(int offset) const
 /*
  * Returns the offset of the character at the point in screen coordinates.
  */
-int TAccessibleConsole::offsetAtPoint(const QPoint &point) const
+int TAccessibleTextEdit::offsetAtPoint(const QPoint &point) const
 {
     qWarning() << QStringLiteral("Unsupported QAccessibleTextInterface::offsetAtPoint");
 
@@ -213,7 +214,7 @@ int TAccessibleConsole::offsetAtPoint(const QPoint &point) const
 /*
  * Ensures that the text between startIndex and endIndex is visible.
  */
-void TAccessibleConsole::scrollToSubstring(int startIndex, int endIndex)
+void TAccessibleTextEdit::scrollToSubstring(int startIndex, int endIndex)
 {
     qWarning() << QStringLiteral("Unsupported QAccessibleTextInterface::scrollToSubstring");
 }
@@ -222,7 +223,7 @@ void TAccessibleConsole::scrollToSubstring(int startIndex, int endIndex)
  * Returns the text attributes at the position offset. In addition the
  * range of the attributes is returned in startOffset and endOffset.
  */
-QString TAccessibleConsole::attributes(int offset, int *startOffset, int *endOffset) const
+QString TAccessibleTextEdit::attributes(int offset, int *startOffset, int *endOffset) const
 {
     qWarning() << QStringLiteral("Unsupported QAccessibleTextInterface::attributes");
 
@@ -247,7 +248,7 @@ QString TAccessibleConsole::attributes(int offset, int *startOffset, int *endOff
  * used for the text length and custom implementations of this function
  * have to return the result as if the length was passed in as offset.
  */
-QString TAccessibleConsole::textAfterOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const
+QString TAccessibleTextEdit::textAfterOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const
 {
     qWarning() << QStringLiteral("Unsupported QAccessibleTextInterface::textAfterOffset");
 
@@ -272,7 +273,7 @@ QString TAccessibleConsole::textAfterOffset(int offset, QAccessible::TextBoundar
  * used for the text length and custom implementations of this function
  * have to return the result as if the length was passed in as offset.
  */
-QString TAccessibleConsole::textAtOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const
+QString TAccessibleTextEdit::textAtOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const
 {
     qWarning() << QStringLiteral("Unsupported QAccessibleTextInterface::textAtOffset");
 
@@ -297,7 +298,7 @@ QString TAccessibleConsole::textAtOffset(int offset, QAccessible::TextBoundaryTy
  * used for the text length and custom implementations of this function
  * have to return the result as if the length was passed in as offset.
  */
-QString TAccessibleConsole::textBeforeOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const
+QString TAccessibleTextEdit::textBeforeOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const
 {
     qWarning() << QStringLiteral("Unsupported QAccessibleTextInterface::textBeforeOffset");
 

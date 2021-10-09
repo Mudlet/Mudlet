@@ -38,6 +38,7 @@
 #include <QStringListIterator>
 #include "post_guard.h"
 #include "AltFocusMenuBarDisable.h"
+#include "TAccessibleTextEdit.h"
 
 using namespace std::chrono_literals;
 
@@ -168,6 +169,8 @@ int main(int argc, char* argv[])
 #endif
 
     auto app = qobject_cast<QApplication*>(new QApplication(argc, argv));
+
+    QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
 
 #if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
     auto abortLaunch = runUpdate();

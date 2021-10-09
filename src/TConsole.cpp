@@ -1699,9 +1699,6 @@ void TConsole::print(const char* txt)
 {
     QString msg(txt);
     print(msg);
-
-    QAccessibleEvent event(this, QAccessible::DocumentContentChanged);
-    QAccessible::updateAccessibility(&event);
 }
 
 // echoUserWindow(const QString& msg) was a redundant wrapper around this method:
@@ -1739,9 +1736,6 @@ void TConsole::printSystemMessage(const QString& msg)
 {
     QString txt = tr("System Message: %1").arg(msg);
     print(txt, mSystemMessageFgColor, mSystemMessageBgColor);
-
-    QAccessibleEvent event(this, QAccessible::DocumentContentChanged);
-    QAccessible::updateAccessibility(&event);
 }
 
 void TConsole::echo(const QString& msg)
@@ -1751,9 +1745,6 @@ void TConsole::echo(const QString& msg)
     } else {
         print(msg);
     }
-
-    QAccessibleEvent event(this, QAccessible::DocumentContentChanged);
-    QAccessible::updateAccessibility(&event);
 }
 
 void TConsole::copy()
@@ -1776,9 +1767,6 @@ void TConsole::paste()
     }
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
-
-    QAccessibleEvent event(this, QAccessible::DocumentContentChanged);
-    QAccessible::updateAccessibility(&event);
 }
 
 void TConsole::pasteWindow(TBuffer bufferSlice)
@@ -1792,9 +1780,6 @@ void TConsole::appendBuffer()
     buffer.appendBuffer(mpHost->mpConsole->mClipboard);
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
-
-    QAccessibleEvent event(this, QAccessible::DocumentContentChanged);
-    QAccessible::updateAccessibility(&event);
 }
 
 void TConsole::appendBuffer(const TBuffer& bufferSlice)
@@ -1802,9 +1787,6 @@ void TConsole::appendBuffer(const TBuffer& bufferSlice)
     buffer.appendBuffer(bufferSlice);
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
-
-    QAccessibleEvent event(this, QAccessible::DocumentContentChanged);
-    QAccessible::updateAccessibility(&event);
 }
 
 void TConsole::slot_stop_all_triggers(bool b)

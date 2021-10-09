@@ -52,6 +52,8 @@ class TTextEdit : public QWidget
 {
     Q_OBJECT
 
+    friend class TAccessibleTextEdit;
+
 public:
     Q_DISABLE_COPY(TTextEdit)
     TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isLowerPane);
