@@ -486,7 +486,7 @@ QString Discord::deduceGameName(const QString& address)
         fragments.removeLast();
         otherName = fragments.join(QLatin1String("."));
         if (otherName.startsWith(QLatin1String("game."))) {
-            // WoTMUD type case - so take remaing term in the middle of original
+            // WoTMUD type case - so take remaining term in the middle of original
             otherName = otherName.split(QChar('.')).last();
             break;
         } else if (otherName.startsWith(QLatin1String("www."))) {

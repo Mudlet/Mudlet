@@ -120,7 +120,7 @@ bool TCommandLine::event(QEvent* event)
         auto* ke = dynamic_cast<QKeyEvent*>(event);
         if (!ke) {
             // Something is wrong -
-            qCritical().noquote() << "TCommandLine::event(QEvent*) CRITICAL - a QEvent that is supposed to be a QKeyEvent is not dynmically castable to the latter - so the processing of this event "
+            qCritical().noquote() << "TCommandLine::event(QEvent*) CRITICAL - a QEvent that is supposed to be a QKeyEvent is not dynamically castable to the latter - so the processing of this event "
                                      "has been aborted - please report this to Mudlet Makers.";
             // Indicate that we don't want to touch this event with a barge-pole!
             return false;
@@ -147,7 +147,7 @@ bool TCommandLine::event(QEvent* event)
 
             if (keybindingMatched(ke)) {
                 // Process as a possible key binding if there are ANY modifiers
-                // other than just a <SHIFT> one; may actaully be configured as
+                // other than just a <SHIFT> one; may actually be configured as
                 // a non-breaking space when used with a modifier!
                 return true;
             }
@@ -285,6 +285,7 @@ bool TCommandLine::event(QEvent* event)
             if ((ke->modifiers() & allModifiers) == Qt::ShiftModifier) {
                 textCursor().insertBlock();
                 ke->accept();
+                adjustHeight();
                 return true;
 
             }
@@ -977,7 +978,7 @@ void TCommandLine::handleTabCompletion(bool direction)
             }
             QString proposal = filterList[mTabCompletionCount];
             QString userWords = mTabCompletionTyped.left(typePosition);
-            setPlainText(QString(userWords + proposal).trimmed());
+            setPlainText(QString(userWords + proposal));
             moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
             mTabCompletionOld = toPlainText();
         }
@@ -1046,11 +1047,11 @@ void TCommandLine::historyMove(MoveDirection direction)
         } else {
             moveCursor(QTextCursor::End);
         }
-        adjustHeight();
     } else {
         mAutoCompletionCount += shift;
         handleAutoCompletion();
     }
+    adjustHeight();
 }
 
 void TCommandLine::slot_clearSelection(bool yes)
@@ -1167,7 +1168,7 @@ void TCommandLine::recheckWholeLine()
     QTextCursor c = textCursor();
     // Move Cursor AND selection anchor to start:
     c.movePosition(QTextCursor::Start);
-    // In case the first character is something other than the begining of a
+    // In case the first character is something other than the beginning of a
     // word
     c.movePosition(QTextCursor::NextWord);
     c.movePosition(QTextCursor::PreviousWord);

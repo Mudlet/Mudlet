@@ -159,7 +159,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         disableHostDetails();
         clearHostDetails();
     }
-
+    enableDarkTheme->setEnabled(true);
 #if defined(INCLUDE_UPDATER)
     if (mudlet::scmIsDevelopmentVersion) {
         // tick the box and make it be "un-untickable" as automatic updates are
@@ -183,7 +183,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     tabWidget->setCurrentIndex(0);
 
     // To be moved to a slot that is used on GUI language change when that gets
-    // implimented:
+    // implemented:
 
     // Set the tooltip on the containing widget so both the label and the
     // control have the same tool-tip:
@@ -240,7 +240,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                              "<li><b>Checked</b> '<i>on</i>' = Allow menus to be drawn with icons.</li>"
                                              "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
                                              "<p><i>This setting is only processed when individual menus are created and changes may not "
-                                             "propogate everywhere until Mudlet is restarted.</i></p>"));
+                                             "propagate everywhere until Mudlet is restarted.</i></p>"));
 
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
@@ -252,6 +252,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // have to state which one we want to use for these two:
     connect(comboBox_menuBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowMenuBar);
     connect(comboBox_toolBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowToolBar);
+
+    if (pMudlet->mDarkTheme) {
+        enableDarkTheme->setChecked(true);
+    }
 
     // This group of signal/slot connections handles updating *this* instance of
     // the "Profile preferences" form/dialog when a *different* profile saves
@@ -267,6 +271,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
     connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
     connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
+    connect(pMudlet, &mudlet::signal_enableDarkThemeChanged, this, &dlgProfilePreferences::slot_changeEnableDarkTheme);
 
     generateDiscordTooltips();
 
@@ -376,7 +381,10 @@ void dlgProfilePreferences::disableHostDetails()
     // groupBox_iconsAndToolbars is NOT dependent on pHost - so leave it alone
     label_encoding->setEnabled(false);
     comboBox_encoding->setEnabled(false);
-    groupBox_miscellaneous->setEnabled(false);
+    mAlertOnNewData->setEnabled(false);
+    acceptServerGUI->setEnabled(false);
+    mFORCE_SAVE_ON_EXIT->setEnabled(false);
+    acceptServerMedia->setEnabled(false);
     groupBox_protocols->setEnabled(false);
     need_reconnect_for_data_protocol->hide();
 
@@ -406,7 +414,7 @@ void dlgProfilePreferences::disableHostDetails()
 
     // on tab_mapper:
     // most of groupBox_mapFiles is disabled but there is ONE checkBox that
-    // is accessable because it is application wide - so disable EVERYTHING
+    // is accessible because it is application wide - so disable EVERYTHING
     // else that is not already disabled:
     label_saveMap->setEnabled(false);
     pushButton_saveMap->setEnabled(false);
@@ -458,7 +466,10 @@ void dlgProfilePreferences::enableHostDetails()
     // on tab_general:
     label_encoding->setEnabled(true);
     comboBox_encoding->setEnabled(true);
-    groupBox_miscellaneous->setEnabled(true);
+    mAlertOnNewData->setEnabled(true);
+    acceptServerGUI->setEnabled(true);
+    mFORCE_SAVE_ON_EXIT->setEnabled(true);
+    acceptServerMedia->setEnabled(true);
     groupBox_protocols->setEnabled(true);
 
     // on tab_inputLine:
@@ -485,7 +496,7 @@ void dlgProfilePreferences::enableHostDetails()
 
     // on tab_mapper:
     // most of groupBox_mapFiles is disabled but there is ONE checkBox that
-    // is accessable because it is application wide - so disable EVERYTHING
+    // is accessible because it is application wide - so disable EVERYTHING
     // else that is not already disabled:
     label_saveMap->setEnabled(true);
     pushButton_saveMap->setEnabled(true);
@@ -537,6 +548,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     ircHostName->setText(dlgIRC::readIrcHostName(pHost));
     ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(pHost)));
+    ircHostSecure->setChecked(dlgIRC::readIrcHostSecure(pHost));
     ircChannels->setText(dlgIRC::readIrcChannels(pHost).join(" "));
     ircNick->setText(dlgIRC::readIrcNickName(pHost));
 
@@ -614,7 +626,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
         }
 
-        // Reenable sorting now we have populated the widget:
+        // Re-enable sorting now we have populated the widget:
         dictList->setSortingEnabled(true);
         // Actually do the sort:
         dictList->sortItems();
@@ -804,7 +816,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     hidePasswordMigrationLabel();
 
-    //doubleclick ignore
+    //double-click ignore
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
     while (it.hasNext()) {
@@ -819,7 +831,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     label_mapFileSaveFormatVersion->setEnabled(false);
     if (pHost->mpMap->mMaxVersion > pHost->mpMap->mDefaultVersion || pHost->mpMap->mMinVersion < pHost->mpMap->mDefaultVersion) {
-        for (short int i = pHost->mpMap->mMinVersion; i <= pHost->mpMap->mMaxVersion; ++i) {
+        for (int i = pHost->mpMap->mMinVersion; i <= pHost->mpMap->mMaxVersion; ++i) {
             if (i == pHost->mpMap->mDefaultVersion) {
                 continue;
             }
@@ -1002,6 +1014,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
+    doubleSpinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout() / 1000.0);
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -1083,6 +1096,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
     connect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_logFileNameFormatChange);
     connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml);
+    connect(doubleSpinBox_networkPacketTimeout, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPostingTimeout);
 
     //Security tab
 
@@ -1632,8 +1646,7 @@ void dlgProfilePreferences::setCommandBgColor()
 void dlgProfilePreferences::setFontSize()
 {
     mFontSize = fontSize->currentIndex() + 1;
-    // delay setting pHost->mDisplayFont until save is clicked by the user.
-    //setDisplayFont();
+    setDisplayFont();
 }
 
 void dlgProfilePreferences::setDisplayFont()
@@ -2300,7 +2313,7 @@ void dlgProfilePreferences::copyMap()
     mudlet::self()->requestProfilesToReloadMaps(toProfilesRoomIdMap.keys());
     // GOTCHA: keys() is a QList<QString>, however, though it IS equivalent to a
     // QStringList in many ways, the SLOT/SIGNAL system treats them as different
-    // - I thinK - so use QList<QString> thoughout the SIGNAL/SLOT links Slysven!
+    // - I thinK - so use QList<QString> throughout the SIGNAL/SLOT links Slysven!
     label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
     QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 
@@ -2332,7 +2345,7 @@ void dlgProfilePreferences::slot_setLogDir()
      * QFileDialog constructors."
      *
      * That warning suggests *bad things* would happen if the "Save" button or
-     * the widget title bar close button was pressed on the Profile Preferrences
+     * the widget title bar close button was pressed on the Profile Preferences
      * dialog while the directory selector is open...!
      */
     // Seems to return "." when Cancel is hit:
@@ -2425,7 +2438,6 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mCommandSeparator = command_separator_lineedit->text();
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
         pHost->mAcceptServerMedia = acceptServerMedia->isChecked();
-        pHost->mUSE_IRE_DRIVER_BUGFIX = checkBox_USE_IRE_DRIVER_BUGFIX->isChecked();
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
         pHost->mEnableTextAnalyzer = checkBox_enableTextAnalyzer->isChecked();
         pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
@@ -2503,11 +2515,13 @@ void dlgProfilePreferences::slot_save_and_exit()
         QString oldIrcNick = dlgIRC::readIrcNickName(pHost);
         QString oldIrcHost = dlgIRC::readIrcHostName(pHost);
         QString oldIrcPort = QString::number(dlgIRC::readIrcHostPort(pHost));
+        bool oldIrcSecure = dlgIRC::readIrcHostSecure(pHost);
         QString oldIrcChannels = dlgIRC::readIrcChannels(pHost).join(" ");
 
         QString newIrcNick = ircNick->text();
         QString newIrcHost = ircHostName->text();
         QString newIrcPort = ircHostPort->text();
+        bool newIrcSecure = ircHostSecure->isChecked();
         QString newIrcChannels = ircChannels->text();
         QStringList newChanList;
         int nIrcPort = dlgIRC::DefaultHostPort;
@@ -2568,6 +2582,11 @@ void dlgProfilePreferences::slot_save_and_exit()
 
         if (oldIrcPort != newIrcPort) {
             dlgIRC::writeIrcHostPort(pHost, nIrcPort);
+            restartIrcClient = true;
+        }
+
+        if (oldIrcSecure != newIrcSecure) {
+            dlgIRC::writeIrcHostSecure(pHost, newIrcSecure);
             restartIrcClient = true;
         }
 
@@ -2701,6 +2720,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
+    pMudlet->setDarkTheme(enableDarkTheme->isChecked());
 
     mudlet::self()->mDiscord.UpdatePresence();
 
@@ -3508,7 +3528,7 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont & font)
 
 // These next two prevent BOTH controls being set to never to prevent the lose
 // of access to the setting/controls completely - once there is a profile loaded
-// access to the settings/controls can be overriden by a context menu action on
+// access to the settings/controls can be overridden by a context menu action on
 // any TConsole instance:
 void dlgProfilePreferences::slot_changeShowMenuBar(int newIndex)
 {
@@ -3602,7 +3622,7 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
                                       .scaled(iconBackground.width(), iconBackground.height(), Qt::KeepAspectRatioByExpanding));
             painter.fillRect(0, 0, iconBackground.width(), iconBackground.height(), disabledColor);
             painter.end();
-            // Because the button is disabled we have to explictly force our
+            // Because the button is disabled we have to explicitly force our
             // icon to be used for that state otherwise the built-in icon engine
             // will assume our image is for the normal state and grey it out
             // completely by automagic means instead of making use of the
@@ -3737,6 +3757,15 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
     label_languageChangeWarning->show();
 }
 
+// This slot is called when the QComboBox for enabling DarkTheme
+// is changed by the user.
+void dlgProfilePreferences::slot_changeEnableDarkTheme(const bool state)
+{
+    if (enableDarkTheme->isChecked() != state) {
+        enableDarkTheme->setChecked(state);
+    }
+}
+
 // This slot is called when the mudlet singleton tells everything that the
 // locale/language selection has been changed (new translators installed)
 // It probably came about because the control for it on THIS dialog was changed
@@ -3756,7 +3785,7 @@ void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
 
     // Now change the displayed texts that are translated - importantly this
     // is done so that the message that says "restart Mudlet to finish changing
-    // the language" is shown in the newly selected langauge - on the basis that
+    // the language" is shown in the newly selected language - on the basis that
     // it is the one the user understands rather than the currently used one.
     retranslateUi(this);
 
@@ -3909,4 +3938,14 @@ void dlgProfilePreferences::setPlayerRoomColor(QPushButton* b, QColor& c)
         // visible and adjusts the saturation of a disabled button:
         setButtonColor(b, color);
     }
+}
+
+void dlgProfilePreferences::slot_setPostingTimeout(const double timeout)
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    pHost->mTelnet.setPostingTimeout(qRound(1000.0 * timeout));
 }

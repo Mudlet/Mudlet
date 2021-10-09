@@ -252,7 +252,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mScreenWidth(90)
 , mTimeout(60)
 , mUSE_FORCE_LF_AFTER_PROMPT(false)
-, mUSE_IRE_DRIVER_BUGFIX(true)
+, mUSE_IRE_DRIVER_BUGFIX(false)
 , mUSE_UNIX_EOL(false)
 , mWrapAt(100)
 , mWrapIndentCount(0)
@@ -419,9 +419,14 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
     mErrorLogFile.setFileName(logFileName);
     mErrorLogFile.open(QIODevice::Append);
-    // This is NOW used (for map
-    // file auditing and other issues)
+     /*
+     * Mudlet will log messages in ASCII, but force a universal (UTF-8) encoding
+     * since user-content can contain anything and someone else reviewing
+     * such logs need not have the same default encoding which would be used
+     * otherwise - note that this must be done AFTER setDevice(...):
+     */
     mErrorLogStream.setDevice(&mErrorLogFile);
+    mErrorLogStream.setCodec(QTextCodec::codecForName("UTF-8"));
 
     QTimer::singleShot(0, this, [this]() {
         qDebug() << "Host::Host() - restore map case 4 {QTimer::singleShot(0)} lambda.";
@@ -1593,7 +1598,7 @@ bool Host::installPackage(const QString& fileName, int module)
     // As the pointed to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
     // pointer just in case we accidentally reenter this method in the future.
-    QDialog* pUnzipDialog = Q_NULLPTR;
+    QDialog* pUnzipDialog = nullptr;
 
     //     Module notes:
     //     For the module install, a module flag of 0 is a package,
@@ -1672,7 +1677,7 @@ bool Host::installPackage(const QString& fileName, int module)
 
         auto successful = mudlet::unzip(fileName, _dest, _tmpDir);
         pUnzipDialog->deleteLater();
-        pUnzipDialog = Q_NULLPTR;
+        pUnzipDialog = nullptr;
         if (!successful) {
             return false;
         }
@@ -1815,7 +1820,7 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     bool result = true;
     QDir dir(dirName);
     if (dir.exists(dirName)) {
-        Q_FOREACH (QFileInfo info, dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
+        for (QFileInfo &info : dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
             // prevent recursion outside of the original branch
             if (info.isDir() && info.absoluteFilePath().startsWith(originalPath)) {
                 result = removeDir(info.absoluteFilePath(), originalPath);
@@ -1912,6 +1917,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     mActionUnit.uninstall(packageName);
     mScriptUnit.uninstall(packageName);
     mKeyUnit.uninstall(packageName);
+    mudlet::self()->mFontManager.unloadFonts(packageName);
     if (module) {
         //if module == 2, this is a temporary uninstall for reloading so we exit here
         QStringList entry = mInstalledModules[packageName];
@@ -1973,9 +1979,17 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
     QStringList strings;
     if (configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&configFile);
+        /*
+         * We also have to explicit set the codec to use whilst reading the file
+         * as otherwise QTextCodec::codecForLocale() is used which might be a
+         * local8Bit codec that thus will not handle all the characters
+         * contained in Unicode:
+         */
+        in.setCodec(QTextCodec::codecForName("UTF-8"));
         while (!in.atEnd()) {
             strings += in.readLine();
         }
+        configFile.close();
     }
 
     lua_State* L = luaL_newstate();
@@ -2102,7 +2116,7 @@ void Host::installPackageFonts(const QString &packageName)
         if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive) ||
             filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
 
-            mudlet::self()->mFontManager.loadFont(filePath);
+            mudlet::self()->mFontManager.loadFont(filePath, packageName);
         }
     }
 }
@@ -2501,7 +2515,7 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
     }
 
     if (dictionaryChanged) {
-        // This will propogate the changes in the two flags to the main
+        // This will propagate the changes in the two flags to the main
         // TConsole's copies of them - although setProfileSpellDictionary() is
         // also called in the main TConsole constructor:
         mpConsole->setProfileSpellDictionary();
@@ -2850,7 +2864,7 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
             return {true, QString()};
         }
     } else if (pC) {
-        // CHECK: The absence of an explict return statement in this block means that
+        // CHECK: The absence of an explicit return statement in this block means that
         // reusing an existing mini console causes the lua function to seem to
         // fail - is this as per Wiki?
         // This part was causing problems with UserWindows
@@ -3699,7 +3713,7 @@ bool Host::commitLayoutUpdates(bool flush)
         for (auto pToolBar : mToolbarLayoutChanges) {
             // Under some circumstances there is NOT a
             // pToolBar->property("layoutChanged") and examining that
-            // non-existant variant to see if it was true or false causes seg. faults!
+            // non-existent variant to see if it was true or false causes seg. faults!
             if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
                 qWarning().nospace().noquote() << "host::commitLayoutUpdates() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
             } else if (pToolBar->property("layoutChanged").toBool()) {
@@ -3710,4 +3724,16 @@ bool Host::commitLayoutUpdates(bool flush)
     }
     mToolbarLayoutChanges.clear();
     return updated;
+}
+
+void Host::setupIreDriverBugfix()
+{
+    // IRE games suffer from unnecessary linebreaks across split packets
+    // but other games implementing GA don't. Thus, only enable the workaround
+    // for the former only
+
+    QStringList ireGameUrls{"achaea.com", "lusternia.com", "imperian.com", "aetolia.com", "starmourn.com"};
+    if (ireGameUrls.contains(getUrl(), Qt::CaseInsensitive)) {
+        set_USE_IRE_DRIVER_BUGFIX(true);
+    }
 }

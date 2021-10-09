@@ -376,3 +376,64 @@ function display(...)
     echo((inspect(arg[1]) or 'nil') .. '\n')
   end
 end
+
+local errc
+-- leave errorc in the global table if and only if this is the mudlet self-test profile for running Busted tests
+-- this is because we need to spy on it to for testing.
+if getProfileName() ~= "Mudlet self-test" then
+  errc = errorc
+  _G.errorc = nil       -- and set to nil since it is internal only for the following functions.
+end
+-- undocumented, internal function
+local function printX(options)
+  local errorc = errc and errc or errorc
+  local func = options.func or debugc
+  local showTrace = options.showTrace
+  local msg = options.msg or ""
+  local halt = options.halt
+  local stackTable = debug.traceback():gsub("\t", "  "):gsub("%[string ",""):split("\n")
+  -- the table.removes below remove the printX and printError or printDebug calls from the stacktrace
+  -- decided to do this as they aren't the information the user is likely to be interested in
+  table.remove(stackTable,2)
+  table.remove(stackTable,2)
+  local level = #stackTable + 1
+  local dinfo = debug.getinfo(level)
+  local header = string.format("(%s:line %s)", dinfo.source, dinfo.currentline)
+  if halt then
+    header = "\n" .. header
+  end
+  local traceback = showTrace and "\n" .. table.concat(stackTable, "\n") or ""
+  if func ~= errorc then
+    msg = string.format("%s %s%s", halt and "" or header, msg, traceback)
+    if halt then
+      func(msg, level)
+    end
+    func(msg)
+    return
+  end
+  msg = msg .. traceback
+  func(msg, header)
+end
+
+-- Documentation: https://wiki.mudlet.org/index.php?title=Manual:Lua_Functions#printError
+function printError(msg, showTrace, haltExecution)
+  local func = haltExecution and error or (errc and errc or errorc) -- if running automated tests, errc is undefined, use the exposed global.
+  local options = {
+    msg = msg,
+    showTrace = showTrace,
+    halt = haltExecution,
+    func = func,
+  }
+  printX(options)
+end
+
+-- Documentation: https://wiki.mudlet.org/index.php?title=Manual:Lua_Functions#printDebug
+function printDebug(msg, showTrace)
+  local options = {
+    msg = msg,
+    showTrace = showTrace,
+    halt = false,
+    func = debugc
+  }
+  printX(options)
+end

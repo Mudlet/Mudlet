@@ -353,15 +353,15 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 {
     // What can appear in a CSI Parameter String (Ps) byte or at least for it
     // to be something we can handle:
-    const QByteArray cParameter("0123456789;:");
+    const QByteArray cParameter = QByteArrayLiteral("0123456789;:");
     // What can appear in the initial position of a CSI Parameter String (Ps) byte:
-    const QByteArray cParameterInitial("0123456789;:<=>?");
+    const QByteArray cParameterInitial = QByteArrayLiteral("0123456789;:<=>?");
     // What can appear in a CSI Intermediate byte (includes a quote character in
     // the middle of the text here which has to be escaped with a backslash):
-    const QByteArray cIntermediate(" !\"#$%&'()*+,-./");
+    const QByteArray cIntermediate = QByteArrayLiteral(" !\"#$%&'()*+,-./");
     // What can appear in a CSI final byte position - (includes a backslash
     // which has to be doubled to include it in here):
-    const QByteArray cFinal("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+    const QByteArray cFinal = QByteArrayLiteral("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
 
     // As well as enabling the prepending of left-over bytes from last packet
     // from the MUD server this may help in high frequency interactions to
@@ -592,7 +592,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     /*
                      * Also seen in output from mud.durismud.com see 'C' case above:
                      * Is ED 'Erase Display' command and has three variants:
-                     * * 0 (or ommitted): clear from cursor to end of screen
+                     * * 0 (or omitted): clear from cursor to end of screen
                      *   - which is a NOP for us!
                      * * 1: clear from cursor to beginning of screen
                      *   - which is a NWIH for us!
@@ -1007,9 +1007,9 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
 
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unexpect SGR code: SGR...;38:" << parameters.at(1) << ":...;...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unexpected SGR code: SGR...;38:" << parameters.at(1) << ":...;...m ignoring sequence!";
         } else {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unexpect SGR code: SGR...;38;" << parameters.at(1) << ";...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unexpected SGR code: SGR...;38;" << parameters.at(1) << ";...m ignoring sequence!";
         }
 #endif
 
@@ -1171,9 +1171,9 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unexpect SGR code: SGR...;48:" << parameters.at(1) << ":...;...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unexpected SGR code: SGR...;48:" << parameters.at(1) << ":...;...m ignoring sequence!";
         } else {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unexpect SGR code: SGR...;48;" << parameters.at(1) << ";...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unexpected SGR code: SGR...;48;" << parameters.at(1) << ";...m ignoring sequence!";
         }
 #endif
     }
@@ -1485,14 +1485,14 @@ void TBuffer::decodeSGR(const QString& sequence)
                 case 3:
                     // There is a proposal by the "VTE" terminal
                     // emulator to use a (sub)parameter entry to
-                    // destinguish between italics and slanted text by
+                    // distinguish between italics and slanted text by
                     // using ESC[...;3:1;...m and ESC[...;3:2;...m
                     // respectively - that is handled above in the colon
                     // sub-string separated part:
                     mItalics = true;
                     break;
                 case 4:
-                    // There is a implimention by some terminal
+                    // There is a implementation by some terminal
                     // emulators ("Kitty" and "VTE") to use a
                     // (sub)parameter entry of 3 for a wavy underline
                     // {presumably 2 would be a double underline and 1
@@ -2317,7 +2317,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
 
 // This is very poorly designed as P2 is used to determine the last character to
 // copy BUT no consideration is given to P2.y() != p1.y() i.e. a copy of more
-// than a single line - and it copys a single QChar at a time....
+// than a single line - and it copies a single QChar at a time....
 TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
 {
     TBuffer slice(mpHost);
@@ -3256,7 +3256,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             // locally generated material from Lua feedTriggers(...)
             if (isFromServer) {
 #if defined(DEBUG_UTF8_PROCESSING)
-                qDebug() << "TBuffer::processUtf8Sequence(...) Insufficent bytes in buffer to complate UTF-8 sequence, need:" << utf8SequenceLength
+                qDebug() << "TBuffer::processUtf8Sequence(...) Insufficient bytes in buffer to complete UTF-8 sequence, need:" << utf8SequenceLength
                          << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
 #endif
                 mIncompleteSequenceBytes = bufferData.substr(pos);
@@ -3453,7 +3453,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 // mapping, instead we use one TChar per QChar - and that has to be
 // tweaked for non-BMP characters that use TWO QChars per codepoint.
 // GB2312 is the predecessor to both and - according to Wikipedia (EN) covers
-// over 99% of the characters of contempory usage.
+// over 99% of the characters of contemporary usage.
 // GBK is a sub-set of GB18030 so can be processed in the same method
 // Assume we are at the first byte of a single (ASCII), pair (GBK/GB18030)
 // or four byte (GB18030) sequence
@@ -3624,8 +3624,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             // Not enough bytes to process yet - so store what we have and return
             if (isFromServer) {
 #if defined(DEBUG_GB_PROCESSING)
-                qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficent bytes in buffer to "
-                                      "complate GB2312/GBK sequence, need at least: "
+                qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficient bytes in buffer to "
+                                      "complete GB2312/GBK sequence, need at least: "
                                    << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
 #endif
                 mIncompleteSequenceBytes = bufferData.substr(pos);
@@ -3656,8 +3656,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     // Not enough bytes to process yet - so store what we have and return
                     if (isFromServer) {
 #if defined(DEBUG_GB_PROCESSING)
-                        qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficent bytes in buffer to "
-                                              "complate GB18030 sequence, need at least: "
+                        qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficient bytes in buffer to "
+                                              "complete GB18030 sequence, need at least: "
                                            << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
 #endif
                         mIncompleteSequenceBytes = bufferData.substr(pos);
@@ -3809,7 +3809,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             // we only have one - so store what we have and return
             if (isFromServer) {
 #if defined(DEBUG_GB_PROCESSING)
-                qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficent bytes in buffer to complate GB18030 sequence, need at least:"
+                qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficient bytes in buffer to complete GB18030 sequence, need at least:"
                                    << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos).length()
                                    << " bytes (which we will store for next call to this method)...";
 #endif
@@ -3917,7 +3917,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
             // Not enough bytes to process yet - so store what we have and return
             if (isFromServer) {
 #if defined(DEBUG_BIG5_PROCESSING)
-                qDebug().nospace() << "TBuffer::processBig5Sequence(...) Insufficent bytes in buffer to "
+                qDebug().nospace() << "TBuffer::processBig5Sequence(...) Insufficient bytes in buffer to "
                                       "complete Big5 sequence, need at least: "
                                    << big5SequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
 #endif
