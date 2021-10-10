@@ -59,10 +59,7 @@ public:
         return QAccessibleWidget::interface_cast(t);
     }
 
-    TTextEdit* textEdit() const;
     QAccessible::State state() const override;
-    int lineForOffset(int offset) const;
-    int columnForOffset(int offset) const;
     void selection(int selectionIndex, int *startOffset, int *endOffset) const override;
     int selectionCount() const override;
     void addSelection(int startOffset, int endOffset) override;
@@ -79,6 +76,11 @@ public:
     QString textAfterOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const override;
     QString textAtOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const override;
     QString textBeforeOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const override;
+
+private:
+    TTextEdit* textEdit() const;
+    int lineForOffset(int offset) const;
+    int columnForOffset(int offset) const;
 };
 
 #endif // MUDLET_TACCESSIBLETEXTEDIT_H
