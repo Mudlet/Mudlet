@@ -79,7 +79,7 @@ public:
 
 private:
     TTextEdit* textEdit() const;
-    int lineForOffset(int offset) const;
+    int lineForOffset(int offset, int *lengthSoFar) const;
     int columnForOffset(int offset) const;
 };
 

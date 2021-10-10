@@ -40,14 +40,35 @@ QAccessible::State TAccessibleTextEdit::state() const
     return s;
 }
 
-int TAccessibleTextEdit::lineForOffset(int offset) const
+int TAccessibleTextEdit::lineForOffset(int offset, int *lengthSoFar = nullptr) const
 {
-    return offset / textEdit()->getColumnCount();
+    const QStringList& lineBuffer = textEdit()->mpBuffer->lineBuffer;
+    int lengthSoFar_ = 0;
+
+    for (int i = 0; i < lineBuffer.length(); i++) {
+        lengthSoFar_ += lineBuffer[i].length();
+
+        if (offset < lengthSoFar_) {
+            if (lengthSoFar != nullptr) {
+                *lengthSoFar = lengthSoFar_ - lineBuffer[i].length();
+            }
+            return i;
+        }
+    }
+
+    if (lengthSoFar != nullptr) {
+        *lengthSoFar = lengthSoFar_;
+    }
+    return lineBuffer.length();
 }
 
 int TAccessibleTextEdit::columnForOffset(int offset) const
 {
-    return offset % textEdit()->getColumnCount();
+    int lengthSoFar;
+
+    lineForOffset(offset, &lengthSoFar);
+
+    return offset - lengthSoFar;
 }
 
 /*
@@ -127,8 +148,13 @@ void TAccessibleTextEdit::setSelection(int selectionIndex, int startOffset, int 
  */
 int TAccessibleTextEdit::cursorPosition() const
 {
-    int offset = textEdit()->getColumnCount() * textEdit()->mpConsole->mUserCursor.y();
-    int ret = offset + textEdit()->mpConsole->mUserCursor.x();
+    int ret = 0;
+
+    for (int i = 0; i < textEdit()->mpConsole->mUserCursor.y(); i++) {
+        ret += textEdit()->mpBuffer->line(i).length();
+    }
+
+    ret += textEdit()->mpConsole->mUserCursor.x();
 
     return ret;
 }
@@ -161,7 +187,9 @@ QString TAccessibleTextEdit::text(int startOffset, int endOffset) const
  */
 int TAccessibleTextEdit::characterCount() const
 {
-    int ret = textEdit()->mpBuffer->getLastLineNumber() * textEdit()->getColumnCount();
+    int ret;
+
+    lineForOffset(std::numeric_limits<int>::max(), &ret);
 
     return ret;
 }
@@ -173,7 +201,7 @@ int TAccessibleTextEdit::characterCount() const
 QRect TAccessibleTextEdit::characterRect(int offset) const
 {
     int row = lineForOffset(offset);
-    int col = offset - row * textEdit()->getColumnCount();
+    int col = columnForOffset(offset);
     int fontWidth = QFontMetrics(textEdit()->mDisplayFont).averageCharWidth();
     int fontHeight = QFontMetrics(textEdit()->mDisplayFont).height();
     QPoint position = QPoint(col * fontWidth , row * fontHeight);
