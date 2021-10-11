@@ -44,9 +44,14 @@
 const QString singleParagraph{QStringLiteral("<p>%1</p>")};
 const QString doubleParagraph{QStringLiteral("<p>%1</p><p>%2</p>")};
 
-dlgRoomExits::dlgRoomExits(Host* pH, QWidget* pW) : QDialog(pW), mpHost(pH), mpEditItem(nullptr), pR(), mRoomID(), mEditColumn()
+dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
+: QDialog(pW)
+, mpHost(pH)
+, mRoomID(roomNumber)
 {
     setupUi(this);
+
+    init();
 }
 
 void dlgRoomExits::slot_endEditSpecialExits()
@@ -1685,8 +1690,7 @@ void dlgRoomExits::slot_stub_out_stateChanged(int state)
     slot_checkModified();
 }
 
-void dlgRoomExits::initExit(int roomId,
-                            int direction,
+void dlgRoomExits::initExit(int direction,
                             int exitId,
                             QLineEdit* exitLineEdit,
                             QCheckBox* noRoute,
@@ -1731,10 +1735,10 @@ void dlgRoomExits::initExit(int roomId,
         locked->setChecked(true);
         break;
     default:
-        qWarning() << "dlgRoomExits::initExit(...) in room id(" << roomId << ") unexpected doors[" << doorAndWeightText << "] value:" << pR->getDoor(doorAndWeightText) << "found for room!";
+        qWarning() << "dlgRoomExits::initExit(...) in room id(" << mRoomID << ") unexpected doors[" << doorAndWeightText << "] value:" << pR->getDoor(doorAndWeightText) << "found for room!";
     }
 
-    TRoom* pExitR;
+    TRoom* pExitR = nullptr;
     if (exitId > 0) {
         pExitR = mpHost->mpMap->mpRoomDB->getRoom(exitId);
         if (!pExitR) {
@@ -1798,20 +1802,20 @@ void dlgRoomExits::initExit(int roomId,
     originalExits[direction] = makeExitFromControls(direction);
 }
 
-void dlgRoomExits::init(int id)
+void dlgRoomExits::init()
 {
-    pR = mpHost->mpMap->mpRoomDB->getRoom(id);
+    pR = mpHost->mpMap->mpRoomDB->getRoom(mRoomID);
     if (!pR) {
         return;
     }
 
-    roomID->setText(QString::number(id));
+    roomID->setText(QString::number(mRoomID));
     roomWeight->setText(QString::number(pR->getWeight()));
     QString titleText;
     if (pR->name.trimmed().length()) {
         titleText = tr(R"(Exits for room: "%1" [*])").arg(pR->name);
     } else {
-        titleText = tr("Exits for room Id: %1 [*]").arg(id);
+        titleText = tr("Exits for room Id: %1 [*]").arg(mRoomID);
     }
 
     this->setWindowTitle(titleText);
@@ -1819,29 +1823,29 @@ void dlgRoomExits::init(int id)
     // Because we are manipulating the settings for the exit we need to know
     // explicitly where the weight comes from, pR->getExitWeight() hides that
     // detail deliberately for normal usage
-    initExit(id, DIR_NORTHWEST, pR->getExit(DIR_NORTHWEST), nw, noroute_nw, stub_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, weight_nw);
+    initExit(DIR_NORTHWEST, pR->getExit(DIR_NORTHWEST), nw, noroute_nw, stub_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, weight_nw);
 
-    initExit(id, DIR_NORTH, pR->getExit(DIR_NORTH), n, noroute_n, stub_n, doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n, weight_n);
+    initExit(DIR_NORTH, pR->getExit(DIR_NORTH), n, noroute_n, stub_n, doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n, weight_n);
 
-    initExit(id, DIR_NORTHEAST, pR->getExit(DIR_NORTHEAST), ne, noroute_ne, stub_ne, doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne, weight_ne);
+    initExit(DIR_NORTHEAST, pR->getExit(DIR_NORTHEAST), ne, noroute_ne, stub_ne, doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne, weight_ne);
 
-    initExit(id, DIR_UP, pR->getExit(DIR_UP), up, noroute_up, stub_up, doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up, weight_up);
+    initExit(DIR_UP, pR->getExit(DIR_UP), up, noroute_up, stub_up, doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up, weight_up);
 
-    initExit(id, DIR_WEST, pR->getExit(DIR_WEST), w, noroute_w, stub_w, doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w, weight_w);
+    initExit(DIR_WEST, pR->getExit(DIR_WEST), w, noroute_w, stub_w, doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w, weight_w);
 
-    initExit(id, DIR_EAST, pR->getExit(DIR_EAST), e, noroute_e, stub_e, doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e, weight_e);
+    initExit(DIR_EAST, pR->getExit(DIR_EAST), e, noroute_e, stub_e, doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e, weight_e);
 
-    initExit(id, DIR_DOWN, pR->getExit(DIR_DOWN), down, noroute_down, stub_down, doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down, weight_down);
+    initExit(DIR_DOWN, pR->getExit(DIR_DOWN), down, noroute_down, stub_down, doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down, weight_down);
 
-    initExit(id, DIR_SOUTHWEST, pR->getExit(DIR_SOUTHWEST), sw, noroute_sw, stub_sw, doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw, weight_sw);
+    initExit(DIR_SOUTHWEST, pR->getExit(DIR_SOUTHWEST), sw, noroute_sw, stub_sw, doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw, weight_sw);
 
-    initExit(id, DIR_SOUTH, pR->getExit(DIR_SOUTH), s, noroute_s, stub_s, doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s, weight_s);
+    initExit(DIR_SOUTH, pR->getExit(DIR_SOUTH), s, noroute_s, stub_s, doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s, weight_s);
 
-    initExit(id, DIR_SOUTHEAST, pR->getExit(DIR_SOUTHEAST), se, noroute_se, stub_se, doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se, weight_se);
+    initExit(DIR_SOUTHEAST, pR->getExit(DIR_SOUTHEAST), se, noroute_se, stub_se, doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se, weight_se);
 
-    initExit(id, DIR_IN, pR->getExit(DIR_IN), in, noroute_in, stub_in, doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in, weight_in);
+    initExit(DIR_IN, pR->getExit(DIR_IN), in, noroute_in, stub_in, doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in, weight_in);
 
-    initExit(id, DIR_OUT, pR->getExit(DIR_OUT), out, noroute_out, stub_out, doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out, weight_out);
+    initExit(DIR_OUT, pR->getExit(DIR_OUT), out, noroute_out, stub_out, doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out, weight_out);
 
     QMapIterator<QString, int> it(pR->getSpecialExits());
     while (it.hasNext()) {
@@ -1929,7 +1933,7 @@ void dlgRoomExits::init(int id)
                 pI->setCheckState(6, Qt::Checked);
                 break;
             default:
-                qWarning().nospace().noquote() << "dlgRoomExits::init(" << id << ") WARNING - unexpected (special exit) doors[" << dir << "] value:" << pR->doors[dir] << " found!";
+                qWarning().nospace().noquote() << "dlgRoomExits::init() WARNING - in room: " << mRoomID << "unexpected (special exit) doors[" << dir << "] value:" << pR->doors[dir] << " found!";
             }
             pSpecialExit->door = specialDoor;
             originalSpecialExits[dir] = pSpecialExit;
@@ -1942,7 +1946,6 @@ void dlgRoomExits::init(int id)
 
 
     }
-    mRoomID = id;
     button_save->setEnabled( false );
 // We now do not connect up all these things until AFTER we have initialised
 // things as some controls will issue unwanted signals upon setting values into

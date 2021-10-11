@@ -82,7 +82,6 @@ T2DMap::T2DMap(QWidget* parent)
 , xyzoom(20)
 , mRX()
 , mRY()
-, mPick()
 , mTarget()
 , mStartSpeedWalk()
 , mRoomBeingMoved()
@@ -611,7 +610,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
 // player's room if it is visible. This is so it is drawn LAST (and any effects,
 // or extra markings for it do not get overwritten by the drawing of the other
 // rooms)...
-inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapNameFont, QPen& pen, TRoom* pRoom, const bool isGridMode, const bool areRoomIdsLegible, bool showRoomName, const int speedWalkStartRoomId, const float rx, const float ry, const bool picked)
+inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapNameFont, QPen& pen, TRoom* pRoom, const bool isGridMode, const bool areRoomIdsLegible, bool showRoomName, const int speedWalkStartRoomId, const float rx, const float ry)
 {
     const int currentRoomId = pRoom->getId();
     pRoom->rendered = false;
@@ -697,7 +696,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         }
     }
 
-    bool isRoomSelected = ((mPick || picked) && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
+    bool isRoomSelected = (mPick && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
     QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
     selectionBg.setColorAt(0.25, roomColor);
     selectionBg.setColorAt(1, Qt::blue);
@@ -1130,7 +1129,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
             QRectF dr = QRectF(rx, ry, mRoomWidth * rSize, mRoomHeight * rSize);
 
             // clang-format off
-            if (((mPick || picked)
+            if ((mPick
                  && mPHighlight.x() >= (dr.x() - mRoomWidth / 3.0)
                  && mPHighlight.x() <= (dr.x() + mRoomWidth / 3.0)
                  && mPHighlight.y() >= (dr.y() - mRoomHeight / 3.0)
@@ -1174,9 +1173,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
     if (!mpMap) {
         return;
     }
-    // As it happens this local is never changed in this method so it can be
-    // made const:
-    const bool __Pick = mPick;
     QElapsedTimer renderTimer;
     renderTimer.start();
 
@@ -1272,7 +1268,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     TArea* playerArea;
     TRoom* playerRoom;
     int playerAreaID = pPlayerRoom->getArea();
-    if ((!__Pick && !mShiftMode) || mpMap->mNewMove) {
+    if ((!mPick && !mShiftMode) || mpMap->mNewMove) {
         mShiftMode = true;
         // that's of interest only here because the map editor is here ->
         // map might not be updated, thus I force a map update on centerview()
@@ -1457,12 +1453,12 @@ void T2DMap::paintEvent(QPaintEvent* e)
             playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
         } else {
             // Not the player's room:
-            drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, __Pick);
+            drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry);
         }
     } // End of while loop for each room in area
 
     if (isPlayerRoomVisible) {
-        drawRoom(painter, roomVNumFont, mapNameFont, pen, playerRoom, pArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), __Pick);
+        drawRoom(painter, roomVNumFont, mapNameFont, pen, playerRoom, pArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()));
         painter.save();
         QPen transparentPen(Qt::transparent);
         QPainterPath myPath;
@@ -3906,8 +3902,7 @@ void T2DMap::slot_setExits()
         return;
     }
     if (mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId)) {
-        auto pD = new dlgRoomExits(mpHost, this);
-        pD->init(mMultiSelectionHighlightRoomId);
+        auto pD = new dlgRoomExits(mpHost, mMultiSelectionHighlightRoomId, this);
         pD->show();
         pD->raise();
     }
