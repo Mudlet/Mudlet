@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2012 by Vadim Peretokin - vperetokin@gmail.com          *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -35,6 +36,22 @@ public:
     Q_DISABLE_COPY(ExitsTreeWidget)
     ExitsTreeWidget(QWidget* pW);
     void keyPressEvent(QKeyEvent* event) override;
+
+protected:
+    // The indexes that are used to identify the columns in the special exits
+    // treewidget have been converted to constants so that we can
+    // tweak them and change all of them correctly.
+    // I'd like to find a way to only define them once but some are also needed
+    // in the dlgRoomExit class as that also needs to access them but I can
+    // not see how to do it... SlySven Oct 2021
+    static const int colIndex_exitRoomId = 0;
+    static const int colIndex_lockExit = 1;
+    static const int colIndex_exitWeight = 2;
+    static const int colIndex_doorNone = 3;
+    static const int colIndex_doorOpen = 4;
+    static const int colIndex_doorClosed = 5;
+    static const int colIndex_doorLocked = 6;
+    static const int colIndex_command = 7;
 };
 
 #endif // MUDLET_EXITSTREEWIDGET_H

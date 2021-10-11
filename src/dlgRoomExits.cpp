@@ -44,17 +44,6 @@
 const QString singleParagraph{QStringLiteral("<p>%1</p>")};
 const QString doubleParagraph{QStringLiteral("<p>%1</p><p>%2</p>")};
 
-// Abstract all the indexes into the special exits treewidget so that we can
-// tweak them and change all of them correctly:
-const int colIndex_exitRoomId = 0;
-const int colIndex_lockExit = 1;
-const int colIndex_exitWeight = 2;
-const int colIndex_doorNone = 3;
-const int colIndex_doorOpen = 4;
-const int colIndex_doorClosed = 5;
-const int colIndex_doorLocked = 6;
-const int colIndex_command = 7;
-
 dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 : QDialog(pW)
 , mpHost(pH)
