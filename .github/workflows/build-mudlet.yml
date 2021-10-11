@@ -250,6 +250,8 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
+        # enable for a debug build (1/2)
+        # buildWithCMakeArgs: --config RelWithDebInfo
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}

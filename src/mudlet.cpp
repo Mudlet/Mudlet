@@ -1526,7 +1526,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
 void mudlet::slot_timer_fires()
 {
-    QTimer* pQT = (QTimer*)sender();
+    QTimer* pQT = qobject_cast<QTimer*>(sender());
     if (Q_UNLIKELY(!pQT)) {
         return;
     }
