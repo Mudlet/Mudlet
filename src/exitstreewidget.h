@@ -32,18 +32,15 @@ class ExitsTreeWidget : public QTreeWidget
 {
     Q_OBJECT
 
-public:
-    Q_DISABLE_COPY(ExitsTreeWidget)
-    ExitsTreeWidget(QWidget* pW);
-    void keyPressEvent(QKeyEvent* event) override;
+    friend class dlgRoomExits;
 
-protected:
     // The indexes that are used to identify the columns in the special exits
     // treewidget have been converted to constants so that we can
-    // tweak them and change all of them correctly.
-    // I'd like to find a way to only define them once but some are also needed
-    // in the dlgRoomExit class as that also needs to access them but I can
-    // not see how to do it... SlySven Oct 2021
+    // tweak them and change all of them correctly - and by making the
+    // dlgRoomExits class a friend that can use the same set as defined here.
+    // Note that if any of these numbers are modified/extended the
+    // corresponding headings in the ./src/ui/room_exits.ui file will need
+    // to be adjusted as well - and visa versa:
     static const int colIndex_exitRoomId = 0;
     static const int colIndex_lockExit = 1;
     static const int colIndex_exitWeight = 2;
@@ -52,6 +49,11 @@ protected:
     static const int colIndex_doorClosed = 5;
     static const int colIndex_doorLocked = 6;
     static const int colIndex_command = 7;
+
+public:
+    Q_DISABLE_COPY(ExitsTreeWidget)
+    ExitsTreeWidget(QWidget* pW);
+    void keyPressEvent(QKeyEvent* event) override;
 };
 
 #endif // MUDLET_EXITSTREEWIDGET_H

@@ -99,26 +99,6 @@ public slots:
     void slot_stub_in_stateChanged(int);
     void slot_stub_out_stateChanged(int);
 
-protected:
-    // The indexes that are used to identify the columns in the special exits
-    // treewidget have been converted to constants so that we can
-    // tweak them and change all of them correctly.
-    // I'd like to find a way to only define them once but some are also needed
-    // in the exitstreewidget class as that also needs to access them but I can
-    // not see how to do it...
-    // Also, it has not proven possible to move the definitions of the columns
-    // in the special exitstreewidget into this class so if the details of the
-    // columns change it is also needed to revise the ./src/ui/room_exits.ui
-    // file - SlySven Oct 2021
-    static const int colIndex_exitRoomId = 0;
-    static const int colIndex_lockExit = 1;
-    static const int colIndex_exitWeight = 2;
-    static const int colIndex_doorNone = 3;
-    static const int colIndex_doorOpen = 4;
-    static const int colIndex_doorClosed = 5;
-    static const int colIndex_doorLocked = 6;
-    static const int colIndex_command = 7;
-
 private slots:
     void slot_checkModified();
 
