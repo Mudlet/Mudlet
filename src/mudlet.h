@@ -709,7 +709,7 @@ private:
     // The collection of words in the above:
     QSet<QString> mWordSet_shared;
 
-    QString mMudletDiscordInvite = QStringLiteral("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+    QString mMudletDiscordInvite = QStringLiteral("https://www.mudlet.org/chat");
 
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate {};
