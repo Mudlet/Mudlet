@@ -34,6 +34,8 @@
 #include <QPainter>
 #include <QScreen>
 #include <QSplashScreen>
+#include <QStringList>
+#include <QStringListIterator>
 #include "post_guard.h"
 #include "AltFocusMenuBarDisable.h"
 
@@ -365,7 +367,26 @@ int main(int argc, char* argv[])
     }
 #if defined(Q_OS_LINUX)
     // Only needed/works on Linux to provide color emojis:
-    QString notoFontDirectory(QStringLiteral("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    // Identify old versions so that we can remove them and later on only try
+    // to load the latest (otherwise, as they all have the same family name
+    // only the first one found will be loaded by the FontManager class):
+    QStringList oldNotoFontDirectories;
+    oldNotoFontDirectories << QStringLiteral("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    oldNotoFontDirectories << QStringLiteral("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+
+    QStringListIterator itOldNotoFontDirectory(oldNotoFontDirectories);
+    while (itOldNotoFontDirectory.hasNext()) {
+        auto oldNotoFontDirectory = itOldNotoFontDirectory.next();
+        QDir oldDir{oldNotoFontDirectory};
+        if (oldDir.exists()) {
+            // This can fail but we do not worry about that too much, as long
+            // as it nukes any "NotoColorEmoji.ttf" files:
+            if (!oldDir.removeRecursively()) {
+                qDebug().nospace().noquote() << "main() INFO - failed to remove old Noto Color Emoji font located at: " << oldDir.absolutePath();
+            }
+        }
+    }
+    QString notoFontDirectory{QStringLiteral("%1/noto-color-emoji-2021-07-15-v2.028").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -420,9 +441,9 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
 #if defined(Q_OS_LINUX)
-    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2019-11-19-unicode12"), QStringLiteral("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2019-11-19-unicode12"), QStringLiteral("LICENSE"));
-    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2019-11-19-unicode12"), QStringLiteral("README"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2021-07-15-v2.028"), QStringLiteral("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2021-07-15-v2.028"), QStringLiteral("LICENSE"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2021-07-15-v2.028"), QStringLiteral("README"));
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
