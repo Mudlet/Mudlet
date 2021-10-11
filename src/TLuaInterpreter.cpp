@@ -10022,9 +10022,9 @@ int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordInviteURL
 int TLuaInterpreter::setDiscordInviteURL(lua_State* L)
 {
-    // The invite URL changes what the Discord button opens, it is not part of
-    // the rich presence, thus it does not have the api enabled check that all
-    // the other Discord functions have. This one is unrelated to privacy.
+    // The invite URL changes what the Discord button opens. It is not part of
+    // rich presence, so it does not have the API enabled check that those
+    // Discord functions need in order to respect privacy.
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
     bool isActiveHost = (pMudlet->mpCurrentActiveHost == &host);
