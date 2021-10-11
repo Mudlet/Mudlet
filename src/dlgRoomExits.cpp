@@ -141,7 +141,8 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
             specialExits->closePersistentEditor(mpEditItem, mEditColumn);
             //            qDebug()<<"Closed PE on item:"<<mpEditItem->text(ExitsTreeWidget::colIndex_command)<<"column:"<<mEditColumn;
             break;
-        default:; //noop for other column (ExitsTreeWidget::colIndex_lockExit)
+        default:
+            {} //noop for other column (ExitsTreeWidget::colIndex_lockExit)
         }
 
         if (pExitToRoom) {
