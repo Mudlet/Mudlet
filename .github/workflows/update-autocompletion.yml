@@ -54,7 +54,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        title: "Update autocompletion data in Mudlet"
+        title: "Infrastructure: Update autocompletion data in Mudlet"
         body: |
           #### Brief overview of PR changes/additions
           :crown: An automated PR to update autocompletion data in Mudlet from ${{ github.ref }} (${{ github.sha }}).
