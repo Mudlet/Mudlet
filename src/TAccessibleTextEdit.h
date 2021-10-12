@@ -5,6 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,10 +26,7 @@
 #include "TTextEdit.h"
 
 #include "pre_guard.h"
-#include <QAccessible>
-#include <QAccessibleActionInterface>
 #include <QAccessibleInterface>
-#include <QAccessibleObject>
 #include <QAccessibleTextInterface>
 #include <QAccessibleWidget>
 #include "post_guard.h"
@@ -54,10 +52,6 @@ public:
 
     void* interface_cast(QAccessible::InterfaceType t) override
     {
-        if (t == QAccessible::ActionInterface) {
-            return static_cast<QAccessibleActionInterface*>(this);
-        }
-
         if (t == QAccessible::TextInterface) {
             return static_cast<QAccessibleTextInterface*>(this);
         }
