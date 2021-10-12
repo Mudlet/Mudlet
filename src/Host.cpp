@@ -252,7 +252,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mScreenWidth(90)
 , mTimeout(60)
 , mUSE_FORCE_LF_AFTER_PROMPT(false)
-, mUSE_IRE_DRIVER_BUGFIX(true)
+, mUSE_IRE_DRIVER_BUGFIX(false)
 , mUSE_UNIX_EOL(false)
 , mWrapAt(100)
 , mWrapIndentCount(0)
@@ -1997,6 +1997,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     mActionUnit.uninstall(packageName);
     mScriptUnit.uninstall(packageName);
     mKeyUnit.uninstall(packageName);
+    mudlet::self()->mFontManager.unloadFonts(packageName);
     if (module) {
         //if module == 2, this is a temporary uninstall for reloading so we exit here
         QStringList entry = mInstalledModules[packageName];
@@ -2195,7 +2196,7 @@ void Host::installPackageFonts(const QString &packageName)
         if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive) ||
             filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
 
-            mudlet::self()->mFontManager.loadFont(filePath);
+            mudlet::self()->mFontManager.loadFont(filePath, packageName);
         }
     }
 }
@@ -3803,4 +3804,16 @@ bool Host::commitLayoutUpdates(bool flush)
     }
     mToolbarLayoutChanges.clear();
     return updated;
+}
+
+void Host::setupIreDriverBugfix()
+{
+    // IRE games suffer from unnecessary linebreaks across split packets
+    // but other games implementing GA don't. Thus, only enable the workaround
+    // for the former only
+
+    QStringList ireGameUrls{"achaea.com", "lusternia.com", "imperian.com", "aetolia.com", "starmourn.com"};
+    if (ireGameUrls.contains(getUrl(), Qt::CaseInsensitive)) {
+        set_USE_IRE_DRIVER_BUGFIX(true);
+    }
 }
