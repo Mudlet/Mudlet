@@ -260,7 +260,6 @@ public:
 
     void startSpeedWalk();
     void startSpeedWalk(int sourceRoom, int targetRoom);
-    void saveModules(int sync, bool backup = true);
     void reloadModule(const QString& reloadModuleName);
     void syncModule(const QString& reloadModuleName, const QString& syncHostName);
     std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String &value);
@@ -633,7 +632,7 @@ signals:
     void signal_changeDebugShowAllProblemCodepoints(const bool);
 
 private slots:
-    void slot_reloadModules();
+    void slot_saveModules(int sync, bool backup = true);
     void slot_purgeTemps();
 
 private:

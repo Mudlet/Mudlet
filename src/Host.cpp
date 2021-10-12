@@ -502,8 +502,9 @@ void Host::loadPackageInfo()
     }
 }
 
-void Host::saveModules(int sync, bool backup)
-{
+
+void Host::slot_saveModules(int sync, bool backup)
+{    
     QMapIterator<QString, QStringList> it(modulesToWrite);
     mModulesToSync.clear();
     QString savePath = mudlet::getMudletPath(mudlet::moduleBackupsPath);
@@ -534,13 +535,9 @@ void Host::saveModules(int sync, bool backup)
     }
     modulesToWrite.clear();
 
-    if (sync) {
-        connect(this, &Host::profileSaveFinished, this, &Host::slot_reloadModules);
+    if (!sync) {
+        return;
     }
-}
-
-void Host::slot_reloadModules()
-{
     //synchronize modules across sessions
     for (auto otherHost : mudlet::self()->getHostManager()) {
         if (otherHost == this || !otherHost->mpConsole) {
@@ -570,7 +567,6 @@ void Host::slot_reloadModules()
 
     // disconnect the one-time event so we're not always reloading modules whenever a profile save happens
     mModulesToSync.clear();
-    QObject::disconnect(this, &Host::profileSaveFinished, this, &Host::slot_reloadModules);
 }
 
 void Host::updateModuleZips()
@@ -843,7 +839,13 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     auto writer = new XMLexport(this);
     writers.insert(QStringLiteral("profile"), writer);
     writer->exportHost(filename_xml);
-    saveModules(syncModules ? 1 : 0, saveName == QStringLiteral("autosave") ? false : true);
+    //use a dummy object for destroying/disconnecting the object after
+    QObject *obj = new QObject(this);
+    connect(this, &Host::profileSaveFinished, obj, [=](){
+        slot_saveModules(syncModules ? 1 : 0, saveName == QStringLiteral("autosave") ? false : true);
+        obj->deleteLater();
+    });
+    //saveModules(syncModules ? 1 : 0, saveName == QStringLiteral("autosave") ? false : true);
     return std::make_tuple(true, filename_xml, QString());
 }
 
