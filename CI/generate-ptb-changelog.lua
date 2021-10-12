@@ -155,15 +155,15 @@ function print_sorted_changelog(changelog)
   local infraLines = lines_to_html(table.concat(infra, "\n"))
   local otherLines = lines_to_html(table.concat(other, "\n"))
   local final_changelog = f[[
-<h3>🆕 added</h3>
+<h3>added:</h3>
 {addLines}
-<h3>✨improved</h3>
+<h3>improved:</h3>
 {improveLines}
-<h3>🔨fixed</h3>
+<h3>fixed</h3>
 {fixLines}
-<h3>🧱 infrastructure</h3>
+<h3>infrastructure:</h3>
 {infraLines}
-<h3>❓ other</h3>
+<h3>other:</h3>
 {otherLines}
 ]]
   print(final_changelog)
