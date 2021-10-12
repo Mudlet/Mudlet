@@ -29,7 +29,8 @@ local MAX_COMMITS_PER_CHANGELOG = 100
 --   retrieve list of releases and their hashes
 --   go through the list collect hashes not present in releases
 --   then get the changelog for the range of hashes
---   html-ize and return the results.
+--   then sort the changelog into categories
+--   html-ize and print the results.
 
 -- credit: https://stackoverflow.com/a/326715/72944
 function os.capture(cmd, raw)
@@ -131,6 +132,50 @@ function convert_to_html(text)
   return table.concat(t, "\n")
 end
 
+function print_sorted_changelog(changelog)
+  local chgtbl = changelog:split("\n")
+  local add, improve, fix, infra, other = {}, {}, {}, {}, {}
+  for _,line in ipairs(chgtbl) do
+    local testline = line:lower()
+    if testline:match("^add") then
+      add[#add+1] = line
+    elseif testline:match("^improve") then
+      improve[#improve+1] = line
+    elseif testline:match("^fix") then
+      fix[#fix+1] = line
+    elseif testline:match("^infra") or testline:match("^%(autocommit%)") then --"(autocommit)" to catch bot PRs which may not start with "infra"
+      infra[#infra+1] = line
+    else
+      other[#other+1] = line
+    end
+  end
+  local addLines = lines_to_html(table.concat(add, "\n"))
+  local improveLines = lines_to_html(table.concat(improve, "\n"))
+  local fixLines = lines_to_html(table.concat(fix, "\n"))
+  local infraLines = lines_to_html(table.concat(infra, "\n"))
+  local otherLines = lines_to_html(table.concat(other, "\n"))
+  local final_changelog = f[[
+<h3>🆕 added</h3>
+{addLines}
+<h3>✨improved</h3>
+{improveLines}
+<h3>🔨fixed</h3>
+{fixLines}
+<h3>🧱 infrastructure</h3>
+{infraLines}
+<h3>❓ other</h3>
+{otherLines}
+]]
+  print(final_changelog)
+end
+
+function lines_to_html(lines)
+  if lines == "" then
+    lines = "None"
+  end
+  return convert_to_html(lines)
+end
+
 local historical_commits = extract_historical_sha1s()
 local released_commits = extract_released_sha1s(get_releases(args.releasefile))
 local unpublished_commits = scan_commits(historical_commits, released_commits)
@@ -139,4 +184,4 @@ if table.is_empty(unpublished_commits) then print("(changelog couldn't be genera
 
 local changelog = get_changelog(unpublished_commits[#unpublished_commits], unpublished_commits[1])
 
-print(convert_to_html(changelog))
+print_sorted_changelog(changelog)
