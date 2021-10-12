@@ -40,6 +40,13 @@ QAccessible::State TAccessibleTextEdit::state() const
     return s;
 }
 
+bool TAccessibleTextEdit::offsetIsInvalid(int offset) const
+{
+    // The end offset is the first character which isn't part of the range, so
+    // it may be equal to characterCount().
+    return offset < 0 || offset > characterCount();
+}
+
 int TAccessibleTextEdit::lineForOffset(int offset, int *lengthSoFar = nullptr) const
 {
     const QStringList& lineBuffer = textEdit()->mpBuffer->lineBuffer;
@@ -176,6 +183,10 @@ void TAccessibleTextEdit::setCursorPosition(int position)
  */
 QString TAccessibleTextEdit::text(int startOffset, int endOffset) const
 {
+    if (offsetIsInvalid(startOffset) || offsetIsInvalid(endOffset)) {
+        return QString();
+    }
+
     QString line(textEdit()->mpBuffer->line(textEdit()->mpConsole->mUserCursor.y()));
     QString ret(line.mid(startOffset, endOffset - startOffset));
 
@@ -200,6 +211,10 @@ int TAccessibleTextEdit::characterCount() const
  */
 QRect TAccessibleTextEdit::characterRect(int offset) const
 {
+    if (offsetIsInvalid(offset)) {
+        return QRect();
+    }
+
     int row = lineForOffset(offset);
     int col = columnForOffset(offset);
     int fontWidth = QFontMetrics(textEdit()->mDisplayFont).averageCharWidth();
