@@ -23,6 +23,7 @@
 
 #include "TAccessibleTextEdit.h"
 #include "TConsole.h"
+#include "mudlet.h"
 
 TTextEdit* TAccessibleTextEdit::textEdit() const
 {
@@ -156,12 +157,14 @@ void TAccessibleTextEdit::setSelection(int selectionIndex, int startOffset, int 
 int TAccessibleTextEdit::cursorPosition() const
 {
     int ret = 0;
+    int line = textEdit()->mCaretLine;
+    int column = textEdit()->mCaretColumn;
 
-    for (int i = 0; i < textEdit()->mpConsole->mUserCursor.y(); i++) {
+    for (int i = 0; i < line; i++) {
         ret += textEdit()->mpBuffer->line(i).length();
     }
 
-    ret += textEdit()->mpConsole->mUserCursor.x();
+    ret += column;
 
     return ret;
 }
@@ -173,7 +176,14 @@ int TAccessibleTextEdit::cursorPosition() const
  */
 void TAccessibleTextEdit::setCursorPosition(int position)
 {
-    qWarning("Unsupported TAccessibleTextEdit::setCursorPosition");
+    if (offsetIsInvalid(position)) {
+        return;
+    }
+
+    int line = lineForOffset(position);
+    int column = columnForOffset(position);
+
+    textEdit()->setCaretPosition(line, column);
 }
 
 /*

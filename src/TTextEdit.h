@@ -62,7 +62,7 @@ public:
     void drawForeground(QPainter&, const QRect&);
     uint getGraphemeBaseCharacter(const QString& str) const;
     void drawLine(QPainter& painter, int lineNumber, int rowOfScreen, int *offset = nullptr) const;
-    int drawGraphemeBackground(QPainter&, QVector<QColor>&, QVector<QRect>&, QVector<QString>&, QVector<int>&, QPoint&, const QString&, const int, TChar&) const;
+    int drawGraphemeBackground(QPainter&, QVector<QColor>&, QVector<QRect>&, QVector<QString>&, QVector<int>&, QPoint&, const QString&, const int, const int, TChar&) const;
     void drawGraphemeForeground(QPainter&, const QColor&, const QRect&, const QString&, TChar &) const;
     void showNewLines();
     void forceUpdate();
@@ -94,11 +94,21 @@ public:
     int getColumnCount();
     int getRowCount();
     void reportCodepointErrors();
+    void updateCaret();
 
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer
     int mCursorY;
     int mCursorX;
+
+    // Position of "caret", the cursor used for accessibility purposes.
+    int mCaretLine;
+    int mCaretColumn;
+    // If the current line is shorter than the previous one, hold here the
+    // previous column value so that we can return to it if the next line is
+    // long enough again.
+    int mOldCaretColumn;
+
     QFont mDisplayFont;
     QColor mFgColor;
     int mFontAscent;
@@ -130,6 +140,9 @@ public slots:
     void slot_changeDebugShowAllProblemCodepoints(const bool);
     void slot_mouseAction(const QString&);
 
+protected:
+    void keyPressEvent(QKeyEvent* event) override;
+
 private slots:
     void slot_copySelectionToClipboardImage();
 
@@ -148,6 +161,7 @@ private:
     void expandSelectionToLine(int);
     inline void replaceControlCharacterWith_Picture(const uint, const QString&, const int, QVector<QString>&, int&) const;
     inline void replaceControlCharacterWith_OEMFont(const uint, const QString&, const int, QVector<QString>&, int&) const;
+    void setCaretPosition(int line, int column);
 
     int mFontHeight;
     int mFontWidth;

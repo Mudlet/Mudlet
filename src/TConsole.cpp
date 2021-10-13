@@ -2020,3 +2020,23 @@ void TConsole::TConsole::slot_changeControlCharacterHandling(const ControlCharac
         refreshView();
     }
 }
+
+void TConsole::setCaretMode(bool enabled)
+{
+    mUpperPane->updateCaret();
+    mLowerPane->updateCaret();
+
+    if (enabled) {
+        mUpperPane->setFocusPolicy(Qt::StrongFocus);
+        mUpperPane->setFocusProxy(nullptr);
+    } else {
+        mUpperPane->setFocusPolicy(Qt::ClickFocus);
+        if (mType == MainConsole) {
+            mUpperPane->setFocusProxy(mpCommandLine);
+        } else if (mType == UserWindow) {
+            mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+        }
+    }
+
+    mUpperPane->setFocus();
+}
