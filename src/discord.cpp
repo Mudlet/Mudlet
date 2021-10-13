@@ -592,10 +592,10 @@ void Discord::resetData(Host* pHost){
     mEndTimes.remove(pHost);
     mDetailTexts.remove(pHost);
     mStateTexts.remove(pHost);
-    mLargeIcons.remove(pHost);
-    mLargeIconTexts.remove(pHost);
-    mSmallIcons.remove(pHost);
-    mSmallIconTexts.remove(pHost);
+    mLargeImages.remove(pHost);
+    mLargeImageTexts.remove(pHost);
+    mSmallImages.remove(pHost);
+    mSmallImageTexts.remove(pHost);
     mPartySize.remove(pHost);
     mPartyMax.remove(pHost);
     mHostApplicationIDs.remove(pHost);
