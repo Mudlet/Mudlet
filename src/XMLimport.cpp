@@ -39,13 +39,13 @@
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)
 , mPackageName(QString())
-, mpTrigger(Q_NULLPTR)
-, mpTimer(Q_NULLPTR)
-, mpAlias(Q_NULLPTR)
-, mpKey(Q_NULLPTR)
-, mpAction(Q_NULLPTR)
-, mpScript(Q_NULLPTR)
-, mpVar(Q_NULLPTR)
+, mpTrigger(nullptr)
+, mpTimer(nullptr)
+, mpAlias(nullptr)
+, mpKey(nullptr)
+, mpAction(nullptr)
+, mpScript(nullptr)
+, mpVar(nullptr)
 , gotTrigger(false)
 , gotTimer(false)
 , gotAlias(false)
@@ -892,11 +892,11 @@ void XMLimport::readHostPackage(Host* pHost)
     if (qFuzzyCompare(1.0 + pHost->mRoomSize, 1.0)) {
         // The value is a float/double and the prior code using "== 0" is a BAD
         // THING to do with non-integer number types!
-        pHost->mRoomSize = 0.5; // Same value as is in Host class initalizer list
+        pHost->mRoomSize = 0.5; // Same value as is in Host class initializer list
     }
     pHost->mLineSize = attributes().value(QStringLiteral("mLineSize")).toString().toDouble();
     if (qFuzzyCompare(1.0 + pHost->mLineSize, 1.0)) {
-        pHost->mLineSize = 10.0; // Same value as is in Host class initalizer list
+        pHost->mLineSize = 10.0; // Same value as is in Host class initializer list
     }
     pHost->mBubbleMode = attributes().value(QStringLiteral("mBubbleMode")) == YES;
     pHost->mMapViewOnly = attributes().value(QStringLiteral("mMapViewOnly")) == YES;
@@ -929,6 +929,15 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->setCompactInputLine(compactInputLine);
     if (mudlet::self()->mpCurrentActiveHost == pHost) {
         mudlet::self()->dactionInputLine->setChecked(compactInputLine);
+    }
+
+    if (attributes().hasAttribute(QLatin1String("NetworkPacketTimeout"))) {
+        // These limits are also hard coded into the QSpinBox used to adjust
+        // this setting in the preferences:
+        pHost->mTelnet.setPostingTimeout(qBound(10, attributes().value(QLatin1String("NetworkPacketTimeout")).toInt(), 500));
+    } else {
+        // The default value, also used up to Mudlet 4.12.0:
+        pHost->mTelnet.setPostingTimeout(300);
     }
 
     while (!atEnd()) {
@@ -1197,7 +1206,7 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
                 readIntegerList(pT->mRegexCodePropertyList, pT->getName());
                 if (Q_UNLIKELY(pT->mRegexCodeList.count() != pT->mRegexCodePropertyList.count())) {
                     qWarning().nospace() << "XMLimport::readTriggerGroup(...) ERROR: "
-                                            "mis-match in regexCode details for Trigger: "
+                                            "mismatch in regexCode details for Trigger: "
                                          << pT->getName() << " there were " << pT->mRegexCodeList.count() << " 'regexCodeList' sub-elements and " << pT->mRegexCodePropertyList.count()
                                          << " 'regexCodePropertyList' sub-elements so "
                                             "something is broken!";
@@ -1474,14 +1483,14 @@ int XMLimport::readScriptPackage()
 
 int XMLimport::readScriptGroup(TScript* pParent)
 {
-    auto pT = new TScript(pParent, mpHost);
+    auto script = new TScript(pParent, mpHost);
 
-    pT->setIsFolder(attributes().value(QStringLiteral("isFolder")) == YES);
-    mpHost->getScriptUnit()->registerScript(pT);
-    pT->setIsActive(attributes().value(QStringLiteral("isActive")) == YES);
+    script->setIsFolder(attributes().value(QStringLiteral("isFolder")) == YES);
+    mpHost->getScriptUnit()->registerScript(script);
+    script->setIsActive(attributes().value(QStringLiteral("isActive")) == YES);
 
     if (module) {
-        pT->mModuleMember = true;
+        script->mModuleMember = true;
     }
 
     while (!atEnd()) {
@@ -1490,26 +1499,26 @@ int XMLimport::readScriptGroup(TScript* pParent)
             break;
         } else if (isStartElement()) {
             if (name() == "name") {
-                pT->mName = readElementText();
+                script->mName = readElementText();
             } else if (name() == "packageName") {
-                pT->mPackageName = readElementText();
+                script->mPackageName = readElementText();
             } else if (name() == "script") {
                 QString tempScript = readScriptElement();
-                if (!pT->setScript(tempScript)) {
-                    qDebug().nospace() << "XMLimport::readScriptGroup(...): ERROR: can not compile script's lua code for: " << pT->getName();
+                if (!script->setScript(tempScript)) {
+                    qDebug().nospace().noquote() << "XMLimport::readScriptGroup(...) ERROR - can not compile script's lua code for \"" << script->getName() << "\"; reason: " << script->getError() << ".";
                 }
             } else if (name() == "eventHandlerList") {
-                readStringList(pT->mEventHandlerList);
-                pT->setEventHandlerList(pT->mEventHandlerList);
+                readStringList(script->mEventHandlerList);
+                script->setEventHandlerList(script->mEventHandlerList);
             } else if (name() == "ScriptGroup" || name() == "Script") {
-                readScriptGroup(pT);
+                readScriptGroup(script);
             } else {
                 readUnknownScriptElement();
             }
         }
     }
 
-    return pT->getID();
+    return script->getID();
 }
 
 int XMLimport::readKeyPackage()
@@ -1792,7 +1801,7 @@ void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<i
             }
 
         } else {
-            // Must advance the pattern interator if it isn't a colour pattern
+            // Must advance the pattern iterator if it isn't a colour pattern
             itPattern.next();
         }
     }

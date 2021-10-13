@@ -1748,35 +1748,6 @@ local lightColours = {
   [7] = { 255, 255, 255 }, -- white
 }
 
--- black + 23 tone grayscale up to white
--- The values are to be used for each of te r, g and b values
-local grayscaleComponents = {
-  [0] = 0,
-  [1] = 11,
-  [2] = 22,
-  [3] = 33,
-  [4] = 44,
-  [5] = 55,
-  [6] = 67,
-  [7] = 78,
-  [8] = 89,
-  [9] = 100,
-  [10] = 111,
-  [11] = 122,
-  [12] = 133,
-  [13] = 144,
-  [14] = 155,
-  [15] = 166,
-  [16] = 177,
-  [17] = 188,
-  [18] = 200,
-  [19] = 211,
-  [20] = 222,
-  [21] = 233,
-  [22] = 244,
-  [23] = 255
-}
-
 local ansiPattern = rex.new("\\e\\[([0-9:;]+?)m")
 
 -- function for converting a raw ANSI string into plain strings
@@ -1815,14 +1786,16 @@ function ansi2decho(text, ansi_default_color)
       elseif tag < 16 then
         rgb = lightColours[tag - 8]
       elseif tag < 232 then
-        tag = tag - 16 -- because color 1-15 behave like normal ANSI colors
-
-        r = floor(tag / 36)
-        g = floor((tag - (r * 36)) / 6)
-        b = floor((tag - (r * 36)) - (g * 6))
-        rgb = { r * 51, g * 51, b * 51 }
+        tag = tag - 16 -- because color 1-15 behave like normal ANSI colors      
+        local b = tag % 6
+        local g = (tag - b) / 6 % 6
+        local r = (tag - b - g * 6) / 36 % 6
+        b = b ~= 0 and b * 40 + 55 or 0
+        r = r ~= 0 and r * 40 + 55 or 0
+        g = g ~= 0 and g * 40 + 55 or 0
+        rgb = { r, g, b }
       else
-        local component = grayscaleComponents[tag - 232]
+        local component = (tag - 232) * 10 + 8
         rgb = { component, component, component }
       end
 
@@ -2206,6 +2179,10 @@ local function copy2color(name,win,str,inst)
   win = win or "main"
   str = str or line
   inst = inst or 1
+  if str == "" then
+    -- happens when you try to use copy2decho() on an empty line
+    return ""
+  end
   local start, len = selectString(win, str, inst), #str
   if not start then
     error(name..": string not found",3)
@@ -2360,4 +2337,58 @@ end
 
 function resetMapWindowTitle()
   return setMapWindowTitle("")
+end
+
+--- This function takes in a color and returns the closest color from color_table. The following all return "ansi_001"
+--- closestColor({127,0,0})
+--- closestColor(127,0,0)
+--- closestColor("#7f0000")
+--- closestColor("|c7f0000")
+--- closestColor("<127,0,0>")
+function closestColor(r,g,b)
+  local rtype = type(r)
+  local rgb
+  if rtype == "table" then
+    rgb = {}
+    local tmp = r
+    local err = f"Could not parse {table.concat(tmp, ',')} into RGB coordinates to look for.\n"
+    if #tmp ~= 3 then
+      return nil, err
+    end
+    for index,coord in ipairs(tmp) do
+      local num = tonumber(coord)
+      if not num or num < 0 or num > 255 then
+        return nil, err
+      end
+      rgb[index] = num
+    end
+  elseif rtype == "string" and not tonumber(r) then
+    if color_table[r] then
+      return r
+    end
+    rgb = {Geyser.Color.parse(r)}
+    if rgb[1] == nil then
+      return nil, f"Could not parse {r} into a set of RGB coordinates to look for.\n"
+    end
+  elseif rtype == "number" or tonumber(r) then
+    local nr = tonumber(r)
+    local ng = tonumber(g)
+    local nb = tonumber(b)
+    if not nr or not ng or not nb or (nr < 0 or nr > 255) or (ng < 0 or ng > 255) or (nb < 0 or nb > 255) then
+      return nil, f"Could not parse {r},{g},{b} into a set of RGB coordinates to look for.\n"
+    end
+    rgb = {nr,ng,nb}
+  else
+    return nil, f"Could not parse your parameters into RGB coordinates.\n"
+  end
+  local least_distance = math.huge
+  local cname = ""
+  for name, color in pairs(color_table) do
+    local color_distance = math.sqrt((color[1] - rgb[1]) ^ 2 + (color[2] - rgb[2]) ^ 2 + (color[3] - rgb[3]) ^ 2)
+    if color_distance < least_distance then
+      least_distance = color_distance
+      cname = name
+    end
+  end
+  return cname
 end

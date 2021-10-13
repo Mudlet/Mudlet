@@ -82,7 +82,6 @@ T2DMap::T2DMap(QWidget* parent)
 , xyzoom(20)
 , mRX()
 , mRY()
-, mPick()
 , mTarget()
 , mStartSpeedWalk()
 , mRoomBeingMoved()
@@ -611,7 +610,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
 // player's room if it is visible. This is so it is drawn LAST (and any effects,
 // or extra markings for it do not get overwritten by the drawing of the other
 // rooms)...
-inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapNameFont, QPen& pen, TRoom* pRoom, const bool isGridMode, const bool areRoomIdsLegible, bool showRoomName, const int speedWalkStartRoomId, const float rx, const float ry, const bool picked)
+inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapNameFont, QPen& pen, TRoom* pRoom, const bool isGridMode, const bool areRoomIdsLegible, bool showRoomName, const int speedWalkStartRoomId, const float rx, const float ry)
 {
     const int currentRoomId = pRoom->getId();
     pRoom->rendered = false;
@@ -686,9 +685,9 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
                 quint8 g = (base - (r * 36)) / 6;
                 quint8 b = (base - (r * 36)) - (g * 6);
 
-                r *= 51;
-                g *= 51;
-                b *= 51;
+                r = r == 0 ? 0 : (r - 1) * 40 + 95;
+                g = g == 0 ? 0 : (g - 1) * 40 + 95;
+                b = b == 0 ? 0 : (b - 1) * 40 + 95;
                 roomColor = QColor(r, g, b, 255);
             } else if (231 < roomEnvironment && roomEnvironment < 256) {
                 quint8 k = ((roomEnvironment - 232) * 10) + 8;
@@ -697,7 +696,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         }
     }
 
-    bool isRoomSelected = ((mPick || picked) && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
+    bool isRoomSelected = (mPick && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
     QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
     selectionBg.setColorAt(0.25, roomColor);
     selectionBg.setColorAt(1, Qt::blue);
@@ -729,7 +728,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         QPointF roomCenter = QPointF(rx, ry);
         if (!isRoomSelected) {
             // CHECK: The use of a gradient fill to a white center on round
-            // rooms might look nice in some sitations but not in all:
+            // rooms might look nice in some situations but not in all:
             QRadialGradient gradient(roomCenter, roomRadius);
             gradient.setColorAt(0.85, roomColor);
             gradient.setColorAt(0, Qt::white);
@@ -746,7 +745,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         mPick = false;
         if (mStartSpeedWalk) {
             mStartSpeedWalk = false;
-            // This draws a red circle around the room that was choosen as
+            // This draws a red circle around the room that was chosen as
             // the target for the speedwalk, but it is only shown for one
             // paintEvent call and it is not obvious that it is useful, note
             // that this is the code for a room being clicked on that is
@@ -1130,7 +1129,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
             QRectF dr = QRectF(rx, ry, mRoomWidth * rSize, mRoomHeight * rSize);
 
             // clang-format off
-            if (((mPick || picked)
+            if ((mPick
                  && mPHighlight.x() >= (dr.x() - mRoomWidth / 3.0)
                  && mPHighlight.x() <= (dr.x() + mRoomWidth / 3.0)
                  && mPHighlight.y() >= (dr.y() - mRoomHeight / 3.0)
@@ -1140,7 +1139,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
                 // clang-format on
                 mStartSpeedWalk = false;
                 // This draws a red circle around the out of area exit that
-                // was choosen as the target for the speedwalk, but it is
+                // was chosen as the target for the speedwalk, but it is
                 // only shown for one paintEvent call and it is not obvious
                 // that it is useful, note that there is similar code for a
                 // room being clicked on that is WITHIN the area, that is
@@ -1174,9 +1173,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
     if (!mpMap) {
         return;
     }
-    // As it happens this local is never changed in this method so it can be
-    // made const:
-    const bool __Pick = mPick;
     QElapsedTimer renderTimer;
     renderTimer.start();
 
@@ -1272,7 +1268,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     TArea* playerArea;
     TRoom* playerRoom;
     int playerAreaID = pPlayerRoom->getArea();
-    if ((!__Pick && !mShiftMode) || mpMap->mNewMove) {
+    if ((!mPick && !mShiftMode) || mpMap->mNewMove) {
         mShiftMode = true;
         // that's of interest only here because the map editor is here ->
         // map might not be updated, thus I force a map update on centerview()
@@ -1457,12 +1453,12 @@ void T2DMap::paintEvent(QPaintEvent* e)
             playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
         } else {
             // Not the player's room:
-            drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, __Pick);
+            drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry);
         }
     } // End of while loop for each room in area
 
     if (isPlayerRoomVisible) {
-        drawRoom(painter, roomVNumFont, mapNameFont, pen, playerRoom, pArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), __Pick);
+        drawRoom(painter, roomVNumFont, mapNameFont, pen, playerRoom, pArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()));
         painter.save();
         QPen transparentPen(Qt::transparent);
         QPainterPath myPath;
@@ -2414,6 +2410,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* e)
     //move map with left mouse button + ALT (->
     if (mpMap->mLeftDown) {
         mpMap->mLeftDown = false;
+        mpMap->m2DPanMode = false;
         unsetCursor();
     }
 
@@ -2990,7 +2987,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     }
 
                     auto lineProperties = new QAction(tr("Properties", "2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)"), this);
-                    // Changed seperately, because the constructor silently copies the text elsewhere
+                    // Changed separately, because the constructor silently copies the text elsewhere
                     // (tooltip and/or object name IIRC) whereas the ellipsis is meant only for display
                     lineProperties->setText(
                             tr("properties...", "2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise"));
@@ -3905,8 +3902,7 @@ void T2DMap::slot_setExits()
         return;
     }
     if (mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId)) {
-        auto pD = new dlgRoomExits(mpHost, this);
-        pD->init(mMultiSelectionHighlightRoomId);
+        auto pD = new dlgRoomExits(mpHost, mMultiSelectionHighlightRoomId, this);
         pD->show();
         pD->raise();
     }
@@ -4230,21 +4226,13 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
     }
     if (mpMap->m2DPanMode) {
         int x = event->x();
-        int y = height() - event->y();
-        if ((mpMap->m2DPanXStart - x) > 1) {
-            slot_shiftRight();
-            mpMap->m2DPanXStart = x;
-        } else if ((mpMap->m2DPanXStart - x) < -1) {
-            slot_shiftLeft();
-            mpMap->m2DPanXStart = x;
-        }
-        if ((mpMap->m2DPanYStart - y) > 1) {
-            slot_shiftDown();
-            mpMap->m2DPanYStart = y;
-        } else if ((mpMap->m2DPanYStart - y) < -1) {
-            slot_shiftUp();
-            mpMap->m2DPanYStart = y;
-        }
+        int y = event->y();
+        mShiftMode = true;
+        mOx = mOx + (mpMap->m2DPanXStart - static_cast<float>(x)) / mRoomWidth;
+        mOy = mOy + (mpMap->m2DPanYStart - static_cast<float>(y)) / mRoomHeight;
+        mpMap->m2DPanYStart = static_cast<float>(y);
+        mpMap->m2DPanXStart = static_cast<float>(x);
+        update();
         return;
     }
 
@@ -5078,8 +5066,8 @@ void T2DMap::resizeMultiSelectionWidget()
     if (mMultiSelectionListWidget.topLevelItemCount() > 0) {
         QTreeWidgetItem* rowItem = mMultiSelectionListWidget.topLevelItem(1);
         // The following factors are tweaks to ensure that the widget shows all
-        // the rows, as the header seems bigger than the value returned, statics
-        // used to enable values to be change by debugger at runtime!
+        // the rows, as the header seems bigger than the value returned, static values
+        // used to enable values to be changed by debugger at runtime!
         static float headerFactor = 1.2;
         static float rowFactor = 1.0;
         _newHeight = headerFactor * mMultiSelectionListWidget.header()->height();

@@ -190,7 +190,7 @@ void GLWidget::slot_topView()
 
 void GLWidget::slot_setScale(int angle)
 {
-    mScale = 150 / ((float)angle + 300);
+    mScale = 150 / (static_cast<float>(angle) + 300.0f);
     makeCurrent();
     resizeGL(width(), height());
     doneCurrent();
@@ -794,9 +794,9 @@ void GLWidget::paintGL()
                                     quint8 g = (base - (r * 36)) / 6;
                                     quint8 b = (base - (r * 36)) - (g * 6);
 
-                                    r = r * 51;
-                                    g = g * 51;
-                                    b = b * 51;
+                                    r = r == 0 ? 0 : (r - 1) * 40 + 95;
+                                    g = g == 0 ? 0 : (g - 1) * 40 + 95;
+                                    b = b == 0 ? 0 : (b - 1) * 40 + 95;
                                     glColor4ub(r, g, b, 200);
                                     mc3[0] = r / 255.0;
                                     mc3[1] = g / 255.0;
@@ -1204,9 +1204,9 @@ void GLWidget::paintGL()
                                     quint8 g = (base - (r * 36)) / 6;
                                     quint8 b = (base - (r * 36)) - (g * 6);
 
-                                    r = r * 51;
-                                    g = g * 51;
-                                    b = b * 51;
+                                    r = r == 0 ? 0 : (r - 1) * 40 + 95;
+                                    g = g == 0 ? 0 : (g - 1) * 40 + 95;
+                                    b = b == 0 ? 0 : (b - 1) * 40 + 95;
                                     glColor4ub(r, g, b, 200);
                                     mc3[0] = r / 255.0;
                                     mc3[1] = g / 255.0;
@@ -1598,9 +1598,9 @@ void GLWidget::paintGL()
                             quint8 g = (base - (r * 36)) / 6;
                             quint8 b = (base - (r * 36)) - (g * 6);
 
-                            r = r * 51;
-                            g = g * 51;
-                            b = b * 51;
+                            r = r == 0 ? 0 : (r - 1) * 40 + 95;
+                            g = g == 0 ? 0 : (g - 1) * 40 + 95;
+                            b = b == 0 ? 0 : (b - 1) * 40 + 95;
                             glColor4ub(r, g, b, 200);
                             mc3[0] = r / 255.0;
                             mc3[1] = g / 255.0;
@@ -1901,9 +1901,9 @@ void GLWidget::paintGL()
                         quint8 g = (base - (r * 36)) / 6;
                         quint8 b = (base - (r * 36)) - (g * 6);
 
-                        r = r * 51;
-                        g = g * 51;
-                        b = b * 51;
+                        r = r == 0 ? 0 : (r - 1) * 40 + 95;
+                        g = g == 0 ? 0 : (g - 1) * 40 + 95;
+                        b = b == 0 ? 0 : (b - 1) * 40 + 95;
                         glColor4ub(r, g, b, 200);
                         mc3[0] = r / 255.0;
                         mc3[1] = g / 255.0;

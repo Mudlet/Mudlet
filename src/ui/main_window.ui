@@ -214,7 +214,7 @@
     <string>IRC</string>
    </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Opens a built-in IRC chat.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionVideo">
@@ -251,7 +251,7 @@
     <string>Live help chat</string>
    </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Opens a built-in IRC chat.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionShowMap">
@@ -280,7 +280,7 @@
   </action>
   <action name="dactionPackageExporter">
    <property name="text">
-    <string>Package exporter (experimental)</string>
+    <string>Package exporter</string>
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Gather and bundle up collections of Mudlet Lua items and other reasources into a module.&lt;/p&gt;</string>
@@ -320,6 +320,9 @@
   <action name="dactionDiscord">
    <property name="text">
     <string>Discord help channel</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Open a link to the Mudlet server on Discord.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionReportIssue">

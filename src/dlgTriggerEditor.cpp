@@ -178,7 +178,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     setUnifiedTitleAndToolBarOnMac(true); //MAC OSX: make window moveable
     const QString hostName{mpHost->getName()};
-    setWindowTitle(hostName);
+    setWindowTitle(tr("%1 - Editor").arg(hostName));
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_editor.png")));
     auto statusBar = new QStatusBar(this);
     statusBar->setSizeGripEnabled(true);
@@ -419,33 +419,55 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     QAction* viewTriggerAction = new QAction(QIcon(QStringLiteral(":/icons/tools-wizard.png")), tr("Triggers"), this);
     viewTriggerAction->setStatusTip(tr("Show Triggers"));
+    viewTriggerAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Show Triggers"), tr("Ctrl+1")));
     connect(viewTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_triggers);
-
-    QAction* viewActionAction = new QAction(QIcon(QStringLiteral(":/icons/bookmarks.png")), tr("Buttons"), this);
-    viewActionAction->setStatusTip(tr("Show Buttons"));
-    connect(viewActionAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_actions);
-
 
     QAction* viewAliasAction = new QAction(QIcon(QStringLiteral(":/icons/system-users.png")), tr("Aliases"), this);
     viewAliasAction->setStatusTip(tr("Show Aliases"));
+    viewAliasAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Show Aliases"), tr("Ctrl+2")));
     connect(viewAliasAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_aliases);
-
-
-    QAction* showTimersAction = new QAction(QIcon(QStringLiteral(":/icons/chronometer.png")), tr("Timers"), this);
-    showTimersAction->setStatusTip(tr("Show Timers"));
-    connect(showTimersAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_timers);
 
     QAction* viewScriptsAction = new QAction(QIcon(QStringLiteral(":/icons/document-properties.png")), tr("Scripts"), this);
     viewScriptsAction->setStatusTip(tr("Show Scripts"));
+    viewScriptsAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Show Scripts"), tr("Ctrl+3")));
     connect(viewScriptsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_scripts);
+
+    QAction* showTimersAction = new QAction(QIcon(QStringLiteral(":/icons/chronometer.png")), tr("Timers"), this);
+    showTimersAction->setStatusTip(tr("Show Timers"));
+    showTimersAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Show Timers"), tr("Ctrl+4")));
+    connect(showTimersAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_timers);
 
     QAction* viewKeysAction = new QAction(QIcon(QStringLiteral(":/icons/preferences-desktop-keyboard.png")), tr("Keys"), this);
     viewKeysAction->setStatusTip(tr("Show Keybindings"));
+    viewKeysAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Show Keybindings"), tr("Ctrl+5")));
     connect(viewKeysAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_keys);
 
     QAction* viewVarsAction = new QAction(QIcon(QStringLiteral(":/icons/variables.png")), tr("Variables"), this);
     viewVarsAction->setStatusTip(tr("Show Variables"));
+    viewVarsAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Show Variables"), tr("Ctrl+6")));
     connect(viewVarsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_vars);
+
+    QAction* viewActionAction = new QAction(QIcon(QStringLiteral(":/icons/bookmarks.png")), tr("Buttons"), this);
+    viewActionAction->setStatusTip(tr("Show Buttons"));
+    viewActionAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Show Buttons"), tr("Ctrl+7")));
+    connect(viewActionAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_actions);
+
+
+    QAction* viewErrorsAction = new QAction(QIcon(QStringLiteral(":/icons/errors.png")), tr("Errors"), this);
+    viewErrorsAction->setStatusTip(tr("Show/Hide the errors console in the bottom right of this editor."));
+    viewErrorsAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Show/Hide errors console"), tr("Ctrl+8")));
+    connect(viewErrorsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewErrorsAction);
+
+    QAction* viewStatsAction = new QAction(QIcon(QStringLiteral(":/icons/view-statistics.png")), tr("Statistics"), this);
+    viewStatsAction->setStatusTip(tr("Generate a statistics summary display on the main profile console."));
+    viewStatsAction->setToolTip(QStringLiteral("%1 (%2)").arg(tr("Generate statistics"), tr("Ctrl+9")));
+    connect(viewStatsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewStatsAction);
+
+    QAction* showDebugAreaAction = new QAction(QIcon(QStringLiteral(":/icons/tools-report-bug.png")), tr("Debug"), this);
+    showDebugAreaAction->setStatusTip(tr("Show/Hide the separate Central Debug Console - when being displayed the system will be slower."));
+    showDebugAreaAction->setToolTip(tr("Show/Hide Debug Console (Ctrl+0) -> system will be <b><i>slower</i></b>."));
+    connect(showDebugAreaAction, &QAction::triggered, this, &dlgTriggerEditor::slot_debug_mode);
+
 
     QAction* toggleActiveAction = new QAction(QIcon(QStringLiteral(":/icons/document-encrypt.png")), tr("Activate"), this);
     toggleActiveAction->setStatusTip(tr("Toggle Active or Non-Active Mode for Triggers, Scripts etc."));
@@ -475,7 +497,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(addFolderAction, &QAction::triggered, this, &dlgTriggerEditor::slot_add_new_folder);
 
     QAction* saveAction = new QAction(QIcon(QStringLiteral(":/icons/document-save-as.png")), tr("Save Item"), this);
-    saveAction->setShortcut(tr("Ctrl+S"));
     saveAction->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
                                    .arg(tr("Saves the selected item. (Ctrl+S)</p>Saving causes any changes to the item to take effect.\nIt will not save to disk, "
                                            "so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)")));
@@ -525,7 +546,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mProfileSaveAction = new QAction(QIcon(QStringLiteral(":/icons/document-save-all.png")), tr("Save Profile"), this);
     mProfileSaveAction->setEnabled(true);
-    mProfileSaveAction->setShortcut(tr("Ctrl+Shift+S"));
     mProfileSaveAction->setToolTip(
             QStringLiteral("<html><head/><body><p>%1</p></body></html>")
                     .arg(tr(R"(Saves your profile. (Ctrl+Shift+S)<p>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.</p><p>It also makes a backup of your profile, you can load an older version of it when connecting.</p><p>Should there be any modules that are marked to be "<i>synced</i>" this will also cause them to be saved and reloaded into other profiles if they too are active.)")));
@@ -536,19 +556,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mProfileSaveAsAction = new QAction(QIcon(QStringLiteral(":/icons/utilities-file-archiver.png")), tr("Save Profile As"), this);
     mProfileSaveAsAction->setEnabled(true);
     connect(mProfileSaveAsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAsAction);
-
-    QAction* viewStatsAction = new QAction(QIcon(QStringLiteral(":/icons/view-statistics.png")), tr("Statistics"), this);
-    viewStatsAction->setStatusTip(tr("Generates a statistics summary display on the main profile console."));
-    connect(viewStatsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewStatsAction);
-
-    QAction* viewErrorsAction = new QAction(QIcon(QStringLiteral(":/icons/errors.png")), tr("Errors"), this);
-    viewErrorsAction->setStatusTip(tr("Shows/Hides the errors console in the bottom right of this editor."));
-    connect(viewErrorsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewErrorsAction);
-
-    QAction* showDebugAreaAction = new QAction(QIcon(QStringLiteral(":/icons/tools-report-bug.png")), tr("Debug"), this);
-    showDebugAreaAction->setToolTip(tr("Activates Debug Messages -> system will be <b><i>slower</i></b>."));
-    showDebugAreaAction->setStatusTip(tr("Shows/Hides the separate Central Debug Console - when being displayed the system will be slower."));
-    connect(showDebugAreaAction, &QAction::triggered, this, &dlgTriggerEditor::slot_debug_mode);
 
     auto *nextSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab), this);
     QObject::connect(nextSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_next_section);
@@ -572,7 +579,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addAction(saveAction);
     toolBar->setWindowTitle(tr("Editor Toolbar - %1 - Actions",
                                // Intentional comment to separate arguments
-                               "This is the toolbar that is initally placed at the top of the editor.")
+                               "This is the toolbar that is initially placed at the top of the editor.")
                             .arg(hostName));
 
     toolBar->addSeparator();
@@ -608,12 +615,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar2->setMovable(true);
     toolBar2->setWindowTitle(tr("Editor Toolbar - %1 - Items",
                                 // Intentional comment to separate arguments
-                                "This is the toolbar that is initally placed at the left side of the editor.")
+                                "This is the toolbar that is initially placed at the left side of the editor.")
                              .arg(hostName));
     toolBar2->setOrientation(Qt::Vertical);
 
     QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
     QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar);
+    setShortcuts();
 
     auto config = mpSourceEditorEdbee->config();
     config->beginChanges();
@@ -5037,7 +5045,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
 
         for (int i = 0; i < patternList.size(); i++) {
             if (i >= 50) {
-                break; //pattern liste ist momentan auf 50 begrenzt
+                break; // pattern list is limited to 50 at the moment
             }
             if (i >= pT->mColorPatternList.size()) {
                 break;
@@ -5306,7 +5314,7 @@ void dlgTriggerEditor::recursiveSearchVariables(TVar* var, QList<TVar*>& list, b
 
 void dlgTriggerEditor::slot_var_changed(QTreeWidgetItem* pItem)
 {
-    // This handles a small case where the radio buttom is clicked while the item is currently selected
+    // This handles a small case where the radio button is clicked while the item is currently selected
     // which causes the variable to not save. In places where we populate the TreeWidgetItem, we have
     // to guard it with mChangingVar or else this will be called with every change such as the variable
     // name, etc.
@@ -5602,7 +5610,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem* pItem)
 
     mpCurrentActionItem = pItem; //remember what has been clicked to save it
     // ID will be 0 for the root of the treewidget and it is not appropriate
-    // to show any right hand side details - pT will also be Q_NULLPTR!
+    // to show any right hand side details - pT will also be nullptr!
     int ID = pItem->data(0, Qt::UserRole).toInt();
     TAction* pT = mpHost->getActionUnit()->getAction(ID);
     if (pT) {
@@ -8313,17 +8321,10 @@ bool dlgTriggerEditor::event(QEvent* event)
     if (mIsGrabKey) {
         if (event->type() == QEvent::KeyPress) {
             auto * ke = static_cast<QKeyEvent*>(event);
-            QList<QAction*> actionList = toolBar->actions();
             switch (ke->key()) {
             case Qt::Key_Escape:
                 mIsGrabKey = false;
-                for (auto& action : actionList) {
-                    if (action->text() == "Save Item") {
-                        action->setShortcut(tr("Ctrl+S"));
-                    } else if (action->text() == "Save Profile") {
-                        action->setShortcut(tr("Ctrl+Shift+S"));
-                    }
-                }
+                setShortcuts();
                 QCoreApplication::instance()->removeEventFilter(this);
                 ke->accept();
                 return true;
@@ -8342,13 +8343,7 @@ bool dlgTriggerEditor::event(QEvent* event)
             default:
                 key_grab_callback(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()));
                 mIsGrabKey = false;
-                for (auto& action : actionList) {
-                    if (action->text() == "Save Item") {
-                        action->setShortcut(tr("Ctrl+S"));
-                    } else if (action->text() == "Save Profile") {
-                        action->setShortcut(tr("Ctrl+Shift+S"));
-                    }
-                }
+                setShortcuts();
                 QCoreApplication::instance()->removeEventFilter(this);
                 ke->accept();
                 return true;
@@ -8370,15 +8365,50 @@ void dlgTriggerEditor::resizeEvent(QResizeEvent* event)
 void dlgTriggerEditor::slot_key_grab()
 {
     mIsGrabKey = true;
+    setShortcuts(false);
+    QCoreApplication::instance()->installEventFilter(this);
+}
+
+// Activate shortcuts for editor menu items like Ctrl+S for "Save Item" etc.
+// Deactivate instead with optional "false" - to allow these for keybindings
+void dlgTriggerEditor::setShortcuts(const bool setNotUnset)
+{
     QList<QAction*> actionList = toolBar->actions();
+    QString actionText;
     for (auto& action : actionList) {
-        if (action->text() == "Save Item") {
-            action->setShortcut(tr(""));
-        } else if (action->text() == "Save Profile") {
-            action->setShortcut(tr(""));
+        actionText = action->text();
+        if (actionText ==  tr("Save Item")) {
+            action->setShortcut((setNotUnset) ? tr("Ctrl+S") : tr(""));
+        } else if (actionText == tr("Save Profile")) {
+            action->setShortcut((setNotUnset) ? tr("Ctrl+Shift+S") : tr(""));
         }
     }
-    QCoreApplication::instance()->installEventFilter(this);
+    actionList = toolBar2->actions();
+    for (auto& action : actionList) {
+        actionText = action->text();
+        // TODO: Refactor into nice list to iterate
+        if (actionText == tr("Triggers")) {
+            action->setShortcut((setNotUnset) ? tr("Ctrl+1") : tr(""));
+        } else if (actionText == tr("Aliases")) {
+            action->setShortcut((setNotUnset) ? tr("Ctrl+2") : tr(""));
+        } else if (actionText == tr("Scripts")) {
+            action->setShortcut((setNotUnset) ? tr("Ctrl+3") : tr(""));
+        } else if (actionText == tr("Timers")) {
+            action->setShortcut((setNotUnset) ? tr("Ctrl+4") : tr(""));
+        } else if (actionText == tr("Keys")) {
+            action->setShortcut((setNotUnset) ? tr("Ctrl+5") : tr(""));
+        } else if (actionText == tr("Variables")) {
+            action->setShortcut((setNotUnset) ? tr("Ctrl+6") : tr(""));
+        } else if (actionText == tr("Buttons")) {
+            action->setShortcut((setNotUnset) ? tr("Ctrl+7") : tr(""));
+        } else if (actionText == tr("Errors")) {
+            action->setShortcut((setNotUnset) ? tr("Ctrl+8") : tr(""));
+        } else if (actionText == tr("Statistics")) {
+            action->setShortcut((setNotUnset) ? tr("Ctrl+9") : tr(""));
+        } else if (actionText == tr("Debug")) {
+            action->setShortcut((setNotUnset) ? tr("Ctrl+0") : tr(""));
+        }
+    }
 }
 
 void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardModifiers modifier)
@@ -8905,7 +8935,7 @@ QColor dlgTriggerEditor::parseButtonStyleSheetColors(const QString& styleSheetTe
                 if (QColor::isValidColor(match.captured(1))) {
                     return QColor(match.captured(1));
                 } else {
-                    qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invaid string \"" <<  match.captured(1) << "\" found as name of foreground color!";
+                    qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invalid string \"" <<  match.captured(1) << "\" found as name of foreground color!";
                     return QColor();
                 }
             } else {
@@ -8939,7 +8969,7 @@ QColor dlgTriggerEditor::parseButtonStyleSheetColors(const QString& styleSheetTe
                 if (QColor::isValidColor(match.captured(1))) {
                     return QColor(match.captured(1));
                 } else {
-                    qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invaid string \"" <<  match.captured(1) << "\" found as name of background color!";
+                    qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invalid string \"" <<  match.captured(1) << "\" found as name of background color!";
                     return QColor();
                 }
             } else {

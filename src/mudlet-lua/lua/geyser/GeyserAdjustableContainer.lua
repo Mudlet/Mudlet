@@ -59,36 +59,32 @@ local function adjust_Info(self, label, event)
     adjustInfo = {name = adjustInfo.name, top = top, bottom = bottom, left = left, right = right, x = x, y = y, move = adjustInfo.move}
 end
 
--- Internal function: hides the window title if the window gets smaller
--- @param lbl the Label which allows the Container to be adjustable and where the title text is on
-local function shrink_title(lbl)
-    if lbl.locked and lbl.connectedContainers then
-        return
-    end
-    local  w  =  lbl:get_width()
-    local titleText = lbl.titleText
-    if #titleText <= 15 then titleText = titleText.."   " end
-    if w < (#titleText-10)*6.6+20 then
-        titleText = string.sub(lbl.titleText, 0, math.floor(w/6)).."..."
-    end
-    if #titleText <= 15 then titleText = "" end
-    lbl.adjLabel:echo(titleText, lbl.titleTxtColor, "l")
-end
-
 --- function to give your adjustable container a new title
 -- @param text new title text
 -- @param color title text color
-function Adjustable.Container:setTitle(text, color)
-    text = text or self.name.." - Adjustable Container"
-    self.titleTxtColor = color or "green"
-    self.titleText = "&nbsp;&nbsp;"..text
-    shrink_title(self)
+-- @param format title format
+function Adjustable.Container:setTitle(text, color, format)
+    self.titleFormat = format or self.titleFormat or "l"
+    self.titleText = text or self.titleText or string.format("%s - Adjustable Container")
+    self.titleTxtColor = color or self.titleTxtColor or "green"
+    if self.locked and self.connectedContainers then
+        return
+    end
+    self.adjLabel:echo(string.format("&nbsp;&nbsp;%s", self.titleText), self.titleTxtColor, self.titleFormat)
 end
 
 
+--- function to reset your adjustable containers title to default
+function Adjustable.Container:resetTitle()
+    self.titleText = nil
+    self.titleTxtColor = nil
+    self.titleFormat = nil
+    self:setTitle()
+end
+
 -- internal function to handle the onClick event of main Adjustable.Container Label
 -- @param label the main Adjustable.Container Label
--- @param event the onClick event and its informations
+-- @param event the onClick event and its information
 function Adjustable.Container:onClick(label, event)
     if label.cursorShape == "OpenHand" then
         label:setCursor("ClosedHand")
@@ -106,7 +102,7 @@ function Adjustable.Container:onClick(label, event)
         --if not in the Geyser main window attach Label is not needed and will be removed
         if self.container ~= Geyser and table.index_of(self.rCLabel.nestedLabels, self.attLabel) then
             label:hideMenuLabel("attLabel")
-            -- if we are back to the Geyser main window attach Label will be readded
+            -- if we are back to the Geyser main window attach Label will be re-added
         elseif self.container == Geyser and not table.index_of(self.rCLabel.nestedLabels, self.attLabel) then
             label:showMenuLabel("attLabel") 
         end
@@ -123,7 +119,7 @@ end
 -- internal function to handle the onRelease event of main Adjustable.Container Label
 --- raises an event "AdjustableContainerRepositionFinish", passed values (name, width, height, x, y)
 -- @param label the main Adjustable.Container Label
--- @param event the onRelease event and its informations
+-- @param event the onRelease event and its information
 function Adjustable.Container:onRelease (label, event)
     if event.button == "LeftButton" and adjustInfo ~= {} and adjustInfo.name == label.name then
         if label.cursorShape == "ClosedHand" then
@@ -143,7 +139,7 @@ end
 
 -- internal function to handle the onMove event of main Adjustable.Container Label
 -- @param label the main Adjustable.Container Label
--- @param event the onMove event and its informations
+-- @param event the onMove event and its information
 function Adjustable.Container:onMove (label, event)
     if self.locked and not self.connectedContainers then
         if label.cursorShape ~= 0 then
@@ -213,7 +209,6 @@ function Adjustable.Container:onMove (label, event)
             tw,th = max(minw,tw), max(minh,th)
             tw,th = make_percent(tw/winw), make_percent(th/winh)
             self:resize(tw, th)
-            shrink_title(self)
             if self.connectedContainers then
                 self:adjustConnectedContainers()
             end
@@ -415,7 +410,7 @@ function Adjustable.Container:attachToBorder(border)
 end
 
 --- detaches the given container
--- this means the mudlet main window border will be reseted
+-- this means the mudlet main window border will be reset
 function Adjustable.Container:detach()
     if Adjustable.Container.Attached and Adjustable.Container.Attached[self.attached] then
         Adjustable.Container.Attached[self.attached][self.name] = nil
@@ -520,7 +515,7 @@ function Adjustable.Container:unlockContainer()
     self.exitLabel:show()
     self.minimizeLabel:show()
     self.locked = false
-    shrink_title(self)
+    self:setTitle()
 end
 
 --- sets the padding of your container
@@ -684,7 +679,7 @@ function Adjustable.Container:changeMenuStyle(mode)
     self.adjLabel:styleMenuItems(self.menuStyleMode)
 end
 
--- overriden add function to put every new window to the Inside container
+-- overridden add function to put every new window to the Inside container
 -- @param window derives from the original Geyser.Container:add function
 -- @param cons derives from the original Geyser.Container:add function
 function Adjustable.Container:add(window, cons)
@@ -705,7 +700,7 @@ function Adjustable.Container:add(window, cons)
     end
 end
 
--- overriden show function to prevent to show the right click menu on show
+-- overridden show function to prevent to show the right click menu on show
 function Adjustable.Container:show(auto)
     Geyser.Container.show(self, auto)
     closeAllLevels(self.rCLabel)
@@ -835,7 +830,7 @@ function Adjustable.Container:load(slot, dir)
     return true
 end
 
---- overridden reposition function to raise an "AdjustableContainerReposition" event and call the shrink_title function
+--- overridden reposition function to raise an "AdjustableContainerReposition" event
 --- Event: "AdjustableContainerReposition" passed values (name, width, height, x, y, isMouseAction)
 --- (the isMouseAction property is true if the reposition is an effect of user dragging/resizing the window,
 --- and false if the reposition event comes as effect of external action, such as resizing of main window)
@@ -850,9 +845,6 @@ function Adjustable.Container:reposition()
       self.get_y(),
       adjustInfo.name == self.adjLabel.name and (adjustInfo.move or adjustInfo.right or adjustInfo.left or adjustInfo.top or adjustInfo.bottom)
     )
-    if self.titleText and not(self.locked) then
-        shrink_title(self)
-    end
 end
 
 --- deletes the file where your saved settings are stored
@@ -967,7 +959,7 @@ function Adjustable.Container:globalLockStyles()
     end)
 
     self:newLockStyle("light", function (s)
-        shrink_title(s)
+        s:setTitle()
         s.Inside:resize("-"..s.padding,"-"..s.padding)
         s.Inside:move(s.padding, s.padding*2)
         s.adjLabel:setStyleSheet(s.adjLabelstyle)
@@ -989,7 +981,7 @@ function Adjustable.Container:newLockStyle(name, func)
 end
 
 --- creates a new custom menu item
--- @param name Name of the new menu iten
+-- @param name Name of the new menu item
 -- @param func function of the new custom menu item
 function Adjustable.Container:newCustomItem(name, func)
     self.customItems = self.customItems or {}
@@ -1110,8 +1102,7 @@ function Adjustable.Container:new(cons,container)
     me.goInside = true
     me.titleTxtColor = me.titleTxtColor or "green"
     me.titleText = me.titleText or me.name.." - Adjustable Container"
-    me.titleText = "&nbsp;&nbsp; "..me.titleText
-    shrink_title(me)
+    me:setTitle()
     me.lockStyle = me.lockStyle or "standard"
     me.noLimit = me.noLimit or false
     if not(me.raiseOnClick == false) then
@@ -1174,7 +1165,7 @@ end
 -- added this wrapper for consistency
 Adjustable.Container.new2 = Adjustable.Container.new
 
---- Overriden constructor to use the old add 
+--- Overridden constructor to use the old add 
 -- if someone really wants to use the old add for Adjustable Container
 -- use this function (not recommended)
 -- or just create elements inside the Adjustable Container with the cons useAdd2 = false
