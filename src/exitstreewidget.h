@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2012 by Vadim Peretokin - vperetokin@gmail.com          *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,6 +31,24 @@
 class ExitsTreeWidget : public QTreeWidget
 {
     Q_OBJECT
+
+    friend class dlgRoomExits;
+
+    // The indexes that are used to identify the columns in the special exits
+    // treewidget have been converted to constants so that we can
+    // tweak them and change all of them correctly - and by making the
+    // dlgRoomExits class a friend that can use the same set as defined here.
+    // Note that if any of these numbers are modified/extended the
+    // corresponding headings in the ./src/ui/room_exits.ui file will need
+    // to be adjusted as well - and visa versa:
+    static const int colIndex_exitRoomId = 0;
+    static const int colIndex_lockExit = 1;
+    static const int colIndex_exitWeight = 2;
+    static const int colIndex_doorNone = 3;
+    static const int colIndex_doorOpen = 4;
+    static const int colIndex_doorClosed = 5;
+    static const int colIndex_doorLocked = 6;
+    static const int colIndex_command = 7;
 
 public:
     Q_DISABLE_COPY(ExitsTreeWidget)
