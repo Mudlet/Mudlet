@@ -1679,7 +1679,7 @@
         <property name="cursor">
          <cursorShape>WhatsThisCursor</cursorShape>
         </property>
-        <layout class="QGridLayout_key">
+        <layout class="QGridLayout" name="gridLayout_key">
          <item row="0" column="0">
           <widget class="QLabel" name="label_key">
            <property name="text">
