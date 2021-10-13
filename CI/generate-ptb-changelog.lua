@@ -150,28 +150,22 @@ function print_sorted_changelog(changelog)
     end
   end
   local addLines = lines_to_html(table.concat(add, "\n"))
+  addLines = addLines and f"<h3>Added:</h3>\n{addLines}\n" or ""
   local improveLines = lines_to_html(table.concat(improve, "\n"))
+  improveLines = improveLines and f"<h3>Improved:</h3>\n{improveLines}\n" or ""
   local fixLines = lines_to_html(table.concat(fix, "\n"))
+  fixLines = fixLines and f"<h3>Fixed:</h3>\n{fixLines}\n" or ""
   local infraLines = lines_to_html(table.concat(infra, "\n"))
+  infraLines = infraLines and f"<h3>Infrastructure:</h3>\n{infraLines}\n" or ""
   local otherLines = lines_to_html(table.concat(other, "\n"))
-  local final_changelog = f[[
-<h3>🆕 added</h3>
-{addLines}
-<h3>✨improved</h3>
-{improveLines}
-<h3>🔨fixed</h3>
-{fixLines}
-<h3>🧱 infrastructure</h3>
-{infraLines}
-<h3>❓ other</h3>
-{otherLines}
-]]
+  otherLines = otherLines and f"<h3>Other:</h3>\n{otherLines}\n" or ""
+  local final_changelog = f"{addLines}{improveLines}{fixLines}{infraLines}{otherLines}"
   print(final_changelog)
 end
 
 function lines_to_html(lines)
   if lines == "" then
-    lines = "None"
+    return nil
   end
   return convert_to_html(lines)
 end
