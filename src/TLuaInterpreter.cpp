@@ -14069,6 +14069,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getDiscordTimeStamps", TLuaInterpreter::getDiscordTimeStamps);
     lua_register(pGlobalLua, "setDiscordParty", TLuaInterpreter::setDiscordParty);
     lua_register(pGlobalLua, "getDiscordParty", TLuaInterpreter::getDiscordParty);
+    lua_register(pGlobalLua, "resetDiscordData", TLuaInterpreter::resetDiscordData);
     lua_register(pGlobalLua, "getPlayerRoom", TLuaInterpreter::getPlayerRoom);
     lua_register(pGlobalLua, "getSelection", TLuaInterpreter::getSelection);
     lua_register(pGlobalLua, "getMapSelection", TLuaInterpreter::getMapSelection);
