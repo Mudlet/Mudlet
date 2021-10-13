@@ -842,10 +842,9 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     //use a dummy object for destroying/disconnecting the object after
     QObject *obj = new QObject(this);
     connect(this, &Host::profileSaveFinished, obj, [=](){
-        slot_saveModules(syncModules ? 1 : 0, saveName == QStringLiteral("autosave") ? false : true);
+        slot_saveModules(syncModules ? 1 : 0, saveName != QStringLiteral("autosave"));
         obj->deleteLater();
     });
-    //saveModules(syncModules ? 1 : 0, saveName == QStringLiteral("autosave") ? false : true);
     return std::make_tuple(true, filename_xml, QString());
 }
 
@@ -1811,7 +1810,7 @@ bool Host::installPackage(const QString& fileName, int module)
             } else {
                 mInstalledPackages.append(packageName);
             }
-            reader.importPackage(&file2, packageName, module); // TODO: Missing false return value handler
+            reader.importPackage(&file2, packageName, module);
             setName(profileName);
             setLogin(login);
             setPass(pass);
@@ -1834,7 +1833,7 @@ bool Host::installPackage(const QString& fileName, int module)
         } else {
             mInstalledPackages.append(packageName);
         }
-        reader.importPackage(&file2, packageName, module); // TODO: Missing false return value handler
+        reader.importPackage(&file2, packageName, module);
         setName(profileName);
         setLogin(login);
         setPass(pass);
