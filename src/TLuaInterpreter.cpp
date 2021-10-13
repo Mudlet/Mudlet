@@ -10387,8 +10387,7 @@ int TLuaInterpreter::resetDiscordData(lua_State* L)
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
 
-    pMudlet->mDiscord.setApplicationID(&host, QString());
-    (&host)->clearDiscordData();
+    pMudlet->mDiscord.resetData(&host);
     lua_pushboolean(L, true);
     return 1;
 }

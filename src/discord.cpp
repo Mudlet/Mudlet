@@ -587,6 +587,21 @@ bool Discord::setApplicationID(Host* pHost, const QString& text)
     }
 }
 
+void Discord::resetData(Host* pHost){
+    mStartTimes.remove(pHost);
+    mEndTimes.remove(pHost);
+    mDetailTexts.remove(pHost);
+    mStateTexts.remove(pHost);
+    mLargeIcons.remove(pHost);
+    mLargeIconTexts.remove(pHost);
+    mSmallIcons.remove(pHost);
+    mSmallIconTexts.remove(pHost);
+    mPartySize.remove(pHost);
+    mPartyMax.remove(pHost);
+    mHostApplicationIDs.remove(pHost);
+    UpdatePresence();
+}
+
 // Returns Host set app ID or the default Mudlet one if none set for the
 // specific Host:
 QString Discord::getApplicationId(Host* pHost) const
