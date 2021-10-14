@@ -101,7 +101,7 @@ QString TRoom::dirCodeToDisplayName(const int dirCode) const
     }
 }
 
-QString TRoom::dirCodeToString(const int dirCode) const
+/*static*/ QString TRoom::dirCodeToString(const int dirCode)
 {
     switch (dirCode) {
     case DIR_NORTH:     return QLatin1String("north");
@@ -110,7 +110,7 @@ QString TRoom::dirCodeToString(const int dirCode) const
     case DIR_EAST:      return QLatin1String("east");
     case DIR_WEST:      return QLatin1String("west");
     case DIR_SOUTH:     return QLatin1String("south");
-    case DIR_SOUTHEAST: return QLatin1String("southeastst");
+    case DIR_SOUTHEAST: return QLatin1String("southeast");
     case DIR_SOUTHWEST: return QLatin1String("southwest");
     case DIR_UP:        return QLatin1String("up");
     case DIR_DOWN:      return QLatin1String("down");
@@ -166,7 +166,7 @@ int TRoom::stringToDirCode(const QString& string) const
     if (string == QLatin1String("northwest")) {
         return DIR_NORTHWEST;
     }
-    if (string == QLatin1String("southeastst")) {
+    if (string == QLatin1String("southeast")) {
         return DIR_SOUTHEAST;
     }
     if (string == QLatin1String("southwest")) {
@@ -729,7 +729,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             if (cmd.startsWith(QLatin1String("1"))) {
                 // Is locked:
                 mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
-                mSpecialExitLocks.insert(cmd);
+                mSpecialExitLocks.insert(cmd.mid(1));
             } else if (Q_LIKELY(cmd.startsWith(QLatin1String("0")))) {
                 // Is not locked:
                 mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
@@ -850,7 +850,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                         customLinesColor.insert(itCustomLineColor.key().toLower(), QColor(itCustomLineColor.value().at(0), itCustomLineColor.value().at(1), itCustomLineColor.value().at(2)));
                     }
                     // Otherwise we will fixup both empty
-                    // itCustomLineColor.value() entites AND altogether missing
+                    // itCustomLineColor.value() entities AND altogether missing
                     // ones outside of the while() {...}:
                 } else {
                     if (itCustomLineColor.value().count() > 2) {
@@ -1763,8 +1763,8 @@ int TRoom::readJsonRoom(const QJsonArray& array, const int index, const int area
         weight = roomObj.value(QLatin1String("weight")).toInt();
     }
 
-    if (roomObj.contains(QLatin1String("symbol")) && roomObj.value(QLatin1String("symbol")).isString()) {
-        mSymbol = roomObj.value(QLatin1String("symbol")).toString();
+    if (roomObj.contains(QLatin1String("symbol")) && roomObj.value(QLatin1String("symbol")).isObject()) {
+        readJsonSymbol(roomObj);
     }
 
     if (roomObj.contains(QLatin1String("environment")) && roomObj.value(QLatin1String("environment")).isDouble()) {
@@ -2106,7 +2106,7 @@ void TRoom::writeJsonCustomExitLine(QJsonObject& exitObj, const QString& directi
         const QPointF point{points.at(i)};
         customLinePointCoordinateArray.append(static_cast<double>(point.x()));
         customLinePointCoordinateArray.append(static_cast<double>(point.y()));
-        // We might wish to consider storing a z in the future to accomodate 3D
+        // We might wish to consider storing a z in the future to accommodate 3D
         // custom lines...!
         const QJsonValue customLinePointCoordinatesValue{customLinePointCoordinateArray};
         customLinePointsArray.append(customLinePointCoordinatesValue);
@@ -2157,7 +2157,7 @@ void TRoom::readJsonCustomExitLine(const QJsonObject& exitObj, const QString& di
             QPointF point{customLinePointCoordinateArray.at(0).toDouble(), customLinePointCoordinateArray.at(1).toDouble()};
 
             // We might wish to consider if there is a z in the future to
-            // accomodate 3D custom lines...!
+            // accommodate 3D custom lines...!
             points.append(point);
         }
     }
@@ -2355,5 +2355,13 @@ void TRoom::writeJsonSymbol(QJsonObject& roomObj) const
 
 void TRoom::readJsonSymbol(const QJsonObject& roomObj)
 {
-    Q_UNUSED(roomObj);
+    const QJsonObject symbolObj{roomObj.value(QLatin1String("symbol")).toObject()};
+    if (symbolObj.contains(QLatin1String("text")) && symbolObj.value(QLatin1String("text")).isString()) {
+        mSymbol = symbolObj.value(QLatin1String("text")).toString();
+    }
+
+    QColor color = TMap::readJsonColor(symbolObj);
+    if (color.isValid()) {
+        mSymbolColor = color;
+    }
 }

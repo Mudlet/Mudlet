@@ -65,8 +65,7 @@ TMxpTagHandlerResult TMxpElementDefinitionHandler::handleStartTag(TMxpContext& c
     el.empty = tag->hasAttribute("EMPTY");
 
     if (!el.definition.isEmpty()) {
-        TMxpTagParser parser;
-        el.parsedDefinition = parser.parseToMxpNodeList(el.definition);
+        el.parsedDefinition = TMxpTagParser::parseToMxpNodeList(el.definition);
     }
 
     ctx.getElementRegistry().registerElement(el);

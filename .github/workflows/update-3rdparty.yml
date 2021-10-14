@@ -36,7 +36,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          title: "Update bundled IRE mapper script to latest upstream"
+          title: "Infrastructure: Update bundled IRE mapper script to latest upstream"
           body: |
             #### Brief overview of PR changes/additions
             :crown: An automated PR to update the IRE mapper script to the latest version.
@@ -78,7 +78,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          title: "Update sparkle-glue to latest in our fork"
+          title: "Infrastructure: Update sparkle-glue to latest in our fork"
           body: |
             #### Brief overview of PR changes/additions
             :crown: An automated PR to update sparkle-glue to its latest in our fork.
@@ -119,7 +119,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          title: "Update dblsqd to latest in our fork"
+          title: "Infrastructure: Update dblsqd to latest in our fork"
           body: |
             #### Brief overview of PR changes/additions
             :crown: An automated PR to update dblsqd to its latest version in our fork.
@@ -163,7 +163,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          title: "Update Lua code formatter to latest upstream 5.1 branch"
+          title: "Infrastructure: Update Lua code formatter to latest upstream 5.1 branch"
           body: |
             #### Brief overview of PR changes/additions
             :crown: An automated PR to update the built-in Lua code formatter to its latest version in upstream `5.1` branch.
@@ -179,7 +179,7 @@ jobs:
   update-widecharwidth-source:
     runs-on: ubuntu-latest
     # Disabled for the time being due to https://github.com/Mudlet/Mudlet/pull/4299
-    if: ${{ github.repository_owner == 'Mudlet' }} && false
+    if: ${{ github.repository_owner == 'Mudlet' && false }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -204,7 +204,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          title: "Update widechar_width.h to latest upstream"
+          title: "Infrastructure: Update widechar_width.h to latest upstream"
           body: |
             #### Brief overview of PR changes/additions
             :crown: An automated PR to update the built-in `src/widechar_width.h` to its latest version in upstream. We don't include it as a submodule as it's just one file.
@@ -212,7 +212,7 @@ jobs:
             Better emoji and symbol support! This file helps us tell if a particular character is 0, 1, or 2 widths wide so we can show it correctly in the display.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-lcf-${{ github.sha }}
+          branch: update-widechar-width-${{ github.sha }}
           path: src/
           commit-message: (autocommit) Update widechar_width.h to latest upstream
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"

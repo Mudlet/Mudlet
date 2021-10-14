@@ -1,8 +1,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
+ *   Copyright (C) 2021 by Vadim Peretokin - vperetokin@gmail.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -54,27 +55,8 @@ const QString TConsole::cmLuaLineVariable("line");
 TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 : QWidget(parent)
 , mpHost(pH)
-, mpDockWidget(nullptr)
-, mpCommandLine(nullptr)
 , buffer(pH)
 , emergencyStop(new QToolButton)
-, layerCommandLine(nullptr)
-, mBorderColor(Qt::black)
-, mBgColor(Qt::black)
-, mCommandBgColor(Qt::black)
-, mCommandFgColor(QColor(213, 195, 0))
-, mConsoleName("main")
-, mDisplayFontName("Bitstream Vera Sans Mono")
-, mDisplayFontSize(14)
-, mDisplayFont(QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal))
-, mFgColor(Qt::lightGray)
-, mIndentCount(0)
-, mMainFrameBottomHeight(0)
-, mMainFrameLeftWidth(0)
-, mMainFrameRightWidth(0)
-, mMainFrameTopHeight(0)
-, mOldX(0)
-, mOldY(0)
 , mpBaseVFrame(new QWidget(this))
 , mpTopToolBar(new QWidget(mpBaseVFrame))
 , mpBaseHFrame(new QWidget(mpBaseVFrame))
@@ -82,28 +64,13 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpMainFrame(new QWidget(mpBaseHFrame))
 , mpRightToolBar(new QWidget(mpBaseHFrame))
 , mpMainDisplay(new QWidget(mpMainFrame))
-, mpMapper(nullptr)
 , mpScrollBar(new QScrollBar)
 , mpHScrollBar(new QScrollBar(Qt::Horizontal))
-, mRecordReplay(false)
-, mSystemMessageBgColor(mBgColor)
-, mSystemMessageFgColor(QColor(Qt::red))
-, mTriggerEngineMode(false)
-, mWrapAt(100)
 , mpLineEdit_networkLatency(new QLineEdit)
 , mProfileName(mpHost ? mpHost->getName() : QStringLiteral("debug console"))
-, splitter(nullptr)
-, mIsPromptLine(false)
-, logButton(nullptr)
-, mUserAgreedToCloseConsole(false)
 , mpBufferSearchBox(new QLineEdit)
 , mpBufferSearchUp(new QToolButton)
 , mpBufferSearchDown(new QToolButton)
-, mCurrentSearchResult(0)
-, mSearchQuery()
-, mpButtonMainLayer(nullptr)
-, mBgImageMode(0)
-, mHScrollBarEnabled(false)
 , mType(type)
 {
     auto ps = new QShortcut(this);
@@ -118,7 +85,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mWrapAt = 50;
     } else {
         if (mType & (ErrorConsole|SubConsole|UserWindow)) {
-            // Orginally this was for TConsole instances with a parent pointer
+            // Originally this was for TConsole instances with a parent pointer
             // This branch for: UserWindows, SubConsole, ErrorConsole
             // mIsSubConsole was true for these
             mMainFrameTopHeight = 0;
@@ -126,7 +93,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
             mMainFrameLeftWidth = 0;
             mMainFrameRightWidth = 0;
         } else if (mType & (MainConsole|Buffer)) {
-            // Orginally this was for TConsole instances without a parent pointer
+            // Originally this was for TConsole instances without a parent pointer
             // This branch for: Buffers, MainConsole
             // mIsSubConsole was false for these
             mMainFrameTopHeight = mpHost->mBorderTopHeight;
@@ -139,7 +106,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
             Q_ASSERT_X(false, "TConsole::TConsole(...)", "invalid TConsole type detected");
         }
     }
-    mpMainFrame->installEventFilter(this);
     setContentsMargins(0, 0, 0, 0);
     mFormatSystemMessage.setBackground(mBgColor);
     mFormatSystemMessage.setForeground(Qt::red);
@@ -153,6 +119,13 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     QSizePolicy sizePolicy5(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
+
+    QPalette framePalette;
+    framePalette.setColor(QPalette::Text, QColor(Qt::black));
+    framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
+    framePalette.setColor(QPalette::Window, QColor(0, 0, 0, 255));
+    mpMainFrame->setPalette(framePalette);
+    mpMainFrame->setAutoFillBackground(true);
     mpMainFrame->setObjectName(QStringLiteral("MainFrame"));
 
     auto centralLayout = new QVBoxLayout;
@@ -480,10 +453,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     splitter->setSizes(sizeList);
 
     mUpperPane->show();
-    mLowerPane->show();
-    mLowerPane->updateScreenView();
-    // timer needed as updateScreenView doesn't seem to finish in time
-    QTimer::singleShot(0, [this]() { mLowerPane->hide(); });
+    mLowerPane->hide();
 
     connect(mpScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_scrollBarMoved);
     connect(mpHScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_hScrollBarMoved);
@@ -542,8 +512,14 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         setAcceptDrops(true);
         setMouseTracking(true);
     }
+
+
     if (mType & MainConsole) {
         mpButtonMainLayer->setVisible(!mpHost->getCompactInputLine());
+    }
+
+    if (mType & MainConsole) {
+        mpCommandLine->adjustHeight();
     }
 }
 
@@ -567,24 +543,6 @@ void TConsole::resizeConsole()
     QApplication::sendEvent(this, &event);
 }
 
-// mpMainFrame uses this to paint it's colour to avoid stylesheet and or palette propagation to it's children
-bool TConsole::eventFilter(QObject* object, QEvent* event)
-{
-    Q_UNUSED(object);
-    if (event->type() == QEvent::Paint) {
-        QPaintEvent* paintEvent = static_cast<QPaintEvent*>(event);
-        const QRect& rect = paintEvent->rect();
-        QPainter painter(mpMainFrame);
-        if (!painter.isActive()) {
-            return false;
-        }
-        QPixmap pixmap(rect.width(), rect.height());
-        pixmap.fill(mBorderColor);
-        painter.drawPixmap(0, 0, pixmap);
-        return true;
-    }
-    return false;
-}
 
 void TConsole::resizeEvent(QResizeEvent* event)
 {
@@ -617,7 +575,14 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
     }
 
+    // don't call event in lua if size didn't change
+    bool preventLuaEvent = (mpMainDisplay->size() == mOldSize);
     QWidget::resizeEvent(event);
+    mOldSize = mpMainDisplay->size();
+
+    if (preventLuaEvent) {
+        return;
+    }
 
     if (mType & (MainConsole|Buffer)) {
         TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
@@ -686,6 +651,10 @@ void TConsole::refresh()
 
     mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
 
+    if (mType & MainConsole) {
+        mpCommandLine->adjustHeight();
+    }
+
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     x = width();
     y = height();
@@ -694,16 +663,14 @@ void TConsole::refresh()
     QApplication::sendEvent(this, &event);
 }
 
-void TConsole::clearSelection(bool yes) const
+void TConsole::clearSelection() const
 {
-    if (yes) {
-        mLowerPane->unHighlight();
-        mUpperPane->unHighlight();
-        mLowerPane->mSelectedRegion = QRegion(0, 0, 0, 0);
-        mUpperPane->mSelectedRegion = QRegion(0, 0, 0, 0);
-        mUpperPane->forceUpdate();
-        mLowerPane->forceUpdate();
-    }
+    mLowerPane->unHighlight();
+    mUpperPane->unHighlight();
+    mLowerPane->mSelectedRegion = QRegion(0, 0, 0, 0);
+    mUpperPane->mSelectedRegion = QRegion(0, 0, 0, 0);
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 
@@ -717,6 +684,7 @@ void TConsole::closeEvent(QCloseEvent* event)
             hide();
             mudlet::mpDebugArea->setVisible(false);
             mudlet::debugMode = false;
+            mudlet::self()->refreshTabBar();
             event->ignore();
             return;
         }
@@ -1513,9 +1481,9 @@ int TConsole::select(const QString& text, int numOfMatch)
     }
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nline under current user cursor: " >> 0;
-        TDebug(QColor(Qt::red), QColor(Qt::black)) << mUserCursor.y() << "#:" >> 0;
-        TDebug(QColor(Qt::gray), QColor(Qt::black)) << buffer.line(mUserCursor.y()) << "\n" >> 0;
+        TDebug(Qt::darkMagenta, Qt::black) << "line under current user cursor: " >> mpHost;
+        TDebug(Qt::red, Qt::black) << TDebug::csmContinue << mUserCursor.y() << "#:" >> mpHost;
+        TDebug(Qt::gray, Qt::black) << TDebug::csmContinue << buffer.line(mUserCursor.y()) << "\n" >>  mpHost;
     }
 
     int begin = -1;
@@ -1542,9 +1510,9 @@ int TConsole::select(const QString& text, int numOfMatch)
     P_end.setY(mUserCursor.y());
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::darkRed), QColor(Qt::black)) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
+        TDebug(Qt::darkRed, Qt::black) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
                                                        << ") selectedText = " << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\n"
-                >> 0;
+                >> mpHost;
     }
     return begin;
 }
@@ -1552,7 +1520,7 @@ int TConsole::select(const QString& text, int numOfMatch)
 bool TConsole::selectSection(int from, int to)
 {
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nselectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n" >> 0;
+        TDebug(Qt::darkMagenta, Qt::black) << "selectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
     }
     if (from < 0) {
         return false;
@@ -1570,15 +1538,15 @@ bool TConsole::selectSection(int from, int to)
     P_end.setY(mUserCursor.y());
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
-                                                           << ") selectedText = " << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\n"
-                >> 0;
+        TDebug(Qt::darkMagenta, Qt::black) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y() << ") selectedText:\n\""
+                                           << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\"\n"
+                >> mpHost;
     }
     return true;
 }
 
 // returns whenever the selection is valid, the selection text,
-// start position, and the length of the seletion
+// start position, and the length of the selection
 std::tuple<bool, QString, int, int> TConsole::getSelection()
 {
     if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
@@ -1713,6 +1681,10 @@ void TConsole::print(const QString& msg)
     buffer.append(msg, 0, msg.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
+
+    if (Q_UNLIKELY(mudlet::self()->mMirrorToStdOut)) {
+        qDebug().nospace().noquote() << QStringLiteral("%1| %2").arg(mConsoleName, msg);
+    }
 }
 
 // printDebug(QColor& c, QColor& d, const QString& msg) was functionally the
@@ -1722,6 +1694,10 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
     buffer.append(msg, 0, msg.size(), fgColor, bgColor);
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
+
+    if (Q_UNLIKELY(mudlet::self()->mMirrorToStdOut)) {
+        qDebug().nospace().noquote() << QStringLiteral("%1| %2").arg(mConsoleName, msg);
+    }
 }
 
 void TConsole::printSystemMessage(const QString& msg)

@@ -115,7 +115,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
      * the most efficient way of putting together a set of large QStrings
      * some of which will shortly be made translable, it is intended to make
      * it easier to add and remove sections according to the build settings
-     * and for boiler-plate licences to be reused mulitple times if necessary.
+     * and for boiler-plate licences to be reused multiple times if necessary.
      */
 
     // A uniform header for all tabs:
@@ -184,7 +184,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                         tr("Contributions to the Travis integration, CMake and Visual C++ build, "
                            "a lot of code quality and memory management improvements.",
                            "about:ahmedcharles")});
-    aboutMakers.append({false, QStringLiteral("Chris Mitchell"), QString(), QStringLiteral("Chris7"), QStringLiteral("chrismudlet@gmail.com"),
+    aboutMakers.append({false, QStringLiteral("Chris Mitchell"), QString("Chris7#6113"), QStringLiteral("Chris7"), QStringLiteral("chris.mit7@gmail.com"),
                         tr("Developed a shared module system that allows script packages to be shared among profiles, "
                            "a UI for viewing Lua variables, improvements in the mapper and all around.",
                            "about:Chris7")});
@@ -210,7 +210,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                         tr("Developed the Vyzor GUI Manager for Mudlet.",
                            "about:Oneymus")});
     aboutMakers.append({false, QStringLiteral("ItsTheFae"), QStringLiteral("TheFae#9971"), QStringLiteral("Kae"), QString(),
-                        tr("Worked wonders in rejuventating our Website in 2017 but who prefers a little anonymity - "
+                        tr("Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - "
                            "if you are a <i>SpamBot</i> you will not get onto our Fora now. They have also made some useful "
                            "C++ core code contributions and we look forward to future reviews on and work in that area.",
                            "about:TheFae")});
@@ -294,7 +294,7 @@ void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
     QString headerText(tr("<p>Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.</p>\n"
                           "<p>Mudlet is released under the GPL license version 2, which is reproduced below:</p>",
                           "For non-english language versions please append a translation of the following "
-                          "to explain why the GPL is NOT reproduced in the relevent language: 'but only "
+                          "to explain why the GPL is NOT reproduced in the relevant language: 'but only "
                           "the English form is considered the official version of the license, so the "
                           "following is reproduced in that language:' to replace 'which is reproduced below:'..."));
 

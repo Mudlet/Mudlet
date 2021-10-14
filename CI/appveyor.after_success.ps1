@@ -3,7 +3,16 @@ if ("$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet") {
 }
 
 cd "$Env:APPVEYOR_BUILD_FOLDER\src\release"
-windeployqt.exe --release mudlet.exe
+
+$Script:QtVersionRegex = [regex]'\\([\d\.]+)\\mingw'
+$Script:QtVersion = $QtVersionRegex.Match($Env:QT_BASE_DIR).Groups[1].Value
+if ([version]$Script:QtVersion -ge [version]'5.14.0') {
+  windeployqt.exe mudlet.exe
+}
+else {
+  windeployqt.exe --release mudlet.exe
+}
+
 . "$Env:APPVEYOR_BUILD_FOLDER\CI\copy-non-qt-win-dependencies.ps1"
 
 Remove-Item * -include *.cpp, *.o
@@ -65,7 +74,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     New-Item "$SQUIRRELWINBIN" -ItemType "directory"
   }
 
-  Write-Output "=== Moving things to where Squirel expects them ==="
+  Write-Output "=== Moving things to where Squirrel expects them ==="
   # move everything into src\release\squirrel.windows\lib\net45\ as that's where Squirrel would like to see it
   Move-Item $Env:APPVEYOR_BUILD_FOLDER\src\release\* $SQUIRRELWINBIN
 
@@ -118,34 +127,37 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     $DEPLOY_URL = $DEPLOY_URL.Trim()
     echo "Deployed Mudlet to '$DEPLOY_URL'"
   } else {
+    # disabled temporarily as ssh key is unavailable
+
     # get winscp .NET dll for uploads
     # activate higher TLS version. Seems PS only uses 1.0 by default
     # credit: https://stackoverflow.com/questions/41618766/powershell-invoke-webrequest-fails-with-ssl-tls-secure-channel/48030563#48030563
-    [Net.ServicePointManager]::SecurityProtocol = [System.Security.Authentication.SslProtocols] "tls, tls11, tls12"
-    (New-Object System.Net.WebClient).DownloadFile("https://downloads.sourceforge.net/project/winscp/WinSCP/5.13.4/WinSCP-5.13.4-Automation.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fwinscp%2Ffiles%2FWinSCP%2F5.13.4%2FWinSCP-5.13.4-Automation.zip%2Fdownload&ts=1538514946", "C:\src\Winscp-automation.zip")
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    [System.IO.Compression.ZipFile]::ExtractToDirectory("C:\src\Winscp-automation.zip", "C:\src\Winscp-automation\")
-    Add-Type -Path 'C:\src\Winscp-automation\WinSCPnet.dll'
+    # [Net.ServicePointManager]::SecurityProtocol = [System.Security.Authentication.SslProtocols] "tls, tls11, tls12"
+    # (New-Object System.Net.WebClient).DownloadFile("https://downloads.sourceforge.net/project/winscp/WinSCP/5.13.4/WinSCP-5.13.4-Automation.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fwinscp%2Ffiles%2FWinSCP%2F5.13.4%2FWinSCP-5.13.4-Automation.zip%2Fdownload&ts=1538514946", "C:\src\Winscp-automation.zip")
+    # Add-Type -AssemblyName System.IO.Compression.FileSystem
+    # [System.IO.Compression.ZipFile]::ExtractToDirectory("C:\src\Winscp-automation.zip", "C:\src\Winscp-automation\")
+    # Add-Type -Path 'C:\src\Winscp-automation\WinSCPnet.dll'
 
-    # do the upload
-    $sessionOptions = New-Object WinSCP.SessionOptions -Property @{
-      # sftp://
-      Protocol = [WinSCP.Protocol]::Scp
-      HostName = "mudlet.org"
-      UserName = "keneanung"
-      SshPrivateKeyPath = "$Env:APPVEYOR_BUILD_FOLDER\CI\mudlet-deploy-key-windows.ppk"
-      SshPrivateKeyPassphrase = "${Env:DEPLOY_KEY_PASS}"
-    }
-    $session = New-Object WinSCP.Session
-    $fingerprint =  $session.ScanFingerprint($sessionOptions, "SHA-256")
-    $sessionOptions.SshHostKeyFingerprint = $fingerprint
-    # Connect
-    Write-Output "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-    $session.Open($sessionOptions)
-    $session.PutFiles("${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe", "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe")
-    $session.Close()
-    $session.Dispose()
-    $DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
+    # # do the upload
+    # $sessionOptions = New-Object WinSCP.SessionOptions -Property @{
+    #   # sftp://
+    #   Protocol = [WinSCP.Protocol]::Scp
+    #   HostName = "mudlet.org"
+    #   UserName = "keneanung"
+    #   SshPrivateKeyPath = "$Env:APPVEYOR_BUILD_FOLDER\CI\mudlet-deploy-key-windows.ppk"
+    #   SshPrivateKeyPassphrase = "${Env:DEPLOY_KEY_PASS}"
+    # }
+    # $session = New-Object WinSCP.Session
+    # $fingerprint =  $session.ScanFingerprint($sessionOptions, "SHA-256")
+    # $sessionOptions.SshHostKeyFingerprint = $fingerprint
+    # # Connect
+    # Write-Output "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
+    # $session.Open($sessionOptions)
+    # $session.PutFiles("${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe", "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe")
+    # $session.Close()
+    # $session.Dispose()
+    # $DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
+    Push-AppveyorArtifact "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe" -DeploymentName "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe"
   }
 
   Write-Output "=== Installing dblsqd-cli ==="
@@ -166,10 +178,11 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
 
     Write-Output "=== Registering release with Dblsqd ==="
     dblsqd push -a mudlet -c public-test-build -r "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower() -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
-  } else {
-    Write-Output "=== Registering release with Dblsqd ==="
-    dblsqd push -a mudlet -c release -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
   }
+  #  else {
+  #   Write-Output "=== Registering release with Dblsqd ==="
+  #   dblsqd push -a mudlet -c release -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
+  # }
 }
 
 if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {

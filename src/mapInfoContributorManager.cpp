@@ -152,7 +152,7 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
         case 0:
             infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location\n",
                                // Intentional comment to separate arguments
-                               "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
+                               "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle "
                                "them literally in raw strings) and a non-breaking hyphen which are used to "
                                "prevent the line being split at some places it might otherwise be; when "
                                "translating please consider at which points the text may be divided to fit onto "

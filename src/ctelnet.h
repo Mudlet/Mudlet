@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2019 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2019, 2021 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -186,7 +186,9 @@ public:
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
     QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
-    std::pair<QString, int> getConnectionInfo() const;
+    std::tuple<QString, int, bool> getConnectionInfo() const;
+    void setPostingTimeout(const int);
+    int getPostingTimeout() const { return mTimeOut; }
 
 
     QMap<int, bool> supportedTelnetOptions;
@@ -205,7 +207,7 @@ public:
 
 public slots:
     void setDownloadProgress(qint64, qint64);
-    void replyFinished(QNetworkReply*);
+    void slot_replyFinished(QNetworkReply*);
     void slot_processReplayChunk();
     void handle_socket_signal_hostFound(QHostInfo);
     void handle_socket_signal_connected();
@@ -281,7 +283,14 @@ private:
     QString termType;
     QByteArray mEncoding;
     QTimer* mpPostingTimer;
+    // We do not directly adjust the interval for the above because doing so
+    // while it is active changes the timerId which might have unforeseen
+    // effects - so instead we change the following and the revised value is
+    // then used the next time the timer is stopped and then started:
+    int mTimeOut = 300;
     bool mUSE_IRE_DRIVER_BUGFIX;
+
+    QNetworkReply* mpPackageDownloadReply = nullptr;
 
     int mCommands;
     bool mMCCP_version_1;
@@ -322,6 +331,7 @@ private:
 
     // server problem w/ not terminating IAC SB: only warn once
     bool mIncompleteSB;
+
 private slots:
 #if !defined(QT_NO_SSL)
     void handle_socket_signal_sslError(const QList<QSslError> &errors);

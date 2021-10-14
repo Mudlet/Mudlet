@@ -353,15 +353,15 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 {
     // What can appear in a CSI Parameter String (Ps) byte or at least for it
     // to be something we can handle:
-    const QByteArray cParameter("0123456789;:");
+    const QByteArray cParameter = QByteArrayLiteral("0123456789;:");
     // What can appear in the initial position of a CSI Parameter String (Ps) byte:
-    const QByteArray cParameterInitial("0123456789;:<=>?");
+    const QByteArray cParameterInitial = QByteArrayLiteral("0123456789;:<=>?");
     // What can appear in a CSI Intermediate byte (includes a quote character in
     // the middle of the text here which has to be escaped with a backslash):
-    const QByteArray cIntermediate(" !\"#$%&'()*+,-./");
+    const QByteArray cIntermediate = QByteArrayLiteral(" !\"#$%&'()*+,-./");
     // What can appear in a CSI final byte position - (includes a backslash
     // which has to be doubled to include it in here):
-    const QByteArray cFinal("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+    const QByteArray cFinal = QByteArrayLiteral("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
 
     // As well as enabling the prepending of left-over bytes from last packet
     // from the MUD server this may help in high frequency interactions to
@@ -592,7 +592,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     /*
                      * Also seen in output from mud.durismud.com see 'C' case above:
                      * Is ED 'Erase Display' command and has three variants:
-                     * * 0 (or ommitted): clear from cursor to end of screen
+                     * * 0 (or omitted): clear from cursor to end of screen
                      *   - which is a NOP for us!
                      * * 1: clear from cursor to beginning of screen
                      *   - which is a NWIH for us!
@@ -934,68 +934,22 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
 
         } else if (tag < 232) {
             // because color 1-15 behave like normal ANSI colors
-            tag -= 16;
+           tag -= 16;
             // 6x6x6 RGB color space
             quint8 r = tag / 36;
             quint8 g = (tag - (r * 36)) / 6;
             quint8 b = (tag - (r * 36)) - (g * 6);
-            // Did use 42 as a factor but that isn't right
-            // as it yields:
-            // 0:0; 1:42; 2:84; 3:126; 4:168; 5:210
-            // 6 x 42 DOES equal 252 BUT IT IS OUT OF RANGE
-            // Instead we use 51:
-            // 0:0; 1:51; 2:102; 3:153; 4:204: 5:255
-            mForeGroundColor = QColor(r * 51, g * 51, b * 51);
+            // Adjusted from previously linear gradient for the blocks.
+            // To match the common terminal palettes, the values are
+            // scaled as follows:
+            // 0: 0, 1: 95, 2:135, 3:175, 4:215, 5:255
+            mForeGroundColor = QColor(r == 0 ? 0 : (r - 1) * 40 + 95,
+                                      g == 0 ? 0 : (g - 1) * 40 + 95,
+                                      b == 0 ? 0 : (b - 1) * 40 + 95);
             mForeGroundColorLight = mForeGroundColor;
 
         } else {
-            // black + 23 tone grayscale from dark to light
-            // gray. Similar to RGB case the multiplier was
-            // a bit off we had been using 10 but:
-            // 23 x 10 = 230
-            // whereas 23 should map to 255, this requires
-            // a non-integer multiplier, instead of
-            // multiplying and rounding we, for speed, can
-            // use a look-up table:
-            int value = 0;
-            // clang-format off
-            switch (tag) {
-                case 232:   value =   0; break; //   0.000
-                case 233:   value =  11; break; //  11.087
-                case 234:   value =  22; break; //  22.174
-                case 235:   value =  33; break; //  33.261
-                case 236:   value =  44; break; //  44.348
-                case 237:   value =  55; break; //  55.435
-                case 238:   value =  67; break; //  66.522
-                case 239:   value =  78; break; //  77.609
-                case 240:   value =  89; break; //  88.696
-                case 241:   value = 100; break; //  99.783
-                case 242:   value = 111; break; // 110.870
-                case 243:   value = 122; break; // 121.957
-                case 244:   value = 133; break; // 133.043
-                case 245:   value = 144; break; // 144.130
-                case 246:   value = 155; break; // 155.217
-                case 247:   value = 166; break; // 166.304
-                case 248:   value = 177; break; // 177.391
-                case 249:   value = 188; break; // 188.478
-                case 250:   value = 200; break; // 199.565
-                case 251:   value = 211; break; // 210.652
-                case 252:   value = 222; break; // 221.739
-                case 253:   value = 233; break; // 232.826
-                case 254:   value = 244; break; // 243.913
-                case 255:   value = 255; break; // 255.000
-                default:
-                    value = 192;
-#if defined(DEBUG_SGR_PROCESSING)
-                    if (isColonSeparated) {
-                        qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2) << ";..m sequence treating it as 192!";
-                    } else {
-                        qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;38;5;" << parameters.at(2) << ";..m sequence treating it as 192!";
-                    }
-#endif
-            }
-
-             // clang-format on
+            int value = (tag - 232) * 10 + 8;
             mForeGroundColor = QColor(value, value, value);
             mForeGroundColorLight = mForeGroundColor;
         }
@@ -1053,9 +1007,9 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
 
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unexpect SGR code: SGR...;38:" << parameters.at(1) << ":...;...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unexpected SGR code: SGR...;38:" << parameters.at(1) << ":...;...m ignoring sequence!";
         } else {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unexpect SGR code: SGR...;38;" << parameters.at(1) << ";...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unexpected SGR code: SGR...;38;" << parameters.at(1) << ";...m ignoring sequence!";
         }
 #endif
 
@@ -1149,61 +1103,16 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
             quint8 r = tag / 36;
             quint8 g = (tag - (r * 36)) / 6;
             quint8 b = (tag - (r * 36)) - (g * 6);
-            // Did use 42 as a factor but that isn't right
-            // as it yields:
-            // 0:0; 1:42; 2:84; 3:126; 4:168; 5:210
-            // 6 x 42 DOES equal 252 BUT IT IS OUT OF RANGE
-            // Instead we use 51:
-            // 0:0; 1:51; 2:102; 3:153; 4:204: 5:255
-            mBackGroundColor = QColor(r * 51, g * 51, b * 51);
+            // Adjusted from previously linear gradient for the blocks.
+            // To match the common terminal palettes, the values are
+            // scaled as follows:
+            // 0: 0, 1: 95, 2:135, 3:175, 4:215, 5:255
+            mBackGroundColor = QColor(r == 0 ? 0 : (r - 1) * 40 + 95,
+                                      g == 0 ? 0 : (g - 1) * 40 + 95,
+                                      b == 0 ? 0 : (b - 1) * 40 + 95);
 
         } else {
-            // black + 23 tone grayscale from dark to light
-            // gray. Similar to RGB case the multiplier was
-            // a bit off we had been using 10 but:
-            // 23 x 10 = 230
-            // whereas 23 should map to 255, this requires
-            // a non-integer multiplier, instead of
-            // multiplying and rounding we, for speed, can
-            // use a look-up table:
-            int value = 0;
-            // clang-format off
-            switch (tag) {
-                case 232:   value =   0; break; //   0.000
-                case 233:   value =  11; break; //  11.087
-                case 234:   value =  22; break; //  22.174
-                case 235:   value =  33; break; //  33.261
-                case 236:   value =  44; break; //  44.348
-                case 237:   value =  55; break; //  55.435
-                case 238:   value =  67; break; //  66.522
-                case 239:   value =  78; break; //  77.609
-                case 240:   value =  89; break; //  88.696
-                case 241:   value = 100; break; //  99.783
-                case 242:   value = 111; break; // 110.870
-                case 243:   value = 122; break; // 121.957
-                case 244:   value = 133; break; // 133.043
-                case 245:   value = 144; break; // 144.130
-                case 246:   value = 155; break; // 155.217
-                case 247:   value = 166; break; // 166.304
-                case 248:   value = 177; break; // 177.391
-                case 249:   value = 188; break; // 188.478
-                case 250:   value = 200; break; // 199.565
-                case 251:   value = 211; break; // 210.652
-                case 252:   value = 222; break; // 221.739
-                case 253:   value = 233; break; // 232.826
-                case 254:   value = 244; break; // 243.913
-                case 255:   value = 255; break; // 255.000
-                default:
-                    value = 64;
-#if defined(DEBUG_SGR_PROCESSING)
-                    if (isColonSeparated) {
-                        qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2) << ";..m sequence treating it as 64!";
-                    } else {
-                        qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;48;5;" << parameters.at(2) << ";..m sequence treating it as 64!";
-                    }
-#endif
-            }
-             // clang-format on
+            int value = (tag - 232) * 10 + 8;
             mBackGroundColor = QColor(value, value, value);
         }
 
@@ -1262,9 +1171,9 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unexpect SGR code: SGR...;48:" << parameters.at(1) << ":...;...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unexpected SGR code: SGR...;48:" << parameters.at(1) << ":...;...m ignoring sequence!";
         } else {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unexpect SGR code: SGR...;48;" << parameters.at(1) << ";...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unexpected SGR code: SGR...;48;" << parameters.at(1) << ";...m ignoring sequence!";
         }
 #endif
     }
@@ -1576,14 +1485,14 @@ void TBuffer::decodeSGR(const QString& sequence)
                 case 3:
                     // There is a proposal by the "VTE" terminal
                     // emulator to use a (sub)parameter entry to
-                    // destinguish between italics and slanted text by
+                    // distinguish between italics and slanted text by
                     // using ESC[...;3:1;...m and ESC[...;3:2;...m
                     // respectively - that is handled above in the colon
                     // sub-string separated part:
                     mItalics = true;
                     break;
                 case 4:
-                    // There is a implimention by some terminal
+                    // There is a implementation by some terminal
                     // emulators ("Kitty" and "VTE") to use a
                     // (sub)parameter entry of 3 for a wavy underline
                     // {presumably 2 would be a double underline and 1
@@ -2408,7 +2317,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
 
 // This is very poorly designed as P2 is used to determine the last character to
 // copy BUT no consideration is given to P2.y() != p1.y() i.e. a copy of more
-// than a single line - and it copys a single QChar at a time....
+// than a single line - and it copies a single QChar at a time....
 TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
 {
     TBuffer slice(mpHost);
@@ -3347,7 +3256,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             // locally generated material from Lua feedTriggers(...)
             if (isFromServer) {
 #if defined(DEBUG_UTF8_PROCESSING)
-                qDebug() << "TBuffer::processUtf8Sequence(...) Insufficent bytes in buffer to complate UTF-8 sequence, need:" << utf8SequenceLength
+                qDebug() << "TBuffer::processUtf8Sequence(...) Insufficient bytes in buffer to complete UTF-8 sequence, need:" << utf8SequenceLength
                          << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
 #endif
                 mIncompleteSequenceBytes = bufferData.substr(pos);
@@ -3544,7 +3453,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 // mapping, instead we use one TChar per QChar - and that has to be
 // tweaked for non-BMP characters that use TWO QChars per codepoint.
 // GB2312 is the predecessor to both and - according to Wikipedia (EN) covers
-// over 99% of the characters of contempory usage.
+// over 99% of the characters of contemporary usage.
 // GBK is a sub-set of GB18030 so can be processed in the same method
 // Assume we are at the first byte of a single (ASCII), pair (GBK/GB18030)
 // or four byte (GB18030) sequence
@@ -3715,8 +3624,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             // Not enough bytes to process yet - so store what we have and return
             if (isFromServer) {
 #if defined(DEBUG_GB_PROCESSING)
-                qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficent bytes in buffer to "
-                                      "complate GB2312/GBK sequence, need at least: "
+                qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficient bytes in buffer to "
+                                      "complete GB2312/GBK sequence, need at least: "
                                    << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
 #endif
                 mIncompleteSequenceBytes = bufferData.substr(pos);
@@ -3747,8 +3656,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                     // Not enough bytes to process yet - so store what we have and return
                     if (isFromServer) {
 #if defined(DEBUG_GB_PROCESSING)
-                        qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficent bytes in buffer to "
-                                              "complate GB18030 sequence, need at least: "
+                        qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficient bytes in buffer to "
+                                              "complete GB18030 sequence, need at least: "
                                            << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
 #endif
                         mIncompleteSequenceBytes = bufferData.substr(pos);
@@ -3900,7 +3809,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             // we only have one - so store what we have and return
             if (isFromServer) {
 #if defined(DEBUG_GB_PROCESSING)
-                qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficent bytes in buffer to complate GB18030 sequence, need at least:"
+                qDebug().nospace() << "TBuffer::processGBSequence(...) Insufficient bytes in buffer to complete GB18030 sequence, need at least:"
                                    << gbSequenceLength << " but we currently only have: " << bufferData.substr(pos).length()
                                    << " bytes (which we will store for next call to this method)...";
 #endif
@@ -4008,7 +3917,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
             // Not enough bytes to process yet - so store what we have and return
             if (isFromServer) {
 #if defined(DEBUG_BIG5_PROCESSING)
-                qDebug().nospace() << "TBuffer::processBig5Sequence(...) Insufficent bytes in buffer to "
+                qDebug().nospace() << "TBuffer::processBig5Sequence(...) Insufficient bytes in buffer to "
                                       "complete Big5 sequence, need at least: "
                                    << big5SequenceLength << " but we currently only have: " << bufferData.substr(pos).length() << " bytes (which we will store for next call to this method)...";
 #endif

@@ -42,9 +42,10 @@
 #include <QPointer>
 #include <QSizeF>
 #include <QVector3D>
+#include <stdlib.h>
+#include <optional>
 #include "post_guard.h"
 
-#include <stdlib.h>
 
 class dlgMapper;
 class Host;
@@ -75,7 +76,18 @@ public:
     ~TMap();
     void mapClear();
     int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop);
-    int createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop = true, bool noScaling = true, qreal zoom = 30.0, int fontSize = 50);
+    int createMapLabel(int area,
+                       const QString& text,
+                       float x,
+                       float y,
+                       float z,
+                       QColor fg,
+                       QColor bg,
+                       bool showOnTop = true,
+                       bool noScaling = true,
+                       qreal zoom = 30.0,
+                       int fontSize = 50,
+                       std::optional<QString> fontName = std::nullopt);
     void deleteMapLabel(int area, int labelID);
     bool addRoom(int id = 0);
     bool setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations = false);
@@ -98,7 +110,9 @@ public:
     bool restore(QString location, bool downloadIfNotFound = true);
     bool retrieveMapFileStats(QString, QString*, int*, int*, int*, int*);
     void initGraph();
-    void connectExitStub(int roomId, int dirType);
+    QString connectExitStubByDirection(const int fromRoomId, const int dirType);
+    QString connectExitStubByToId(const int fromRoomId, const int toRoomId);
+    QString connectExitStubByDirectionAndToId(const int fromRoomId, const int dirType, const int toRoomId);
     void postMessage(QString text);
 
     // Used by the 2D mapper to send view center coordinates to 3D one
@@ -120,10 +134,10 @@ public:
     void downloadMap(const QString& remoteUrl = QString(), const QString& localFileName = QString());
 
     // like 'downloadMap' but for local files:
-    bool importMap(QFile&, QString* errMsg = Q_NULLPTR);
+    bool importMap(QFile&, QString* errMsg = nullptr);
 
     // Used at end of downloadMap(...) OR as part of importMap(...)
-    bool readXmlMapFile(QFile&, QString* errMsg = Q_NULLPTR);
+    bool readXmlMapFile(QFile&, QString* errMsg = nullptr);
 
     // Use progress dialog for post-download operations.
     void reportStringToProgressDialog(QString);
@@ -144,7 +158,7 @@ public:
     void setRoomNamesShown(bool shown);
 
     std::pair<bool, QString> writeJsonMapFile(const QString&);
-    std::pair<bool, QString> readJsonMapFile(const QString&);
+    std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false, const bool allowUserCancellation = true);
     int getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
     QString getDefaultAreaName() const { return mDefaultAreaName; }
@@ -268,6 +282,7 @@ private:
     const QString createFileHeaderLine(QString, QChar);
     void writeJsonUserData(QJsonObject&) const;
     void readJsonUserData(const QJsonObject&);
+    bool validatePotentialMapFile(QFile&, QDataStream&);
 
     QStringList mStoredMessages;
 
@@ -281,7 +296,7 @@ private:
     QList<QString> mMapAuditErrors;
 
     // Are things so bad the user needs to check the log (ignored if messages ARE already sent to screen)
-    bool mIsFileViewingRecommended = false;;
+    bool mIsFileViewingRecommended = false;
 
     // Moved and revised from dlgMapper:
     QNetworkAccessManager* mpNetworkAccessManager = nullptr;

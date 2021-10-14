@@ -26,7 +26,7 @@
 	"forwardPorts": [5900, 5901, 6080],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "gcc -v",
+	"postCreateCommand": "git submodule update --init",
 
 	// Comment out this line to run as root instead.
 	"remoteUser": "vscode",

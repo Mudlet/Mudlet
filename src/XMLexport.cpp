@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2017-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -44,77 +44,77 @@
 
 XMLexport::XMLexport( Host * pH )
 : mpHost( pH )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+, mpTrigger( nullptr )
+, mpTimer( nullptr )
+, mpAlias( nullptr )
+, mpAction( nullptr )
+, mpScript( nullptr )
+, mpKey( nullptr )
 {
 }
 
 XMLexport::XMLexport( TTrigger * pT )
-: mpHost( Q_NULLPTR )
+: mpHost( nullptr )
 , mpTrigger( pT )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+, mpTimer( nullptr )
+, mpAlias( nullptr )
+, mpAction( nullptr )
+, mpScript( nullptr )
+, mpKey( nullptr )
 {
 }
 
 XMLexport::XMLexport( TTimer * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
+: mpHost( nullptr )
+, mpTrigger( nullptr )
 , mpTimer( pT )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+, mpAlias( nullptr )
+, mpAction( nullptr )
+, mpScript( nullptr )
+, mpKey( nullptr )
 {
 }
 
 XMLexport::XMLexport( TAlias * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
+: mpHost( nullptr )
+, mpTrigger( nullptr )
+, mpTimer( nullptr )
 , mpAlias( pT )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+, mpAction( nullptr )
+, mpScript( nullptr )
+, mpKey( nullptr )
 {
 }
 
 XMLexport::XMLexport( TAction * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
+: mpHost( nullptr )
+, mpTrigger( nullptr )
+, mpTimer( nullptr )
+, mpAlias( nullptr )
 , mpAction( pT )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+, mpScript( nullptr )
+, mpKey( nullptr )
 {
 }
 
 XMLexport::XMLexport( TScript * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
+: mpHost( nullptr )
+, mpTrigger( nullptr )
+, mpTimer( nullptr )
+, mpAlias( nullptr )
+, mpAction( nullptr )
 , mpScript( pT )
-, mpKey( Q_NULLPTR )
+, mpKey( nullptr )
 {
 }
 
 XMLexport::XMLexport( TKey * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
+: mpHost( nullptr )
+, mpTrigger( nullptr )
+, mpTimer( nullptr )
+, mpAlias( nullptr )
+, mpAction( nullptr )
+, mpScript( nullptr )
 , mpKey( pT )
 {
 }
@@ -332,11 +332,11 @@ bool XMLexport::saveXmlFile(QFile& file)
 {
     std::stringstream saveStringStream(std::ios::out);
     // Remember, the mExportDoc is the data in the form of a pugi::xml_document
-    // instance - the save method needs a stream that impliments the
+    // instance - the save method needs a stream that implements the
     // std::ostream interface into which it can push the data:
     mExportDoc.save(saveStringStream);
     // We need to do our own replacement of ASCII control characters that are
-    // not valid in XML verison 1.0 and that means we cannot use the pugixml
+    // not valid in XML version 1.0 and that means we cannot use the pugixml
     // file methods as it does that in a different way which is not helpful
     // as we do not use that library for READING the XML files - so convert
     // the data to a std::string :
@@ -463,6 +463,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mDoubleClickIgnore") = ignore.toUtf8().constData();
     host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toUtf8().constData();
     host.append_attribute("DebugShowAllProblemCodepoints") = pHost->debugShowAllProblemCodepoints() ? "yes" : "no";
+    host.append_attribute("NetworkPacketTimeout") = pHost->mTelnet.getPostingTimeout();
 
     { // Blocked so that indentation reflects that of the XML file
         host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());
@@ -547,6 +548,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mLightMagenta2").text().set(pHost->mLightMagenta_2.name().toUtf8().constData());
         host.append_child("mWhite2").text().set(pHost->mWhite_2.name().toUtf8().constData());
         host.append_child("mLightWhite2").text().set(pHost->mLightWhite_2.name().toUtf8().constData());
+        // this crashes
         host.append_child("mSpellDic").text().set(pHost->mpConsole->getSystemSpellDictionary().toUtf8().constData());
         // TODO: Consider removing these sub-elements that duplicate the same
         // attributes - which WERE bugged - when we update the XML format, must leave
@@ -738,25 +740,25 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     return false;
 }
 
-bool XMLexport::exportPackage(const QString& exportFileName)
+bool XMLexport::exportPackage(const QString& exportFileName, bool ignoreModuleMember)
 {
     auto mudletPackage = writeXmlHeader();
 
-    if (writeGenericPackage(mpHost, mudletPackage)) {
+    if (writeGenericPackage(mpHost, mudletPackage, ignoreModuleMember)) {
         return saveXml(exportFileName);
     }
 
     return false;
 }
 
-bool XMLexport::writeGenericPackage(Host* pHost, pugi::xml_node& mudletPackage)
+bool XMLexport::writeGenericPackage(Host* pHost, pugi::xml_node& mudletPackage, bool ignoreModuleMember)
 {
-    writeTriggerPackage(pHost, mudletPackage, true);
-    writeTimerPackage(pHost, mudletPackage, true);
-    writeAliasPackage(pHost, mudletPackage, true);
-    writeActionPackage(pHost, mudletPackage, true);
-    writeScriptPackage(pHost, mudletPackage, true);
-    writeKeyPackage(pHost, mudletPackage, true);
+    writeTriggerPackage(pHost, mudletPackage, ignoreModuleMember);
+    writeTimerPackage(pHost, mudletPackage, ignoreModuleMember);
+    writeAliasPackage(pHost, mudletPackage, ignoreModuleMember);
+    writeActionPackage(pHost, mudletPackage, ignoreModuleMember);
+    writeScriptPackage(pHost, mudletPackage, ignoreModuleMember);
+    writeKeyPackage(pHost, mudletPackage, ignoreModuleMember);
     // variables weren't previously exported as a generic package
     writeVariablePackage(pHost, mudletPackage);
 
