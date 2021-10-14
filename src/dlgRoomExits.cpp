@@ -912,7 +912,7 @@ void dlgRoomExits::normalStubExitChanged(const int state, QLineEdit* pExit, QChe
         pDoorType_closed->setEnabled(false);
         pDoorType_locked->setEnabled(false);
         pDoorType_none->setChecked(true);
-        //  similarly as there won't be a valid exit or a stub exit at theis point disable/reset the door type controls
+        //  similarly as there won't be a valid exit or a stub exit at this point disable/reset the door type controls
         pWeight->setEnabled(false);
         pWeight->setValue(0); // Prevent a weight to be set/changed on a also
     }
