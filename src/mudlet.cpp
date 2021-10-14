@@ -567,6 +567,9 @@ mudlet::mudlet()
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
     connect(dactionShowErrors, &QAction::triggered, [=]() {
         auto host = getActiveHost();
+        if (!host) {
+            return;
+        }
         host->mpEditorDialog->slot_show_current();
         host->mpEditorDialog->raise();
         host->mpEditorDialog->showNormal();
