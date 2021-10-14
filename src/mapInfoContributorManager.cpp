@@ -115,7 +115,7 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
         if (area) {
             infoText = tr("Area:%1%2 ID:%1%3 x:%1%4%1<‑>%1%5 y:%1%6%1<‑>%1%7 z:%1%8%1<‑>%1%9\n",
                           // Intentional separator
-                          "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
+                          "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle "
                           "them literally in raw strings) and non-breaking hyphens which are used to "
                           "prevent the line being split at some places it might otherwise be; when "
                           "translating please consider at which points the text may be divided to fit onto "
@@ -169,7 +169,7 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
         case 1:
             infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room\n",
                                // Intentional comment to separate arguments
-                               "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
+                               "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle "
                                "them literally in raw strings) and a non-breaking hyphen which are used to "
                                "prevent the line being split at some places it might otherwise be; when "
                                "translating please consider at which points the text may be divided to fit onto "
@@ -187,7 +187,7 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
         default:
             infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms\n",
                                // Intentional comment to separate arguments
-                               "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
+                               "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle "
                                "them literally in raw strings) and a non-breaking hyphen which are used to "
                                "prevent the line being split at some places it might otherwise be; when "
                                "translating please consider at which points the text may be divided to fit onto "
