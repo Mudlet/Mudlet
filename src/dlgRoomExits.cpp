@@ -58,7 +58,7 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 
     mIcon_invalidExit.addFile(QStringLiteral(":/icons/dialog-error.png"), QSize(24, 24));
     mIcon_inAreaExit.addFile(QStringLiteral(":/icons/dialog-ok-apply.png"), QSize(24, 24));
-    mIcon_otherAreaExit.addFile(QStringLiteral(":/icons/dialog-warning.png"), QSize(24, 24));
+    mIcon_otherAreaExit.addFile(QStringLiteral(":/icons/arrow-right_cyan.png"), QSize(24, 24));
 
     mpAction_noExit = new QAction(this);
     mpAction_noExit->setText(QString());
