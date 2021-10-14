@@ -590,7 +590,7 @@ bool Discord::setApplicationID(Host* pHost, const QString& text)
 void Discord::resetData(Host* pHost){
     mStartTimes.remove(pHost);
     mEndTimes.remove(pHost);
-    mDetailTexts.remove(pHost);
+    mDetailTexts[pHost] = QStringLiteral("www.mudlet.org");
     mStateTexts.remove(pHost);
     mLargeImages.remove(pHost);
     mLargeImageTexts.remove(pHost);
