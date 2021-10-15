@@ -11266,12 +11266,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2642"/>
       <source>&lt;p&gt;TLS/SSL is usually on port 6697. IRC networks often use a &lt;b&gt;+&lt;/b&gt; when listing secure ports offered.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;TLS/SSL utilizza solitamente la porta 6697. Le reti IRC spesso usano un &lt;b&gt;&lt;/b&gt; per elencare le porte sicure disponibili.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2645"/>
       <source>Use a secure connection</source>
-      <translation type="unfinished"/>
+      <translation>Usa una connessione sicura</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3496"/>
