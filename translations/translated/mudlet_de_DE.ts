@@ -56,19 +56,19 @@
       <translation>Text, der zum Spiel gesendet werden soll</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="863"/>
+      <location filename="../src/Host.cpp" line="873"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
       <translation>[  OK  ]  - %1 Vielen Dank für die Nutzung der öffentlichen Testversion!</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="864"/>
+      <location filename="../src/Host.cpp" line="874"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
       <translation>[  OK  ]  - %1 Hilf uns, Mudlet zu verbessern, indem Du Probleme meldest.</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1664"/>
+      <location filename="../src/Host.cpp" line="1674"/>
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
@@ -77,7 +77,7 @@ please wait...</source>
 Bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1666"/>
+      <location filename="../src/Host.cpp" line="1676"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
@@ -86,35 +86,35 @@ please wait...</source>
 Bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1670"/>
+      <location filename="../src/Host.cpp" line="1680"/>
       <source>Unpacking</source>
       <translation>Entpacke</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2308"/>
+      <location filename="../src/Host.cpp" line="2318"/>
       <source>Playing %1</source>
       <translation>Spielt %1</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2310"/>
-      <location filename="../src/Host.cpp" line="2316"/>
+      <location filename="../src/Host.cpp" line="2320"/>
+      <location filename="../src/Host.cpp" line="2326"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
       <translation>%1 bei %2:%3</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2696"/>
-      <location filename="../src/Host.cpp" line="3628"/>
+      <location filename="../src/Host.cpp" line="2706"/>
+      <location filename="../src/Host.cpp" line="3638"/>
       <source>Map - %1</source>
       <translation>Karte - %1</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="3644"/>
+      <location filename="../src/Host.cpp" line="3654"/>
       <source>Pre-Map loading(3) report</source>
       <translation>Bericht bevor die Karte geladen wird(3)</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="3654"/>
+      <location filename="../src/Host.cpp" line="3664"/>
       <source>Loading map(3) at %1 report</source>
       <translation>Bericht der geladenen Karte(3) bei %1</translation>
     </message>
@@ -540,114 +540,114 @@ Bitte warten...</translation>
   <context>
     <name>T2DMap</name>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2808"/>
+      <location filename="../src/T2DMap.cpp" line="2804"/>
       <source>Create a new room here</source>
       <translation>Erstelle hier einen neuen Raum</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2998"/>
+      <location filename="../src/T2DMap.cpp" line="2994"/>
       <source>Change the properties of this custom line</source>
       <translation>Ändere die Eigenschaften dieser benutzerdefinierten Linie</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3228"/>
-      <location filename="../src/T2DMap.cpp" line="4833"/>
+      <location filename="../src/T2DMap.cpp" line="3224"/>
+      <location filename="../src/T2DMap.cpp" line="4828"/>
       <source>Solid line</source>
       <translation>Durchgezogene Linie</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3229"/>
-      <location filename="../src/T2DMap.cpp" line="4834"/>
+      <location filename="../src/T2DMap.cpp" line="3225"/>
+      <location filename="../src/T2DMap.cpp" line="4829"/>
       <source>Dot line</source>
       <translation>Gepunktete Linie</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3230"/>
-      <location filename="../src/T2DMap.cpp" line="4835"/>
+      <location filename="../src/T2DMap.cpp" line="3226"/>
+      <location filename="../src/T2DMap.cpp" line="4830"/>
       <source>Dash line</source>
       <translation>Gestrichelte Linie</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3231"/>
-      <location filename="../src/T2DMap.cpp" line="4836"/>
+      <location filename="../src/T2DMap.cpp" line="3227"/>
+      <location filename="../src/T2DMap.cpp" line="4831"/>
       <source>Dash-dot line</source>
       <translation>Strich-Punkt-Linie</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3232"/>
-      <location filename="../src/T2DMap.cpp" line="4837"/>
+      <location filename="../src/T2DMap.cpp" line="3228"/>
+      <location filename="../src/T2DMap.cpp" line="4832"/>
       <source>Dash-dot-dot line</source>
       <translation>Strich-Punkt-Punkt-Linie</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3520"/>
+      <location filename="../src/T2DMap.cpp" line="3516"/>
       <source>x coordinate (was %1):</source>
       <translation>x-Koordinate (war %1):</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3521"/>
+      <location filename="../src/T2DMap.cpp" line="3517"/>
       <source>y coordinate (was %1):</source>
       <translation>y-Koordinate (war %1):</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3522"/>
+      <location filename="../src/T2DMap.cpp" line="3518"/>
       <source>z coordinate (was %1):</source>
       <translation>z-Koordinate (war %1):</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3710"/>
+      <location filename="../src/T2DMap.cpp" line="3706"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
       <translation>Farbe löschen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3728"/>
+      <location filename="../src/T2DMap.cpp" line="3724"/>
       <source>Define new color</source>
       <translation>Neue Farbe definieren</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4042"/>
+      <location filename="../src/T2DMap.cpp" line="4037"/>
       <source>%1 {count:%2}</source>
       <translation>%1 {Anzahl: %2}</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="1386"/>
-      <location filename="../src/T2DMap.cpp" line="1507"/>
-      <location filename="../src/T2DMap.cpp" line="2322"/>
-      <location filename="../src/T2DMap.cpp" line="2338"/>
+      <location filename="../src/T2DMap.cpp" line="1382"/>
+      <location filename="../src/T2DMap.cpp" line="1503"/>
+      <location filename="../src/T2DMap.cpp" line="2318"/>
+      <location filename="../src/T2DMap.cpp" line="2334"/>
       <source>no text</source>
       <comment>Default text if a label is created in mapper with no text</comment>
       <translation>ohne Text</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="141"/>
+      <location filename="../src/T2DMap.cpp" line="140"/>
       <source>ID</source>
       <comment>Room ID in the mapper widget</comment>
       <translation>ID</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="141"/>
+      <location filename="../src/T2DMap.cpp" line="140"/>
       <source>Name</source>
       <comment>Room name in the mapper widget</comment>
       <translation>Name</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="143"/>
+      <location filename="../src/T2DMap.cpp" line="142"/>
       <source>&lt;p&gt;Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Klick auf eine Zeile, um diese Raumnummer an- oder abzuwählen. Wenn der Raum einen Namen hat, wird dieser auch ausgewählt. Durch einen Klick auf die entsprechende Kopfzelle wird nach der Spalte sortiert. Hinweis: Die Spalte "Name" erscheint nur, wenn mindestens ein Raum einen Namen hat.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="601"/>
+      <location filename="../src/T2DMap.cpp" line="600"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
       <translation>Mapper: Kein Weg von %1 nach %2 konnte mit bekannten Ausgängen gefunden werden.</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="1259"/>
+      <location filename="../src/T2DMap.cpp" line="1255"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
       <translation>Du hast noch keine Karte - lade eine oder beginne neu zu kartographieren.</translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/T2DMap.cpp" line="1256"/>
+      <location filename="../src/T2DMap.cpp" line="1252"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
       <translation>
         <numerusform>Du hast eine Karte geladen (mit einem Raum), aber Mudlet weiß nicht, wo du gerade bist.</numerusform>
@@ -655,438 +655,438 @@ Bitte warten...</translation>
       </translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="1254"/>
+      <location filename="../src/T2DMap.cpp" line="1250"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
       <translation>Keine Räume auf der Karte - lade eine andere oder beginne neu zu kartieren.</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2256"/>
+      <location filename="../src/T2DMap.cpp" line="2252"/>
       <source>render time: %1S mO: (%2,%3,%4)</source>
       <comment>This is debug information that is not expected to be seen in release versions, %1 is a decimal time period and %2-%4 are the x,y and z coordinates at the center of the view (but y will be negative compared to previous room related ones as it represents the real coordinate system for this widget which has y increasing in a downward direction!)</comment>
       <translation>Berechnungszeit: %1S mO: (%2,%3,%4)</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2328"/>
+      <location filename="../src/T2DMap.cpp" line="2324"/>
       <source>Text label or image label?</source>
       <comment>2D Mapper create label dialog text</comment>
       <translation>Text oder Bild?</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2329"/>
+      <location filename="../src/T2DMap.cpp" line="2325"/>
       <source>Text Label</source>
       <comment>2D Mapper create label dialog button</comment>
       <translation>Textmarke</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2330"/>
+      <location filename="../src/T2DMap.cpp" line="2326"/>
       <source>Image Label</source>
       <comment>2D Mapper create label dialog button</comment>
       <translation>Bildmarke</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2334"/>
+      <location filename="../src/T2DMap.cpp" line="2330"/>
       <source>Enter label text.</source>
       <comment>2D Mapper create label dialog title/text</comment>
       <translation>Text der Markierung eingeben.</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2341"/>
+      <location filename="../src/T2DMap.cpp" line="2337"/>
       <source>Background color</source>
       <comment>2D Mapper create label color dialog title</comment>
       <translation>Hintergrundfarbe</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2342"/>
+      <location filename="../src/T2DMap.cpp" line="2338"/>
       <source>Foreground color</source>
       <comment>2D Mapper create label color dialog title</comment>
       <translation>Vordergrundfarbe</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2346"/>
+      <location filename="../src/T2DMap.cpp" line="2342"/>
       <source>Select image</source>
       <comment>2D Mapper create label file dialog title</comment>
       <translation>Bild auswählen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2353"/>
+      <location filename="../src/T2DMap.cpp" line="2349"/>
       <source>Draw label as background or on top of everything?</source>
       <comment>2D Mapper create label dialog text</comment>
       <translation>Markierung als Hintergrund zeichnen oder alles überlagern?</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2354"/>
+      <location filename="../src/T2DMap.cpp" line="2350"/>
       <source>Background</source>
       <comment>2D Mapper create label dialog button</comment>
       <translation>Hintergrund</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2355"/>
+      <location filename="../src/T2DMap.cpp" line="2351"/>
       <source>Foreground</source>
       <comment>2D Mapper create label dialog button</comment>
       <translation>Vordergrund</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2605"/>
+      <location filename="../src/T2DMap.cpp" line="2601"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
       <translation>Ziehen zum Auswählen mehrerer Räume oder Marken, loslassen zum Beenden...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2709"/>
+      <location filename="../src/T2DMap.cpp" line="2705"/>
       <source>Undo</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
       <translation>Rückgängig machen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2710"/>
+      <location filename="../src/T2DMap.cpp" line="2706"/>
       <source>Undo last point</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
       <translation>Letzten Punkt rückgängig machen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2717"/>
+      <location filename="../src/T2DMap.cpp" line="2713"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)</comment>
       <translation>Eigenschaften</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2719"/>
+      <location filename="../src/T2DMap.cpp" line="2715"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)</comment>
       <translation>eigenschaften...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2720"/>
+      <location filename="../src/T2DMap.cpp" line="2716"/>
       <source>Change the properties of this line</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
       <translation>Ändere die Eigenschaften dieser Linie</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2723"/>
+      <location filename="../src/T2DMap.cpp" line="2719"/>
       <source>Finish</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
       <translation>Fertigstellen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2724"/>
+      <location filename="../src/T2DMap.cpp" line="2720"/>
       <source>Finish drawing this line</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
       <translation>Zeichnen der Linie beenden</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2790"/>
+      <location filename="../src/T2DMap.cpp" line="2786"/>
       <source>Create new map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
       <translation>Neue Karte erstellen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2793"/>
+      <location filename="../src/T2DMap.cpp" line="2789"/>
       <source>Load map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
       <translation>Karte laden</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2807"/>
+      <location filename="../src/T2DMap.cpp" line="2803"/>
       <source>Create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
       <translation>Raum erstellen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2814"/>
+      <location filename="../src/T2DMap.cpp" line="2810"/>
       <source>Move</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Verschieben</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2815"/>
+      <location filename="../src/T2DMap.cpp" line="2811"/>
       <source>Move room</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Raum verschieben</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2890"/>
+      <location filename="../src/T2DMap.cpp" line="2886"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Löschen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2891"/>
+      <location filename="../src/T2DMap.cpp" line="2887"/>
       <source>Delete room</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Raum löschen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2841"/>
+      <location filename="../src/T2DMap.cpp" line="2837"/>
       <source>Color</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Farbe</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2842"/>
+      <location filename="../src/T2DMap.cpp" line="2838"/>
       <source>Change room color</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Ändern der Raumfarbe</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2855"/>
+      <location filename="../src/T2DMap.cpp" line="2851"/>
       <source>Spread</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Ausbreiten</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2856"/>
+      <location filename="../src/T2DMap.cpp" line="2852"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Erhöhe den X-Y Kartenabstand der gewählten Gruppe von Räumen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2862"/>
+      <location filename="../src/T2DMap.cpp" line="2858"/>
       <source>Shrink</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Schrumpfen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2863"/>
+      <location filename="../src/T2DMap.cpp" line="2859"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Verringere den X-Y Kartenabstand der gewählten Gruppe von Räumen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2871"/>
+      <location filename="../src/T2DMap.cpp" line="2867"/>
       <source>Lock</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Sperren</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2872"/>
+      <location filename="../src/T2DMap.cpp" line="2868"/>
       <source>Lock room for speed walks</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Sperre den Raum für Schnellreisen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2876"/>
+      <location filename="../src/T2DMap.cpp" line="2872"/>
       <source>Unlock</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Entsperren</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2877"/>
+      <location filename="../src/T2DMap.cpp" line="2873"/>
       <source>Unlock room for speed walks</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Entsperre den Raum für Schnellreisen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2883"/>
+      <location filename="../src/T2DMap.cpp" line="2879"/>
       <source>Weight</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Gewicht</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2884"/>
+      <location filename="../src/T2DMap.cpp" line="2880"/>
       <source>Set room weight</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Setze Raumgewicht</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2821"/>
+      <location filename="../src/T2DMap.cpp" line="2817"/>
       <source>Exits</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Ausgänge</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2822"/>
+      <location filename="../src/T2DMap.cpp" line="2818"/>
       <source>Set room exits</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Setze Raumausgänge</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2848"/>
+      <location filename="../src/T2DMap.cpp" line="2844"/>
       <source>Symbol</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Symbol</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2849"/>
+      <location filename="../src/T2DMap.cpp" line="2845"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Markiere spezielle Räume mit einem oder mehreren Symbolen oder Buchstaben</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2897"/>
+      <location filename="../src/T2DMap.cpp" line="2893"/>
       <source>Move to</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Verschieben nach</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2898"/>
+      <location filename="../src/T2DMap.cpp" line="2894"/>
       <source>Move selected group to a given position</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Verschiebe die gewählte Gruppe an eine bestimmte Position</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2904"/>
+      <location filename="../src/T2DMap.cpp" line="2900"/>
       <source>Area</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Gebiet</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2905"/>
+      <location filename="../src/T2DMap.cpp" line="2901"/>
       <source>Set room&apos;s area number</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Gebietsnummer des Raumes festlegen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2828"/>
+      <location filename="../src/T2DMap.cpp" line="2824"/>
       <source>Custom exit line</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Benutzerdefinierte Ausgangslinie</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2830"/>
+      <location filename="../src/T2DMap.cpp" line="2826"/>
       <source>Replace an exit line with a custom line</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
       <translation>Ersetze eine Ausgangslinie mit einer benutzerdefinierten Linie</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2834"/>
+      <location filename="../src/T2DMap.cpp" line="2830"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
       <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
       <translation>Benutzerdefinierte Ausgangslinien werden im Rastermodus nicht angezeigt und sind in diesem nicht bearbeitbar</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2910"/>
+      <location filename="../src/T2DMap.cpp" line="2906"/>
       <source>Create Label</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Label erstellen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2911"/>
+      <location filename="../src/T2DMap.cpp" line="2907"/>
       <source>Create labels to show text or images</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
       <translation>Erstelle Marken und Text oder Bilder anzuzeigen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2917"/>
+      <location filename="../src/T2DMap.cpp" line="2913"/>
       <source>Set location</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Standort festlegen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2918"/>
+      <location filename="../src/T2DMap.cpp" line="2914"/>
       <source>Set player current location to here</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
       <translation>Setze die aktuelle Spielerposition hierher</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2927"/>
+      <location filename="../src/T2DMap.cpp" line="2923"/>
       <source>Switch to editing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Bearbeiten starten</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2928"/>
+      <location filename="../src/T2DMap.cpp" line="2924"/>
       <source>Switch to viewing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>Bearbeiten beenden</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2935"/>
+      <location filename="../src/T2DMap.cpp" line="2931"/>
       <source>Move</source>
       <comment>2D Mapper context menu (label) item</comment>
       <translation>Verschieben</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2936"/>
+      <location filename="../src/T2DMap.cpp" line="2932"/>
       <source>Move label</source>
       <comment>2D Mapper context menu item (label) tooltip</comment>
       <translation>Verschiebe Marke</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2938"/>
+      <location filename="../src/T2DMap.cpp" line="2934"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (label) item</comment>
       <translation>Löschen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2939"/>
+      <location filename="../src/T2DMap.cpp" line="2935"/>
       <source>Delete label</source>
       <comment>2D Mapper context menu (label) item tooltip</comment>
       <translation>Lösche Marke</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2953"/>
+      <location filename="../src/T2DMap.cpp" line="2949"/>
       <source>Add point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
       <translation>Punkt hinzufügen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2960"/>
+      <location filename="../src/T2DMap.cpp" line="2956"/>
       <source>Divide segment by adding a new point mid-way along</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state)</comment>
       <translation>Teile das Segment, indem ein neuer Punkt in der Mitte ergänzt wird</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2963"/>
+      <location filename="../src/T2DMap.cpp" line="2959"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, i.e must do the suggested action first)</comment>
       <translation>Wähle zuerst einen Punkt, dann ergänze einen neuen Punkt in der Mitte des Segments zum Raum</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2967"/>
+      <location filename="../src/T2DMap.cpp" line="2963"/>
       <source>Remove point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
       <translation>Punkt entfernen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2974"/>
+      <location filename="../src/T2DMap.cpp" line="2970"/>
       <source>Merge pair of segments by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but will be able to be done again on this item)</comment>
       <translation>Vereinige zwei Segmente, indem dieser Punkt entfernt wird</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2978"/>
+      <location filename="../src/T2DMap.cpp" line="2974"/>
       <source>Remove last segment by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)</comment>
       <translation>Entferne das letzte Segment, indem dieser Punkt entfernt wird</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2983"/>
+      <location filename="../src/T2DMap.cpp" line="2979"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action)</comment>
       <translation>Benutze &quot;Linie löschen&quot;, um das einzige Segment zu entfernen, das an einem bearbeitbaren Punkt endet</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2989"/>
+      <location filename="../src/T2DMap.cpp" line="2985"/>
       <source>Select a point first, then remove it</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)</comment>
       <translation>Wähle zuerst einen Punkt, dann entferne ihn</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2993"/>
+      <location filename="../src/T2DMap.cpp" line="2989"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</comment>
       <translation>Eigenschaften</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="2997"/>
+      <location filename="../src/T2DMap.cpp" line="2993"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</comment>
       <translation>eigenschaften...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3001"/>
+      <location filename="../src/T2DMap.cpp" line="2997"/>
       <source>Delete line</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
       <translation>Linie löschen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3002"/>
+      <location filename="../src/T2DMap.cpp" line="2998"/>
       <source>Delete all of this custom line</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip</comment>
       <translation>Lösche diese benutzerdefinierte Linie ganz</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3513"/>
+      <location filename="../src/T2DMap.cpp" line="3509"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
       <comment>Use linefeeds as necessary to format text into a reasonable rectangle of text, %1 is a room number</comment>
@@ -1094,36 +1094,36 @@ the highlighted room (%1) to:</source>
 den markierten Raum (%1), verschieben nach:</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3537"/>
+      <location filename="../src/T2DMap.cpp" line="3533"/>
       <source>OK</source>
       <comment>dialog (room(s) move) button</comment>
       <translation>OK</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3542"/>
+      <location filename="../src/T2DMap.cpp" line="3538"/>
       <source>Cancel</source>
       <comment>dialog (room(s) move) button</comment>
       <translation>Abbrechen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3736"/>
+      <location filename="../src/T2DMap.cpp" line="3732"/>
       <source>OK</source>
       <comment>dialog (room(s) change color) button</comment>
       <translation>OK</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3741"/>
+      <location filename="../src/T2DMap.cpp" line="3737"/>
       <source>Cancel</source>
       <comment>dialog (room(s) change color) button</comment>
       <translation>Abbrechen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3798"/>
+      <location filename="../src/T2DMap.cpp" line="3794"/>
       <source>Spread out rooms</source>
       <translation>Räume ausbreiten</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3799"/>
+      <location filename="../src/T2DMap.cpp" line="3795"/>
       <source>Increase the spacing of
 the selected rooms,
 centered on the
@@ -1135,12 +1135,12 @@ um den markierten Raum
 herum um ein Faktor von:</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3858"/>
+      <location filename="../src/T2DMap.cpp" line="3854"/>
       <source>Shrink in rooms</source>
       <translation>Räume zusammenziehen</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3859"/>
+      <location filename="../src/T2DMap.cpp" line="3855"/>
       <source>Decrease the spacing of
 the selected rooms,
 centered on the
@@ -1152,14 +1152,14 @@ um den markierten Raum
 herum um einen Faktor von:</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3987"/>
-      <location filename="../src/T2DMap.cpp" line="4001"/>
-      <location filename="../src/T2DMap.cpp" line="4051"/>
+      <location filename="../src/T2DMap.cpp" line="3982"/>
+      <location filename="../src/T2DMap.cpp" line="3996"/>
+      <location filename="../src/T2DMap.cpp" line="4046"/>
       <source>Enter room weight</source>
       <translation>Raumgewicht eingeben</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3988"/>
+      <location filename="../src/T2DMap.cpp" line="3983"/>
       <source>Enter new roomweight
 (= travel time), minimum
 (and default) is 1:</source>
@@ -1169,7 +1169,7 @@ herum um einen Faktor von:</translation>
 mindestens 1 (Standard):</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4002"/>
+      <location filename="../src/T2DMap.cpp" line="3997"/>
       <source>Enter new roomweight
 (= travel time) for all
 selected rooms, minimum
@@ -1185,17 +1185,17 @@ und der einzige bisher
 benutzte Wert ist:</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4040"/>
+      <location filename="../src/T2DMap.cpp" line="4035"/>
       <source>%1 {count:%2, default}</source>
       <translation>%1 {Anzahl:%2, Standard}</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4048"/>
+      <location filename="../src/T2DMap.cpp" line="4043"/>
       <source>1 {count 0, default}</source>
       <translation>1 {Anzahl 0, Standard}</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4052"/>
+      <location filename="../src/T2DMap.cpp" line="4047"/>
       <source>Choose an existing
 roomweight (= travel
 time) from the list
@@ -1214,25 +1214,25 @@ eine neue (positive)
 Ganzzahl eingeben:</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4101"/>
+      <location filename="../src/T2DMap.cpp" line="4096"/>
       <source>Load Mudlet map</source>
       <translation>Mudlet Karte laden</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4103"/>
+      <location filename="../src/T2DMap.cpp" line="4098"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) or the ;;s as they are used programmatically</comment>
       <translation>Mudlet Karte (*.dat);;Xml Kartendaten (*.xml);;Beliebige Datei (*)</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4980"/>
-      <location filename="../src/T2DMap.cpp" line="5014"/>
+      <location filename="../src/T2DMap.cpp" line="4975"/>
+      <location filename="../src/T2DMap.cpp" line="5009"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
       <translation>Links klicken um einen Punkt hinzuzufügen, rechts klicken zum rückgängig machen/ändern/beenden...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="5025"/>
+      <location filename="../src/T2DMap.cpp" line="5020"/>
       <source>Left-click and drag a square for the size and position of your label</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
       <translation>Links klicken und ein Rechteck aufziehen für die Größe und Position der Marke</translation>
@@ -1416,84 +1416,84 @@ Ganzzahl eingeben:</translation>
       <translation>Spielt %1</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="12657"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="12678"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12671"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12692"/>
       <source>ERROR</source>
       <translation>FEHLER</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="12658"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="12669"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12672"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12683"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
       <translation>Objekt</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="12658"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="12669"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12672"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12683"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
       <translation>Funktion</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14154"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14168"/>
       <source>Some functions may not be available.</source>
       <translation>Einige Funktionen sind möglicherweise nicht verfügbar.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13566"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13580"/>
       <source>No error message available from Lua</source>
       <translation>Keine Fehlermeldung von Lua verfügbar</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13568"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13582"/>
       <source>Lua error: %1</source>
       <translation>Lua-Fehler: %1</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13570"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13584"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
       <translation>[FEHLER] - Konnte Lua-Modul %1 nicht finden.%2%3%4</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13584"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13598"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name (may specify which variant) of the module.</comment>
       <translation>[  OK  ]  - Lua-Modul %1 geladen.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14141"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14155"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
       <translation>Wahrscheinlich wird es nicht möglich sein, auf Mudlet Lua-Code zuzugreifen.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14159"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14173"/>
       <source>Database support will not be available.</source>
       <translation>Datenbankunterstützung wird nicht verfügbar sein.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14166"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14180"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
       <translation>utf8.* Lua Funktionen werden nicht verfügbar sein.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14172"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14186"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
       <translation>yajl.* Lua Funktionen werden nicht verfügbar sein.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14357"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14371"/>
       <source>No error message available from Lua.</source>
       <translation>Keine Fehlermeldung von Lua verfügbar.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14359"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14373"/>
       <source>Lua error: %1.</source>
       <translation>Lua-Fehler: %1.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14361"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14375"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
       <translation>[FEHLER] - Code-Formatierer kann nicht geladen werden.
@@ -1501,34 +1501,34 @@ Die Einrückungungsfunktion wird nicht verfügbar sein.
 </translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14438"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14452"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
       <translation>%1 (nicht vorhanden)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14443"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14457"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
       <translation>%1 (ist keine Datei oder ein Symlink auf eine Datei)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14452"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14466"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
       <translation>%1 (ist keine lesbare Datei oder ein Symlink auf eine lesbare Datei)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14470"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14484"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
       <translation>%1 (konnte Datei nicht lesen)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14476"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14490"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
       <translation>[  OK  ]  - Mudlet-Lua-API &amp; Geyser Layoutmanager geladen.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14483"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14497"/>
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
@@ -4684,145 +4684,145 @@ Nutzungen</translation>
   <context>
     <name>directions</name>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14207"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14221"/>
       <source>north</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>norden</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14209"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14223"/>
       <source>n</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>n</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14211"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14225"/>
       <source>east</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>osten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14213"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14227"/>
       <source>e</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>o</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14215"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14229"/>
       <source>south</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>süden</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14217"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14231"/>
       <source>s</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>s</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14219"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14233"/>
       <source>west</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>westen</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14221"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14235"/>
       <source>w</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>w</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14223"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14237"/>
       <source>northeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>nordosten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14225"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14239"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>no</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14227"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14241"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>südosten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14229"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14243"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>so</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14231"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14245"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>südwesten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14233"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14247"/>
       <source>sw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>sw</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14235"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14249"/>
       <source>northwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>nordwesten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14237"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14251"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>nw</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14239"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14253"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>rein</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14241"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14255"/>
       <source>i</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>rein</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14243"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14257"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>raus</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14245"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14259"/>
       <source>o</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>raus</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14247"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14261"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>oben</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14249"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14263"/>
       <source>u</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>ob</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14251"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14265"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>unten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14253"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14267"/>
       <source>d</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>u</translation>
@@ -5482,102 +5482,102 @@ Nutzungen</translation>
   <context>
     <name>dlgIRC</name>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="119"/>
+      <location filename="../src/dlgIRC.cpp" line="123"/>
       <source>%1 closed their client.</source>
       <translation>%1 hat den Client geschlossen.</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="131"/>
+      <location filename="../src/dlgIRC.cpp" line="135"/>
       <source>Mudlet IRC Client - %1 - %2 on %3</source>
       <translation>Mudlet IRC-Client - %1 - %2 auf %3</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="145"/>
+      <location filename="../src/dlgIRC.cpp" line="149"/>
       <source>$ Starting Mudlet IRC Client...</source>
       <translation>$ Starte Mudlet IRC Client...</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="146"/>
+      <location filename="../src/dlgIRC.cpp" line="150"/>
       <source>$ Host: %1:%2</source>
       <translation>$ Server: %1:%2</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="147"/>
+      <location filename="../src/dlgIRC.cpp" line="151"/>
       <source>$ Nick: %1</source>
       <translation>$ Spitzname: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="148"/>
+      <location filename="../src/dlgIRC.cpp" line="152"/>
       <source>$ Auto-Join Channels: %1</source>
       <translation>Automatisch betretene Kanäle: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="149"/>
+      <location filename="../src/dlgIRC.cpp" line="153"/>
       <source>$ This client supports Auto-Completion using the Tab key.</source>
       <translation>$ Dieser Client unterstützt Auto-Vervollständigung per Tab-Taste.</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="150"/>
+      <location filename="../src/dlgIRC.cpp" line="154"/>
       <source>$ Type &lt;b&gt;/help&lt;/b&gt; for commands or &lt;b&gt;/help [command]&lt;/b&gt; for command syntax.</source>
       <translation>$ Tippe &lt;b&gt;/help&lt;/b&gt; für alle Befehle oder &lt;b&gt;/help [Befehl]&lt;/b&gt; für die Syntax eines Befehls.</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="209"/>
+      <location filename="../src/dlgIRC.cpp" line="213"/>
       <source>Restarting IRC Client</source>
       <translation>Starte IRC Client neu</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="382"/>
+      <location filename="../src/dlgIRC.cpp" line="388"/>
       <source>[Error] MSGLIMIT requires &lt;limit&gt; to be a whole number greater than zero!</source>
       <translation>[Error] MSGLIMIT erfordert, dass &lt;limit&gt; eine ganze Zahl und größer als Null ist!</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="412"/>
+      <location filename="../src/dlgIRC.cpp" line="418"/>
       <source>[HELP] Available Commands: %1</source>
       <translation>[HILFE] Verfügbare Befehle: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="414"/>
+      <location filename="../src/dlgIRC.cpp" line="420"/>
       <source>[HELP] Syntax: %1</source>
       <translation>[HILFE] Syntax: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="422"/>
+      <location filename="../src/dlgIRC.cpp" line="428"/>
       <source>! Connected to %1.</source>
       <translation>! Verbunden mit %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="423"/>
+      <location filename="../src/dlgIRC.cpp" line="429"/>
       <source>! Joining %1...</source>
       <translation>! Betrete %1...</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="428"/>
+      <location filename="../src/dlgIRC.cpp" line="434"/>
       <source>! Connecting %1...</source>
       <translation>! Verbinde mit %1...</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="433"/>
+      <location filename="../src/dlgIRC.cpp" line="439"/>
       <source>! Disconnected from %1.</source>
       <translation>! Getrennt von %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="499"/>
+      <location filename="../src/dlgIRC.cpp" line="505"/>
       <source>[ERROR] Syntax: %1</source>
       <translation>[FEHLER] Syntax: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="501"/>
+      <location filename="../src/dlgIRC.cpp" line="507"/>
       <source>[ERROR] Unknown command: %1</source>
       <translation>[FEHLER] Unbekannter Befehl: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="647"/>
+      <location filename="../src/dlgIRC.cpp" line="653"/>
       <source>! The Nickname %1 is reserved. Automatically changing Nickname to: %2</source>
       <translation>! Der Spitzname %1 ist reserviert. Wechsle Spitznamen automatisch zu: %2</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="658"/>
+      <location filename="../src/dlgIRC.cpp" line="664"/>
       <source>Your nick has changed.</source>
       <translation>Dein Spitzname hat sich geändert.</translation>
     </message>
@@ -6021,150 +6021,150 @@ Nutzungen</translation>
       <translation>Alle Kennwörter wurden in den Profilspeicher migriert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="749"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="750"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</source>
       <translation>yyyy-MM-dd#HH-mm-ss (z.B., 1970-01-01#00-00-00%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="751"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="752"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</source>
       <translation>yyyy-MM-ddTHH-mm-ss (z.B., 1970-01-01T00-00-00%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="752"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="753"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)</source>
       <translation>yyyy-MM-dd (Logs eines Tages aneinander hängen, z.B. 1970-01-01%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="755"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="756"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01%1)</source>
       <translation>yyyy-MM (Logs eines Monats aneinander hängen, z.B. 1970-01%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="756"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="757"/>
       <source>Named file (concatenate logs in one file)</source>
       <translation>Benannte Datei (Logs in einer Datei aneinander hängen)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="789"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="790"/>
       <source>Other profiles to Map to:</source>
       <translation>Andere Profile für die Karte:</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="829"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="830"/>
       <source>%1 {Default, recommended}</source>
       <translation>%1 {Standard, empfohlen}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="840"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="841"/>
       <source>%1 {Upgraded, experimental/testing, NOT recommended}</source>
       <translation>%1 {Neuere Version, experimentell/testweise, NICHT empfohlen}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="842"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="843"/>
       <source>%1 {Downgraded, for sharing with older version users, NOT recommended}</source>
       <translation>%1 {Ältere Version, zum Austausch mit anderen Benutzern, NICHT empfohlen}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="851"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="852"/>
       <source>2D Map Room Symbol scaling factor:</source>
       <translation>Skalierungsfaktor des Symbols für Räume der 2D Karte:</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="871"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="872"/>
       <source>Show &quot;%1&quot; in the map area selection</source>
       <translation>Zeige &quot;%1&quot; in der Auswahl der Kartengebiete</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="909"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="910"/>
       <source>%1 (*Error, report to Mudlet Makers*)</source>
       <comment>The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!</comment>
       <translation>%1 (*Fehler, bitte an Mudlet-Entwickler melden*)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1024"/>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3791"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1025"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3799"/>
       <source>Profile preferences - %1</source>
       <translation>Profil-Einstellungen - %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1301"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1302"/>
       <source>Profile preferences</source>
       <translation>Profil-Einstellungen</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2019"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2020"/>
       <source>Load Mudlet map</source>
       <translation>Mudlet Karte laden</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2034"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2035"/>
       <source>Importing map - please wait...</source>
       <translation>Karte wird importiert, bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2038"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2039"/>
       <source>Imported map from %1.</source>
       <translation>Karte importiert von %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2040"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2041"/>
       <source>Could not import map from %1.</source>
       <translation>Karte konnte nicht importiert werden von %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2043"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2044"/>
       <source>Loading map - please wait...</source>
       <translation>Karte wird geladen, bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2048"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2049"/>
       <source>Loaded map from %1.</source>
       <translation>Karte geladen von %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2050"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2051"/>
       <source>Could not load map from %1.</source>
       <translation>Karte konnte nicht geladen werden von %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2067"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2068"/>
       <source>Save Mudlet map</source>
       <translation>Mudlet Karte speichern</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2067"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2068"/>
       <source>Mudlet map (*.dat)</source>
       <comment>Do not change the extension text (in braces) - it is needed programmatically!</comment>
       <translation>Mudlet Karte (*.dat)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2077"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2078"/>
       <source>Saving map - please wait...</source>
       <translation>Karte wird gespeichert, bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2087"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2088"/>
       <source>Saved map to %1.</source>
       <translation>Karte gespeichert nach %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2089"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2090"/>
       <source>Could not save map to %1.</source>
       <translation>Konnte die Karte nicht nach %1 speichern.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2117"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2118"/>
       <source>Migrating passwords to secure storage...</source>
       <translation>Alle Kennwörter werden in den sicheren Speicher migriert...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2124"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2125"/>
       <source>Migrating passwords to profiles...</source>
       <translation>Kennwörter werden in die Profile migriert...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2156"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2157"/>
       <source>[ ERROR ] - Unable to use or create directory to store map for other profile &quot;%1&quot;.
 Please check that you have permissions/access to:
 &quot;%2&quot;
@@ -6176,112 +6176,112 @@ Prüfe bitte, dass du die Berechtigungen und Zugriff hast auf:
 und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2163"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2164"/>
       <source>Creating a destination directory failed...</source>
       <translation>Erstellen eines Ziel-Verzeichnisses ist fehlgeschlagen...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2247"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2248"/>
       <source>Backing up current map - please wait...</source>
       <translation>Sichern der aktuellen Karte - bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2257"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2258"/>
       <source>Could not backup the map - saving it failed.</source>
       <translation>Karte konnte nicht gesichert werden - Speichern schlug fehl.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2282"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2283"/>
       <source>Could not copy the map - failed to work out which map file we just saved the map as!</source>
       <translation>Konnte Karte nicht kopieren - Wusste nicht mehr, als welche Datei die Karte gerade gespeichert wurde.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2294"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2295"/>
       <source>Copying over map to %1 - please wait...</source>
       <translation>Kopiere Karte herüber nach %1 - bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2300"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2301"/>
       <source>Could not copy the map to %1 - unable to copy the new map file over.</source>
       <translation>Konnte Karte nicht kopieren nach %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2304"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2305"/>
       <source>Map copied successfully to other profile %1.</source>
       <translation>Karte erfolgreich in das andere Profil %1 kopiert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2316"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2317"/>
       <source>Map copied, now signalling other profiles to reload it.</source>
       <translation>Karte kopiert. Signalisiere den anderen Profilen, sie neu zu laden.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2352"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2353"/>
       <source>Where should Mudlet save log files?</source>
       <translation>Wo soll Mudlet Protokolldateien speichern?</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2737"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2745"/>
       <source>%1 selected - press to change</source>
       <translation>%1 gewählt - drücken zum ändern</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2740"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2748"/>
       <source>Press to pick destination(s)</source>
       <translation>Drücken, um Ziel(e) zu wählen</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2981"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2989"/>
       <source>Could not update themes: %1</source>
       <translation>Designs konnten nicht aktualisiert werden: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2984"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2992"/>
       <source>Updating themes from colorsublime.github.io...</source>
       <translation>Aktualisiere Designs von colorsublime.github.io...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3101"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3109"/>
       <source>{missing, possibly recently deleted trigger item}</source>
       <translation>(Fehlender Trigger, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3104"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3112"/>
       <source>{missing, possibly recently deleted alias item}</source>
       <translation>(Fehlendes Alias, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3107"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3115"/>
       <source>{missing, possibly recently deleted script item}</source>
       <translation>(Fehlendes Skript, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3110"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3118"/>
       <source>{missing, possibly recently deleted timer item}</source>
       <translation>(Fehlender Timer, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3113"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3121"/>
       <source>{missing, possibly recently deleted key item}</source>
       <translation>(Fehlende Taste, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3116"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3124"/>
       <source>{missing, possibly recently deleted button item}</source>
       <translation>(Fehlender Button, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3241"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3249"/>
       <source>&lt;p&gt;The room symbol will appear like this if only symbols (glyphs) from the specific font are used.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Das Raumsymbol erscheint wie folgt, wenn nur Symbole (Glyphen) aus der spezifischen Schriftart verwendet werden.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3923"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3931"/>
       <source>Set outer color of player room mark.</source>
       <translation>Wähle die äußere Farbe der Markierung des Spielerraums.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3924"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3932"/>
       <source>Set inner color of player room mark.</source>
       <translation>Wähle die innere Farbe der Markierung des Spielerraums.</translation>
     </message>
@@ -6341,167 +6341,167 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="582"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="583"/>
       <source>Mudlet dictionaries:</source>
       <comment>On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones.</comment>
       <translation>Mudlet-Wörterbücher:</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="584"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="585"/>
       <source>System dictionaries:</source>
       <comment>On *nix systems where we find the system ones we use them.</comment>
       <translation>System-Wörterbücher:</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="615"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="616"/>
       <source>&lt;p&gt;From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).&lt;/p&gt;</source>
       <translation>&lt;p&gt;Aus der Wörterbuchdatei &lt;tt&gt;%1.dic&lt;/tt&gt; (und der begleitenden Affix &lt;tt&gt;.aff&lt;/tt&gt; Datei).&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="617"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="618"/>
       <source>%1 - not recognised</source>
       <translation>%1 - nicht erkannt</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="618"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="619"/>
       <source>&lt;p&gt;Mudlet does not recognise the code &quot;%1&quot;, please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!&lt;/p&gt;&lt;p&gt;The file &lt;tt&gt;%2.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file) is still usable.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Mudlet erkennt den Code &quot;%1&quot; nicht. Bitte melde ihn bei den Mudlet-Entwicklern, damit wir ihn in zukünftigen Mudlet-Versionen richtig beschreiben können!&lt;/p&gt;&lt;p&gt;Die Datei &lt;tt&gt;%2.dic&lt;/tt&gt; (und die zugehörige &lt;tt&gt;.aff&lt;/tt&gt; Affix-Datei) ist weiterhin verwendbar.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="643"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="644"/>
       <source>No Hunspell dictionary files found, spell-checking will not be available.</source>
       <translation>Es wurden keine Hunspell-Wörterbuchdateien gefunden. Rechtschreibprüfung ist nicht verfügbar.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2021"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2022"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
       <translation>Mudlet Karte (*.dat);;Xml Kartendaten (*.xml);;Beliebige Datei (*)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3247"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3255"/>
       <source>&lt;p&gt;The room symbol will appear like this if symbols (glyphs) from any font can be used.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Das Raumsymbol erscheint wie folgt, wenn Symbole (Glyphen) aus jeder Schriftart verwendet werdet dürfen.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3276"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3284"/>
       <source>&lt;p&gt;These are the sequence of hexadecimal numbers that are used by the Unicode consortium to identify the graphemes needed to create the symbol.  These numbers can be utilised to determine precisely what is to be drawn even if some fonts have glyphs that are the same for different codepoints or combination of codepoints.&lt;/p&gt;&lt;p&gt;Character entry utilities such as &lt;i&gt;charmap.exe&lt;/i&gt; on &lt;i&gt;Windows&lt;/i&gt; or &lt;i&gt;gucharmap&lt;/i&gt; on many Unix type operating systems will also use these numbers which cover everything from U+0020 {Space} to U+10FFFD the last usable number in the &lt;i&gt;Private Use Plane 16&lt;/i&gt; via most of the written marks that humanity has ever made.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3289"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3297"/>
       <source>&lt;p&gt;How many rooms in the whole map have this symbol.</source>
       <translation>&lt;p&gt;Wie viele Räume in der gesamten Karte haben dieses Symbol.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3301"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3309"/>
       <source>more - not shown...</source>
       <translation>mehr - nicht angezeigt...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3308"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3316"/>
       <source>&lt;p&gt;The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Die Räume mit diesem Symbol, maximal 32. Falls es mehr sind, wird es angezeigt, aber sie werden nicht gelistet.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3317"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3325"/>
       <source>&lt;p&gt;The symbol can be made entirely from glyphs in the specified font.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Das Symbol kann vollständig aus Glypthen der gewählten Schriftart erstellt werden.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3327"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3335"/>
       <source>&lt;p&gt;The symbol cannot be made entirely from glyphs in the specified font, but, using other fonts in the system, it can. Either un-check the &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; option or try and choose another font that does have the needed glyphs.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You need not close this table to try another font, changing it on the main preferences dialogue will update this table after a slight delay.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;Das Symbol kann nicht vollständig aus Glypthen der gewählten Schriftart erstellt werden, aber mit anderen Schriftarten geht es. Bitte deaktiviere entweder die Einstellung &lt;i&gt;Das Symbol kann vollständig aus Glypthen der gewählten Schriftart erstellt werden.&lt;/i&gt; oder versuche eine andere Schriftart mit den benötigten Glyphen.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Du brauchst diese Tabelle nicht zu schließen, um eine andere Schriftart auszuprobieren. Wenn du sie in den Einstellungen änderst, wird sich diese Tabelle kurz darauf aktualisieren.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3337"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3345"/>
       <source>&lt;p&gt;The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different systems with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3426"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3434"/>
       <source>Large icon</source>
       <comment>Discord Rich Presence large icon</comment>
       <translation>Großes Symbol</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3427"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3435"/>
       <source>Detail</source>
       <comment>Discord Rich Presence detail</comment>
       <translation>Detail</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3429"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3437"/>
       <source>Small icon</source>
       <comment>Discord Rich Presence small icon</comment>
       <translation>Kleines Symbol</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3430"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3438"/>
       <source>State</source>
       <comment>Discord Rich Presence state</comment>
       <translation>Zustand</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3432"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3440"/>
       <source>Party size</source>
       <comment>Discord Rich Presence party size</comment>
       <translation>Gruppengröße</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3433"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3441"/>
       <source>Party max</source>
       <comment>Discord Rich Presence maximum party size</comment>
       <translation>Maximale Gruppengröße</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3434"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3442"/>
       <source>Time</source>
       <comment>Discord Rich Presence time until or time elapsed</comment>
       <translation>Zeit</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3469"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3477"/>
       <source>Map symbol usage - %1</source>
       <translation>Benutzung des Kartensymbols - %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3546"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3554"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)</source>
       <translation>yyyy-MM-dd#HH-mm-ss (z.B., 1970-01-01#00-00-00.html)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3547"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3555"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)</source>
       <translation>yyyy-MM-ddTHH-mm-ss (z.B., 1970-01-01T00-00-00.html)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3548"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3556"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)</source>
       <translation>yyyy-MM-dd (Logs eines Tages aneinander hängen, z.B. 1970-01-01.html)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3549"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3557"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.html)</source>
       <translation>yyyy-MM (Logs eines Monats aneinander hängen, z.B. 1970-01.html)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3552"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3560"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)</source>
       <translation>yyyy-MM-dd#HH-mm-ss (z.B., 1970-01-01#00-00-00.txt)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3553"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3561"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)</source>
       <translation>yyyy-MM-ddTHH-mm-ss (z.B., 1970-01-01T00-00-00.txt)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3554"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3562"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)</source>
       <translation>yyyy-MM-dd (Logs eines Tages aneinander hängen, z.B. 1970-01-01.txt)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3555"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3563"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)</source>
       <translation>yyyy-MM (Logs eines Monats aneinander hängen, z.B. 1970-01.txt)</translation>
     </message>
@@ -6509,367 +6509,367 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
   <context>
     <name>dlgRoomExits</name>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="145"/>
-      <location filename="../src/dlgRoomExits.cpp" line="150"/>
-      <location filename="../src/dlgRoomExits.cpp" line="736"/>
-      <location filename="../src/dlgRoomExits.cpp" line="741"/>
-      <location filename="../src/dlgRoomExits.cpp" line="789"/>
-      <location filename="../src/dlgRoomExits.cpp" line="794"/>
-      <location filename="../src/dlgRoomExits.cpp" line="838"/>
-      <location filename="../src/dlgRoomExits.cpp" line="843"/>
-      <location filename="../src/dlgRoomExits.cpp" line="887"/>
-      <location filename="../src/dlgRoomExits.cpp" line="892"/>
-      <location filename="../src/dlgRoomExits.cpp" line="936"/>
-      <location filename="../src/dlgRoomExits.cpp" line="941"/>
-      <location filename="../src/dlgRoomExits.cpp" line="985"/>
-      <location filename="../src/dlgRoomExits.cpp" line="990"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1034"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1039"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1083"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1088"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1132"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1137"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1181"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1186"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1230"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1235"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1279"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1284"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1753"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1758"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1863"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1868"/>
+      <location filename="../src/dlgRoomExits.cpp" line="152"/>
+      <location filename="../src/dlgRoomExits.cpp" line="157"/>
+      <location filename="../src/dlgRoomExits.cpp" line="743"/>
+      <location filename="../src/dlgRoomExits.cpp" line="748"/>
+      <location filename="../src/dlgRoomExits.cpp" line="796"/>
+      <location filename="../src/dlgRoomExits.cpp" line="801"/>
+      <location filename="../src/dlgRoomExits.cpp" line="845"/>
+      <location filename="../src/dlgRoomExits.cpp" line="850"/>
+      <location filename="../src/dlgRoomExits.cpp" line="894"/>
+      <location filename="../src/dlgRoomExits.cpp" line="899"/>
+      <location filename="../src/dlgRoomExits.cpp" line="943"/>
+      <location filename="../src/dlgRoomExits.cpp" line="948"/>
+      <location filename="../src/dlgRoomExits.cpp" line="992"/>
+      <location filename="../src/dlgRoomExits.cpp" line="997"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1041"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1046"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1090"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1095"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1139"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1144"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1188"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1193"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1237"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1242"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1286"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1291"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1759"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1764"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1869"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1874"/>
       <source>&lt;b&gt;Room&lt;/b&gt; Weight of destination: %1.</source>
       <comment>Bold HTML tags are used to emphasis that the value is destination room&apos;s weight whether overridden by a non-zero exit weight here or not.</comment>
       <translation>&lt;b&gt;Raum&lt;/b&gt; Gewicht des Ziels: %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="149"/>
-      <location filename="../src/dlgRoomExits.cpp" line="740"/>
-      <location filename="../src/dlgRoomExits.cpp" line="793"/>
-      <location filename="../src/dlgRoomExits.cpp" line="842"/>
-      <location filename="../src/dlgRoomExits.cpp" line="891"/>
-      <location filename="../src/dlgRoomExits.cpp" line="940"/>
-      <location filename="../src/dlgRoomExits.cpp" line="989"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1038"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1087"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1136"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1185"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1234"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1283"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1757"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1867"/>
+      <location filename="../src/dlgRoomExits.cpp" line="156"/>
+      <location filename="../src/dlgRoomExits.cpp" line="747"/>
+      <location filename="../src/dlgRoomExits.cpp" line="800"/>
+      <location filename="../src/dlgRoomExits.cpp" line="849"/>
+      <location filename="../src/dlgRoomExits.cpp" line="898"/>
+      <location filename="../src/dlgRoomExits.cpp" line="947"/>
+      <location filename="../src/dlgRoomExits.cpp" line="996"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1045"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1094"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1143"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1192"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1241"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1290"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1763"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1873"/>
       <source>Exit to unnamed room is valid</source>
       <translation>Ausgang zu unbenanntem Raum ist gültig</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="156"/>
+      <location filename="../src/dlgRoomExits.cpp" line="163"/>
       <source>Entered number is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &amp;lt;i&amp;gt;save&amp;lt;/i&amp;gt; is clicked.</source>
       <translation>Die eingegebene Nummer ist ungültig. Wähle die ID des Raums, zu dem dieser besondere Ausgang hinführt. Gültige Zahlen werden blau. Falls sie bleibt wie jetzt, wird dieser Ausgang gelöscht, sobald &apos;Speichern&apos; angeklickt wird.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="218"/>
+      <location filename="../src/dlgRoomExits.cpp" line="225"/>
       <source>Set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &amp;lt;i&amp;gt;save&amp;lt;/i&amp;gt; is clicked.</source>
       <translation>Wähle die ID des Raums, zu dem dieser besondere Ausgang hinführt. Gültige Zahlen werden blau. Falls sie bleibt wie jetzt, wird dieser Ausgang gelöscht, sobald &apos;Speichern&apos; angeklickt wird.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="221"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1886"/>
+      <location filename="../src/dlgRoomExits.cpp" line="228"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1892"/>
       <source>Prevent a route being created via this exit, equivalent to an infinite exit weight.</source>
       <translation>Verhindere die Erstellung von Routen durch diesen Ausgang. Das entspricht einem unendlichen Gewicht des Ausgangs.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="225"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1895"/>
+      <location filename="../src/dlgRoomExits.cpp" line="232"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1901"/>
       <source>Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.</source>
       <translation>Wähle einen positiven Wert, um die normale Gewichtung des Raums für diese Ausgangsrichtung zu setzen. Null setzt wieder den Standard.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="227"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1902"/>
+      <location filename="../src/dlgRoomExits.cpp" line="234"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1908"/>
       <source>No door symbol is drawn on 2D Map for this exit (only functional choice currently).</source>
       <translation>Für diesen Ausgang wird kein Symbol für die Tür auf der 2D Karte gezeichnet (derzeit einzige funktionale Auswahl).</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="229"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1906"/>
+      <location filename="../src/dlgRoomExits.cpp" line="236"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1912"/>
       <source>Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
       <translation>Ein grünes Symbol für die (offene) Tür würde auf der benutzerdefinierten Linie für diesen Ausgang auf der 2D Karte gezeichnet (derzeit aber nicht).</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="231"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1911"/>
+      <location filename="../src/dlgRoomExits.cpp" line="238"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1917"/>
       <source>Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
       <translation>Ein oranges Symbol für die (geschlossene) Tür würde auf der benutzerdefinierten Linie für diesen Ausgang auf der 2D Karte gezeichnet (derzeit aber nicht).</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="233"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1914"/>
+      <location filename="../src/dlgRoomExits.cpp" line="240"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1920"/>
       <source>Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
       <translation>Ein rotes Symbol für die (versperrte) Tür würde auf der benutzerdefinierten Linie für diesen Ausgang auf der 2D Karte gezeichnet (derzeit aber nicht).</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="93"/>
-      <location filename="../src/dlgRoomExits.cpp" line="216"/>
+      <location filename="../src/dlgRoomExits.cpp" line="99"/>
+      <location filename="../src/dlgRoomExits.cpp" line="223"/>
       <source>(room ID)</source>
       <comment>Placeholder, if no room ID is set for an exit, yet. This string is used in 2 places, ensure they match!</comment>
       <translation>(Raum-ID)</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="133"/>
-      <location filename="../src/dlgRoomExits.cpp" line="234"/>
-      <location filename="../src/dlgRoomExits.cpp" line="269"/>
-      <location filename="../src/dlgRoomExits.cpp" line="2269"/>
-      <location filename="../src/dlgRoomExits.cpp" line="2291"/>
+      <location filename="../src/dlgRoomExits.cpp" line="139"/>
+      <location filename="../src/dlgRoomExits.cpp" line="241"/>
+      <location filename="../src/dlgRoomExits.cpp" line="276"/>
+      <location filename="../src/dlgRoomExits.cpp" line="2273"/>
+      <location filename="../src/dlgRoomExits.cpp" line="2295"/>
       <source>(command or Lua script)</source>
       <comment>Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same</comment>
       <translation>(Befehl oder Lua-Skript)</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="144"/>
-      <location filename="../src/dlgRoomExits.cpp" line="735"/>
-      <location filename="../src/dlgRoomExits.cpp" line="788"/>
-      <location filename="../src/dlgRoomExits.cpp" line="837"/>
-      <location filename="../src/dlgRoomExits.cpp" line="886"/>
-      <location filename="../src/dlgRoomExits.cpp" line="935"/>
-      <location filename="../src/dlgRoomExits.cpp" line="984"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1033"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1082"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1131"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1180"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1229"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1278"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1752"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1862"/>
+      <location filename="../src/dlgRoomExits.cpp" line="151"/>
+      <location filename="../src/dlgRoomExits.cpp" line="742"/>
+      <location filename="../src/dlgRoomExits.cpp" line="795"/>
+      <location filename="../src/dlgRoomExits.cpp" line="844"/>
+      <location filename="../src/dlgRoomExits.cpp" line="893"/>
+      <location filename="../src/dlgRoomExits.cpp" line="942"/>
+      <location filename="../src/dlgRoomExits.cpp" line="991"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1040"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1089"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1138"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1187"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1236"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1285"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1758"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1868"/>
       <source>Exit to &quot;%1&quot;.</source>
       <translation>Ausgang nach &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="749"/>
+      <location filename="../src/dlgRoomExits.cpp" line="756"/>
       <source>Entered number is invalid, set the number of the room northwest of this one, will turn blue for a valid number.</source>
       <translation>Die eingegebene Nummer ist ungültig. Wähle die ID des Raums in Richtung Nordwesten von hier aus. Gültige Zahlen werden blau.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="760"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1332"/>
+      <location filename="../src/dlgRoomExits.cpp" line="767"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1339"/>
       <source>Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.</source>
       <translation>Wähle die ID des Raums in Richtung Nordwesten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="800"/>
+      <location filename="../src/dlgRoomExits.cpp" line="807"/>
       <source>Entered number is invalid, set the number of the room north of this one, will turn blue for a valid number.</source>
       <translation>Die eingegebene Nummer ist ungültig. Wähle die ID des Raums in Richtung Norden von hier aus. Gültige Zahlen werden blau.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="810"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1366"/>
+      <location filename="../src/dlgRoomExits.cpp" line="817"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1373"/>
       <source>Set the number of the room north of this one, will be blue for a valid number or red for invalid.</source>
       <translation>Wähle die ID des Raums in Richtung Norden von hier aus. Gültige Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="849"/>
+      <location filename="../src/dlgRoomExits.cpp" line="856"/>
       <source>Entered number is invalid, set the number of the room northeast of this one, will turn blue for a valid number.</source>
       <translation>Die eingegebene Nummer ist ungültig. Wähle die ID des Raums in Richtung Nordosten von hier aus. Gültige Zahlen werden blau.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="859"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1397"/>
+      <location filename="../src/dlgRoomExits.cpp" line="866"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1404"/>
       <source>Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.</source>
       <translation>Wähle die ID des Raums in Richtung Nordosten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="898"/>
+      <location filename="../src/dlgRoomExits.cpp" line="905"/>
       <source>Entered number is invalid, set the number of the room up from this one, will turn blue for a valid number.</source>
       <translation>Die eingegebene Nummer ist ungültig. Wähle die ID des Raums in Richtung Oben von hier aus. Gültige Zahlen werden blau.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="908"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1428"/>
+      <location filename="../src/dlgRoomExits.cpp" line="915"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1435"/>
       <source>Set the number of the room up from this one, will be blue for a valid number or red for invalid.</source>
       <translation>Wähle die ID des Raums in Richtung Oben von hier aus. Gültige Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="947"/>
+      <location filename="../src/dlgRoomExits.cpp" line="954"/>
       <source>Entered number is invalid, set the number of the room west of this one, will turn blue for a valid number.</source>
       <translation>Die eingegebene Nummer ist ungültig. Wähle die ID des Raums in Richtung Westen von hier aus. Gültige Zahlen werden blau.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="957"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1459"/>
+      <location filename="../src/dlgRoomExits.cpp" line="964"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1466"/>
       <source>Set the number of the room west of this one, will be blue for a valid number or red for invalid.</source>
       <translation>Wähle die ID des Raums in Richtung Westen von hier aus. Gültige Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="996"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1003"/>
       <source>Entered number is invalid, set the number of the room east of this one, will turn blue for a valid number.</source>
       <translation>Die eingegebene Nummer ist ungültig. Wähle die ID des Raums in Richtung Osten von hier aus. Gültige Zahlen werden blau.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1006"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1490"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1013"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1497"/>
       <source>Set the number of the room east of this one, will be blue for a valid number or red for invalid.</source>
       <translation>Wähle die ID des Raums in Richtung Osten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1045"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1052"/>
       <source>Entered number is invalid, set the number of the room down from this one, will turn blue for a valid number.</source>
       <translation>Die eingegebene Nummer ist ungültig. Wähle die ID des Raums in Richtung Unten von hier aus. Gültige Zahlen werden blau.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1055"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1521"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1062"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1528"/>
       <source>Set the number of the room down from this one, will be blue for a valid number or red for invalid.</source>
       <translation>Wähle die ID des Raums in Richtung Unten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1094"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1101"/>
       <source>Entered number is invalid, set the number of the room southwest of this one, will turn blue for a valid number.</source>
       <translation>Die eingegebene Nummer ist ungültig. Wähle die ID des Raums in Richtung Südwesten von hier aus. Gültige Zahlen werden blau.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1104"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1552"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1111"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1559"/>
       <source>Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.</source>
       <translation>Wähle die ID des Raums in Richtung Südwesten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1143"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1150"/>
       <source>Entered number is invalid, set the number of the room south of this one, will turn blue for a valid number.</source>
       <translation>Die eingegebene Nummer ist ungültig. Wähle die ID des Raums in Richtung Süden von hier aus. Gültige Zahlen werden blau.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1153"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1583"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1160"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1590"/>
       <source>Set the number of the room south of this one, will be blue for a valid number or red for invalid.</source>
       <translation>Wähle die ID des Raums in Richtung Süden von hier aus. Gültige Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1192"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1199"/>
       <source>Entered number is invalid, set the number of the room southeast of this one, will turn blue for a valid number.</source>
       <translation>Die eingegebene Nummer ist ungültig. Wähle die ID des Raums in Richtung Südosten von hier aus. Gültige Zahlen werden blau.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1202"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1614"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1209"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1621"/>
       <source>Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.</source>
       <translation>Wähle die ID des Raums in Richtung Südosten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1241"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1248"/>
       <source>Entered number is invalid, set the number of the room in from this one, will turn blue for a valid number.</source>
       <translation>Die eingegebene Nummer ist ungültig. Wähle die ID des Raums in Richtung Innen von hier aus. Gültige Zahlen werden blau.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1251"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1645"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1258"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1652"/>
       <source>Set the number of the room in from this one, will be blue for a valid number or red for invalid.</source>
       <translation>Wähle die ID des Raums in Richtung Innen von hier aus. Gültige Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1290"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1297"/>
       <source>Entered number is invalid, set the number of the room out from this one, will turn blue for a valid number.</source>
       <translation>Die eingegebene Nummer ist ungültig. Wähle die ID des Raums in Richtung Außen von hier aus. Gültige Zahlen werden blau.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1300"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1676"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1307"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1683"/>
       <source>Set the number of the room out from this one, will be blue for a valid number or red for invalid.</source>
       <translation>Wähle die ID des Raums in Richtung Außen von hier aus. Gültige Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1324"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1358"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1389"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1420"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1451"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1482"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1513"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1544"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1575"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1606"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1637"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1668"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1781"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1331"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1365"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1396"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1427"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1458"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1489"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1520"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1551"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1582"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1613"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1644"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1675"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1787"/>
       <source>Clear the stub exit for this exit to enter an exit roomID.</source>
       <translation>Deaktiviere die Abzweigung, um einen Ausgang per ID einzugeben.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1703"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1709"/>
       <source>northwest</source>
       <translation>nordwesten</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1704"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1710"/>
       <source>north</source>
       <translation>norden</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1705"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1711"/>
       <source>northeast</source>
       <translation>nordosten</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1706"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1712"/>
       <source>up</source>
       <translation>oben</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1707"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1713"/>
       <source>west</source>
       <translation>westen</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1708"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1714"/>
       <source>east</source>
       <translation>osten</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1709"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1715"/>
       <source>down</source>
       <translation>unten</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1710"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1716"/>
       <source>southwest</source>
       <translation>südwesten</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1711"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1717"/>
       <source>south</source>
       <translation>süden</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1712"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1718"/>
       <source>southeast</source>
       <translation>südosten</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1713"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1719"/>
       <source>in</source>
       <translation>rein</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1714"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1720"/>
       <source>out</source>
       <translation>raus</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1789"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1795"/>
       <source>Set the number of the room %1 of this one, will be blue for a valid number or red for invalid.</source>
       <translation>Wähle die ID des Raums in Richtung %1 von hier aus. Gültige Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1812"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1818"/>
       <source>Exits for room: &quot;%1&quot; [*]</source>
       <translation>Ausgänge aus Raum: &quot;%1&quot; [*]</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1814"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1820"/>
       <source>Exits for room Id: %1 [*]</source>
       <translation>Ausgänge für Raum ID: %1 [*]</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1874"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1880"/>
       <source>Room Id is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number.</source>
       <translation>Raum ID ist ungültig. Wähle die ID des Raums, zu dem dieser besondere Ausgang führt. Gültige Zahlen werden blau, ungültige werden rot.</translation>
     </message>
@@ -8311,37 +8311,37 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
   <context>
     <name>main</name>
     <message>
-      <location filename="../src/main.cpp" line="169"/>
+      <location filename="../src/main.cpp" line="196"/>
       <source>Profile to open automatically</source>
       <translation>Profil, das automatisch geöffnet werden soll</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="169"/>
+      <location filename="../src/main.cpp" line="196"/>
       <source>profile</source>
       <translation>Profil</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="172"/>
+      <location filename="../src/main.cpp" line="199"/>
       <source>Display help and exit</source>
       <translation>Hilfe anzeigen und beenden</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="175"/>
+      <location filename="../src/main.cpp" line="202"/>
       <source>Display version and exit</source>
       <translation>Version anzeigen und beenden</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="178"/>
+      <location filename="../src/main.cpp" line="205"/>
       <source>Don&apos;t show the splash screen when starting</source>
       <translation>Zeige keinen Splash-Screen beim Starten an</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="181"/>
+      <location filename="../src/main.cpp" line="208"/>
       <source>Mirror output of all consoles to STDOUT</source>
       <translation>Ausgabe aller Konsolen auf STDOUT spiegeln</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="191"/>
+      <location filename="../src/main.cpp" line="218"/>
       <source>Usage: %1 [OPTION...]
        -h, --help           displays this message.
        -v, --version        displays version information.
@@ -8362,7 +8362,7 @@ wahrscheinlich weniger nützlich für die normale Verwendung dieser Anwendung si
 </translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="248"/>
+      <location filename="../src/main.cpp" line="275"/>
       <source>%1 %2%3 (with debug symbols, without optimisations)
 </source>
       <comment>%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev</comment>
@@ -8370,7 +8370,7 @@ wahrscheinlich weniger nützlich für die normale Verwendung dieser Anwendung si
 </translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="254"/>
+      <location filename="../src/main.cpp" line="281"/>
       <source>Qt libraries %1 (compilation) %2 (runtime)
 </source>
       <comment>%1 and %2 are version numbers</comment>
@@ -8378,14 +8378,14 @@ wahrscheinlich weniger nützlich für die normale Verwendung dieser Anwendung si
 </translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="258"/>
+      <location filename="../src/main.cpp" line="285"/>
       <source>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html
 </source>
       <translation>Lizenz GPLv2+: GNU GPL Version 2 oder höher - http://gnu.org/licenses/gpl.html
 </translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="259"/>
+      <location filename="../src/main.cpp" line="286"/>
       <source>This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
 </source>
@@ -8394,28 +8394,28 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
 </translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="239"/>
+      <location filename="../src/main.cpp" line="266"/>
       <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues
 </source>
       <translation>Berichte Fehler an: https://github.com/Mudlet/Mudlet/issues
 </translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="240"/>
+      <location filename="../src/main.cpp" line="267"/>
       <source>Project home page: http://www.mudlet.org/
 </source>
       <translation>Webseite des Projekts: http://www.mudlet.org/
 </translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="257"/>
+      <location filename="../src/main.cpp" line="284"/>
       <source>Copyright © 2008-2021  Mudlet developers
 </source>
       <translation>Copyright © 2008-2021 Mudlet-Entwickler
 </translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="283"/>
+      <location filename="../src/main.cpp" line="310"/>
       <source>Version: %1</source>
       <translation>Version: %1</translation>
     </message>
@@ -10747,7 +10747,7 @@ try again when it has finished.</source>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="333"/>
-      <location filename="../src/ui/profile_preferences.ui" line="3316"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3326"/>
       <source>Please reconnect to your game for the change to take effect</source>
       <translation>Bitte neu mit dem Spiel verbinden, damit die Änderungen aktiv werden.</translation>
     </message>
@@ -11217,7 +11217,17 @@ try again when it has finished.</source>
       <translation>Textanalyse aktivieren</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3486"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2642"/>
+      <source>&lt;p&gt;TLS/SSL is usually on port 6697. IRC networks often use a &lt;b&gt;+&lt;/b&gt; when listing secure ports offered.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="2645"/>
+      <source>Use a secure connection</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="3496"/>
       <source>h:mm:ss.zzz</source>
       <comment>Used to set a time interval only</comment>
       <translation>h:mm:ss.zzz</translation>
@@ -11659,97 +11669,97 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <translation>Chat</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3205"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3215"/>
       <source>Username for logging into the proxy if required</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3221"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3231"/>
       <source>Password for logging into the proxy if required</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3260"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3270"/>
       <source>Special options needed for some older game drivers (needs client restart to take effect)</source>
       <translation>Spezielle Optionen für einige ältere Spiel-Treiber (Aktivierung benötigt Neustart des Client)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3298"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3308"/>
       <source>Force CHARSET negotiation off</source>
       <translation>CHARSET Verhandlungen ausschalten</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3403"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3413"/>
       <source>the computer&apos;s password manager (secure)</source>
       <translation>im Kennwort-Manager des Computers (sicher)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3408"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3418"/>
       <source>plaintext with the profile (portable)</source>
       <translation>als Klartext mit dem Profil (protabel)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3496"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3506"/>
       <source>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summarized in as a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3382"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3392"/>
       <source>&lt;p&gt;Some MUDs use a flawed interpretation of the ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) code sequences for 16M color mode which only uses semi-colons and not colons to separate parameter elements i.e. instead of using a code in the form: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;where the &lt;i&gt;Color Space Id&lt;/i&gt; is expected to be an empty string to specify the usual (default) case and all of the &lt;i&gt;Parameter Elements&lt;/i&gt; (the &quot;2&quot; and the values in the &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) may, technically, be omitted; they use: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;or: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;/p&gt;&lt;p&gt;It is not possible to reliably detect the difference between these two so checking this option causes Mudlet to expect the last one with the additional (but empty!) parameter.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3385"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3395"/>
       <source>Expect Color Space Id in SGR...(3|4)8;2;...m codes</source>
       <translation>Erwarte Farbraum-ID in SGR... (3|4)8;2;... m-Codes</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3392"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3402"/>
       <source>Store character login passwords in:</source>
       <translation>Kennwörter für Charakteranmeldung speichern in:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2826"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2836"/>
       <source>TLS/SSL secure connection</source>
       <translation>Sichere TLS/SSL-Verbindung</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2927"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2937"/>
       <source>Accept self-signed certificates</source>
       <translation>Akzeptiere selbstsignierte Zertifikate</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2937"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2947"/>
       <source>Accept expired certificates</source>
       <translation>Akzeptiere abgelaufene Zertifikate</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2844"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2854"/>
       <source>Certificate</source>
       <translation>Zertifikat</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2904"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2914"/>
       <source>Serial:</source>
       <translation>Seriennummer:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2853"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2863"/>
       <source>Issuer:</source>
       <translation>Aussteller:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2870"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2880"/>
       <source>Issued to:</source>
       <translation>Ausgestellt für:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2887"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2897"/>
       <source>Expires:</source>
       <translation>Läuft ab:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2947"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2957"/>
       <source>Accept all certificate errors       (unsecure)</source>
       <translation>Akzeptiere alle Zertifikatsfehler (unsicher)</translation>
     </message>
@@ -11871,117 +11881,117 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <translation>Hintergrundfarbe:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3254"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3264"/>
       <source>Special Options</source>
       <translation>Spezielle Optionen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3266"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3276"/>
       <source>Force compression off</source>
       <translation>Komprimierung zwingend abschalten</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3284"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3294"/>
       <source>Force telnet GA signal interpretation off</source>
       <translation>Telnet GA Signalinterpretation zwingend abschalten</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3273"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3283"/>
       <source>This option adds a line line break &lt;LF&gt; or &quot;
 &quot; to your command input on empty commands. This option will rarely be necessary.</source>
       <translation>Diese Option ergänzt einen Zeilenumbruch &lt;LF&gt; oder &quot;
 &quot; zu deiner Befehlszeile bei leeren Befehlen. Diese Option wird nur selten notwendig sein.</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3277"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3287"/>
       <source>Force new line on empty commands</source>
       <translation>Neue Zeile bei leeren Befehlen ergänzen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3291"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3301"/>
       <source>Force MXP negotiation off</source>
       <translation>MXP Verhandlungen ausschalten</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2645"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2655"/>
       <source>Discord privacy</source>
       <translation>Discord Privatsphäre</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2678"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2688"/>
       <source>Don&apos;t hide small icon or tooltip</source>
       <translation>Tooltipp und kleines Symbol einblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2683"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2693"/>
       <source>Hide small icon tooltip</source>
       <translation>Tooltip am kleinen Symbol ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2688"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2698"/>
       <source>Hide small icon and tooltip</source>
       <translation>Tooltipp und kleines Symbol ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2710"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2720"/>
       <source>Hide timer</source>
       <translation>Timer ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2733"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2746"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2762"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2778"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2743"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2756"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2772"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2788"/>
       <source>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Mudlet wird Informationen zur Rich Presence nur zeigen, während du diesen Discord Benutzernamen benutzt (hilfreich, falls du mehrere Discord Konten hast). Leer lassen, um sie für jedes eingeloggtes Discord Konto anzuzeigen.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2739"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2749"/>
       <source>Restrict to:</source>
       <translation>Beschränken auf:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2652"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2662"/>
       <source>Don&apos;t hide large icon or tooltip</source>
       <translation>Tooltipp und großes Symbol einblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2657"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2667"/>
       <source>Hide large icon tooltip</source>
       <translation>Tooltip am großen Symbol ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2662"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2672"/>
       <source>Hide large icon and tooltip</source>
       <translation>Tooltipp und großes Symbol ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2717"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2727"/>
       <source>&lt;p&gt;Allow Lua to set Discord status&lt;/p&gt;</source>
       <translation>&lt;p&gt;Erlaube Lua, den Status des Discord zu setzen&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2720"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2730"/>
       <source>Enable Lua API</source>
       <translation>Lua API aktivieren</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2752"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2762"/>
       <source>specific Discord username</source>
       <translation>bestimmter Discord-Benutzername</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2696"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2706"/>
       <source>Hide state</source>
       <translation>Zustand ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2703"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2713"/>
       <source>Hide party details</source>
       <translation>Gruppendetails ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2670"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2680"/>
       <source>Hide detail</source>
       <translation>Detail ausblenden</translation>
     </message>
@@ -12031,94 +12041,94 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <translation>6667</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3348"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3358"/>
       <source>Search Engine</source>
       <translation>Suchmaschine</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3332"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3342"/>
       <source>Mudlet updates</source>
       <translation>Mudlet Aktualisierungen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3338"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3348"/>
       <source>Disable automatic updates</source>
       <translation>Deaktiviere automatische Aktualisierungen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3360"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3370"/>
       <source>Other Special options</source>
       <translation>Andere spezielle Optionen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3366"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3376"/>
       <source>Show icons on menus</source>
       <translation>Symbole in Menüs anzeigen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2820"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2830"/>
       <source>Connection</source>
       <translation>Verbindung</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3160"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3170"/>
       <source>Connect to the game via proxy</source>
       <translation>Mit dem Spiel über Proxy verbinden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3175"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3185"/>
       <source>Address</source>
       <translation>Adresse</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3195"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3205"/>
       <source>port</source>
       <translation>port</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3211"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3221"/>
       <source>username (optional)</source>
       <translation>Benutzername (optional)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3227"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3237"/>
       <source>password (optional)</source>
       <translation>Passwort (optional)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3449"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3459"/>
       <source>Show debug messages for timers not smaller than:</source>
       <translation>Debug-Meldungen für Timer anzeigen, die nicht kleiner sind als:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3455"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3465"/>
       <source>&lt;p&gt;Show &apos;LUA OK&apos; messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</source>
       <comment>The term in &apos;...&apos; refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.</comment>
       <translation>&lt;p&gt;Zeige &apos;LUA OK&apos;-Meldungen für Timer mit dem angegebenen Mindestintervall (h:mm:ss.zzz). Der Minimalwert (die Voreinstellung) zeigt alle derartigen Meldungen an, kann aber die &lt;i&gt;Zentrale Debug-Konsole&lt;/i&gt; nutzlos machen, wenn ein Timer mit sehr kleinem Intervall läuft.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3499"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3509"/>
       <source>Report all Codepoint problems immediately</source>
       <translation>Alle Codepoint-Probleme sofort melden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3506"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3516"/>
       <source>Additional text wait time:</source>
       <translation>Zusätzliche Wartezeit auf den Text:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3516"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3526"/>
       <source>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) and &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) signalling tells Mudlet when the game server is done sending text. On games that do not provide &lt;tt&gt;GA&lt;/tt&gt; or &lt;tt&gt;EOR&lt;/tt&gt;, this option controls how long Mudlet will wait for more text to arrive. Greater values will help reduce the risk that Mudlet will split a large piece of text (with unintended line-breaks in the middle) which can stop some triggers from working. Lesser values increases the risk of text getting broken up, but may make the game feel more responsive.&lt;/p&gt;&lt;p&gt;&lt;i&gt;The default value, which was what Mudlet used before this control was added, is 0.300 Seconds.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) und &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) signalisieren Mudlet, wann der Spielserver mit dem Senden von Text fertig ist. Bei Spielen, die weder &lt;tt&gt;GA&lt;/tt&gt; noch &lt;tt&gt;EOR&lt;/tt&gt;anbieten, steuert diese Option, wie lange Mudlet auf weiteren Text warten soll. Größere Werte verringern das Risiko, dass Mudlet einen großen Textabschnitt aufteilt (mit unbeabsichtigten Zeilenumbrüchen in der Mitte), was dazu führen kann, dass einige Trigger nicht funktionieren. Kleinere Werte erhöhen das Risiko, dass der Text unterbrochen wird, können aber dazu führen, dass das Spiel gefühlt schneller reagiert.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Der Standardwert, den Mudlet verwendet hat, bevor dieses Steuerelement hinzugefügt wurde, ist 0,3 Sekunden.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3519"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3529"/>
       <source> seconds</source>
       <extracomment>For most locales a space should be included so that the text is separated from the number!</extracomment>
       <translation> Sekunden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3589"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3599"/>
       <source>Save</source>
       <translation>Speichern</translation>
     </message>
@@ -12147,7 +12157,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <location filename="../src/ui/room_exits.ui" line="1311"/>
       <location filename="../src/ui/room_exits.ui" line="1451"/>
       <location filename="../src/ui/room_exits.ui" line="1591"/>
-      <location filename="../src/ui/room_exits.ui" line="1731"/>
+      <location filename="../src/ui/room_exits.ui" line="1870"/>
       <source>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Wähle einen positiven Wert, um die normale Gewichtung des Raums für diese Ausgangsrichtung zu setzen. Null setzt wieder den Standard.&lt;/p&gt;</translation>
     </message>
@@ -12212,22 +12222,22 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <translation>Rein-Ausgang...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1721"/>
+      <location filename="../src/ui/room_exits.ui" line="1860"/>
       <source>Out exit...</source>
       <translation>Raus-Ausgang...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1826"/>
+      <location filename="../src/ui/room_exits.ui" line="1686"/>
       <source>Key:</source>
       <translation>Taste:</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1844"/>
+      <location filename="../src/ui/room_exits.ui" line="1704"/>
       <source>No route</source>
       <translation>Keine Route</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1859"/>
+      <location filename="../src/ui/room_exits.ui" line="1719"/>
       <source>Stub Exit</source>
       <translation>Platzhalter</translation>
     </message>
@@ -12243,8 +12253,8 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <location filename="../src/ui/room_exits.ui" line="1272"/>
       <location filename="../src/ui/room_exits.ui" line="1412"/>
       <location filename="../src/ui/room_exits.ui" line="1552"/>
-      <location filename="../src/ui/room_exits.ui" line="1692"/>
-      <location filename="../src/ui/room_exits.ui" line="2057"/>
+      <location filename="../src/ui/room_exits.ui" line="1831"/>
+      <location filename="../src/ui/room_exits.ui" line="2009"/>
       <source>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Verhindere die Erstellung von Routen durch diesen Ausgang. Das entspricht einem unendlichen Gewicht des Ausgangs.&lt;/p&gt;</translation>
     </message>
@@ -12260,7 +12270,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <location filename="../src/ui/room_exits.ui" line="1288"/>
       <location filename="../src/ui/room_exits.ui" line="1428"/>
       <location filename="../src/ui/room_exits.ui" line="1568"/>
-      <location filename="../src/ui/room_exits.ui" line="1708"/>
+      <location filename="../src/ui/room_exits.ui" line="1847"/>
       <source>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Erstelle in diese Richtung einen Abzweig mit unbekanntem Ziel. Kann nicht gleichzeitig einen Ausgang mit echter RaumID haben.&lt;/p&gt;</translation>
     </message>
@@ -12281,7 +12291,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <location filename="../src/ui/room_exits.ui" line="1324"/>
       <location filename="../src/ui/room_exits.ui" line="1464"/>
       <location filename="../src/ui/room_exits.ui" line="1604"/>
-      <location filename="../src/ui/room_exits.ui" line="1744"/>
+      <location filename="../src/ui/room_exits.ui" line="1883"/>
       <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Für diesen Ausgang wird kein Symbol für die Tür auf der 2D Karte gezeichnet.&lt;/p&gt;</translation>
     </message>
@@ -12340,7 +12350,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <location filename="../src/ui/room_exits.ui" line="558"/>
       <location filename="../src/ui/room_exits.ui" line="1045"/>
       <location filename="../src/ui/room_exits.ui" line="1623"/>
-      <location filename="../src/ui/room_exits.ui" line="1763"/>
+      <location filename="../src/ui/room_exits.ui" line="1902"/>
       <source>&lt;p&gt;A symbol is drawn with a green (Open) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ein Symbol mit grüner (offener) Füllung wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;/p&gt;</translation>
     </message>
@@ -12348,7 +12358,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <location filename="../src/ui/room_exits.ui" line="574"/>
       <location filename="../src/ui/room_exits.ui" line="1061"/>
       <location filename="../src/ui/room_exits.ui" line="1639"/>
-      <location filename="../src/ui/room_exits.ui" line="1779"/>
+      <location filename="../src/ui/room_exits.ui" line="1918"/>
       <source>&lt;p&gt;A symbol is drawn with an orange (Closed) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ein Symbol mit oranger (geschlossener) Füllung wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;/p&gt;</translation>
     </message>
@@ -12356,7 +12366,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <location filename="../src/ui/room_exits.ui" line="590"/>
       <location filename="../src/ui/room_exits.ui" line="1077"/>
       <location filename="../src/ui/room_exits.ui" line="1655"/>
-      <location filename="../src/ui/room_exits.ui" line="1795"/>
+      <location filename="../src/ui/room_exits.ui" line="1934"/>
       <source>&lt;p&gt;A symbol is drawn with a red (Locked) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ein Symbol mit roter (versperrter) Füllung wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;/p&gt;</translation>
     </message>
@@ -12406,183 +12416,183 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Innen von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1718"/>
+      <location filename="../src/ui/room_exits.ui" line="1857"/>
       <source>&lt;p&gt;Set the number of the room out from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Außen von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1871"/>
+      <location filename="../src/ui/room_exits.ui" line="1731"/>
       <source>&lt;p&gt;Set the number of the room that&apos;s to the southwest here.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Südwesten von hier aus.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1874"/>
+      <location filename="../src/ui/room_exits.ui" line="1734"/>
       <source>Exit RoomID number</source>
       <translation>Ausgangs RaumID Nummer</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1901"/>
+      <location filename="../src/ui/room_exits.ui" line="1761"/>
       <source>No door</source>
       <translation>Keine Tür</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1916"/>
+      <location filename="../src/ui/room_exits.ui" line="1776"/>
       <source>Open door</source>
       <translation>Offene Tür</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1928"/>
+      <location filename="../src/ui/room_exits.ui" line="1788"/>
       <source>Closed door</source>
       <translation>Geschlossene Tür</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1940"/>
+      <location filename="../src/ui/room_exits.ui" line="1800"/>
       <source>Locked door</source>
       <translation>Versperrte Tür</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1975"/>
+      <location filename="../src/ui/room_exits.ui" line="2131"/>
       <source>&lt;p&gt;Use this button to save any changes, will also remove any invalid Special exits.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Benutze diese Schaltfläche, um alle Änderungen zu speichern, und auch alle ungültigen besonderen Ausgänge zu entfernen.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1991"/>
+      <location filename="../src/ui/room_exits.ui" line="2147"/>
       <source>&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Mit dieser Schaltfläche schließt du den Dialog ohne etwas zu ändern.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2010"/>
+      <location filename="../src/ui/room_exits.ui" line="1962"/>
       <source>&lt;p&gt;Click on an item to edit/change it, to DELETE a Special Exit set its Exit Room ID to zero.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Klicke auf ein Element, um es zu bearbeiten. Um einen besonderen Ausgang zu LÖSCHEN, setze die Raum ID des Ausgangs auf Null.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2048"/>
+      <location filename="../src/ui/room_exits.ui" line="2000"/>
       <source>&lt;p&gt;Set the number of the room that this exit leads to, if set to zero the exit will be removed on saving the exits.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Wähle die ID des Raums zu dem dieser Ausgang hinführt. Bei Null wird dieser Ausgang beim Speichern entfernt.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2075"/>
+      <location filename="../src/ui/room_exits.ui" line="2027"/>
       <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit (only functional choice currently).&lt;/p&gt;</source>
       <translation>&lt;p&gt;Für diesen Ausgang wird kein Symbol für die Tür auf der 2D Karte gezeichnet (derzeit einzige funktionale Auswahl).&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2084"/>
+      <location filename="../src/ui/room_exits.ui" line="2036"/>
       <source>&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ein grünes Symbol für die (offene) Tür würde auf der 2D Karte gezeichnet (derzeit aber nicht).&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2093"/>
+      <location filename="../src/ui/room_exits.ui" line="2045"/>
       <source>&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ein oranges Symbol für die (geschlossene) Tür würde auf der 2D Karte gezeichnet (derzeit aber nicht).&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2102"/>
+      <location filename="../src/ui/room_exits.ui" line="2054"/>
       <source>&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ein rotes Symbol für die (versperrte) Tür würde auf der 2D Karte gezeichnet (derzeit aber nicht).&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2111"/>
+      <location filename="../src/ui/room_exits.ui" line="2063"/>
       <source>&lt;p&gt;(Lua scripts need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</source>
       <translation>&lt;p&gt;(Lua Skripte brauchen &quot;script:&quot; vorangestellt).&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2128"/>
+      <location filename="../src/ui/room_exits.ui" line="2080"/>
       <source>&lt;p&gt;Add an empty item to Special exits to be edited as required.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ergänze ein leeres Element zu den besonderen Ausgängen, damit es wie benötigt bearbeitet werden kann.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2147"/>
+      <location filename="../src/ui/room_exits.ui" line="2099"/>
       <source>&lt;p&gt;Press this button to deactivate the selection of a Special exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Klicke diese Schaltfläche um die Auswahl des besonderen Ausgangs zu deaktivieren.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1978"/>
+      <location filename="../src/ui/room_exits.ui" line="2134"/>
       <source>&amp;Save</source>
       <translation>&amp;Speichern</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1886"/>
+      <location filename="../src/ui/room_exits.ui" line="1746"/>
       <source>Exit Weight (0=No override)</source>
       <translation>Gewichtung des Ausgangs (0=Nicht überschreiben)</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1994"/>
+      <location filename="../src/ui/room_exits.ui" line="2150"/>
       <source>&amp;Cancel</source>
       <translation>&amp;Abbrechen</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2001"/>
+      <location filename="../src/ui/room_exits.ui" line="1953"/>
       <source>Special exits:</source>
       <translation>Spezielle Ausgänge:</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2044"/>
+      <location filename="../src/ui/room_exits.ui" line="1996"/>
       <source>Exit
 Room ID</source>
       <translation>Ausgang
 Raum-ID</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2053"/>
+      <location filename="../src/ui/room_exits.ui" line="2005"/>
       <source>No
 Route</source>
       <translation>Keine
 Route</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2062"/>
+      <location filename="../src/ui/room_exits.ui" line="2014"/>
       <source>Exit
 Weight</source>
       <translation>Ausgang
 Gewicht</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2066"/>
+      <location filename="../src/ui/room_exits.ui" line="2018"/>
       <source>&lt;p&gt;Set to a positive integer value to override the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Wähle einen positiven Wert, um die normale Gewichtung des Raums für diese Ausgangsrichtung zu setzen. Null setzt wieder den Standard.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2071"/>
+      <location filename="../src/ui/room_exits.ui" line="2023"/>
       <source>Door
 None</source>
       <translation>Tür
 Keine</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2080"/>
+      <location filename="../src/ui/room_exits.ui" line="2032"/>
       <source>Door
 Open</source>
       <translation>Tür
 Offen</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2089"/>
+      <location filename="../src/ui/room_exits.ui" line="2041"/>
       <source>Door
 Closed</source>
       <translation>Tür
 Geschlossen</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2098"/>
+      <location filename="../src/ui/room_exits.ui" line="2050"/>
       <source>Door
 Locked</source>
       <translation>Tür
 Versperrt</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2107"/>
+      <location filename="../src/ui/room_exits.ui" line="2059"/>
       <source>Command
 or LUA script</source>
       <translation>Befehl oder 
 LUA Skript</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2131"/>
+      <location filename="../src/ui/room_exits.ui" line="2083"/>
       <source>&amp;Add special exit</source>
       <translation>Besonderen Ausgang hinzufügen</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2150"/>
+      <location filename="../src/ui/room_exits.ui" line="2102"/>
       <source>&amp;End S. Exits editing</source>
       <translation>Besonderen Auswahl abwählen</translation>
     </message>
