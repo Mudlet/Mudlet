@@ -11245,12 +11245,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2642"/>
       <source>&lt;p&gt;TLS/SSL is usually on port 6697. IRC networks often use a &lt;b&gt;+&lt;/b&gt; when listing secure ports offered.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;TLS/SSL обычно находится на порту 6697. IRC-сети часто используют &lt;b&gt;+&lt;/b&gt; при перечислении предлагаемых безопасных портов.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2645"/>
       <source>Use a secure connection</source>
-      <translation type="unfinished"/>
+      <translation>Использовать защищенное соединение</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3496"/>
