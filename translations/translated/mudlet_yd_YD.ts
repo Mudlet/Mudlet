@@ -836,7 +836,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2867"/>
       <source>Lock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Lock</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2868"/>
