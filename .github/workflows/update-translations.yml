@@ -36,7 +36,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        title: "Update text for translation in Crowdin"
+        title: "Infrastructure: Update text for translation in Crowdin"
         body: |
           #### Brief overview of PR changes/additions
           :crown: An automated PR to make new text available for translation in Crowdin from ${{ github.ref }} (${{ github.sha }}).

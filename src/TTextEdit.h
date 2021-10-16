@@ -126,6 +126,7 @@ public slots:
     void slot_analyseSelection();
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
     void slot_changeDebugShowAllProblemCodepoints(const bool);
+    void slot_mouseAction(const QString&);
 
 private slots:
     void slot_copySelectionToClipboardImage();
@@ -196,7 +197,7 @@ private:
     // making this a const value for the moment:
     const int mTimeStampWidth;
     bool mShowAllCodepointIssues;
-    // Marked mutable so that it is permissable to change this in class methods
+    // Marked mutable so that it is permissible to change this in class methods
     // that are otherwise const!
     mutable QHash<uint, std::tuple<uint, std::string>> mProblemCodepoints;
     // We scroll on the basis that one vertical mouse wheel click is one line

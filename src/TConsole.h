@@ -38,7 +38,6 @@
 #include <QFile>
 #include <QLabel>
 #include <QPointer>
-#include <QTextStream>
 #include <QWidget>
 #include "post_guard.h"
 
