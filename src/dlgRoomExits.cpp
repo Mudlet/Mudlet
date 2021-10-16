@@ -49,6 +49,150 @@
 const QString singleParagraph{QStringLiteral("<p>%1</p>")};
 const QString doubleParagraph{QStringLiteral("<p>%1</p><p>%2</p>")};
 
+RoomIdLineEditDelegate::RoomIdLineEditDelegate(QObject* parent)
+: QStyledItemDelegate(parent)
+{}
+
+QWidget* RoomIdLineEditDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& /* option */, const QModelIndex& index) const
+{
+    // Work our way up through the ancestors to get to the one that is the
+    // dlgRoomExit pointer:
+    auto* pSpecialExits = qobject_cast<ExitsTreeWidget*>(parent->parent());
+    // This should end up pointing to the item that contains the roomIdLineEdit
+    // that is being edited - we need it so as to be able to modify other
+    // elements of the same item. We cannot access them via index.sibling(...)
+    // as that returns const values which cannot thus be modified (and that is
+    // to prevent changes which might modify index itself) - basically be
+    // careful not to modify the roomID element that is contained in what mpItem
+    // points to!
+    if (pSpecialExits) {
+        auto* pGroupBox_specialExits = qobject_cast<QGroupBox*>(pSpecialExits->parent());
+        if (pGroupBox_specialExits) {
+            mpDlgRoomExits = qobject_cast<dlgRoomExits*>(pGroupBox_specialExits->parent());
+        }
+        mpItem = pSpecialExits->topLevelItem(index.row());
+    }
+    mpEditor = new QLineEdit(parent);
+    mpEditor->setFrame(false);
+    mpEditor->setPlaceholderText(mpDlgRoomExits->mSpecialExitRoomIdPlaceholder);
+    if (mpDlgRoomExits) {
+        if (!mpHost) {
+            mpHost = mpDlgRoomExits->getHost();
+        }
+        if (!mAreaID) {
+            mAreaID = mpDlgRoomExits->getAreaID();
+        }
+        QString roomIdToolTipText;
+        if (mpHost) {
+            // Need to set the status icon on the QLineEdit on the opening of
+            // the editor otherwise it will not be shown until the user edits it:
+            auto text = index.model()->data(index, Qt::EditRole).toString();
+            if (text == mpDlgRoomExits->mSpecialExitRoomIdPlaceholder) {
+                // If the placeholder text was being shown "for real" then clear it now
+                // so that the greyed out version gets shown - and it is easier to enter
+                // just a plain number (no need to clear the real placehoder text)
+                text.clear();
+            }
+            TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
+            if (exitToRoom) {
+                // Valid exit roomID in place:
+                int exitAreaID = exitToRoom->getArea();
+                bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+                mpDlgRoomExits->setActionOnExit(mpEditor, outOfAreaExit ? mpDlgRoomExits->mpAction_otherAreaExit : mpDlgRoomExits->mpAction_inAreaExit);
+                QString exitAreaName;
+                if (outOfAreaExit) {
+                    exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
+                }
+                roomIdToolTipText = mpDlgRoomExits->generateToolTip(exitToRoom->name, exitAreaName, outOfAreaExit, exitToRoom->getWeight());
+            } else if (text.isEmpty()) {
+                // Nothing is entered (or the text was the placeholder):
+                mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_noExit);
+                roomIdToolTipText = singleParagraph.arg(tr("Set the number of the room that this special exit goes to."));
+            } else {
+                // Something is entered but it does not yield a valid exit roomID:
+                mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_invalidExit);
+                roomIdToolTipText = singleParagraph.arg(tr("Entered number is invalid, set the number of the room that this special exit goes to."));
+            }
+        }
+        // Set the tooltip for the QLineEdit:
+        mpEditor->setToolTip(roomIdToolTipText);
+        if (mpItem) {
+            // And duplicate it in the status:
+            mpItem->setToolTip(ExitsTreeWidget::colIndex_exitStatus, roomIdToolTipText);
+        }
+    }
+
+    connect(mpEditor, &QLineEdit::textEdited, this, &RoomIdLineEditDelegate::slot_specialRoomExitIdEdited);
+    return mpEditor;
+}
+
+void RoomIdLineEditDelegate::setEditorData(QWidget* pEditor, const QModelIndex& index) const
+{
+    auto value = index.model()->data(index, Qt::EditRole).toString();
+    auto* pLineEdit = static_cast<QLineEdit*>(pEditor);
+    // If the text to assign is the placeholder text - then don't
+    if (mpDlgRoomExits && value == mpDlgRoomExits->mSpecialExitRoomIdPlaceholder) {
+        pLineEdit->setText(QString());
+    } else {
+        pLineEdit->setText(value);
+    }
+}
+
+void RoomIdLineEditDelegate::setModelData(QWidget* pEditor, QAbstractItemModel* model, const QModelIndex& index) const
+{
+    auto* pLineEdit = static_cast<QLineEdit*>(pEditor);
+    auto value = pLineEdit->text();
+    model->setData(index, value, Qt::EditRole);
+}
+
+void RoomIdLineEditDelegate::updateEditorGeometry(QWidget* pEditor, const QStyleOptionViewItem& option, const QModelIndex& /* index */) const
+{
+    pEditor->setGeometry(option.rect);
+}
+
+void RoomIdLineEditDelegate::slot_specialRoomExitIdEdited(const QString& text) const
+{
+    // We do not set an icon in the status column whilst we are editing the
+    // exit room ID.
+
+    if (!mpHost || !mpItem || !mAreaID) {
+        return;
+    }
+    // The following code is a variation of that of
+    // dlgRoomExits::setIconAndToolTipsOnSpecialExit(...) :
+    TRoom* pExitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
+    QString roomIdToolTipText;
+    if (pExitToRoom) {
+        // A valid exit roomID number:
+        int exitAreaID = pExitToRoom->getArea();
+        bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        QString exitAreaName;
+        if (outOfAreaExit) {
+            exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
+        }
+
+        mpDlgRoomExits->setActionOnExit(mpEditor, outOfAreaExit ? mpDlgRoomExits->mpAction_otherAreaExit : mpDlgRoomExits->mpAction_inAreaExit);
+        roomIdToolTipText = mpDlgRoomExits->generateToolTip(pExitToRoom->name, exitAreaName, outOfAreaExit, pExitToRoom->getWeight());
+    } else if (text.toInt() > 0) {
+        // A number but not valid
+        mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_invalidExit);
+        roomIdToolTipText = singleParagraph.arg(tr("Entered number is invalid, set the number of the room that this special exit leads to; "
+                                                   "if left like this, this exit will be deleted when <tt>save</tt> is clicked."));
+    } else if (text.isEmpty() || text == mpDlgRoomExits->mSpecialExitRoomIdPlaceholder) {
+        // Nothing is entered:
+        mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_noExit);
+        roomIdToolTipText = singleParagraph.arg(tr("Set the number of the room that this special exit goes to."));
+    } else {
+        // Something else that isn't a positive number
+        mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_invalidExit);
+        roomIdToolTipText = singleParagraph.arg(tr("A positive room ID of the room that this special exit leads to is expected here; "
+                                                   "if left like this, this exit will be deleted when <tt>save</tt> is clicked."));
+    }
+    mpEditor->setToolTip(roomIdToolTipText);
+
+    mpItem->setToolTip(ExitsTreeWidget::colIndex_exitStatus, roomIdToolTipText);
+}
+
 dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 : QDialog(pW)
 , mpHost(pH)
@@ -78,9 +222,13 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
     mpAction_otherAreaExit->setToolTip(QString());
     mpAction_otherAreaExit->setIcon(mIcon_otherAreaExit);
 
+    mSpecialExitRoomIdPlaceholder = tr("(room ID)", "Placeholder, if no room ID is set for an exit.");
+    mSpecialExitCommandPlaceholder = tr("(command or Lua script)", "Placeholder, if a special exit has no name/script set.");
     mAllExitActionsSet << mpAction_noExit << mpAction_invalidExit << mpAction_inAreaExit << mpAction_otherAreaExit;
 
     init();
+
+    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitRoomId, new RoomIdLineEditDelegate);
 }
 
 dlgRoomExits::~dlgRoomExits()
@@ -99,6 +247,10 @@ void dlgRoomExits::slot_endEditSpecialExits()
     }
     if (mpEditItem != nullptr && mEditColumn >= 0) {
         specialExits->closePersistentEditor(mpEditItem, mEditColumn);
+        // Restore placeholder text for the exitRoomID field
+        if (mEditColumn == ExitsTreeWidget::colIndex_exitRoomId && !mpEditItem->text(ExitsTreeWidget::colIndex_exitRoomId).trimmed().length()) {
+            mpEditItem->setText(ExitsTreeWidget::colIndex_exitRoomId, mSpecialExitRoomIdPlaceholder);
+        }
         mpEditItem = nullptr;
         mEditColumn = -1;
     }
@@ -107,17 +259,6 @@ void dlgRoomExits::slot_endEditSpecialExits()
 
 void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
 {
-    /* column is now
-       0 = exitRoomID
-       1 = no route (locked)
-       2 = exit weight
-       3 = door type: none
-       4 = door type: open
-       5 = door type: closed
-       6 = door type: locked
-       7 = cmd
-     */
-
     if (!button_endEditing->isEnabled()) {
         button_endEditing->setEnabled(true);
     }
@@ -128,11 +269,11 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
     if (mpEditItem != nullptr && (pI != mpEditItem || mEditColumn != column)) {
         // Thing that was clicked on is not the same as last thing that was clicked on
         // ... so clean up the old column
-        TRoom* pExitToRoom = mpHost->mpMap->mpRoomDB->getRoom(mpEditItem->text(ExitsTreeWidget::colIndex_exitRoomId).toInt());
         switch (mEditColumn) {
         case ExitsTreeWidget::colIndex_exitRoomId:
             if (mpEditItem->text(ExitsTreeWidget::colIndex_exitRoomId).toInt() < 1) {
-                mpEditItem->setText(ExitsTreeWidget::colIndex_exitRoomId, tr("(room ID)", "Placeholder, if no room ID is set for an exit, yet. This string is used in 2 places, ensure they match!"));
+                // Restore the placeholder if there is nothing there to give a roomID:
+                mpEditItem->setText(ExitsTreeWidget::colIndex_exitRoomId, mSpecialExitRoomIdPlaceholder);
             }
             specialExits->closePersistentEditor(mpEditItem, mEditColumn);
             break;
@@ -172,50 +313,40 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
 
         case ExitsTreeWidget::colIndex_command:
             if (!mpEditItem->text(ExitsTreeWidget::colIndex_command).trimmed().length()) {
-                mpEditItem->setText(ExitsTreeWidget::colIndex_command, tr("(command or Lua script)", "Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same"));
+                // Restore the placeholder text if there is nothing but spaces in the entry:
+                mpEditItem->setText(ExitsTreeWidget::colIndex_command, mSpecialExitCommandPlaceholder);
             }
             specialExits->closePersistentEditor(mpEditItem, mEditColumn);
-            //            qDebug()<<"Closed PE on item:"<<mpEditItem->text(ExitsTreeWidget::colIndex_command)<<"column:"<<mEditColumn;
+            //            qDebug().nospace().noquote() << "dlgRoomExits::slot_editSpecialExit(...) INFO - Closed PE on item: \"" << mpEditItem->text(ExitsTreeWidget::colIndex_command) << "\" column: " << mEditColumn;
             break;
         default:
             {} //noop for other column (ExitsTreeWidget::colIndex_lockExit)
         }
+        setIconAndToolTipsOnSpecialExit(mpEditItem, true);
 
-        if (pExitToRoom) {
-            mpEditItem->setForeground(ExitsTreeWidget::colIndex_exitRoomId, QColor(Qt::blue));
-            if (!pExitToRoom->name.isEmpty()) {
-                mpEditItem->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, doubleParagraph.arg(tr(R"(Exit to "%1".)").arg(pExitToRoom->name),
-                                                              tr("<b>Room</b> Weight of destination: %1.",
-                                                                 "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                                      .arg(pExitToRoom->getWeight())));
-            } else {
-                mpEditItem->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, doubleParagraph.arg(tr("Exit to unnamed room is valid"),
-                                                              tr("<b>Room</b> Weight of destination: %1.",
-                                                                 "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                                      .arg(pExitToRoom->getWeight())));
-            }
-        } else {
-            mpEditItem->setForeground(ExitsTreeWidget::colIndex_exitRoomId, QColor(Qt::red));
-            mpEditItem->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, singleParagraph.arg(tr("Entered number is invalid, set the number of the room that this special exit leads to, will turn blue for "
-                                                             "a valid number; if left like this, this exit will be deleted when &lt;i&gt;save&lt;/i&gt; is clicked.")));
-        }
-
-        mpEditItem = nullptr; //This will cause a new PE to be opened, it will also be zeroed on the first time this function is called
+        mpEditItem = nullptr; //This will cause a new PE to be opened, it will also be nulled on the first time this function is called
         mEditColumn = -1;
     }
 
     // Now process the new column that was selected:
     if (mpEditItem == nullptr) {
         if (column == ExitsTreeWidget::colIndex_exitRoomId || column == ExitsTreeWidget::colIndex_exitWeight || column == ExitsTreeWidget::colIndex_command) {
-            //            qDebug()<<"Opened PE on item:"<<pI->text(ExitsTreeWidget::colIndex_command)<<"column:"<<column;
+            //            qDebug().nospace().noquote() << "dlgRoomExits::slot_editSpecialExit(...) INFO - Opened PE on item: \"" << pI->text(ExitsTreeWidget::colIndex_command) << "\" column: " << column;
             specialExits->openPersistentEditor(pI, column);
             specialExits->editItem(pI, column);
+            if (column == ExitsTreeWidget::colIndex_exitRoomId) {
+                setIconAndToolTipsOnSpecialExit(pI, false);
+                // Hide the Edit Status icon (as the status will be replicated
+                // and adjusted within the Exit Room ID column's QLineEdit)
+                // whilst the value is being edited:
+                pI->setIcon(ExitsTreeWidget::colIndex_exitStatus, QIcon());
+            }
         }
         mpEditItem = pI;
         mEditColumn = column;
     }
 
-    //    qDebug()<<"A Special Exit is been edited, it has the command:" << pI->text(ExitsTreeWidget::colIndex_command) <<"and the editing is on column "<<column;
+    //    qDebug().nospace().noquote() << "dlgRoomExits::slot_editSpecialExit(...) INFO - A Special Exit is been edited, it has the command: \"" << pI->text(ExitsTreeWidget::colIndex_command) << "\" and the editing is on column:" << column;
     switch (column) {
     case ExitsTreeWidget::colIndex_exitWeight:
         pI->setText(ExitsTreeWidget::colIndex_exitWeight, QString::number((pI->text(ExitsTreeWidget::colIndex_exitWeight).toInt() < 0) ? (-1 * pI->text(ExitsTreeWidget::colIndex_exitWeight).toInt()) : pI->text(ExitsTreeWidget::colIndex_exitWeight).toInt())); //Force result to be non-negative
@@ -256,16 +387,20 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
 void dlgRoomExits::slot_addSpecialExit()
 {
     auto pI = new QTreeWidgetItem(specialExits);
-    pI->setText(ExitsTreeWidget::colIndex_exitRoomId, tr("(room ID)", "Placeholder, if no room ID is set for an exit, yet. This string is used in 2 places, ensure they match!")); //Exit RoomID
-    pI->setForeground(ExitsTreeWidget::colIndex_exitRoomId, QColor(Qt::red));
-    pI->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, singleParagraph.arg(tr("Set the number of the room that this special exit leads to, will turn blue for a valid number; if left like "
-                                             "this, this exit will be deleted when &lt;i&gt;save&lt;/i&gt; is clicked.")));
+    pI->setText(ExitsTreeWidget::colIndex_exitRoomId, mSpecialExitRoomIdPlaceholder); //Exit RoomID
+    pI->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, singleParagraph.arg(tr("Set the number of the room that this special exit goes to.")));
     pI->setTextAlignment(ExitsTreeWidget::colIndex_exitRoomId, Qt::AlignRight);
+
+    // No icon for the status of a new exit
+    pI->setToolTip(ExitsTreeWidget::colIndex_exitStatus, singleParagraph.arg(tr("Set the number of the room that this special exit goes to.")));
+
     pI->setToolTip(ExitsTreeWidget::colIndex_lockExit, singleParagraph.arg(tr("Prevent a route being created via this exit, equivalent to an infinite exit weight.")));
     pI->setCheckState(ExitsTreeWidget::colIndex_lockExit, Qt::Unchecked); //Locked
+
     pI->setText(ExitsTreeWidget::colIndex_exitWeight, QStringLiteral("0")); //Exit Weight
     pI->setTextAlignment(ExitsTreeWidget::colIndex_exitWeight, Qt::AlignRight);
     pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, singleParagraph.arg(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
+
     pI->setCheckState(ExitsTreeWidget::colIndex_doorNone, Qt::Checked); //Doortype: none
     pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, singleParagraph.arg(tr("No door symbol is drawn on 2D Map for this exit (only functional choice currently).")));
     pI->setCheckState(ExitsTreeWidget::colIndex_doorOpen, Qt::Unchecked); //Doortype: open
@@ -274,9 +409,13 @@ void dlgRoomExits::slot_addSpecialExit()
     pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, singleParagraph.arg(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
     pI->setCheckState(ExitsTreeWidget::colIndex_doorLocked, Qt::Unchecked); //Doortype: locked
     pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, singleParagraph.arg(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
-    pI->setText(ExitsTreeWidget::colIndex_command, tr("(command or Lua script)", "Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same")); //Exit command
+
+    pI->setText(ExitsTreeWidget::colIndex_command, mSpecialExitCommandPlaceholder); //Exit command
     pI->setTextAlignment(ExitsTreeWidget::colIndex_command, Qt::AlignLeft);
+
     specialExits->addTopLevelItem(pI);
+
+    setIconAndToolTipsOnSpecialExit(pI, true);
 }
 
 void dlgRoomExits::save()
@@ -309,7 +448,7 @@ void dlgRoomExits::save()
             door = 0;
         }
         QString key = pI->text(ExitsTreeWidget::colIndex_command);
-        if (key != tr("(command or Lua script)", "Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same")
+        if (key != mSpecialExitCommandPlaceholder
             && value != 0 && mpHost->mpMap->mpRoomDB->getRoom(value) != nullptr) {
             originalExitCmds.remove(key);
             locked = (pI->checkState(ExitsTreeWidget::colIndex_lockExit) != Qt::Unchecked);
@@ -758,6 +897,54 @@ void dlgRoomExits::save()
     close();
 }
 
+void dlgRoomExits::setIconAndToolTipsOnSpecialExit(QTreeWidgetItem* pSpecialExit, const bool showIconOnExitStatus)
+{
+    if (!pSpecialExit) {
+        return;
+    }
+
+    TRoom* pExitToRoom = mpHost->mpMap->mpRoomDB->getRoom(pSpecialExit->text(ExitsTreeWidget::colIndex_exitRoomId).toInt());
+    if (pExitToRoom) {
+        // A valid exit roomID number:
+        int exitAreaID = pExitToRoom->getArea();
+        bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        QString exitAreaName;
+        if (outOfAreaExit) {
+            exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
+        }
+
+        // This is the toolTip text for the room ID number column (and the
+        // status icon)
+        const QString roomIdToolTipText{generateToolTip(pExitToRoom->name, exitAreaName, outOfAreaExit, pExitToRoom->getWeight())};
+        pSpecialExit->setIcon(ExitsTreeWidget::colIndex_exitStatus, showIconOnExitStatus ? (outOfAreaExit ? mIcon_otherAreaExit : mIcon_inAreaExit) : QIcon());
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, roomIdToolTipText);
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitStatus, roomIdToolTipText);
+
+    } else if (pSpecialExit->text(ExitsTreeWidget::colIndex_exitRoomId).toInt() > 0) {
+        // A number but not valid
+        pSpecialExit->setIcon(ExitsTreeWidget::colIndex_exitStatus, showIconOnExitStatus ? mIcon_invalidExit : QIcon());
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, singleParagraph.arg(tr("Entered number is invalid, set the number of the room that this special exit leads to; "
+                                                                                              "if left like this, this exit will be deleted when <tt>save</tt> is clicked.")));
+    } else if (pSpecialExit->text(ExitsTreeWidget::colIndex_exitRoomId).isEmpty() || pSpecialExit->text(ExitsTreeWidget::colIndex_exitRoomId) == mSpecialExitRoomIdPlaceholder) {
+        // Nothing
+        pSpecialExit->setIcon(ExitsTreeWidget::colIndex_exitStatus, QIcon());
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, singleParagraph.arg(tr("A positive room ID of the room that this special exit leads to is expected here; "
+                                                                                              "if left like this, this exit will be deleted when <tt>save</tt> is clicked.")));
+    } else {
+        // Something else that isn't a positive number
+        pSpecialExit->setIcon(ExitsTreeWidget::colIndex_exitStatus, showIconOnExitStatus ? mIcon_invalidExit : QIcon());
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, singleParagraph.arg(tr("A positive room ID of the room that this special exit leads to is expected here; "
+                                                                                              "if left like this, this exit will be deleted when <tt>save</tt> is clicked.")));
+    }
+
+    if (pSpecialExit->text(ExitsTreeWidget::colIndex_command) == mSpecialExitCommandPlaceholder) {
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_command, singleParagraph.arg(tr("No command or Lua script entered, if left like this, this exit will be deleted when <tt>save</tt> is clicked.")));
+    } else {
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_command, singleParagraph.arg(tr("(Lua scripts for some mapper packages {those using the <tt>mudlet-mapper/<tt>, i.e. I.R.E. Muds and StickMUD} need to be prefixed with \"script:\").")));
+    }
+}
+
+
 void dlgRoomExits::setActionOnExit(QLineEdit* pExitLineEdit, QAction* pWantedAction) const
 {
     auto pActions = pExitLineEdit->actions();
@@ -785,22 +972,21 @@ void dlgRoomExits::setActionOnExit(QLineEdit* pExitLineEdit, QAction* pWantedAct
     }
 }
 
-// FIXME: INTENDED TO BE USED IN A SEPARATE PR - DELETE THIS COMMENT LINE WHEN THAT GOES IN AND THE CODE IS UNCOMMENTED...
 // Check for and return the (first one of the) QAction's used for the status
 // icon on the ExitRoomID - this is actually only used for the special exits:
-//QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
-//{
-//    auto pActions = pExitLineEdit->actions();
-//    for (int index = 0, total = pActions.count(); index < total; ++index) {
-//        auto pAction = pActions[index];
-//        if (pAction && mAllExitActionsSet.contains(pAction)) {
-//            // This is one of the four we are looking for.
-//            return pAction;
-//        }
-//    }
-//    // Handle the not found case:
-//    return nullptr;
-//}
+QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
+{
+    auto pActions = pExitLineEdit->actions();
+    for (int index = 0, total = pActions.count(); index < total; ++index) {
+        auto pAction = pActions[index];
+        if (pAction && mAllExitActionsSet.contains(pAction)) {
+            // This is one of the four we are looking for.
+            return pAction;
+        }
+    }
+    // Handle the not found case:
+    return nullptr;
+}
 
 /* static */ QString dlgRoomExits::generateToolTip(const QString& exitRoomName, const QString& exitAreaName, const bool outOfAreaExit, const int exitRoomWeight)
 {
@@ -1286,28 +1472,20 @@ void dlgRoomExits::init()
         // It should be impossible for this not to be valid:
         Q_ASSERT_X(pSpecialExit, "dlgRoomExits::init(...)", "failed to generate a new TExit");
         auto pI = new QTreeWidgetItem(specialExits);
-        TRoom* pExitToRoom = mpHost->mpMap->mpRoomDB->getRoom(id_to);
+        pSpecialExit->destination = id_to;
+
         //ExitsTreeWidget::colIndex_exitRoomId
         pI->setText(ExitsTreeWidget::colIndex_exitRoomId, QString::number(id_to));
         pI->setTextAlignment(ExitsTreeWidget::colIndex_exitRoomId, Qt::AlignRight);
-        if (pExitToRoom) {
-            pI->setForeground(ExitsTreeWidget::colIndex_exitRoomId, QColor(Qt::blue));
-            if (!pExitToRoom->name.isEmpty()) {
-                pI->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, doubleParagraph.arg(tr(R"(Exit to "%1".)").arg(pExitToRoom->name),
-                                                      tr("<b>Room</b> Weight of destination: %1.",
-                                                         "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                              .arg(pExitToRoom->getWeight())));
-            } else {
-                pI->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, doubleParagraph.arg(tr("Exit to unnamed room is valid"),
-                                                      tr("<b>Room</b> Weight of destination: %1.",
-                                                         "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                              .arg(pExitToRoom->getWeight())));
-            }
-        } else {
-            pI->setForeground(ExitsTreeWidget::colIndex_exitRoomId, QColor(Qt::red));
-            pI->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, singleParagraph.arg(tr("Room Id is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number.")));
-        }
-        pSpecialExit->destination = id_to;
+        //Tooltip generation for this column is done in
+        //setIconAndToolTipsOnSpecialExit(...) at end of this while() loop
+
+        //ExitsTreeWidget::colIndex_exitStatus
+        pI->setTextAlignment(ExitsTreeWidget::colIndex_exitStatus, Qt::AlignRight);
+        pI->setIcon(ExitsTreeWidget::colIndex_exitStatus, QIcon());
+        //Tooltip generation for this column is done in
+        //setIconAndToolTipsOnSpecialExit(...) at end of this while() loop
+
         //ExitsTreeWidget::colIndex_lockExit (or more properly "No route") - setCheckedState
         //automagically makes it a CheckBox!!!
         if (pR->hasSpecialExitLock(dir)) {
@@ -1319,34 +1497,24 @@ void dlgRoomExits::init()
         }
         pI->setToolTip(ExitsTreeWidget::colIndex_lockExit, singleParagraph.arg(tr("Prevent a route being created via this exit, equivalent to an infinite exit weight.")));
 
-        //ExitsTreeWidget::colIndex_exitWeight - ideally want a spin box - but use a text edit for now
-        if (pR->hasExitWeight(dir)) {
-            pI->setText(ExitsTreeWidget::colIndex_exitWeight, QString::number(pR->getExitWeight(dir)));
-        } else {
-            pI->setText(ExitsTreeWidget::colIndex_exitWeight, QString::number(0));
-        }
+        //ExitsTreeWidget::colIndex_exitWeight
+        pI->setData(ExitsTreeWidget::colIndex_exitWeight, Qt::EditRole, pR->hasExitWeight(dir) ? pR->getExitWeight(dir) : 0);
         pI->setTextAlignment(ExitsTreeWidget::colIndex_exitWeight, Qt::AlignRight);
+        pSpecialExit->weight = pI->data(ExitsTreeWidget::colIndex_exitWeight, Qt::EditRole).toInt();
         pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, singleParagraph.arg(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
-        pSpecialExit->weight = pI->text(ExitsTreeWidget::colIndex_exitWeight).toInt();
 
 
-        //ExitsTreeWidget::colIndex_doorNone-ExitsTreeWidget::colIndex_doorLocked hold a buttongroup of 4, ideally QRadioButtons, to select a door type
+        //ExitsTreeWidget::colIndex_doorNone-ExitsTreeWidget::colIndex_doorLocked
+        //hold a buttongroup of 4, ideally QRadioButtons, to select a door type
+        //Initially uncheck all of them so we only have to check the wanted one:
         pI->setCheckState(ExitsTreeWidget::colIndex_doorNone, Qt::Unchecked);
-        pI->setTextAlignment(ExitsTreeWidget::colIndex_doorNone, Qt::AlignCenter);
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, singleParagraph.arg(tr("No door symbol is drawn on 2D Map for this exit (only functional choice currently).")));
         pI->setCheckState(ExitsTreeWidget::colIndex_doorOpen, Qt::Unchecked);
-        pI->setTextAlignment(ExitsTreeWidget::colIndex_doorOpen, Qt::AlignCenter);
-        pI->setToolTip(
-                ExitsTreeWidget::colIndex_doorOpen, singleParagraph.arg(tr("Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
         pI->setCheckState(ExitsTreeWidget::colIndex_doorClosed, Qt::Unchecked);
-        pI->setTextAlignment(ExitsTreeWidget::colIndex_doorClosed, Qt::AlignCenter);
-        pI->setToolTip(
-                ExitsTreeWidget::colIndex_doorClosed,
-                singleParagraph.arg(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
-        pI->setTextAlignment(ExitsTreeWidget::colIndex_doorLocked, Qt::AlignCenter);
-        pI->setToolTip(
-                ExitsTreeWidget::colIndex_doorLocked, singleParagraph.arg(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
         pI->setCheckState(ExitsTreeWidget::colIndex_doorLocked, Qt::Unchecked);
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, singleParagraph.arg(tr("No door symbol is drawn on 2D Map for this exit (only functional choice currently).")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorOpen, singleParagraph.arg(tr("Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, singleParagraph.arg(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, singleParagraph.arg(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
         {
             int specialDoor = pR->getDoor(dir);
             switch (specialDoor) {
@@ -1371,15 +1539,19 @@ void dlgRoomExits::init()
 
         //ExitsTreeWidget::colIndex_command holds the script/name
         pI->setText(ExitsTreeWidget::colIndex_command, dir);
+
+        //Tooltip generation for this column and a couple of earlier ones is
+        //done here:
+        setIconAndToolTipsOnSpecialExit(pI, true);
+
         // Not relevant for special exits but better initialise it
         pSpecialExit->hasStub = false;
-
-
     }
-    button_save->setEnabled( false );
-// We now do not connect up all these things until AFTER we have initialised
-// things as some controls will issue unwanted signals upon setting values into
-// them as we have above...
+    button_save->setEnabled(false);
+
+    // We now do not connect up all these things until AFTER we have initialised
+    // things as some controls will issue unwanted signals upon setting values into
+    // them as we have above...
     // clang-format off
     connect(button_save,           &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_endEditSpecialExits);
     connect(button_save,           &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_checkModified);
@@ -1698,7 +1870,7 @@ void dlgRoomExits::slot_checkModified()
  *                   pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt(),
  *                   qPrintable(pI->text(ExitsTreeWidget::colIndex_command)));
  */
-            if (pI->text(ExitsTreeWidget::colIndex_command) == tr("(command or Lua script)", "Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same")
+            if (pI->text(ExitsTreeWidget::colIndex_command) == mSpecialExitCommandPlaceholder
                 || pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt() <= 0) {
                 continue;
             } // Ignore new or to be deleted entries
@@ -1720,7 +1892,7 @@ void dlgRoomExits::slot_checkModified()
  *                           pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt(),
  *                           qPrintable(pI->text(ExitsTreeWidget::colIndex_command)));
  */
-                    if (pI->text(ExitsTreeWidget::colIndex_command) == tr("(command or Lua script)", "Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same")
+                    if (pI->text(ExitsTreeWidget::colIndex_command) == mSpecialExitCommandPlaceholder
                         || pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt() <= 0) {
                         continue; // Ignore new or to be deleted entries
                     }
