@@ -1145,7 +1145,7 @@ void TRoomDB::clearMapDB()
         delete area;
     }
     assert(areas.empty());
-    // Must now reinsert areaId -1 name = "Default Area"
+    // Must now reinsert areaId -1 name = "Default area"
     addArea(-1, mpMap->getDefaultAreaName());
     qDebug() << "TRoomDB::clearMapDB() run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
