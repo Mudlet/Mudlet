@@ -640,7 +640,7 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
         qDebug() << "TConsole::createMapper() - restore map case 2.";
-        mpHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(2) report"), true);
+        mpHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(2) report", "This will report errors happening before loading the map"), true);
         QDateTime now(QDateTime::currentDateTime());
 
         if (mpHost->mpMap->restore(QString())) {
@@ -651,7 +651,7 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
             mpMapper->show();
         }
 
-        mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
+        mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report", "%1 refers to the date/time of loading now").arg(now.toString(Qt::ISODate)), true);
 
         TEvent mapOpenEvent{};
         mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
@@ -1203,7 +1203,7 @@ bool TMainConsole::loadMap(const QString& location)
     pHost->mpMap->mapClear();
 
     qDebug() << "TMainConsole::loadMap() - restore map case 1.";
-    pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(1) report"), true);
+    pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(1) report", "This will report errors happening before loading the map"), true);
     QDateTime now(QDateTime::currentDateTime());
 
     bool result = false;
@@ -1221,9 +1221,9 @@ bool TMainConsole::loadMap(const QString& location)
     }
 
     if (location.isEmpty()) {
-        pHost->mpMap->pushErrorMessagesToFile(tr("Loading map(1) at %1 report").arg(now.toString(Qt::ISODate)), true);
+        pHost->mpMap->pushErrorMessagesToFile(tr("Loading map(1) at %1 report", "%1 refers to the date/time of loading now").arg(now.toString(Qt::ISODate)), true);
     } else {
-        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Loading map(1) "%1" at %2 report)").arg(location, now.toString(Qt::ISODate)), true);
+        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Loading map(1) "%1" at %2 report)", "%1 is the map name and folder, %2 refers to the date/time of loading now").arg(location, now.toString(Qt::ISODate)), true);
     }
 
     pHost->mpMap->update();
