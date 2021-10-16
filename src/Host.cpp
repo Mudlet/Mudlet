@@ -3645,7 +3645,7 @@ void Host::createMapper(const bool loadDefaultMap)
                                      pMap->mPlayerRoomOuterColor,
                                      pMap->mPlayerRoomInnerColor);
 
-    pMap->mpMapper = new dlgMapper(mpDockableMapWidget, this, pMap); //FIXME: mpHost definieren
+    pMap->mpMapper = new dlgMapper(mpDockableMapWidget, this, pMap); //FIXME: define mpHost
     pMap->mpMapper->setStyleSheet(mProfileStyleSheet);
     mpDockableMapWidget->setWidget(pMap->mpMapper);
 
