@@ -45,8 +45,8 @@
 
 
 TMap::TMap(Host* pH, const QString& profileName)
-: mDefaultAreaName(tr("Default Area"))
-, mUnnamedAreaName(tr("Unnamed Area"))
+: mDefaultAreaName(tr("Default area"))
+, mUnnamedAreaName(tr("Unnamed area"))
 , mpRoomDB(new TRoomDB(this))
 , mpHost(pH)
 , mProfileName(profileName)
@@ -628,15 +628,15 @@ void TMap::audit()
                                 QString msg = tr("[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.").arg(areaID).arg(i);
                                 postMessage(msg);
                             }
-                            appendAreaErrorMsg(areaID, tr("[ INFO ] - Converting old style label id: %1.").arg(i));
+                            appendAreaErrorMsg(areaID, tr("[ INFO ] - CONVERTING: old style label, labelID: %1.").arg(i));
                             pArea->mMapLabels[i] = pArea->mMapLabels.take(newID);
 
                         } else {
                             if (mudlet::self()->showMapAuditErrors()) {
-                                QString msg = tr("[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.").arg(areaID).arg(i);
+                                QString msg = tr("[ WARN ] - CONVERTING: cannot convert old style label, areaID: %1, labelID: %2.").arg(areaID).arg(i);
                                 postMessage(msg);
                             }
-                            appendAreaErrorMsg(areaID, tr("[ WARN ] - CONVERTING: cannot convert old style label with id: %1.").arg(i));
+                            appendAreaErrorMsg(areaID, tr("[ WARN ] - CONVERTING: cannot convert old style label, labelID: %1.").arg(i));
                         }
                     }
                     if ((l.size.width() > std::numeric_limits<qreal>::max()) || (l.size.width() < -std::numeric_limits<qreal>::max())) {
@@ -2408,9 +2408,9 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
         itAreasMsg.next();
         QString titleText;
         if (!mpRoomDB->getAreaNamesMap().value(itAreasMsg.key()).isEmpty()) {
-            titleText = tr(R"(Area id: %1 "%2")").arg(itAreasMsg.key()).arg(mpRoomDB->getAreaNamesMap().value(itAreasMsg.key()));
+            titleText = tr(R"(AreaID: %1 "%2")").arg(itAreasMsg.key()).arg(mpRoomDB->getAreaNamesMap().value(itAreasMsg.key()));
         } else {
-            titleText = tr("Area id: %1").arg(itAreasMsg.key());
+            titleText = tr("AreaID: %1").arg(itAreasMsg.key());
         }
         pHost->mErrorLogStream << createFileHeaderLine(titleText, QLatin1Char('-'));
         QListIterator<QString> itMapAreaMsg(itAreasMsg.value());
@@ -2426,9 +2426,9 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
         QString titleText;
         TRoom* pR = mpRoomDB->getRoom(itRoomsMsg.key());
         if (pR && !pR->name.isEmpty()) {
-            titleText = tr(R"(Room id: %1 "%2")").arg(itRoomsMsg.key()).arg(pR->name);
+            titleText = tr(R"(RoomID: %1 "%2")").arg(itRoomsMsg.key()).arg(pR->name);
         } else {
-            titleText = tr("Room id: %1").arg(itRoomsMsg.key());
+            titleText = tr("RoomID: %1").arg(itRoomsMsg.key());
         }
         pHost->mErrorLogStream << createFileHeaderLine(titleText, QLatin1Char('-'));
         QListIterator<QString> itMapRoomMsg(itRoomsMsg.value());
@@ -2607,7 +2607,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         // This is the local import case - which has not got a progress dialog
         // until now:
         isLocalImport = true;
-        mpProgressDialog = new QProgressDialog(tr("Importing XML map file for use in %1...").arg(mProfileName), QString(), 0, 0);
+        mpProgressDialog = new QProgressDialog(tr("Importing XML map file for use in profile \"%1\"...").arg(mProfileName), QString(), 0, 0);
         mpProgressDialog->setWindowTitle(tr("Map import", "This is a title of a progress dialog."));
         mpProgressDialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_map_download.png")));
         mpProgressDialog->setMinimumWidth(300);
@@ -2913,8 +2913,8 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         }
     }
 
-    mpProgressDialog = new QProgressDialog(tr("Exporting JSON map data from %1\n"
-                                              "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
+    mpProgressDialog = new QProgressDialog(tr("Exporting JSON map data from profile \"%1\"\n"
+                                              "Areas: %2 of %3 - Rooms: %4 of %5 - Labels: %6 of %7...")
                                            .arg(mProfileName,
                                                 QLatin1String("0"),
                                                 QString::number(mProgressDialogAreasTotal),
@@ -3063,7 +3063,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     mapObj.insert(QLatin1String("playerRoomOuterDiameterPercentage"), static_cast<double>(mPlayerRoomOuterDiameterPercentage));
     mapObj.insert(QLatin1String("playerRoomInnerDiameterPercentage"), static_cast<double>(mPlayerRoomInnerDiameterPercentage));
 
-    mpProgressDialog->setLabelText(tr("Exporting JSON map file from %1 - writing data to file:\n"
+    mpProgressDialog->setLabelText(tr("Exporting JSON map file from profile \"%1\" - writing data to file:\n"
                                       "%2 ...").arg(mProfileName, destination));
     mpProgressDialog->setValue(0);
     // Hide the cancel button as we can't stop now:
@@ -3153,8 +3153,8 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     mProgressDialogRoomsCount = 0;
     mProgressDialogLabelsTotal = qRound(mapObj[QLatin1String("labelCount")].toDouble());
     mProgressDialogLabelsCount = 0;
-    mpProgressDialog = new QProgressDialog(tr("Importing JSON map data to %1\n"
-                                              "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
+    mpProgressDialog = new QProgressDialog(tr("Importing JSON map data to profile \"%1\"\n"
+                                              "Areas: %2 of %3 - Rooms: %4 of %5 - Labels: %6 of %7...")
                                                    .arg(mProfileName,
                                                         QLatin1String("0"),
                                                         QString::number(mProgressDialogAreasTotal),
@@ -3404,8 +3404,8 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
 
     mpProgressDialog->setValue(mProgressDialogRoomsCount);
     if (isExportNotImport) {
-        mpProgressDialog->setLabelText(tr("Exporting JSON map data from %1\n"
-                                          "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
+        mpProgressDialog->setLabelText(tr("Exporting JSON map data from profile \"%1\"\n"
+                                          "Areas: %2 of %3 - Rooms: %4 of %5 - Labels: %6 of %7...")
                                        .arg(mProfileName,
                                             QString::number(mProgressDialogAreasCount),
                                             QString::number(mProgressDialogAreasTotal),
@@ -3414,8 +3414,8 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
                                             QString::number(mProgressDialogLabelsCount),
                                             QString::number(mProgressDialogLabelsTotal)));
     } else {
-        mpProgressDialog->setLabelText(tr("Importing JSON map data to %1\n"
-                                          "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
+        mpProgressDialog->setLabelText(tr("Importing JSON map data to profile \"%1\"\n"
+                                          "Areas: %2 of %3 - Rooms: %4 of %5 - Labels: %6 of %7...")
                                        .arg(mProfileName,
                                             QString::number(mProgressDialogAreasCount),
                                             QString::number(mProgressDialogAreasTotal),
