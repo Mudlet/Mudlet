@@ -520,7 +520,7 @@ int TRoomDB::addArea(QString name)
 {
     // reject it if area name already exists or is empty
     if (name.isEmpty()) {
-        QString error = tr("An Unnamed Area is (no longer) permitted!");
+        QString error = tr("An unnamed area is (no longer) permitted!");
         mpMap->logError(error);
         return 0;
     } else if (areaNamesMap.values().contains(name)) {
@@ -532,7 +532,7 @@ int TRoomDB::addArea(QString name)
     int areaID = createNewAreaID();
     if (addArea(areaID)) {
         areaNamesMap[areaID] = name;
-        // This will overwrite the "Unnamed Area_###" that addArea( areaID )
+        // This will overwrite the "Unnamed area_###" that addArea( areaID )
         // will generate - but that is fine.
         return areaID;
     } else {
@@ -549,7 +549,7 @@ bool TRoomDB::addArea(int id, QString name)
     if (((!name.isEmpty()) && areaNamesMap.values().contains(name)) || areaNamesMap.keys().contains(id)) {
         return false;
     } else if (addArea(id)) {
-        // This will generate an "Unnamed Area_###" area name which we should
+        // This will generate an "Unnamed area_###" area name which we should
         // overwrite only if we have a name!
         if (!name.isEmpty()) {
             areaNamesMap[id] = name;
