@@ -10187,7 +10187,11 @@ int TLuaInterpreter::setDiscordDetail(lua_State* L)
         return warnArgumentValue(L, __func__, "access to Discord detail is disabled in settings for privacy");
     }
 
-    pMudlet->mDiscord.setDetailText(&host, getVerifiedString(L, __func__, 1, "text"));
+    auto discordText = getVerifiedString(L, __func__, 1, "text");
+    if (discordText.size() == 1) {
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed");
+
+    pMudlet->mDiscord.setDetailText(&host, discordText);
     lua_pushboolean(L, true);
     return 1;
 }
