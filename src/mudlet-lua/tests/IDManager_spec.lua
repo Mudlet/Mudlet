@@ -118,7 +118,7 @@ describe("Tests the functionality of IDMgr", function()
   -- functional testing shows it works, and the code paths are the same for timers as
   -- for events in the underlying IDMgr, just using different core Mudlet API functions
   -- I have personally functionally tested this though. -- Demonnic
-  -- TODO: write timer tests
+  -- TODO: write timer tests https://github.com/Mudlet/Mudlet/issues/5520
   describe("Tests the timer functionality", function()
     pending("Should register a named timer")
     pending("Should reset a named timer if it is registered a second+ time")
