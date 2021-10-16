@@ -129,7 +129,7 @@ bool TAlias::match(const QString& toMatch)
         goto MUD_ERROR;
     } else if (rc == 0) {
         if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Alias Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
+            mpHost->mpEditorDialog->mpErrorConsole->print(tr("[ ERROR ] - Alias %1 capture group limit exceeded! Capture less groups.\n", "Here %1 is the max. number of groups allowed.").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
         }
         qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
     } else {
@@ -197,7 +197,7 @@ bool TAlias::match(const QString& toMatch)
             goto END;
         } else if (rc == 0) {
             if (mpHost->mpEditorDialog) {
-                mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Alias Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
+                mpHost->mpEditorDialog->mpErrorConsole->print(tr("[ ERROR ] - Alias %1 capture group limit exceeded! Capture less groups.\n", "Here %1 is the max. number of groups allowed.").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
             }
             qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
         }
