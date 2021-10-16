@@ -739,7 +739,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         if (mudlet::self()->showMapAuditErrors()) {
             infoMsg = tr("[ INFO ]  - The missing area(s) are now called:\n"
                          "(ID) ==> \"name\"",
-                         "Making use of %n to allow quantity dependent message form 8-) !",
+                         "The last line is a headline explaining what follows is a list of lines, one for each area, in the form of the ID number followed by the new name of the area",
                          missingAreasNeeded.count());
         }
 
@@ -772,20 +772,19 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     // Now process problem areaIds
     if (!areaRemapping.isEmpty()) {
         if (mudlet::self()->showMapAuditErrors()) {
-            QString alertMsg = tr("[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1)\n"
-                                  "in map, now working out what new id numbers to use...")
-                                       .arg(areaRemapping.count());
+            QString alertMsg = tr("[ ALERT ] - %n bad area id(s) found in map! (less than +1 and not the reserved -1)\n"
+                                  "Now working out what new id numbers to use...", "", areaRemapping.count());
             mpMap->postMessage(alertMsg);
         }
-        mpMap->appendErrorMsg(tr("[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!"
-                                 "  Look for further messages related to this for each affected area ...")
-                                      .arg(areaRemapping.count()),
+        mpMap->appendErrorMsg(tr("[ ALERT ] - %n bad area id(s) found in map! (less than +1 and not the reserved -1)"
+                                 "  Look for further messages related to this for each affected area ...", "", areaRemapping.count()),
                               true);
 
         QString infoMsg;
         if (mudlet::self()->showMapAuditErrors()) {
             infoMsg = tr("[ INFO ]  - The renumbered area ids will be:\n"
-                         "Old ==> New");
+                         "Old ==> New",
+                         "The last line is a headline explaining what follows is a list of lines, one for each area, in the form of the old ID number followed by the new ID of the area");
         }
 
         QMutableHashIterator<int, int> itRemappedArea(areaRemapping);
@@ -851,14 +850,12 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     // Now complete TASK 1 - find the new room Ids to use
     if (!roomRemapping.isEmpty()) {
         if (mudlet::self()->showMapAuditErrors()) {
-            QString alertMsg = tr("[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map, now working\n"
-                                  "out what new id numbers to use.")
-                                       .arg(roomRemapping.count());
+            QString alertMsg = tr("[ ALERT ] - %n bad room id(s) found in map! (less than +1)\n"
+                                  "Now working out what new id numbers to use.", "", roomRemapping.count());
             mpMap->postMessage(alertMsg);
         }
-        mpMap->appendErrorMsg(tr("[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!"
-                                 "  Look for further messages related to this for each affected room ...")
-                                      .arg(roomRemapping.count()),
+        mpMap->appendErrorMsg(tr("[ ALERT ] - %n bad room id(s) found in map! (less than +1)"
+                                 "  Look for further messages related to this for each affected room ...", "", roomRemapping.count()),
                               true);
 
         QString infoMsg;
@@ -1063,18 +1060,16 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                                               true);
                 }
                 if (mudlet::self()->showMapAuditErrors()) {
-                    QString infoMsg = tr("[ INFO ]  - In area with id: %1 there were %2 rooms missing from those it\n"
-                                         "should be recording as possessing, they were:\n%3\nthey have been added.")
+                    QString infoMsg = tr("[ INFO ]  - In area with id: %1 there were %n rooms missing from those it\n"
+                                         "should be recording as possessing. They are:\n%2.\nThey have been added.", "", missingRooms.count())
                                               .arg(itArea.key())
-                                              .arg(missingRooms.count())
                                               .arg(roomList.join(QStringLiteral(", ")));
                     mpMap->postMessage(infoMsg);
                 }
                 mpMap->appendAreaErrorMsg(itArea.key(),
-                                          tr("[ INFO ]  - In this area there were %1 rooms missing from those it should be recorded as possessing."
-                                             "  They are: %2."
-                                             "  They have been added.")
-                                                  .arg(missingRooms.count())
+                                          tr("[ INFO ]  - In this area there were %n rooms missing from those it should be recorded as possessing."
+                                             "  They are: %1."
+                                             "  They have been added.", "", missingRooms.count())
                                                   .arg(roomList.join(QStringLiteral(", "))),
                                           true);
 
@@ -1214,7 +1209,8 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
         }
         if (!renamedMap.empty()) {
             detailText = tr("[  OK  ]  - The changes made are:\n"
-                            "(ID) \"old name\" ==> \"new name\"\n");
+                            "(ID) \"old name\" ==> \"new name\"\n",
+                            "The last line is a headline explaining what follows is a list of lines, one for each change, in the form of the old name followed by the new name.");
             QMapIterator<QString, QString> itRemappedNames = renamedMap;
             itRemappedNames.toBack();
             // Seems to look better if we iterate through backwards!
@@ -1232,7 +1228,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
         if (!renamedMap.empty() && isEmptyAreaNamePresent) {
             // At least one unnamed area and at least one duplicate area name
             // - may be the same items
-            alertText = tr("[ ALERT ] - Empty and duplicate area names detected in Map file!");
+            alertText = tr("[ ALERT ] - Empty and duplicate area names detected in map file!");
             informativeText = tr("[ INFO ]  - Due to some situations not being checked in the past,  Mudlet had\n"
                                  "allowed the map to have more than one area with the same or no name.\n"
                                  "These make some things confusing and are now disallowed.\n"
@@ -1249,7 +1245,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
                                  "%2").arg(mpMap->getUnnamedAreaName(), extraTextForMatchingSuffixAlreadyUsed);
         } else if (!renamedMap.empty()) {
             // Duplicates but no unnnamed area
-            alertText = tr("[ ALERT ] - Duplicate area names detected in the Map file!");
+            alertText = tr("[ ALERT ] - Duplicate area names detected in the map file!");
             informativeText = tr("[ INFO ]  - Due to some situations not being checked in the past, Mudlet had\n"
                                  "allowed the user to have more than one area with the same name.\n"
                                  "These make some things confusing and are now disallowed.\n"
@@ -1265,7 +1261,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
                                       .arg(extraTextForMatchingSuffixAlreadyUsed);
         } else {
             // A single unnamed area found
-            alertText = tr("[ ALERT ] - An empty area name was detected in the Map file!");
+            alertText = tr("[ ALERT ] - An empty area name was detected in the map file!");
             // Use OK for this one because it is the last part and indicates the
             // successful end of something, whereas INFO is an intermediate step
             informativeText = tr("[  OK  ]  - Due to some situations not being checked in the past, Mudlet had\n"
