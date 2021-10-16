@@ -330,12 +330,11 @@ QString KeyUnit::getKeyName(const Qt::Key keyCode, const Qt::KeyboardModifiers m
         return name % mKeys.value(keyCode);
     }
 
-    return tr("%1undefined key (code: 0x%2)",
+    return QStringLiteral("%1%2").arg(name, tr("undefined key (code: 0x%1)",
               // Intentional comment to separate arguments
-              "%1 is a string describing the modifier keys (e.g. \"shift\" or \"control\") "
-              "used with the key, whose 'code' number, in %2 is not one that we have a name "
-              "for. This is probably one of those extra keys around the edge of the keyboard "
-              "that some people have.").arg(name).arg(keyCode, 4, 16, QLatin1Char('0'));
+              "%1 is the code-number of a key which Mudlet has no name for. "
+              "This is probably one of those extra keys around the edge of the keyboard "
+              "that some people have.").arg(keyCode, 4, 16, QLatin1Char('0')));
 }
 
 void KeyUnit::initStats()
