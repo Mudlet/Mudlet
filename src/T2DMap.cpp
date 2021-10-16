@@ -2818,7 +2818,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 }
 
                 if (selectionSize == 1) {
-                    auto customExitLine = new QAction(tr("Create exit line", "2D Mapper context menu (room) item"), this);
+                    auto customExitLine = new QAction(tr("Customize exit line...", "2D Mapper context menu (room) item"), this);
                     if (pArea && !pArea->gridMode) {
                         customExitLine->setToolTip(tr("Replace an exit line with a custom line", "2D Mapper context menu (room) item tooltip (enabled state)"));
                         connect(customExitLine, &QAction::triggered, this, &T2DMap::slot_setCustomLine);
