@@ -2800,6 +2800,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             if (!mMapViewOnly) {
                 if (selectionSize == 0) {
+                    mContextMenuClickPosition = getMousePosition(); // Remember position of original right-click to create room there!
                     mpCreateRoomAction = new QAction(tr("Create room", "Menu option to create a new room in the mapper"), this);
                     mpCreateRoomAction->setToolTip(tr("Create a new room here"));
                     connect(mpCreateRoomAction.data(), &QAction::triggered, this, &T2DMap::slot_createRoom);
@@ -3130,9 +3131,7 @@ void T2DMap::slot_createRoom()
     }
 
     mpMap->setRoomArea(roomID, mAreaID, false);
-
-    auto mousePosition = getMousePosition();
-    mpMap->setRoomCoordinates(roomID, mousePosition.first, mousePosition.second, mOz);
+    mpMap->setRoomCoordinates(roomID, mContextMenuClickPosition.first, mContextMenuClickPosition.second, mOz);
 
     mpMap->mMapGraphNeedsUpdate = true;
 #if defined(INCLUDE_3DMAPPER)
