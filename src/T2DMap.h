@@ -234,7 +234,10 @@ private:
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
 
     bool mDialogLock;
-    std::pair<int, int> mContextMenuClickPosition;
+    struct ClickPosition {
+        int x;
+        int y;
+    } mContextMenuClickPosition;
 
     // When more than zero rooms are selected this
     // is either the first (only) room in the set
