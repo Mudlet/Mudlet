@@ -565,6 +565,18 @@ mudlet::mudlet()
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_discord);
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
+    connect(dactionShowErrors, &QAction::triggered, [=]() {
+        auto host = getActiveHost();
+        if (!host) {
+            return;
+        }
+        host->mpEditorDialog->slot_show_current();
+        host->mpEditorDialog->raise();
+        host->mpEditorDialog->showNormal();
+        host->mpEditorDialog->activateWindow();
+        host->mpEditorDialog->mpErrorConsole->setVisible(true);
+    });
+
 #if defined(INCLUDE_UPDATER)
     // Show the update option if the code is present AND if this is a
     // release OR a public test version:
@@ -1511,7 +1523,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
 void mudlet::slot_timer_fires()
 {
-    QTimer* pQT = (QTimer*)sender();
+    QTimer* pQT = qobject_cast<QTimer*>(sender());
     if (Q_UNLIKELY(!pQT)) {
         return;
     }
