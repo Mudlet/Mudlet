@@ -34,7 +34,7 @@ jobs:
       uses: gr2m/create-or-update-pull-request-action@v1.x
       if: steps.getdiff.outputs.lines_changed > 0
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
       with:
         title: "Infrastructure: Update text for translation in Crowdin"
         body: |
