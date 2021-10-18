@@ -67,6 +67,7 @@ public:
     void setSelection(int selectionIndex, int startOffset, int endOffset) override;
     int cursorPosition() const override;
     void setCursorPosition(int position) override;
+    QString text(QAccessible::Text t) const override;
     QString text(int startOffset, int endOffset) const override;
     int characterCount() const override;
     QRect characterRect(int offset) const override;

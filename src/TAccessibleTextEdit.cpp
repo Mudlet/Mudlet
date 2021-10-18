@@ -54,18 +54,21 @@ int TAccessibleTextEdit::lineForOffset(int offset, int *lengthSoFar = nullptr) c
     int lengthSoFar_ = 0;
 
     for (int i = 0; i < lineBuffer.length(); i++) {
-        lengthSoFar_ += lineBuffer[i].length();
+        // The text() method adds a '\n' to the end of every line, so account
+        // for it with the '+ 1' below.
+        lengthSoFar_ += lineBuffer[i].length() + 1;
 
         if (offset < lengthSoFar_) {
             if (lengthSoFar != nullptr) {
-                *lengthSoFar = lengthSoFar_ - lineBuffer[i].length();
+                *lengthSoFar = lengthSoFar_ - lineBuffer[i].length() - 1;
             }
             return i;
         }
     }
 
     if (lengthSoFar != nullptr) {
-        *lengthSoFar = lengthSoFar_;
+        // The text() method doesn't add a '\n' to the end of the last line.
+        *lengthSoFar = lengthSoFar_ - 1;
     }
     return lineBuffer.length();
 }
@@ -161,7 +164,9 @@ int TAccessibleTextEdit::cursorPosition() const
     int column = textEdit()->mCaretColumn;
 
     for (int i = 0; i < line; i++) {
-        ret += textEdit()->mpBuffer->line(i).length();
+        // The text() method adds a '\n' to the end of every line, so account
+        // for it with the '+ 1' below.
+        ret += textEdit()->mpBuffer->line(i).length() + 1;
     }
 
     ret += column;
@@ -186,6 +191,15 @@ void TAccessibleTextEdit::setCursorPosition(int position)
     textEdit()->setCaretPosition(line, column);
 }
 
+QString TAccessibleTextEdit::text(QAccessible::Text t) const
+{
+    if (t != QAccessible::Value) {
+        return QAccessibleWidget::text(t);
+    }
+
+    return textEdit()->mpBuffer->lineBuffer.join('\n');
+}
+
 /*
  * Returns the text from startOffset to endOffset. The startOffset is the
  * first character that will be returned. The endOffset is the first
@@ -197,22 +211,7 @@ QString TAccessibleTextEdit::text(int startOffset, int endOffset) const
         return QString();
     }
 
-    int startLineNumber = lineForOffset(startOffset);
-    int startColumn = columnForOffset(startOffset);
-    int endLineNumber = lineForOffset(endOffset);
-    int endColumn = columnForOffset(endOffset);
-
-    // Get the first line of the range.
-    QString startLine(textEdit()->mpBuffer->line(startLineNumber));
-    int startLineLength = startLineNumber == endLineNumber ? endOffset - startOffset : -1;
-    QString ret(startLine.mid(startColumn, startLineLength));
-
-    // Get the other lines in the range.
-    for (int i = startLineNumber + 1; i <= endLineNumber; i++) {
-        QString line(textEdit()->mpBuffer->line(i));
-
-        ret += i == endLineNumber ? line.left(endColumn) : line;
-    }
+    QString ret = text(QAccessible::Value).mid(startOffset, endOffset - startOffset);
 
     return ret;
 }
