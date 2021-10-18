@@ -142,6 +142,7 @@ end
 function print_sorted_changelog(changelog)
   local chgtbl = changelog:split("\n")
   local add, improve, fix, infra, other = {}, {}, {}, {}, {}
+  local prefix = "- "
   for _,line in ipairs(chgtbl) do
     local trimmedLine
     local addPattern = create_category_pattern("add")
@@ -150,22 +151,22 @@ function print_sorted_changelog(changelog)
     local infraPattern = create_category_pattern("infra")
     local autoPattern = "^%(autocommit%) (.*)"
     if line:match(addPattern) then
-      trimmedLine = line:match(addPattern)
+      trimmedLine = prefix .. line:match(addPattern)
       add[#add+1] = trimmedLine
     elseif line:match(improvePattern) then
-      trimmedLine = line:match(improvePattern)
+      trimmedLine = prefix .. line:match(improvePattern)
       improve[#improve+1] = trimmedLine
     elseif line:match(fixPattern) then
-      trimmedLine = line:match(fixPattern)
+      trimmedLine = prefix .. line:match(fixPattern)
       fix[#fix+1] = trimmedLine
     elseif line:match(infraPattern) then
-      trimmedLine = line:match(infraPattern)
+      trimmedLine = prefix .. line:match(infraPattern)
       infra[#infra+1] = trimmedLine
     elseif line:match(autoPattern) then --"(autocommit)" to catch bot PRs which may not start with "infra"
-      trimmedLine = line:match(autoPattern)
+      trimmedLine = prefix .. line:match(autoPattern)
       infra[#infra+1] = trimmedLine
     else
-      other[#other+1] = line
+      other[#other+1] = prefix .. line
     end
   end
   local addLines = lines_to_html(table.concat(add, "\n"))
