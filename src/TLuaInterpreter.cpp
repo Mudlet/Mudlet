@@ -10084,7 +10084,7 @@ int TLuaInterpreter::setDiscordLargeIconText(lua_State* L)
 
     auto discordText = getVerifiedString(L, __func__, 1, "text");
     if (discordText.size() == 1) {
-        return warnArgumentValue(L, __func__, "text of length 1 not allowed");
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed by Discord");
     }
 
     pMudlet->mDiscord.setLargeImageText(&host, discordText);
@@ -10159,7 +10159,7 @@ int TLuaInterpreter::setDiscordSmallIconText(lua_State* L)
 
     auto discordText = getVerifiedString(L, __func__, 1, "text");
     if (discordText.size() == 1) {
-        return warnArgumentValue(L, __func__, "text of length 1 not allowed");
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed by Discord");
     }
 
     pMudlet->mDiscord.setSmallImageText(&host, discordText);
@@ -10199,7 +10199,7 @@ int TLuaInterpreter::setDiscordDetail(lua_State* L)
 
     auto discordText = getVerifiedString(L, __func__, 1, "text");
     if (discordText.size() == 1) {
-        return warnArgumentValue(L, __func__, "text of length 1 not allowed");
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed by Discord");
     }
 
     pMudlet->mDiscord.setDetailText(&host, discordText);
@@ -10260,7 +10260,7 @@ int TLuaInterpreter::setDiscordState(lua_State* L)
 
     auto discordText = getVerifiedString(L, __func__, 1, "text");
     if (discordText.size() == 1) {
-        return warnArgumentValue(L, __func__, "text of length 1 not allowed");
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed by Discord");
     }
 
     mudlet::self()->mDiscord.setStateText(&host, discordText);
