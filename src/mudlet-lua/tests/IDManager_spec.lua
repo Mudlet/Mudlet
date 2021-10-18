@@ -41,6 +41,21 @@ describe("Tests the functionality of IDMgr", function()
       assert.spy(handlerSpy).was_called(1)
     end)
 
+    it("Should enforce separation between users/packages", function()
+      local user2 = user.."2"
+      local handlerName2 = handlerName .. "2"
+      registerNamedEventHandler(user, handlerName, eventName, func)
+      registerNamedEventHandler(user2, handlerName2, eventName, func)
+      local handlerList = getNamedEventHandlers(user)
+      local handlerList2 = getNamedEventHandlers(user2)
+      assert.is_equal(1, #handlerList)
+      assert.is_equal(1, #handlerList2)
+      assert.is_not.same(handlerList, handlerList2)
+      assert.is_equal(handlerName, handlerList[1])
+      assert.is_equal(handlerName2, handlerList2[1])
+      deleteAllNamedEventHandlers(user2)
+    end)
+
     it("Should allow for you to stop a handler", function()
       registerNamedEventHandler(user, handlerName, eventName, func)
       local ok = stopNamedEventHandler(user, handlerName)
