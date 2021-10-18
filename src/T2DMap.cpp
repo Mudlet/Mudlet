@@ -2820,7 +2820,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 }
 
                 if (selectionSize == 1) {
-                    auto customExitLine = new QAction(tr("Customize exit line...", "2D Mapper context menu (room) item"), this);
+                    auto customExitLine = new QAction(tr("Create exit line...", "2D Mapper context menu (room) item"), this);
                     if (pArea && !pArea->gridMode) {
                         customExitLine->setToolTip(tr("Replace an exit line with a custom line", "2D Mapper context menu (room) item tooltip (enabled state)"));
                         connect(customExitLine, &QAction::triggered, this, &T2DMap::slot_setCustomLine);
@@ -2833,27 +2833,27 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 }
 
                 if (selectionSize > 0) {
-                    auto recolorRoom = new QAction(tr("Set room color...", "2D Mapper context menu (room) item, selectionSize"), this);
+                    auto recolorRoom = new QAction(tr("Set room's/rooms' color...", "2D Mapper context menu (room) item.\nThere can be 1 or more room selected, but all rooms will receive their same setting, which the player can select here.", selectionSize), this);
                     connect(recolorRoom, &QAction::triggered, this, &T2DMap::slot_changeColor);
                     popup->addAction(recolorRoom);
                 }
 
                 if (selectionSize > 0) {
-                    auto roomSymbol = new QAction(tr("Set room symbol...", "2D Mapper context menu (room) item", selectionSize), this);
+                    auto roomSymbol = new QAction(tr("Set room's/rooms' symbol...", "2D Mapper context menu (room) item.\nThere can be 1 or more room selected, but all rooms will receive their same setting, which the player can select here.", selectionSize), this);
                     roomSymbol->setToolTip(tr("Set one or more symbols or letters to mark special rooms", "2D Mapper context menu (room) item tooltip"));
                     connect(roomSymbol, &QAction::triggered, this, &T2DMap::slot_showSymbolSelection);
                     popup->addAction(roomSymbol);
                 }
 
                 if (selectionSize > 1) {
-                    auto spreadRooms = new QAction(tr("Spread rooms...", "2D Mapper context menu (room) item", selectionSize), this);
+                    auto spreadRooms = new QAction(tr("Spread rooms...", "2D Mapper context menu (room) item.\nThere will always be more than 1 room selected, so smaller quantities need no plural forms translated.", selectionSize), this);
                     spreadRooms->setToolTip(tr("Increase map X-Y spacing for the selected group of rooms", "2D Mapper context menu (room) item tooltip"));
                     connect(spreadRooms, &QAction::triggered, this, &T2DMap::slot_spread);
                     popup->addAction(spreadRooms);
                 }
 
                 if (selectionSize > 1) {
-                    auto shrinkRooms = new QAction(tr("Shrink rooms...", "2D Mapper context menu (room) item", selectionSize), this);
+                    auto shrinkRooms = new QAction(tr("Shrink rooms...", "2D Mapper context menu (room) item.\nThere will always be more than 1 room selected, so smaller quantities need no plural forms translated.", selectionSize), this);
                     shrinkRooms->setToolTip(tr("Decrease map X-Y spacing for the selected group of rooms", "2D Mapper context menu (room) item tooltip"));
                     connect(shrinkRooms, &QAction::triggered, this, &T2DMap::slot_shrink);
                     popup->addAction(shrinkRooms);
@@ -2874,7 +2874,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 }
 
                 if (selectionSize > 0) {
-                    auto weightRoom = new QAction(tr("Set room weight...", "2D Mapper context menu (room) item", selectionSize), this);
+                    auto weightRoom = new QAction(tr("Set room's/rooms' weight...", "2D Mapper context menu (room) item.\nThere can be 1 or more room selected, but all rooms will receive their same setting, which the player can select here.", selectionSize), this);
                     connect(weightRoom, &QAction::triggered, this, &T2DMap::slot_setRoomWeight);
                     popup->addAction(weightRoom);
                 }
@@ -2899,7 +2899,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 }
 
                 auto createLabel = new QAction(tr("Create new label...", "2D Mapper context menu (room) item"), this);
-                createLabel->setToolTip(tr("Create labels to show text or images", "2D Mapper context menu (room) item tooltip"));
+                createLabel->setToolTip(tr("Create label to show text or an image", "2D Mapper context menu (room) item tooltip"));
                 connect(createLabel, &QAction::triggered, this, &T2DMap::slot_createLabel);
                 popup->addAction(createLabel);
             }
