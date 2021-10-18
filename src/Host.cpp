@@ -658,32 +658,17 @@ void Host::syncModule(const QString& syncModuleName, const QString& syncHostName
         const auto& moduleLocation = moduleIterator.value()[0];
         QString fileName = moduleLocation;
         if (moduleName == syncModuleName) {
+            uninstallPackage(moduleName, 2);
             if (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive)) {
                 fileName = mudlet::getMudletPath(mudlet::profilePackagePathFileName, syncHostName, moduleName);
+                installPackage(fileName, 2);
+                QStringList moduleEntry;
+                moduleEntry << moduleLocation;
+                moduleEntry << QStringLiteral("0");
+                mInstalledModules[moduleName] = moduleEntry;
+            } else {
+                installPackage(moduleLocation, 2);
             }
-            uninstallPackage(moduleName, 2);
-            QFile file2;
-            file2.setFileName(fileName);
-            file2.open(QFile::ReadOnly | QFile::Text);
-            QString profileName = getName();
-            QString login = getLogin();
-            QString pass = getPass();
-            XMLimport reader(this);
-            QStringList moduleEntry;
-            moduleEntry << moduleLocation;
-            moduleEntry << QStringLiteral("0");
-            mInstalledModules[moduleName] = moduleEntry;
-            mActiveModules.append(moduleName);
-            reader.importPackage(&file2, moduleName, 2); // TODO: Missing false return value handler
-            setName(profileName);
-            setLogin(login);
-            setPass(pass);
-            file2.close();
-            if (mpEditorDialog) {
-                mpEditorDialog->doCleanReset();
-            }
-            // reorder permanent and temporary triggers: perm first, temp second
-            mTriggerUnit.reorderTriggersAfterPackageImport();
 
             // raise 2 events - a generic one and a more detailed one to serve both
             TEvent genericInstallEvent{};
