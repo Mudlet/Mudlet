@@ -156,121 +156,244 @@ function IDMgr:new()
   return mgr
 end
 
-local mgr = IDMgr:new()
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getNewIDManager
+-- give the user their own IDM to manage if that's what they want
 function getNewIDManager()
   return IDMgr:new()
 end
 
+local idmanagers = {}
+
+-- handles getting or making an IDM for the user
+-- internal only, not documented
+local function getManager(user)
+  local mgr = idmanagers[user]
+  if not mgr then
+    mgr = IDMgr:new()
+    idmanagers[user] = mgr
+  end
+  return mgr
+end
+
+-- internal only, used to format error messages
+local function extractUpstreamError(funcName, err)
+  local splitPattern = string.format("%s: ", funcName)
+  local errMsg = err:split(splitPattern)[2]
+  local argNumber = tonumber(errMsg:match("#(%d+)"))
+  if argNumber then
+    errMsg = errMsg:gsub("#" .. argNumber, "#" .. (argNumber + 2))
+  end
+  return errMsg
+end
+
+-- internal only, used to format error messages
+local function userErrorMsg(funcName, userType)
+  return string.format("%s: bad argument #1 type (user or package name as string expected, got %s!)", funcName, userType)
+end
+
+-- internal only, used to format error messages
+local function nameErrorMsg(funcName, nameType)
+  return string.format("%s: bad argument #2 type (handler name as string expected, got %s!)", funcName, nameType)
+end
+
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerNamedEventHandler
-function registerNamedEventHandler(name, eventName, handler, oneShot)
+function registerNamedEventHandler(user, name, eventName, handler, oneShot)
+  local funcName = "registerNamedEventHandler"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local nameType = type(name)
+  if nameType ~= "string" then
+    printError(nameErrorMsg(funcName, nameType), true, true)
+  end
+  local mgr = getManager(user)
   local ok, err = mgr:registerEvent(name, eventName, handler, oneShot)
   if ok then
     return true
   end
-  local errMsg = err:split("registerAnonymousEventHandler: ")[2]
-  local argNumber = tonumber(errMsg:match("#(%d+)"))
-  if argNumber then
-    errMsg = errMsg:gsub("#" .. argNumber, "#" .. (argNumber + 1))
-  end
+  -- extract the error info from registerAnonymousEventHandler's error, increment argument number by 2
+  -- to account for the user and name arguments, and then display it as our own error
+  local errMsg = extractUpstreamError("registerAnonymousEventHandler", err)
   printError("registerNamedEventHandler: " .. errMsg, true, true)
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopNamedEventHandler
-function stopNamedEventHandler(name)
+function stopNamedEventHandler(user, name)
+  local funcName = "stopNamedEventHandler"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
   local nameType = type(name)
   if nameType ~= "string" then
-    return nil, "name as string expected, got " .. nameType
+    printError(nameErrorMsg(funcName, nameType), true, true)
   end
+  local mgr = getManager(user)
   return mgr:stopEvent(name)
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resumeNamedEventHandler
-function resumeNamedEventHandler(name)
+function resumeNamedEventHandler(user,name)
+  local funcName = "resumeNamedEventHandler"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
   local nameType = type(name)
   if nameType ~= "string" then
-    return nil, "name as string expected, got " .. nameType
+    printError(nameErrorMsg(funcName, nameType), true, true)
   end
+  local mgr = getManager(user)
   return mgr:resumeEvent(name)
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteNamedEventHandler
-function deleteNamedEventHandler(name)
+function deleteNamedEventHandler(user,name)
+  local funcName = "deleteNamedEventHandler"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
   local nameType = type(name)
   if nameType ~= "string" then
-    return nil, "name as string expected, got " .. nameType
+    printError(nameErrorMsg(funcName, nameType), true, true)
   end
+  local mgr = getManager(user)
   return mgr:deleteEvent(name)
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getNamedEventHandlers
-function getNamedEventHandlers()
+function getNamedEventHandlers(user)
+  local funcName = "getNamedEventHandlers"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local mgr = getManager(user)
   return mgr:getEvents()
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopAllNamedEventHandlers
-function stopAllNamedEventHandlers()
+function stopAllNamedEventHandlers(user)
+  local funcName = "stopAllNamedEventHandlers"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local mgr = getManager(user)
   return mgr:stopAllEvents()
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteAllNamedEventHandlers
-function deleteAllNamedEventHandlers()
+function deleteAllNamedEventHandlers(user)
+  local funcName = "deleteAllNamedEventHandlers"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local mgr = getManager(user)
   return mgr:deleteAllEvents()
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerNamedTimer
-function registerNamedTimer(name, time, handler, oneShot)
+function registerNamedTimer(user,name, time, handler, oneShot)
+  local funcName = "registerNamedTimer"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local nameType = type(name)
+  if nameType ~= "string" then
+    printError(nameErrorMsg(funcName, nameType), true, true)
+  end
+  local mgr = getManager(user)
   local ok, err = mgr:registerTimer(name, time, handler, oneShot)
   if ok then
     return true
   end
-  local errMsg = err:split("tempTimer: ")[2]
-  local argNumber = tonumber(err:match("#(%d+)"))
-  if argNumber then
-    errMsg = errMsg:gsub("#" .. argNumber, "#" .. (argNumber + 1))
-  end
+  -- extract the error info from tempTimer's error
+  -- increment argument number by 1 (to account for the leading 'name' parameter)
+  -- and then display it as our own error
+  local errMsg = extractUpstreamError("tempTimer", err)
   printError("registerNamedTimer: " .. errMsg, true, true)
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopNamedTimer
-function stopNamedTimer(name)
+function stopNamedTimer(user, name)
+  local funcName = "stopNamedTimer"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
   local nameType = type(name)
   if nameType ~= "string" then
-    return nil, "name as string expected, got " .. nameType
+    printError(nameErrorMsg(funcName, nameType), true, true)
   end
+  local mgr = getManager(user)
   return mgr:stopTimer(name)
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resumeNamedTimer
-function resumeNamedTimer(name)
+function resumeNamedTimer(user, name)
+  local funcName = "resumeNamedTimer"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
   local nameType = type(name)
   if nameType ~= "string" then
-    return nil, "name as string expected, got " .. nameType
+    printError(nameErrorMsg(funcName, nameType), true, true)
   end
+  local mgr = getManager(user)
   return mgr:resumeTimer(name)
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteNamedTimer
-function deleteNamedTimer(name)
+function deleteNamedTimer(user, name)
+  local funcName = "deleteNamedTimer"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
   local nameType = type(name)
   if nameType ~= "string" then
-    return nil, "name as string expected, got " .. nameType
+    printError(nameErrorMsg(funcName, nameType), true, true)
   end
+  local mgr = getManager(user)
   return mgr:deleteTimer(name)
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getNamedTimers
-function getNamedTimers()
+function getNamedTimers(user)
+  local funcName = "stopNamedTimers"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local mgr = getManager(user)
   return mgr:getTimers()
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopAllNamedTimers
-function stopAllNamedTimers()
+function stopAllNamedTimers(user)
+  local funcName = "stopAllNamedTimers"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local mgr = getManager(user)
   return mgr:stopAllTimers()
 end
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteAllNamedTimers
-function deleteAllNamedTimers()
+function deleteAllNamedTimers(user)
+  local funcName = "deleteAllNamedTimers"
+  local userType = type(user)
+  if userType ~= "string" then
+    printError(userErrorMsg(funcName, userType), true, true)
+  end
+  local mgr = getManager(user)
   return mgr:deleteAllTimers()
 end
