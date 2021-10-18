@@ -157,7 +157,8 @@ please wait...</source>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when ONE room is selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the selected Room.</comment>
-      <translation type="unfinished"/>
+      <translation>房間%1ID：%1%2 位置%1on%1地圖： (%3, %4, %5) %1 已選擇的房間
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mapInfoContributorManager.cpp" line="188"/>
