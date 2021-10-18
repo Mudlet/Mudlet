@@ -10082,7 +10082,12 @@ int TLuaInterpreter::setDiscordLargeIconText(lua_State* L)
         return warnArgumentValue(L, __func__, "access to Discord large icon text is disabled in settings for privacy");
     }
 
-    pMudlet->mDiscord.setLargeImageText(&host, getVerifiedString(L, __func__, 1, "text"));
+    auto discordText = getVerifiedString(L, __func__, 1, "text");
+    if (discordText.size() == 1) {
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed by Discord");
+    }
+
+    pMudlet->mDiscord.setLargeImageText(&host, discordText);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10152,7 +10157,12 @@ int TLuaInterpreter::setDiscordSmallIconText(lua_State* L)
         return warnArgumentValue(L, __func__, "access to Discord small icon text is disabled in settings for privacy");
     }
 
-    pMudlet->mDiscord.setSmallImageText(&host, getVerifiedString(L, __func__, 1, "text"));
+    auto discordText = getVerifiedString(L, __func__, 1, "text");
+    if (discordText.size() == 1) {
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed by Discord");
+    }
+
+    pMudlet->mDiscord.setSmallImageText(&host, discordText);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10187,7 +10197,12 @@ int TLuaInterpreter::setDiscordDetail(lua_State* L)
         return warnArgumentValue(L, __func__, "access to Discord detail is disabled in settings for privacy");
     }
 
-    pMudlet->mDiscord.setDetailText(&host, getVerifiedString(L, __func__, 1, "text"));
+    auto discordText = getVerifiedString(L, __func__, 1, "text");
+    if (discordText.size() == 1) {
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed by Discord");
+    }
+
+    pMudlet->mDiscord.setDetailText(&host, discordText);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10243,7 +10258,12 @@ int TLuaInterpreter::setDiscordState(lua_State* L)
         return warnArgumentValue(L, __func__, "access to Discord state is disabled in settings for privacy");
     }
 
-    mudlet::self()->mDiscord.setStateText(&host, getVerifiedString(L, __func__, 1, "text"));
+    auto discordText = getVerifiedString(L, __func__, 1, "text");
+    if (discordText.size() == 1) {
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed by Discord");
+    }
+
+    mudlet::self()->mDiscord.setStateText(&host, discordText);
     lua_pushboolean(L, true);
     return 1;
 }
