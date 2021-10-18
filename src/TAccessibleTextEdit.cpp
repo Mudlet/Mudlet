@@ -53,6 +53,12 @@ int TAccessibleTextEdit::lineForOffset(int offset, int *lengthSoFar = nullptr) c
     const QStringList& lineBuffer = textEdit()->mpBuffer->lineBuffer;
     int lengthSoFar_ = 0;
 
+    // If the offset is just past the end of the contents, consider it to be on
+    // the last character.
+    if (offset == characterCount()) {
+        offset -= 1;
+    }
+
     for (int i = 0; i < lineBuffer.length(); i++) {
         // The text() method adds a '\n' to the end of every line, so account
         // for it with the '+ 1' below.
@@ -76,6 +82,12 @@ int TAccessibleTextEdit::lineForOffset(int offset, int *lengthSoFar = nullptr) c
 int TAccessibleTextEdit::columnForOffset(int offset) const
 {
     int lengthSoFar;
+
+    // If the offset is just past the end of the contents, consider it to be on
+    // the last character.
+    if (offset == characterCount()) {
+        offset -= 1;
+    }
 
     lineForOffset(offset, &lengthSoFar);
 
@@ -221,11 +233,7 @@ QString TAccessibleTextEdit::text(int startOffset, int endOffset) const
  */
 int TAccessibleTextEdit::characterCount() const
 {
-    int ret;
-
-    lineForOffset(std::numeric_limits<int>::max(), &ret);
-
-    return ret;
+    return text(QAccessible::Value).length();
 }
 
 /*
