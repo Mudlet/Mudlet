@@ -518,7 +518,7 @@ void Host::slot_saveModules(int sync, bool backup)
         QString moduleName = it.key();
         QString filename_xml = entry[0];
 
-        if (backup){
+        if (backup) {
             QString time = QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss");
             QFile::copy(filename_xml, savePath + moduleName + time);
         }
@@ -526,7 +526,7 @@ void Host::slot_saveModules(int sync, bool backup)
             filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
             //only save to zip after the xml is ready
             QObject *obj = new QObject(this);
-            connect(this, &Host::profileSaveFinished, obj, [=](){
+            connect(this, &Host::profileSaveFinished, obj, [=]() {
                 slot_updateModuleZips(entry, moduleName);
                 obj->deleteLater();
             });
