@@ -634,13 +634,14 @@ signals:
 
 private slots:
     void slot_saveModules(int sync, bool backup = true);
+    void slot_updateModuleZips(const QStringList entry, const QString moduleName);
+    void slot_reloadModules();
     void slot_purgeTemps();
 
 private:
     void installPackageFonts(const QString &packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
-    void updateModuleZips();
     void loadSecuredPassword();
     void removeAllNonPersistentStopWatches();
     void updateConsolesFont();
