@@ -634,7 +634,7 @@ signals:
 
 private slots:
     void slot_saveModules(int sync, bool backup = true);
-    void slot_updateModuleZips(const QStringList entry, const QString moduleName);
+    void slot_updateModuleZips(const QStringList &entry, const QString &moduleName);
     void slot_reloadModules();
     void slot_purgeTemps();
 

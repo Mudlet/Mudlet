@@ -578,14 +578,14 @@ void Host::slot_reloadModules()
     QObject::disconnect(this, &Host::profileSaveFinished, this, &Host::slot_reloadModules);
 }
 
-void Host::slot_updateModuleZips(const QStringList entry, const QString moduleName)
+void Host::slot_updateModuleZips(const QStringList &entry, const QString &moduleName)
 {
     QString zipName = entry[0];
     zip* zipFile = nullptr;
     if (zipName.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || zipName.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
         QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
         QString filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
-        int err;
+        int err = 0;
         zipFile = zip_open(zipName.toStdString().c_str(), ZIP_CREATE, &err);
         if (!zipFile) {
             return;
