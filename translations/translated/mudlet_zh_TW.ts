@@ -5070,7 +5070,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="54"/>
       <source>Click to access all 256 ANSI colors.</source>
-      <translation type="unfinished"/>
+      <translation>點選以存取 ANSI 256色。</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
@@ -5384,7 +5384,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1784"/>
       <source>SSL connections require the URL of the Game server.</source>
-      <translation type="unfinished"/>
+      <translation>SSL 連線需要遊戲伺服器的 URL</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1801"/>
@@ -5428,7 +5428,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="135"/>
       <source>Mudlet IRC Client - %1 - %2 on %3</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet IRC 用戶端 - %1 %2 在 %3</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="149"/>
@@ -5438,7 +5438,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="150"/>
       <source>$ Host: %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>主機： %1:%2</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="151"/>
