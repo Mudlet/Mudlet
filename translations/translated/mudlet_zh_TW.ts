@@ -5438,27 +5438,27 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="150"/>
       <source>$ Host: %1:%2</source>
-      <translation>主機： %1:%2</translation>
+      <translation>$ 主機： %1:%2</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="151"/>
       <source>$ Nick: %1</source>
-      <translation type="unfinished"/>
+      <translation>$ 暱稱： %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="152"/>
       <source>$ Auto-Join Channels: %1</source>
-      <translation type="unfinished"/>
+      <translation>$ 自動加入頻道：%1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="153"/>
       <source>$ This client supports Auto-Completion using the Tab key.</source>
-      <translation type="unfinished"/>
+      <translation>$ 用戶端支援 Tab 自動完成。</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="154"/>
       <source>$ Type &lt;b&gt;/help&lt;/b&gt; for commands or &lt;b&gt;/help [command]&lt;/b&gt; for command syntax.</source>
-      <translation type="unfinished"/>
+      <translation>$ 輸入 &lt;b&gt;/help&lt;/b&gt; 或 &lt;b&gt;/help [command]&lt;/b&gt; 查詢所有或指定命令的說明。</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="213"/>
