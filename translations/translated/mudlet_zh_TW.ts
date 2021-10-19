@@ -2618,7 +2618,10 @@ out what new id numbers to use.</source>
  Look for further messages related to the rooms that is/are supposed to
  be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[警告] - 偵測到 %n 個遺失的地圖區域，正在新增它們。
+ 尋找更多關於該區域的相關資訊…</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="780"/>
@@ -4604,7 +4607,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="56"/>
       <source>Codepoints</source>
-      <translation type="unfinished"/>
+      <translation>編碼位置</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="61"/>
@@ -5132,7 +5135,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="82"/>
       <source>Magenta</source>
-      <translation type="unfinished"/>
+      <translation>洋红色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="83"/>
@@ -5142,7 +5145,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
       <source>White (Light gray)</source>
-      <translation type="unfinished"/>
+      <translation>白色（淺灰）</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="86"/>
