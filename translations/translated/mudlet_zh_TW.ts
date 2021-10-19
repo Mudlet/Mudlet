@@ -5150,42 +5150,42 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="86"/>
       <source>Light black (Dark gray)</source>
-      <translation type="unfinished"/>
+      <translation>淺黑色 (深灰色)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="87"/>
       <source>Light red</source>
-      <translation type="unfinished"/>
+      <translation>淺紅色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="88"/>
       <source>Light green</source>
-      <translation type="unfinished"/>
+      <translation>淺綠色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="89"/>
       <source>Light yellow</source>
-      <translation type="unfinished"/>
+      <translation>淺黃色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="90"/>
       <source>Light blue</source>
-      <translation type="unfinished"/>
+      <translation>淺藍色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="91"/>
       <source>Light magenta</source>
-      <translation type="unfinished"/>
+      <translation>淺紅色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="92"/>
       <source>Light cyan</source>
-      <translation type="unfinished"/>
+      <translation>淺藍色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="93"/>
       <source>Light white</source>
-      <translation type="unfinished"/>
+      <translation>淺白色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="218"/>
@@ -5316,7 +5316,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="553"/>
       <source>new profile name</source>
-      <translation type="unfinished"/>
+      <translation>新設定檔名稱</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="666"/>
@@ -5364,7 +5364,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1322"/>
       <source>Images (%1)</source>
-      <translation type="unfinished"/>
+      <translation>圖片（%1）</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1732"/>
