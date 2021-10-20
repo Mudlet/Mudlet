@@ -2,6 +2,7 @@ describe("Tests the functionality of IDMgr", function()
   describe("Test the event mgr functionality", function()
     local RESpy
     local KESpy
+    local handlerSpy
     local eventName = "testEvent"
     local handlerName = "tester"
     local user = "test user"
