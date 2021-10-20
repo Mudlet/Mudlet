@@ -126,7 +126,7 @@ function convert_to_html(text)
   for s in string.gmatch(text, "(.-)\n") do
     s = escape_for_html(s)
     s = s:gsub("%(#(.-)%)", [[<a href="https://github.com/Mudlet/Mudlet/pull/%1">(#%1)</a>]])
-		t[#t+1] = string.format('<p>%s</p>', s)
+		t[#t+1] = string.format("<p>%s</p>", s)
   end
 
   return table.concat(t, "\n")
