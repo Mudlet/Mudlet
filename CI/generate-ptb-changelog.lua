@@ -169,16 +169,18 @@ function print_sorted_changelog(changelog)
       other[#other+1] = prefix .. line
     end
   end
+  local hopen = [[<h5 style="margin-top: 1em;margin-bottom: 1em;">]]
+  local hclose = "</h5>"
   local addLines = lines_to_html(table.concat(add, "\n"))
-  addLines = addLines and f"<h3>Added:</h3>\n{addLines}\n" or ""
+  addLines = addLines and f"{hopen}Added:{hclose}\n{addLines}\n" or ""
   local improveLines = lines_to_html(table.concat(improve, "\n"))
-  improveLines = improveLines and f"<h3>Improved:</h3>\n{improveLines}\n" or ""
+  improveLines = improveLines and f"{hopen}Improved:{hclose}\n{improveLines}\n" or ""
   local fixLines = lines_to_html(table.concat(fix, "\n"))
-  fixLines = fixLines and f"<h3>Fixed:</h3>\n{fixLines}\n" or ""
+  fixLines = fixLines and f"{hopen}Fixed:{hclose}\n{fixLines}\n" or ""
   local infraLines = lines_to_html(table.concat(infra, "\n"))
-  infraLines = infraLines and f"<h3>Infrastructure:</h3>\n{infraLines}\n" or ""
+  infraLines = infraLines and f"{hopen}Infrastructure:{hclose}\n{infraLines}\n" or ""
   local otherLines = lines_to_html(table.concat(other, "\n"))
-  otherLines = otherLines and f"<h3>Other:</h3>\n{otherLines}\n" or ""
+  otherLines = otherLines and f"{hopen}Other:{hclose}\n{otherLines}\n" or ""
   local final_changelog = f"{addLines}{improveLines}{fixLines}{infraLines}{otherLines}"
   print(final_changelog)
 end
