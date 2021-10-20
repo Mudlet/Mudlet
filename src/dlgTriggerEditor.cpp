@@ -619,8 +619,40 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                              .arg(hostName));
     toolBar2->setOrientation(Qt::Vertical);
 
-    QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
+    // Inserting them in this order also causes the first one (the top toolbar)
+    // to be listed first in the QMainWindows's default context menu:
     QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar);
+    QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
+
+    // (Top) "Actions" toolbar:
+    mpAction_restoreEditorActionsToolbar = new QAction(tr("Restore Actions toolbar"), this);
+    // (Left) "Items" toolbar:
+    mpAction_restoreEditorItemsToolbar = new QAction(tr("Restore Items toolbar"), this);
+
+    connect(mpAction_restoreEditorActionsToolbar, &QAction::triggered, this, &dlgTriggerEditor::slot_restoreEditorActionsToolbar);
+    connect(mpAction_restoreEditorItemsToolbar, &QAction::triggered, this, &dlgTriggerEditor::slot_restoreEditorItemsToolbar);
+    connect(toolBar, &QToolBar::visibilityChanged, this, &dlgTriggerEditor::slot_visibilityChangedEditorActionsToolbar);
+    connect(toolBar2, &QToolBar::visibilityChanged, this, &dlgTriggerEditor::slot_visibilityChangedEditorItemsToolbar);
+
+    treeWidget_triggers->addAction(mpAction_restoreEditorActionsToolbar);
+    treeWidget_aliases->addAction(mpAction_restoreEditorActionsToolbar);
+    treeWidget_timers->addAction(mpAction_restoreEditorActionsToolbar);
+    treeWidget_scripts->addAction(mpAction_restoreEditorActionsToolbar);
+    treeWidget_actions->addAction(mpAction_restoreEditorActionsToolbar);
+    treeWidget_keys->addAction(mpAction_restoreEditorActionsToolbar);
+
+    treeWidget_triggers->addAction(mpAction_restoreEditorItemsToolbar);
+    treeWidget_aliases->addAction(mpAction_restoreEditorItemsToolbar);
+    treeWidget_timers->addAction(mpAction_restoreEditorItemsToolbar);
+    treeWidget_scripts->addAction(mpAction_restoreEditorItemsToolbar);
+    treeWidget_actions->addAction(mpAction_restoreEditorItemsToolbar);
+    treeWidget_keys->addAction(mpAction_restoreEditorItemsToolbar);
+
+    // These only have to be shown should the associated toolbar get hidden
+    // and by default the starting state for those is a visible one so these
+    // need to be hidden at the start:
+    mpAction_restoreEditorActionsToolbar->setVisible(false);
+    mpAction_restoreEditorActionsToolbar->setVisible(false);
     setShortcuts();
 
     auto config = mpSourceEditorEdbee->config();
@@ -9093,4 +9125,30 @@ void dlgTriggerEditor::setSearchOptions(const SearchOptions optionsState)
     mpAction_searchCaseSensitive->setChecked(optionsState & SearchOptionCaseSensitive);
     mpAction_searchIncludeVariables->setChecked(optionsState & SearchOptionIncludeVariables);
     createSearchOptionIcon();
+}
+
+// These two slots show/hide the restore option for the relevant toolbar
+// as the toolbar itself is hidden/shown:
+void dlgTriggerEditor::slot_visibilityChangedEditorActionsToolbar(const bool visible)
+{
+    mpAction_restoreEditorActionsToolbar->setVisible(!visible);
+}
+
+void dlgTriggerEditor::slot_visibilityChangedEditorItemsToolbar(const bool visible)
+{
+    mpAction_restoreEditorItemsToolbar->setVisible(!visible);
+}
+
+void dlgTriggerEditor::slot_restoreEditorActionsToolbar()
+{
+    if (!toolBar->isVisible()) {
+        toolBar->show();
+    }
+}
+
+void dlgTriggerEditor::slot_restoreEditorItemsToolbar()
+{
+    if (!toolBar2->isVisible()) {
+        toolBar2->show();
+    }
 }

@@ -293,6 +293,10 @@ private slots:
     void slot_clearSearchResults();
     void slot_clearSoundFile();
     void slot_editorContextMenu();
+    void slot_visibilityChangedEditorActionsToolbar(const bool);
+    void slot_visibilityChangedEditorItemsToolbar(const bool);
+    void slot_restoreEditorActionsToolbar();
+    void slot_restoreEditorItemsToolbar();
 
 public:
     TConsole* mpErrorConsole;
@@ -483,6 +487,10 @@ private:
 
     QAction* mProfileSaveAction;
     QAction* mProfileSaveAsAction;
+
+    // Enables the toolbars to be unhidden if they get hid:
+    QAction* mpAction_restoreEditorActionsToolbar = nullptr;
+    QAction* mpAction_restoreEditorItemsToolbar = nullptr;
 
     // We need to keep a record of this button as we have to disable it
     // for the "Variables" view:
