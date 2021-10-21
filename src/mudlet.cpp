@@ -407,7 +407,7 @@ mudlet::mudlet()
     mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
 
     mpActionMudletDiscord = new QAction(QIcon(QStringLiteral(":/icons/mudlet_discord.png")), tr("Mudlet Discord"), this);
-    mpActionMudletDiscord->setToolTip(tr("Mudlet Discord"));
+    mpActionMudletDiscord->setToolTip(tr("Open a link to the Mudlet server on Discord"));
     mpMainToolBar->addAction(mpActionMudletDiscord);
     mpActionMudletDiscord->setObjectName(QStringLiteral("mudlet_discord"));
     mpMainToolBar->widgetForAction(mpActionMudletDiscord)->setObjectName(mpActionMudletDiscord->objectName());
