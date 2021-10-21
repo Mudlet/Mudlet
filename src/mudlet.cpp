@@ -406,10 +406,11 @@ mudlet::mudlet()
     mpActionDiscord->setIconText(QStringLiteral("Discord"));
     mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
 
-    mpActionMudletDiscord = new QAction(tr("Open Mudlet Discord"), this);
-    mpActionMudletDiscord->setIcon(QIcon(QStringLiteral(":/icons/mudlet_discord.png")));
-    mpActionMudletDiscord->setIconText(QStringLiteral("Mudlet Discord"));
-    mpActionMudletDiscord->setObjectName(QStringLiteral("openMudletDiscord"));
+    mpActionMudletDiscord = new QAction(QIcon(QStringLiteral(":/icons/mudlet_discord.png")), tr("Mudlet Discord"), this);
+    mpActionMudletDiscord->setToolTip(tr("Mudlet Discord"));
+    mpMainToolBar->addAction(mpActionMudletDiscord);
+    mpActionMudletDiscord->setObjectName(QStringLiteral("mudlet_discord"));
+    mpMainToolBar->widgetForAction(mpActionMudletDiscord)->setObjectName(mpActionMudletDiscord->objectName());
     mpActionMudletDiscord->setVisible(false); // Mudlet Discord becomes visible if game has custom invite
 
     mpActionIRC = new QAction(tr("Open IRC"), this);
@@ -417,7 +418,6 @@ mudlet::mudlet()
     mpActionIRC->setObjectName(QStringLiteral("openIRC"));
 
     mpButtonDiscord->addAction(mpActionDiscord);
-    mpButtonDiscord->addAction(mpActionMudletDiscord);
     mpButtonDiscord->addAction(mpActionIRC);
     mpButtonDiscord->setDefaultAction(mpActionDiscord);
 
@@ -1532,6 +1532,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     int y = mpCurrentActiveHost->mpConsole->height();
     QSize s = QSize(x, y);
     QResizeEvent event(s, s);
+    toggleMudletDiscordVisible(false);
     QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
 }
 
