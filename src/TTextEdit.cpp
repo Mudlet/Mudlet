@@ -1018,10 +1018,11 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
                 QStringList tooltip = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
                 QStringList commands = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
 
-                if (tooltip.size() > commands.size())
+                if (tooltip.size() > commands.size()) {
                     QToolTip::showText(event->globalPos(), tooltip[0]);
-                else
+                } else {
                     QToolTip::showText(event->globalPos(), tooltip.join("\n"));
+                }
             } else {
                 setCursor(Qt::IBeamCursor);
                 QToolTip::hideText();
