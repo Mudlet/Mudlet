@@ -10031,7 +10031,6 @@ int TLuaInterpreter::setDiscordGameUrl(lua_State* L)
     bool isActiveHost = (pMudlet->mpCurrentActiveHost == &host);
     int args = lua_gettop(L);
 
-    qDebug()<<"setDiscordGameUrl called lua_gettop(L)="<<lua_gettop(L);
     if (!args) { // no args, blank the invite URL and game name
         host.setDiscordInviteURL(QString());
         host.setDiscordGameName(QString());
