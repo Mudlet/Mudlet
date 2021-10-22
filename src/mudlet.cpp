@@ -1434,11 +1434,7 @@ void mudlet::slot_tab_changed(int tabID)
     dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
 
     // If game has custom invite then make secondary Discord option visible.
-    if (mpCurrentActiveHost->getDiscordInviteURL().isEmpty()) {
-        toggleMudletDiscordVisible(false);
-    } else {
-        toggleMudletDiscordVisible(true);
-    }
+    toggleMudletDiscordVisible(!mpCurrentActiveHost->getDiscordInviteURL().isEmpty());
 
     // Restore the multi-view mode if it was enabled:
     if (mpTabBar->count() > 1) {
@@ -4436,11 +4432,7 @@ void mudlet::activateProfile(Host* pHost)
         }
         mpCurrentActiveHost = pHost;
         // If game has custom invite then make secondary Discord option visible.
-        if (mpCurrentActiveHost->getDiscordInviteURL().isEmpty()) {
-            toggleMudletDiscordVisible(false);
-        } else {
-            toggleMudletDiscordVisible(true);
-        }
+        toggleMudletDiscordVisible(!mpCurrentActiveHost->getDiscordInviteURL().isEmpty());
         dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
     }
 }
