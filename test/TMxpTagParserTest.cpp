@@ -250,7 +250,7 @@ private slots:
 
     void testSimpleQuotedElementDefition()
     {
-        QString tagLine = "!EL RExit 'FLAG=RoomExit'";
+        QString tagLine = "<!EL RExit FLAG='RoomExit'>";
 
         auto node = parseNode(tagLine);
 
