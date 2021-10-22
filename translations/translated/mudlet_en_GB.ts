@@ -852,91 +852,91 @@ please wait...</translation>
       <location filename="../src/T2DMap.cpp" line="2805"/>
       <source>Create new room here</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Create new room here</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2817"/>
       <source>Set exits...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Set exits...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2823"/>
       <source>Create exit line...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Create exit line...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2836"/>
       <source>Set color...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Set colour...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2842"/>
       <source>Set symbol...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Set symbol...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2849"/>
       <source>Spread...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Spread...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2856"/>
       <source>Shrink...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Shrink...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2877"/>
       <source>Set weight...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Set weight...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2889"/>
       <source>Move to position...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Move to position...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2890"/>
       <source>Move selected room or group of rooms to the given coordinates in this area</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Move selected room or group of rooms to the given coordinates in this area</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2896"/>
       <source>Move to area...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Move to area...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2901"/>
       <source>Create label...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Create label...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2902"/>
       <source>Create label to show text or an image</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Create label to show text or an image</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2908"/>
       <source>Set player location</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Set player location</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2909"/>
       <source>Set the player&apos;s current location to here</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Set the player&apos;s current location to here</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2918"/>
@@ -7513,7 +7513,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7900"/>
       <source>Export Item</source>
-      <translation type="unfinished"/>
+      <translation>Export Item</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7914"/>
@@ -8355,12 +8355,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="190"/>
       <source>Show errors</source>
-      <translation type="unfinished"/>
+      <translation>Show errors</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="193"/>
       <source>&lt;p&gt;Show errors from scripts that you have running&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Show errors from scripts that you have running&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="222"/>
