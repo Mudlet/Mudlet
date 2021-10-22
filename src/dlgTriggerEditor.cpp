@@ -7897,7 +7897,7 @@ void dlgTriggerEditor::slot_export()
         return;
     }
 
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Triggers"), QDir::currentPath(), tr("Mudlet packages (*.xml)"));
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Item"), QDir::currentPath(), tr("Mudlet packages (*.xml)"));
     if (fileName.isEmpty()) {
         return;
     }

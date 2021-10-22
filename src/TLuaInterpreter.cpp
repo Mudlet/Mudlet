@@ -12514,7 +12514,7 @@ void TLuaInterpreter::setMatches(lua_State* L)
         // set values
         int i = 1; // Lua indexes start with 1 as a general convention
         for (auto it = mCaptureGroupList.begin(); it != mCaptureGroupList.end(); it++, i++) {
-            // if ((*it).length() < 1) continue; //have empty capture groups to be undefined keys i.e. machts[emptyCapGroupNumber] = nil otherwise it's = "" i.e. an empty string
+            // if ((*it).length() < 1) continue; //have empty capture groups to be undefined keys i.e. matches[emptyCapGroupNumber] = nil otherwise it's = "" i.e. an empty string
             lua_pushnumber(L, i);
             lua_pushstring(L, (*it).c_str());
             lua_settable(L, -3);
