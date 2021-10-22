@@ -852,25 +852,25 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2805"/>
       <source>Create new room here</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation>Crea una nuova stanza</translation>
+      <translation>Crea stanza qui</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2817"/>
       <source>Set exits...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation>Imposta le uscite...</translation>
+      <translation>Imposta uscite...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2823"/>
       <source>Create exit line...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation>Crea la linea dell'uscita...</translation>
+      <translation>Crea linea dell'uscita...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2836"/>
       <source>Set color...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation>Imposta i colori...</translation>
+      <translation>Imposta colori...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2842"/>
@@ -894,49 +894,49 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2877"/>
       <source>Set weight...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Imposta peso...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2889"/>
       <source>Move to position...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Sposta in posizione...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2890"/>
       <source>Move selected room or group of rooms to the given coordinates in this area</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Sposta stanza o gruppo di stanze alle coordinate specificate per quest'area</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2896"/>
       <source>Move to area...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Spostati nella zona...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2901"/>
       <source>Create label...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Crea etichetta...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2902"/>
       <source>Create label to show text or an image</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Crea etichetta per mostrare testo o immagine</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2908"/>
       <source>Set player location</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Imposta posizione giocatore</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2909"/>
       <source>Set the player&apos;s current location to here</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Imposta qui la posizione corrente giocatore</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2918"/>
@@ -7619,7 +7619,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7900"/>
       <source>Export Item</source>
-      <translation type="unfinished"/>
+      <translation>Esportare elemento</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7914"/>
@@ -8479,12 +8479,12 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/ui/main_window.ui" line="190"/>
       <source>Show errors</source>
-      <translation type="unfinished"/>
+      <translation>Mostra errori</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="193"/>
       <source>&lt;p&gt;Show errors from scripts that you have running&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mostra gli errori degli script che hai eseguito&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="222"/>
