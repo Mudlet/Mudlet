@@ -4435,6 +4435,12 @@ void mudlet::activateProfile(Host* pHost)
             mpTabBar->blockSignals(false);
         }
         mpCurrentActiveHost = pHost;
+        // If game has custom invite then make secondary Discord option visible.
+        if (mpCurrentActiveHost->getDiscordInviteURL().isEmpty()) {
+            toggleMudletDiscordVisible(false);
+        } else {
+            toggleMudletDiscordVisible(true);
+        }
         dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
     }
 }
