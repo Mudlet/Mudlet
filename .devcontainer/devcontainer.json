@@ -24,6 +24,12 @@
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	"forwardPorts": [5900, 5901, 6080],
+		
+	"portsAttributes": {
+		"6080": {
+			"label": "Open in a browser"
+		}
+	}
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "git submodule update --init",
