@@ -652,7 +652,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // and by default the starting state for those is a visible one so these
     // need to be hidden at the start:
     mpAction_restoreEditorActionsToolbar->setVisible(false);
-    mpAction_restoreEditorActionsToolbar->setVisible(false);
+    mpAction_restoreEditorItemsToolbar->setVisible(false);
     setShortcuts();
 
     auto config = mpSourceEditorEdbee->config();
