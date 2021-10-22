@@ -10045,6 +10045,8 @@ int TLuaInterpreter::setDiscordGameUrl(lua_State* L)
     if (args > 1){
         inputText = getVerifiedString(L, __func__, 2, "game name").trimmed();
         host.setDiscordGameName(inputText.isEmpty() ? QString() : inputText);
+    } else {
+        host.setDiscordGameName(QString());
     }
     if (isActiveHost) {
         pMudlet->updateDiscordNamedIcon();
