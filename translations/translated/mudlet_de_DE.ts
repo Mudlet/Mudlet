@@ -850,91 +850,91 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2805"/>
       <source>Create new room here</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Hier neuen Raum erstellen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2817"/>
       <source>Set exits...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Ausgänge einstellen...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2823"/>
       <source>Create exit line...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Ausgangslinie erstellen...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2836"/>
       <source>Set color...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Farbe einstellen...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2842"/>
       <source>Set symbol...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Symbol einstellen...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2849"/>
       <source>Spread...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Ausbreiten...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2856"/>
       <source>Shrink...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Schrumpfen...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2877"/>
       <source>Set weight...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Gewicht einstellen...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2889"/>
       <source>Move to position...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Verschiebe zu Position...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2890"/>
       <source>Move selected room or group of rooms to the given coordinates in this area</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Verschiebe den ausgewählten Raum oder die Gruppe von Räumen an die angegebenen Koordinaten in diesem Gebiet</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2896"/>
       <source>Move to area...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Verschiebe zu Gebiet...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2901"/>
       <source>Create label...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Markierung erstellen...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2902"/>
       <source>Create label to show text or an image</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Markierung erstellen, um Text oder ein Bild anzuzeigen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2908"/>
       <source>Set player location</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Spielerstandort festlegen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2909"/>
       <source>Set the player&apos;s current location to here</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Setze die aktuelle Position des Spielers hierher</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2918"/>
