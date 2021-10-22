@@ -10044,7 +10044,7 @@ int TLuaInterpreter::setDiscordGameUrl(lua_State* L)
     host.setDiscordInviteURL(inputText.isEmpty() ? QString() : inputText);
     if (args > 1) {
         inputText = getVerifiedString(L, __func__, 2, "game name").trimmed();
-        host.setDiscordGameName(inputText.isEmpty() ? QString() : inputText);
+        host.setDiscordGameName(inputText);
     } else {
         host.setDiscordGameName(QString());
     }
