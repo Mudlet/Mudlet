@@ -68,6 +68,12 @@ private:
 
 private slots:
 
+    QSharedPointer<MxpNode> parseNode(const QString& tagText) const
+    {
+        auto nodes = TMxpTagParser::parseToMxpNodeList(tagText);
+        return nodes.size() > 0 ? nodes.first() : nullptr;
+    }
+
     void testCustomItemCmd() {
         // Complex Example: Aldebaran defines a profile with definitions like this:
         // <!EL ITI '<SEND "examine &ID;|drop &ID;" HINT="&CMDH;examine|drop">' ATT='ID'>
@@ -77,24 +83,23 @@ private slots:
 
         TMxpStubHandlerContext ctx;
         TMxpStubClient stub;
-        TMxpTagParser parser;
 
         ctx.getEntityResolver().registerEntity("&CMDH;", "Right-click for options|");
 
-        MxpStartTag* defTag = parser.parseStartTag(R"(<!EL ITI '<SEND "examine &ID;|drop &ID;" HINT="&CMDH;examine|drop">' ATT='ID'>)");
+        auto defTag = parseNode(R"(<!EL ITI '<SEND "examine &ID;|drop &ID;" HINT="&CMDH;examine|drop">' ATT='ID'>)");
 
         TMxpElementDefinitionHandler definitionHandler;
-        definitionHandler.handleTag(ctx, stub, defTag);
+        definitionHandler.handleTag(ctx, stub, defTag->asStartTag());
 
-        MxpStartTag* startTag = parser.parseStartTag(R"(<ITI inv##10>)");
-        MxpEndTag* endTag = parser.parseEndTag("</ITI>");
+        auto startTag = parseNode(R"(<ITI inv##10>)");
+        auto endTag = parseNode("</ITI>");
 
         TMxpCustomElementTagHandler customElementTagHandler;
         TMxpTagHandler& tagHandler = customElementTagHandler;
 
-        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("a rock");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 2);
         QCOMPARE(stub.mHrefs[0], "send([[examine inv##10]])");
@@ -119,24 +124,23 @@ private slots:
 
         TMxpStubHandlerContext ctx;
         TMxpStubClient stub;
-        TMxpTagParser parser;
 
         ctx.getEntityResolver().registerEntity("&MID;", "map of the newbie jungle");
 
-        MxpStartTag* defTag = parser.parseStartTag(R"(<!EL MAP '<SEND "follow &MID; to &ID;" HINT="go here">' ATT='ID'>)");
+        auto defTag = parseNode(R"(<!EL MAP '<SEND "follow &MID; to &ID;" HINT="go here">' ATT='ID'>)");
 
         TMxpElementDefinitionHandler definitionHandler;
-        definitionHandler.handleTag(ctx, stub, defTag);
+        definitionHandler.handleTag(ctx, stub, defTag->asStartTag());
 
-        MxpStartTag* startTag = parser.parseStartTag(R"(<MAP P8x7>)");
-        MxpEndTag* endTag = parser.parseEndTag("</MAP>");
+        auto startTag = parseNode(R"(<MAP P8x7>)");
+        auto endTag = parseNode("</MAP>");
 
         TMxpCustomElementTagHandler customElementTagHandler;
         TMxpTagHandler& tagHandler = customElementTagHandler;
 
-        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("*");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 1);
         QCOMPARE(stub.mHrefs[0], "send([[follow map of the newbie jungle to P8x7]])");
@@ -147,12 +151,12 @@ private slots:
         // Now player looks at another map and gets an MXP button to go to another place.
         // Note the MAP element is NOT redefined, only the entity.
         ctx.getEntityResolver().registerEntity("&MID;", "map of the south forest");
-        startTag = parser.parseStartTag(R"(<MAP P42>)");
-        endTag = parser.parseEndTag("</MAP>");
+        startTag = parseNode(R"(<MAP P42>)");
+        endTag = parseNode("</MAP>");
 
-        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("*");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 1);
         QCOMPARE(stub.mHrefs[0], "send([[follow map of the south forest to P42]])");
@@ -174,50 +178,49 @@ private slots:
 
         TMxpStubHandlerContext ctx;
         TMxpStubClient stub;
-        TMxpTagParser parser;
 
-        MxpStartTag* defTag = parser.parseStartTag(R"(<!ELEMENT boldtext '<COLOR &col;><B>' ATT='col=red'>)");
+        auto defTag = parseNode(R"(<!ELEMENT boldtext '<COLOR &col;><B>' ATT='col=red'>)");
 
         TMxpElementDefinitionHandler definitionHandler;
-        definitionHandler.handleTag(ctx, stub, defTag);
+        definitionHandler.handleTag(ctx, stub, defTag->asStartTag());
 
-        MxpStartTag* startTag = parser.parseStartTag(R"(<boldtext>)");
-        MxpEndTag* endTag = parser.parseEndTag("</boldtext>");
+        auto startTag = parseNode(R"(<boldtext>)");
+        auto endTag = parseNode("</boldtext>");
 
         TMxpCustomElementTagHandler customElementTagHandler;
         TMxpTagHandler& tagHandler = customElementTagHandler;
 
-        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("This is bold red");
         // is it?
         QCOMPARE(stub.isBold(), true);
         QCOMPARE(stub.fgColor, "red");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         // back to defaults:
         QCOMPARE(stub.isBold(), false);
         QCOMPARE(stub.fgColor, "");
 
-        startTag = parser.parseStartTag(R"(<boldtext COL=blue>)");
-        tagHandler.handleTag(ctx, stub, startTag);
+        startTag = parseNode(R"(<boldtext COL=blue>)");
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("This is bold blue text");
         // is it?
         QCOMPARE(stub.isBold(), true);
         QCOMPARE(stub.fgColor, "blue");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         // back to defaults:
         QCOMPARE(stub.isBold(), false);
         QCOMPARE(stub.fgColor, "");
 
-        startTag = parser.parseStartTag(R"(<boldtext blue>)");
-        tagHandler.handleTag(ctx, stub, startTag);
+        startTag = parseNode(R"(<boldtext blue>)");
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("This is also bold blue text");
         // is it?
 
         QCOMPARE(stub.isBold(), true);
         QCOMPARE(stub.fgColor, "blue");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         // back to defaults:
         QCOMPARE(stub.isBold(), false);
@@ -228,7 +231,7 @@ private slots:
         // Real life example from Aldebaran: (there are more sensible ones with EXPIRE which Mudlet does not yet support)
         //
         // <!EL WH '<SEND "whisper &NAME; |finger &NAME; |tell &NAME; " HINT="whisper &NAME;|finger &NAME;|tell &NAME;" PROMPT>' ATT='NAME=someone'>
-        // 
+        //
         // Used like <WH playerid>Player</WH> says: Hello!
         // However, if player is invisible, playerid is empty, like <WH >Someone</WH> says: Hello!
         //
@@ -236,22 +239,21 @@ private slots:
 
         TMxpStubHandlerContext ctx;
         TMxpStubClient stub;
-        TMxpTagParser parser;
 
-        MxpStartTag* defTag = parser.parseStartTag(R"(<!EL WH '<SEND "whisper &Name; |finger &NAme; |tell &namE; " HINT="whisper &name;|finger &NAME;|tell &NAME;" PROMPT>' ATT='NAme=someone'>)");
+        auto defTag = parseNode(R"(<!EL WH '<SEND "whisper &Name; |finger &NAme; |tell &namE; " HINT="whisper &name;|finger &NAME;|tell &NAME;" PROMPT>' ATT='NAme=someone'>)");
 
         TMxpElementDefinitionHandler definitionHandler;
-        definitionHandler.handleTag(ctx, stub, defTag);
+        definitionHandler.handleTag(ctx, stub, defTag->asStartTag());
 
-        MxpStartTag* startTag = parser.parseStartTag(R"(<WH playerid>)");
-        MxpEndTag* endTag = parser.parseEndTag("</WH>");
+        auto startTag = parseNode(R"(<WH playerid>)");
+        auto endTag = parseNode("</WH>");
 
         TMxpCustomElementTagHandler customElementTagHandler;
         TMxpTagHandler& tagHandler = customElementTagHandler;
 
-        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("Player");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 3);
         QCOMPARE(stub.mHrefs[0], "printCmdLine([[whisper playerid ]])");
@@ -265,10 +267,10 @@ private slots:
         QCOMPARE(stub.mHints[3], "tell playerid");
 
         // Now w/o a NAME parameter given:
-        startTag = parser.parseStartTag(R"(<WH>)");
-        tagHandler.handleTag(ctx, stub, startTag);
+        startTag = parseNode(R"(<WH>)");
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("Invisible SuperAdmin");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 3);
         QCOMPARE(stub.mHrefs[0], "printCmdLine([[whisper someone ]])");

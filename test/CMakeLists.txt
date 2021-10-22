@@ -59,9 +59,9 @@ add_test(NAME TMxpTagParserTest COMMAND TMxpTagParserTest)
 
 add_executable(TMxpSendTagHandlerTest TMxpSendTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpSendTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp TMxpStubClient.cpp)
 add_test(NAME TMxpSendTagHandlerTest COMMAND TMxpSendTagHandlerTest)
-#
-#add_executable(TMxpCustomElementTagHandlerTest TMxpCustomElementTagHandlerTest.cpp TMxpStubClient.cpp ${MXP_SOURCE} ../src/TMxpSendTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp )
-#add_test(NAME TMxpCustomElementTagHandlerTest COMMAND TMxpCustomElementTagHandlerTest)
+
+add_executable(TMxpCustomElementTagHandlerTest TMxpCustomElementTagHandlerTest.cpp TMxpStubClient.cpp ${MXP_SOURCE} ../src/TMxpSendTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp )
+add_test(NAME TMxpCustomElementTagHandlerTest COMMAND TMxpCustomElementTagHandlerTest)
 
 add_executable(TLinkStoreTest TLinkStoreTest.cpp ../src/TLinkStore.cpp ../src/TEntityResolver.cpp)
 add_test(NAME TLinkStoreTest COMMAND TLinkStoreTest)
