@@ -293,8 +293,10 @@ private slots:
     void slot_clearSearchResults();
     void slot_clearSoundFile();
     void slot_editorContextMenu();
-    void slot_visibilityChangedEditorActionsToolbar(const bool);
-    void slot_visibilityChangedEditorItemsToolbar(const bool);
+    void slot_visibilityChangedEditorActionsToolbar();
+    void slot_visibilityChangedEditorItemsToolbar();
+    void slot_floatingChangedEditorActionsToolbar();
+    void slot_floatingChangedEditorItemsToolbar();
     void slot_restoreEditorActionsToolbar();
     void slot_restoreEditorItemsToolbar();
 
@@ -421,6 +423,10 @@ private:
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
     void key_grab_callback(const Qt::Key, const Qt::KeyboardModifiers);
     void setShortcuts(const bool setNotUnset = true);
+
+    void showOrHideRestoreEditorActionsToolbarAction();
+    void showOrHideRestoreEditorItemsToolbarAction();
+
 
     QToolBar* toolBar;
     QToolBar* toolBar2;
