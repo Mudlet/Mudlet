@@ -1435,6 +1435,7 @@ void mudlet::slot_tab_changed(int tabID)
 
     // If game has custom invite then make secondary Discord option visible.
     toggleMudletDiscordVisible(!mpCurrentActiveHost->getDiscordInviteURL().isEmpty());
+    updateDiscordNamedIcon();
 
     // Restore the multi-view mode if it was enabled:
     if (mpTabBar->count() > 1) {
@@ -1529,6 +1530,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     QSize s = QSize(x, y);
     QResizeEvent event(s, s);
     toggleMudletDiscordVisible(false);
+    updateDiscordNamedIcon();
     QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
 }
 
@@ -2399,6 +2401,18 @@ void mudlet::toggleMudletDiscordVisible(bool vis)
     if (dactionDiscord->isVisible() != vis) {
         dactionDiscord->setVisible(vis);
     }
+}
+
+void mudlet::updateDiscordNamedIcon()
+{
+    Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
+
+    QString gameName = pHost->getDiscordGameName();
+
+    mpActionDiscord->setIconText(gameName.isEmpty() ? QStringLiteral("Discord") : gameName);
 }
 
 void mudlet::slot_reconnect()
@@ -4433,6 +4447,7 @@ void mudlet::activateProfile(Host* pHost)
         mpCurrentActiveHost = pHost;
         // If game has custom invite then make secondary Discord option visible.
         toggleMudletDiscordVisible(!mpCurrentActiveHost->getDiscordInviteURL().isEmpty());
+        updateDiscordNamedIcon();
         dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
     }
 }

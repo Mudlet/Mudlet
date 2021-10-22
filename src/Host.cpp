@@ -2315,6 +2315,7 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
     auto pMudlet = mudlet::self();
     auto gameName = discordInfo.value(QStringLiteral("game"));
     if (gameName != QJsonValue::Undefined) {
+        setDiscordGameName(gameName.toString());
         QPair<bool, QString> richPresenceSupported = pMudlet->mDiscord.gameIntegrationSupported(getUrl());
         if (richPresenceSupported.first && pMudlet->mDiscord.usingMudletsDiscordID(this)) {
             pMudlet->mDiscord.setDetailText(this, tr("Playing %1").arg(richPresenceSupported.second));

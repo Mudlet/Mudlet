@@ -328,6 +328,8 @@ public:
     int64_t getPhysicalMemoryTotal();
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     void refreshTabBar();
+    void toggleMudletDiscordVisible(bool);
+    void updateDiscordNamedIcon();
 
     bool firstLaunch = false;
     // Needed to work around a (likely only Windows) issue:
@@ -519,7 +521,6 @@ public slots:
     void slot_irc();
     void slot_discord();
     void slot_mudlet_discord();
-    void toggleMudletDiscordVisible(bool);
     void slot_package_manager();
     void slot_package_exporter();
     void slot_module_manager();
@@ -685,7 +686,7 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
-    
+
     QString mDefaultStyle;
 
     // Has default form of "en_US" but can be just an ISO language code e.g. "fr" for french,

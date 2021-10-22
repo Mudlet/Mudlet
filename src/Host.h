@@ -167,6 +167,8 @@ public:
     void            setUrl(const QString& s)         { mUrl = s; }
     QString         getUserDefinedName()             { return mUserDefinedName; }
     void            setUserDefinedName(const QString& s) { mUserDefinedName = s; }
+    QString         getDiscordGameName()             { return mDiscordGameName; }
+    void            setDiscordGameName(const QString& s) { mDiscordGameName = s; }
     int             getPort()                        { return mPort; }
     void            setPort(const int p)                 { mPort = p; }
     void            setAutoReconnect(const bool b)   { mTelnet.setAutoReconnect(b); }
@@ -668,6 +670,7 @@ private:
 
     int mHostID;
     QString mHostName;
+    QString mDiscordGameName; // Discord self-reported game name
 
     bool mIsClosingDown;
 
