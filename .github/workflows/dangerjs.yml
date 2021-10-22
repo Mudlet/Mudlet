@@ -1,0 +1,25 @@
+name: DangerJS
+
+on: pull_request_target
+
+jobs:
+  danger:
+    runs-on: ubuntu-latest
+    #if: github.event_name  == 'pull_request' # only run pull requests, no really
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        ref: ${{github.event.pull_request.head.ref}}
+        repository: ${{github.event.pull_request.head.repo.full_name}}
+        fetch-depth: 0
+    - name: Use Node.js
+      uses: actions/setup-node@v2.4.1
+      with:
+        node-version: "12.x"
+    - name: Install yarn dependencies
+      run: |
+        yarn add danger --dev
+        yarn danger ci
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        DANGER_DISABLE_TRANSPILATION: "true"

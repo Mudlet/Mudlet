@@ -51,7 +51,8 @@ public:
     TArea* getArea(int id);
     TArea* getRawArea(int, bool*);
     bool addRoom(int id);
-    int size() { return rooms.size(); }
+    int size() const { return rooms.size(); }
+    bool isEmpty() const { return rooms.isEmpty(); }
     bool removeRoom(int);
     void removeRoom(QSet<int>&);
     bool removeArea(int id);
@@ -60,6 +61,7 @@ public:
     bool addArea(int id);
     int addArea(QString name);
     bool addArea(int id, QString name);
+    bool addArea(TArea*, const int, const QString&);
     bool setAreaName(int areaID, QString name);
     const QList<TRoom*> getRoomPtrList() const;
     const QList<TArea*> getAreaPtrList() const;
@@ -82,7 +84,6 @@ public:
     void restoreAreaMap(QDataStream&);
     void restoreSingleArea(int, TArea*);
     void restoreSingleRoom(int, TRoom*);
-    const QString getDefaultAreaName() { return mDefaultAreaName; }
 
     // This is for muds that provide hashes to rooms instead of IDs.
     // If it exists, we delete the info when deleting a room.
@@ -107,12 +108,8 @@ private:
     QMap<int, QString> areaNamesMap;
     TMap* mpMap;
     QSet<int>* mpTempRoomDeletionSet; // Used during bulk room deletion
-    QString mUnnamedAreaName;
-    QString mDefaultAreaName;
 
-    friend class TRoom; //friend TRoom::~TRoom();
-    //friend class TMap;//bool TMap::restore(QString location);
-    //friend bool TMap::serialize(QDataStream &);
+    friend class TRoom;
     friend class XMLexport;
     friend class XMLimport;
 };

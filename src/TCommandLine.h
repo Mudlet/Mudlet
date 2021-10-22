@@ -70,6 +70,7 @@ public:
     void addSuggestion(const QString&);
     void removeSuggestion(const QString&);
     void clearSuggestions();
+    void adjustHeight();
 
     int mActionFunction = 0;
     QPalette mRegularPalette;
@@ -79,6 +80,7 @@ public slots:
     void slot_popupMenu();
     void slot_addWord();
     void slot_removeWord();
+    void slot_clearSelection(bool yes);
 
 private:
     bool event(QEvent*) override;
@@ -88,7 +90,6 @@ private:
     void handleTabCompletion(bool);
     void historyMove(MoveDirection);
     void enterCommand(QKeyEvent*);
-    void adjustHeight();
     void processNormalKey(QEvent*);
     bool keybindingMatched(QKeyEvent*);
     void spellCheckWord(QTextCursor& c);
@@ -110,6 +111,7 @@ private:
     QString mTabCompletionOld;
     QPoint mPopupPosition;
     QString mSpellCheckedWord;
+    bool mSpellChecking = false;
     int mSystemDictionarySuggestionsCount;
     int mUserDictionarySuggestionsCount;
     char** mpSystemSuggestionsList;

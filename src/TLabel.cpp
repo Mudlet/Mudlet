@@ -23,6 +23,8 @@
 
 
 #include "TLabel.h"
+#include "TConsole.h"
+#include "TDockWidget.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -84,7 +86,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 
     if (mpHost && mClickFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mClickFunction, event);
-        // The use of accept() here prevents the propogation of the event to
+        // The use of accept() here prevents the propagation of the event to
         // any parent, e.g. the containing TConsole
         event->accept();
         mudlet::self()->activateProfile(mpHost);
@@ -105,6 +107,12 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
+    auto labelParent = qobject_cast<TConsole*>(parent());
+    if (labelParent && labelParent->mpDockWidget && labelParent->mpDockWidget->isFloating()) {
+        mpHost->mpConsole->activateWindow();
+        mpHost->mpConsole->setFocus();
+    }
+
     if (mpHost && mReleaseFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mReleaseFunction, event);
         event->accept();

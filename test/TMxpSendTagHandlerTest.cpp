@@ -17,14 +17,15 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
- 
+
 // Aldebaran / Entity in Send Test by Michael Weller, 12/2020, michael.weller@t-online.de
- 
+
 
 #include <QTest>
 #include <TMxpSendTagHandler.h>
 #include <TMxpTagParser.h>
 #include <TMxpTagProcessor.h>
+#include <TMxpProcessor.h>
 
 #include "TMxpStubClient.h"
 
@@ -35,6 +36,51 @@ Q_OBJECT
 private:
 
 private slots:
+    QSharedPointer<MxpNode> parseNode(const QString& tagText) const
+    {
+        auto nodes = TMxpTagParser::parseToMxpNodeList(tagText);
+        return nodes.size() > 0 ? nodes.first() : nullptr;
+    }
+
+    void testSendHrefUTF8FromMxpProcessor()
+    {
+        // issue #4368
+        TMxpStubClient stub;
+        TMxpProcessor processor(&stub);
+
+        std::string input = "<SEND href=\"áéíóúñ\" >test link: áéíóúñ</SEND>";
+        for (char &ch : input) {
+          processor.processMxpInput(ch);
+        }
+
+        QCOMPARE(stub.mHrefs.size(), 1);
+        QCOMPARE(stub.mHrefs[0], "send([[áéíóúñ]])");
+
+        QCOMPARE(stub.mHints.size(), 1);
+        QCOMPARE(stub.mHints[0], "áéíóúñ");
+
+    }
+
+    void testSendHrefUTF8()
+    {
+        // issue #4368
+        QString input = "<SEND href=\"áéíóúñ\" >test link: áéíóúñ</SEND>";
+
+        TMxpTagProcessor processor;
+        TMxpStubClient stub;
+
+        auto nodes = TMxpTagParser::parseToMxpNodeList(input, false);
+        QCOMPARE(nodes.size(), 3);
+        for (const auto &node : nodes) {
+          processor.handleNode(processor, stub, node.get());
+        }
+
+        QCOMPARE(stub.mHrefs.size(), 1);
+        QCOMPARE(stub.mHrefs[0], "send([[áéíóúñ]])");
+
+        QCOMPARE(stub.mHints.size(), 1);
+        QCOMPARE(stub.mHints[0], "áéíóúñ");
+    }
 
     void testStaticText()
     {
@@ -42,15 +88,14 @@ private slots:
         TMxpStubContext ctx;
         TMxpStubClient stub;
 
-        TMxpTagParser parser;
-        MxpStartTag* startTag = parser.parseStartTag("<SEND \"tell Zugg \" PROMPT>");
-        MxpEndTag* endTag = parser.parseEndTag("</SEND>");
+        auto startTag = parseNode("<SEND \"tell Zugg \" PROMPT>");
+        auto endTag = parseNode("</SEND>");
 
         TMxpSendTagHandler sendTagHandler;
         TMxpTagHandler& tagHandler = sendTagHandler;
-        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("Zugg");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 1);
         QCOMPARE(stub.mHrefs[0], "printCmdLine([[tell Zugg ]])");
@@ -88,15 +133,14 @@ private slots:
         TMxpStubContext ctx;
         TMxpStubClient stub;
 
-        TMxpTagParser parser;
-        MxpStartTag* startTag = parser.parseStartTag("<SEND href=\"&text;\" PROMPT>");
-        MxpEndTag* endTag = parser.parseEndTag("</SEND>");
+        auto startTag = parseNode("<SEND href=\"&text;\" PROMPT>");
+        auto endTag = parseNode("</SEND>");
 
         TMxpSendTagHandler sendTagHandler;
         TMxpTagHandler& tagHandler = sendTagHandler;
-        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("north");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 1);
         QCOMPARE(stub.mHrefs[0], "printCmdLine([[north]])");
@@ -109,12 +153,11 @@ private slots:
         // Example from Age of Elements
         QString input = "<send 'push &text;' HINT='push button'>button</send>";
 
-        TMxpTagParser parser;
         TMxpTagProcessor processor;
         TMxpStubClient stub;
 
 
-        auto nodes = parser.parseToMxpNodeList(input, false);
+        auto nodes = TMxpTagParser::parseToMxpNodeList(input, false);
         for (const auto& node : nodes) {
             processor.handleNode(processor, stub, node.get());
         }
@@ -133,15 +176,14 @@ private slots:
 
         ctx.getEntityResolver().registerEntity("&charName;", "Gandalf");
 
-        TMxpTagParser parser;
-        MxpStartTag* startTag = parser.parseStartTag("<SEND href=\"say I am &charName;\">");
-        MxpEndTag* endTag = parser.parseEndTag("</SEND>");
+        auto startTag = parseNode("<SEND href=\"say I am &charName;\">");
+        auto endTag = parseNode("</SEND>");
 
         TMxpSendTagHandler sendTagHandler;
         TMxpTagHandler& tagHandler = sendTagHandler;
-        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("TAG CONTENT");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 1);
         QCOMPARE(stub.mHrefs[0], "send([[say I am Gandalf]])");
@@ -156,15 +198,14 @@ private slots:
         TMxpStubContext ctx;
         TMxpStubClient stub;
 
-        TMxpTagParser parser;
-        MxpStartTag* startTag = parser.parseStartTag(R"(<SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">)");
-        MxpEndTag* endTag = parser.parseEndTag("</SEND>");
+        auto startTag = parseNode(R"(<SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">)");
+        auto endTag = parseNode("</SEND>");
 
         TMxpSendTagHandler sendTagHandler;
         TMxpTagHandler& tagHandler = sendTagHandler;
-        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("3091");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 2);
         QCOMPARE(stub.mHrefs[0], "send([[PROBE SUSPENDERS30901]])");
@@ -183,15 +224,14 @@ private slots:
         TMxpStubContext ctx;
         TMxpStubClient stub;
 
-        TMxpTagParser parser;
-        MxpStartTag* startTag = parser.parseStartTag(R"(<SEND HREF="say a|say b|say c" hint="Talk about A|Talk about B">)");
-        MxpEndTag* endTag = parser.parseEndTag("</SEND>");
+        auto startTag = parseNode(R"(<SEND HREF="say a|say b|say c" hint="Talk about A|Talk about B">)");
+        auto endTag = parseNode("</SEND>");
 
         TMxpSendTagHandler sendTagHandler;
         TMxpTagHandler& tagHandler = sendTagHandler;
-        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("telling nonsense");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 3);
         QCOMPARE(stub.mHrefs[0], "send([[say a]])");
@@ -215,15 +255,14 @@ private slots:
         TMxpStubContext ctx;
         TMxpStubClient stub;
 
-        TMxpTagParser parser;
-        MxpStartTag* startTag = parser.parseStartTag(R"(<SEND HREF="say a|say b|say c" hint="Right-click for options|Talk about A|Talk about B|Talk about C|Talk about D">)");
-        MxpEndTag* endTag = parser.parseEndTag("</SEND>");
+        auto startTag = parseNode(R"(<SEND HREF="say a|say b|say c" hint="Right-click for options|Talk about A|Talk about B|Talk about C|Talk about D">)");
+        auto endTag = parseNode("</SEND>");
 
         TMxpSendTagHandler sendTagHandler;
         TMxpTagHandler& tagHandler = sendTagHandler;
-        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("telling nonsense");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 3);
         QCOMPARE(stub.mHrefs[0], "send([[say a]])");
@@ -243,16 +282,15 @@ private slots:
         // <SEND HREF="wield item##2|drop item##2" hint="wield|drop">sword</SEND>
         TMxpStubContext ctx;
         TMxpStubClient stub;
-        TMxpTagParser parser;
 
-        MxpStartTag* startTag = parser.parseStartTag(R"(<SEND HREF="wield item##2|drop item##2" hint="wield|drop">)");
-        MxpEndTag* endTag = parser.parseEndTag("</SEND>");
+        auto startTag = parseNode(R"(<SEND HREF="wield item##2|drop item##2" hint="wield|drop">)");
+        auto endTag = parseNode("</SEND>");
 
         TMxpSendTagHandler sendTagHandler;
         TMxpTagHandler& tagHandler = sendTagHandler;
-        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("sword");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 2);
         QCOMPARE(stub.mHrefs[0], "send([[wield item##2]])");
@@ -270,16 +308,15 @@ private slots:
         // <SEND HREF="wield item##2|drop item##2" hint="Right-click for options|wield|drop">sword</SEND>
         TMxpStubContext ctx;
         TMxpStubClient stub;
-        TMxpTagParser parser;
 
-        MxpStartTag* startTag = parser.parseStartTag(R"(<SEND HREF="wield item##2|drop item##2" hint="Right-click for options|wield|drop">)");
-        MxpEndTag* endTag = parser.parseEndTag("</SEND>");
+        auto startTag = parseNode(R"(<SEND HREF="wield item##2|drop item##2" hint="Right-click for options|wield|drop">)");
+        auto endTag = parseNode("</SEND>");
 
         TMxpSendTagHandler sendTagHandler;
         TMxpTagHandler& tagHandler = sendTagHandler;
-        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("sword");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 2);
         QCOMPARE(stub.mHrefs[0], "send([[wield item##2]])");
@@ -291,27 +328,26 @@ private slots:
         QCOMPARE(stub.mHints[1], "wield");
         QCOMPARE(stub.mHints[2], "drop");
     }
-    
+
     void testSendEntityWithPipeOptMouseOver() {
         // Example: Aldebaran: Prompt Menu containing aliases, Send Menu Mouse Over Hint provided for clients that
         // support and need it (mushclient) (&HD is empty for clients that cannot deal with it (z/cmud))
         // <SEND HREF="&CMDS;who|inventory" hint="&HD;&CMDH;Who is online|Your inventory">Aldebaran&gt; </SEND>
         TMxpStubContext ctx;
         TMxpStubClient stub;
-        TMxpTagParser parser;
-        
+
         ctx.getEntityResolver().registerEntity("&CMDS;", "gc|");
         ctx.getEntityResolver().registerEntity("&CMDH;", "get all from corpse|");
         ctx.getEntityResolver().registerEntity("&HD;", "Right-click for options|");
 
-        MxpStartTag* startTag = parser.parseStartTag(R"(<SEND HREF="&CMDS;who|inventory" hint="&HD;&CMDH;Who is online?|show inventory">)");
-        MxpEndTag* endTag = parser.parseEndTag("</SEND>");
+        auto startTag = parseNode(R"(<SEND HREF="&CMDS;who|inventory" hint="&HD;&CMDH;Who is online?|show inventory">)");
+        auto endTag = parseNode("</SEND>");
 
         TMxpSendTagHandler sendTagHandler;
         TMxpTagHandler& tagHandler = sendTagHandler;
-        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("Aldebaran&gt; ");
-        tagHandler.handleTag(ctx, stub, endTag);
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         QCOMPARE(stub.mHrefs.size(), 3);
         QCOMPARE(stub.mHrefs[0], "send([[gc]])");

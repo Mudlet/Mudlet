@@ -49,12 +49,12 @@ class TVar;
 
 class XMLimport : public QXmlStreamReader
 {
-    Q_DECLARE_TR_FUNCTIONS(XMLimport) // Needed so we can use tr() even though XMLimport is NOT derived from QObject
+    Q_DECLARE_TR_FUNCTIONS(XMLimport);
 
 public:
     XMLimport(Host*);
     virtual ~XMLimport() {}
-    bool importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = Q_NULLPTR);
+    bool importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = nullptr);
     std::pair<dlgTriggerEditor::EditorViewType, int> importFromClipboard();
 
 private:
@@ -90,6 +90,7 @@ private:
     void readUnknownKeyElement();
 
     void readHostPackage(Host*);
+    void readMapInfoContributors();
     void readStopWatchMap();
     int readTriggerGroup(TTrigger*);
     int readTimerGroup(TTimer*);

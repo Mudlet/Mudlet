@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2015-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2015-2016, 2018-2019, 2021 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
@@ -65,22 +65,30 @@
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
 
+// how to use: https://github.com/mandeepsandhu/qt-ordered-map/blob/master/tests/functional/testorderedmap.cpp
+#include <../3rdparty/qt-ordered-map/src/orderedmap.h>
+
 // for system physical memory info
-#ifdef WIN32
+#if defined(Q_OS_WIN32)
 #include <Windows.h>
 #include <Psapi.h>
-#elif defined(__APPLE__)
+#elif defined(Q_OS_MACOS)
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <array>
-#else
+#elif defined(Q_OS_HURD)
+#include <errno.h>
+#include <unistd.h>
+#elif defined(Q_OS_UNIX)
+// Including both GNU/Linux and FreeBSD
 #include <sys/resource.h>
 #include <sys/sysinfo.h>
 #include <sys/types.h>
 #include <unistd.h>
-
+#else
+// Any other OS?
 #endif
 
 class QAction;
@@ -152,6 +160,9 @@ public:
         // Takes two extra arguments (profile name, dataTime stamp) that returns
         // the pathFile name for a dateTime stamped map file:
         profileDateTimeStampedMapPathFileName,
+        // Takes two extra arguments (profile name, dataTime stamp) that returns
+        // the pathFile name for a dateTime stamped JSON map file:
+        profileDateTimeStampedJsonMapPathFileName,
         // Takes two extra arguments (profile name, mapFileName) that returns
         // the pathFile name for any map file:
         profileMapPathFileName,
@@ -206,7 +217,6 @@ public:
     static void start();
     HostManager& getHostManager() { return mHostManager; }
     void attachDebugArea(const QString& hostname);
-    void addSubWindow(TConsole* p);
     void addConsoleForNewHost(Host* pH);
     void disableToolbarButtons();
     void enableToolbarButtons();
@@ -247,12 +257,10 @@ public:
     void replayOver();
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
-    bool moduleTableVisible();
     void doAutoLogin(const QString&);
     void stopSounds();
     void playSound(const QString &s, int);
     QStringList getAvailableFonts();
-    void updateMudletDiscordInvite();
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     std::pair<bool, QString> resetProfileIcon(const QString& profile);
 #if defined(Q_OS_WIN32)
@@ -267,14 +275,13 @@ public:
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
     void requestProfilesToReloadMaps(QList<QString>);
-
     void showChangelogIfUpdated();
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool);
     void setShowIconsOnMenu(const Qt::CheckState);
     void setGlobalStyleSheet(const QString& styleSheet);
-
+    void setupPreInstallPackages(const QString& gameUrl);
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
 
     // This construct will be very useful for formatting tooltips and by
@@ -293,6 +300,7 @@ public:
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     void show_options_dialog(const QString& tab);
     void setInterfaceLanguage(const QString &languageCode);
+    void setDarkTheme(const bool &state);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     const QLocale& getUserLocale() const { return mUserLocale; }
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
@@ -316,10 +324,15 @@ public:
     QSet<QString> getWordSet();
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
-    void layoutModules();
     void startAutoLogin(const QString&);
     int64_t getPhysicalMemoryTotal();
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
+    void refreshTabBar();
+
+    bool firstLaunch = false;
+    // Needed to work around a (likely only Windows) issue:
+    QString mBG_ONLY_STYLESHEET;
+    QString mTEXT_ON_BG_STYLESHEET;
 
     FontManager mFontManager;
     Discord mDiscord;
@@ -358,8 +371,6 @@ public:
     static QVariantHash mLuaFunctionNames;
     bool mHasSavedLayout;
     QPointer<dlgAboutDialog> mpAboutDlg;
-    QPointer<QDialog> mpModuleDlg;
-    QPointer<QDialog> mpPackageManagerDlg;
     QPointer<dlgConnectionProfiles> mConnectionDialog;
     // More modern Desktop styles no longer include icons on the buttons in
     // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
@@ -385,7 +396,6 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions;
 
-    QPointer<QTableWidget> moduleTable;
     QSystemTrayIcon mTrayIcon;
 
 #if defined(INCLUDE_UPDATER)
@@ -393,7 +403,7 @@ public:
 #endif
 
 
-    // Currently tracks the "mudlet_option_use_smallscreen" file's existance but
+    // Currently tracks the "mudlet_option_use_smallscreen" file's existence but
     // may eventually migrate solely to the "EnableFullScreenMode" in the main
     // QSetting file - it is only stored as a file now to maintain backwards
     // compatibility...
@@ -423,6 +433,67 @@ public:
 
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
+    bool mDarkTheme;
+
+    // mirror everything shown in any console to stdout. Helpful for CI environments
+    inline static bool mMirrorToStdOut;
+
+    struct GameDetails {
+        QString hostUrl;
+        int port;
+        bool tlsEnabled;
+        QString websiteInfo;
+        QString icon;
+    };
+
+    // clang-format off
+    inline static const OrderedMap<QString, GameDetails> scmDefaultGames = {
+        {"Avalon.de", {"avalon.mud.de", 23, false,
+                        "<center><a href='http://avalon.mud.de'>http://avalon.mud.de</a></center>",
+                        ":/icons/avalon.png"}},
+        {"Achaea", {"achaea.com", 23, false, "<center><a href='http://www.achaea.com/'>http://www.achaea.com</a></center>", ":/icons/achaea_120_30.png"}},
+        {"3Kingdoms", {"3k.org", 3200, false, "<center><a href='http://www.3k.org/'>http://www.3k.org</a></center>", ":/icons/3klogo.png"}},
+        {"3Scapes", {
+            "3k.org",   // address to connect to
+            3200,       // port to connect on
+            false,      // secure connection possible?
+            // game's website
+            "<center><a href='http://www.3scapes.org/'>http://www.3scapes.org</a></center>",
+            // path to the profile icon
+            ":/icons/3slogo.png"
+        }},
+        {"Lusternia", {"lusternia.com", 23, false, "<center><a href='http://www.lusternia.com/'>http://www.lusternia.com</a></center>", ":/icons/lusternia_120_30.png"}},
+        {"BatMUD", {"batmud.bat.org", 23, false, "<center><a href='http://www.bat.org'>http://www.bat.org</a></center>", ":/icons/batmud_mud.png"}},
+
+        {"God Wars II", {"godwars2.org", 3000, false,
+                        "<center><a href='http://www.godwars2.org'>http://www.godwars2.org</a></center>",
+                        ":/icons/gw2.png"}},
+        {"Slothmud", {"slothmud.org", 6101, false, "<center><a href='http://www.slothmud.org/'>http://www.slothmud.org/</a></center>", ":/icons/Slothmud.png"}},
+        {"Aardwolf", {"aardmud.org", 4000, false, "<center><a href='http://www.aardwolf.com/'>http://www.aardwolf.com</a></center>", ":/icons/aardwolf_mud.png"}},
+        {"Materia Magica", {"materiamagica.com", 23, false,
+                        "<center><a href='http://www.materiamagica.com'>http://www.materiamagica.com</a></center>",
+                        ":/materiaMagicaIcon"}},
+        {"Realms of Despair", {"realmsofdespair.com", 4000, false, "<center><a href='http://www.realmsofdespair.com/'>http://www.realmsofdespair.com</a></center>", ":/icons/120x30RoDLogo.png"}},
+        {"ZombieMUD", {"zombiemud.org", 23, false, "<center><a href='http://www.zombiemud.org/'>http://www.zombiemud.org</a></center>", ":/icons/zombiemud.png"}},
+        {"Aetolia", {"aetolia.com", 23, false, "<center><a href='http://www.aetolia.com/'>http://www.aetolia.com</a></center>", ":/icons/aetolia_120_30.png"}},
+        {"Imperian", {"imperian.com", 23, false, "<center><a href='http://www.imperian.com/'>http://www.imperian.com</a></center>", ":/icons/imperian_120_30.png"}},
+        {"WoTMUD", {"game.wotmud.org", 2224, false, "<center><a href='http://www.wotmud.org/'>Main website</a></center>\n"
+                                 "<center><a href='http://www.wotmod.org/'>Forums</a></center>", ":/icons/wotmudicon.png"}},
+        {"Midnight Sun 2", {"midnightsun2.org", 3000, false, "<center><a href='http://midnightsun2.org/'>http://midnightsun2.org/</a></center>", ":/icons/midnightsun2.png"}},
+        {"Luminari", {"luminarimud.com", 4100, false, "<center><a href='http://www.luminarimud.com/'>http://www.luminarimud.com/</a></center>", ":/icons/luminari_icon.png"}},
+        {"StickMUD", {"stickmud.com", 7680, false, "<center><a href='http://www.stickmud.com/'>stickmud.com</a></center>", ":/icons/stickmud_icon.jpg"}},
+        {"Clessidra", {"mud.clessidra.it", 4000, false, "<center><a href='http://www.clessidra.it/'>http://www.clessidra.it</a></center>", ":/icons/clessidra.jpg"}},
+        {"Reinos de Leyenda", {"reinosdeleyenda.es", 23, false, "<center><a href='https://www.reinosdeleyenda.es/'>Main website</a></center>\n"
+                                 "<center><a href='https://www.reinosdeleyenda.es/foro/'>Forums</a></center>\n"
+                                 "<center><a href='https://wiki.reinosdeleyenda.es/'>Wiki</a></center>\n", ":/icons/reinosdeleyenda_mud.png"}},
+        {"Fierymud", {"fierymud.org", 4000, false, "<center><a href='https://www.fierymud.org/'>https://www.fierymud.org</a></center>", ":/icons/fiery_mud.png"}},
+        {"Mudlet self-test", {"mudlet.org", 23, false, "", ""}},
+        {"Carrion Fields", {"carrionfields.net", 4449, false, "<center><a href='http://www.carrionfields.net'>www.carrionfields.net</a></center>", ":/icons/carrionfields.png"}},
+        {"Cleft of Dimensions", {"cleftofdimensions.net", 4354, false, "<center><a href='https://www.cleftofdimensions.net/'>cleftofdimensions.net</a></center>", ":/icons/cleftofdimensions.png"}},
+        {"Legends of the Jedi", {"legendsofthejedi.com", 5656, false, "<center><a href='https://www.legendsofthejedi.com/'>legendsofthejedi.com</a></center>", ":/icons/legendsofthejedi_120x30.png"}},
+        {"CoreMUD", {"coremud.org", 4020, true, "<center><a href='https://coremud.org/'>coremud.org</a></center>", ":/icons/coremud_icon.jpg"}},
+    };
+    // clang-format on
 
 public slots:
     void processEventLoopHack_timerRun();
@@ -436,8 +507,6 @@ public slots:
     void slot_show_help_dialog_forum();
     void slot_show_help_dialog_irc();
     void slot_open_mappingscripts_page();
-    void slot_module_clicked(QTableWidgetItem*);
-    void slot_module_changed(QTableWidgetItem*);
     void slot_multi_view(const bool);
     void slot_toggle_multi_view();
     void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
@@ -449,14 +518,9 @@ public slots:
     void slot_close_profile_requested(int);
     void slot_irc();
     void slot_discord();
-    void slot_uninstall_package();
-    void slot_install_package();
     void slot_package_manager();
     void slot_package_exporter();
-    void slot_uninstall_module();
-    void slot_install_module();
     void slot_module_manager();
-    void slot_help_module();
 #if defined(INCLUDE_UPDATER)
     void slot_check_manual_update();
 #endif
@@ -477,6 +541,7 @@ signals:
     void signal_setTreeIconSize(int);
     void signal_hostCreated(Host*, quint8);
     void signal_hostDestroyed(Host*, quint8);
+    void signal_enableDarkThemeChanged(bool);
     void signal_enableFulScreenModeChanged(bool);
     void signal_showMapAuditErrorsChanged(bool);
     void signal_menuBarVisibilityChanged(const controlsVisibility);
@@ -509,7 +574,6 @@ private slots:
     void slot_gamepadDisconnected(int deviceId);
     void slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
 #endif
-    void slot_module_manager_destroyed();
 #if defined(INCLUDE_UPDATER)
     void slot_update_installed();
     void slot_updateAvailable(const int);
@@ -519,6 +583,7 @@ private slots:
     void slot_compact_input_line(const bool);
     void slot_password_migrated_to_secure(QKeychain::Job *job);
     void slot_password_migrated_to_profile(QKeychain::Job *job);
+    void slot_tabMoved(const int oldPos, const int newPos);
 
 
 private:
@@ -533,12 +598,12 @@ private:
     void loadTranslators(const QString &languageCode);
     void loadMaps();
     void migrateDebugConsole(Host* currentHost);
-    static bool firstLaunch();
     QString autodetectPreferredLanguage();
     void installModulesList(Host*, QStringList);
     void setupTrayIcon();
 
-    QWidget* mainPane;
+    QWidget* mpWidget_profileContainer;
+    QHBoxLayout* mpHBoxLayout_profileContainer;
 
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
@@ -582,6 +647,7 @@ private:
     QPointer<QAction> mpActionReplay;
 
     QPointer<QAction> mpActionAbout;
+    QPointer<QAction> mpActionAboutWithUpdates;
     QPointer<QToolButton> mpButtonAbout;
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
@@ -609,15 +675,6 @@ private:
     QPointer<QAction> mpActionTriggers;
     QPointer<QAction> mpActionVariables;
 
-    QPointer<QListWidget> packageList;
-    QPointer<QPushButton> uninstallButton;
-    QPointer<QPushButton> installButton;
-
-    QPointer<Host> mpModuleTableHost;
-    QPointer<QPushButton> moduleUninstallButton;
-    QPointer<QPushButton> moduleInstallButton;
-    QPointer<QPushButton> moduleHelpButton;
-
     HostManager mHostManager;
 
     bool mshowMapAuditErrors;
@@ -625,8 +682,10 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
+    
+    QString mDefaultStyle;
 
-    // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
+    // Has default form of "en_US" but can be just an ISO language code e.g. "fr" for french,
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
     // file for GUI translation
     QString mInterfaceLanguage {};
@@ -635,7 +694,7 @@ private:
     QLocale mUserLocale {};
 
     // The next pair retains the path argument supplied to the corresponding
-    // scanForXxxTranslations(...) method so it is available to the subsquent
+    // scanForXxxTranslations(...) method so it is available to the subsequent
     // loadTranslators(...) call
     QString mQtTranslationsPathName;
     QString mMudletTranslationsPathName;
@@ -647,7 +706,7 @@ private:
     // The collection of words in the above:
     QSet<QString> mWordSet_shared;
 
-    QString mMudletDiscordInvite = QStringLiteral("https://discord.com/invite/kuYvMQ9");
+    QString mMudletDiscordInvite = QStringLiteral("https://www.mudlet.org/chat");
 
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate {};
@@ -676,7 +735,7 @@ protected:
 
 
 // A convenience class to keep all the details for the translators for a
-// specific locale code (langauge only "xx" or language/country "xx_YY")
+// specific locale code (language only "xx" or language/country "xx_YY")
 // in one unified structure.
 class translation
 {

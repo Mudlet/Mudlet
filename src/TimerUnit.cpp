@@ -26,6 +26,13 @@
 #include "mudlet.h"
 #include "TTimer.h"
 
+TimerUnit::~TimerUnit()
+{
+    for (auto&& timer : qAsConst(mQTimerSet)) {
+        delete timer;
+    }
+}
+
 void TimerUnit::_uninstall(TTimer* pChild, const QString& packageName)
 {
     std::list<TTimer*>* childrenList = pChild->mpMyChildrenList;

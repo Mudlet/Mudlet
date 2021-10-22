@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2020 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2016, 2020-2021 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,7 +25,9 @@
 
 #include "pre_guard.h"
 #include "ui_connection_profiles.h"
-#include "QDir"
+#include <optional>
+#include <QTimer>
+#include <QKeyEvent>
 #include <pugixml.hpp>
 #if defined(INCLUDE_OWN_QT5_KEYCHAIN)
 #include <../3rdparty/qtkeychain/keychain.h>
@@ -33,6 +36,8 @@
 #endif
 #include "post_guard.h"
 
+class QDir;
+
 class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 {
     Q_OBJECT
@@ -40,12 +45,14 @@ class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 public:
     Q_DISABLE_COPY(dlgConnectionProfiles)
     dlgConnectionProfiles(QWidget* parent = nullptr);
+    ~dlgConnectionProfiles();
+
     void fillout_form();
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     QString readProfileData(const QString& profile, const QString& item) const;
     void accept() override;
     QList<QListWidgetItem*> findData(const QListWidget& listWidget, const QVariant& what, const int role = Qt::UserRole) const;
-
+    QList<int> findProfilesBeginningWith(const QString&) const;
     static const int csmNameRole{Qt::UserRole};
 
     QString btn_connect_enabled_accessDesc;
@@ -60,12 +67,12 @@ signals:
 public slots:
     void slot_update_name(const QString&);
     void slot_save_name();
-    void slot_update_url(const QString &);
+    void slot_update_url(const QString&);
     void slot_update_port(const QString&);
     void slot_update_SSL_TSL_port(int state);
-    void slot_update_login(const QString &);
-    void slot_update_pass(const QString &);
-    void slot_update_website(const QString &);
+    void slot_update_login(const QString&);
+    void slot_update_pass(const QString&);
+    void slot_update_website(const QString&);
     void slot_deleteprofile_check(const QString&);
     void slot_update_description();
 
@@ -77,11 +84,15 @@ public slots:
     void slot_update_autologin(int state);
     void slot_update_autoreconnect(int state);
     void slot_update_discord_optin(int state);
-    void slot_connectToServer();
     void slot_load();
     void slot_cancel();
     void slot_copy_profile();
     void slot_copy_profilesettings_only();
+
+
+protected:
+    bool eventFilter(QObject*, QEvent*) override;
+
 
 private:
     void copyFolder(const QString& sourceFolder, const QString& destFolder);
@@ -105,9 +116,11 @@ private:
     void writeSecurePassword(const QString& profile, const QString& pass) const;
     void deleteSecurePassword(const QString& profile) const;
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
+    void reallyDeleteProfile(const QString& profile);
     void setItemName(QListWidgetItem*, const QString&) const;
-    QIcon customIcon(const QString&) const;
-
+    QIcon customIcon(const QString&, const std::optional<QColor>&) const;
+    void addLetterToProfileSearch(const int);
+    inline void clearNotificationArea();
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
@@ -126,21 +139,24 @@ private:
     QLineEdit* delete_profile_lineedit;
     QPushButton* delete_button;
     QString mDiscordApplicationId;
-    const QStringList mDefaultGames;
     QAction* mpAction_revealPassword;
     // true for the duration of the 'Copy profile' action
-    bool mCopyingProfile {};
+    bool mCopyingProfile{};
     QString mDateTimeFormat;
     QVector<QColor> mCustomIconColors;
+    QTimer mSearchTextTimer;
+    QString mSearchText;
 
 
 private slots:
     void slot_profile_menu(QPoint pos);
     void slot_set_custom_icon();
+    void slot_set_custom_color();
     void slot_reset_custom_icon();
     void slot_togglePasswordVisibility(const bool);
     void slot_password_saved(QKeychain::Job* job);
     void slot_password_deleted(QKeychain::Job* job);
+    void slot_reenableAllProfileItems();
 };
 
 

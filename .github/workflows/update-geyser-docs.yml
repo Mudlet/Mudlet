@@ -8,7 +8,7 @@ on:
 jobs:
   update-geyser-docs:
     runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
+    if: ${{ github.repository_owner == 'Mudlet' }}
 
     steps:
     - uses: actions/checkout@v2

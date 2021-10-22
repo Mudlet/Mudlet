@@ -4,7 +4,9 @@
 
 mudlet = mudlet or {}
 mudlet.supports = {
-  coroutines = true
+  coroutines = true,
+  namedPatterns = true,
+  osVersion = true
 }
 
 -- enforce uniform locale so scripts don't get
@@ -29,7 +31,7 @@ setmetatable( _G, {
 
 
 
---- Mudlet's support for ATCP. This is primarily available on IRE-based MUDs, but Mudlets impelementation is generic enough
+--- Mudlet's support for ATCP. This is primarily available on IRE-based MUDs, but Mudlet's implementation is generic enough
 --- such that any it should work on others. <br/><br/>
 ---
 --- The latest ATCP data is stored in the atcp table. Whenever new data arrives, the previous is overwritten. An event is also
@@ -114,7 +116,7 @@ SavedVariables = {}
 ---   send ("wield shield")
 ---   send ("say ha!")
 ---   </pre>
---- @usage Use sendAll and do not echo sent commnad on the main window.
+--- @usage Use sendAll and do not echo sent command on the main window.
 ---   <pre>
 ---   sendAll("stand", "wield shield", "say ha!", false)
 ---   </pre>
@@ -295,7 +297,7 @@ end
 ---  Functions are saved via string.dump, so make sure it has no upvalues <br/>
 ---  References are saved <br/>
 ---
---- @usage Saves the globals table (minus some lua enviroment stuffs) into a file (only Mudlet should use this).
+--- @usage Saves the globals table (minus some lua environment stuff) into a file (only Mudlet should use this).
 ---   <pre>
 ---   table.save(file)
 ---   </pre>
@@ -414,12 +416,55 @@ end
 
 
 
+--- local functions used for pausing/resuming a speedwalk
+local speedwalkTimerID
+local speedwalkDelay
+local speedwalkList
+local speedwalkShow
+
+--- Stops a speedwalk and clears the walklist
+function stopSpeedwalk()
+  local active = pauseSpeedwalk()
+  if active then 
+    speedwalkList = {}
+    return true
+  end
+  return nil, "stopSpeedwalk(): no active speedwalk found"
+end
+
+
+
+--- pauses a running speedwalk, but leaves the walklist intact in case you want to resume
+function pauseSpeedwalk()
+  if speedwalkTimerID then
+    killTimer(speedwalkTimerID)
+    speedwalkTimerID = false
+    return true
+  end
+  return nil, "pauseSpeedwalk(): no active speedwalk found"
+end
+
+
+
+--- Resumes a paused speedwalk
+function resumeSpeedwalk()
+  if speedwalkTimerID then
+    return nil, "resumeSpeedwalk(): attempted to resume an already running speedwalk"
+  end
+  if not speedwalkList or table.is_empty(speedwalkList) then
+    return nil, "resumeSpeedwalk(): attempted to resume a speedwalk but no active speedwalk found"
+  end
+  speedwalktimer(speedwalkList, speedwalkDelay, speedwalkShow)
+  return true
+end
+
+
 --- <b><u>TODO</u></b> speedwalktimer()
 function speedwalktimer(walklist, walkdelay, show)
   send(walklist[1], show)
   table.remove(walklist, 1)
   if #walklist > 0 then
-    tempTimer(walkdelay, function()
+    speedwalkTimerID = tempTimer(walkdelay, function()
       speedwalktimer(walklist, walkdelay, show)
     end)
   end
@@ -432,6 +477,8 @@ function speedwalk(dirString, backwards, delay, show)
   local dirString = dirString:lower()
   local walkdelay = delay
   if show ~= false then show = true end
+  speedwalkShow = show
+  speedwalkDelay = delay
   local walklist = {}
   local long_dir = {north = 'n', south = 's', east = 'e', west = 'w', up = 'u', down = 'd'}
   for k,v in pairs(long_dir) do
@@ -463,7 +510,7 @@ function speedwalk(dirString, backwards, delay, show)
     end
   else
     for direction, count in string.gmatch(dirString:reverse(), "(t?[ewnu]?[neswudio])([0-9]*)") do
-      count = (count == "" and 1 or count)
+      count = (count == "" and 1 or count:reverse())
       for i = 1, count do
         if delay then
           walklist[#walklist + 1] = reversedir[direction]
@@ -473,6 +520,7 @@ function speedwalk(dirString, backwards, delay, show)
     end
   end
   if walkdelay then
+    speedwalkList = walklist
     speedwalktimer(walklist, walkdelay, show)
   end
 end
@@ -725,7 +773,7 @@ do
   -- to the right functions.
   local handlers = {}
 
-  -- Remember highest hander ID to avoid ID reuse.
+  -- Remember highest handler ID to avoid ID reuse.
   local highestHandlerId = 0
   -- Helps us finding the right event handler from an ID.
   local handlerIdsToHandlers = {}
@@ -926,13 +974,6 @@ function killtimeframe(vname)
   end
 end
 
--- replace line from MUD with colour-tagged string
-creplaceLine = function(str)
-	selectString(line,1)
-	replace("")
-	cinsertText(str)
-end
-
 function translateTable(data, language)
   language = language or mudlet.translations.interfacelanguage
   assert(type(data) == "table", string.format("translateTable: bad argument #1 type (input as table expected, got %s!)", type(data)))
@@ -983,6 +1024,7 @@ function loadTranslations(packageName, fileName, languageCode, folder)
   languageCode = languageCode or mudlet.translations.interfacelanguage
   -- get the right folder
   folder = folder or io.exists("../translations/lua") and "../translations/lua/"
+  folder = folder or io.exists("../../translations/lua") and "../../translations/lua/"
   folder = folder or io.exists(luaGlobalPath.."/../../translations/lua") and luaGlobalPath.."/../../translations/lua/"
   folder = folder or luaGlobalPath.."/translations/"
 
@@ -1017,18 +1059,93 @@ function loadTranslations(packageName, fileName, languageCode, folder)
   return translation
 end
 
+local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
+
+function verbosePackageInstall(fileName)
+  local installationSuccessful = installPackage(fileName)
+  local packageName = string.gsub(fileName, getMudletHomeDir() .. "/", "")
+  -- That is all for installing, now to announce the result to the user:
+  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
+  if installationSuccessful then
+    local successText = mudlet.Locale.packageInstallSuccess.message
+    successText = string.format(successText, packageName)
+    local okPrefix = mudlet.Locale.prefixOk.message
+    decho('<0,160,0>' .. okPrefix .. '<190,100,50>' .. successText .. '\n')
+    -- Light Green and Orange-ish; see cTelnet::postMessage for color comparison
+  else
+    local failureText = mudlet.Locale.packageInstallFail.message
+    failureText = string.format(failureText, packageName)
+    local warnPrefix = mudlet.Locale.prefixWarn.message
+    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n')
+    -- Cyan and Orange; see cTelnet::postMessage for color comparison
+  end
+end
+
+local oldInstallPackage = installPackage
+
+-- Override of original installPackage to allow installs from URL
+-- @param target - file path or url (starting with http(s):// and ending with package file extensions)
+function installPackage(target)
+  if target:starts("http://") or target:starts("https://") then
+    local fileName, suffix = target:gmatch("([^/]+)%.([^.]+)$")()
+    if suffix and table.contains(acceptableSuffix, suffix) then
+      local file = string.format("%s.%s", fileName, suffix)
+      return installPackageFromUrl(file, target)
+    end
+  end
+  return oldInstallPackage(target)
+end
+
+--- Installs package from url
+-- @param url
+function installPackageFromUrl(file, url)
+  local destination = string.format("%s/%s", getMudletHomeDir(), file)
+
+  registerAnonymousEventHandler("sysDownloadDone", function(_, saveTo)
+    if saveTo ~= destination then return end
+    verbosePackageInstall(destination)
+    os.remove(destination)
+  end, true)
+
+  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
+
+  registerAnonymousEventHandler("sysDownloadError", function(_, errorFound, saveTo)
+    if saveTo ~= destination then return end
+    local warnPrefix = mudlet.Locale.prefixWarn.message
+    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. errorFound .. '\n')
+  end, true)
+
+  downloadFile(destination, url)
+  local infoMessage = mudlet.Locale.packageDownloading.message
+  local infoPrefix = mudlet.Locale.prefixInfo.message
+    decho('<0,150,190>' ..infoPrefix .. '<190,100,50>' .. string.format(infoMessage, url) .. '\n')
+end
+
 --- Installs packages which are dropped on MainConsole or UserWindow
 -- @param event Drag and Drop Event
 -- @param fileName name and location of the file
 -- @param suffix suffix of the file
 function packageDrop(event, fileName, suffix)
-  local acceptable_suffix = {"xml", "mpackage", "zip"}
-  if not table.contains(acceptable_suffix, suffix) then
+  if not table.contains(acceptableSuffix, suffix) then
     return
   end
-  installPackage(fileName)
+  verbosePackageInstall(fileName)
 end
 registerAnonymousEventHandler("sysDropEvent", "packageDrop")
+
+--- Installs packages which are dropped on MainConsole or UserWindow
+-- @param event Drag and Drop Event
+-- @param url package url to download from
+-- @param schema url schema
+function packageUrlDrop(event, url, schema)
+  local acceptedSchemas = {"http", "https"}
+  if not table.contains(acceptedSchemas, schema) then
+    return
+  end
+
+  installPackage(url)
+end
+registerAnonymousEventHandler("sysDropUrlEvent", "packageUrlDrop")
 
 -- Add dummy functions for the TTS functions if Mudlet has been compiled without them
 -- This is to prevent scripts erroring if they've been written with TTS capabilities

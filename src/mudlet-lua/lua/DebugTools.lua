@@ -4,10 +4,7 @@
 
 
 
---- Function colorizes all matched regex capture groups on the screen.
---- This is very handy if you make complex regex and want to see what really matches in the text.
----
---- @see matches
+-- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showCaptureGroups
 function showCaptureGroups()
   for k, v in pairs( matches ) do
     selectCaptureGroup( tonumber(k) )
@@ -17,25 +14,14 @@ function showCaptureGroups()
 end
 
 
-
---- Prints the content of the table multimatches[n][m] to the screen. This is meant
---- as a tool to help write multiline trigger scripts. This helps you to easily see
---- what your multiline trigger actually captured in all regex. You can use these values
---- directly in your script by referring to it with multimatches[regex-number][capturegroup].
----
---- @usage Just call this s function from your trigger to show the info.
----   <pre>
----   showMultimatches()
----   </pre>
----
---- @see multimatches
+-- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showMultimatches
 function showMultimatches()
   echo("\n-------------------------------------------------------");
   echo("\nThe table multimatches[n][m] contains:");
   echo("\n-------------------------------------------------------");
   for k, v in ipairs(multimatches) do
     echo("\nregex " .. k .. " captured: (multimatches[" .. k .. "][1-n])");
-    for k2, v2 in ipairs(v) do
+    for k2, v2 in pairs(v) do
       echo("\n          key=" .. k2 .. " value=" .. v2);
     end
   end
@@ -43,178 +29,342 @@ function showMultimatches()
 end
 
 
+inspect ={
+  _VERSION = 'inspect.lua 3.1.0',
+  _URL     = 'http://github.com/kikito/inspect.lua',
+  _DESCRIPTION = 'human-readable representations of tables',
+  _LICENSE = [[
+    MIT LICENSE
 
---- get the Lua keywords as a set-like table.
--- So <code>res["and"]</code> etc would be <code>true</code>.
--- @return a table
-local function get_keywords ()
-  if not lua_keyword then
-    lua_keyword = {
-      ["and"] = true, ["break"] = true, ["do"] = true,
-      ["else"] = true, ["elseif"] = true, ["end"] = true,
-      ["false"] = true, ["for"] = true, ["function"] = true,
-      ["if"] = true, ["in"] = true, ["local"] = true, ["nil"] = true,
-      ["not"] = true, ["or"] = true, ["repeat"] = true,
-      ["return"] = true, ["then"] = true, ["true"] = true,
-      ["until"] = true, ["while"] = true
-    }
-  end
-  return lua_keyword
+    Copyright (c) 2013 Enrique García Cota
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to
+    the following conditions:
+
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+    OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  ]]
+}
+
+local tostring = tostring
+
+inspect.KEY       = setmetatable({}, {__tostring = function() return 'inspect.KEY' end})
+inspect.METATABLE = setmetatable({}, {__tostring = function() return 'inspect.METATABLE' end})
+
+local function rawpairs(t)
+  return next, t, nil
 end
 
-local function quote_if_necessary (v)
-  if not v then
-    return ''
+-- Apostrophizes the string if it has quotes, but not aphostrophes
+-- Otherwise, it returns a regular quoted string
+local function smartQuote(str)
+  if str:match('"') and not str:match("'") then
+    return "'" .. str .. "'"
+  end
+  return '"' .. str:gsub('"', '\\"') .. '"'
+end
+
+-- \a => '\\a', \0 => '\\0', 31 => '\31'
+local shortControlCharEscapes = {
+  ["\a"] = "\\a",  ["\b"] = "\\b", ["\f"] = "\\f", ["\n"] = "\\n",
+  ["\r"] = "\\r",  ["\t"] = "\\t", ["\v"] = "\\v"
+}
+local longControlCharEscapes = {} -- \a => nil, \0 => \000, 31 => \031
+for i=0, 31 do
+  local ch = string.char(i)
+  if not shortControlCharEscapes[ch] then
+    shortControlCharEscapes[ch] = "\\"..i
+    longControlCharEscapes[ch]  = string.format("\\%03d", i)
+  end
+end
+
+local function escape(str)
+  return (str:gsub("\\", "\\\\")
+             :gsub("(%c)%f[0-9]", longControlCharEscapes)
+             :gsub("%c", shortControlCharEscapes))
+end
+
+local function isIdentifier(str)
+  return type(str) == 'string' and str:match( "^[_%a][_%a%d]*$" )
+end
+
+local function isSequenceKey(k, sequenceLength)
+  return type(k) == 'number'
+     and 1 <= k
+     and k <= sequenceLength
+     and math.floor(k) == k
+end
+
+local defaultTypeOrders = {
+  ['number']   = 1, ['boolean']  = 2, ['string'] = 3, ['table'] = 4,
+  ['function'] = 5, ['userdata'] = 6, ['thread'] = 7
+}
+
+local function sortKeys(a, b)
+  local ta, tb = type(a), type(b)
+
+  -- strings and numbers are sorted numerically/alphabetically
+  if ta == tb and (ta == 'string' or ta == 'number') then return a < b end
+
+  local dta, dtb = defaultTypeOrders[ta], defaultTypeOrders[tb]
+  -- Two default types are compared according to the defaultTypeOrders table
+  if dta and dtb then return defaultTypeOrders[ta] < defaultTypeOrders[tb]
+  elseif dta     then return true  -- default types before custom ones
+  elseif dtb     then return false -- custom types after default ones
+  end
+
+  -- custom types are sorted out alphabetically
+  return ta < tb
+end
+
+-- For implementation reasons, the behavior of rawlen & # is "undefined" when
+-- tables aren't pure sequences. So we implement our own # operator.
+local function getSequenceLength(t)
+  local len = 1
+  local v = rawget(t,len)
+  while v ~= nil do
+    len = len + 1
+    v = rawget(t,len)
+  end
+  return len - 1
+end
+
+local function getNonSequentialKeys(t)
+  local keys, keysLength = {}, 0
+  local sequenceLength = getSequenceLength(t)
+  for k,_ in rawpairs(t) do
+    if not isSequenceKey(k, sequenceLength) then
+      keysLength = keysLength + 1
+      keys[keysLength] = k
+    end
+  end
+  table.sort(keys, sortKeys)
+  return keys, keysLength, sequenceLength
+end
+
+local function countTableAppearances(t, tableAppearances)
+  tableAppearances = tableAppearances or {}
+
+  if type(t) == 'table' then
+    if not tableAppearances[t] then
+      tableAppearances[t] = 1
+      for k,v in rawpairs(t) do
+        countTableAppearances(k, tableAppearances)
+        countTableAppearances(v, tableAppearances)
+      end
+      countTableAppearances(getmetatable(t), tableAppearances)
+    else
+      tableAppearances[t] = tableAppearances[t] + 1
+    end
+  end
+
+  return tableAppearances
+end
+
+local copySequence = function(s)
+  local copy, len = {}, #s
+  for i=1, len do copy[i] = s[i] end
+  return copy, len
+end
+
+local function makePath(path, ...)
+  local keys = {...}
+  local newPath, len = copySequence(path)
+  for i=1, #keys do
+    newPath[len + i] = keys[i]
+  end
+  return newPath
+end
+
+local function processRecursive(process, item, path, visited)
+  if item == nil then return nil end
+  if visited[item] then return visited[item] end
+
+  local processed = process(item, path)
+  if type(processed) == 'table' then
+    local processedCopy = {}
+    visited[item] = processedCopy
+    local processedKey
+
+    for k,v in rawpairs(processed) do
+      processedKey = processRecursive(process, k, makePath(path, k, inspect.KEY), visited)
+      if processedKey ~= nil then
+        processedCopy[processedKey] = processRecursive(process, v, makePath(path, processedKey), visited)
+      end
+    end
+
+    local mt  = processRecursive(process, getmetatable(processed), makePath(path, inspect.METATABLE), visited)
+    if type(mt) ~= 'table' then mt = nil end -- ignore not nil/table __metatable field
+    setmetatable(processedCopy, mt)
+    processed = processedCopy
+  end
+  return processed
+end
+
+
+
+-------------------------------------------------------------------
+
+local Inspector = {}
+local Inspector_mt = {__index = Inspector}
+
+function Inspector:puts(...)
+  local args   = {...}
+  local buffer = self.buffer
+  local len    = #buffer
+  for i=1, #args do
+    len = len + 1
+    buffer[len] = args[i]
+  end
+end
+
+function Inspector:down(f)
+  self.level = self.level + 1
+  f()
+  self.level = self.level - 1
+end
+
+function Inspector:tabify()
+  self:puts(self.newline, string.rep(self.indent, self.level))
+end
+
+function Inspector:alreadyVisited(v)
+  return self.ids[v] ~= nil
+end
+
+function Inspector:getId(v)
+  local id = self.ids[v]
+  if not id then
+    local tv = type(v)
+    id              = (self.maxIds[tv] or 0) + 1
+    self.maxIds[tv] = id
+    self.ids[v]     = id
+  end
+  return tostring(id)
+end
+
+function Inspector:putKey(k)
+  if isIdentifier(k) then return self:puts(k) end
+  self:puts("[")
+  self:putValue(k)
+  self:puts("]")
+end
+
+function Inspector:putTable(t)
+  if t == inspect.KEY or t == inspect.METATABLE then
+    self:puts(tostring(t))
+  elseif self:alreadyVisited(t) then
+    self:puts('<table ', self:getId(t), '>')
+  elseif self.level >= self.depth then
+    self:puts('{...}')
   else
-    if v:find ' ' then
-      v = '"' .. v .. '"'
+    if self.tableAppearances[t] > 1 then self:puts('<', self:getId(t), '>') end
+
+    local nonSequentialKeys, nonSequentialKeysLength, sequenceLength = getNonSequentialKeys(t)
+    local mt                = getmetatable(t)
+
+    self:puts('{')
+    self:down(function()
+      local count = 0
+      for i=1, sequenceLength do
+        if count > 0 then self:puts(',') end
+        self:puts(' ')
+        self:putValue(t[i])
+        count = count + 1
+      end
+
+      for i=1, nonSequentialKeysLength do
+        local k = nonSequentialKeys[i]
+        if count > 0 then self:puts(',') end
+        self:tabify()
+        self:putKey(k)
+        self:puts(' = ')
+        self:putValue(t[k])
+        count = count + 1
+      end
+
+      if type(mt) == 'table' then
+        if count > 0 then self:puts(',') end
+        self:tabify()
+        self:puts('<metatable> = ')
+        self:putValue(mt)
+      end
+    end)
+
+    if nonSequentialKeysLength > 0 or type(mt) == 'table' then -- result is multi-lined. Justify closing }
+      self:tabify()
+    elseif sequenceLength > 0 then -- array tables have one extra space before closing }
+      self:puts(' ')
     end
+
+    self:puts('}')
   end
-  return v
 end
 
-local keywords
+function Inspector:putValue(v)
+  local tv = type(v)
 
-local function is_identifier (s)
-  return type(s) == 'string' and s:find('^[%a_][%w_]*$') and not keywords[s]
-end
-
-local function quote (s)
-  if type(s) == 'table' then
-    return prettywrite(s, '')
+  if tv == 'string' then
+    self:puts(smartQuote(escape(v)))
+  elseif tv == 'number' or tv == 'boolean' or tv == 'nil' or
+         tv == 'cdata' or tv == 'ctype' then
+    self:puts(tostring(v))
+  elseif tv == 'table' then
+    self:putTable(v)
   else
-    return ('%q'):format(tostring(s))
+    self:puts('<', tv, ' ', self:getId(v), '>')
   end
 end
 
-local function index (numkey, key)
-  if not numkey then
-    key = quote(key)
+-------------------------------------------------------------------
+
+function inspect.inspect(root, options)
+  options       = options or {}
+
+  local depth   = options.depth   or math.huge
+  local newline = options.newline or '\n'
+  local indent  = options.indent  or '  '
+  local process = options.process
+
+  if process then
+    root = processRecursive(process, root, {}, {})
   end
-  return '[' .. key .. ']'
+
+  local inspector = setmetatable({
+    depth            = depth,
+    level            = 0,
+    buffer           = {},
+    ids              = {},
+    maxIds           = {},
+    newline          = newline,
+    indent           = indent,
+    tableAppearances = countTableAppearances(root)
+  }, Inspector_mt)
+
+  inspector:putValue(root)
+
+  return table.concat(inspector.buffer)
 end
 
---- Create a string representation of a Lua table. (From Steve Donovans Penlight library)
---  This function never fails, but may complain by returning an
---  extra value. Normally puts out one item per line, using
---  the provided indent; set the second parameter to '' if
---  you want output on one line.
---  @param tbl {table} Table to serialize to a string.
---  @param space {string} (optional) The indent to use.
---  Defaults to two spaces; make it the empty string for no indentation
---  @param not_clever {bool} (optional) Use for plain output, e.g {['key']=1}.
---  Defaults to false.
---  @return a string
---  @return a possible error message
-local append = table.insert
-function prettywrite (tbl, space, not_clever)
-  if type(tbl) ~= 'table' then
-    if type(tbl) == "string" then
-      return string.format("\"%s\"\n", tostring(tbl))
-    else
-      return string.format("%s\n", tostring(tbl))
-    end
-  end
+setmetatable(inspect, { __call = function(_, ...) return inspect.inspect(...) end })
 
-  -- return a nice {} instead of {\n} on blanks
-  if not next(tbl) then
-    return '{}'
-  end
+-- maintain backwards compatibility with prettywrite
+prettywrite = inspect
 
-  if not keywords then
-    keywords = get_keywords()
-  end
-  local set = ' = '
-  if space == '' then
-    set = '='
-  end
-  space = space or '  '
-  local lines = {}
-  local line = ''
-  local tables = {}
-
-
-  local function put(s)
-    if #s > 0 then
-      line = line .. s
-    end
-  end
-
-  local function putln (s)
-    if #line > 0 then
-      line = line .. s
-      append(lines, line)
-      line = ''
-    else
-      append(lines, s)
-    end
-  end
-
-  local function eat_last_comma ()
-    local n, lastch = #lines
-    local lastch = lines[n]:sub(-1, -1)
-    if lastch == ',' then
-      lines[n] = lines[n]:sub(1, -2)
-    end
-  end
-
-
-  local writeit
-  writeit = function(t, oldindent, indent)
-    local tp = type(t)
-    if tp ~= 'string' and tp ~= 'table' then
-      putln(quote_if_necessary(tostring(t)) .. ',')
-    elseif tp == 'string' then
-      if t:find('\n') then
-        putln('[[\n' .. t .. ']],')
-      else
-        putln(quote(t) .. ',')
-      end
-    elseif tp == 'table' then
-      if tables[t] then
-        putln('<cycle>,')
-        return
-      end
-      tables[t] = true
-      local newindent = indent .. space
-      putln('{')
-      local used = {}
-      if not not_clever then
-        for i, val in ipairs(t) do
-          put(indent)
-          writeit(val, indent, newindent)
-          used[i] = true
-        end
-      end
-      for key, val in pairs(t) do
-        local numkey = type(key) == 'number'
-        if not_clever then
-          key = tostring(key)
-          put(indent .. index(numkey, key) .. set)
-          writeit(val, indent, newindent)
-        else
-          if not numkey or not used[key] then
-            -- non-array indices
-            if numkey or not is_identifier(key) then
-              key = index(numkey, key)
-            end
-            put(indent .. key .. set)
-            writeit(val, indent, newindent)
-          end
-        end
-      end
-      tables[t] = nil
-      eat_last_comma()
-      putln(oldindent .. '},')
-    else
-      putln(tostring(t) .. ',')
-    end
-  end
-  writeit(tbl, '', space)
-  eat_last_comma()
-  return table.concat(lines, #space > 0 and '\n' or '')
-end
-
+-- Documentation: https://wiki.mudlet.org/index.php?title=Manual:Lua_Functions#display
 function display(...)
   local arg = {...}
   arg.n = table.maxn(arg)
@@ -223,6 +373,67 @@ function display(...)
       display(arg[i])
     end
   else
-    echo((prettywrite(arg[1], '  ') or 'nil') .. '\n')
+    echo((inspect(arg[1]) or 'nil') .. '\n')
   end
+end
+
+local errc
+-- leave errorc in the global table if and only if this is the mudlet self-test profile for running Busted tests
+-- this is because we need to spy on it to for testing.
+if getProfileName() ~= "Mudlet self-test" then
+  errc = errorc
+  _G.errorc = nil       -- and set to nil since it is internal only for the following functions.
+end
+-- undocumented, internal function
+local function printX(options)
+  local errorc = errc and errc or errorc
+  local func = options.func or debugc
+  local showTrace = options.showTrace
+  local msg = options.msg or ""
+  local halt = options.halt
+  local stackTable = debug.traceback():gsub("\t", "  "):gsub("%[string ",""):split("\n")
+  -- the table.removes below remove the printX and printError or printDebug calls from the stacktrace
+  -- decided to do this as they aren't the information the user is likely to be interested in
+  table.remove(stackTable,2)
+  table.remove(stackTable,2)
+  local level = #stackTable + 1
+  local dinfo = debug.getinfo(level)
+  local header = string.format("(%s:line %s)", dinfo.source, dinfo.currentline)
+  if halt then
+    header = "\n" .. header
+  end
+  local traceback = showTrace and "\n" .. table.concat(stackTable, "\n") or ""
+  if func ~= errorc then
+    msg = string.format("%s %s%s", halt and "" or header, msg, traceback)
+    if halt then
+      func(msg, level)
+    end
+    func(msg)
+    return
+  end
+  msg = msg .. traceback
+  func(msg, header)
+end
+
+-- Documentation: https://wiki.mudlet.org/index.php?title=Manual:Lua_Functions#printError
+function printError(msg, showTrace, haltExecution)
+  local func = haltExecution and error or (errc and errc or errorc) -- if running automated tests, errc is undefined, use the exposed global.
+  local options = {
+    msg = msg,
+    showTrace = showTrace,
+    halt = haltExecution,
+    func = func,
+  }
+  printX(options)
+end
+
+-- Documentation: https://wiki.mudlet.org/index.php?title=Manual:Lua_Functions#printDebug
+function printDebug(msg, showTrace)
+  local options = {
+    msg = msg,
+    showTrace = showTrace,
+    halt = false,
+    func = debugc
+  }
+  printX(options)
 end

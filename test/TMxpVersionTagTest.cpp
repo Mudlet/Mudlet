@@ -18,7 +18,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
- 
+
 #include <MxpTag.h>
 #include <QTest>
 #include <TMxpVersionTagHandler.h>
@@ -39,19 +39,24 @@ private slots:
     void initTestCase()
     {}
 
+    QSharedPointer<MxpNode> parseNode(const QString& tagText) const
+    {
+        auto nodes = TMxpTagParser::parseToMxpNodeList(tagText);
+        return nodes.size() > 0 ? nodes.first() : nullptr;
+    }
+
     void testVersionTag()
     {
         // Vanilla use of version
 
-        TMxpTagParser parser;
         TMxpStubContext ctx;
         TMxpStubClient stub;
 
-        MxpStartTag* versionTag = parser.parseStartTag("<Version>");
+        auto versionTag = parseNode("<Version>");
 
         TMxpVersionTagHandler versionTagHandler;
         TMxpTagHandler& tagHandler = versionTagHandler;
-        tagHandler.handleTag(ctx, stub, versionTag);
+        tagHandler.handleTag(ctx, stub, versionTag->asStartTag());
 
         QCOMPARE(stub.sentToServer, "\n\u001B[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=Stub-1.0>\n");
     }
@@ -60,17 +65,16 @@ private slots:
     {
         // Set a Style (Version of MXP Template of mud)
 
-        TMxpTagParser parser;
         TMxpStubContext ctx;
         TMxpStubClient stub;
 
         // style is generally just a string, but compared to other implementations we must at least allow for full 9 digit
         // (which always fit into a 32bit int)
-        MxpStartTag* versionTag = parser.parseStartTag("<Version 987654321>");
+        auto versionTag = parseNode("<Version 987654321>");
 
         TMxpVersionTagHandler versionTagHandler;
         TMxpTagHandler& tagHandler = versionTagHandler;
-        tagHandler.handleTag(ctx, stub, versionTag);
+        tagHandler.handleTag(ctx, stub, versionTag->asStartTag());
 
         // NO return value when setting style (this is a grey area.. but Z/CMUD do it this way and the MXP definition
         // seems to imply this interpretation:
@@ -79,8 +83,8 @@ private slots:
         QCOMPARE(stub.sentToServer, "");
 
         // From now on, return it with version
-        versionTag = parser.parseStartTag("<VERSION>");
-        tagHandler.handleTag(ctx, stub, versionTag);
+        versionTag = parseNode("<VERSION>");
+        tagHandler.handleTag(ctx, stub, versionTag->asStartTag());
         QCOMPARE(stub.sentToServer, "\n\u001B[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=Stub-1.0 STYLE=987654321>\n");
     }
 

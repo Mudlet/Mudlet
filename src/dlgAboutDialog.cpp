@@ -24,14 +24,6 @@
 // Debugging value to display ALL licences in the dialog
 // #define DEBUG_SHOWALL
 
-#ifndef GIT_COMMIT_HASH
-#define GIT_COMMIT_HASH "?"
-#endif
-
-#ifndef GIT_BRANCH
-#define GIT_BRANCH "?"
-#endif
-
 #include "dlgAboutDialog.h"
 
 #include "mudlet.h"
@@ -123,7 +115,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
      * the most efficient way of putting together a set of large QStrings
      * some of which will shortly be made translable, it is intended to make
      * it easier to add and remove sections according to the build settings
-     * and for boiler-plate licences to be reused mulitple times if necessary.
+     * and for boiler-plate licences to be reused multiple times if necessary.
      */
 
     // A uniform header for all tabs:
@@ -154,7 +146,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
         tr("<tr><td><span style=\"color:#bc8942;\"><b>Homepage</b></span></td><td><a href=\"http://www.mudlet.org/\">www.mudlet.org</a></td></tr>\n"
            "<tr><td><span style=\"color:#bc8942;\"><b>Forums</b></span></td><td><a href=\"http://forums.mudlet.org/\">forums.mudlet.org</a></td></tr>\n"
            "<tr><td><span style=\"color:#bc8942;\"><b>Documentation</b></span></td><td><a href=\"http://wiki.mudlet.org/w/Main_Page\">wiki.mudlet.org/w/Main_Page</a></td></tr>\n"
-           "<tr><td><span style=\"color:#7289DA;\"><b>Discord</b></span></td><td><a href=\"https://discord.gg/kuYvMQ9\">discord.gg</a></td></tr>\n"
+           "<tr><td><span style=\"color:#7289DA;\"><b>Discord</b></span></td><td><a href=\"https://www.mudlet.org/chat\">discord.gg</a></td></tr>\n"
            "<tr><td><span style=\"color:#40b040;\"><b>Source code</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet\">github.com/Mudlet/Mudlet</a></td></tr>\n"
            "<tr><td><span style=\"color:#40b040;\"><b>Features/bugs</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet/issues\">github.com/Mudlet/Mudlet/issues</a></td></tr>"));
 
@@ -192,7 +184,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                         tr("Contributions to the Travis integration, CMake and Visual C++ build, "
                            "a lot of code quality and memory management improvements.",
                            "about:ahmedcharles")});
-    aboutMakers.append({false, QStringLiteral("Chris Mitchell"), QString(), QStringLiteral("Chris7"), QStringLiteral("chrismudlet@gmail.com"),
+    aboutMakers.append({false, QStringLiteral("Chris Mitchell"), QString("Chris7#6113"), QStringLiteral("Chris7"), QStringLiteral("chris.mit7@gmail.com"),
                         tr("Developed a shared module system that allows script packages to be shared among profiles, "
                            "a UI for viewing Lua variables, improvements in the mapper and all around.",
                            "about:Chris7")});
@@ -218,7 +210,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                         tr("Developed the Vyzor GUI Manager for Mudlet.",
                            "about:Oneymus")});
     aboutMakers.append({false, QStringLiteral("ItsTheFae"), QStringLiteral("TheFae#9971"), QStringLiteral("Kae"), QString(),
-                        tr("Worked wonders in rejuventating our Website in 2017 but who prefers a little anonymity - "
+                        tr("Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - "
                            "if you are a <i>SpamBot</i> you will not get onto our Fora now. They have also made some useful "
                            "C++ core code contributions and we look forward to future reviews on and work in that area.",
                            "about:TheFae")});
@@ -302,7 +294,7 @@ void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
     QString headerText(tr("<p>Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.</p>\n"
                           "<p>Mudlet is released under the GPL license version 2, which is reproduced below:</p>",
                           "For non-english language versions please append a translation of the following "
-                          "to explain why the GPL is NOT reproduced in the relevent language: 'but only "
+                          "to explain why the GPL is NOT reproduced in the relevant language: 'but only "
                           "the English form is considered the official version of the license, so the "
                           "following is reproduced in that language:' to replace 'which is reproduced below:'..."));
 
@@ -1072,15 +1064,10 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 }
 
 QString dlgAboutDialog::createBuildInfo() const {
-
-    QString commitHash = !QByteArray(GIT_COMMIT_HASH).isEmpty() ? QStringLiteral(GIT_COMMIT_HASH) : QStringLiteral("?");
-    QString branch = !QByteArray(GIT_BRANCH).isEmpty() ? QStringLiteral(GIT_BRANCH) : QStringLiteral("?");
     return QStringLiteral("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n")
         .append(QStringLiteral("<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>").arg(tr("Technical information:")))
         .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1<td>%2</td></tr>").arg(tr("Version"), mudlet::self()->version))
         .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("OS"), QSysInfo::prettyProductName()))
         .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("CPU"), QSysInfo::currentCpuArchitecture()))
-        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("Branch"), branch))
-        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("Commit"), commitHash))
         .append(QStringLiteral("</table>"));
 }

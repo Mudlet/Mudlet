@@ -60,11 +60,6 @@
        <height>16777215</height>
       </size>
      </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
      <property name="text">
       <string>Command:</string>
      </property>
@@ -76,7 +71,10 @@
    <item row="1" column="1" colspan="8">
     <widget class="QLineEdit" name="lineEdit_timer_command">
      <property name="toolTip">
-      <string>&lt;p&gt;Type in one or more commands you want the timer to send directly to the game when the time has elapsed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</string>
+      <string>&lt;p&gt;Type in one or more commands you want the timer to send directly to the game when the time has elapsed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</string>
+     </property>
+     <property name="placeholderText">
+      <string>Text to send to the game as-is (optional)</string>
      </property>
     </widget>
    </item>
@@ -133,7 +131,7 @@
       </font>
      </property>
      <property name="text">
-      <string>&lt;p&gt;miliseconds&lt;/p&gt;</string>
+      <string>&lt;p&gt;milliseconds&lt;/p&gt;</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignBottom|Qt::AlignHCenter</set>

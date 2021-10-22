@@ -57,10 +57,10 @@ public:
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
-    void drawBackground(QPainter&, const QRect&, const QColor&) const;
     uint getGraphemeBaseCharacter(const QString& str) const;
     void drawLine(QPainter& painter, int lineNumber, int rowOfScreen, int *offset = nullptr) const;
-    int drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style) const;
+    int drawGraphemeBackground(QPainter&, QVector<QColor>&, QVector<QRect>&, QVector<QString>&, QVector<int>&, QPoint&, const QString&, const int, TChar&) const;
+    void drawGraphemeForeground(QPainter&, const QColor&, const QRect&, const QString&, TChar &) const;
     void showNewLines();
     void forceUpdate();
     void needUpdate(int, int);
@@ -107,7 +107,7 @@ public:
     // to be related to the file monitoring feature in the *nix tail command.
     // See, e.g.: https://en.wikipedia.org/wiki/Tail_(Unix)#File_monitoring
     bool mIsTailMode;
-    QMap<QString, QString> mPopupCommands;
+    QMap<QString, std::pair<QString, int>> mPopupCommands;
     int mScrollVector;
     QRegion mSelectedRegion;
     bool mShowTimeStamps;
@@ -126,13 +126,14 @@ public slots:
     void slot_analyseSelection();
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
     void slot_changeDebugShowAllProblemCodepoints(const bool);
+    void slot_mouseAction(const QString&);
 
 private slots:
     void slot_copySelectionToClipboardImage();
 
 private:
     void initDefaultSettings();
-    QString getSelectedText(const QChar& newlineChar = QChar::LineFeed);
+    QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);
     static QString htmlCenter(const QString&);
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
@@ -143,6 +144,7 @@ private:
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
     bool establishSelectedText();
     void expandSelectionToWords();
+    void expandSelectionToLine(int);
 
     int mFontHeight;
     int mFontWidth;
@@ -193,7 +195,7 @@ private:
     // making this a const value for the moment:
     const int mTimeStampWidth;
     bool mShowAllCodepointIssues;
-    // Marked mutable so that it is permissable to change this in class methods
+    // Marked mutable so that it is permissible to change this in class methods
     // that are otherwise const!
     mutable QHash<uint, std::tuple<uint, std::string>> mProblemCodepoints;
     // We scroll on the basis that one vertical mouse wheel click is one line

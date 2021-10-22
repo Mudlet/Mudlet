@@ -84,17 +84,6 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
       echo "== Creating a release build =="
     fi
 
-    # add ssh-key to ssh-agent for deployment
-    # shellcheck disable=2154
-    # the two "undefined" variables are defined by travis
-    if [ "${public_test_build}" != "true" ]; then
-      echo "=== Registering Mudlet SSH keys for release upload ==="
-      openssl aes-256-cbc -K "${encrypted_70dbe4c5e427_key}" -iv "${encrypted_70dbe4c5e427_iv}" -in "${BUILD_DIR}/CI/mudlet-deploy-key.enc" -out /tmp/mudlet-deploy-key -d
-      eval "$(ssh-agent -s)"
-      chmod 600 /tmp/mudlet-deploy-key
-      ssh-add /tmp/mudlet-deploy-key
-    fi
-
     if [ "${public_test_build}" == "true" ]; then
       ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}"
     else
@@ -113,20 +102,25 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
       tar -czvf "Mudlet-${VERSION}-linux-x64.AppImage.tar" "Mudlet.AppImage"
     fi
 
-    if [ "${public_test_build}" == "true" ]; then
-      echo "=== Uploading public test build to make.mudlet.org ==="
-      DEPLOY_URL=$(wget --method PUT --body-file="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" \
-                     "https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" -O - -q)
-    else
-      echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-      scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "keneanung@mudlet.org:${DEPLOY_PATH}"
-      # upload an unzipped, unversioned release for appimage.github.io
-      scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "keneanung@mudlet.org:${DEPLOY_PATH}"
-      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
-    fi
+    # if [ "${public_test_build}" == "true" ]; then
+      echo "=== Setting up for Github upload ==="
+      mkdir "upload/"
+      mv "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" "upload/"
+      {
+        echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
+        echo "UPLOAD_FILENAME=Mudlet-$VERSION$MUDLET_VERSION_BUILD-linux-x64"
+      } >> "$GITHUB_ENV"
+      DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
+    # else
+    #   echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
+    #   scp -i "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "keneanung@mudlet.org:${DEPLOY_PATH}"
+    #   # upload an unzipped, unversioned release for appimage.github.io
+    #   scp -i "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "keneanung@mudlet.org:${DEPLOY_PATH}"
+    #   DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
+    # fi
 
     # push release to DBLSQD
-    npm install -g dblsqd-cli
+    sudo npm install -g dblsqd-cli
     dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
 
     if [ "${public_test_build}" == "true" ]; then
@@ -134,32 +128,31 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
       downloadedfeed=$(mktemp)
       wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/linux/x86_64" --output-document="$downloadedfeed"
       echo "=== Generating a changelog ==="
-      cd "${BUILD_DIR}"
-      changelog=$(lua "${BUILD_DIR}/CI/generate-ptb-changelog.lua" --releasefile "${downloadedfeed}")
+      cd "${SOURCE_DIR}" || exit
+      changelog=$(lua "${SOURCE_DIR}/CI/generate-ptb-changelog.lua" --releasefile "${downloadedfeed}")
 
       echo "=== Creating release in Dblsqd ==="
       dblsqd release -a mudlet -c public-test-build -m "${changelog}" "${VERSION}${MUDLET_VERSION_BUILD}" || true
 
-      echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}" -s mudlet --type "standalone" --attach linux:x86_64 "${DEPLOY_URL}" || true
-    else
-      echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${DEPLOY_URL}"
+      # release registration and uploading will be manual for the time being
+    # else
+    #   echo "=== Registering release with Dblsqd ==="
+    #   dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${DEPLOY_URL}"
     fi
 
-    if [ "${public_test_build}" != "true" ]; then
-      # generate and deploy source tarball
-      cd "${HOME}"
-      # get the archive script
-      wget https://raw.githubusercontent.com/meitar/git-archive-all.sh/master/git-archive-all.sh
+    # if [ "${public_test_build}" != "true" ]; then
+    #   # generate and deploy source tarball
+    #   cd "${HOME}" || exit
+    #   # get the archive script
+    #   wget https://raw.githubusercontent.com/meitar/git-archive-all.sh/master/git-archive-all.sh
 
-      cd "${BUILD_DIR}"
-      # generate and upload the tarball
-      chmod +x "${HOME}/git-archive-all.sh"
-      "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
-      xz "Mudlet-${VERSION}.tar"
-      scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "keneanung@mudlet.org:${DEPLOY_PATH}"
-    fi
+    #   cd "${BUILD_DIR}" || exit
+    #   # generate and upload the tarball
+    #   chmod +x "${HOME}/git-archive-all.sh"
+    #   "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
+    #   xz "Mudlet-${VERSION}.tar"
+    #   scp -i "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "keneanung@mudlet.org:${DEPLOY_PATH}"
+    # fi
   fi
   export DEPLOY_URL
 fi

@@ -21,14 +21,14 @@
 
 ############################################################################
 #                                                                          #
-#    NOTICE: FreeBSD is not an officially supported platform as such;      #
-#    the work on getting it working has been done by myself, and other     #
-#    developers, unless they have explicitly said so, are not able to      #
-#    address issues relating specifically to that Operating System.        #
-#    Nevertheless users of FreeBSD are equally welcome to contribute       #
-#    to the development of Mudlet - bugfixes and enhancements are          #
-#    welcome from all!                                                     #
-#                                           Stephen Lyons, February 2018   #
+#    NOTICE: FreeBSD and GNU/Hurd are not officially supported platforms   #
+#    as such; the work on getting them working has been done by myself,    #
+#    and other developers, unless they have explicitly said so, are not    #
+#    able to address issues relating specifically to these Operating       #
+#    Systems. Nevertheless users of either are equally welcome to          #
+#    contribute to the development of Mudlet - bugfixes and enhancements   #
+#    are welcome from all!                                                 #
+#                         Stephen Lyons, February 2018, updated March 2021 #
 #                                                                          #
 ############################################################################
 
@@ -36,10 +36,10 @@
 cmake_minimum_required(VERSION 3.3)
 
 if(APPLE)
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13") # Qt 5.11.2 with which we build on OS
-                                           # X supports 10.11 and up, but some
-                                           # tools are not provided as bottles
-                                           # for that anymore.
+  # needed for fetching Sparkle
+  cmake_minimum_required(VERSION 3.18)
+  # minimum supported version by Apple
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "")
 endif()
 
 project(mudlet)
@@ -83,7 +83,7 @@ endif()
 # IMPORTANT: To insure consistency please ensure the SAME of the first two
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 4.10.1)
+set(APP_VERSION 4.13.1)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
                                          STREQUAL "")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
@@ -137,6 +137,10 @@ git_submodule_init(
   CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"
   READABLE_NAME "lua code formatter source code")
 
+git_submodule_init(
+  CHECK_FILE "3rdparty/qt-orordered-map/src/orderedmap.h" SUBMODULE_PATH "3rdparty/qt-ordered-map"
+  READABLE_NAME "Qt ordered map source code")
+
 if(USE_UPDATER)
   git_submodule_init(CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt" SUBMODULE_PATH
                      "3rdparty/dblsqd" READABLE_NAME "DBLSQD updater")
@@ -150,12 +154,15 @@ if(APPLE)
 
     if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
       message(
-        STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it..."
+        STATUS "Sparkle is missing, fetching it..."
       )
-      execute_process(
-        TIMEOUT 30
-        WORKING_DIRECTORY "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods"
-        COMMAND pod install)
+      file(DOWNLOAD "https://github.com/sparkle-project/Sparkle/releases/download/1.25.0/Sparkle-1.25.0.tar.xz" "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0.tar.xz"
+        TIMEOUT 60  # seconds
+        TLS_VERIFY ON
+      )
+      file(ARCHIVE_EXTRACT INPUT "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0.tar.xz"
+        DESTINATION "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
+      file(REMOVE "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0.tar.xz")
     endif()
   endif()
 endif()
@@ -179,36 +186,4 @@ if(USE_UPDATER)
     add_subdirectory(3rdparty/sparkle-glue)
   endif()
 
-endif()
-
-# Get the latest commit hash
-execute_process(
-        COMMAND git rev-parse --short HEAD
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_COMMIT_HASH
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-if(GIT_COMMIT_HASH)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE "-DGIT_COMMIT_HASH=\"${GIT_COMMIT_HASH}\"")
-endif()
-
-# Get the current working branch
-execute_process(
-        COMMAND git describe --all --dirty --broken
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_BRANCH
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-if(GIT_BRANCH)
-  STRING(REGEX REPLACE "heads/" "" GIT_BRANCH ${GIT_BRANCH})
-
-  if(GIT_BRANCH MATCHES ".*-dirty$")
-    STRING(REGEX REPLACE "-dirty$" " (modified)" GIT_BRANCH ${GIT_BRANCH})
-  endif()
-
-  if(GIT_BRANCH MATCHES ".*-broken")
-    STRING(REGEX REPLACE "-broken" " (broken)" GIT_BRANCH ${GIT_BRANCH})
-  endif()
-
-  target_compile_definitions(${PROJECT_NAME} PRIVATE "-DGIT_BRANCH=\"${GIT_BRANCH}\"")
 endif()

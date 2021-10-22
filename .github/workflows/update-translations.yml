@@ -9,7 +9,7 @@ on:
 jobs:
   update-and-commit-text:
     runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
+    if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
     - uses: actions/checkout@v2
       with:
@@ -34,9 +34,9 @@ jobs:
       uses: gr2m/create-or-update-pull-request-action@v1.x
       if: steps.getdiff.outputs.lines_changed > 0
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
       with:
-        title: "Update text for translation in Crowdin"
+        title: "Infrastructure: Update text for translation in Crowdin"
         body: |
           #### Brief overview of PR changes/additions
           :crown: An automated PR to make new text available for translation in Crowdin from ${{ github.ref }} (${{ github.sha }}).

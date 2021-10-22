@@ -38,15 +38,17 @@
 
 QString dlgIRC::HostNameCfgItem = QStringLiteral("irc_host");
 QString dlgIRC::HostPortCfgItem = QStringLiteral("irc_port");
+QString dlgIRC::HostSecureCfgItem = QStringLiteral("irc_secure");
 QString dlgIRC::NickNameCfgItem = QStringLiteral("irc_nick");
 QString dlgIRC::ChannelsCfgItem = QStringLiteral("irc_channels");
-QString dlgIRC::DefaultHostName = QStringLiteral("irc.freenode.net");
+QString dlgIRC::DefaultHostName = QStringLiteral("irc.libera.chat");
 int dlgIRC::DefaultHostPort = 6667;
+bool dlgIRC::DefaultHostSecure = false;
 QString dlgIRC::DefaultNickName = QStringLiteral("Mudlet");
 QStringList dlgIRC::DefaultChannels = QStringList() << QStringLiteral("#mudlet");
 int dlgIRC::DefaultMessageBufferLimit = 5000;
 
-dlgIRC::dlgIRC(Host* pHost) 
+dlgIRC::dlgIRC(Host* pHost)
 : mReadyForSending(false)
 , mpHost(pHost)
 , mIrcStarted(false)
@@ -98,6 +100,7 @@ dlgIRC::dlgIRC(Host* pHost)
     mRealName = mudlet::self()->version;
     mHostName = readIrcHostName(mpHost);
     mHostPort = readIrcHostPort(mpHost);
+    mHostSecure = readIrcHostSecure(mpHost);
     mNickName = readIrcNickName(mpHost);
     mChannels = readIrcChannels(mpHost);
 
@@ -106,6 +109,7 @@ dlgIRC::dlgIRC(Host* pHost)
     connection->setRealName(mRealName);
     connection->setHost(mHostName);
     connection->setPort(mHostPort);
+    connection->setSecure(mHostSecure);
 
     // set the title here to pick up the previously loaded nick and host values.
     setClientWindowTitle();
@@ -227,12 +231,14 @@ void dlgIRC::ircRestart(bool reloadConfigs)
     if (reloadConfigs) {
         mHostName = readIrcHostName(mpHost);
         mHostPort = readIrcHostPort(mpHost);
+        mHostSecure = readIrcHostSecure(mpHost);
         mNickName = readIrcNickName(mpHost);
         mChannels = readIrcChannels(mpHost);
 
         connection->setNickName(mNickName);
         connection->setHost(mHostName);
         connection->setPort(mHostPort);
+        connection->setSecure(mHostSecure);
     }
 
     // queue auto-joined channels and reopen the connection.
@@ -495,10 +501,11 @@ void dlgIRC::slot_onTextEntered()
 #else
         QString command = lineEdit->text().mid(1).split(" ", QString::SkipEmptyParts).value(0).toUpper();
 #endif
-        if (commandParser->commands().contains(command))
+        if (commandParser->commands().contains(command)) {
             error = tr("[ERROR] Syntax: %1").arg(commandParser->syntax(command).replace(QStringLiteral("<"), QStringLiteral("&lt;")).replace(QStringLiteral(">"), QStringLiteral("&gt;")));
-        else
+        } else {
             error = tr("[ERROR] Unknown command: %1").arg(command);
+        }
         ircBrowser->append(IrcMessageFormatter::formatMessage(error, QStringLiteral("indianred")));
         lineEdit->setStyleSheet(QStringLiteral("background: salmon"));
     }
@@ -534,17 +541,18 @@ void dlgIRC::slot_onBufferAdded(IrcBuffer* buffer)
     // joined a buffer - start listening to buffer specific messages
     connect(buffer, &IrcBuffer::messageReceived, this, &dlgIRC::slot_receiveMessage);
     // create a document for storing the buffer specific messages
-    auto * document = new QTextDocument(buffer);
+    auto* document = new QTextDocument(buffer);
     document->setMaximumBlockCount(mMessageBufferLimit);
     bufferTexts.insert(buffer, document);
     // create a sorted model for buffer users
-    auto * userModel = new IrcUserModel(buffer);
+    auto* userModel = new IrcUserModel(buffer);
     userModel->setSortMethod(Irc::SortByTitle);
     userModels.insert(buffer, userModel);
     // activate the new buffer
     int idx = bufferModel->buffers().indexOf(buffer);
-    if (idx != -1)
+    if (idx != -1) {
         bufferList->setCurrentIndex(bufferModel->index(idx));
+    }
 }
 
 void dlgIRC::slot_onBufferRemoved(IrcBuffer* buffer)
@@ -751,6 +759,12 @@ int dlgIRC::readIrcHostPort(Host* pH)
     return port;
 }
 
+bool dlgIRC::readIrcHostSecure(Host* pH)
+{
+    QString secureStr = pH->readProfileData(dlgIRC::HostSecureCfgItem);
+    return secureStr.contains(QLatin1String("true"), Qt::CaseInsensitive);
+}
+
 QString dlgIRC::readIrcNickName(Host* pH)
 {
     QString nick = pH->readProfileData(dlgIRC::NickNameCfgItem);
@@ -819,6 +833,11 @@ QPair<bool, QString> dlgIRC::writeIrcHostName(Host* pH, const QString& hostname)
 QPair<bool, QString> dlgIRC::writeIrcHostPort(Host* pH, int port)
 {
     return pH->writeProfileData(dlgIRC::HostPortCfgItem, QString::number(port));
+}
+
+QPair<bool, QString> dlgIRC::writeIrcHostSecure(Host* pH, bool secure)
+{
+    return pH->writeProfileData(dlgIRC::HostSecureCfgItem, (secure ? QLatin1String("true") : QLatin1String("false")));
 }
 
 QPair<bool, QString> dlgIRC::writeIrcNickName(Host* pH, const QString& nickname)

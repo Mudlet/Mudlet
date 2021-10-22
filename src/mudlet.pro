@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020 by Stephen Lyons             #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2021 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -23,14 +23,14 @@
 
 ############################################################################
 #                                                                          #
-#    NOTICE: FreeBSD is not an officially supported platform as such;      #
-#    the work on getting it working has been done by myself, and other     #
-#    developers, unless they have explicitly said so, are not able to      #
-#    address issues relating specifically to that Operating System.        #
-#    Nevertheless users of FreeBSD are equally welcome to contribute       #
-#    to the development of Mudlet - bugfixes and enhancements are          #
-#    welcome from all!                                                     #
-#                                           Stephen Lyons, February 2018   #
+#    NOTICE: FreeBSD and GNU/Hurd are not officially supported platforms   #
+#    as such; the work on getting them working has been done by myself,    #
+#    and other developers, unless they have explicitly said so, are not    #
+#    able to address issues relating specifically to these Operating       #
+#    Systems. Nevertheless users of either are equally welcome to          #
+#    contribute to the development of Mudlet - bugfixes and enhancements   #
+#    are welcome from all!                                                 #
+#                         Stephen Lyons, February 2018, updated March 2021 #
 #                                                                          #
 ############################################################################
 
@@ -89,7 +89,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.10.1
+VERSION = 4.13.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -102,31 +102,6 @@ isEmpty( BUILD ) {
 # "-ptb" for the public test build
 # "" for the release build
    BUILD = "-dev"
-}
-
-$$system(git --version, blob, GIT_STATUS)
-isEqual(GIT_STATUS, 0) {
-    # Git command appeared to work - so get a description of the current
-    # repository state
-    GIT_DESCRIPTION=$$system(git describe --all --dirty --broken)
-    GIT_COMMITHASH=$$system(git rev-parse --short HEAD)
-    # remove the leading "head/"
-    GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "heads/", "")
-    # Split it on hyphens
-    SPLIT_GIT_DESCRIPTION=$$split(GIT_DESCRIPTION, -)
-    # Get the last part so we can check if it is "broken" or "dirty"
-    LAST_GIT_DESCRIPTION=$$last(SPLIT_GIT_DESCRIPTION)
-    contains(LAST_GIT_DESCRIPTION, "broken" ) {
-        warning( "Main Git repository has a problem." )
-        GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "-broken", " (broken)")
-    } else {
-        contains(LAST_GIT_DESCRIPTION, "dirty" ) {
-            GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "-dirty", " (modified)")
-        }
-    }
-    !build_pass : message("Using a git description of: \"$${GIT_DESCRIPTION}\", Git SHA1 is: $${GIT_COMMITHASH}")
-    DEFINES += GIT_COMMIT_HASH=\\\"$${GIT_COMMITHASH}\\\"
-    DEFINES += GIT_BRANCH=\\\"\"$${GIT_DESCRIPTION}\"\\\"
 }
 
 # As the above also modifies the splash screen image (so developers get reminded
@@ -175,8 +150,8 @@ isEmpty( FONT_TEST ) | !equals(FONT_TEST, "NO" ) {
     # It would be nice if we could automate the download and extraction of all
     # the font and associate documentation (but NOT the "sources" sub-directory)
     # contents into the ./src/fonts/ directory structure only if this option is
-    # set to ON; however that would be plaform specific and add more complexity
-    # and it is not obvious that there is a demand to do this currenly.
+    # set to ON; however that would be platform specific and add more complexity
+    # and it is not obvious that there is a demand to do this currently.
 }
 
 ######################### Auto Updater setting detection #########,#############
@@ -240,7 +215,7 @@ isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
 # from the executable's location will be used.  Mudlet will now moan and ask
 # the user to find them if the files (and specifically the <10KByte
-# "LuaGlobal.lua" one) is not accessable (read access only required) during
+# "LuaGlobal.lua" one) is not accessible (read access only required) during
 # startup.  The precise directory is remembered once found (and stored in the
 # Mudlet configuration file as "systemLuaFilePath") but if the installer places
 # the files in the place documented here the user will not be bothered by this.
@@ -309,7 +284,7 @@ unix:!macx {
         LIBS +=  \
             -L"$${MINGW_BASE_DIR_TEST}\\bin" \
             -llua51 \
-            -llibhunspell-1.6
+            -lhunspell-1.6
 
         INCLUDEPATH += \
              "C:\\Libraries\\boost_1_71_0" \
@@ -438,6 +413,10 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
+    !exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
+        message("git submodule for required Qt ordered map source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${PWD}\.. & git submodule update --init 3rdparty/qt-ordered-map")
+    }
     contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
             message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
@@ -452,6 +431,10 @@ win32 {
     !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
+    }
+    !exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
+        message("git submodule for required Qt ordered map source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qt-ordered-map")
     }
     contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
@@ -497,6 +480,10 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
 }
 
+!exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
+    error("Cannot locate Qt ordered map submodule source code, build abandoned!")
+}
+
 contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
     exists("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri") {
         include("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri")
@@ -515,7 +502,7 @@ contains( DEFINES, INCLUDE_UPDATER ) {
 
     macx {
         # We do not actually have to do anything to include it here - it is
-        # pulled in by the Sparkle complation below
+        # pulled in by the Sparkle compilation below
         !exists("$${PWD}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
             error("Cannot locate Sparkle glue library submodule source code, build abandoned!")
         }
@@ -527,7 +514,7 @@ SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
     AltFocusMenuBarDisable.cpp \
-    TTextCodec.cpp \
+    DarkTheme.cpp \
     ctelnet.cpp \
     discord.cpp \
     dlgAboutDialog.cpp \
@@ -538,11 +525,14 @@ SOURCES += \
     dlgConnectionProfiles.cpp \
     dlgIRC.cpp \
     dlgKeysMainArea.cpp \
+    dlgModuleManager.cpp \
     dlgMapper.cpp \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
+    dlgPackageManager.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
+    dlgRoomSymbol.cpp \
     dlgScriptsMainArea.cpp \
     dlgSourceEditorArea.cpp \
     dlgSourceEditorFindArea.cpp \
@@ -561,7 +551,9 @@ SOURCES += \
     KeyUnit.cpp \
     LuaInterface.cpp \
     main.cpp \
+    mapInfoContributorManager.cpp \
     mudlet.cpp \
+    MxpTag.cpp \
     ScriptUnit.cpp \
     T2DMap.cpp \
     TAction.cpp \
@@ -585,12 +577,13 @@ SOURCES += \
     TLuaInterpreter.cpp \
     TMainConsole.cpp \
     TMap.cpp \
+    TMapLabel.cpp \
     TMedia.cpp \
+    TMxpBRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
     TMxpFormattingTagsHandler.cpp \
-    TMxpBRTagHandler.cpp \
     TMxpColorTagHandler.cpp \
     TMxpCustomElementTagHandler.cpp \
     TMxpFontTagHandler.cpp \
@@ -602,19 +595,20 @@ SOURCES += \
     TMxpProcessor.cpp \
     TMxpSendTagHandler.cpp \
     TMxpSupportTagHandler.cpp \
-    MxpTag.cpp \
     TMxpTagHandler.cpp \
     TMxpTagParser.cpp \
     TMxpTagProcessor.cpp \
-    TMxpVarTagHandler.cpp \
     TMxpVersionTagHandler.cpp \
+    TMxpVarTagHandler.cpp \
     TriggerUnit.cpp \
     TRoom.cpp \
     TRoomDB.cpp \
     TScript.cpp \
     TSplitter.cpp \
     TSplitterHandle.cpp \
+    TStringUtils.cpp \
     TTabBar.cpp \
+    TTextCodec.cpp \
     TTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
@@ -623,14 +617,13 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    TStringUtils.cpp
+    XMLimport.cpp
 
 HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
-    TTextCodec.h \
+    DarkTheme.h \
     ctelnet.h \
     discord.h \
     dlgAboutDialog.h \
@@ -642,10 +635,13 @@ HEADERS += \
     dlgIRC.h \
     dlgKeysMainArea.h \
     dlgMapper.h \
+    dlgModuleManager.h \
     dlgNotepad.h \
     dlgPackageExporter.h \
+    dlgPackageManager.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
+    dlgRoomSymbol.h \
     dlgScriptsMainArea.h \
     dlgSourceEditorArea.h \
     dlgSourceEditorFindArea.h \
@@ -662,7 +658,9 @@ HEADERS += \
     ircmessageformatter.h \
     KeyUnit.h \
     LuaInterface.h \
+    mapInfoContributorManager.h \
     mudlet.h \
+    MxpTag.h \
     pre_guard.h \
     post_guard.h \
     ScriptUnit.h \
@@ -691,6 +689,7 @@ HEADERS += \
     TLuaInterpreter.h \
     TMainConsole.h \
     TMap.h \
+    TMapLabel.h \
     TMatchState.h \
     TMedia.h \
     TMxpBRTagHandler.h \
@@ -710,7 +709,6 @@ HEADERS += \
     TMxpNodeBuilder.h \
     TMxpProcessor.h \
     TMxpSendTagHandler.h \
-    MxpTag.h \
     TMxpTagHandler.h \
     TMxpTagParser.h \
     TMxpTagProcessor.h \
@@ -724,7 +722,9 @@ HEADERS += \
     TScript.h \
     TSplitter.h \
     TSplitterHandle.h \
+    TStringUtils.h \
     TTabBar.h \
+    TTextCodec.h \
     TTextEdit.h \
     TTimer.h \
     TToolBar.h \
@@ -736,8 +736,7 @@ HEADERS += \
     XMLimport.h \
     widechar_width.h \
     ../3rdparty/discord/rpc/include/discord_register.h \
-    ../3rdparty/discord/rpc/include/discord_rpc.h \
-    TStringUtils.h
+    ../3rdparty/discord/rpc/include/discord_rpc.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
@@ -753,10 +752,13 @@ FORMS += \
     ui/irc.ui \
     ui/keybindings_main_area.ui \
     ui/main_window.ui \
+    ui/module_manager.ui \
     ui/mapper.ui \
     ui/notes_editor.ui \
+    ui/package_manager.ui \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
+    ui/room_symbol.ui \
     ui/scripts_main_area.ui \
     ui/source_editor_area.ui \
     ui/source_editor_find_area.ui \
@@ -852,7 +854,7 @@ TRANSLATIONS = $$files(../translations/translated/*.ts)
 #
 # Select Qt Creator's "Project" Side tab and under the "Build and Run" top tab
 # choose your Build Kit's "Run"->"Run Settings" ensure you have a "Make" step
-# that - if you are NOT runnning QT Creator as root, which is the safest way
+# that - if you are NOT running QT Creator as root, which is the safest way
 # (i.e safe = NOT root) - against:
 # "Override <path to?>/make" has the entry: "/usr/bin/sudo"
 # without the quotes, assuming /usr/bin is the location of "sudo"
@@ -1495,7 +1497,7 @@ OTHER_FILES += \
 
 # Unix Makefile installer:
 # lua file installation, needs install, sudo, and a setting in /etc/sudo.conf
-# or via enviromental variable SUDO_ASKPASS to something like ssh-askpass
+# or via environmental variable SUDO_ASKPASS to something like ssh-askpass
 # to provide a graphic password requestor needed to install software
 unix:!macx {
 # say what we want to get installed by "make install" (executed by 'deployment' step):
@@ -1569,6 +1571,10 @@ unix:!macx {
 
 
 DISTFILES += \
+    ../docker/Dockerfile \
+    ../docker/docker-compose.override.linux.yml \
+    ../docker/docker-compose.yml \
+    CF-loader.xml \
     CMakeLists.txt \
     .clang-format \
     ../.github/pr-labeler.yml \
@@ -1607,6 +1613,8 @@ DISTFILES += \
     ../CI/appveyor.set-build-info.ps1 \
     ../CI/appveyor.functions.ps1 \
     ../CI/appveyor.build.ps1 \
+    mudlet-lua/lua/generic-mapper/generic_mapper.xml \
+    mudlet-lua/lua/generic-mapper/versions.lua \
     mudlet-lua/lua/ldoc.css \
     mudlet-lua/genDoc.sh \
     mudlet-lua/tests/README.md \

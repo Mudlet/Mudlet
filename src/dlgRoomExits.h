@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -35,11 +36,11 @@ class TRoom;
 class TExit
 {
 public:
-    bool hasNoRoute;
-    bool hasStub;
-    int destination;
-    int door;
-    int weight;
+    bool hasNoRoute = false;
+    bool hasStub = false;
+    int destination = 0;
+    int door = 0;
+    int weight = 0;
 
     friend bool operator==( TExit &a, TExit &b )
     {
@@ -66,8 +67,7 @@ class dlgRoomExits : public QDialog, public Ui::room_exits
 
 public:
     Q_DISABLE_COPY(dlgRoomExits)
-    explicit dlgRoomExits(Host*, QWidget* parent = nullptr);
-    void init(int);
+    explicit dlgRoomExits(Host*, const int, QWidget* parent = nullptr);
 
 public slots:
     void save();
@@ -103,28 +103,22 @@ private slots:
     void slot_checkModified();
 
 private:
+    void init();
+    void initExit(int direction, int exitId, QLineEdit* exitLineEdit,
+                  QCheckBox* noRoute, QCheckBox* stub,
+                  QRadioButton* none, QRadioButton* open, QRadioButton* closed, QRadioButton* locked,
+                  QSpinBox* weight);
+    TExit* makeExitFromControls(int direction);
+
     QPointer<Host> mpHost;
-    QTreeWidgetItem* mpEditItem;
-    TRoom* pR;
-    int mRoomID;
-    int mEditColumn;
+    QTreeWidgetItem* mpEditItem = nullptr;
+    TRoom* pR = nullptr;
+    int mRoomID = 0;
+    int mEditColumn = -1;
 
     // key = (normal) exit DIR_***, value = exit class instance
     QMap<int, TExit*> originalExits;
     QMap<QString, TExit*> originalSpecialExits;
-
-    void initExit(int roomId,
-                  int direction,
-                  int exitId,
-                  QLineEdit* exitLineEdit,
-                  QCheckBox* noRoute,
-                  QCheckBox* stub,
-                  QRadioButton* none,
-                  QRadioButton* open,
-                  QRadioButton* closed,
-                  QRadioButton* locked,
-                  QSpinBox* weight);
-    TExit* makeExitFromControls(int direction);
 };
 
 #endif // MUDLET_DLGROOMEXITS_H

@@ -11,6 +11,8 @@ SetLuarocksPath "C:\src\verbose_output.log"
 cd "$Env:APPVEYOR_BUILD_FOLDER\src"
 
 $Env:PATH="C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;$Env:QT_BASE_DIR\bin;$Env:MINGW_BASE_DIR\bin;" + (($Env:PATH.Split(';') | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';')
+# enable for a debug build (1/2)
+# qmake CONFIG+=release CONFIG+=force_debug_info mudlet.pro
 qmake CONFIG+=release mudlet.pro
 if("$LastExitCode" -ne "0"){
   exit 1

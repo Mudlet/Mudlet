@@ -22,19 +22,21 @@
 #include <MxpTag.h>
 #include <QTest>
 #include <TMxpEntityTagHandler.h>
+#include <TMxpStubClient.h>
 #include <TMxpTagParser.h>
 #include <TMxpTagProcessor.h>
 #include <TEntityResolver.h>
-
-#include "TMxpStubClient.h"
-
-
 
 class TMxpEntityTagTest : public QObject {
     Q_OBJECT
 
 private:
 private slots:
+    QSharedPointer<MxpNode> parseNode(const QString& tagText) const
+    {
+        auto nodes = TMxpTagParser::parseToMxpNodeList(tagText);
+        return nodes.size() > 0 ? nodes.first() : nullptr;
+    }
 
     void initTestCase()
     {}
@@ -43,15 +45,14 @@ private slots:
     {
         // set a new entity:
 
-        TMxpTagParser parser;
         TMxpStubContext ctx;
         TMxpStubClient stub;
 
-        MxpStartTag* entityTag = parser.parseStartTag("<!EN CDIR 'filename'>");
+        auto entityTag = parseNode("<!EN CDIR 'filename'>");
 
         TMxpEntityTagHandler entityTagHandler;
         TMxpTagHandler& tagHandler = entityTagHandler;
-        tagHandler.handleTag(ctx, stub, entityTag);
+        tagHandler.handleTag(ctx, stub, entityTag->asStartTag());
 
         QCOMPARE(ctx.getEntityResolver().interpolate("cd &cdir;"), "cd filename");
     }
@@ -60,20 +61,19 @@ private slots:
     {
         // redefine existing entity:
 
-        TMxpTagParser parser;
         TMxpStubContext ctx;
         TMxpStubClient stub;
 
-        MxpStartTag* entityTag = parser.parseStartTag("<!EN Atom 'org value'>");
+        auto entityTag = parseNode("<!EN Atom 'org value'>");
 
         TMxpEntityTagHandler entityTagHandler;
         TMxpTagHandler& tagHandler = entityTagHandler;
-        tagHandler.handleTag(ctx, stub, entityTag);
+        tagHandler.handleTag(ctx, stub, entityTag->asStartTag());
 
         QCOMPARE(ctx.getEntityResolver().interpolate("cd &ATOM;"), "cd org value");
 
-        entityTag = parser.parseStartTag("<!entity atom 'new value'>");
-        tagHandler.handleTag(ctx, stub, entityTag);
+        entityTag = parseNode("<!entity atom 'new value'>");
+        tagHandler.handleTag(ctx, stub, entityTag->asStartTag());
 
         QCOMPARE(ctx.getEntityResolver().interpolate("cd &ATOM;"), "cd new value");
     }
@@ -84,20 +84,19 @@ private slots:
         // to parseStartTag does not handle '' as in <!EN item ''> well.
         // In the real mudlet code '' is resolved to empty string in advance
 
-        TMxpTagParser parser;
         TMxpStubContext ctx;
         TMxpStubClient stub;
 
-        MxpStartTag* entityTag = parser.parseStartTag("<!en item torch>");
+        auto entityTag = parseNode("<!en item torch>");
 
         TMxpEntityTagHandler entityTagHandler;
         TMxpTagHandler& tagHandler = entityTagHandler;
-        tagHandler.handleTag(ctx, stub, entityTag);
+        tagHandler.handleTag(ctx, stub, entityTag->asStartTag());
 
         QCOMPARE(ctx.getEntityResolver().interpolate("examine &Item;"), "examine torch");
 
-        entityTag = parser.parseStartTag("<!Entity item>");
-        tagHandler.handleTag(ctx, stub, entityTag);
+        entityTag = parseNode("<!Entity item>");
+        tagHandler.handleTag(ctx, stub, entityTag->asStartTag());
 
         QCOMPARE(ctx.getEntityResolver().interpolate("examine &Item;"), "examine ");
     }
@@ -105,21 +104,19 @@ private slots:
     void testEntityTagDelete()
     {
         // remove an existing entity:
-
-        TMxpTagParser parser;
         TMxpStubContext ctx;
         TMxpStubClient stub;
 
-        MxpStartTag* entityTag = parser.parseStartTag("<!EN weapon sword>");
+        auto entityTag = parseNode("<!EN weapon sword>");
 
         TMxpEntityTagHandler entityTagHandler;
         TMxpTagHandler& tagHandler = entityTagHandler;
-        tagHandler.handleTag(ctx, stub, entityTag);
+        tagHandler.handleTag(ctx, stub, entityTag->asStartTag());
 
         QCOMPARE(ctx.getEntityResolver().interpolate("wield &weapon;"), "wield sword");
 
-        entityTag = parser.parseStartTag("<!Entity Weapon Delete>");
-        tagHandler.handleTag(ctx, stub, entityTag);
+        entityTag = parseNode("<!Entity Weapon Delete>");
+        tagHandler.handleTag(ctx, stub, entityTag->asStartTag());
 
         QCOMPARE(ctx.getEntityResolver().interpolate("wield &weapon;"), "wield &weapon;");
     }

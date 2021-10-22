@@ -60,8 +60,9 @@ TMxpTagHandlerResult TMxpCustomElementTagHandler::handleEndTag(TMxpContext& ctx,
         mCurrentFlagName.clear();
     }
 
-    if (el.definition.isEmpty())
+    if (el.definition.isEmpty()) {
         return MXP_TAG_HANDLED; //NO DEFINITION
+    }
 
 
     // generates closing tags in the reverse order

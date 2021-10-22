@@ -28,6 +28,7 @@
 #include <QDebug>
 #include "TMxpContext.h"
 #include "TMxpClient.h"
+#include "TMediaData.h"
 
 class TMxpStubContext : public TMxpContext {
 public:
@@ -44,12 +45,12 @@ public:
         return mSupportedElements;
     }
 
-    virtual TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override
+    TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override
     {
         return MXP_TAG_HANDLED;
     }
 
-    virtual void handleContent(char ch) override
+    void handleContent(char ch) override
     {
 
     }

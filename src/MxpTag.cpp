@@ -128,10 +128,12 @@ MxpStartTag MxpStartTag::transform(const MxpTagAttribute::Transformation& transf
 
 const QString& MxpStartTag::getAttributeByNameOrIndex(const QString& attrName, int attrIndex, const QString& defaultValue) const
 {
-    if (hasAttribute(attrName))
+    if (hasAttribute(attrName)) {
         return getAttributeValue(attrName);
-    if (getAttributesCount() > attrIndex && !getAttribute(attrIndex).hasValue())
+    }
+    if (getAttributesCount() > attrIndex && !getAttribute(attrIndex).hasValue()) {
         return getAttribute(attrIndex).getName();
+    }
 
     return defaultValue;
 }

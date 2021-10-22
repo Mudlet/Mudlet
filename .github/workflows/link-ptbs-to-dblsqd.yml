@@ -1,0 +1,81 @@
+name: Link Linux/macOS PTBs to the updater (dblsqd)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'
+
+jobs:
+  link-ptbs:
+    runs-on: ubuntu-20.04
+    if: ${{ github.repository_owner == 'Mudlet' }}
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: leafo/gh-actions-lua@v8
+      with:
+        luaVersion: "5.1.5"
+    - uses: actions/setup-node@v2.4.1
+    - uses: leafo/gh-actions-luarocks@v4
+
+    - name: Retrieve latest PTB version
+      run: |
+        # Get the latest Windows version, because that one runs first and will be registered in dblsqd. Linux/macOS won't exist yet
+        export PTB_VERSION=$(curl --silent https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86 | jq --raw-output ".releases[0].version")
+        export PTB_COMMIT=$(lua -e "print(os.getenv('PTB_VERSION'):match('.+\-(.+)$'))")
+
+        echo "Latest PTB version is: $PTB_VERSION"
+        echo "Latest PTB commit is: $PTB_COMMIT"
+
+        {
+          echo "PTB_VERSION=$PTB_VERSION"
+          echo "PTB_COMMIT=$PTB_COMMIT"
+        } >> "$GITHUB_ENV"
+
+    - name: Retrieve binaries available on make.mudlet.org
+      run: |
+        LATEST_FEED=$(tempfile) || exit 1
+        curl --silent --output $LATEST_FEED "https://make.mudlet.org/snapshots/json.php?commitid=$PTB_COMMIT"
+
+        if [ "$(cat "$LATEST_FEED" | jq --raw-output '.status')" != "ok" ]; then
+          echo "Downloaded feed from https://make.mudlet.org/snapshots/json.php?commitid=$PTB_COMMIT wasn't OK, feed is:"
+          cat "${LATEST_FEED}" | jq
+        fi
+
+        export LINUX_PTB_URL=$(cat $LATEST_FEED | jq --raw-output ".data[] | select(.platform == \"linux\") | .url")
+        export MACOS_PTB_URL=$(cat $LATEST_FEED | jq --raw-output ".data[] | select(.platform == \"macos\") | .url")
+
+        echo "Linux PTB link: $LINUX_PTB_URL"
+        echo "macOS PTB link: $MACOS_PTB_URL"
+
+        {
+          echo "LINUX_PTB_URL=$LINUX_PTB_URL"
+          echo "MACOS_PTB_URL=$MACOS_PTB_URL"
+        } >> "$GITHUB_ENV"
+
+    - name: Setup dblsqd client
+      run: |
+        sudo npm install -g dblsqd-cli
+        dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
+      env:
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+
+    - name: Link updater with Linux/macOS downloads
+      run: |
+        set -e
+        export TERM=xterm
+        bold=$(tput bold)
+        normal=$(tput sgr0)
+        EXIT_CODE_LINUX=0
+        EXIT_CODE_MACOS=0
+
+        echo "Linking ${bold}Linux PTB${normal} ${PTB_VERSION}..."
+        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${LINUX_PTB_URL}" || EXIT_CODE_LINUX=$?
+        echo "Linking ${bold}macOS PTB${normal} ${PTB_VERSION}..."
+        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${MACOS_PTB_URL}" || EXIT_CODE_MACOS=$?
+
+        if [ "${EXIT_CODE_LINUX}" != 0 ] && [ "${EXIT_CODE_MACOS}" != 0 ]; then
+          exit 1
+        fi
+
