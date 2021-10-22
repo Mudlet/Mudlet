@@ -165,8 +165,6 @@ public:
     void            setName(const QString& s);
     QString         getUrl()                         { return mUrl; }
     void            setUrl(const QString& s)         { mUrl = s; }
-    QString         getUserDefinedName()             { return mUserDefinedName; }
-    void            setUserDefinedName(const QString& s) { mUserDefinedName = s; }
     int             getPort()                        { return mPort; }
     void            setPort(const int p)                 { mPort = p; }
     void            setAutoReconnect(const bool b)   { mTelnet.setAutoReconnect(b); }
@@ -677,8 +675,6 @@ private:
 
     int mRetries;
     bool mSaveProfileOnExit;
-
-    QString mUserDefinedName;
 
     // To keep things simple for Lua the first stopwatch will be allocated a key
     // of 1 - and anything less that that will be rejected - and we force
