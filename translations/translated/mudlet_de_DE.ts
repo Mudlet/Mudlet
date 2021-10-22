@@ -11640,12 +11640,12 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3215"/>
       <source>Username for logging into the proxy if required</source>
-      <translation type="unfinished"/>
+      <translation>Benutzername für die Anmeldung am Proxy, falls nötig</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3231"/>
       <source>Password for logging into the proxy if required</source>
-      <translation type="unfinished"/>
+      <translation>Passwort für die Anmeldung am Proxy, falls nötig</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3270"/>
