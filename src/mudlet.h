@@ -328,7 +328,6 @@ public:
     int64_t getPhysicalMemoryTotal();
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     void refreshTabBar();
-    void toggleMudletDiscordVisible(bool);
     void updateDiscordNamedIcon();
 
     bool firstLaunch = false;

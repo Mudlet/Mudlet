@@ -1433,8 +1433,6 @@ void mudlet::slot_tab_changed(int tabID)
 
     dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
 
-    // If game has custom invite then make secondary Discord option visible.
-    toggleMudletDiscordVisible(!mpCurrentActiveHost->getDiscordInviteURL().isEmpty());
     updateDiscordNamedIcon();
 
     // Restore the multi-view mode if it was enabled:
@@ -1529,7 +1527,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     int y = mpCurrentActiveHost->mpConsole->height();
     QSize s = QSize(x, y);
     QResizeEvent event(s, s);
-    toggleMudletDiscordVisible(false);
     updateDiscordNamedIcon();
     QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
 }
@@ -2393,16 +2390,6 @@ void mudlet::slot_mudlet_discord()
     openWebPage(mMudletDiscordInvite);
 }
 
-void mudlet::toggleMudletDiscordVisible(bool vis)
-{
-    if (mpActionMudletDiscord->isVisible() != vis) {
-        mpActionMudletDiscord->setVisible(vis);
-    }
-    if (dactionDiscord->isVisible() != vis) {
-        dactionDiscord->setVisible(vis);
-    }
-}
-
 void mudlet::updateDiscordNamedIcon()
 {
     Host* pHost = getActiveHost();
@@ -2412,7 +2399,16 @@ void mudlet::updateDiscordNamedIcon()
 
     QString gameName = pHost->getDiscordGameName();
 
-    mpActionDiscord->setIconText(gameName.isEmpty() ? QStringLiteral("Discord") : gameName);
+    bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
+    
+    mpActionDiscord->setIconText(hasCustom ? gameName : QStringLiteral("Discord"));
+
+    if (mpActionMudletDiscord->isVisible() != hasCustom) {
+        mpActionMudletDiscord->setVisible(hasCustom);
+    }
+    if (dactionDiscord->isVisible() != hasCustom) {
+        dactionDiscord->setVisible(hasCustom);
+    }
 }
 
 void mudlet::slot_reconnect()
@@ -4445,8 +4441,6 @@ void mudlet::activateProfile(Host* pHost)
             mpTabBar->blockSignals(false);
         }
         mpCurrentActiveHost = pHost;
-        // If game has custom invite then make secondary Discord option visible.
-        toggleMudletDiscordVisible(!mpCurrentActiveHost->getDiscordInviteURL().isEmpty());
         updateDiscordNamedIcon();
         dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
     }

@@ -377,7 +377,6 @@
     "setDiscordDetail": "setDiscordDetail(text)",
     "setDiscordElapsedStartTime": "setDiscordElapsedStartTime(time)",
     "setDiscordGame": "setDiscordGame(text)",
-    "setDiscordInviteURL": "setDiscordInviteURL(url)",
     "setDiscordLargeIcon": "setDiscordLargeIcon(iconName)",
     "setDiscordLargeIconText": "setDiscordLargeIconText(text)",
     "setDiscordParty": "setDiscordParty(current, max)",

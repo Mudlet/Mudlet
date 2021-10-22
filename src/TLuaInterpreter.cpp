@@ -10019,38 +10019,36 @@ int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
     return warnArgumentValue(L, __func__, QStringLiteral("'%1' can not be converted to the expected numeric Discord application id").arg(inputText));
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordInviteURL
-int TLuaInterpreter::setDiscordInviteURL(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordGameUrl
+int TLuaInterpreter::setDiscordGameUrl(lua_State* L)
 {
-    // The invite URL changes what the Discord button opens. It is not part of
-    // rich presence, so it does not have the API enabled check that those
-    // Discord functions need in order to respect privacy.
+    // The invite URL changes what the Discord button opens, and the name is
+    // what it displays on the button. It is not part of rich presence, so it
+    // does not have the API enabled check that those Discord functions need
+    // in order to respect privacy.
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
     bool isActiveHost = (pMudlet->mpCurrentActiveHost == &host);
+    int args = lua_gettop(L);
 
-    if (!lua_gettop(L)) {
+    qDebug()<<"setDiscordGameUrl called lua_gettop(L)="<<lua_gettop(L);
+    if (!args) { // no args, blank the invite URL and game name
         host.setDiscordInviteURL(QString());
+        host.setDiscordGameName(QString());
         if (isActiveHost) {
-            pMudlet->toggleMudletDiscordVisible(false);
+            pMudlet->updateDiscordNamedIcon();
         }
         lua_pushboolean(L, true);
         return 1;
     }
     QString inputText = getVerifiedString(L, __func__, 1, "url").trimmed();
-    if (inputText.isEmpty()) {
-        // Empty string input - to reset to default the same as the no
-        // argument case:
-        host.setDiscordInviteURL(QString());
-        if (isActiveHost) {
-            pMudlet->toggleMudletDiscordVisible(false);
-        }
-        lua_pushboolean(L, true);
-        return 1;
+    host.setDiscordInviteURL(inputText.isEmpty() ? QString() : inputText);
+    if (args > 1){
+        inputText = getVerifiedString(L, __func__, 2, "game name").trimmed();
+        host.setDiscordGameName(inputText.isEmpty() ? QString() : inputText);
     }
-    host.setDiscordInviteURL(inputText);
     if (isActiveHost) {
-        pMudlet->toggleMudletDiscordVisible(true);
+        pMudlet->updateDiscordNamedIcon();
     }
     lua_pushboolean(L, true);
     return 1;
@@ -14095,7 +14093,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getAvailableFonts", TLuaInterpreter::getAvailableFonts);
     lua_register(pGlobalLua, "tempAnsiColorTrigger", TLuaInterpreter::tempAnsiColorTrigger);
     lua_register(pGlobalLua, "setDiscordApplicationID", TLuaInterpreter::setDiscordApplicationID);
-    lua_register(pGlobalLua, "setDiscordInviteURL", TLuaInterpreter::setDiscordInviteURL);
+    lua_register(pGlobalLua, "setDiscordGameUrl", TLuaInterpreter::setDiscordGameUrl);
     lua_register(pGlobalLua, "usingMudletsDiscordID", TLuaInterpreter::usingMudletsDiscordID);
     lua_register(pGlobalLua, "setDiscordState", TLuaInterpreter::setDiscordState);
     lua_register(pGlobalLua, "setDiscordGame", TLuaInterpreter::setDiscordGame);
