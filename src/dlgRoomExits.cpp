@@ -40,6 +40,10 @@
 #include "TRoomDB.h"
 #include "exitstreewidget.h"
 
+#include "pre_guard.h"
+#include <QAction>
+#include "post_guard.h"
+
 // A couple of templates for tooltip HTML formatting so that we do not have
 // 65/30 copies of the same QString s in the read-only segment of the code:
 const QString singleParagraph{QStringLiteral("<p>%1</p>")};
@@ -52,7 +56,39 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 {
     setupUi(this);
 
+    mIcon_invalidExit.addFile(QStringLiteral(":/icons/dialog-error.png"), QSize(24, 24));
+    mIcon_inAreaExit.addFile(QStringLiteral(":/icons/dialog-ok-apply.png"), QSize(24, 24));
+    mIcon_otherAreaExit.addFile(QStringLiteral(":/icons/arrow-right_cyan.png"), QSize(24, 24));
+
+    mpAction_noExit = new QAction(this);
+    mpAction_noExit->setText(QString());
+
+    mpAction_invalidExit = new QAction(this);
+    mpAction_invalidExit->setText(QString());
+    mpAction_invalidExit->setToolTip(QString());
+    mpAction_invalidExit->setIcon(mIcon_invalidExit);
+
+    mpAction_inAreaExit = new QAction(this);
+    mpAction_inAreaExit->setText(QString());
+    mpAction_inAreaExit->setToolTip(QString());
+    mpAction_inAreaExit->setIcon(mIcon_inAreaExit);
+
+    mpAction_otherAreaExit = new QAction(this);
+    mpAction_otherAreaExit->setText(QString());
+    mpAction_otherAreaExit->setToolTip(QString());
+    mpAction_otherAreaExit->setIcon(mIcon_otherAreaExit);
+
+    mAllExitActionsSet << mpAction_noExit << mpAction_invalidExit << mpAction_inAreaExit << mpAction_otherAreaExit;
+
     init();
+}
+
+dlgRoomExits::~dlgRoomExits()
+{
+    delete mpAction_otherAreaExit;
+    delete mpAction_inAreaExit;
+    delete mpAction_invalidExit;
+    delete mpAction_noExit;
 }
 
 void dlgRoomExits::slot_endEditSpecialExits()
@@ -722,973 +758,369 @@ void dlgRoomExits::save()
     close();
 }
 
+void dlgRoomExits::setActionOnExit(QLineEdit* pExitLineEdit, QAction* pWantedAction) const
+{
+    auto pActions = pExitLineEdit->actions();
+    // In fact there should only be one action but this code is flexible enough
+    // to deal with there being other unrealated ones also present:
+    bool found = false;
+    for (int index = 0, total = pActions.count(); index < total; ++index) {
+        auto pAction = pActions[index];
+        if (pAction && mAllExitActionsSet.contains(pAction)) {
+            // This is one of the four we are looking for.
+            if (pAction != pWantedAction) {
+                // but it isn't the one we want - so remove it from the QLineEdit
+                pExitLineEdit->removeAction(pAction);
+            } else {
+                // it is already there:
+                found = true;
+            }
+        }
+    }
+    if (!found) {
+        // It wasn't there so add it - so that the position is similar for the
+// FIXME: PENDING TO BE ADDED IN A SEPARATE PR - DELETE THIS COMMENT LINE WHEN THAT GOES IN...
+        // special exit form put it to the right of the QLineEdit text:
+        pExitLineEdit->addAction(pWantedAction, QLineEdit::TrailingPosition);
+    }
+}
+
+// FIXME: INTENDED TO BE USED IN A SEPARATE PR - DELETE THIS COMMENT LINE WHEN THAT GOES IN AND THE CODE IS UNCOMMENTED...
+// Check for and return the (first one of the) QAction's used for the status
+// icon on the ExitRoomID - this is actually only used for the special exits:
+//QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
+//{
+//    auto pActions = pExitLineEdit->actions();
+//    for (int index = 0, total = pActions.count(); index < total; ++index) {
+//        auto pAction = pActions[index];
+//        if (pAction && mAllExitActionsSet.contains(pAction)) {
+//            // This is one of the four we are looking for.
+//            return pAction;
+//        }
+//    }
+//    // Handle the not found case:
+//    return nullptr;
+//}
+
+/* static */ QString dlgRoomExits::generateToolTip(const QString& exitRoomName, const QString& exitAreaName, const bool outOfAreaExit, const int exitRoomWeight)
+{
+    if (exitRoomName.trimmed().length()) {
+        if (outOfAreaExit) {
+            return doubleParagraph.arg(tr("Exit to \"%1\" in area: \"%2\".")
+                                           .arg(exitRoomName, exitAreaName),
+                                       tr("<b>Room</b> Weight of destination: %1.",
+                                          // Intentional comment to separate arguments
+                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
+                                           .arg(exitRoomWeight));
+        }
+        return doubleParagraph.arg(tr("Exit to \"%1\".")
+                                       .arg(exitRoomName),
+                                   tr("<b>Room</b> Weight of destination: %1.",
+                                      // Intentional comment to separate arguments
+                                      "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
+                                       .arg(exitRoomWeight));
+    }
+
+    if (outOfAreaExit) {
+        return doubleParagraph.arg(tr("Exit to unnamed room in area: \"%1\", is valid.")
+                                       .arg(exitAreaName),
+                                   tr("<b>Room</b> Weight of destination: %1.",
+                                      // Intentional comment to separate arguments
+                                      "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
+                                       .arg(exitRoomWeight));
+    }
+
+    return doubleParagraph.arg(tr("Exit to unnamed room is valid."),
+                               tr("<b>Room</b> Weight of destination: %1.",
+                                  // Intentional comment to separate arguments
+                                  "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
+                                     .arg(exitRoomWeight));
+}
+
+void dlgRoomExits::normalExitEdited(const QString& roomExitIdText, QLineEdit* pExit, QCheckBox* pNoRoute, QCheckBox* pStub, QSpinBox* pWeight, QRadioButton* pDoorType_none, QRadioButton* pDoorType_open, QRadioButton* pDoorType_closed, QRadioButton* pDoorType_locked, const QString& invalidExitToolTipText, const QString& noExitToolTipText)
+{
+    TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(roomExitIdText.toInt());
+    if (exitToRoom) {
+        int exitAreaID = exitToRoom->getArea();
+        bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        QString exitAreaName;
+        if (outOfAreaExit) {
+            exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
+        }
+        // Valid exit roomID in place
+        pStub->setChecked(false);
+        pStub->setEnabled(false);
+        pNoRoute->setEnabled(true);
+        pWeight->setEnabled(true);
+        pDoorType_none->setEnabled(true);
+        pDoorType_open->setEnabled(true);
+        pDoorType_closed->setEnabled(true);
+        pDoorType_locked->setEnabled(true);
+        setActionOnExit(pExit, outOfAreaExit ? mpAction_otherAreaExit : mpAction_inAreaExit);
+        pExit->setToolTip(generateToolTip(exitToRoom->name, exitAreaName, outOfAreaExit, exitToRoom->getWeight()));
+    } else {
+        if (!roomExitIdText.isEmpty()) {
+            // Something is entered but it does not yield a valid exit roomID
+            setActionOnExit(pExit, mpAction_invalidExit);
+            pExit->setToolTip(invalidExitToolTipText);
+        } else {
+            // Nothing is entered
+            setActionOnExit(pExit, mpAction_noExit);
+            pExit->setToolTip(noExitToolTipText);
+        }
+        // In either case we can enable the stub exit control but disable
+        // other controls that need either a valid exit room Id or an actual
+        // stub exit to be chosen:
+        pNoRoute->setEnabled(false);
+        pWeight->setEnabled(false);
+        pDoorType_none->setEnabled(false);
+        pDoorType_open->setEnabled(false);
+        pDoorType_closed->setEnabled(false);
+        pDoorType_locked->setEnabled(false);
+        pStub->setEnabled(true);
+    }
+ }
+
+void dlgRoomExits::normalStubExitChanged(const int state, QLineEdit* pExit, QCheckBox* pNoRoute, QSpinBox* pWeight,
+                                         QRadioButton* pDoorType_none, QRadioButton* pDoorType_open, QRadioButton* pDoorType_closed, QRadioButton* pDoorType_locked, const QString& noExitToolTipText) const
+{
+    if (state == Qt::Checked) {
+        if (!pExit->text().isEmpty()) {
+            // There might be some text that does not evaluate to a valid Room
+            // Id still in that field - so clear it:
+            pExit->setText(QString());
+            setActionOnExit(pExit, mpAction_noExit);
+            pWeight->setValue(0);        // Can't have a weight for a stub pExit
+            pNoRoute->setChecked(false); // nor a "lock"
+        }
+        pNoRoute->setEnabled(false); // Disable "lock" on this exit
+        pExit->setEnabled(false);         // Prevent entry of an exit roomID
+        pExit->setToolTip(singleParagraph.arg(tr("Clear the stub exit for this exit to enter an exit roomID.")));
+        pDoorType_none->setEnabled(true);
+        pDoorType_open->setEnabled(true);
+        pDoorType_closed->setEnabled(true);
+        pDoorType_locked->setEnabled(true); // Permit a door to be set on a stub exit
+        pWeight->setEnabled(false);         // Prevent a weight to be set/changed on a stub
+    } else {
+        pExit->setEnabled(true);
+        setActionOnExit(pExit, mpAction_noExit);
+        pExit->setToolTip(noExitToolTipText);
+        //  pNoRoute->setEnabled(true); although this branch will enable the exit entry
+        //  there will not be a valid one there yet so don't enable the noroute(lock) control here!
+        pDoorType_none->setEnabled(false);
+        pDoorType_open->setEnabled(false);
+        pDoorType_closed->setEnabled(false);
+        pDoorType_locked->setEnabled(false);
+        pDoorType_none->setChecked(true);
+        //  similarly as there won't be a valid exit or a stub exit at this point disable/reset the door type controls
+        pWeight->setEnabled(false);
+        pWeight->setValue(0); // Prevent a weight to be set/changed on a also
+    }
+}
+
 // These slots are called as the text for the exitID is edited
 void dlgRoomExits::slot_nw_textEdited(const QString& text)
 {
-    TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
-
-    if (exitToRoom) {
-        // Valid exit roomID in place
-        nw->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
-        stub_nw->setChecked(false);
-        stub_nw->setEnabled(false);
-        noroute_nw->setEnabled(true);
-        weight_nw->setEnabled(true);
-        doortype_none_nw->setEnabled(true);
-        doortype_open_nw->setEnabled(true);
-        doortype_closed_nw->setEnabled(true);
-        doortype_locked_nw->setEnabled(true);
-        if (exitToRoom->name.trimmed().length()) {
-            nw->setToolTip(doubleParagraph.arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
-                                               tr("<b>Room</b> Weight of destination: %1.",
-                                                  "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                       .arg(exitToRoom->getWeight())));
-        } else {
-            nw->setToolTip(doubleParagraph.arg(tr("Exit to unnamed room is valid"),
-                                               tr("<b>Room</b> Weight of destination: %1.",
-                                                  "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                       .arg(exitToRoom->getWeight())));
-        }
-    } else if (!text.isEmpty()) {
-        // Something is entered but it does not yield a valid exit roomID
-        // Enable stub exit control
-        nw->setStyleSheet(QStringLiteral(".QLineEdit { color:red }"));
-        nw->setToolTip(singleParagraph.arg(tr("Entered number is invalid, set the number of the room northwest of this one, will turn blue for a valid number.")));
-        stub_nw->setEnabled(true);
-        noroute_nw->setEnabled(false);
-        weight_nw->setEnabled(false);
-        doortype_none_nw->setEnabled(false);
-        doortype_open_nw->setEnabled(false);
-        doortype_closed_nw->setEnabled(false);
-        doortype_locked_nw->setEnabled(false);
-    } else {
-        // Nothing is entered - so we can enable the stub exit control
-        nw->setStyleSheet(QString());
-        nw->setToolTip(singleParagraph.arg(tr("Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.")));
-        stub_nw->setEnabled(true);
-        noroute_nw->setEnabled(false);
-        weight_nw->setEnabled(false);
-        doortype_none_nw->setEnabled(false);
-        doortype_open_nw->setEnabled(false);
-        doortype_closed_nw->setEnabled(false);
-        doortype_locked_nw->setEnabled(false);
-    }
+    normalExitEdited(text, nw, noroute_nw, stub_nw, weight_nw,
+                     doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw,
+                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room northwest of this one.")),
+                     singleParagraph.arg(tr("Set the number of the room northwest of this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_n_textEdited(const QString& text)
 {
-    TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
-
-    if (exitToRoom) {
-        n->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
-        ;
-        stub_n->setChecked(false);
-        stub_n->setEnabled(false);
-        noroute_n->setEnabled(true);
-        weight_n->setEnabled(true);
-        doortype_none_n->setEnabled(true);
-        doortype_open_n->setEnabled(true);
-        doortype_closed_n->setEnabled(true);
-        doortype_locked_n->setEnabled(true);
-        if (exitToRoom->name.trimmed().length()) {
-            n->setToolTip(doubleParagraph.arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
-                                              tr("<b>Room</b> Weight of destination: %1.",
-                                                 "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                      .arg(exitToRoom->getWeight())));
-        } else {
-            n->setToolTip(doubleParagraph.arg(tr("Exit to unnamed room is valid"),
-                                              tr("<b>Room</b> Weight of destination: %1.",
-                                                 "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                      .arg(exitToRoom->getWeight())));
-        }
-    } else if (text.size() > 0) {
-        n->setStyleSheet(QStringLiteral(".QLineEdit { color:red }"));
-        n->setToolTip(singleParagraph.arg(tr("Entered number is invalid, set the number of the room north of this one, will turn blue for a valid number.")));
-        stub_n->setEnabled(true);
-        noroute_n->setEnabled(false);
-        weight_n->setEnabled(false);
-        doortype_none_n->setEnabled(false);
-        doortype_open_n->setEnabled(false);
-        doortype_closed_n->setEnabled(false);
-        doortype_locked_n->setEnabled(false);
-    } else {
-        n->setStyleSheet(QString());
-        n->setToolTip(singleParagraph.arg(tr("Set the number of the room north of this one, will be blue for a valid number or red for invalid.")));
-        stub_n->setEnabled(true);
-        noroute_n->setEnabled(false);
-        weight_n->setEnabled(false);
-        doortype_none_n->setEnabled(false);
-        doortype_open_n->setEnabled(false);
-        doortype_closed_n->setEnabled(false);
-        doortype_locked_n->setEnabled(false);
-    }
+    normalExitEdited(text, n, noroute_n, stub_n, weight_n,
+                     doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n,
+                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room north of this one.")),
+                     singleParagraph.arg(tr("Set the number of the room north of this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_ne_textEdited(const QString& text)
 {
-    TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
-
-    if (exitToRoom) {
-        ne->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
-        stub_ne->setChecked(false);
-        stub_ne->setEnabled(false);
-        noroute_ne->setEnabled(true);
-        weight_ne->setEnabled(true);
-        doortype_none_ne->setEnabled(true);
-        doortype_open_ne->setEnabled(true);
-        doortype_closed_ne->setEnabled(true);
-        doortype_locked_ne->setEnabled(true);
-        if (exitToRoom->name.trimmed().length()) {
-            ne->setToolTip(doubleParagraph.arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
-                                               tr("<b>Room</b> Weight of destination: %1.",
-                                                  "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                       .arg(exitToRoom->getWeight())));
-        } else {
-            ne->setToolTip(doubleParagraph.arg(tr("Exit to unnamed room is valid"),
-                                               tr("<b>Room</b> Weight of destination: %1.",
-                                                  "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                       .arg(exitToRoom->getWeight())));
-        }
-    } else if (text.size() > 0) {
-        ne->setStyleSheet(QStringLiteral(".QLineEdit { color:red }"));
-        ne->setToolTip(singleParagraph.arg(tr("Entered number is invalid, set the number of the room northeast of this one, will turn blue for a valid number.")));
-        stub_ne->setEnabled(true);
-        noroute_ne->setEnabled(false);
-        weight_ne->setEnabled(false);
-        doortype_none_ne->setEnabled(false);
-        doortype_open_ne->setEnabled(false);
-        doortype_closed_ne->setEnabled(false);
-        doortype_locked_ne->setEnabled(false);
-    } else {
-        ne->setStyleSheet(QString());
-        ne->setToolTip(singleParagraph.arg(tr("Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.")));
-        stub_ne->setEnabled(true);
-        noroute_ne->setEnabled(false);
-        weight_ne->setEnabled(false);
-        doortype_none_ne->setEnabled(false);
-        doortype_open_ne->setEnabled(false);
-        doortype_closed_ne->setEnabled(false);
-        doortype_locked_ne->setEnabled(false);
-    }
+    normalExitEdited(text, ne, noroute_ne, stub_ne, weight_ne,
+                     doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne,
+                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room northeast of this one.")),
+                     singleParagraph.arg(tr("Set the number of the room northeast of this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_up_textEdited(const QString& text)
 {
-    TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
-
-    if (exitToRoom) {
-        up->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
-        stub_up->setChecked(false);
-        stub_up->setEnabled(false);
-        noroute_up->setEnabled(true);
-        weight_up->setEnabled(true);
-        doortype_none_up->setEnabled(true);
-        doortype_open_up->setEnabled(true);
-        doortype_closed_up->setEnabled(true);
-        doortype_locked_up->setEnabled(true);
-        if (exitToRoom->name.trimmed().length()) {
-            up->setToolTip(doubleParagraph.arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
-                                               tr("<b>Room</b> Weight of destination: %1.",
-                                                  "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                       .arg(exitToRoom->getWeight())));
-        } else {
-            up->setToolTip(doubleParagraph.arg(tr("Exit to unnamed room is valid"),
-                                               tr("<b>Room</b> Weight of destination: %1.",
-                                                  "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                       .arg(exitToRoom->getWeight())));
-        }
-    } else if (text.size() > 0) {
-        up->setStyleSheet(QStringLiteral(".QLineEdit { color:red }"));
-        up->setToolTip(singleParagraph.arg(tr("Entered number is invalid, set the number of the room up from this one, will turn blue for a valid number.")));
-        stub_up->setEnabled(true);
-        noroute_up->setEnabled(false);
-        weight_up->setEnabled(false);
-        doortype_none_up->setEnabled(false);
-        doortype_open_up->setEnabled(false);
-        doortype_closed_up->setEnabled(false);
-        doortype_locked_up->setEnabled(false);
-    } else {
-        up->setStyleSheet(QString());
-        up->setToolTip(singleParagraph.arg(tr("Set the number of the room up from this one, will be blue for a valid number or red for invalid.")));
-        stub_up->setEnabled(true);
-        noroute_up->setEnabled(false);
-        weight_up->setEnabled(false);
-        doortype_none_up->setEnabled(false);
-        doortype_open_up->setEnabled(false);
-        doortype_closed_up->setEnabled(false);
-        doortype_locked_up->setEnabled(false);
-    }
+    normalExitEdited(text, up, noroute_up, stub_up, weight_up,
+                     doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up,
+                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room up from this one.")),
+                     singleParagraph.arg(tr("Set the number of the room up from this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_w_textEdited(const QString& text)
 {
-    TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
-
-    if (exitToRoom) {
-        w->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
-        stub_w->setChecked(false);
-        stub_w->setEnabled(false);
-        noroute_w->setEnabled(true);
-        weight_w->setEnabled(true);
-        doortype_none_w->setEnabled(true);
-        doortype_open_w->setEnabled(true);
-        doortype_closed_w->setEnabled(true);
-        doortype_locked_w->setEnabled(true);
-        if (exitToRoom->name.trimmed().length()) {
-            w->setToolTip(doubleParagraph.arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
-                                              tr("<b>Room</b> Weight of destination: %1.",
-                                                 "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                      .arg(exitToRoom->getWeight())));
-        } else {
-            w->setToolTip(doubleParagraph.arg(tr("Exit to unnamed room is valid"),
-                                              tr("<b>Room</b> Weight of destination: %1.",
-                                                 "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                      .arg(exitToRoom->getWeight())));
-        }
-    } else if (text.size() > 0) {
-        w->setStyleSheet(QStringLiteral(".QLineEdit { color:red }"));
-        w->setToolTip(singleParagraph.arg(tr("Entered number is invalid, set the number of the room west of this one, will turn blue for a valid number.")));
-        stub_w->setEnabled(true);
-        noroute_w->setEnabled(false);
-        weight_w->setEnabled(false);
-        doortype_none_w->setEnabled(false);
-        doortype_open_w->setEnabled(false);
-        doortype_closed_w->setEnabled(false);
-        doortype_locked_w->setEnabled(false);
-    } else {
-        w->setStyleSheet(QString());
-        w->setToolTip(singleParagraph.arg(tr("Set the number of the room west of this one, will be blue for a valid number or red for invalid.")));
-        stub_w->setEnabled(true);
-        noroute_w->setEnabled(false);
-        weight_w->setEnabled(false);
-        doortype_none_w->setEnabled(false);
-        doortype_open_w->setEnabled(false);
-        doortype_closed_w->setEnabled(false);
-        doortype_locked_w->setEnabled(false);
-    }
+    normalExitEdited(text, w, noroute_w, stub_w, weight_w,
+                     doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w,
+                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room west of this one.")),
+                     singleParagraph.arg(tr("Set the number of the room west of this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_e_textEdited(const QString& text)
 {
-    TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
-
-    if (exitToRoom) {
-        e->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
-        stub_e->setChecked(false);
-        stub_e->setEnabled(false);
-        noroute_e->setEnabled(true);
-        weight_e->setEnabled(true);
-        doortype_none_e->setEnabled(true);
-        doortype_open_e->setEnabled(true);
-        doortype_closed_e->setEnabled(true);
-        doortype_locked_e->setEnabled(true);
-        if (exitToRoom->name.trimmed().length()) {
-            e->setToolTip(doubleParagraph.arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
-                                              tr("<b>Room</b> Weight of destination: %1.",
-                                                 "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                      .arg(exitToRoom->getWeight())));
-        } else {
-            e->setToolTip(doubleParagraph.arg(tr("Exit to unnamed room is valid"),
-                                              tr("<b>Room</b> Weight of destination: %1.",
-                                                 "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                      .arg(exitToRoom->getWeight())));
-        }
-    } else if (text.size() > 0) {
-        e->setStyleSheet(QStringLiteral(".QLineEdit { color:red }"));
-        e->setToolTip(singleParagraph.arg(tr("Entered number is invalid, set the number of the room east of this one, will turn blue for a valid number.")));
-        stub_e->setEnabled(true);
-        noroute_e->setEnabled(false);
-        weight_e->setEnabled(false);
-        doortype_none_e->setEnabled(false);
-        doortype_open_e->setEnabled(false);
-        doortype_closed_e->setEnabled(false);
-        doortype_locked_e->setEnabled(false);
-    } else {
-        e->setStyleSheet(QString());
-        e->setToolTip(singleParagraph.arg(tr("Set the number of the room east of this one, will be blue for a valid number or red for invalid.")));
-        stub_e->setEnabled(true);
-        noroute_e->setEnabled(false);
-        weight_e->setEnabled(false);
-        doortype_none_e->setEnabled(false);
-        doortype_open_e->setEnabled(false);
-        doortype_closed_e->setEnabled(false);
-        doortype_locked_e->setEnabled(false);
-    }
+    normalExitEdited(text, e, noroute_e, stub_e, weight_e,
+                     doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e,
+                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room east of this one.")),
+                     singleParagraph.arg(tr("Set the number of the room east of this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_down_textEdited(const QString& text)
 {
-    TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
-
-    if (exitToRoom) {
-        down->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
-        stub_down->setChecked(false);
-        stub_down->setEnabled(false);
-        noroute_down->setEnabled(true);
-        weight_down->setEnabled(true);
-        doortype_none_down->setEnabled(true);
-        doortype_open_down->setEnabled(true);
-        doortype_closed_down->setEnabled(true);
-        doortype_locked_down->setEnabled(true);
-        if (exitToRoom->name.trimmed().length()) {
-            down->setToolTip(doubleParagraph.arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
-                                                 tr("<b>Room</b> Weight of destination: %1.",
-                                                    "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                         .arg(exitToRoom->getWeight())));
-        } else {
-            down->setToolTip(doubleParagraph.arg(tr("Exit to unnamed room is valid"),
-                                                 tr("<b>Room</b> Weight of destination: %1.",
-                                                    "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                         .arg(exitToRoom->getWeight())));
-        }
-    } else if (text.size() > 0) {
-        down->setStyleSheet(QStringLiteral(".QLineEdit { color:red }"));
-        down->setToolTip(singleParagraph.arg(tr("Entered number is invalid, set the number of the room down from this one, will turn blue for a valid number.")));
-        stub_down->setEnabled(true);
-        noroute_down->setEnabled(false);
-        weight_down->setEnabled(false);
-        doortype_none_down->setEnabled(false);
-        doortype_open_down->setEnabled(false);
-        doortype_closed_down->setEnabled(false);
-        doortype_locked_down->setEnabled(false);
-    } else {
-        down->setStyleSheet(QString());
-        down->setToolTip(singleParagraph.arg(tr("Set the number of the room down from this one, will be blue for a valid number or red for invalid.")));
-        stub_down->setEnabled(true);
-        noroute_down->setEnabled(false);
-        weight_down->setEnabled(false);
-        doortype_none_down->setEnabled(false);
-        doortype_open_down->setEnabled(false);
-        doortype_closed_down->setEnabled(false);
-        doortype_locked_down->setEnabled(false);
-    }
+    normalExitEdited(text, down, noroute_down, stub_down, weight_down,
+                     doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down,
+                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room down from this one.")),
+                     singleParagraph.arg(tr("Set the number of the room down from this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_sw_textEdited(const QString& text)
 {
-    TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
-
-    if (exitToRoom) {
-        sw->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
-        stub_sw->setChecked(false);
-        stub_sw->setEnabled(false);
-        noroute_sw->setEnabled(true);
-        weight_sw->setEnabled(true);
-        doortype_none_sw->setEnabled(true);
-        doortype_open_sw->setEnabled(true);
-        doortype_closed_sw->setEnabled(true);
-        doortype_locked_sw->setEnabled(true);
-        if (exitToRoom->name.trimmed().length()) {
-            sw->setToolTip(doubleParagraph.arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
-                                               tr("<b>Room</b> Weight of destination: %1.",
-                                                  "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                       .arg(exitToRoom->getWeight())));
-        } else {
-            sw->setToolTip(doubleParagraph.arg(tr("Exit to unnamed room is valid"),
-                                               tr("<b>Room</b> Weight of destination: %1.",
-                                                  "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                       .arg(exitToRoom->getWeight())));
-        }
-    } else if (text.size() > 0) {
-        sw->setStyleSheet(QStringLiteral(".QLineEdit { color:red }"));
-        sw->setToolTip(singleParagraph.arg(tr("Entered number is invalid, set the number of the room southwest of this one, will turn blue for a valid number.")));
-        stub_sw->setEnabled(true);
-        noroute_sw->setEnabled(false);
-        weight_sw->setEnabled(false);
-        doortype_none_sw->setEnabled(false);
-        doortype_open_sw->setEnabled(false);
-        doortype_closed_sw->setEnabled(false);
-        doortype_locked_sw->setEnabled(false);
-    } else {
-        sw->setStyleSheet(QString());
-        sw->setToolTip(singleParagraph.arg(tr("Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.")));
-        stub_sw->setEnabled(true);
-        noroute_sw->setEnabled(false);
-        weight_sw->setEnabled(false);
-        doortype_none_sw->setEnabled(false);
-        doortype_open_sw->setEnabled(false);
-        doortype_closed_sw->setEnabled(false);
-        doortype_locked_sw->setEnabled(false);
-    }
+    normalExitEdited(text, sw, noroute_sw, stub_sw, weight_sw,
+                     doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw,
+                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room southwest of this one.")),
+                     singleParagraph.arg(tr("Set the number of the room southwest of this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_s_textEdited(const QString& text)
 {
-    TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
-
-    if (exitToRoom) {
-        s->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
-        stub_s->setChecked(false);
-        stub_s->setEnabled(false);
-        noroute_s->setEnabled(true);
-        weight_s->setEnabled(true);
-        doortype_none_s->setEnabled(true);
-        doortype_open_s->setEnabled(true);
-        doortype_closed_s->setEnabled(true);
-        doortype_locked_s->setEnabled(true);
-        if (exitToRoom->name.trimmed().length()) {
-            s->setToolTip(doubleParagraph.arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
-                                              tr("<b>Room</b> Weight of destination: %1.",
-                                                 "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                      .arg(exitToRoom->getWeight())));
-        } else {
-            s->setToolTip(doubleParagraph.arg(tr("Exit to unnamed room is valid"),
-                                              tr("<b>Room</b> Weight of destination: %1.",
-                                                 "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                      .arg(exitToRoom->getWeight())));
-        }
-    } else if (text.size() > 0) {
-        s->setStyleSheet(QStringLiteral(".QLineEdit { color:red }"));
-        s->setToolTip(singleParagraph.arg(tr("Entered number is invalid, set the number of the room south of this one, will turn blue for a valid number.")));
-        stub_s->setEnabled(true);
-        noroute_s->setEnabled(false);
-        weight_s->setEnabled(false);
-        doortype_none_s->setEnabled(false);
-        doortype_open_s->setEnabled(false);
-        doortype_closed_s->setEnabled(false);
-        doortype_locked_s->setEnabled(false);
-    } else {
-        s->setStyleSheet(QString());
-        s->setToolTip(singleParagraph.arg(tr("Set the number of the room south of this one, will be blue for a valid number or red for invalid.")));
-        stub_s->setEnabled(true);
-        noroute_s->setEnabled(false);
-        weight_s->setEnabled(false);
-        doortype_none_s->setEnabled(false);
-        doortype_open_s->setEnabled(false);
-        doortype_closed_s->setEnabled(false);
-        doortype_locked_s->setEnabled(false);
-    }
+    normalExitEdited(text, s, noroute_s, stub_s, weight_s,
+                     doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s,
+                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room south of this one.")),
+                     singleParagraph.arg(tr("Set the number of the room south of this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_se_textEdited(const QString& text)
 {
-    TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
-
-    if (exitToRoom) {
-        se->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
-        stub_se->setChecked(false);
-        stub_se->setEnabled(false);
-        noroute_se->setEnabled(true);
-        weight_se->setEnabled(true);
-        doortype_none_se->setEnabled(true);
-        doortype_open_se->setEnabled(true);
-        doortype_closed_se->setEnabled(true);
-        doortype_locked_se->setEnabled(true);
-        if (exitToRoom->name.trimmed().length()) {
-            se->setToolTip(doubleParagraph.arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
-                                               tr("<b>Room</b> Weight of destination: %1.",
-                                                  "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                       .arg(exitToRoom->getWeight())));
-        } else {
-            se->setToolTip(doubleParagraph.arg(tr("Exit to unnamed room is valid"),
-                                               tr("<b>Room</b> Weight of destination: %1.",
-                                                  "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                       .arg(exitToRoom->getWeight())));
-        }
-    } else if (text.size() > 0) {
-        se->setStyleSheet(QStringLiteral(".QLineEdit { color:red }"));
-        se->setToolTip(singleParagraph.arg(tr("Entered number is invalid, set the number of the room southeast of this one, will turn blue for a valid number.")));
-        stub_se->setEnabled(true);
-        noroute_se->setEnabled(false);
-        weight_se->setEnabled(false);
-        doortype_none_se->setEnabled(false);
-        doortype_open_se->setEnabled(false);
-        doortype_closed_se->setEnabled(false);
-        doortype_locked_se->setEnabled(false);
-    } else {
-        se->setStyleSheet(QString());
-        se->setToolTip(singleParagraph.arg(tr("Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.")));
-        stub_se->setEnabled(true);
-        noroute_se->setEnabled(false);
-        weight_se->setEnabled(false);
-        doortype_none_se->setEnabled(false);
-        doortype_open_se->setEnabled(false);
-        doortype_closed_se->setEnabled(false);
-        doortype_locked_se->setEnabled(false);
-    }
+    normalExitEdited(text, se, noroute_se, stub_se, weight_se,
+                     doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se,
+                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room southeast of this one.")),
+                     singleParagraph.arg(tr("Set the number of the room southeast of this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_in_textEdited(const QString& text)
 {
-    TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
-
-    if (exitToRoom) {
-        in->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
-        stub_in->setChecked(false);
-        stub_in->setEnabled(false);
-        noroute_in->setEnabled(true);
-        weight_in->setEnabled(true);
-        doortype_none_in->setEnabled(true);
-        doortype_open_in->setEnabled(true);
-        doortype_closed_in->setEnabled(true);
-        doortype_locked_in->setEnabled(true);
-        if (exitToRoom->name.trimmed().length()) {
-            in->setToolTip(doubleParagraph.arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
-                                               tr("<b>Room</b> Weight of destination: %1.",
-                                                  "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                       .arg(exitToRoom->getWeight())));
-        } else {
-            in->setToolTip(doubleParagraph.arg(tr("Exit to unnamed room is valid"),
-                                               tr("<b>Room</b> Weight of destination: %1.",
-                                                  "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                       .arg(exitToRoom->getWeight())));
-        }
-    } else if (text.size() > 0) {
-        in->setStyleSheet(QStringLiteral(".QLineEdit { color:red }"));
-        in->setToolTip(singleParagraph.arg(tr("Entered number is invalid, set the number of the room in from this one, will turn blue for a valid number.")));
-        stub_in->setEnabled(true);
-        noroute_in->setEnabled(false);
-        weight_in->setEnabled(false);
-        doortype_none_in->setEnabled(false);
-        doortype_open_in->setEnabled(false);
-        doortype_closed_in->setEnabled(false);
-        doortype_locked_in->setEnabled(false);
-    } else {
-        in->setStyleSheet(QString());
-        in->setToolTip(singleParagraph.arg(tr("Set the number of the room in from this one, will be blue for a valid number or red for invalid.")));
-        stub_in->setEnabled(true);
-        noroute_in->setEnabled(false);
-        weight_in->setEnabled(false);
-        doortype_none_in->setEnabled(false);
-        doortype_open_in->setEnabled(false);
-        doortype_closed_in->setEnabled(false);
-        doortype_locked_in->setEnabled(false);
-    }
+    normalExitEdited(text, in, noroute_in, stub_in, weight_in,
+                     doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in,
+                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room in from this one.")),
+                     singleParagraph.arg(tr("Set the number of the room in from this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_out_textEdited(const QString& text)
 {
-    TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
-
-    if (exitToRoom) {
-        out->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
-        stub_out->setChecked(false);
-        stub_out->setEnabled(false);
-        noroute_out->setEnabled(true);
-        weight_out->setEnabled(true);
-        doortype_none_out->setEnabled(true);
-        doortype_open_out->setEnabled(true);
-        doortype_closed_out->setEnabled(true);
-        doortype_locked_out->setEnabled(true);
-        if (exitToRoom->name.trimmed().length()) {
-            out->setToolTip(doubleParagraph.arg(tr(R"(Exit to "%1".)").arg(exitToRoom->name),
-                                                tr("<b>Room</b> Weight of destination: %1.",
-                                                   "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                        .arg(exitToRoom->getWeight())));
-        } else {
-            out->setToolTip(doubleParagraph.arg(tr("Exit to unnamed room is valid"),
-                                                tr("<b>Room</b> Weight of destination: %1.",
-                                                   "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                        .arg(exitToRoom->getWeight())));
-        }
-    } else if (text.size() > 0) {
-        out->setStyleSheet(QStringLiteral(".QLineEdit { color:red }"));
-        out->setToolTip(singleParagraph.arg(tr("Entered number is invalid, set the number of the room out from this one, will turn blue for a valid number.")));
-        stub_out->setEnabled(true);
-        noroute_out->setEnabled(false);
-        weight_out->setEnabled(false);
-        doortype_none_out->setEnabled(false);
-        doortype_open_out->setEnabled(false);
-        doortype_closed_out->setEnabled(false);
-        doortype_locked_out->setEnabled(false);
-    } else {
-        out->setStyleSheet(QString());
-        out->setToolTip(singleParagraph.arg(tr("Set the number of the room out from this one, will be blue for a valid number or red for invalid.")));
-        stub_out->setEnabled(true);
-        noroute_out->setEnabled(false);
-        weight_out->setEnabled(false);
-        doortype_none_out->setEnabled(false);
-        doortype_open_out->setEnabled(false);
-        doortype_closed_out->setEnabled(false);
-        doortype_locked_out->setEnabled(false);
-    }
+    normalExitEdited(text, out, noroute_out, stub_out, weight_out,
+                     doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out,
+                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room out from this one.")),
+                     singleParagraph.arg(tr("Set the number of the room out from this one.")));
     slot_checkModified();
 }
 
 // These slots are called as the stub exit checkboxes are clicked
 void dlgRoomExits::slot_stub_nw_stateChanged(int state)
 {
-    if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(nw->text().toInt()) != nullptr) {
-            nw->setText(QString());
-            nw->setStyleSheet(QString());
-            weight_nw->setValue(0);        // Can't have a weight for a stub exit
-            noroute_nw->setChecked(false); // nor a "lock"
-        }
-        noroute_nw->setEnabled(false); // Disable "lock" on this exit
-        nw->setEnabled(false);         // Prevent entry of an exit roomID
-        nw->setToolTip(singleParagraph.arg(tr("Clear the stub exit for this exit to enter an exit roomID.")));
-        doortype_none_nw->setEnabled(true);
-        doortype_open_nw->setEnabled(true);
-        doortype_closed_nw->setEnabled(true);
-        doortype_locked_nw->setEnabled(true); // Permit a door to be set on a stub exit
-        weight_nw->setEnabled(false);         // Prevent a weight to be set/changed on a stub
-    } else {
-        nw->setEnabled(true);
-        nw->setToolTip(singleParagraph.arg(tr("Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.")));
-        //  noroute_nw->setEnabled(true); although this branch will enable the exit entry
-        //  there will not be a valid one there yet so don't enable the noroute(lock) control here!
-        doortype_none_nw->setEnabled(false);
-        doortype_open_nw->setEnabled(false);
-        doortype_closed_nw->setEnabled(false);
-        doortype_locked_nw->setEnabled(false);
-        doortype_none_nw->setChecked(true);
-        //  similarly as there won't be a valid exit or a stub exit at this point disable/reset the door type controls
-        weight_nw->setEnabled(false);
-        weight_nw->setValue(0); // Prevent a weight to be set/changed on a also
-    }
+    normalStubExitChanged(state, nw, noroute_nw, weight_nw,
+                          doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_n,
+                          singleParagraph.arg(tr("Set the number of the room northwest of this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_stub_n_stateChanged(int state)
 {
-    if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != nullptr) {
-            n->setText(QString());
-            n->setStyleSheet(QString());
-            weight_n->setValue(0);
-            noroute_n->setChecked(false);
-        }
-        noroute_n->setEnabled(false);
-        n->setEnabled(false);
-        n->setToolTip(singleParagraph.arg(tr("Clear the stub exit for this exit to enter an exit roomID.")));
-        doortype_none_n->setEnabled(true);
-        doortype_open_n->setEnabled(true);
-        doortype_closed_n->setEnabled(true);
-        doortype_locked_n->setEnabled(true);
-        weight_n->setEnabled(false);
-    } else {
-        n->setEnabled(true);
-        n->setToolTip(singleParagraph.arg(tr("Set the number of the room north of this one, will be blue for a valid number or red for invalid.")));
-        doortype_none_n->setEnabled(false);
-        doortype_open_n->setEnabled(false);
-        doortype_closed_n->setEnabled(false);
-        doortype_locked_n->setEnabled(false);
-        doortype_none_n->setChecked(true);
-        weight_n->setEnabled(false);
-        weight_n->setValue(0);
-    }
+    normalStubExitChanged(state, n, noroute_n, weight_n,
+                          doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n,
+                          singleParagraph.arg(tr("Set the number of the room north of this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_stub_ne_stateChanged(int state)
 {
-    if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != nullptr) {
-            ne->setText(QString());
-            ne->setStyleSheet(QString());
-            weight_ne->setValue(0);
-            noroute_ne->setChecked(false);
-        }
-        noroute_ne->setEnabled(false);
-        ne->setEnabled(false);
-        ne->setToolTip(singleParagraph.arg(tr("Clear the stub exit for this exit to enter an exit roomID.")));
-        doortype_none_ne->setEnabled(true);
-        doortype_open_ne->setEnabled(true);
-        doortype_closed_ne->setEnabled(true);
-        doortype_locked_ne->setEnabled(true);
-        weight_ne->setEnabled(false);
-    } else {
-        ne->setEnabled(true);
-        ne->setToolTip(singleParagraph.arg(tr("Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.")));
-        doortype_none_ne->setEnabled(false);
-        doortype_open_ne->setEnabled(false);
-        doortype_closed_ne->setEnabled(false);
-        doortype_locked_ne->setEnabled(false);
-        doortype_none_ne->setChecked(true);
-        weight_ne->setEnabled(false);
-        weight_ne->setValue(0);
-    }
+    normalStubExitChanged(state, ne, noroute_ne, weight_ne,
+                          doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne,
+                          singleParagraph.arg(tr("Set the number of the room northeast of this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_stub_up_stateChanged(int state)
 {
-    if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != nullptr) {
-            up->setText(QString());
-            up->setStyleSheet(QString());
-            weight_up->setValue(0);
-            noroute_up->setChecked(false);
-        }
-        noroute_up->setEnabled(false);
-        up->setEnabled(false);
-        up->setToolTip(singleParagraph.arg(tr("Clear the stub exit for this exit to enter an exit roomID.")));
-        doortype_none_up->setEnabled(true);
-        doortype_open_up->setEnabled(true);
-        doortype_closed_up->setEnabled(true);
-        doortype_locked_up->setEnabled(true);
-        weight_up->setEnabled(false);
-    } else {
-        up->setEnabled(true);
-        up->setToolTip(singleParagraph.arg(tr("Set the number of the room up from this one, will be blue for a valid number or red for invalid.")));
-        doortype_none_up->setEnabled(false);
-        doortype_open_up->setEnabled(false);
-        doortype_closed_up->setEnabled(false);
-        doortype_locked_up->setEnabled(false);
-        doortype_none_up->setChecked(true);
-        weight_up->setEnabled(false);
-        weight_up->setValue(0);
-    }
+    normalStubExitChanged(state, up, noroute_up, weight_up,
+                          doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up,
+                          singleParagraph.arg(tr("Set the number of the room up from this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_stub_w_stateChanged(int state)
 {
-    if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != nullptr) {
-            w->setText(QString());
-            w->setStyleSheet(QString());
-            weight_w->setValue(0);
-            noroute_w->setChecked(false);
-        }
-        noroute_w->setEnabled(false);
-        w->setEnabled(false);
-        w->setToolTip(singleParagraph.arg(tr("Clear the stub exit for this exit to enter an exit roomID.")));
-        doortype_none_w->setEnabled(true);
-        doortype_open_w->setEnabled(true);
-        doortype_closed_w->setEnabled(true);
-        doortype_locked_w->setEnabled(true);
-        weight_w->setEnabled(false);
-    } else {
-        w->setEnabled(true);
-        w->setToolTip(singleParagraph.arg(tr("Set the number of the room west of this one, will be blue for a valid number or red for invalid.")));
-        doortype_none_w->setEnabled(false);
-        doortype_open_w->setEnabled(false);
-        doortype_closed_w->setEnabled(false);
-        doortype_locked_w->setEnabled(false);
-        doortype_none_w->setChecked(true);
-        weight_w->setEnabled(false);
-        weight_w->setValue(0);
-    }
+    normalStubExitChanged(state, w, noroute_w, weight_w,
+                          doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w,
+                          singleParagraph.arg(tr("Set the number of the room west of this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_stub_e_stateChanged(int state)
 {
-    if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != nullptr) {
-            e->setText(QString());
-            e->setStyleSheet(QString());
-            weight_e->setValue(0);
-            noroute_e->setChecked(false);
-        }
-        noroute_e->setEnabled(false);
-        e->setEnabled(false);
-        e->setToolTip(singleParagraph.arg(tr("Clear the stub exit for this exit to enter an exit roomID.")));
-        doortype_none_e->setEnabled(true);
-        doortype_open_e->setEnabled(true);
-        doortype_closed_e->setEnabled(true);
-        doortype_locked_e->setEnabled(true);
-        weight_e->setEnabled(false);
-    } else {
-        e->setEnabled(true);
-        e->setToolTip(singleParagraph.arg(tr("Set the number of the room east of this one, will be blue for a valid number or red for invalid.")));
-        doortype_none_e->setEnabled(false);
-        doortype_open_e->setEnabled(false);
-        doortype_closed_e->setEnabled(false);
-        doortype_locked_e->setEnabled(false);
-        doortype_none_e->setChecked(true);
-        weight_e->setEnabled(false);
-        weight_e->setValue(0);
-    }
+    normalStubExitChanged(state, e, noroute_e, weight_e,
+                          doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e,
+                          singleParagraph.arg(tr("Set the number of the room east of this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_stub_down_stateChanged(int state)
 {
-    if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != nullptr) {
-            down->setText(QString());
-            down->setStyleSheet(QString());
-            weight_down->setValue(0);
-            noroute_down->setChecked(false);
-        }
-        noroute_down->setEnabled(false);
-        down->setEnabled(false);
-        down->setToolTip(singleParagraph.arg(tr("Clear the stub exit for this exit to enter an exit roomID.")));
-        doortype_none_down->setEnabled(true);
-        doortype_open_down->setEnabled(true);
-        doortype_closed_down->setEnabled(true);
-        doortype_locked_down->setEnabled(true);
-        weight_down->setEnabled(false);
-    } else {
-        down->setEnabled(true);
-        down->setToolTip(singleParagraph.arg(tr("Set the number of the room down from this one, will be blue for a valid number or red for invalid.")));
-        doortype_none_down->setEnabled(false);
-        doortype_open_down->setEnabled(false);
-        doortype_closed_down->setEnabled(false);
-        doortype_locked_down->setEnabled(false);
-        doortype_none_down->setChecked(true);
-        weight_down->setEnabled(false);
-        weight_down->setValue(0);
-    }
+    normalStubExitChanged(state, down, noroute_down, weight_down,
+                          doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down,
+                          singleParagraph.arg(tr("Set the number of the room down from this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_stub_sw_stateChanged(int state)
 {
-    if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != nullptr) {
-            sw->setText(QString());
-            sw->setStyleSheet(QString());
-            weight_sw->setValue(0);
-            noroute_sw->setChecked(false);
-        }
-        noroute_sw->setEnabled(false);
-        sw->setEnabled(false);
-        sw->setToolTip(singleParagraph.arg(tr("Clear the stub exit for this exit to enter an exit roomID.")));
-        doortype_none_sw->setEnabled(true);
-        doortype_open_sw->setEnabled(true);
-        doortype_closed_sw->setEnabled(true);
-        doortype_locked_sw->setEnabled(true);
-        weight_sw->setEnabled(false);
-    } else {
-        sw->setEnabled(true);
-        sw->setToolTip(singleParagraph.arg(tr("Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.")));
-        doortype_none_sw->setEnabled(false);
-        doortype_open_sw->setEnabled(false);
-        doortype_closed_sw->setEnabled(false);
-        doortype_locked_sw->setEnabled(false);
-        doortype_none_sw->setChecked(true);
-        weight_sw->setEnabled(false);
-        weight_sw->setValue(0);
-    }
+    normalStubExitChanged(state, sw, noroute_sw, weight_sw,
+                          doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw,
+                          singleParagraph.arg(tr("Set the number of the room southwest of this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_stub_s_stateChanged(int state)
 {
-    if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != nullptr) {
-            s->setText(QString());
-            s->setStyleSheet(QString());
-            weight_s->setValue(0);
-            noroute_s->setChecked(false);
-        }
-        noroute_s->setEnabled(false);
-        s->setEnabled(false);
-        s->setToolTip(singleParagraph.arg(tr("Clear the stub exit for this exit to enter an exit roomID.")));
-        doortype_none_s->setEnabled(true);
-        doortype_open_s->setEnabled(true);
-        doortype_closed_s->setEnabled(true);
-        doortype_locked_s->setEnabled(true);
-        weight_s->setEnabled(false);
-    } else {
-        s->setEnabled(true);
-        s->setToolTip(singleParagraph.arg(tr("Set the number of the room south of this one, will be blue for a valid number or red for invalid.")));
-        doortype_none_s->setEnabled(false);
-        doortype_open_s->setEnabled(false);
-        doortype_closed_s->setEnabled(false);
-        doortype_locked_s->setEnabled(false);
-        doortype_none_s->setChecked(true);
-        weight_s->setEnabled(false);
-        weight_s->setValue(0);
-    }
+    normalStubExitChanged(state, s, noroute_s, weight_s,
+                          doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s,
+                          singleParagraph.arg(tr("Set the number of the room south of this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_stub_se_stateChanged(int state)
 {
-    if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != nullptr) {
-            se->setText(QString());
-            se->setStyleSheet(QString());
-            weight_se->setValue(0);
-            noroute_se->setChecked(false);
-        }
-        noroute_se->setEnabled(false);
-        se->setEnabled(false);
-        se->setToolTip(singleParagraph.arg(tr("Clear the stub exit for this exit to enter an exit roomID.")));
-        doortype_none_se->setEnabled(true);
-        doortype_open_se->setEnabled(true);
-        doortype_closed_se->setEnabled(true);
-        doortype_locked_se->setEnabled(true);
-        weight_se->setEnabled(false);
-    } else {
-        se->setEnabled(true);
-        se->setToolTip(singleParagraph.arg(tr("Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.")));
-        doortype_none_se->setEnabled(false);
-        doortype_open_se->setEnabled(false);
-        doortype_closed_se->setEnabled(false);
-        doortype_locked_se->setEnabled(false);
-        doortype_none_se->setChecked(true);
-        weight_se->setEnabled(false);
-        weight_se->setValue(0);
-    }
+    normalStubExitChanged(state, se, noroute_se, weight_se,
+                          doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se,
+                          singleParagraph.arg(tr("Set the number of the room southeast of this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_stub_in_stateChanged(int state)
 {
-    if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != nullptr) {
-            in->setText(QString());
-            in->setStyleSheet(QString());
-            weight_in->setValue(0);
-            noroute_in->setChecked(false);
-        }
-        noroute_in->setEnabled(false);
-        in->setEnabled(false);
-        in->setToolTip(singleParagraph.arg(tr("Clear the stub exit for this exit to enter an exit roomID.")));
-        doortype_none_in->setEnabled(true);
-        doortype_open_in->setEnabled(true);
-        doortype_closed_in->setEnabled(true);
-        doortype_locked_in->setEnabled(true);
-        weight_in->setEnabled(false);
-    } else {
-        in->setEnabled(true);
-        in->setToolTip(singleParagraph.arg(tr("Set the number of the room in from this one, will be blue for a valid number or red for invalid.")));
-        doortype_none_in->setEnabled(false);
-        doortype_open_in->setEnabled(false);
-        doortype_closed_in->setEnabled(false);
-        doortype_locked_in->setEnabled(false);
-        doortype_none_in->setChecked(true);
-        weight_in->setEnabled(false);
-        weight_in->setValue(0);
-    }
+    normalStubExitChanged(state, in, noroute_in, weight_in,
+                          doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in,
+                          singleParagraph.arg(tr("Set the number of the room in from this one.")));
     slot_checkModified();
 }
 
 void dlgRoomExits::slot_stub_out_stateChanged(int state)
 {
-    if (state == Qt::Checked) {
-        if (mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != nullptr) {
-            out->setText(QString());
-            out->setStyleSheet(QString());
-            weight_out->setValue(0);
-            noroute_out->setChecked(false);
-        }
-        noroute_out->setEnabled(false);
-        out->setEnabled(false);
-        out->setToolTip(singleParagraph.arg(tr("Clear the stub exit for this exit to enter an exit roomID.")));
-        doortype_none_out->setEnabled(true);
-        doortype_open_out->setEnabled(true);
-        doortype_closed_out->setEnabled(true);
-        doortype_locked_out->setEnabled(true);
-        weight_out->setEnabled(false);
-    } else {
-        out->setEnabled(true);
-        out->setToolTip(singleParagraph.arg(tr("Set the number of the room out from this one, will be blue for a valid number or red for invalid.")));
-        doortype_none_out->setEnabled(false);
-        doortype_open_out->setEnabled(false);
-        doortype_closed_out->setEnabled(false);
-        doortype_locked_out->setEnabled(false);
-        doortype_none_out->setChecked(true);
-        weight_out->setEnabled(false);
-        weight_out->setValue(0);
-    }
+    normalStubExitChanged(state, out, noroute_out, weight_out,
+                          doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out,
+                          singleParagraph.arg(tr("Set the number of the room out from this one.")));
     slot_checkModified();
 }
 
@@ -1701,24 +1133,23 @@ void dlgRoomExits::initExit(int direction,
                             QRadioButton* open,
                             QRadioButton* closed,
                             QRadioButton* locked,
-                            QSpinBox* weight)
+                            QSpinBox* weight,
+                            const QString& validExitToolTip)
 {
     QString doorAndWeightText; // lowercase, initials for XY-plane, words for others
-    QString exitText;          // lowercase, full words, no space
     switch (direction) {
-        case DIR_NORTHWEST: doorAndWeightText = QStringLiteral("nw");   exitText = tr("northwest"); break;
-        case DIR_NORTH    : doorAndWeightText = QStringLiteral("n");    exitText = tr("north");     break;
-        case DIR_NORTHEAST: doorAndWeightText = QStringLiteral("ne");   exitText = tr("northeast"); break;
-        case DIR_UP       : doorAndWeightText = QStringLiteral("up");   exitText = tr("up");        break;
-        case DIR_WEST     : doorAndWeightText = QStringLiteral("w");    exitText = tr("west");      break;
-        case DIR_EAST     : doorAndWeightText = QStringLiteral("e");    exitText = tr("east");      break;
-        case DIR_DOWN     : doorAndWeightText = QStringLiteral("down"); exitText = tr("down");      break;
-        case DIR_SOUTHWEST: doorAndWeightText = QStringLiteral("sw");   exitText = tr("southwest"); break;
-        case DIR_SOUTH    : doorAndWeightText = QStringLiteral("s");    exitText = tr("south");     break;
-        case DIR_SOUTHEAST: doorAndWeightText = QStringLiteral("se");   exitText = tr("southeast"); break;
-        case DIR_IN       : doorAndWeightText = QStringLiteral("in");   exitText = tr("in");        break;
-        case DIR_OUT      : doorAndWeightText = QStringLiteral("out");  exitText = tr("out");       break;
-        default: Q_UNREACHABLE();
+        case DIR_NORTHWEST: doorAndWeightText = QStringLiteral("nw");   break;
+        case DIR_NORTH    : doorAndWeightText = QStringLiteral("n");    break;
+        case DIR_NORTHEAST: doorAndWeightText = QStringLiteral("ne");   break;
+        case DIR_UP       : doorAndWeightText = QStringLiteral("up");   break;
+        case DIR_WEST     : doorAndWeightText = QStringLiteral("w");    break;
+        case DIR_EAST     : doorAndWeightText = QStringLiteral("e");    break;
+        case DIR_DOWN     : doorAndWeightText = QStringLiteral("down"); break;
+        case DIR_SOUTHWEST: doorAndWeightText = QStringLiteral("sw");   break;
+        case DIR_SOUTH    : doorAndWeightText = QStringLiteral("s");    break;
+        case DIR_SOUTHEAST: doorAndWeightText = QStringLiteral("se");   break;
+        case DIR_IN       : doorAndWeightText = QStringLiteral("in");   break;
+        case DIR_OUT      : doorAndWeightText = QStringLiteral("out");  break;
     }
 
     weight->setValue(pR->hasExitWeight(doorAndWeightText) ? pR->getExitWeight(doorAndWeightText) : 0);
@@ -1737,7 +1168,7 @@ void dlgRoomExits::initExit(int direction,
         locked->setChecked(true);
         break;
     default:
-        qWarning() << "dlgRoomExits::initExit(...) in room id(" << mRoomID << ") unexpected doors[" << doorAndWeightText << "] value:" << pR->getDoor(doorAndWeightText) << "found for room!";
+        qWarning() << "dlgRoomExits::initExit(...) WARNING - in room id(" << mRoomID << ") unexpected doors[" << doorAndWeightText << "] value:" << pR->getDoor(doorAndWeightText) << "found for room!";
     }
 
     TRoom* pExitR = nullptr;
@@ -1745,7 +1176,7 @@ void dlgRoomExits::initExit(int direction,
         pExitR = mpHost->mpMap->mpRoomDB->getRoom(exitId);
         if (!pExitR) {
             // Recover from a missing exit room - not doing this was causing seg. faults
-            qWarning() << "dlgRoomExits::initExit(...): Warning: missing exit to" << exitId << "in direction" << exitText << ", resetting exit.";
+            qWarning().nospace().noquote() << "dlgRoomExits::initExit(...) WARNING - missing exit to " << exitId << " in direction " << doorAndWeightText << ", resetting exit.";
             exitId = -1;
         }
     }
@@ -1753,18 +1184,14 @@ void dlgRoomExits::initExit(int direction,
     if (exitId > 0 && pExitR) {                         //Does this exit point anywhere
         exitLineEdit->setText(QString::number(exitId)); //Put in the value
         exitLineEdit->setEnabled(true);                 //Enable it for editing
-        exitLineEdit->setStyleSheet(QStringLiteral(".QLineEdit { color:blue }"));
-        if (pExitR->name.trimmed().length()) {
-            exitLineEdit->setToolTip(doubleParagraph.arg(tr(R"(Exit to "%1".)").arg(pExitR->name),
-                                                         tr("<b>Room</b> Weight of destination: %1.",
-                                                            "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                                 .arg(pExitR->getWeight())));
-        } else {
-            exitLineEdit->setToolTip(doubleParagraph.arg(tr("Exit to unnamed room is valid"),
-                                                         tr("<b>Room</b> Weight of destination: %1.",
-                                                            "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                                                 .arg(pExitR->getWeight())));
+        int exitAreaID = pExitR->getArea();
+        bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        QString exitAreaName;
+        if (outOfAreaExit) {
+            exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
         }
+        setActionOnExit(exitLineEdit, outOfAreaExit ? mpAction_otherAreaExit : mpAction_inAreaExit);
+        exitLineEdit->setToolTip(generateToolTip(pExitR->name, exitAreaName, outOfAreaExit, pExitR->getWeight()));
         noRoute->setEnabled(true); //Enable speedwalk lock control
         none->setEnabled(true);    //Enable door type controls...
         open->setEnabled(true);
@@ -1776,7 +1203,7 @@ void dlgRoomExits::initExit(int direction,
         noRoute->setChecked(pR->hasExitLock(direction)); //Set/reset "locK" control as appropriate
     } else {                                             //No exit is set on initialisation
         exitLineEdit->setText(QString());                //Nothing to put in exitID box
-        exitLineEdit->setStyleSheet(QString());
+        setActionOnExit(exitLineEdit, mpAction_noExit);
         noRoute->setEnabled(false); //Disable lock control, can't lock a non-existent exit..
         noRoute->setChecked(false); //.. and ensure there isn't one
         weight->setEnabled(false);  //Disable exit weight control...
@@ -1792,7 +1219,7 @@ void dlgRoomExits::initExit(int direction,
             locked->setEnabled(true);
         } else {
             exitLineEdit->setEnabled(true);
-            exitLineEdit->setToolTip(singleParagraph.arg(tr("Set the number of the room %1 of this one, will be blue for a valid number or red for invalid.").arg(exitText)));
+            exitLineEdit->setToolTip(validExitToolTip);
             stub->setChecked(false);
             none->setEnabled(false); //Disable door type controls, can't lock a non-existent exit..
             open->setEnabled(false); //.. and ensure the "none" one is set if it ever gets enabled
@@ -1812,6 +1239,7 @@ void dlgRoomExits::init()
     }
 
     roomID->setText(QString::number(mRoomID));
+    mAreaID = pR->getArea();
     roomWeight->setText(QString::number(pR->getWeight()));
     QString titleText;
     if (pR->name.trimmed().length()) {
@@ -1825,29 +1253,29 @@ void dlgRoomExits::init()
     // Because we are manipulating the settings for the exit we need to know
     // explicitly where the weight comes from, pR->getExitWeight() hides that
     // detail deliberately for normal usage
-    initExit(DIR_NORTHWEST, pR->getExit(DIR_NORTHWEST), nw, noroute_nw, stub_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, weight_nw);
+    initExit(DIR_NORTHWEST, pR->getExit(DIR_NORTHWEST), nw, noroute_nw, stub_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, weight_nw, singleParagraph.arg(tr("Set the number of the room northwest of this one.")));
 
-    initExit(DIR_NORTH, pR->getExit(DIR_NORTH), n, noroute_n, stub_n, doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n, weight_n);
+    initExit(DIR_NORTH, pR->getExit(DIR_NORTH), n, noroute_n, stub_n, doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n, weight_n, singleParagraph.arg(tr("Set the number of the room north of this one.")));
 
-    initExit(DIR_NORTHEAST, pR->getExit(DIR_NORTHEAST), ne, noroute_ne, stub_ne, doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne, weight_ne);
+    initExit(DIR_NORTHEAST, pR->getExit(DIR_NORTHEAST), ne, noroute_ne, stub_ne, doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne, weight_ne, singleParagraph.arg(tr("Set the number of the room northeast of this one.")));
 
-    initExit(DIR_UP, pR->getExit(DIR_UP), up, noroute_up, stub_up, doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up, weight_up);
+    initExit(DIR_UP, pR->getExit(DIR_UP), up, noroute_up, stub_up, doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up, weight_up, singleParagraph.arg(tr("Set the number of the room up from this one.")));
 
-    initExit(DIR_WEST, pR->getExit(DIR_WEST), w, noroute_w, stub_w, doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w, weight_w);
+    initExit(DIR_WEST, pR->getExit(DIR_WEST), w, noroute_w, stub_w, doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w, weight_w, singleParagraph.arg(tr("Set the number of the room west of this one.")));
 
-    initExit(DIR_EAST, pR->getExit(DIR_EAST), e, noroute_e, stub_e, doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e, weight_e);
+    initExit(DIR_EAST, pR->getExit(DIR_EAST), e, noroute_e, stub_e, doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e, weight_e, singleParagraph.arg(tr("Set the number of the room east of this one.")));
 
-    initExit(DIR_DOWN, pR->getExit(DIR_DOWN), down, noroute_down, stub_down, doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down, weight_down);
+    initExit(DIR_DOWN, pR->getExit(DIR_DOWN), down, noroute_down, stub_down, doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down, weight_down, singleParagraph.arg(tr("Set the number of the room down from this one.")));
 
-    initExit(DIR_SOUTHWEST, pR->getExit(DIR_SOUTHWEST), sw, noroute_sw, stub_sw, doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw, weight_sw);
+    initExit(DIR_SOUTHWEST, pR->getExit(DIR_SOUTHWEST), sw, noroute_sw, stub_sw, doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw, weight_sw, singleParagraph.arg(tr("Set the number of the room southwest of this one.")));
 
-    initExit(DIR_SOUTH, pR->getExit(DIR_SOUTH), s, noroute_s, stub_s, doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s, weight_s);
+    initExit(DIR_SOUTH, pR->getExit(DIR_SOUTH), s, noroute_s, stub_s, doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s, weight_s, singleParagraph.arg(tr("Set the number of the room south of this one.")));
 
-    initExit(DIR_SOUTHEAST, pR->getExit(DIR_SOUTHEAST), se, noroute_se, stub_se, doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se, weight_se);
+    initExit(DIR_SOUTHEAST, pR->getExit(DIR_SOUTHEAST), se, noroute_se, stub_se, doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se, weight_se, singleParagraph.arg(tr("Set the number of the room southeast of this one.")));
 
-    initExit(DIR_IN, pR->getExit(DIR_IN), in, noroute_in, stub_in, doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in, weight_in);
+    initExit(DIR_IN, pR->getExit(DIR_IN), in, noroute_in, stub_in, doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in, weight_in, singleParagraph.arg(tr("Set the number of the room in from this one.")));
 
-    initExit(DIR_OUT, pR->getExit(DIR_OUT), out, noroute_out, stub_out, doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out, weight_out);
+    initExit(DIR_OUT, pR->getExit(DIR_OUT), out, noroute_out, stub_out, doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out, weight_out, singleParagraph.arg(tr("Set the number of the room out from this one.")));
 
     QMapIterator<QString, int> it(pR->getSpecialExits());
     while (it.hasNext()) {
