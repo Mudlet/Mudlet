@@ -76,10 +76,9 @@ private slots:
         TMxpTagHandler& tagHandler = versionTagHandler;
         tagHandler.handleTag(ctx, stub, versionTag->asStartTag());
 
-        // NO return value when setting style (this is a grey area.. but Z/CMUD do it this way and the MXP definition
-        // seems to imply this interpretation:
+        // NO return value when setting style.
+        // This is a grey area.. but Z/CMUD do it this way and the MXP definition seems to imply this interpretation:
         // The client caches this version information and returns it when requested by a plain <VERSION> request.
-        // One can interprete this like, it ONLY returns it when using a plain request... but...)
         QCOMPARE(stub.sentToServer, "");
 
         // From now on, return it with version
