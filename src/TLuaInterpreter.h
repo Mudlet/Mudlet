@@ -581,6 +581,7 @@ public:
     static int getDiscordTimeStamps(lua_State*);
     static int getDiscordParty(lua_State*);
     static int setDiscordGame(lua_State*);
+    static int resetDiscordData(lua_State*);
     static int getPlayerRoom(lua_State*);
     static int getMapSelection(lua_State*);
     static int addWordToDictionary(lua_State*);
