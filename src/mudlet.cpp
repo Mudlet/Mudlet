@@ -217,7 +217,6 @@ mudlet::mudlet()
 , mpActionDisconnect(nullptr)
 , mpActionFullScreenView(nullptr)
 , mpActionHelp(nullptr)
-, mpActionDiscord(nullptr)
 , mpActionIRC(nullptr)
 , mpButtonDiscord(nullptr)
 , mpActionKeys(nullptr)
@@ -407,6 +406,13 @@ mudlet::mudlet()
     mpActionDiscord->setIconText(QStringLiteral("Discord"));
     mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
 
+    mpActionMudletDiscord = new QAction(QIcon(QStringLiteral(":/icons/mudlet_discord.png")), tr("Mudlet Discord"), this);
+    mpActionMudletDiscord->setToolTip(tr("Open a link to the Mudlet server on Discord"));
+    mpMainToolBar->addAction(mpActionMudletDiscord);
+    mpActionMudletDiscord->setObjectName(QStringLiteral("mudlet_discord"));
+    mpMainToolBar->widgetForAction(mpActionMudletDiscord)->setObjectName(mpActionMudletDiscord->objectName());
+    mpActionMudletDiscord->setVisible(false); // Mudlet Discord becomes visible if game has custom invite
+
     mpActionIRC = new QAction(tr("Open IRC"), this);
     mpActionIRC->setIcon(QIcon(QStringLiteral(":/icons/internet-telephony.png")));
     mpActionIRC->setObjectName(QStringLiteral("openIRC"));
@@ -546,6 +552,7 @@ mudlet::mudlet()
     connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_mapper);
     connect(mpActionIRC.data(), &QAction::triggered, this, &mudlet::slot_irc);
     connect(mpActionDiscord.data(), &QAction::triggered, this, &mudlet::slot_discord);
+    connect(mpActionMudletDiscord.data(), &QAction::triggered, this, &mudlet::slot_mudlet_discord);
     connect(mpActionPackageManager.data(), &QAction::triggered, this, &mudlet::slot_package_manager);
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_package_exporter);
@@ -564,6 +571,7 @@ mudlet::mudlet()
     connect(dactionForum, &QAction::triggered, this, &mudlet::slot_show_help_dialog_forum);
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_discord);
+    connect(dactionMudletDiscord, &QAction::triggered, this, &mudlet::slot_mudlet_discord);
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
     connect(dactionShowErrors, &QAction::triggered, [=]() {
         auto host = getActiveHost();
@@ -1425,6 +1433,8 @@ void mudlet::slot_tab_changed(int tabID)
 
     dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
 
+    updateDiscordNamedIcon();
+
     // Restore the multi-view mode if it was enabled:
     if (mpTabBar->count() > 1) {
         if (!mpActionMultiView->isEnabled() || !dactionMultiView->isEnabled()) {
@@ -1517,6 +1527,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     int y = mpCurrentActiveHost->mpConsole->height();
     QSize s = QSize(x, y);
     QResizeEvent event(s, s);
+    updateDiscordNamedIcon();
     QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
 }
 
@@ -2366,7 +2377,38 @@ void mudlet::slot_irc()
 
 void mudlet::slot_discord()
 {
+    Host* pHost = getActiveHost();
+    QString invite;
+    if (pHost) {
+        invite = pHost->getDiscordInviteURL();
+    }
+    openWebPage(invite.isEmpty() ? mMudletDiscordInvite : invite);
+}
+
+void mudlet::slot_mudlet_discord()
+{
     openWebPage(mMudletDiscordInvite);
+}
+
+void mudlet::updateDiscordNamedIcon()
+{
+    Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
+
+    QString gameName = pHost->getDiscordGameName();
+
+    bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
+    
+    mpActionDiscord->setIconText(gameName.isEmpty() ? QStringLiteral("Discord") : gameName);
+
+    if (mpActionMudletDiscord->isVisible() != hasCustom) {
+        mpActionMudletDiscord->setVisible(hasCustom);
+    }
+    if (dactionDiscord->isVisible() != hasCustom) {
+        dactionDiscord->setVisible(hasCustom);
+    }
 }
 
 void mudlet::slot_reconnect()
@@ -4399,6 +4441,7 @@ void mudlet::activateProfile(Host* pHost)
             mpTabBar->blockSignals(false);
         }
         mpCurrentActiveHost = pHost;
+        updateDiscordNamedIcon();
         dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
     }
 }

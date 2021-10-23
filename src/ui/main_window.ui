@@ -119,6 +119,7 @@
     <addaction name="dactionHelp"/>
     <addaction name="dactionVideo"/>
     <addaction name="dactionDiscord"/>
+    <addaction name="dactionMudletDiscord"/>
     <addaction name="dactionIRC"/>
     <addaction name="dactionForum"/>
    </widget>
@@ -326,6 +327,17 @@
    </property>
   </action>
   <action name="dactionDiscord">
+   <property name="text">
+    <string>Discord</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Open a link to Discord.&lt;/p&gt;</string>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
+   </property>
+  </action>
+  <action name="dactionMudletDiscord">
    <property name="text">
     <string>Discord help channel</string>
    </property>

@@ -935,6 +935,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     }
 
     mDiscordApplicationId = readProfileData(profile_name, QStringLiteral("discordApplicationId"));
+    mDiscordInviteURL = readProfileData(profile_name, QStringLiteral("discordInviteURL"));
 
     // val will be null if this is the first time the profile has been read
     // since an update to a Mudlet version supporting Discord - so a toint()

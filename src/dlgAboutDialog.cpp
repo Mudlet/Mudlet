@@ -988,7 +988,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 #endif
 
     license_3rdParty_texts.append(QStringLiteral("<hr><br>"
-                                                 "<center><img src=\":/icons/Discord-Logo+Wordmark-Color_400x136px.png\"/></center><br>"
+                                                 "<center><img src=\":/icons/Discord-Logo+Wordmark-Color_438x120px.png\"/></center><br>"
                                                  "%33%34")
                                   .arg(DiscordHeader,                          // 33 - Discord header - translatable
                                        MIT_Body));                             // 34 - Discord body MIT - not translatable
