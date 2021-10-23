@@ -57,7 +57,8 @@ Discord::Discord(QObject* parent)
               {"lusternia", {"lusternia.com", "iron-lus.ironrealms.com"}},
               {"starmourn", {"starmourn.com"}},
               {"stickmud", {"stickmud.com"}},
-              {"clessidra", {"clessidra.it", "mud.clessidra.it"}}
+              {"clessidra", {"clessidra.it", "mud.clessidra.it"}},
+              {"mume", {"mume.org"}}
             }
 {
 #if defined(Q_OS_WIN64)
