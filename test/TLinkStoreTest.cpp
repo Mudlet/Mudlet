@@ -26,13 +26,13 @@ Q_OBJECT
 
 private:
 
-private slots:
+
 
     void initTestCase()
     {
     }
 
-    void testAddAndGet()
+    static void testAddAndGet()
     {
         TLinkStore store(3);
 
@@ -55,7 +55,7 @@ private slots:
         QCOMPARE(hints2[1], "Look at &href;");
     }
 
-    void testNewGeneratedID()
+    static void testNewGeneratedID()
     {
         TLinkStore store(3);
 
@@ -77,7 +77,7 @@ private slots:
         QCOMPARE(store.getCurrentLinkID(), 2);
     }
 
-    void testMaxId()
+    static void testMaxId()
     {
         TLinkStore store(3);
 

@@ -57,8 +57,8 @@ public:
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
-    uint getGraphemeBaseCharacter(const QString& str) const;
-    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen, int *offset = nullptr) const;
+    static uint getGraphemeBaseCharacter(const QString& str) ;
+    void drawLine(QPainter& painter, int lineNumber, int lineOfScreen, int *offset = nullptr) const;
     int drawGraphemeBackground(QPainter&, QVector<QColor>&, QVector<QRect>&, QVector<QString>&, QVector<int>&, QPoint&, const QString&, const int, TChar&) const;
     void drawGraphemeForeground(QPainter&, const QColor&, const QRect&, const QString&, TChar &) const;
     void showNewLines();
@@ -98,8 +98,8 @@ public:
     int mCursorX;
     QFont mDisplayFont;
     QColor mFgColor;
-    int mFontAscent;
-    int mFontDescent;
+    int mFontAscent{};
+    int mFontDescent{};
     bool mIsCommandPopup;
     // If true, this TTextEdit is to display the last lines in
     // mpConsole.mpBuffer. This is always true for the lower main window panel
@@ -108,10 +108,10 @@ public:
     // See, e.g.: https://en.wikipedia.org/wiki/Tail_(Unix)#File_monitoring
     bool mIsTailMode;
     QMap<QString, std::pair<QString, int>> mPopupCommands;
-    int mScrollVector;
+    int mScrollVector{};
     QRegion mSelectedRegion;
     bool mShowTimeStamps;
-    int mWrapAt;
+    int mWrapAt{};
     int mWrapIndentCount {};
 
 public slots:
@@ -163,7 +163,7 @@ private:
     bool mCtrlSelecting {};
     int mCtrlDragStartY {};
     QPoint mDragStart, mDragSelectionEnd;
-    int mOldScrollPos;
+    int mOldScrollPos{};
     // top-left point of the selection
     QPoint mPA;
     // bottom-right point of the selection

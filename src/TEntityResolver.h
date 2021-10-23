@@ -47,7 +47,7 @@ public:
     static QString resolveCode(ushort val);
     static QString resolveCode(const QString& entityValue);
     static QString resolveCode(const QString& entityValue, int base);
-    static QString interpolate(const QString& input, std::function<QString(const QString&)> resolver);
+    static QString interpolate(const QString& input, const std::function<QString(const QString&)>& resolver);
 
     QString interpolate(const QString& input) const;
 };

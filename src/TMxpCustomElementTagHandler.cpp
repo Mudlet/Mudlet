@@ -90,9 +90,8 @@ MxpStartTag TMxpCustomElementTagHandler::resolveElementDefinition(const TMxpElem
     auto mapping = [this, customTag, element](const MxpTagAttribute& attr) {
         if (!attr.hasValue()) {
             return MxpTagAttribute(mapAttributes(element, attr.getName(), customTag));
-        } else {
-            return MxpTagAttribute(attr.getName(), mapAttributes(element, attr.getValue(), customTag));
         }
+        return MxpTagAttribute(attr.getName(), mapAttributes(element, attr.getValue(), customTag));
     };
 
     return definitionTag->transform(mapping);

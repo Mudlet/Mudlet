@@ -18,22 +18,17 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
-#include <TEntityHandler.h>
 #include <QtTest/QtTest>
+#include <TEntityHandler.h>
 
-class TEntityHandlerTest : public QObject {
-Q_OBJECT
+class TEntityHandlerTest : public QObject
+{
+    Q_OBJECT
 
 private:
+    void initTestCase() {}
 
-private slots:
-
-    void initTestCase()
-    {
-    }
-
-    void testHandleSimpleString()
+    static void testHandleSimpleString()
     {
         TEntityHandler handler;
 
@@ -43,7 +38,7 @@ private slots:
         QCOMPARE(result.c_str(), "Someone says \"Hello\"");
     }
 
-    void testHandleUnfinishedString()
+    static void testHandleUnfinishedString()
     {
         TEntityHandler handler;
 
@@ -53,7 +48,7 @@ private slots:
         QCOMPARE(result.c_str(), "Someone says \"Hello");
     }
 
-    void testLongSequence()
+    static void testLongSequence()
     {
         TEntityHandler handler;
 
@@ -63,7 +58,7 @@ private slots:
         QCOMPARE(result.c_str(), "Long sequence: ; asdf");
     }
 
-    void testHandleSplitInTwoParts()
+    static void testHandleSplitInTwoParts()
     {
         TEntityHandler handler;
 
@@ -98,9 +93,7 @@ private slots:
         return result;
     }
 
-    void cleanupTestCase()
-    {
-    }
+    void cleanupTestCase() {}
 };
 #include "TEntityHandlerTest.moc"
 QTEST_MAIN(TEntityHandlerTest)

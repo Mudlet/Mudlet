@@ -50,7 +50,7 @@ TMxpTagHandlerResult TMxpFormattingTagsHandler::handleEndTag(TMxpContext& ctx, T
     return MXP_TAG_HANDLED;
 }
 
-void TMxpFormattingTagsHandler::setAttribute(TMxpClient& client, MxpTag* tag, bool value) const
+void TMxpFormattingTagsHandler::setAttribute(TMxpClient& client, MxpTag* tag, bool value) 
 {
     if (tag->isNamed("B") || tag->isNamed("BOLD") || tag->isNamed("STRONG")) {
         client.setBold(value);

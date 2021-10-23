@@ -57,7 +57,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
         }
         // if less hints than commands, add commands as hints
         for (; i < hsize; i++) {
-             hints.append(hrefs[i]);
+            hints.append(hrefs[i]);
         }
         if (hints.size() <= hsize) {
             // We now have a multi line menu, with no tooltip for the menulink. Add a special tooltip:
@@ -110,7 +110,8 @@ QString TMxpSendTagHandler::extractHint(MxpStartTag* tag)
 {
     if (tag->hasAttribute(ATTR_HINT)) {
         return tag->getAttributeValue(ATTR_HINT);
-    } else if (tag->getAttributesCount() > 1 && !tag->getAttribute(1).isNamed(ATTR_PROMPT) && !tag->getAttribute(1).isNamed(ATTR_EXPIRE)) {
+    }
+    if (tag->getAttributesCount() > 1 && !tag->getAttribute(1).isNamed(ATTR_PROMPT) && !tag->getAttribute(1).isNamed(ATTR_EXPIRE)) {
         return tag->getAttrName(1);
     }
 
@@ -138,7 +139,7 @@ void TMxpSendTagHandler::resetCurrentTagContent(TMxpClient& client)
 
 void TMxpSendTagHandler::updateHrefInLinks(TMxpClient& client) const
 {
-    QStringList *hrefs, *hints;
+    QStringList *hrefs = nullptr, *hints = nullptr;
     if (client.getLink(mLinkId, &hrefs, &hints)) {
         if (hrefs != nullptr) {
             hrefs->replaceInStrings(TAG_CONTENT_PLACEHOLDER, mCurrentTagContent, Qt::CaseInsensitive);

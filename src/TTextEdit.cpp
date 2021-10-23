@@ -33,6 +33,8 @@
 #include "widechar_width.h"
 
 #include "pre_guard.h"
+#include <QTextBoundaryFinder>
+#include <QToolTip>
 #include <QtEvents>
 #include <QtGlobal>
 #include <QApplication>
@@ -42,8 +44,6 @@
 #include <QHash>
 #include <QPainter>
 #include <QScrollBar>
-#include <QTextBoundaryFinder>
-#include <QToolTip>
 #include <QVersionNumber>
 #include "post_guard.h"
 #include <chrono>
@@ -186,7 +186,7 @@ void TTextEdit::updateScrollBar(int line)
 {
     Q_ASSERT_X(!mIsLowerPane, "updateScrollBar(...)", "called on LOWER pane when it should only be used on upper one!");
     int screenHeight{mScreenHeight};
-    if (mIsTailMode){
+    if (mIsTailMode) {
         screenHeight -= mpConsole->mLowerPane->getScreenHeight();
     }
     if (mpConsole->mpScrollBar) {
@@ -403,7 +403,7 @@ void TTextEdit::scrollDown(int lines)
 // and if they ARE a surrogate pair convert them back to the single
 // Unicode codepoint (needs around 21 bits, can be contained in a
 // 32bit unsigned integer) value:
-inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str) const
+inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str)
 {
     if (str.isEmpty()) {
         return 0;
@@ -417,7 +417,8 @@ inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str) const
         }
 
         if (Q_UNLIKELY(first.isLowSurrogate() && second.isHighSurrogate())) {
-            qDebug().noquote().nospace() << "TTextEdit::getGraphemeBaseCharacter(\"str\") INFO - passed a QString comprising a Low followed by a High surrogate QChar, this is not expected, they will be swapped around to try and recover but if this causes mojibake (text corrupted into meaningless symbols) please report this to the developers!";
+            qDebug().noquote().nospace() << "TTextEdit::getGraphemeBaseCharacter(\"str\") INFO - passed a QString comprising a Low followed by a High surrogate QChar, this is not expected, they will "
+                                            "be swapped around to try and recover but if this causes mojibake (text corrupted into meaningless symbols) please report this to the developers!";
             return QChar::surrogateToUcs4(second, first);
         }
 
@@ -469,7 +470,8 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
         int nextBoundary = boundaryFinder.toNextBoundary();
 
         TChar& charStyle = mpBuffer->buffer.at(lineNumber).at(indexOfChar);
-        int graphemeWidth = drawGraphemeBackground(painter, fgColors, textRects, graphemes, charWidths, cursor, lineText.mid(indexOfChar, nextBoundary - indexOfChar), columnWithOutTimestamp, charStyle);
+        int graphemeWidth =
+                drawGraphemeBackground(painter, fgColors, textRects, graphemes, charWidths, cursor, lineText.mid(indexOfChar, nextBoundary - indexOfChar), columnWithOutTimestamp, charStyle);
         cursor.setX(cursor.x() + graphemeWidth);
         indexOfChar = nextBoundary;
         columnWithOutTimestamp += graphemeWidth;
@@ -486,11 +488,19 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     }
 }
 
-int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColors, QVector<QRect>& textRects, QVector<QString>& graphemes, QVector<int>& charWidths, QPoint& cursor, const QString& grapheme, const int column, TChar& charStyle) const
+int TTextEdit::drawGraphemeBackground(QPainter& painter,
+                                      QVector<QColor>& fgColors,
+                                      QVector<QRect>& textRects,
+                                      QVector<QString>& graphemes,
+                                      QVector<int>& charWidths,
+                                      QPoint& cursor,
+                                      const QString& grapheme,
+                                      const int column,
+                                      TChar& charStyle) const
 {
     static const QString replacementCharacter{QChar::ReplacementCharacter};
     uint unicode = getGraphemeBaseCharacter(grapheme);
-    int charWidth;
+    int charWidth = 0;
     bool useReplacementCharacter = false;
     if (unicode == '\t') {
         charWidth = mTabStopwidth - (column % mTabStopwidth);
@@ -530,12 +540,8 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     const bool isOverline = attributes & TChar::Overline;
     const bool isStrikeOut = attributes & TChar::StrikeOut;
     const bool isUnderline = attributes & TChar::Underline;
-    if ((painter.font().bold() != isBold)
-            || (painter.font().italic() != isItalics)
-            || (painter.font().overline() != isOverline)
-            || (painter.font().strikeOut() != isStrikeOut)
-            || (painter.font().underline() != isUnderline)) {
-
+    if ((painter.font().bold() != isBold) || (painter.font().italic() != isItalics) || (painter.font().overline() != isOverline) || (painter.font().strikeOut() != isStrikeOut)
+        || (painter.font().underline() != isUnderline)) {
         QFont font = painter.font();
         font.setBold(isBold);
         font.setItalic(isItalics);
@@ -588,7 +594,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
             if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
                 qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is a zero width combiner, codepoint number: U+"
-                                             << QStringLiteral("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
+                                               << QStringLiteral("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
             if (Q_UNLIKELY(newCodePointToWarnAbout)) {
                 mProblemCodepoints.insert(unicode, std::tuple{1, std::string{"Zero Width Combiner"}});
@@ -624,7 +630,8 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
             if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
-                qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which was not previously assigned and we do not know how wide it is, codepoint number: U+"
+                qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which was not previously assigned and we do not know how wide it "
+                                                  "is, codepoint number: U+"
                                                << QStringLiteral("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
             if (Q_UNLIKELY(newCodePointToWarnAbout)) {
@@ -891,8 +898,7 @@ void TTextEdit::expandSelectionToWords()
     int yind = mPA.y();
     int xind = mPA.x();
     for (; xind >= 0; --xind) {
-        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space
-            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
+        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
             break;
         }
     }
@@ -902,8 +908,7 @@ void TTextEdit::expandSelectionToWords()
     yind = mPB.y();
     xind = mPB.x();
     for (; xind < static_cast<int>(mpBuffer->lineBuffer.at(yind).size()); ++xind) {
-        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space
-            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
+        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
             break;
         }
     }
@@ -1190,7 +1195,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                     QString func;
                     if (!command.empty()) {
                         func = command.at(0);
-                        if (!luaReference){
+                        if (!luaReference) {
                             mpHost->mLuaInterpreter.compileAndExecuteScript(func);
                         } else {
                             mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, QStringLiteral("echoLink"));
@@ -1223,7 +1228,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 mMouseTrackLevel = 3;
             }
 
-            if (mMouseTrackLevel == 3){
+            if (mMouseTrackLevel == 3) {
                 expandSelectionToLine(y);
                 event->accept();
                 return;
@@ -1251,19 +1256,18 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             highlightSelection();
             event->accept();
             return;
-        } else {
-            mLastClickTimer.start();
-            mMouseTracking = true;
-            mMouseTrackLevel = 1;
-            if (y >= mpBuffer->size()) {
-                return;
-            }
-            mDragStart.setX(x);
-            mDragStart.setY(y);
-            mDragSelectionEnd = mDragStart;
-            event->accept();
+        }
+        mLastClickTimer.start();
+        mMouseTracking = true;
+        mMouseTrackLevel = 1;
+        if (y >= mpBuffer->size()) {
             return;
         }
+        mDragStart.setX(x);
+        mDragStart.setY(y);
+        mDragSelectionEnd = mDragStart;
+        event->accept();
+        return;
     }
 
     if (event->button() == Qt::RightButton) {
@@ -1289,7 +1293,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                         }
 
                         for (int i = 0, total = command.size(); i < total; ++i) {
-                            QAction* pA;
+                            QAction* pA = nullptr;
                             if (hi < hint.size()) {
                                 pA = popup->addAction(hint[hi]);
                                 mPopupCommands[hint[hi++]] = {command[i], luaReference.value(i, 0)};
@@ -1386,8 +1390,8 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         while (it.hasNext()) {
             it.next();
             QStringList actionInfo = it.value();
-            const QString &actionName = actionInfo.at(1);
-            QAction * action = new QAction(actionName, this);
+            const QString& actionName = actionInfo.at(1);
+            QAction* action = new QAction(actionName, this);
             action->setToolTip(actionInfo.at(2));
             popup->addAction(action);
             connect(action, &QAction::triggered, this, [this, actionName] { slot_mouseAction(actionName); });
@@ -1729,11 +1733,10 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
         }
     }
 
-     if (showTimestamps) {
+    if (showTimestamps) {
         QStringList timestamps = mpBuffer->timeBuffer.mid(startLine, endLine - startLine + 1);
         QStringList result;
-        std::transform(textLines.cbegin(), textLines.cend(), timestamps.cbegin(), std::back_inserter(result),
-                               [](const QString& text, const QString& timestamp) { return timestamp + text; });
+        std::transform(textLines.cbegin(), textLines.cend(), timestamps.cbegin(), std::back_inserter(result), [](const QString& text, const QString& timestamp) { return timestamp + text; });
         textLines = result;
     }
 
@@ -1844,9 +1847,8 @@ int TTextEdit::imageTopLine()
         }
 
         return mCursorY - mScreenHeight;
-    } else {
-        return 0;
     }
+    return 0;
 }
 
 
@@ -1866,8 +1868,8 @@ int TTextEdit::bufferScrollDown(int lines)
             mIsTailMode = false;
         }
         return lines;
-
-    } else if (mpBuffer->mCursorY >= static_cast<int>(mpBuffer->size() - 1)) {
+    }
+    if (mpBuffer->mCursorY >= static_cast<int>(mpBuffer->size() - 1)) {
         mIsTailMode = true;
         mpBuffer->mCursorY = mpBuffer->lineBuffer.size();
         forceUpdate();
@@ -1893,7 +1895,7 @@ int TTextEdit::bufferScrollDown(int lines)
 
 int TTextEdit::getColumnCount()
 {
-    int charWidth;
+    int charWidth = 0;
 
     if (mpConsole->getType() == TConsole::MainConsole) {
         charWidth = qRound(QFontMetricsF(mpHost->getDisplayFont()).averageCharWidth());
@@ -1906,7 +1908,7 @@ int TTextEdit::getColumnCount()
 
 int TTextEdit::getRowCount()
 {
-    int rowHeight;
+    int rowHeight = 0;
 
     if (mpConsole->getType() == TConsole::MainConsole) {
         rowHeight = qRound(QFontMetricsF(mpHost->getDisplayFont()).lineSpacing());
@@ -2054,7 +2056,8 @@ inline QString TTextEdit::byteToLuaCodeOrChar(const char* byte)
 {
     if (!byte) {
         return QString();
-    } else if (static_cast<quint8>(*byte) < 0x20 || static_cast<quint8>(*byte) >= 0x7f) {
+    }
+    if (static_cast<quint8>(*byte) < 0x20 || static_cast<quint8>(*byte) >= 0x7f) {
         // Control character or not ASCII
         return QStringLiteral("\\%1").arg(static_cast<quint8>(*byte), 3, 10, QLatin1Char('0'));
     } else if (static_cast<quint8>(*byte) == 0x3C) {
@@ -2427,9 +2430,9 @@ void TTextEdit::slot_changeDebugShowAllProblemCodepoints(const bool state)
     }
 }
 
-void TTextEdit::slot_mouseAction(const QString &uniqueName)
+void TTextEdit::slot_mouseAction(const QString& uniqueName)
 {
-    TEvent event {};
+    TEvent event{};
     QStringList mouseEvent = mpHost->mConsoleActions[uniqueName];
     event.mArgumentList.append(mouseEvent[0]);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);

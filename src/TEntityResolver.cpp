@@ -72,7 +72,7 @@ QString TEntityResolver::resolveCode(ushort val)
     return QString(QChar(val));
 }
 
-QString TEntityResolver::interpolate(const QString& input, std::function<QString(const QString&)> resolver)
+QString TEntityResolver::interpolate(const QString& input, const std::function<QString(const QString&)>& resolver)
 {
     QString output;
     QString entity;

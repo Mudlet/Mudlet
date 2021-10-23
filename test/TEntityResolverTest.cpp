@@ -27,13 +27,13 @@ Q_OBJECT
 
 private:
 
-private slots:
+
 
     void initTestCase()
     {
     }
 
-    void testStandardEntities()
+    static void testStandardEntities()
     {
         TEntityResolver resolver;
 
@@ -44,7 +44,7 @@ private slots:
         QCOMPARE(resolver.getResolution("&quot;"), "\"");
     }
 
-    void testStandardEntitiesCaseInsensitive()
+    static void testStandardEntitiesCaseInsensitive()
     {
         TEntityResolver resolver;
 
@@ -54,7 +54,7 @@ private slots:
         QCOMPARE(resolver.getResolution("&QUOT;"), "\"");
     }
 
-    void testDecimalCode()
+    static void testDecimalCode()
     {
         TEntityResolver resolver;
 
@@ -63,7 +63,7 @@ private slots:
         QCOMPARE(resolver.getResolution("&#32;"), " ");
     }
 
-    void testHexCode()
+    static void testHexCode()
     {
         TEntityResolver resolver;
 
@@ -73,7 +73,7 @@ private slots:
 
     }
 
-    void testRegisteredEntities()
+    static void testRegisteredEntities()
     {
         TEntityResolver resolver;
 
@@ -87,7 +87,7 @@ private slots:
         QCOMPARE(resolver.getResolution("&end;"), "</em>");
     }
 
-    void testRegisterEntityAsChar()
+    static void testRegisterEntityAsChar()
     {
         TEntityResolver resolver;
 
@@ -96,7 +96,7 @@ private slots:
         QCOMPARE(resolver.getResolution("&symbol;"), "@");
     }
 
-    void testInvalidRegister()
+    static void testInvalidRegister()
     {
         TEntityResolver resolver;
 
@@ -106,14 +106,14 @@ private slots:
         QVERIFY(resolver.registerEntity("&symbol;", '@'));
     }
 
-    void testResolveNonExistentEntity()
+    static void testResolveNonExistentEntity()
     {
         TEntityResolver resolver;
 
         QCOMPARE(resolver.getResolution("&symbol;"), "&symbol;");
     }
 
-    void testInterpolation()
+    static void testInterpolation()
     {
         TEntityResolver resolver;
 
@@ -122,7 +122,7 @@ private slots:
         QCOMPARE(resolver.interpolate("You say &quot;Hello World&quot;"), "You say \"Hello World\"");
     }
 
-    void testCustomInterpolation()
+    static void testCustomInterpolation()
     {
         const QMap<QString, QString> attributes = {
                 {QStringLiteral("&name;"), QStringLiteral("drunk sailor")},

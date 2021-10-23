@@ -35,14 +35,14 @@ Q_OBJECT
 
 private:
 
-private slots:
-    QSharedPointer<MxpNode> parseNode(const QString& tagText) const
+
+    static QSharedPointer<MxpNode> parseNode(const QString& tagText) 
     {
         auto nodes = TMxpTagParser::parseToMxpNodeList(tagText);
-        return nodes.size() > 0 ? nodes.first() : nullptr;
+        return !nodes.empty() ? nodes.first() : nullptr;
     }
 
-    void testSendHrefUTF8FromMxpProcessor()
+    static void testSendHrefUTF8FromMxpProcessor()
     {
         // issue #4368
         TMxpStubClient stub;
@@ -61,7 +61,7 @@ private slots:
 
     }
 
-    void testSendHrefUTF8()
+    static void testSendHrefUTF8()
     {
         // issue #4368
         QString input = "<SEND href=\"áéíóúñ\" >test link: áéíóúñ</SEND>";
@@ -104,7 +104,7 @@ private slots:
         QCOMPARE(stub.mHints[0], "tell Zugg ");
     }
 
-    void testSimpleSend()
+    static void testSimpleSend()
     {
         // <SEND>north</SEND>
         TMxpStubContext ctx;
@@ -149,7 +149,7 @@ private slots:
         QCOMPARE(stub.mHints[0], "north");
     }
 
-    void testSendHrefTextEntity() {
+    static void testSendHrefTextEntity() {
         // Example from Age of Elements
         QString input = "<send 'push &text;' HINT='push button'>button</send>";
 

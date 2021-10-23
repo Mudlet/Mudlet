@@ -63,9 +63,9 @@ public:
 
     void popColor() override;
 
-    void pushColor(QList<QColor>& stack, const QString& color);
+    static void pushColor(QList<QColor>& stack, const QString& color);
 
-    void popColor(QList<QColor>& stack);
+    static void popColor(QList<QColor>& stack);
 
     bool hasFgColor() const { return !fgColors.isEmpty(); }
     const QColor& getFgColor() { return fgColors.last(); }

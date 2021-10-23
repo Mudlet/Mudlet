@@ -24,27 +24,26 @@
 class TMxpTagParserTest : public QObject {
     Q_OBJECT
 
-private:
 private slots:
 
     void initTestCase()
     {
     }
 
-    QSharedPointer<MxpNode> parseNode(const QString& tagText) const
+    static QSharedPointer<MxpNode> parseNode(const QString& tagText)
     {
         auto nodes = TMxpTagParser::parseToMxpNodeList(tagText);
-        return nodes.size() > 0 ? nodes.first() : nullptr;
+        return !nodes.empty() ? nodes.first() : nullptr;
     }
 
-    void testMateriaMagicaScriptedActionEndTag()
+    static void testMateriaMagicaScriptedActionEndTag()
     {
         auto node = parseNode("<play hangman/scripted_action>");
         QVERIFY(node->isEndTag());
         QCOMPARE(node->asEndTag()->getName(), "scripted_action");
     }
 
-    void testMateriaMagicaScriptedActionTag()
+    static void testMateriaMagicaScriptedActionTag()
     {
         TMxpTagParser parser;
         QString tagText = R"(<scripted_action desc="hangman start">play hangman<play hangman/scripted_action>)";
@@ -62,7 +61,7 @@ private slots:
         QCOMPARE(list[2]->asEndTag()->getName(), "scripted_action");
     }
 
-    void testSimpleEndTag()
+    static void testSimpleEndTag()
     {
         TMxpTagParser parser;
         QString tagText = R"(<tag_name desc="blabla">tag content</tag_name>)";
@@ -78,7 +77,7 @@ private slots:
         QCOMPARE(list[1]->asEndTag()->getName(), "tag_name");
     }
 
-    void testSimpleTagQuotedSlash()
+    static void testSimpleTagQuotedSlash()
     {
         TMxpTagParser parser;
         QString tagText = R"(<tag_name desc="a/b">)";
@@ -91,7 +90,7 @@ private slots:
         QCOMPARE(list[0]->asStartTag()->getAttributeValue("desc"), "a/b");
     }
 
-    void testParseUrl()
+    static void testParseUrl()
     {
         QString tagText = R"(<A HREF="https://www.google.com/search?q=mudlet">)";
         auto node = parseNode(tagText);
@@ -102,7 +101,7 @@ private slots:
         QCOMPARE(node->asStartTag()->getAttributeValue("HREF"), "https://www.google.com/search?q=mudlet");
     }
 
-    void testParseWithEqualSymbol()
+    static void testParseWithEqualSymbol()
     {
         QString tagText = R"(<SEND HREF="1+1=2">)";
         auto node = parseNode(tagText);
@@ -113,7 +112,7 @@ private slots:
         QCOMPARE(node->asStartTag()->getAttributeValue("HREF"), "1+1=2");
     }
 
-    void testParseWithQuotes()
+    static void testParseWithQuotes()
     {
         TMxpTagParser parser;
         QList<QSharedPointer<MxpNode>> list = parser.parseToMxpNodeList("  <!EN quot '\"'>", true);
@@ -124,7 +123,7 @@ private slots:
         QCOMPARE(list[0]->asStartTag()->getAttrName(1), "\"");
     }
 
-    void testParseToNodes()
+    static void testParseToNodes()
     {
         TMxpTagParser parser;
         QList<QSharedPointer<MxpNode>> list = parser.parseToMxpNodeList("<COLOR fore=red><B>");
@@ -136,7 +135,7 @@ private slots:
         QCOMPARE(list[1]->asStartTag()->getName(), "B");
     }
 
-    void testParseToNodesWithText()
+    static void testParseToNodesWithText()
     {
         TMxpTagParser parser;
         QList<QSharedPointer<MxpNode>> list = parser.parseToMxpNodeList("<SEND>north</SEND>");
@@ -150,7 +149,7 @@ private slots:
         QCOMPARE(list[2]->asEndTag()->getName(), "SEND");
     }
 
-    void testParseToNodesIgnoreText()
+    static void testParseToNodesIgnoreText()
     {
         TMxpTagParser parser;
         QList<QSharedPointer<MxpNode>> list = parser.parseToMxpNodeList("  <COLOR fore=red>asafsdf<B>asdf", true);
@@ -162,7 +161,7 @@ private slots:
         QCOMPARE(list[1]->asStartTag()->getName(), "B");
     }
 
-    void testParseToNodesWithClosedAndEndTag()
+    static void testParseToNodesWithClosedAndEndTag()
     {
         TMxpTagParser parser;
         QList<QSharedPointer<MxpNode>> list = parser.parseToMxpNodeList("<RNum 2 /><SEND>text</ SEND>");
@@ -176,7 +175,7 @@ private slots:
         QCOMPARE(list[3].get()->asEndTag()->getName(), "SEND");
     }
 
-    void testParseToNodesWithTextAndSpaces()
+    static void testParseToNodesWithTextAndSpaces()
     {
         TMxpTagParser parser;
         QList<QSharedPointer<MxpNode>> list = parser.parseToMxpNodeList("<SEND href=\"&text;\">  go north...  </SEND>");
@@ -191,7 +190,7 @@ private slots:
         QCOMPARE(list[2]->asEndTag()->getName(), "SEND");
     }
 
-    void testComplexElementDefinitionToTag()
+    static void testComplexElementDefinitionToTag()
     {
         QString tagLine =
                 "<!EL get \"<send href='examine &#34;&name;&#34;|get &#34;&name;&#34;' hint='Right mouse click to act on this item|Get &desc;|Examine &desc;|Look in &desc;' expire=get>\" ATT='name desc'>";
@@ -218,7 +217,7 @@ private slots:
         QCOMPARE(sendTag->getName(), "send");
     }
 
-    void testMxpTagParser()
+    static void testMxpTagParser()
     {
         TMxpTagParser parser;
 
@@ -239,7 +238,7 @@ private slots:
         QCOMPARE(tag->getAttributeValue("FLAG"), "RoomExit");
     }
 
-    void testAttrDefinition()
+    static void testAttrDefinition()
     {
         QString tagLine = R"(<!ATTLIST boldtext 'color=red background=white flags'>)";
         TMxpTagParser parser;
@@ -254,7 +253,7 @@ private slots:
         QCOMPARE(tag->getAttribute(1).getName(), "color=red background=white flags");
     }
 
-    void testSimpleElementDefinition()
+    static void testSimpleElementDefinition()
     {
         QString tagLine = "<!EL RExit FLAG=RoomExit>";
 
@@ -266,7 +265,7 @@ private slots:
         QCOMPARE(node->asStartTag()->getAttributeValue("FLAG"), "RoomExit");
     }
 
-    void testSimpleQuotedElementDefition()
+    static void testSimpleQuotedElementDefition()
     {
         QString tagLine = "<!EL RExit FLAG='RoomExit'>";
 
@@ -278,7 +277,7 @@ private slots:
         QCOMPARE(node->asStartTag()->getAttributeValue("FLAG"), "RoomExit");
     }
 
-    void testElementDefinitionWithExtraSpaces()
+    static void testElementDefinitionWithExtraSpaces()
     {
         QString tagLine = "<!EL RExit   FLAG=RoomExit>";
 
@@ -290,7 +289,7 @@ private slots:
         QCOMPARE(node->asStartTag()->getAttributeValue("FLAG"), "RoomExit");
     }
 
-    void testElementDefinitionQuotedAttributeSpaces()
+    static void testElementDefinitionQuotedAttributeSpaces()
     {
         QString tagLine = "<!EL sHp FLAG='Set Hp'>";
 
@@ -302,7 +301,7 @@ private slots:
         QCOMPARE(node->asStartTag()->getAttributeValue("FLAG"), "Set Hp");
     }
 
-    void testAccessAttrCaseInsensitive()
+    static void testAccessAttrCaseInsensitive()
     {
         TMxpTagParser parser;
         QString tagLine = "<!EL sHp FLAG='Set Hp'>";
@@ -318,7 +317,7 @@ private slots:
         QCOMPARE(tag->getAttributeValue("flag"), "Set Hp");
     }
 
-    void testElementDefinitionQuotesInQuotes()
+    static void testElementDefinitionQuotesInQuotes()
     {
         QString tagLine = "<!EL x FLAG='Quote \" ex'>";
 
@@ -330,7 +329,7 @@ private slots:
         QCOMPARE(node->asStartTag()->getAttributeValue("FLAG"), "Quote \" ex");
     }
 
-    void testCompleteElement()
+    static void testCompleteElement()
     {
         QString tagLine = R"(<FRAME Name="Map" Left="-20c" Top="0" Width="20c" Height="20c">)";
 
@@ -346,7 +345,7 @@ private slots:
         QCOMPARE(tag->getAttributeValue("Height"), "20c");
     }
 
-    void testEndTag()
+    static void testEndTag()
     {
         auto node = parseNode("</V>");
         QVERIFY(node->isEndTag());
@@ -356,7 +355,7 @@ private slots:
         QCOMPARE(endTag->asStartTag(), nullptr);
     }
 
-    void testParseEndTag()
+    static void testParseEndTag()
     {
         auto node = parseNode("</V>");
         QVERIFY(node);
@@ -368,7 +367,7 @@ private slots:
         QVERIFY(!tag->asStartTag());
     }
 
-    void testStartTagClosed()
+    static void testStartTagClosed()
     {
         auto node = parseNode("<RNum 212 />");
         QVERIFY(node);
@@ -382,7 +381,7 @@ private slots:
         QCOMPARE(tag->getAttributesCount(), 1);
     }
 
-    void testQuotedAttrValue()
+    static void testQuotedAttrValue()
     {
         auto node = parseNode("<color fore='red' back=\"blue\">");
 
