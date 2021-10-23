@@ -57,10 +57,10 @@ public:
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
-    static uint getGraphemeBaseCharacter(const QString& str) ;
-    void drawLine(QPainter& painter, int lineNumber, int lineOfScreen, int *offset = nullptr) const;
+    static uint getGraphemeBaseCharacter(const QString& str);
+    void drawLine(QPainter& painter, int lineNumber, int lineOfScreen, int* offset = nullptr) const;
     int drawGraphemeBackground(QPainter&, QVector<QColor>&, QVector<QRect>&, QVector<QString>&, QVector<int>&, QPoint&, const QString&, const int, TChar&) const;
-    void drawGraphemeForeground(QPainter&, const QColor&, const QRect&, const QString&, TChar &) const;
+    void drawGraphemeForeground(QPainter&, const QColor&, const QRect&, const QString&, TChar&) const;
     void showNewLines();
     void forceUpdate();
     void needUpdate(int, int);
@@ -83,8 +83,8 @@ public:
     void focusInEvent(QFocusEvent* event) override;
     int imageTopLine();
     int bufferScrollDown(int lines);
-// Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
-    void setConsoleBgColor(int r, int g, int b, int a ) { mBgColor = QColor(r, g, b, a); }
+    // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
+    void setConsoleBgColor(int r, int g, int b, int a) { mBgColor = QColor(r, g, b, a); }
     void resetHScrollbar() { mScreenOffset = 0; mMaxHRange = 0; }
     int getScreenHeight() { return mScreenHeight; }
     void searchSelectionOnline();
@@ -112,7 +112,7 @@ public:
     QRegion mSelectedRegion;
     bool mShowTimeStamps;
     int mWrapAt{};
-    int mWrapIndentCount {};
+    int mWrapIndentCount{};
 
 public slots:
     void slot_toggleTimeStamps(const bool);
@@ -138,7 +138,7 @@ private:
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
-    int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool *isOutOfbounds, bool *isOverTimeStamp = nullptr) const;
+    int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool* isOutOfbounds, bool* isOverTimeStamp = nullptr) const;
     int getGraphemeWidth(uint unicode) const;
     void normaliseSelection();
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
@@ -159,9 +159,9 @@ private:
     int mLastRenderBottom;
     bool mMouseTracking;
     // 1/2/3 for single/double/triple click seen so far
-    int  mMouseTrackLevel;
-    bool mCtrlSelecting {};
-    int mCtrlDragStartY {};
+    int mMouseTrackLevel;
+    bool mCtrlSelecting{};
+    int mCtrlDragStartY{};
     QPoint mDragStart, mDragSelectionEnd;
     int mOldScrollPos{};
     // top-left point of the selection

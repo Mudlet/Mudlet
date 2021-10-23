@@ -32,7 +32,7 @@ public:
 
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
 
-    static void setAttribute(TMxpClient& client, MxpTag* tag, bool value) ;
+    static void setAttribute(TMxpClient& client, MxpTag* tag, bool value);
 };
 
 #endif //MUDLET_TMXPFORMATTINGTAGSHANDLER_H
