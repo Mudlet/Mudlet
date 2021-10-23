@@ -136,7 +136,8 @@ local packages = {
   "GMCP.lua",
   "KeyCodes.lua",
   "CursorShapes.lua",
-  "TTSValues.lua"
+  "TTSValues.lua",
+  "IDManager.lua",
 }
 
 if debugLoading then
