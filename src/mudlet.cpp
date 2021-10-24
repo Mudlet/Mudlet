@@ -2401,7 +2401,7 @@ void mudlet::updateDiscordNamedIcon()
 
     bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
     
-    mpActionDiscord->setIconText(gameName.isEmpty() ? QStringLiteral("Discord") : gameName);
+    mpActionDiscord->setIconText(gameName.isEmpty() ? QStringLiteral("Discord") : QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90));
 
     if (mpActionMudletDiscord->isVisible() != hasCustom) {
         mpActionMudletDiscord->setVisible(hasCustom);
