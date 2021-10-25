@@ -425,8 +425,9 @@ local speedwalkShow
 --- Stops a speedwalk and clears the walklist
 function stopSpeedwalk()
   local active = pauseSpeedwalk()
-  if active then 
+  if active then
     speedwalkList = {}
+    raiseEvent("sysSpeedwalkStopped")
     return true
   end
   return nil, "stopSpeedwalk(): no active speedwalk found"
@@ -439,6 +440,7 @@ function pauseSpeedwalk()
   if speedwalkTimerID then
     killTimer(speedwalkTimerID)
     speedwalkTimerID = false
+    raiseEvent("sysSpeedwalkPaused")
     return true
   end
   return nil, "pauseSpeedwalk(): no active speedwalk found"
@@ -467,6 +469,8 @@ function speedwalktimer(walklist, walkdelay, show)
     speedwalkTimerID = tempTimer(walkdelay, function()
       speedwalktimer(walklist, walkdelay, show)
     end)
+  else
+    raiseEvent("sysSpeedwalkFinished")
   end
 end
 
