@@ -2786,6 +2786,7 @@ continue_walk = function(new_room)
         -- check to see if we are done
         if #map.walkDirs == 0 then
             walking = false
+            raiseEvent("sysSpeedwalkFinished")
         end
     end
     -- make tempTimer to send next command if necessary
@@ -2843,6 +2844,7 @@ function map.speedwalk(roomID, walkPath, walkDirs)
             send(dir)
         end
         walking = false
+        raiseEvent("sysSpeedwalkFinished")
     end
 end
 
