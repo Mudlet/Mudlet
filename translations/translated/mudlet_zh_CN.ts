@@ -854,7 +854,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2817"/>
       <source>Set exits...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>设置出口...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2823"/>
@@ -866,31 +866,31 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2836"/>
       <source>Set color...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>设置颜色...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2842"/>
       <source>Set symbol...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>设置符号...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2849"/>
       <source>Spread...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>展开...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2856"/>
       <source>Shrink...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>收缩...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2877"/>
       <source>Set weight...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>设置权重...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2889"/>
