@@ -90,7 +90,7 @@ QWidget* RoomIdLineEditDelegate::createEditor(QWidget* parent, const QStyleOptio
             if (text == mpDlgRoomExits->mSpecialExitRoomIdPlaceholder) {
                 // If the placeholder text was being shown "for real" then clear it now
                 // so that the greyed out version gets shown - and it is easier to enter
-                // just a plain number (no need to clear the real placehoder text)
+                // just a plain number (no need to clear the real placeholder text)
                 text.clear();
             }
             TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
