@@ -406,7 +406,7 @@ mudlet::mudlet()
     mpActionDiscord->setIconText(QStringLiteral("Discord"));
     mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
 
-    mpActionMudletDiscord = new QAction(QIcon(QStringLiteral(":/icons/mudlet_discord.png")), tr("Mudlet Discord"), this);
+    mpActionMudletDiscord = new QAction(QIcon(QStringLiteral(":/icons/mudlet_discord.png")), tr("Mudlet chat"), this);
     mpActionMudletDiscord->setToolTip(tr("Open a link to the Mudlet server on Discord"));
     mpMainToolBar->addAction(mpActionMudletDiscord);
     mpActionMudletDiscord->setObjectName(QStringLiteral("mudlet_discord"));
@@ -2401,7 +2401,7 @@ void mudlet::updateDiscordNamedIcon()
 
     bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
     
-    mpActionDiscord->setIconText(gameName.isEmpty() ? QStringLiteral("Discord") : gameName);
+    mpActionDiscord->setIconText(gameName.isEmpty() ? QStringLiteral("Discord") : QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90));
 
     if (mpActionMudletDiscord->isVisible() != hasCustom) {
         mpActionMudletDiscord->setVisible(hasCustom);
