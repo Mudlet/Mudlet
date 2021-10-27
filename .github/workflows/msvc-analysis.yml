@@ -1,0 +1,145 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+#
+# Find more information at:
+# https://github.com/microsoft/msvc-code-analysis-action
+
+name: Microsoft C++ Code Analysis
+
+on:
+  push:
+    # branches: [development, main]
+  schedule:
+    - cron: '0 7 * * 3'
+  workflow_dispatch:
+
+env:
+  BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
+  BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
+
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: windows-latest
+
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        # We must fetch at least the immediate parents so that if this is
+        # a pull request then we can checkout the head.
+        fetch-depth: 2
+        submodules: true
+
+    - name: Restore Qt cache
+      uses: actions/cache@v2.1.6
+      id: cache-qt
+      with:
+        path: ${{runner.workspace}}/Qt/${{matrix.qt}}
+        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+      with:
+        version: ${{matrix.qt}}
+        dir: ${{runner.workspace}}
+        arch: win64_mingw81 # this key is relevant only for windows
+        cached: ${{steps.cache-qt.outputs.cache-hit}}
+        aqtversion: '==1.1.2'
+
+    - name: Restore Boost cache
+      uses: actions/cache@v2.1.6
+      id: cache-boost
+      with:
+        path: ${{env.BOOST_ROOT}}
+        key: boost
+
+    - name: Install Boost
+      if: steps.cache-boost.outputs.cache-hit != 'true'
+      run: |
+        if [ "$OS" == "Windows_NT" ]; then
+          # fix up paths to be forward slashes consistently
+          BOOST_ROOT=$(echo $BOOST_ROOT | sed 's/\\/\//g')
+        fi
+        mkdir -p $BOOST_ROOT
+        curl --progress-bar --location --output $BOOST_ROOT/download.tar.bz2 $BOOST_URL
+        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar.bz2 -y -bd
+        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar -y -bd
+        cd $BOOST_ROOT && cp -r boost_*/* .
+        rm -rf boost_*/* download.tar.bz2 download.tar
+      shell: bash
+
+    # workaround a poor interaction between github actions/cmake/vcpkg, see https://github.com/lukka/run-vcpkg/issues/88#issuecomment-885758902
+    - name: Use CMake 3.20.1
+      uses: lukka/get-cmake@v3.20.1
+
+    # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
+    - name: Restore from cache and run vcpkg
+      uses: lukka/run-vcpkg@v7
+      env:
+        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
+      with:
+        vcpkgArguments: '@${{env.vcpkgResponseFile}}'
+        vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
+        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
+
+    - name: (Windows) Install non-vcpkg dependencies
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: |
+        # Install dependencies not available on machine
+        $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
+        $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
+        echo "MINGW_BASE_DIR=$env:MINGW_BASE_DIR" >> $env:GITHUB_ENV
+        . ${{github.workspace}}\CI\appveyor.functions.ps1
+
+        # Libzip install complains when \bin is missing
+        New-Item -ItemType Directory -Path "$env:MINGW_BASE_DIR\bin"
+
+        SetQtBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
+        SetMingwBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
+        SetLuarocksPath "$env:WORKING_BASE_DIR\verbose_output.log"
+        $NoShPath = filterPathForSh
+
+        CheckAndInstallZlib
+        CheckAndInstallLibzip
+
+    - name: (Linux/macOS) Set build info
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      run: |
+        ${{github.workspace}}/CI/travis.validate_deployment.sh
+        ${{github.workspace}}/CI/travis.set-build-info.sh
+
+    - name: Build Mudlet
+      uses: lukka/run-cmake@v3
+      with:
+        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+        useVcpkgToolchainFile: true
+        buildDirectory: '${{runner.workspace}}/b/ninja'
+        cmakeAppendedArgs: >-
+          -G Ninja
+          -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
+          -DVCPKG_APPLOCAL_DEPS=OFF
+      env:
+        NINJA_STATUS: '[%f/%t %o/sec] '
+
+    # Run Microsoft Visual C++ code analysis
+    - name: Initialize MSVC Code Analysis
+      uses: microsoft/msvc-code-analysis-action@v0.0.1
+      # Provide a unique ID to access the sarif output path
+      id: run-analysis
+      with:
+        cmakeBuildDirectory: ${{runner.workspace}}/b/ninja
+        # Ruleset file that will determine what checks will be run
+        ruleset: NativeRecommendedRules.ruleset
+
+    # Upload SARIF file to GitHub Code Scanning Alerts
+#    - name: Upload SARIF to Github
+#      uses: github/codeql-action/upload-sarif@v1
+#      with:
+#        sarif_file: ${{ steps.run-analysis.outputs.sarif }}
