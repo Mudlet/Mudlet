@@ -723,15 +723,13 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         if (mudlet::self()->showMapAuditErrors()) {
             QString alertMsg = tr("[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
                                   " Look for further messages related to the rooms that are supposed\n"
-                                  " to be in this/these area(s)...",
-                                  "Making use of %n to allow quantity dependent message form 8-) !",
+                                  " to be in this/these area(s)...", "",
                                   missingAreasNeeded.count());
             mpMap->postMessage(alertMsg);
         }
         mpMap->appendErrorMsgWithNoLf(tr("[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
                                          " Look for further messages related to the rooms that is/are supposed to\n"
-                                         " be in this/these area(s)...",
-                                         "Making use of %n to allow quantity dependent message form 8-) !",
+                                         " be in this/these area(s)...", "",
                                          missingAreasNeeded.count()),
                                       true);
 
@@ -1060,14 +1058,14 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                                               true);
                 }
                 if (mudlet::self()->showMapAuditErrors()) {
-                    QString infoMsg = tr("[ INFO ]  - In area with id: %1 there were %n rooms missing from those it\n"
+                    QString infoMsg = tr("[ INFO ]  - In area with id: %1 there were %n room(s) missing from those it\n"
                                          "should be recording as possessing. They are:\n%2.\nThey have been added.", "", missingRooms.count())
                                               .arg(itArea.key())
                                               .arg(roomList.join(QStringLiteral(", ")));
                     mpMap->postMessage(infoMsg);
                 }
                 mpMap->appendAreaErrorMsg(itArea.key(),
-                                          tr("[ INFO ]  - In this area there were %n rooms missing from those it should be recorded as possessing."
+                                          tr("[ INFO ]  - In this area there were %n room(s) missing from those it should be recorded as possessing."
                                              "  They are: %1."
                                              "  They have been added.", "", missingRooms.count())
                                                   .arg(roomList.join(QStringLiteral(", "))),
