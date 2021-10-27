@@ -32,7 +32,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="288"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Brak lokacji w mapie - załaduj inną lub zacznij mapowanie od początku.</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
@@ -658,7 +658,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="1250"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Brak lokacji w mapie - załaduj inną lub zacznij mapowanie od początku.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2252"/>
@@ -856,55 +856,55 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2805"/>
       <source>Create new room here</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Stwórz nową lokację w tym miejscu</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2817"/>
       <source>Set exits...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Ustaw wyjścia...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2823"/>
       <source>Create exit line...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Utwórz linię wyjścia...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2836"/>
       <source>Set color...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Ustaw kolor...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2842"/>
       <source>Set symbol...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Ustaw symbol...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2849"/>
       <source>Spread...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Rozprosz...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2856"/>
       <source>Shrink...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Ścieśnij...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2877"/>
       <source>Set weight...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Ustaw wagę...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2889"/>
       <source>Move to position...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Przenieś na pozycję...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2890"/>
@@ -1937,7 +1937,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3100"/>
       <source>could not open file</source>
-      <translation type="unfinished"/>
+      <translation>nie można otworzyć pliku</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3110"/>
@@ -1973,7 +1973,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3267"/>
       <source>aborted by user</source>
-      <translation type="unfinished"/>
+      <translation>przerwane przez użytkownika</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3156"/>
