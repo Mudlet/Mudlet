@@ -18,12 +18,15 @@ on:
 env:
   BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
   BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
-
+  os: windows-2019
+  buildname: 'windows'
+  triplet: x64-mingw-dynamic
+  qt: '5.14.2'
 
 jobs:
   analyze:
     name: Analyze
-    runs-on: windows-latest
+    runs-on: ${{env.os}}
 
 
     steps:
@@ -39,13 +42,13 @@ jobs:
       uses: actions/cache@v2.1.6
       id: cache-qt
       with:
-        path: ${{runner.workspace}}/Qt/${{matrix.qt}}
-        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
+        path: ${{runner.workspace}}/Qt/${{env.qt}}
+        key: ${{env.os}}-qt-${{env.qt}}-cache
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
       with:
-        version: ${{matrix.qt}}
+        version: ${{env.qt}}
         dir: ${{runner.workspace}}
         arch: win64_mingw81 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
@@ -81,7 +84,7 @@ jobs:
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v7
       env:
-        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
+        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{env.triplet}}-dependencies
       with:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
