@@ -18,7 +18,7 @@ on:
 env:
   BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
   BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
-  os: windows-2019
+  os: windows-2019 # update on line 29 as well
   buildname: 'windows'
   triplet: x64-mingw-dynamic
   qt: '5.14.2'
@@ -26,7 +26,7 @@ env:
 jobs:
   analyze:
     name: Analyze
-    runs-on: ${{env.os}}
+    runs-on: windows-2019 # update on line 21 as well
 
 
     steps:
