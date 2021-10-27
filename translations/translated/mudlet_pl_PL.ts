@@ -1932,7 +1932,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3092"/>
       <source>import or export already in progress</source>
-      <translation type="unfinished"/>
+      <translation>import lub eksport jest już w toku</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3100"/>
@@ -1942,12 +1942,12 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3110"/>
       <source>could not parse file, reason: &quot;%1&quot; at offset %2</source>
-      <translation type="unfinished"/>
+      <translation>nie można przetworzyć pliku, powód: &quot;%1&quot; na pozycji %2</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3119"/>
       <source>empty Json file, no map data detected</source>
-      <translation type="unfinished"/>
+      <translation>pusty plik JSON, nie wykryto danych mapy</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3134"/>
@@ -1968,7 +1968,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="3171"/>
       <source>Map JSON import</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>Import mapy JSON</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3267"/>
@@ -1980,7 +1980,8 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="3417"/>
       <source>Importing JSON map data to %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>Importowanie danych mapy JSON do %1
+Obszary: %2 z: %3   Lokacji: %4 z: %5   Etykiety: %6 z: %7...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1180"/>
