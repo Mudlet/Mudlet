@@ -916,25 +916,25 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2896"/>
       <source>Move to area...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Przenieś do obszaru...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2901"/>
       <source>Create label...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Utwórz etykietę...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2902"/>
       <source>Create label to show text or an image</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Utwórz etykietę, aby wyświetlić tekst lub obraz</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2908"/>
       <source>Set player location</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Ustaw lokalizację gracza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2909"/>
