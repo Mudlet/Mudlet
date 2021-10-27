@@ -1347,7 +1347,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             connect(mpContextMenuAnalyser, &QAction::hovered, this, &TTextEdit::slot_analyseSelection);
             mpContextMenuAnalyser->setToolTip(QStringLiteral("<p>%1</p>").arg(
                 tr("Hover on this item to display the Unicode codepoints in the selection <i>(only the first line!)</i>",
-                    "Codepoint refers to the actual unicode number of a character: https://en.wikipedia.org/wiki/Unicode#Architecture_and_terminology/")));
+                   "Codepoint refers to the actual unicode number of a character: https://en.wikipedia.org/wiki/Unicode#Architecture_and_terminology")));
             popup->addSeparator();
             popup->addAction(mpContextMenuAnalyser);
         }
