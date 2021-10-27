@@ -20,7 +20,7 @@ env:
   BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
   os: windows-2019 # update on line 29 as well
   buildname: 'windows'
-  triplet: x64-mingw-dynamic
+  triplet: x64-windows
   qt: '5.14.2'
 
 jobs:
