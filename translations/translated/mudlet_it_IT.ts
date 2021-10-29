@@ -9049,7 +9049,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/mudlet.cpp" line="409"/>
       <source>Mudlet chat</source>
-      <translation type="unfinished"/>
+      <translation>Chat di Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="410"/>
