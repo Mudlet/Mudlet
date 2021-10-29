@@ -923,7 +923,7 @@ void dlgRoomExits::slot_nw_textEdited(const QString& text)
 {
     normalExitEdited(text, nw, noroute_nw, stub_nw, weight_nw,
                      doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room northwest of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room northwest of this one.")),
                      singleParagraph.arg(tr("Set the number of the room northwest of this one.")));
     slot_checkModified();
 }
@@ -932,7 +932,7 @@ void dlgRoomExits::slot_n_textEdited(const QString& text)
 {
     normalExitEdited(text, n, noroute_n, stub_n, weight_n,
                      doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room north of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room north of this one.")),
                      singleParagraph.arg(tr("Set the number of the room north of this one.")));
     slot_checkModified();
 }
@@ -941,7 +941,7 @@ void dlgRoomExits::slot_ne_textEdited(const QString& text)
 {
     normalExitEdited(text, ne, noroute_ne, stub_ne, weight_ne,
                      doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room northeast of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room northeast of this one.")),
                      singleParagraph.arg(tr("Set the number of the room northeast of this one.")));
     slot_checkModified();
 }
@@ -950,7 +950,7 @@ void dlgRoomExits::slot_up_textEdited(const QString& text)
 {
     normalExitEdited(text, up, noroute_up, stub_up, weight_up,
                      doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room up from this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room up from this one.")),
                      singleParagraph.arg(tr("Set the number of the room up from this one.")));
     slot_checkModified();
 }
@@ -959,7 +959,7 @@ void dlgRoomExits::slot_w_textEdited(const QString& text)
 {
     normalExitEdited(text, w, noroute_w, stub_w, weight_w,
                      doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room west of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room west of this one.")),
                      singleParagraph.arg(tr("Set the number of the room west of this one.")));
     slot_checkModified();
 }
@@ -968,7 +968,7 @@ void dlgRoomExits::slot_e_textEdited(const QString& text)
 {
     normalExitEdited(text, e, noroute_e, stub_e, weight_e,
                      doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room east of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room east of this one.")),
                      singleParagraph.arg(tr("Set the number of the room east of this one.")));
     slot_checkModified();
 }
@@ -977,7 +977,7 @@ void dlgRoomExits::slot_down_textEdited(const QString& text)
 {
     normalExitEdited(text, down, noroute_down, stub_down, weight_down,
                      doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room down from this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room down from this one.")),
                      singleParagraph.arg(tr("Set the number of the room down from this one.")));
     slot_checkModified();
 }
@@ -986,7 +986,7 @@ void dlgRoomExits::slot_sw_textEdited(const QString& text)
 {
     normalExitEdited(text, sw, noroute_sw, stub_sw, weight_sw,
                      doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room southwest of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room southwest of this one.")),
                      singleParagraph.arg(tr("Set the number of the room southwest of this one.")));
     slot_checkModified();
 }
@@ -995,7 +995,7 @@ void dlgRoomExits::slot_s_textEdited(const QString& text)
 {
     normalExitEdited(text, s, noroute_s, stub_s, weight_s,
                      doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room south of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room south of this one.")),
                      singleParagraph.arg(tr("Set the number of the room south of this one.")));
     slot_checkModified();
 }
@@ -1004,7 +1004,7 @@ void dlgRoomExits::slot_se_textEdited(const QString& text)
 {
     normalExitEdited(text, se, noroute_se, stub_se, weight_se,
                      doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room southeast of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room southeast of this one.")),
                      singleParagraph.arg(tr("Set the number of the room southeast of this one.")));
     slot_checkModified();
 }
@@ -1013,7 +1013,7 @@ void dlgRoomExits::slot_in_textEdited(const QString& text)
 {
     normalExitEdited(text, in, noroute_in, stub_in, weight_in,
                      doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room in from this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room in from this one.")),
                      singleParagraph.arg(tr("Set the number of the room in from this one.")));
     slot_checkModified();
 }
@@ -1022,7 +1022,7 @@ void dlgRoomExits::slot_out_textEdited(const QString& text)
 {
     normalExitEdited(text, out, noroute_out, stub_out, weight_out,
                      doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room out from this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room out from this one."))),
                      singleParagraph.arg(tr("Set the number of the room out from this one.")));
     slot_checkModified();
 }
