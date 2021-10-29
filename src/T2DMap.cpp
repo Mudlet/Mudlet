@@ -2781,7 +2781,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     getCenterSelection();
             }
 
-            if (!mpMap->mpRoomDB) {
+            if (mpMap->mpRoomDB->isEmpty()) {
                 // No map loaded
                 auto createMap = new QAction(tr("Create new map", "2D Mapper context menu (no map found) item"), this);
                 connect(createMap, &QAction::triggered, this, &T2DMap::slot_newMap);
