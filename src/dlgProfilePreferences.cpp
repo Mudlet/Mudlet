@@ -2019,7 +2019,7 @@ void dlgProfilePreferences::loadMap()
                            this,
                            tr("Load Mudlet map"),
                            mapSaveLoadDirectory(pHost),
-                           tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)",
+                           tr("Mudlet map (*.dat *.json);;Xml map data (*.xml);;Any file (*)",
                               "Do not change extensions (in braces) as they are used programmatically"));
     if (fileName.isEmpty()) {
         return;
@@ -2031,26 +2031,25 @@ void dlgProfilePreferences::loadMap()
     bool showAuditErrors = mudlet::self()->showMapAuditErrors();
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
+    bool success = false;
+    label_mapFileActionResult->setText(tr("Loading map - please wait..."));
+    qApp->processEvents(); // Needed to make the above message show up when loading big maps
     if (fileName.endsWith(QStringLiteral(".xml"), Qt::CaseInsensitive)) {
         label_mapFileActionResult->setText(tr("Importing map - please wait..."));
         qApp->processEvents(); // Needed to make the above message show up when loading big maps
-
-        if (pHost->mpConsole->importMap(fileName)) {
-            label_mapFileActionResult->setText(tr("Imported map from %1.").arg(fileName));
-        } else {
-            label_mapFileActionResult->setText(tr("Could not import map from %1.").arg(fileName));
-        }
+        success = pHost->mpConsole->importMap(fileName);
+    } else if (fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
+        success = pHost->mpMap->readJsonMapFile(fileName).first;
     } else {
-        label_mapFileActionResult->setText(tr("Loading map - please wait..."));
-        qApp->processEvents(); // Needed to make the above message show up when loading big maps
-
-
-        if (pHost->mpConsole->loadMap(fileName)) {
-            label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
-        } else {
-            label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
-        }
+       success = pHost->mpConsole->loadMap(fileName);
     }
+
+    if (success) {
+        label_mapFileActionResult->setText(tr("Imported map from %1.").arg(fileName));
+    } else {
+        label_mapFileActionResult->setText(tr("Could not import map from %1.").arg(fileName));
+    }
+
     QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 
     // Restore setting immediately before we used it
@@ -2065,12 +2064,12 @@ void dlgProfilePreferences::saveMap()
     }
 
     QString fileName =
-            QFileDialog::getSaveFileName(this, tr("Save Mudlet map"), mapSaveLoadDirectory(pHost), tr("Mudlet map (*.dat)", "Do not change the extension text (in braces) - it is needed programmatically!"));
+            QFileDialog::getSaveFileName(this, tr("Save Mudlet map"), mapSaveLoadDirectory(pHost), tr("Mudlet map (*.dat *.json);;", "Do not change the extension text (in braces) - it is needed programmatically!"));
     if (fileName.isEmpty()) {
         return;
     }
 
-    if (!fileName.endsWith(QStringLiteral(".dat"), Qt::CaseInsensitive)) {
+    if (!fileName.endsWith(QStringLiteral(".dat"), Qt::CaseInsensitive) && !fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
         fileName.append(QStringLiteral(".dat"));
     }
 
@@ -2084,7 +2083,14 @@ void dlgProfilePreferences::saveMap()
     bool showAuditErrors = mudlet::self()->showMapAuditErrors();
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
-    if (pHost->mpConsole->saveMap(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt())) {
+    bool success = false;
+    if (!fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
+        success = pHost->mpConsole->saveMap(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt());
+    } else {
+        success = pHost->mpMap->writeJsonMapFile(fileName).first;
+    }
+
+    if (success) {
         label_mapFileActionResult->setText(tr("Saved map to %1.").arg(fileName));
     } else {
         label_mapFileActionResult->setText(tr("Could not save map to %1.").arg(fileName));
