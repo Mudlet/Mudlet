@@ -318,7 +318,6 @@
     "replaceWildcard": "replaceWildcard(which, replacement, [keepcolor])",
     "resetBackgroundImage": "resetBackgroundImage([windowName])",
     "resetCmdLineAction": "resetCmdLineAction(commandLineName)",
-    "resetDiscordData": "resetDiscordData()",
     "resetFormat": "resetFormat()",
     "resetLabelCursor": "resetLabelCursor(labelName)",
     "resetLabelToolTip": "resetLabelToolTip(labelName)",
