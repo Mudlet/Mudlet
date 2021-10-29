@@ -6535,17 +6535,17 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="809"/>
       <source>Exit to &quot;%1&quot; in area: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Ausgang nach &quot;%1&quot; in Gebiet: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="825"/>
       <source>Exit to unnamed room in area: &quot;%1&quot;, is valid.</source>
-      <translation type="unfinished"/>
+      <translation>Ausgang zu unbenanntem Raum in Gebiet &quot;%1&quot; ist gültig.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="833"/>
       <source>Exit to unnamed room is valid.</source>
-      <translation type="unfinished"/>
+      <translation>Ausgang zu unbenanntem Raum ist gültig.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="926"/>
@@ -8408,7 +8408,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/ui/main_window.ui" line="334"/>
       <source>&lt;p&gt;Open a link to Discord.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Öffne einen Link zu Discord.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="342"/>
@@ -9003,12 +9003,12 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/mudlet.cpp" line="409"/>
       <source>Mudlet chat</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet Chat</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="410"/>
       <source>Open a link to the Mudlet server on Discord</source>
-      <translation type="unfinished"/>
+      <translation>Öffne einen Link zum Mudlet-Server auf Discord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="452"/>
