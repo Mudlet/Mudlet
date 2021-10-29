@@ -1022,7 +1022,7 @@ void dlgRoomExits::slot_out_textEdited(const QString& text)
 {
     normalExitEdited(text, out, noroute_out, stub_out, weight_out,
                      doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out,
-                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room out from this one."))),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room out from this one.")),
                      singleParagraph.arg(tr("Set the number of the room out from this one.")));
     slot_checkModified();
 }
