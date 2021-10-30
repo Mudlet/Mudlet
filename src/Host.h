@@ -260,8 +260,7 @@ public:
 
     void startSpeedWalk();
     void startSpeedWalk(int sourceRoom, int targetRoom);
-    void reloadModule(const QString& reloadModuleName);
-    void syncModule(const QString& reloadModuleName, const QString& syncHostName);
+    void reloadModule(const QString& reloadModuleName, const QString& syncHostName = QString());
     std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String &value);
     std::pair<bool, QString> getModuleSync(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
@@ -603,6 +602,7 @@ public:
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
     bool mEnableTextAnalyzer;
+    bool mWritingModules = false;
     // Set from profile preferences, if the timer interval is less
     // than this then the normal reoccuring debug output of the entire command
     // and script for any timer with a timeout LESS than this is NOT shown
@@ -633,9 +633,6 @@ signals:
     void signal_changeDebugShowAllProblemCodepoints(const bool);
 
 private slots:
-    void slot_saveModules(int sync, bool backup = true);
-    void slot_updateModuleZips(const QStringList &entry, const QString &moduleName);
-    void slot_reloadModules();
     void slot_purgeTemps();
 
 private:
@@ -649,6 +646,12 @@ private:
     void toggleMapperVisibility();
     void createMapper(const bool);
     void removePackageInfo(const QString &packageName, const bool);
+    void createModuleBackup(const QString &filename, const QString& saveName);
+    void writeModules(const QStringList &entry, const QString &moduleName, QString &filename);
+    void waitForHostXmlSave();
+    void saveModules(int sync, bool backup = true);
+    void updateModuleZips(const QString &zipName, const QString &moduleName);
+    void reloadModules();
 
     QFont mDisplayFont;
     QStringList mModulesToSync;
@@ -706,6 +709,8 @@ private:
 
     // keeps track of all of the array writers we're currently operating with
     QHash<QString, XMLexport*> writers;
+
+    QFuture<void> moduleFuture;
 
     // Will be null/empty if is to use Mudlet's default/own presence
     QString mDiscordApplicationID;

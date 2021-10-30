@@ -192,11 +192,8 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
         helpPackage.append_child("helpURL").text().set("");
     }
 
-    auto future = QtConcurrent::run(this, &XMLexport::saveXml, fileName);
-    auto watcher = new QFutureWatcher<bool>;
-    QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(fileName); });
-    watcher->setFuture(future);
-    saveFutures.append(future);
+    saveXml(fileName);
+    mpHost->xmlSaved(fileName);
 }
 
 void XMLexport::exportHost(const QString& filename_pugi_xml)
