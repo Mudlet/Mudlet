@@ -522,8 +522,10 @@ void Host::writeModules(const QStringList &entry, const QString &moduleName, QSt
 
 void Host::waitForHostXmlSave()
 {
-    for (auto& writer : writers) {
-        for (auto& future : writer->saveFutures) {
+    auto myWriters = writers;
+    for (auto& writer : myWriters) {
+        auto myFutures = writer->saveFutures;
+        for (auto& future : myFutures) {
             future.waitForFinished();
         }
     }
@@ -826,7 +828,7 @@ void Host::xmlSaved(const QString& xmlName)
 {
     if (writers.contains(xmlName)) {
         auto writer = writers.take(xmlName);
-        delete writer;
+        writer->deleteLater();
     }
 
     if (writers.empty()) {
@@ -836,10 +838,7 @@ void Host::xmlSaved(const QString& xmlName)
 
 bool Host::currentlySavingProfile()
 {
-    if (!mWritingModules && writers.empty()) {
-        return false;
-    }
-    return true;
+    return (mWritingModules || !writers.empty());
 }
 
 void Host::waitForProfileSave()

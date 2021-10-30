@@ -646,7 +646,7 @@ private:
     void toggleMapperVisibility();
     void createMapper(const bool);
     void removePackageInfo(const QString &packageName, const bool);
-    void createModuleBackup(const QString &filename, const QString& saveName);
+    static void createModuleBackup(const QString &filename, const QString& saveName);
     void writeModules(const QStringList &entry, const QString &moduleName, QString &filename);
     void waitForHostXmlSave();
     void saveModules(int sync, bool backup = true);
