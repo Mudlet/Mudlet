@@ -2035,7 +2035,6 @@ void dlgProfilePreferences::loadMap()
     label_mapFileActionResult->setText(tr("Loading map - please wait..."));
     qApp->processEvents(); // Needed to make the above message show up when loading big maps
     if (fileName.endsWith(QStringLiteral(".xml"), Qt::CaseInsensitive)) {
-        label_mapFileActionResult->setText(tr("Importing map - please wait..."));
         qApp->processEvents(); // Needed to make the above message show up when loading big maps
         success = pHost->mpConsole->importMap(fileName);
     } else if (fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
@@ -2045,9 +2044,9 @@ void dlgProfilePreferences::loadMap()
     }
 
     if (success) {
-        label_mapFileActionResult->setText(tr("Imported map from %1.").arg(fileName));
+        label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
     } else {
-        label_mapFileActionResult->setText(tr("Could not import map from %1.").arg(fileName));
+        label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
     }
 
     QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
