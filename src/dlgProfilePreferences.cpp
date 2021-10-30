@@ -928,6 +928,20 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         }
     }
 
+    switch (pHost->getControlCharacterMode()) {
+    case 1:
+        radioButton_controlCharacterHandling_pictures->setChecked(true);
+        break;
+    case 2:
+        radioButton_controlCharacterHandling_oemFont->setChecked(true);
+        break;
+    case 0:
+        [[fallthrough]];
+    default:
+        radioButton_controlCharacterHandling_none->setChecked(true);
+    }
+
+    connect(controlCharacterHandler, qOverload<int>(&QButtonGroup::buttonClicked), this, &dlgProfilePreferences::slot_changeControlCharacterHandling);
     timeEdit_timerDebugOutputMinimumInterval->setTime(pHost->mTimerDebugOutputSuppressionInterval);
     notificationArea->hide();
     notificationAreaIconLabelWarning->hide();
@@ -3948,4 +3962,18 @@ void dlgProfilePreferences::slot_setPostingTimeout(const double timeout)
     }
 
     pHost->mTelnet.setPostingTimeout(qRound(1000.0 * timeout));
+}
+
+void dlgProfilePreferences::slot_changeControlCharacterHandling(const int mode)
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    // As is the case for QButtonGroups in the room exits dialog the
+    // id value returned when a button in the group is selected starts
+    // at -2 for the first button and then gets more negative for others
+    // so a bit of maths is needed to get a 0, 1 or 2 result:
+    pHost->setControlCharacterMode(-2-mode);
 }

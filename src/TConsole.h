@@ -275,6 +275,7 @@ public:
     int mBgImageMode = 0;
     QString mBgImagePath;
     bool mHScrollBarEnabled = false;
+    int mControlHandlingMode = 0;
 
 
 public slots:
@@ -283,6 +284,7 @@ public slots:
     void slot_toggleReplayRecording();
     void slot_stop_all_triggers(bool);
     void slot_toggleLogging();
+    void slot_changeControlCharacterHandling(const int);
 
 
 protected:

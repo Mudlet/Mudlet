@@ -940,6 +940,13 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->mTelnet.setPostingTimeout(300);
     }
 
+    if (attributes().hasAttribute(QLatin1String("ControlCharacterHandling"))) {
+        pHost->setControlCharacterMode(qBound(0, attributes().value(QLatin1String("ControlCharacterHandling")).toInt(), 2));
+    } else {
+        // The default value, also used up to Mudlet 4.13.1:
+        pHost->setControlCharacterMode(0);
+    }
+
     while (!atEnd()) {
         readNext();
 

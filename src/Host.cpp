@@ -3757,3 +3757,15 @@ void Host::setupIreDriverBugfix()
         set_USE_IRE_DRIVER_BUGFIX(true);
     }
 }
+
+void Host::setControlCharacterMode(const int mode)
+{
+    if (mode < 0 && mode > 2) {
+        return;
+    }
+
+    if (mControlCharacterHandlingMode != mode) {
+        mControlCharacterHandlingMode = mode;
+        emit signal_controlCharacterHandlingChanged(mode);
+    }
+}

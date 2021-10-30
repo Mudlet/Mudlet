@@ -464,6 +464,12 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toUtf8().constData();
     host.append_attribute("DebugShowAllProblemCodepoints") = pHost->debugShowAllProblemCodepoints() ? "yes" : "no";
     host.append_attribute("NetworkPacketTimeout") = pHost->mTelnet.getPostingTimeout();
+    if (int mode = pHost->getControlCharacterMode(); mode) {
+        // Don't bother to include the attribute if it is the default (zero)
+        // value - and as it is an ASCII digit it only needs
+        // QString::toLatin1() encoding:
+        host.append_attribute("ControlCharacterHandling") = QString::number(mode).toLatin1().constData();
+    }
 
     { // Blocked so that indentation reflects that of the XML file
         host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());

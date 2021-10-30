@@ -202,6 +202,8 @@ public:
     void            getUserDictionaryOptions(bool& useDictionary, bool& useShared) {
                         useDictionary = mEnableUserDictionary;
                         useShared = mUseSharedDictionary; }
+    void            setControlCharacterMode(const int mode);
+    int             getControlCharacterMode() const { return mControlCharacterHandlingMode; }
 
     void closingDown();
     bool isClosingDown();
@@ -635,6 +637,9 @@ signals:
     // To tell all TConsole's upper TTextEdit panes to report all Codepoint
     // problems as they arrive as well as a summery upon destruction:
     void signal_changeDebugShowAllProblemCodepoints(const bool);
+    // Tells all consoles associated with this Host (but NOT the Central Debug
+    // one) to change the way they show  control characters:
+    void signal_controlCharacterHandlingChanged(const int);
 
 private slots:
     void slot_reloadModules();
@@ -773,6 +778,18 @@ private:
     bool mCompactInputLine;
 
     QTimer purgeTimer;
+
+    // How to display (most) incoming control characters in TConsoles:
+    // 0 = as is, no replacement
+    // 1 = as Unicode "Control Pictures" - use Unicode codepoints in range
+    //   U+2400 to U+2421
+    // 2 = as "OEM Font" characters (most often seen as a part of CP437
+    //   encoding), see the corresponding Wikipedia page, e.g.
+    //   EN: https://en.wikipedia.org/wiki/Code_page_437
+    //   DE: https://de.wikipedia.org/wiki/Codepage_437
+    //   RU: https://ru.wikipedia.org/wiki/CP437
+    int mControlCharacterHandlingMode;
+
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

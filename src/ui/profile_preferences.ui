@@ -202,7 +202,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="4">
+          <item row="1" column="0" colspan="2">
            <widget class="QLabel" name="label_languageChangeWarning">
             <property name="font">
              <font>
@@ -212,6 +212,51 @@
             <property name="text">
              <string>Please restart Mudlet to apply the new language</string>
             </property>
+           </widget>
+          </item>
+          <item row="1" column="2" colspan="2">
+           <widget class="QGroupBox" name="groupBox_controlCharacterHandling">
+            <property name="title">
+             <string>Replacement of Control Characters on-screen:</string>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_groupBox_controlCharacterHandling">
+             <item>
+              <widget class="QRadioButton" name="radioButton_controlCharacterHandling_none">
+               <property name="text">
+                <string>None</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">controlCharacterHandler</string>
+               </attribute>
+              </widget>
+             </item>
+             <item>
+              <widget class="QRadioButton" name="radioButton_controlCharacterHandling_pictures">
+               <property name="text">
+                <string>Unicode &quot;Control Pictures&quot;</string>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">controlCharacterHandler</string>
+               </attribute>
+              </widget>
+             </item>
+             <item>
+              <widget class="QRadioButton" name="radioButton_controlCharacterHandling_oemFont">
+               <property name="text">
+                <string>CP437 (OEM Font)- like</string>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">controlCharacterHandler</string>
+               </attribute>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
@@ -3776,4 +3821,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <include location="../mudlet.qrc"/>
  </resources>
  <connections/>
+ <buttongroups>
+  <buttongroup name="controlCharacterHandler"/>
+ </buttongroups>
 </ui>

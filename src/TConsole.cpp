@@ -505,7 +505,12 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mDisplayFont = mpHost->getDisplayFont();
         mDisplayFontName = mDisplayFont.family();
         mDisplayFontSize = mDisplayFont.pointSize();
+
+        // They always use "Control Pictures" to show control characters:
+        mControlHandlingMode = 1;
         refreshView();
+    } else if (mpHost) {
+        connect(mpHost, &Host::signal_controlCharacterHandlingChanged, this, &TConsole::slot_changeControlCharacterHandling);
     }
 
     if (mType & (MainConsole | UserWindow)) {
@@ -2027,4 +2032,10 @@ void TConsole::mouseReleaseEvent(QMouseEvent* event)
     raiseMudletMousePressOrReleaseEvent(event, false);
 }
 
-
+void TConsole::TConsole::slot_changeControlCharacterHandling(const int mode)
+{
+    if (mControlHandlingMode != mode) {
+        mControlHandlingMode = mode;
+        refreshView();
+    }
+}

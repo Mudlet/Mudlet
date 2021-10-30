@@ -159,6 +159,7 @@ private slots:
     void slot_setPlayerRoomOuterDiameter(const int);
     void slot_setPlayerRoomInnerDiameter(const int);
     void slot_setPostingTimeout(const double);
+    void slot_changeControlCharacterHandling(const int);
 
 private:
     void setColors();

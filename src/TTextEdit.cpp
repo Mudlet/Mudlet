@@ -492,19 +492,123 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     uint unicode = getGraphemeBaseCharacter(grapheme);
     int charWidth;
     bool useReplacementCharacter = false;
-    if (unicode == '\t') {
-        charWidth = mTabStopwidth - (column % mTabStopwidth);
-        graphemes.append(QString(QChar::Tabulation));
-    } else {
-        charWidth = getGraphemeWidth(unicode);
-        if (!charWidth) {
-            // Print the grapheme replacement character instead - which seems to
-            // be 1 wide
-            useReplacementCharacter = true;
-            charWidth = 1;
+    switch (mpConsole->mControlHandlingMode) {
+    default:
+        if (unicode == '\t') {
+            charWidth = mTabStopwidth - (column % mTabStopwidth);
+            graphemes.append(QChar::Tabulation);
+        } else {
+            charWidth = getGraphemeWidth(unicode);
+            if (!charWidth) {
+                // Print the grapheme replacement character instead - which seems to
+                // be 1 wide
+                useReplacementCharacter = true;
+                charWidth = 1;
+            }
+            graphemes.append(useReplacementCharacter ? replacementCharacter : grapheme);
         }
-        graphemes.append(useReplacementCharacter ? replacementCharacter : grapheme);
-    }
+        break; // End of outer switch default
+    case 1:
+        // As Control Pictures
+        switch (unicode) {
+        case 0:     graphemes.append(QChar(0x2400)); charWidth = 1; break; // NUL - not sure that this can appear
+        case 1:     graphemes.append(QChar(0x2401)); charWidth = 1; break; // SOH
+        case 2:     graphemes.append(QChar(0x2402)); charWidth = 1; break; // STX
+        case 3:     graphemes.append(QChar(0x2403)); charWidth = 1; break; // ETX
+        case 4:     graphemes.append(QChar(0x2404)); charWidth = 1; break; // EOT
+        case 5:     graphemes.append(QChar(0x2405)); charWidth = 1; break; // ENQ
+        case 6:     graphemes.append(QChar(0x2406)); charWidth = 1; break; // ACK
+        case 7:     graphemes.append(QChar(0x2407)); charWidth = 1; break; // BEL - the (audio) handling of this gets done when it is received, not when it is displayed here:
+        case 8:     graphemes.append(QChar(0x2408)); charWidth = 1; break; // BS
+        case 9: // HT
+            // Makes the spacing behave like a tab
+            charWidth = mTabStopwidth - (column % mTabStopwidth);
+            // But print the "control picture" on top
+            // graphemes.append(QChar::Tabulation);
+            graphemes.append(QChar(0x2409));
+            break;
+        case 10:    graphemes.append(QChar(0x240A)); charWidth = 1; break; // LF - may not ever appear!
+        case 11:    graphemes.append(QChar(0x240B)); charWidth = 1; break; // VT
+        case 12:    graphemes.append(QChar(0x240C)); charWidth = 1; break; // FF
+        case 13:    graphemes.append(QChar(0x240D)); charWidth = 1; break; // CR - shouldn't appear but does seem to crop up somehow!
+        case 14:    graphemes.append(QChar(0x240E)); charWidth = 1; break; // SO
+        case 15:    graphemes.append(QChar(0x240F)); charWidth = 1; break; // SI
+        case 16:    graphemes.append(QChar(0x2410)); charWidth = 1; break; // DLE
+        case 17:    graphemes.append(QChar(0x2411)); charWidth = 1; break; // DC1
+        case 18:    graphemes.append(QChar(0x2412)); charWidth = 1; break; // DC2
+        case 19:    graphemes.append(QChar(0x2413)); charWidth = 1; break; // DC3
+        case 20:    graphemes.append(QChar(0x2414)); charWidth = 1; break; // DC4
+        case 21:    graphemes.append(QChar(0x2415)); charWidth = 1; break; // NAK
+        case 22:    graphemes.append(QChar(0x2416)); charWidth = 1; break; // SYN
+        case 23:    graphemes.append(QChar(0x2417)); charWidth = 1; break; // ETB
+        case 24:    graphemes.append(QChar(0x2418)); charWidth = 1; break; // CAN
+        case 25:    graphemes.append(QChar(0x2419)); charWidth = 1; break; // EM
+        case 26:    graphemes.append(QChar(0x241A)); charWidth = 1; break; // SUB
+        case 27:    graphemes.append(QChar(0x241B)); charWidth = 1; break; // ESC - shouldn't appear as will have been intercepted previously
+        case 28:    graphemes.append(QChar(0x241C)); charWidth = 1; break; // FS
+        case 29:    graphemes.append(QChar(0x241D)); charWidth = 1; break; // GS
+        case 30:    graphemes.append(QChar(0x241E)); charWidth = 1; break; // RS
+        case 31:    graphemes.append(QChar(0x241F)); charWidth = 1; break; // US
+        case 127:   graphemes.append(QChar(0x2421)); charWidth = 1; break; // DEL
+        default:
+            charWidth = getGraphemeWidth(unicode);
+            if (!charWidth) {
+                // Print the grapheme replacement character instead - which seems to
+                // be 1 wide
+                useReplacementCharacter = true;
+                charWidth = 1;
+            }
+            graphemes.append(useReplacementCharacter ? replacementCharacter : grapheme);
+        }
+        break; // End of outer switch case 1
+    case 2:
+        // As CP437:
+        switch (unicode) {
+        case 0:     graphemes.append(QChar(0x2400)); charWidth = 1; break; // NUL - not sure that this can appear
+        case 1:     graphemes.append(QChar(0x263A)); charWidth = 1; break; // SOH - White Smiling Face
+        case 2:     graphemes.append(QChar(0x263B)); charWidth = 1; break; // STX - Black Smiling Face
+        case 3:     graphemes.append(QChar(0x2665)); charWidth = 1; break; // ETX - Card Suite Hearts
+        case 4:     graphemes.append(QChar(0x2666)); charWidth = 1; break; // EOT - Card Suite Diamonds
+        case 5:     graphemes.append(QChar(0x2663)); charWidth = 1; break; // ENQ - Card Suite Clubs
+        case 6:     graphemes.append(QChar(0x2660)); charWidth = 1; break; // ACK - Card Suite Spades
+        case 7:     graphemes.append(QChar(0x2022)); charWidth = 1; break; // BEL - Bullet - the handling of this gets done when it is received, not when it is displayed here:
+        case 8:     graphemes.append(QChar(0x25D8)); charWidth = 1; break; // BS  - Inverse Bullet
+        case 9:     graphemes.append(QChar(0x25CB)); charWidth = 1; break; // HT  - Circle - NOTE THAT WE DO NOT USE TAB SPACING
+        case 10:    graphemes.append(QChar(0x25D9)); charWidth = 1; break; // LF  - Inverse Circle
+        case 11:    graphemes.append(QChar(0x2642)); charWidth = 1; break; // VT  - Male Sign
+        case 12:    graphemes.append(QChar(0x2640)); charWidth = 1; break; // FF  - Female Sign
+        case 13:    graphemes.append(QChar(0x240D)); charWidth = 1; break; // CR  - Single Quaver - shouldn't appear but does seem to crop up somehow!
+        case 14:    graphemes.append(QChar(0x266A)); charWidth = 1; break; // SO  - Double Quaver
+        case 15:    graphemes.append(QChar(0x266B)); charWidth = 1; break; // SI  - White Sun with Rays
+        case 16:    graphemes.append(QChar(0x263C)); charWidth = 1; break; // DLE - Black Right-Pointing Pointer
+        case 17:    graphemes.append(QChar(0x25BA)); charWidth = 1; break; // DC1 - Black Left-Pointing Pointer
+        case 18:    graphemes.append(QChar(0x25C4)); charWidth = 1; break; // DC2 - Up Down ArroW
+        case 19:    graphemes.append(QChar(0x2195)); charWidth = 1; break; // DC3 - Double Exclaimation Mark
+        case 20:    graphemes.append(QChar(0x203C)); charWidth = 1; break; // DC4 - Pilcrow
+        case 21:    graphemes.append(QChar(0x00B6)); charWidth = 1; break; // NAK - Section Sign
+        case 22:    graphemes.append(QChar(0x00A7)); charWidth = 1; break; // SYN - Black Rectangle
+        case 23:    graphemes.append(QChar(0x21A8)); charWidth = 1; break; // ETB - Up Down Arrow With Base
+        case 24:    graphemes.append(QChar(0x2191)); charWidth = 1; break; // CAN - Up Arrow
+        case 25:    graphemes.append(QChar(0x2193)); charWidth = 1; break; // EM  - Down Arrow
+        case 26:    graphemes.append(QChar(0x2192)); charWidth = 1; break; // SUB - Right Arrow
+        case 27:    graphemes.append(QChar(0x2190)); charWidth = 1; break; // ESC - Left Arrow - shouldn't appear as will have been intercepted previously
+        case 28:    graphemes.append(QChar(0x221F)); charWidth = 1; break; // FS  - Rigth Angle
+        case 29:    graphemes.append(QChar(0x2194)); charWidth = 1; break; // GS  - Left Rigth Arrow
+        case 30:    graphemes.append(QChar(0x25B2)); charWidth = 1; break; // RS  - Black Up-Pointing Pointer
+        case 31:    graphemes.append(QChar(0x25BC)); charWidth = 1; break; // US  - Black Down-Pointing Pointer
+        case 127:   graphemes.append(QChar(0x2302)); charWidth = 1; break; // DEL - House
+        default:
+            charWidth = getGraphemeWidth(unicode);
+            if (!charWidth) {
+                // Print the grapheme replacement character instead - which seems to
+                // be 1 wide
+                useReplacementCharacter = true;
+                charWidth = 1;
+            }
+            graphemes.append(useReplacementCharacter ? replacementCharacter : grapheme);
+        }
+        break; // End of outer switch case 2
+    } // End of outer switch
     charWidths.append(charWidth);
 
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
