@@ -167,6 +167,8 @@ public:
     void            setUrl(const QString& s)         { mUrl = s; }
     QString         getUserDefinedName()             { return mUserDefinedName; }
     void            setUserDefinedName(const QString& s) { mUserDefinedName = s; }
+    QString         getDiscordGameName()             { return mDiscordGameName; }
+    void            setDiscordGameName(const QString& s) { mDiscordGameName = s; }
     int             getPort()                        { return mPort; }
     void            setPort(const int p)                 { mPort = p; }
     void            setAutoReconnect(const bool b)   { mTelnet.setAutoReconnect(b); }
@@ -192,6 +194,8 @@ public:
     bool            getMayRedefineColors() { return mServerMayRedefineColors; }
     void            setDiscordApplicationID(const QString& s);
     const QString&  getDiscordApplicationID();
+    void            setDiscordInviteURL(const QString& s);
+    const QString&  getDiscordInviteURL() const { return mDiscordInviteURL; }
     void            setSpellDic(const QString&);
     const QString&  getSpellDic() { return mSpellDic; }
     void            setUserDictionaryOptions(const bool useDictionary, const bool useShared);
@@ -670,6 +674,7 @@ private:
 
     int mHostID;
     QString mHostName;
+    QString mDiscordGameName; // Discord self-reported game name
 
     bool mIsClosingDown;
 
@@ -714,6 +719,9 @@ private:
 
     // Will be null/empty if is to use Mudlet's default/own presence
     QString mDiscordApplicationID;
+
+    // Will be null/empty if they have not set their own invite
+    QString mDiscordInviteURL;
 
     // Will be null/empty if we are not concerned to check the use of Discord
     // Rich Presence against the local user currently logged into Discord -

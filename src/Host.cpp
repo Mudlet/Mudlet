@@ -2306,6 +2306,8 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
     auto inviteUrl = discordInfo.value(QStringLiteral("inviteurl"));
     // Will be of form: "https://discord.gg/#####"
     if (inviteUrl != QJsonValue::Undefined && !inviteUrl.toString().isEmpty() && inviteUrl.toString() != QStringLiteral("0")) {
+        setDiscordInviteURL(inviteUrl.toString());
+        pMudlet->updateDiscordNamedIcon();
         hasInvite = true;
     }
 
@@ -2353,6 +2355,8 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
     auto pMudlet = mudlet::self();
     auto gameName = discordInfo.value(QStringLiteral("game"));
     if (gameName != QJsonValue::Undefined) {
+        setDiscordGameName(gameName.toString());
+        pMudlet->updateDiscordNamedIcon();
         QPair<bool, QString> richPresenceSupported = pMudlet->mDiscord.gameIntegrationSupported(getUrl());
         if (richPresenceSupported.first && pMudlet->mDiscord.usingMudletsDiscordID(this)) {
             pMudlet->mDiscord.setDetailText(this, tr("Playing %1").arg(richPresenceSupported.second));
@@ -2511,6 +2515,12 @@ void Host::setDiscordApplicationID(const QString& s)
 const QString& Host::getDiscordApplicationID()
 {
     return mDiscordApplicationID;
+}
+
+void Host::setDiscordInviteURL(const QString& s)
+{
+    mDiscordInviteURL = s;
+    writeProfileData(QStringLiteral("discordInviteURL"), s);
 }
 
 // Compares the current discord username and discriminator against the non-empty
