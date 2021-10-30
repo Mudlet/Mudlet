@@ -10082,7 +10082,12 @@ int TLuaInterpreter::setDiscordLargeIconText(lua_State* L)
         return warnArgumentValue(L, __func__, "access to Discord large icon text is disabled in settings for privacy");
     }
 
-    pMudlet->mDiscord.setLargeImageText(&host, getVerifiedString(L, __func__, 1, "text"));
+    auto discordText = getVerifiedString(L, __func__, 1, "text");
+    if (discordText.size() == 1) {
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed by Discord");
+    }
+
+    pMudlet->mDiscord.setLargeImageText(&host, discordText);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10152,7 +10157,12 @@ int TLuaInterpreter::setDiscordSmallIconText(lua_State* L)
         return warnArgumentValue(L, __func__, "access to Discord small icon text is disabled in settings for privacy");
     }
 
-    pMudlet->mDiscord.setSmallImageText(&host, getVerifiedString(L, __func__, 1, "text"));
+    auto discordText = getVerifiedString(L, __func__, 1, "text");
+    if (discordText.size() == 1) {
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed by Discord");
+    }
+
+    pMudlet->mDiscord.setSmallImageText(&host, discordText);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10187,7 +10197,12 @@ int TLuaInterpreter::setDiscordDetail(lua_State* L)
         return warnArgumentValue(L, __func__, "access to Discord detail is disabled in settings for privacy");
     }
 
-    pMudlet->mDiscord.setDetailText(&host, getVerifiedString(L, __func__, 1, "text"));
+    auto discordText = getVerifiedString(L, __func__, 1, "text");
+    if (discordText.size() == 1) {
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed by Discord");
+    }
+
+    pMudlet->mDiscord.setDetailText(&host, discordText);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10243,7 +10258,12 @@ int TLuaInterpreter::setDiscordState(lua_State* L)
         return warnArgumentValue(L, __func__, "access to Discord state is disabled in settings for privacy");
     }
 
-    mudlet::self()->mDiscord.setStateText(&host, getVerifiedString(L, __func__, 1, "text"));
+    auto discordText = getVerifiedString(L, __func__, 1, "text");
+    if (discordText.size() == 1) {
+        return warnArgumentValue(L, __func__, "text of length 1 not allowed by Discord");
+    }
+
+    mudlet::self()->mDiscord.setStateText(&host, discordText);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10379,6 +10399,17 @@ int TLuaInterpreter::getDiscordParty(lua_State* L)
     lua_pushnumber(L, partyValues.first);
     lua_pushnumber(L, partyValues.second);
     return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetDiscordData
+int TLuaInterpreter::resetDiscordData(lua_State* L)
+{
+    mudlet* pMudlet = mudlet::self();
+    auto& host = getHostFromLua(L);
+
+    pMudlet->mDiscord.resetData(&host);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getTime
@@ -12457,7 +12488,7 @@ void TLuaInterpreter::setMatches(lua_State* L)
         // set values
         int i = 1; // Lua indexes start with 1 as a general convention
         for (auto it = mCaptureGroupList.begin(); it != mCaptureGroupList.end(); it++, i++) {
-            // if ((*it).length() < 1) continue; //have empty capture groups to be undefined keys i.e. machts[emptyCapGroupNumber] = nil otherwise it's = "" i.e. an empty string
+            // if ((*it).length() < 1) continue; //have empty capture groups to be undefined keys i.e. matches[emptyCapGroupNumber] = nil otherwise it's = "" i.e. an empty string
             lua_pushnumber(L, i);
             lua_pushstring(L, (*it).c_str());
             lua_settable(L, -3);
@@ -14057,6 +14088,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getDiscordTimeStamps", TLuaInterpreter::getDiscordTimeStamps);
     lua_register(pGlobalLua, "setDiscordParty", TLuaInterpreter::setDiscordParty);
     lua_register(pGlobalLua, "getDiscordParty", TLuaInterpreter::getDiscordParty);
+    lua_register(pGlobalLua, "resetDiscordData", TLuaInterpreter::resetDiscordData);
     lua_register(pGlobalLua, "getPlayerRoom", TLuaInterpreter::getPlayerRoom);
     lua_register(pGlobalLua, "getSelection", TLuaInterpreter::getSelection);
     lua_register(pGlobalLua, "getMapSelection", TLuaInterpreter::getMapSelection);

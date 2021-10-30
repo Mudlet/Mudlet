@@ -184,6 +184,7 @@ public:
     void setParty(Host*, int);
     void setParty(Host*, int, int);
     bool setApplicationID(Host*, const QString&);
+    void resetData(Host*);
     QString getApplicationId(Host* pHost) const;
 
     // These retrieve the cached data:

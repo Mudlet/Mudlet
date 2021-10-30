@@ -24,6 +24,7 @@
         <file>icons/arrow-down_grey.png</file>
         <file>icons/arrow-right-16x.png</file>
         <file>icons/arrow-right.png</file>
+        <file>icons/arrow-right_cyan.png</file>
         <file>icons/arrow-right_grey-16x.png</file>
         <file>icons/arrow-right_grey.png</file>
         <file>icons/avalon.png</file>
@@ -144,6 +145,7 @@
         <file>icons/mudlet_notepad.png</file>
         <file>icons/mudlet_ptb_256px.png</file>
         <file>icons/mudlet_room_exits.png</file>
+        <file>icons/mume.png</file>
         <file>icons/offsettimer-off.png</file>
         <file>icons/offsettimer-on.png</file>
         <file>icons/package-exporter.png</file>

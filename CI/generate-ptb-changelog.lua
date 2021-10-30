@@ -132,46 +132,62 @@ function convert_to_html(text)
   return table.concat(t, "\n")
 end
 
+function create_category_pattern(category)
+  if not category then return end
+  local nocase = category:genNocasePattern()
+  local res = f[[^{nocase}%w*:*%s*(.*)]]
+  return res
+end
+
 function print_sorted_changelog(changelog)
   local chgtbl = changelog:split("\n")
   local add, improve, fix, infra, other = {}, {}, {}, {}, {}
+  local prefix = "- "
   for _,line in ipairs(chgtbl) do
-    local testline = line:lower()
-    if testline:match("^add") then
-      add[#add+1] = line
-    elseif testline:match("^improve") then
-      improve[#improve+1] = line
-    elseif testline:match("^fix") then
-      fix[#fix+1] = line
-    elseif testline:match("^infra") or testline:match("^%(autocommit%)") then --"(autocommit)" to catch bot PRs which may not start with "infra"
-      infra[#infra+1] = line
+    local trimmedLine
+    local addPattern = create_category_pattern("add")
+    local improvePattern = create_category_pattern("improve")
+    local fixPattern = create_category_pattern("fix")
+    local infraPattern = create_category_pattern("infra")
+    local autoPattern = "^%(autocommit%) (.*)"
+    if line:match(addPattern) then
+      trimmedLine = prefix .. line:match(addPattern)
+      add[#add+1] = trimmedLine
+    elseif line:match(improvePattern) then
+      trimmedLine = prefix .. line:match(improvePattern)
+      improve[#improve+1] = trimmedLine
+    elseif line:match(fixPattern) then
+      trimmedLine = prefix .. line:match(fixPattern)
+      fix[#fix+1] = trimmedLine
+    elseif line:match(infraPattern) then
+      trimmedLine = prefix .. line:match(infraPattern)
+      infra[#infra+1] = trimmedLine
+    elseif line:match(autoPattern) then --"(autocommit)" to catch bot PRs which may not start with "infra"
+      trimmedLine = prefix .. line:match(autoPattern)
+      infra[#infra+1] = trimmedLine
     else
-      other[#other+1] = line
+      other[#other+1] = prefix .. line
     end
   end
+  local hopen = [[<h5 style="margin-top: 1em;margin-bottom: 1em;">]]
+  local hclose = "</h5>"
   local addLines = lines_to_html(table.concat(add, "\n"))
+  addLines = addLines and f"{hopen}Added:{hclose}\n{addLines}\n" or ""
   local improveLines = lines_to_html(table.concat(improve, "\n"))
+  improveLines = improveLines and f"{hopen}Improved:{hclose}\n{improveLines}\n" or ""
   local fixLines = lines_to_html(table.concat(fix, "\n"))
+  fixLines = fixLines and f"{hopen}Fixed:{hclose}\n{fixLines}\n" or ""
   local infraLines = lines_to_html(table.concat(infra, "\n"))
+  infraLines = infraLines and f"{hopen}Infrastructure:{hclose}\n{infraLines}\n" or ""
   local otherLines = lines_to_html(table.concat(other, "\n"))
-  local final_changelog = f[[
-<h3>🆕 added</h3>
-{addLines}
-<h3>✨improved</h3>
-{improveLines}
-<h3>🔨fixed</h3>
-{fixLines}
-<h3>🧱 infrastructure</h3>
-{infraLines}
-<h3>❓ other</h3>
-{otherLines}
-]]
+  otherLines = otherLines and f"{hopen}Other:{hclose}\n{otherLines}\n" or ""
+  local final_changelog = f"{addLines}{improveLines}{fixLines}{infraLines}{otherLines}"
   print(final_changelog)
 end
 
 function lines_to_html(lines)
   if lines == "" then
-    lines = "None"
+    return nil
   end
   return convert_to_html(lines)
 end

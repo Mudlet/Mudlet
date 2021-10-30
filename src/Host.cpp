@@ -634,6 +634,16 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
 
 void Host::reloadModule(const QString& syncModuleName, const QString& syncHostName)
 {
+    //Wait till profile is finished saving
+    if (currentlySavingProfile()) {
+        //create a dummy object to singleshot connect (disconnect/delete after execution)
+        QObject *obj = new QObject(this);
+        connect(this, &Host::profileSaveFinished, obj, [=](){
+            reloadModule(reloadModuleName);
+            obj->deleteLater();
+        });
+        return;
+    }
     QMap<QString, QStringList> installedModules = mInstalledModules;
     QMapIterator<QString, QStringList> moduleIterator(installedModules);
     while (moduleIterator.hasNext()) {
