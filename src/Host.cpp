@@ -611,9 +611,9 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
     zip_delete(zipFile, xmlIndex);
     struct zip_source* s = zip_source_file(zipFile, filename_xml.toUtf8().constData(), 0, -1);
     if (mudlet::debugMode && s == nullptr) {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to open xml file \"%1\" to save to module %2. Error message was: \"%3\".",
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to open xml file \"%1\" inside module %2 to update it. Error message was: \"%3\".",
                                                          // Intentional comment to separate arguments
-                                                         "This error message will appear when the xml file cannot be added to the module for some reason.")
+                                                         "This error message will appear when the xml file inside the module zip cannot be updated for some reason.")
                                                               .arg(filename_xml, zipName, zip_strerror(zipFile));
     }
     err = zip_file_add(zipFile, QStringLiteral("%1.xml").arg(moduleName).toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE);
@@ -1770,7 +1770,7 @@ bool Host::installPackage(const QString& fileName, int module)
             } else {
                 mInstalledPackages.append(packageName);
             }
-            reader.importPackage(&file2, packageName, module);
+            reader.importPackage(&file2, packageName, module); // TODO: Missing false return value handler
             setName(profileName);
             setLogin(login);
             setPass(pass);
@@ -1793,7 +1793,7 @@ bool Host::installPackage(const QString& fileName, int module)
         } else {
             mInstalledPackages.append(packageName);
         }
-        reader.importPackage(&file2, packageName, module);
+        reader.importPackage(&file2, packageName, module); // TODO: Missing false return value handler
         setName(profileName);
         setLogin(login);
         setPass(pass);
@@ -1868,6 +1868,7 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
             } else {
                 result = QFile::remove(info.absoluteFilePath());
             }
+
             if (!result) {
                 return result;
             }
