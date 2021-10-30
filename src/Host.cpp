@@ -635,11 +635,11 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
 void Host::reloadModule(const QString& syncModuleName, const QString& syncHostName)
 {
     //Wait till profile is finished saving
-    if (currentlySavingProfile()) {
+    if (syncHostName.isEmpty() && currentlySavingProfile()) {
         //create a dummy object to singleshot connect (disconnect/delete after execution)
         QObject *obj = new QObject(this);
         connect(this, &Host::profileSaveFinished, obj, [=](){
-            reloadModule(reloadModuleName);
+            reloadModule(syncModuleName);
             obj->deleteLater();
         });
         return;
