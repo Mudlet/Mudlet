@@ -9,6 +9,7 @@
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
+ *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -108,6 +109,7 @@ public:
     // See, e.g.: https://en.wikipedia.org/wiki/Tail_(Unix)#File_monitoring
     bool mIsTailMode;
     QMap<QString, std::pair<QString, int>> mPopupCommands;
+    // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
     QRegion mSelectedRegion;
     bool mShowTimeStamps;
@@ -155,7 +157,7 @@ private:
     // which one this instance is:
     const bool mIsLowerPane;
     // last line offset rendered
-    int mLastRenderBottom;
+    int mLastRenderedOffset;
     bool mMouseTracking;
     // 1/2/3 for single/double/triple click seen so far
     int  mMouseTrackLevel;

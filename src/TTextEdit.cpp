@@ -6,6 +6,7 @@
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
+ *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -58,7 +59,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mShowTimeStamps(false)
 , mForceUpdate(false)
 , mIsLowerPane(isLowerPane)
-, mLastRenderBottom(0)
+, mLastRenderedOffset(0)
 , mMouseTracking(false)
 , mMouseTrackLevel(0)
 , mpBuffer(pB)
@@ -782,9 +783,9 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     if (lineOffset == 0) {
         mScrollVector = 0;
     } else {
-        // Was: mScrollVector = lineOffset - mLastRenderBottom;
-        if (mLastRenderBottom) {
-            mScrollVector = lineOffset - mLastRenderBottom;
+        // Was: mScrollVector = lineOffset - mLastRenderedOffset;
+        if (mLastRenderedOffset) {
+            mScrollVector = lineOffset - mLastRenderedOffset;
         } else {
             mScrollVector = y2 + lineOffset;
         }
@@ -851,7 +852,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         mScreenMap = pixmap.copy();
     }
     mScrollVector = 0;
-    mLastRenderBottom = lineOffset;
+    mLastRenderedOffset = lineOffset;
     mForceUpdate = false;
 }
 
