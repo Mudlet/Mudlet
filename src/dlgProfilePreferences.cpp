@@ -272,6 +272,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
     connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
     connect(pMudlet, &mudlet::signal_enableDarkThemeChanged, this, &dlgProfilePreferences::slot_changeEnableDarkTheme);
+    connect(enableDarkTheme, &QCheckBox::stateChanged, this, &dlgProfilePreferences::slot_changeEnableDarkTheme);
 
     generateDiscordTooltips();
 
@@ -2723,7 +2724,6 @@ void dlgProfilePreferences::slot_save_and_exit()
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
-    pMudlet->setDarkTheme(enableDarkTheme->isChecked());
 
     mudlet::self()->mDiscord.UpdatePresence();
 
@@ -3760,13 +3760,13 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
     label_languageChangeWarning->show();
 }
 
-// This slot is called when the QComboBox for enabling DarkTheme
-// is changed by the user.
 void dlgProfilePreferences::slot_changeEnableDarkTheme(const bool state)
 {
     if (enableDarkTheme->isChecked() != state) {
         enableDarkTheme->setChecked(state);
     }
+
+    mudlet::self()->setDarkTheme(state);
 }
 
 // This slot is called when the mudlet singleton tells everything that the

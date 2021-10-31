@@ -2400,7 +2400,7 @@ void mudlet::updateDiscordNamedIcon()
     QString gameName = pHost->getDiscordGameName();
 
     bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
-    
+
     mpActionDiscord->setIconText(gameName.isEmpty() ? QStringLiteral("Discord") : QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90));
 
     if (mpActionMudletDiscord->isVisible() != hasCustom) {
@@ -3864,8 +3864,13 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
         emit signal_showIconsOnMenusChanged(state);
     }
 }
+
 void mudlet::setDarkTheme(const bool& state)
 {
+    if (mDarkTheme == state) {
+        return;
+    }
+
     if (state) {
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         qApp->setStyle(new DarkTheme);
