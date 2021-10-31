@@ -848,7 +848,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2805"/>
       <source>Create new room here</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>在此创建一个新房间</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2817"/>
@@ -860,7 +860,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2823"/>
       <source>Create exit line...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>创建出口线...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2836"/>
@@ -896,7 +896,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2889"/>
       <source>Move to position...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>移动到位置...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2890"/>
@@ -908,13 +908,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2896"/>
       <source>Move to area...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>移动到区域...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2901"/>
       <source>Create label...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>创建标签</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2902"/>
@@ -926,7 +926,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2908"/>
       <source>Set player location</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>设置玩家位置</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2909"/>
