@@ -48,6 +48,7 @@
 #include <QTableWidget>
 #include <QToolBar>
 #include <QUiLoader>
+#include <../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h>
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
@@ -3027,6 +3028,8 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                         QObject::connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
                             if (future.result()) {
                                 populateThemesList();
+
+                                emit signal_themeUpdateCompleted();
                             }
 
                             theme_download_label->hide();
@@ -3969,8 +3972,8 @@ void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
             return;
         }
 
-        // unlikely, but theme index could be not yet available - wait a bit then
-        QTimer::singleShot(3s, this, [=]() {
+        // in case no theme index is available yet, so it as soon as one is available
+        KDToolBox::connectSingleShot(this, &dlgProfilePreferences::signal_themeUpdateCompleted,  [=]() {
             auto monokaiIndex = code_editor_theme_selection_combobox->findText(darkTheme);
             if (monokaiIndex != -1) {
                 code_editor_theme_selection_combobox->setCurrentIndex(monokaiIndex);
