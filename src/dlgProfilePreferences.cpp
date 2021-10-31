@@ -338,6 +338,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     }
 
     setupPasswordsMigration();
+
+    connect(label_darkEditorPrompt, &QLabel::linkActivated, this, &dlgProfilePreferences::slot_enableDarkEditor);
+    label_darkEditorPrompt->hide();
 }
 
 void dlgProfilePreferences::setupPasswordsMigration()
@@ -3948,4 +3951,34 @@ void dlgProfilePreferences::slot_setPostingTimeout(const double timeout)
     }
 
     pHost->mTelnet.setPostingTimeout(qRound(1000.0 * timeout));
+}
+
+void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
+{
+    if (link == QStringLiteral("dark-code-editor")) {
+        const auto darkTheme = QStringLiteral("Monokai");
+
+        label_darkEditorPrompt->hide();
+
+        // switch to code editor tab
+        tabWidget->setCurrentIndex(3);
+
+        auto monokaiIndex = code_editor_theme_selection_combobox->findText(darkTheme);
+        if (monokaiIndex != -1) {
+            code_editor_theme_selection_combobox->setCurrentIndex(monokaiIndex);
+            return;
+        }
+
+        // unlikely, but theme index could be not yet available - wait a bit then
+        QTimer::singleShot(3s, this, [=]() {
+            auto monokaiIndex = code_editor_theme_selection_combobox->findText(darkTheme);
+            if (monokaiIndex != -1) {
+                code_editor_theme_selection_combobox->setCurrentIndex(monokaiIndex);
+            }
+        });
+
+        return;
+    }
+
+    qWarning() << "unknown link clicked in profile preferences:" << link;
 }

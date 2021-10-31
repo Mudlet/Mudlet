@@ -159,6 +159,7 @@ private slots:
     void slot_setPlayerRoomOuterDiameter(const int);
     void slot_setPlayerRoomInnerDiameter(const int);
     void slot_setPostingTimeout(const double);
+    void slot_enableDarkEditor(const QString&);
 
 private:
     void setColors();
