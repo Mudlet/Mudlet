@@ -311,9 +311,87 @@ void TAccessibleTextEdit::scrollToSubstring(int startIndex, int endIndex)
  */
 QString TAccessibleTextEdit::attributes(int offset, int *startOffset, int *endOffset) const
 {
-    qWarning("Unsupported TAccessibleTextEdit::attributes");
+    // IAccessible2 defines -1 as length and -2 as cursor position.
+    if (offset == -2) {
+        offset = cursorPosition();
+    }
 
-    return QString();
+    const int charCount = characterCount();
+
+    // -1 doesn't make much sense here, but it's better to return something.
+    // Screen readers may ask for text attributes at the cursor position which
+    // may be equal to length.
+    if (offset == -1 || offset == charCount) {
+        offset = charCount - 1;
+    }
+
+    if (offset < 0 || offset > charCount) {
+        *startOffset = -1;
+        *endOffset = -1;
+        return QString();
+    }
+
+    QString ret = QString();
+
+    const QFont font = textEdit()->font();
+
+    QString family = font.family();
+    if (!family.isEmpty()) {
+        family = family.replace('\\', QLatin1String("\\\\"));
+        family = family.replace(':', QLatin1String("\\:"));
+        family = family.replace(',', QLatin1String("\\,"));
+        family = family.replace('=', QLatin1String("\\="));
+        family = family.replace(';', QLatin1String("\\;"));
+        family = family.replace('\"', QLatin1String("\\\""));
+        ret += "font-family:" + QLatin1Char('"') + family + QLatin1Char('"') + ";";
+    }
+
+    const int fontSize = int(font.pointSize());
+    if (fontSize) {
+        ret += "font-size:" + QString::fromLatin1("%1pt").arg(fontSize) + ";";
+    }
+
+    const int line = lineForOffset(offset);
+    const int column = columnForOffset(offset);
+    const QFont::Style style = font.style();
+    const TChar &charStyle = textEdit()->mpBuffer->buffer.at(line).at(column);
+    // IAccessible2's text attributes don't support the overline attribute.
+    const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
+    const bool isBold = (attributes & TChar::Bold) || font.weight() > QFont::Normal;
+    const bool isItalics = (attributes & TChar::Italic) || style == QFont::StyleItalic;
+    const bool isStrikeOut = attributes & TChar::StrikeOut;
+    const bool isUnderline = attributes & TChar::Underline;
+    const bool isReverse = attributes & TChar::Reverse;
+    const bool caretIsHere = mudlet::self()->isCaretModeEnabled() && textEdit()->mCaretLine == line &&
+        textEdit()->mCaretColumn == column;
+
+    // Different weight values are not handled.
+    if (isBold) {
+        ret += "font-weight:bold;";
+    }
+    if (isItalics || style != QFont::StyleNormal) {
+        ret += "font-style:" + QString::fromLatin1(isItalics ? "italic;" : "oblique;");
+    }
+    if (isStrikeOut) {
+        ret += "text-line-through-type:single;";
+    }
+    if (isUnderline) {
+        ret += "text-underline-type:single;";
+    }
+
+    QColor fgColor;
+    QColor bgColor;
+    if (isReverse != (charStyle.isSelected() != caretIsHere)) {
+        fgColor = charStyle.background();
+        bgColor = charStyle.foreground();
+    } else {
+        fgColor = charStyle.foreground();
+        bgColor = charStyle.background();
+    }
+    ret += QString::fromLatin1("color:rgb(%1,%2,%3);").arg(fgColor.red()).arg(fgColor.green()).arg(fgColor.blue());
+    ret += QString::fromLatin1("background-color:rgb(%1,%2,%3);").arg(bgColor.red()).arg(bgColor.green()).arg(bgColor.blue());
+
+    return ret;
 }
 
 /*
