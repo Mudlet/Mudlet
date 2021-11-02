@@ -264,6 +264,14 @@ int TAccessibleTextEdit::characterCount() const
     return text(QAccessible::Value).length();
 }
 
+bool TAccessibleTextEdit::lineIsVisible(int line) const
+{
+    TTextEdit* edit = textEdit();
+    int topLine = edit->imageTopLine();
+
+    return line >= topLine && line < topLine + edit->mScreenHeight;
+}
+
 /*
  * Returns the position and size of the character at position offset in
  * screen coordinates.
@@ -280,7 +288,7 @@ QRect TAccessibleTextEdit::characterRect(int offset) const
     int topLine = edit->imageTopLine();
 
     // Check whether the character is visible.
-    if (row < topLine || row >= topLine + edit->mScreenHeight) {
+    if (!lineIsVisible(row)) {
         return QRect();
     }
 
@@ -309,7 +317,17 @@ int TAccessibleTextEdit::offsetAtPoint(const QPoint& point) const
  */
 void TAccessibleTextEdit::scrollToSubstring(int startIndex, int endIndex)
 {
-    qWarning("Unsupported TAccessibleTextEdit::scrollToSubstring");
+    int startLine = lineForOffset(startIndex);
+    int endLine = lineForOffset(endIndex);
+    TTextEdit* edit = textEdit();
+
+    if (!lineIsVisible(startLine)) {
+        edit->scrollTo(startLine);
+    }
+
+    if (!lineIsVisible(endLine)) {
+        edit->scrollTo(endLine);
+    }
 }
 
 /*

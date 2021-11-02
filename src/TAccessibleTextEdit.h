@@ -90,6 +90,7 @@ private:
     int lineForOffset(int offset, int *lengthSoFar) const;
     int columnForOffset(int offset) const;
     int offsetForPosition(int line, int column) const;
+    bool lineIsVisible(int line) const;
     QString textAroundOffset(TextOp op, int offset, QAccessible::TextBoundaryType boundaryType,
                              int* startOffset, int* endOffset) const;
 };
