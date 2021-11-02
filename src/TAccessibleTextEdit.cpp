@@ -276,10 +276,17 @@ QRect TAccessibleTextEdit::characterRect(int offset) const
 
     int row = lineForOffset(offset);
     int col = columnForOffset(offset);
-    int fontWidth = QFontMetrics(textEdit()->mDisplayFont).averageCharWidth();
-    int fontHeight = QFontMetrics(textEdit()->mDisplayFont).height();
-    QPoint position = QPoint(col * fontWidth , row * fontHeight);
-    position = textEdit()->mapToGlobal(position);
+    TTextEdit* edit = textEdit();
+    int topLine = edit->imageTopLine();
+
+    // Check whether the character is visible.
+    if (row < topLine || row >= topLine + edit->mScreenHeight) {
+        return QRect();
+    }
+
+    int fontWidth = edit->mFontWidth;
+    int fontHeight = edit->mFontHeight;
+    QPoint position = edit->mapToGlobal(QPoint(col * fontWidth, (row - topLine) * fontHeight));
 
     return QRect(position, QSize(fontWidth, fontHeight));
 }
