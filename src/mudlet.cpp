@@ -256,11 +256,11 @@ mudlet::mudlet()
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
     if (mDarkTheme) {
-        setDarkTheme(mDarkTheme);
+        setDarkTheme(mDarkTheme, true);
     }
     if (QStringList{"windowsvista", "macintosh"}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
         qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - QPushButton styling fix applied!";
-        mBG_ONLY_STYLESHEET = QStringLiteral("QPushButton {background-color: %1; border: 1px solid #8f8f91;}");
+        mBG_ONLY_STYLESHEET = QStringLiteral("QPushButto`n {background-color: %1; border: 1px solid #8f8f91;}");
         mTEXT_ON_BG_STYLESHEET = QStringLiteral("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}");
     } else {
         qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - no styling fixes applied.";
@@ -3865,9 +3865,11 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
     }
 }
 
-void mudlet::setDarkTheme(const bool& state)
+// during Mudlet load, darktheme will already be set to 'true' -
+// so pass a separate flag to override the state check
+void mudlet::setDarkTheme(const bool& state, const bool& loading)
 {
-    if (mDarkTheme == state) {
+    if (mDarkTheme == state && !loading) {
         return;
     }
 
