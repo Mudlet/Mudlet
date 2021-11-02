@@ -165,15 +165,11 @@ void TAccessibleTextEdit::setSelection(int selectionIndex, int startOffset, int 
 }
 
 /*
- * Returns the current cursor position.
- *
- * See also setCursorPosition().
+ * Convert from line, column coordinates to character offset.
  */
-int TAccessibleTextEdit::cursorPosition() const
+int TAccessibleTextEdit::offsetForPosition(int line, int column) const
 {
     int ret = 0;
-    int line = textEdit()->mCaretLine;
-    int column = textEdit()->mCaretColumn;
 
     for (int i = 0; i < line; i++) {
         // The text() method adds a '\n' to the end of every line, so account
@@ -184,6 +180,16 @@ int TAccessibleTextEdit::cursorPosition() const
     ret += column;
 
     return ret;
+}
+
+/*
+ * Returns the current cursor position.
+ *
+ * See also setCursorPosition().
+ */
+int TAccessibleTextEdit::cursorPosition() const
+{
+    return offsetForPosition(textEdit()->mCaretLine, textEdit()->mCaretColumn);
 }
 
 /*
@@ -259,11 +265,14 @@ QRect TAccessibleTextEdit::characterRect(int offset) const
 /*
  * Returns the offset of the character at the point in screen coordinates.
  */
-int TAccessibleTextEdit::offsetAtPoint(const QPoint &point) const
+int TAccessibleTextEdit::offsetAtPoint(const QPoint& point) const
 {
-    qWarning("Unsupported TAccessibleTextEdit::offsetAtPoint");
+    TTextEdit* edit = textEdit();
+    QPoint local = edit->mapFromGlobal(point);
+    int line = edit->imageTopLine() + local.y() / edit->mFontHeight;
+    int column = local.x() / edit->mFontWidth;
 
-    return 0;
+    return offsetForPosition(line, column);
 }
 
 /*

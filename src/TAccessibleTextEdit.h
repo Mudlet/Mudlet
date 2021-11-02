@@ -83,6 +83,7 @@ private:
     bool offsetIsInvalid(int offset) const;
     int lineForOffset(int offset, int *lengthSoFar) const;
     int columnForOffset(int offset) const;
+    int offsetForPosition(int line, int column) const;
 };
 
 #endif // MUDLET_TACCESSIBLETEXTEDIT_H
