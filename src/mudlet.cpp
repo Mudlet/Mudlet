@@ -258,9 +258,9 @@ mudlet::mudlet()
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
 
-    if (firstLaunch) {
+    // if (firstLaunch) {
         qDebug() << "Dark theme in desktop?" << desktopInDarkMode();
-    }
+    // }
 
     if (mDarkTheme) {
         setDarkTheme(mDarkTheme);
