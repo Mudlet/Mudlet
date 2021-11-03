@@ -3760,7 +3760,7 @@ void Host::setupIreDriverBugfix()
 
 void Host::setControlCharacterMode(const int mode)
 {
-    if (mode < 0 && mode > 2) {
+    if (mode < 0 || mode > 2) {
         return;
     }
 
