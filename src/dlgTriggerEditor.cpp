@@ -5805,12 +5805,6 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
     int ID = pItem->data(0, Qt::UserRole).toInt();
     TTimer* pT = mpHost->getTimerUnit()->getTimer(ID);
     if (pT) {
-        if (pT->getParent()) {
-            qDebug() << "[STATUS]: timer ID=" << pT->getID() << " name=" << pT->getName() << " mActive = " << pT->isActive() << " mUserActiveState=" << pT->shouldBeActive()
-                     << " parent=" << pT->getParent()->getName();
-        } else {
-            qDebug() << "[STATUS]: timer ID=" << pT->getID() << " name=" << pT->getName() << "> mActive = " << pT->isActive() << " mUserActiveState=" << pT->shouldBeActive() << " parent=0";
-        }
         QString command = pT->getCommand();
         QString name = pT->getName();
         mpTimersMainArea->lineEdit_timer_command->setText(command);
