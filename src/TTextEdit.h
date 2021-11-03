@@ -113,6 +113,7 @@ public:
     bool mShowTimeStamps;
     int mWrapAt;
     int mWrapIndentCount {};
+    inline static QString csmReplacementCharacter{QChar::ReplacementCharacter};
 
 public slots:
     void slot_toggleTimeStamps(const bool);
@@ -145,6 +146,8 @@ private:
     bool establishSelectedText();
     void expandSelectionToWords();
     void expandSelectionToLine(int);
+    inline void replaceControlCharacterWith_Picture(const uint, const QString&, const int, QVector<QString>&, int&) const;
+    inline void replaceControlCharacterWith_OEMFont(const uint, const QString&, const int, QVector<QString>&, int&) const;
 
     int mFontHeight;
     int mFontWidth;
