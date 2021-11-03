@@ -240,6 +240,8 @@ mudlet::mudlet()
 , mHunspell_sharedDictionary(nullptr)
 , mMultiView(false)
 {
+    firstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
+
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
     readEarlySettings(*mpSettings);
@@ -255,6 +257,11 @@ mudlet::mudlet()
     scanForMudletTranslations(QStringLiteral(":/lang"));
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
+
+    if (firstLaunch) {
+        qDebug() << "Dark theme in desktop?" << desktopInDarkMode();
+    }
+
     if (mDarkTheme) {
         setDarkTheme(mDarkTheme);
     }
@@ -326,8 +333,6 @@ mudlet::mudlet()
     } else {
         mAutolog = false;
     }
-
-    firstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
 
     mpButtonConnect = new QToolButton(this);
     mpButtonConnect->setText(tr("Connect"));
@@ -2400,7 +2405,7 @@ void mudlet::updateDiscordNamedIcon()
     QString gameName = pHost->getDiscordGameName();
 
     bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
-    
+
     mpActionDiscord->setIconText(gameName.isEmpty() ? QStringLiteral("Discord") : QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90));
 
     if (mpActionMudletDiscord->isVisible() != hasCustom) {
@@ -4544,4 +4549,30 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
     if (!mudlet::self()->packagesToInstallList.contains(QStringLiteral(":/mudlet-mapper.xml"))) {
         mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
     }
+}
+
+// Referenced from github.com/keepassxreboot/keepassxc. Licensed under GPL2/3.
+// Copyright (C) 2020 KeePassXC Team <team@keepassxc.org>
+bool desktopInDarkMode()
+{
+#if defined(Q_OS_WIN32)
+    QSettings settings(R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)", QSettings::NativeFormat);
+    return settings.value("AppsUseLightTheme", 1).toInt() == 0;
+#elif defined(Q_OS_MAC)
+    bool isDark = false;
+    CFStringRef uiStyleKey = CFSTR("AppleInterfaceStyle");
+    CFStringRef uiStyle = nullptr;
+    CFStringRef darkUiStyle = CFSTR("Dark");
+    if (uiStyle = (CFStringRef) CFPreferencesCopyAppValue(uiStyleKey, kCFPreferencesCurrentApplication); uiStyle)
+    {
+        isDark = (kCFCompareEqualTo == CFStringCompare(uiStyle, darkUiStyle, 0));
+        CFRelease(uiStyle);
+    }
+    return isDark;
+#endif
+    if (!qApp || !qApp->style())
+    {
+        return false;
+    }
+    return qApp->style()->standardPalette().color(QPalette::Window).toHsl().lightness() < 110;
 }
