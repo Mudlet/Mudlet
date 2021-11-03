@@ -480,7 +480,13 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
                 mInstalledModules.append_child("key").text().set(it.key().toUtf8().constData());
                 QStringList entry = it.value();
                 mInstalledModules.append_child("filepath").text().set(entry.at(0).toUtf8().constData());
-                mInstalledModules.append_child("globalSave").text().set(entry.at(1).toUtf8().constData());
+                if (entry.at(0).endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || entry.at(0).endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
+                    mInstalledModules.append_child("zipSync").text().set(entry.at(1).toUtf8().constData());
+                    // ensure compatibility with previous versions
+                    mInstalledModules.append_child("globalSave").text().set(0);
+                } else {
+                    mInstalledModules.append_child("globalSave").text().set(entry.at(1).toUtf8().constData());
+                }
                 if (entry.at(1).toInt()) {
                     pHost->modulesToWrite.insert(it.key(), entry);
                 }
