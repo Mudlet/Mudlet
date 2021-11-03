@@ -594,8 +594,8 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
         case 25:    graphemes.append(QChar(0x2193)); charWidth = 1; break; // EM  - Down Arrow
         case 26:    graphemes.append(QChar(0x2192)); charWidth = 1; break; // SUB - Right Arrow
         case 27:    graphemes.append(QChar(0x2190)); charWidth = 1; break; // ESC - Left Arrow - shouldn't appear as will have been intercepted previously
-        case 28:    graphemes.append(QChar(0x221F)); charWidth = 1; break; // FS  - Rigth Angle
-        case 29:    graphemes.append(QChar(0x2194)); charWidth = 1; break; // GS  - Left Rigth Arrow
+        case 28:    graphemes.append(QChar(0x221F)); charWidth = 1; break; // FS  - Right Angle
+        case 29:    graphemes.append(QChar(0x2194)); charWidth = 1; break; // GS  - Left Right Arrow
         case 30:    graphemes.append(QChar(0x25B2)); charWidth = 1; break; // RS  - Black Up-Pointing Pointer
         case 31:    graphemes.append(QChar(0x25BC)); charWidth = 1; break; // US  - Black Down-Pointing Pointer
         case 127:   graphemes.append(QChar(0x2302)); charWidth = 1; break; // DEL - House
