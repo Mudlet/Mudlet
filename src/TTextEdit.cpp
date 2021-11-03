@@ -494,9 +494,10 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     bool useReplacementCharacter = false;
     switch (mpConsole->mControlHandlingMode) {
     default:
+        // No special handling:
         if (unicode == '\t') {
             charWidth = mTabStopwidth - (column % mTabStopwidth);
-            graphemes.append(QChar::Tabulation);
+            graphemes.append(QString(QChar::Tabulation));
         } else {
             charWidth = getGraphemeWidth(unicode);
             if (!charWidth) {
@@ -509,7 +510,7 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
         }
         break; // End of outer switch default
     case 1:
-        // As Control Pictures
+        // As Unicode Control Pictures:
         switch (unicode) {
         case 0:     graphemes.append(QChar(0x2400)); charWidth = 1; break; // NUL - not sure that this can appear
         case 1:     graphemes.append(QChar(0x2401)); charWidth = 1; break; // SOH
@@ -524,7 +525,6 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
             // Makes the spacing behave like a tab
             charWidth = mTabStopwidth - (column % mTabStopwidth);
             // But print the "control picture" on top
-            // graphemes.append(QChar::Tabulation);
             graphemes.append(QChar(0x2409));
             break;
         case 10:    graphemes.append(QChar(0x240A)); charWidth = 1; break; // LF - may not ever appear!
@@ -573,7 +573,9 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
         case 6:     graphemes.append(QChar(0x2660)); charWidth = 1; break; // ACK - Card Suite Spades
         case 7:     graphemes.append(QChar(0x2022)); charWidth = 1; break; // BEL - Bullet - the handling of this gets done when it is received, not when it is displayed here:
         case 8:     graphemes.append(QChar(0x25D8)); charWidth = 1; break; // BS  - Inverse Bullet
-        case 9:     graphemes.append(QChar(0x25CB)); charWidth = 1; break; // HT  - Circle - NOTE THAT WE DO NOT USE TAB SPACING
+        case 9:
+            // NOTE THAT WE DO NOT USE TAB SPACING FOR THIS MODE:
+                    graphemes.append(QChar(0x25CB)); charWidth = 1; break; // HT  - Circle
         case 10:    graphemes.append(QChar(0x25D9)); charWidth = 1; break; // LF  - Inverse Circle
         case 11:    graphemes.append(QChar(0x2642)); charWidth = 1; break; // VT  - Male Sign
         case 12:    graphemes.append(QChar(0x2640)); charWidth = 1; break; // FF  - Female Sign
