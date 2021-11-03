@@ -56,6 +56,7 @@
 #include "VarUnit.h"
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QtUiTools/quiloader.h>
 #include <QDesktopServices>
 #include <QDesktopWidget>
@@ -80,6 +81,14 @@
 #include <QVariantHash>
 #include <QRandomGenerator>
 #include <zip.h>
+#include <QStyle>
+#ifdef Q_OS_LINUX
+#elif defined(Q_OS_WIN32)
+#include <QSettings>
+#elif defined(Q_OS_MAC)
+#include <CoreFoundation/CoreFoundation.h>
+#include <CoreServices/CoreServices.h>
+#endif
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
@@ -4553,7 +4562,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
 
 // Referenced from github.com/keepassxreboot/keepassxc. Licensed under GPL2/3.
 // Copyright (C) 2020 KeePassXC Team <team@keepassxc.org>
-bool desktopInDarkMode()
+bool mudlet::desktopInDarkMode()
 {
 #if defined(Q_OS_WIN32)
     QSettings settings(R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)", QSettings::NativeFormat);
