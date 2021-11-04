@@ -80,6 +80,12 @@
 #include <QVariantHash>
 #include <QRandomGenerator>
 #include <zip.h>
+
+if defined(Q_OS_MAC)
+#include <CoreFoundation/CoreFoundation.h>
+#include <CoreServices/CoreServices.h>
+#endif
+
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
@@ -2400,7 +2406,7 @@ void mudlet::updateDiscordNamedIcon()
     QString gameName = pHost->getDiscordGameName();
 
     bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
-    
+
     mpActionDiscord->setIconText(gameName.isEmpty() ? QStringLiteral("Discord") : QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90));
 
     if (mpActionMudletDiscord->isVisible() != hasCustom) {
