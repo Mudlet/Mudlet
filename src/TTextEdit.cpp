@@ -544,13 +544,13 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
 {
     Q_UNUSED(column)
     switch (unicode) {
-    case 0:     graphemes.append(QChar(0x2400)); charWidth = 1; break; // NUL - not sure that this can appear and the OEM font treats it as a space
+    case 0:     graphemes.append(QString(QChar::Space)); charWidth = 1; break; // NUL - not sure that this can appear and the OEM font treats it as a space
     case 1:     graphemes.append(QChar(0x263A)); charWidth = 1; break; // SOH - White Smiling Face
     case 2:     graphemes.append(QChar(0x263B)); charWidth = 1; break; // STX - Black Smiling Face
-    case 3:     graphemes.append(QChar(0x2665)); charWidth = 1; break; // ETX - Card Suite Hearts
-    case 4:     graphemes.append(QChar(0x2666)); charWidth = 1; break; // EOT - Card Suite Diamonds
-    case 5:     graphemes.append(QChar(0x2663)); charWidth = 1; break; // ENQ - Card Suite Clubs
-    case 6:     graphemes.append(QChar(0x2660)); charWidth = 1; break; // ACK - Card Suite Spades
+    case 3:     graphemes.append(QChar(0x2665)); charWidth = 1; break; // ETX - Black Heart Suite
+    case 4:     graphemes.append(QChar(0x2666)); charWidth = 1; break; // EOT - Black Diamond Suite
+    case 5:     graphemes.append(QChar(0x2663)); charWidth = 1; break; // ENQ - Black ClubsSuite
+    case 6:     graphemes.append(QChar(0x2660)); charWidth = 1; break; // ACK - Black Spade Suite
     case 7:     graphemes.append(QChar(0x2022)); charWidth = 1; break; // BEL - Bullet - the handling of this gets done when it is received, not when it is displayed here:
     case 8:     graphemes.append(QChar(0x25D8)); charWidth = 1; break; // BS  - Inverse Bullet
     case 9:
@@ -559,16 +559,16 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     case 10:    graphemes.append(QChar(0x25D9)); charWidth = 1; break; // LF  - Inverse Circle
     case 11:    graphemes.append(QChar(0x2642)); charWidth = 1; break; // VT  - Male Sign
     case 12:    graphemes.append(QChar(0x2640)); charWidth = 1; break; // FF  - Female Sign
-    case 13:    graphemes.append(QChar(0x240D)); charWidth = 1; break; // CR  - Single Quaver - shouldn't appear but does seem to crop up somehow!
-    case 14:    graphemes.append(QChar(0x266A)); charWidth = 1; break; // SO  - Double Quaver
-    case 15:    graphemes.append(QChar(0x266B)); charWidth = 1; break; // SI  - White Sun with Rays
-    case 16:    graphemes.append(QChar(0x263C)); charWidth = 1; break; // DLE - Black Right-Pointing Pointer
-    case 17:    graphemes.append(QChar(0x25BA)); charWidth = 1; break; // DC1 - Black Left-Pointing Pointer
-    case 18:    graphemes.append(QChar(0x25C4)); charWidth = 1; break; // DC2 - Up Down ArroW
-    case 19:    graphemes.append(QChar(0x2195)); charWidth = 1; break; // DC3 - Double Exclaimation Mark
-    case 20:    graphemes.append(QChar(0x203C)); charWidth = 1; break; // DC4 - Pilcrow
-    case 21:    graphemes.append(QChar(0x00B6)); charWidth = 1; break; // NAK - Section Sign
-    case 22:    graphemes.append(QChar(0x00A7)); charWidth = 1; break; // SYN - Black Rectangle
+    case 13:    graphemes.append(QChar(0x266A)); charWidth = 1; break; // CR  - Single Quaver - shouldn't appear but does seem to crop up somehow!
+    case 14:    graphemes.append(QChar(0x266B)); charWidth = 1; break; // SO  - Double Quaver
+    case 15:    graphemes.append(QChar(0x263C)); charWidth = 1; break; // SI  - White Sun with Rays
+    case 16:    graphemes.append(QChar(0x25BA)); charWidth = 1; break; // DLE - Black Right-Pointing Pointer
+    case 17:    graphemes.append(QChar(0x25C4)); charWidth = 1; break; // DC1 - Black Left-Pointing Pointer
+    case 18:    graphemes.append(QChar(0x2195)); charWidth = 1; break; // DC2 - Up Down ArroW
+    case 19:    graphemes.append(QChar(0x203C)); charWidth = 1; break; // DC3 - Double Exclaimation Mark
+    case 20:    graphemes.append(QChar(0x00B6)); charWidth = 1; break; // DC4 - Pilcrow
+    case 21:    graphemes.append(QChar(0x00A7)); charWidth = 1; break; // NAK - Section Sign
+    case 22:    graphemes.append(QChar(0x25AC)); charWidth = 1; break; // SYN - Black Rectangle
     case 23:    graphemes.append(QChar(0x21A8)); charWidth = 1; break; // ETB - Up Down Arrow With Base
     case 24:    graphemes.append(QChar(0x2191)); charWidth = 1; break; // CAN - Up Arrow
     case 25:    graphemes.append(QChar(0x2193)); charWidth = 1; break; // EM  - Down Arrow
