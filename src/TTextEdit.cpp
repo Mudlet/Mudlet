@@ -528,15 +528,8 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     case 31:    graphemes.append(QChar(0x241F)); charWidth = 1; break; // US
     case 127:   graphemes.append(QChar(0x2421)); charWidth = 1; break; // DEL
     default:
-        bool useReplacementCharacter = false;
         charWidth = getGraphemeWidth(unicode);
-        if (!charWidth) {
-            // Print the grapheme replacement character instead - which seems to
-            // be 1 wide
-            useReplacementCharacter = true;
-            charWidth = 1;
-        }
-        graphemes.append(useReplacementCharacter ? csmReplacementCharacter : grapheme);
+        graphemes.append((charWidth < 1) ? QChar() : grapheme);
     }
 }
 
@@ -580,15 +573,8 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     case 31:    graphemes.append(QChar(0x25BC)); charWidth = 1; break; // US  - Black Down-Pointing Pointer
     case 127:   graphemes.append(QChar(0x2302)); charWidth = 1; break; // DEL - House
     default:
-        bool useReplacementCharacter = false;
         charWidth = getGraphemeWidth(unicode);
-        if (!charWidth) {
-            // Print the grapheme replacement character instead - which seems to
-            // be 1 wide
-            useReplacementCharacter = true;
-            charWidth = 1;
-        }
-        graphemes.append(useReplacementCharacter ? csmReplacementCharacter : grapheme);
+        graphemes.append((charWidth < 1) ? QChar() : grapheme);
     }
 }
 
@@ -600,19 +586,22 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     switch (mpConsole->mControlHandlingMode) {
     default:
         // No special handling:
-        if (unicode == '\t') {
-            charWidth = mTabStopwidth - (column % mTabStopwidth);
-            graphemes.append(QString(QChar::Tabulation));
+        if (unicode == '\a' || unicode == '\t') {
+            if (unicode == '\t') {
+                charWidth = mTabStopwidth - (column % mTabStopwidth);
+                graphemes.append(QString(QChar::Tabulation));
+            } else {
+                // The alert character could make a sound when it is processed
+                // in cTelnet::proccessSocketData(...) but it does not have a
+                // visible representation - so lets give it one - a double
+                // note:
+                charWidth = 1;
+                graphemes.append(QChar(0x266B));
+            }
+
         } else {
             charWidth = getGraphemeWidth(unicode);
-            bool useReplacementCharacter = false;
-            if (!charWidth) {
-                // Print the grapheme replacement character instead - which seems to
-                // be 1 wide
-                useReplacementCharacter = true;
-                charWidth = 1;
-            }
-            graphemes.append(useReplacementCharacter ? csmReplacementCharacter : grapheme);
+            graphemes.append((charWidth < 1) ? QChar() : grapheme);
         }
         break;
     case 1:
@@ -625,7 +614,10 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     charWidths.append(charWidth);
 
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
-    auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
+    QRect textRect;
+    if (charWidth > 0) {
+        textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
+    }
     textRects.append(textRect);
     QColor bgColor;
     if (Q_UNLIKELY(static_cast<bool>(attributes & TChar::Reverse) != charStyle.isSelected())) {
@@ -635,7 +627,9 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
         fgColors.append(charStyle.foreground());
         bgColor = charStyle.background();
     }
-    painter.fillRect(textRect, bgColor);
+    if (!textRect.isNull()) {
+        painter.fillRect(textRect, bgColor);
+    }
     return charWidth;
 }
 
@@ -660,6 +654,10 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
         font.setStrikeOut(isStrikeOut);
         font.setUnderline(isUnderline);
         painter.setFont(font);
+    }
+
+    if (textRect.isNull()) {
+        return;
     }
 
     if (painter.pen().color() != fgColor) {
