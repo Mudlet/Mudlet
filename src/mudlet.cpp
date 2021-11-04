@@ -81,8 +81,9 @@
 #include <QRandomGenerator>
 #include <zip.h>
 
-namespace coreMacOS {
+
 #if defined(Q_OS_MAC)
+namespace coreMacOS {
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreServices/CoreServices.h>
 }
