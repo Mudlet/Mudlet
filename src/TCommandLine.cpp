@@ -53,6 +53,7 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
 , mUserDictionarySuggestionsCount()
 , mpSystemSuggestionsList()
 , mpUserSuggestionsList()
+, contextMenuItems()
 {
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -834,6 +835,13 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             // else the word is in the dictionary - in either case show the context
             // menu - either the one with the prefixed spellings, or the standard
             // one:
+        }
+
+        popup->addSeparator();
+        foreach(auto label, contextMenuItems.keys()) {
+            auto action = new QAction(label, this);
+            connect(action, &QAction::triggered, [=]() { contextMenuItems.value(label)(); });
+            popup->addAction(action);
         }
 
         mPopupPosition = event->pos();
