@@ -16028,7 +16028,7 @@ int TLuaInterpreter::addCommandLineMenu(lua_State * L)
     }
     int callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    auto commandline = COMMANDLINE(L, commandLineName);
+    const auto& commandline = COMMANDLINE(L, commandLineName);
 
     commandline->contextMenuItems.insert(menuLabel, [=]() {
         lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
@@ -16065,7 +16065,7 @@ int TLuaInterpreter::removeCommandLineMenu(lua_State * L)
     }
     auto menuLabel = getVerifiedString(L, __func__, args++, "menu label");
 
-    auto commandline = COMMANDLINE(L, commandLineName);
+    const auto& commandline = COMMANDLINE(L, commandLineName);
 
     if (commandline->contextMenuItems.remove(menuLabel) == 0) {
         lua_pushboolean(L, false);

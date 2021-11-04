@@ -53,7 +53,6 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
 , mUserDictionarySuggestionsCount()
 , mpSystemSuggestionsList()
 , mpUserSuggestionsList()
-, contextMenuItems()
 {
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
