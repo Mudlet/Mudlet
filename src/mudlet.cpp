@@ -85,10 +85,15 @@
 #ifdef Q_OS_LINUX
 #elif defined(Q_OS_WIN32)
 #include <QSettings>
-#elif defined(Q_OS_MAC)
+#endif
+
+#if defined(Q_OS_MAC)
+namespace coreMacOS {
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreServices/CoreServices.h>
+}
 #endif
+
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
