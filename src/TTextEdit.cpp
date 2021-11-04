@@ -595,7 +595,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
 int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColors, QVector<QRect>& textRects, QVector<QString>& graphemes, QVector<int>& charWidths, QPoint& cursor, const QString& grapheme, const int column, TChar& charStyle) const
 {
     uint unicode = getGraphemeBaseCharacter(grapheme);
-    int charWidth;
+    int charWidth = 0;
 
     switch (mpConsole->mControlHandlingMode) {
     default:
