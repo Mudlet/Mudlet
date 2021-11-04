@@ -4577,10 +4577,10 @@ bool mudlet::desktopInDarkMode()
     CFStringRef uiStyleKey = CFSTR("AppleInterfaceStyle");
     CFStringRef uiStyle = nullptr;
     CFStringRef darkUiStyle = CFSTR("Dark");
-    if (uiStyle = (CFStringRef) CFPreferencesCopyAppValue(uiStyleKey, kCFPreferencesCurrentApplication); uiStyle)
+    if (uiStyle = (CFStringRef) CFPreferencesCopyAppValue(uiStyleKey, coreMacOS::kCFPreferencesCurrentApplication); uiStyle)
     {
-        isDark = (kCFCompareEqualTo == CFStringCompare(uiStyle, darkUiStyle, 0));
-        CFRelease(uiStyle);
+        isDark = (coreMacOS::kCFCompareEqualTo == coreMacOS::CFStringCompare(uiStyle, darkUiStyle, 0));
+        coreMacOS::CFRelease(uiStyle);
     }
     return isDark;
 #endif
