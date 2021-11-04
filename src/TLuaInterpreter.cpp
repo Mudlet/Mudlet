@@ -16017,7 +16017,7 @@ int TLuaInterpreter::addCommandLineMenu(lua_State * L)
 
     QString consoleName;
     if (argsCount == 3) {
-        consoleName = getVerifiedString(L, __func__, args++, "console name");
+        consoleName = getVerifiedString(L, __func__, args++, "window name");
     } else {
         consoleName = QStringLiteral("main");
     }
@@ -16031,7 +16031,7 @@ int TLuaInterpreter::addCommandLineMenu(lua_State * L)
 
     auto console = host.findConsole(consoleName);
     if(!console) {
-        lua_pushfstring(L, "addCommandLineMenu: bad argument #1 (no console named %s!)", consoleName.toUtf8().constData());
+        lua_pushfstring(L, "addCommandLineMenu: bad argument #1 (no window named %s!)", consoleName.toUtf8().constData());
         return lua_error(L);
     }
 
