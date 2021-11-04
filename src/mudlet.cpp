@@ -81,7 +81,7 @@
 #include <QRandomGenerator>
 #include <zip.h>
 
-if defined(Q_OS_MAC)
+#if defined(Q_OS_MAC)
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreServices/CoreServices.h>
 #endif
