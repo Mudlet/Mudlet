@@ -427,6 +427,8 @@ void dlgProfilePreferences::disableHostDetails()
     // ----- groupbox_codeEditorThemeSelection -----
     theme_download_label->hide();
 
+    groupBox_autoComplete->setEnabled(false);
+
     // ===== tab_displayColors =====
     groupBox_displayColors->setEnabled(false);
 
@@ -479,9 +481,13 @@ void dlgProfilePreferences::disableHostDetails()
 
     groupbox_searchEngineSelection->setEnabled(false);
     // ----- groupBox_debug -----
+    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(false);
     // This acts on a label within this groupBox:
     hidePasswordMigrationLabel();
+    checkBox_debugShowAllCodepointProblems->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
+    label_networkPacketTimeout->setEnabled(false);
+    doubleSpinBox_networkPacketTimeout->setEnabled(false);
 }
 
 void dlgProfilePreferences::enableHostDetails()
@@ -524,6 +530,7 @@ void dlgProfilePreferences::enableHostDetails()
     // ===== tab_codeEditor =====
     groupbox_codeEditorThemeSelection->setEnabled(true);
 
+    groupBox_autoComplete->setEnabled(true);
 
     // ===== tab_displayColors =====
     groupBox_displayColors->setEnabled(true);
@@ -563,8 +570,11 @@ void dlgProfilePreferences::enableHostDetails()
 
     groupbox_searchEngineSelection->setEnabled(true);
     // ----- groupBox_debug -----
+    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
     widget_timerDebugOutputMinimumInterval->setEnabled(true);
     checkBox_debugShowAllCodepointProblems->setEnabled(true);
+    label_networkPacketTimeout->setEnabled(true);
+    doubleSpinBox_networkPacketTimeout->setEnabled(true);
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
