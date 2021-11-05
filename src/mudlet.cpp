@@ -4584,6 +4584,9 @@ bool mudlet::desktopInDarkMode()
     }
     return isDark;
 #endif
+    // add Gnome and KDE settings detection
+
+
     if (!qApp || !qApp->style())
     {
         return false;
