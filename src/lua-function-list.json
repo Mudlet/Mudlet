@@ -344,7 +344,7 @@
     "selectCmdLineText": "selectCmdLineText([commandLine])",
     "selectCurrentLine": "selectCurrentLine([windowName])",
     "selectSection": "selectSection( [windowName], fromPosition, length )",
-    "selectString": "selectString( [windowName], text, number_of_match )",
+    "selectString": "selectString([windowName], text, number_of_match)",
     "send": "send(command, showOnScreen)",
     "sendAll": "sendAll(list of things to send, [echo back or not])",
     "sendATCP": "sendATCP(message, what)",
