@@ -935,6 +935,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     }
 
     mDiscordApplicationId = readProfileData(profile_name, QStringLiteral("discordApplicationId"));
+    mDiscordInviteURL = readProfileData(profile_name, QStringLiteral("discordInviteURL"));
 
     // val will be null if this is the first time the profile has been read
     // since an update to a Mudlet version supporting Discord - so a toint()
@@ -1609,10 +1610,11 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    bool preInstallPackages = false;
+    // loading this profile for the first time
+    bool firstTimeLoad = false;
     pHost->hideMudletsVariables();
     if (entries.isEmpty()) {
-        preInstallPackages = true;
+        firstTimeLoad = true;
     } else {
         QFile file(QStringLiteral("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
         file.open(QFile::ReadOnly | QFile::Text);
@@ -1623,7 +1625,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
         // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
         if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
-            preInstallPackages = true;
+            firstTimeLoad = true;
         }
     }
 
@@ -1668,8 +1670,9 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         mudlet::self()->mDiscord.setApplicationID(pHost, mDiscordApplicationId);
     }
 
-    if (preInstallPackages) {
+    if (firstTimeLoad) {
         mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
+        pHost->setupIreDriverBugfix();
     }
 
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());

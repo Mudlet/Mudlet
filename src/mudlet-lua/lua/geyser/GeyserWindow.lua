@@ -68,7 +68,7 @@ end
 
 --- Sets the background color of this window primitive.  If this primitive
 -- was using a shared color, then it creates a new, personal color.
--- @param r The red value, or a quoted color name, like "green".
+-- @param r The red value, or a quoted color name, like "green", or a decho color like "<0,255,0>", or hex color like "#00ff00"
 -- @param g The green value, or nil if using a name.
 -- @param b The blue value, or nil if using a name.
 function Geyser.Window:setBgColor (r, g, b)
@@ -77,7 +77,7 @@ end
 
 --- Sets the foreground color of this window primitive.  If this primitive
 -- was using a shared color, then it creates a new, personal color.
--- @param r The red value, or a quoted color name, like "green".
+-- @param r The red value, or a quoted color name, like "green", or a decho color like "<0,255,0>", or hex color like "#00ff00"
 -- @param g The green value, or nil if using a name.
 -- @param b The blue value, or nil if using a name.
 function Geyser.Window:setFgColor (r, g, b)
@@ -86,7 +86,7 @@ end
 
 --- Sets the background color and alpha.  If this primitive
 -- was using a shared color, then it creates a new, personal color.
--- @param r The red component of the color, or a named color like "green".
+-- @param r The red component of the color, or a named color like "green", or a decho color like "<0,255,0>", or hex color like "#00ff00"
 -- @param g The green component, or nil if using named colors.
 -- @param b The blue component, or nil if using named colors.
 -- @param a The alpha component. If nil, uses current alpha value.

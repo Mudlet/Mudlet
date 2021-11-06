@@ -300,6 +300,7 @@ public:
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     void show_options_dialog(const QString& tab);
     void setInterfaceLanguage(const QString &languageCode);
+    void setDarkTheme(const bool &state);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     const QLocale& getUserLocale() const { return mUserLocale; }
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
@@ -327,6 +328,7 @@ public:
     int64_t getPhysicalMemoryTotal();
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     void refreshTabBar();
+    void updateDiscordNamedIcon();
 
     bool firstLaunch = false;
     // Needed to work around a (likely only Windows) issue:
@@ -432,6 +434,7 @@ public:
 
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
+    bool mDarkTheme;
 
     // mirror everything shown in any console to stdout. Helpful for CI environments
     inline static bool mMirrorToStdOut;
@@ -485,11 +488,12 @@ public:
                                  "<center><a href='https://www.reinosdeleyenda.es/foro/'>Forums</a></center>\n"
                                  "<center><a href='https://wiki.reinosdeleyenda.es/'>Wiki</a></center>\n", ":/icons/reinosdeleyenda_mud.png"}},
         {"Fierymud", {"fierymud.org", 4000, false, "<center><a href='https://www.fierymud.org/'>https://www.fierymud.org</a></center>", ":/icons/fiery_mud.png"}},
-        {"Mudlet self-test", {"mudlet.org", 23, false,}},
+        {"Mudlet self-test", {"mudlet.org", 23, false, "", ""}},
         {"Carrion Fields", {"carrionfields.net", 4449, false, "<center><a href='http://www.carrionfields.net'>www.carrionfields.net</a></center>", ":/icons/carrionfields.png"}},
         {"Cleft of Dimensions", {"cleftofdimensions.net", 4354, false, "<center><a href='https://www.cleftofdimensions.net/'>cleftofdimensions.net</a></center>", ":/icons/cleftofdimensions.png"}},
         {"Legends of the Jedi", {"legendsofthejedi.com", 5656, false, "<center><a href='https://www.legendsofthejedi.com/'>legendsofthejedi.com</a></center>", ":/icons/legendsofthejedi_120x30.png"}},
         {"CoreMUD", {"coremud.org", 4020, true, "<center><a href='https://coremud.org/'>coremud.org</a></center>", ":/icons/coremud_icon.jpg"}},
+        {"Multi-Users in Middle-earth", {"mume.org", 4242, true, "<center><a href='https://mume.org/'>mume.org</a></center>", ":/icons/mume.png"}},
     };
     // clang-format on
 
@@ -516,6 +520,7 @@ public slots:
     void slot_close_profile_requested(int);
     void slot_irc();
     void slot_discord();
+    void slot_mudlet_discord();
     void slot_package_manager();
     void slot_package_exporter();
     void slot_module_manager();
@@ -539,6 +544,7 @@ signals:
     void signal_setTreeIconSize(int);
     void signal_hostCreated(Host*, quint8);
     void signal_hostDestroyed(Host*, quint8);
+    void signal_enableDarkThemeChanged(bool);
     void signal_enableFulScreenModeChanged(bool);
     void signal_showMapAuditErrorsChanged(bool);
     void signal_menuBarVisibilityChanged(const controlsVisibility);
@@ -654,6 +660,7 @@ private:
     QPointer<QAction> mpActionFullScreenView;
     QPointer<QAction> mpActionHelp;
     QPointer<QAction> mpActionDiscord;
+    QPointer<QAction> mpActionMudletDiscord;
     QPointer<QAction> mpActionIRC;
     QPointer<QToolButton> mpButtonDiscord;
     QPointer<QAction> mpActionKeys;
@@ -679,6 +686,8 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
+
+    QString mDefaultStyle;
 
     // Has default form of "en_US" but can be just an ISO language code e.g. "fr" for french,
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation

@@ -81,6 +81,9 @@ public:
 
     void setSystemSpellDictionary(const QString&);
     void setProfileSpellDictionary();
+
+    void showStatistics();
+
     const QString& getSystemSpellDictionary() const { return mSpellDic; }
     QTextCodec* getHunspellCodec_system() const { return mpHunspellCodec_system; }
     Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
