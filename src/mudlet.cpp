@@ -88,6 +88,7 @@
 #endif
 
 #if defined(Q_OS_MAC)
+// wrap in namespace since `Collection` defined in these headers will clash with Boost
 namespace coreMacOS {
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreServices/CoreServices.h>
