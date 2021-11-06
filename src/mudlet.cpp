@@ -4440,6 +4440,7 @@ void mudlet::activateProfile(Host* pHost)
         mpCurrentActiveHost = pHost;
         updateDiscordNamedIcon();
         dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
+        pHost->updateDisplayDimensions();
     }
 }
 

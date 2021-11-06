@@ -299,7 +299,7 @@ public:
         mTelnet.set_USE_IRE_DRIVER_BUGFIX(b);
     }
 
-    void adjustNAWS();
+    void updateDisplayDimensions();
 
     bool installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);
@@ -386,6 +386,7 @@ public:
     void setDockLayoutUpdated(const QString&);
     void setToolbarLayoutUpdated(TToolBar*);
     bool commitLayoutUpdates(bool flush = false);
+    void setScreenDimensions(const int width, const int height) { mScreenWidth = width; mScreenHeight = height; }
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;

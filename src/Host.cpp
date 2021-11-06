@@ -1021,9 +1021,9 @@ void Host::startSpeedWalk(int sourceRoom, int targetRoom)
     mLuaInterpreter.call(f, n);
 }
 
-void Host::adjustNAWS()
+void Host::updateDisplayDimensions()
 {
-    mTelnet.setDisplayDimensions();
+    mTelnet.checkNAWS();
 }
 
 void Host::stopAllTriggers()

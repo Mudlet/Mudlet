@@ -45,6 +45,8 @@ public:
     explicit TMainConsole(Host*, QWidget* parent = nullptr);
     ~TMainConsole();
 
+    void resizeEvent(QResizeEvent* event) override;
+
     void resetMainConsole();
 
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
