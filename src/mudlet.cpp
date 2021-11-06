@@ -3898,14 +3898,13 @@ void mudlet::setAppearance(const Appearance state)
         enableDarkTheme = true;
     }
 
+    auto host = getActiveHost();
     if (enableDarkTheme) {
-        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         qApp->setStyle(new DarkTheme);
-        getHostManager().changeAllHostColour(getActiveHost());
+        getHostManager().changeAllHostColour(host);
     } else {
-        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
-        getHostManager().changeAllHostColour(getActiveHost());
+        getHostManager().changeAllHostColour(host);
     }
     mAppearance = state;
     emit signal_appearanceChanged(state);
