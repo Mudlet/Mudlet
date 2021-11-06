@@ -752,7 +752,6 @@ void cTelnet::checkNAWS()
     int naws_x = (pHost->mScreenWidth < pHost->mWrapAt) ? pHost->mScreenWidth : pHost->mWrapAt;
     int naws_y = pHost->mScreenHeight;
     if ((naws_y > 0) && (myOptionState[static_cast<size_t>(OPT_NAWS)]) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
-        qDebug().nospace().noquote() << "cTelnet::checkNAWS()() INFO - want to send NAWS data (for: \"" << mProfileName << "\") of X = " << naws_x << ", Y = " << naws_y << ".";
         sendNAWS(naws_x, naws_y);
         mNaws_x = naws_x;
         mNaws_y = naws_y;
