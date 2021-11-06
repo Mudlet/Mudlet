@@ -266,19 +266,13 @@ mudlet::mudlet()
     }
 
     qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
+    setAppearance(mAppearance);
     mDefaultStyle = qApp->style()->objectName();
 
     scanForMudletTranslations(QStringLiteral(":/lang"));
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
 
-    // if (firstLaunch) {
-        qDebug() << "Dark theme in desktop?" << desktopInDarkMode();
-    // }
-
-    if (mDarkTheme) {
-        setDarkTheme(mDarkTheme);
-    }
     if (QStringList{"windowsvista", "macintosh"}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
         qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - QPushButton styling fix applied!";
         mBG_ONLY_STYLESHEET = QStringLiteral("QPushButton {background-color: %1; border: 1px solid #8f8f91;}");
@@ -1879,7 +1873,17 @@ void mudlet::readEarlySettings(const QSettings& settings)
         QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
         mEnableFullScreenMode = file_use_smallscreen.exists();
     }
-    mDarkTheme = settings.value(QStringLiteral("darkTheme"), QVariant(false)).toBool();
+
+    // PTBs had a boolean setting, migrate it to one that can respect the system setting as well
+    auto oldDarkTheme = settings.value(QStringLiteral("darkTheme"), QVariant(false)).toBool();
+
+    auto appearance = settings.value(QStringLiteral("appearance"), QVariant(0)).toInt();
+    if (appearance == 0) {
+        mAppearance = settings.contains(QStringLiteral("darkTheme")) ? (oldDarkTheme ? Appearance::dark : Appearance::light) : Appearance::system;
+    } else {
+        mAppearance = static_cast<Appearance>(appearance);
+    }
+
     mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
     mUserLocale = QLocale(mInterfaceLanguage);
     if (mUserLocale == QLocale::c()) {
@@ -2050,7 +2054,9 @@ void mudlet::writeSettings()
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
     settings.setValue("interfaceLanguage", mInterfaceLanguage);
-    settings.setValue("darkTheme", mDarkTheme);
+    // value only used during PTBs, remove it to reduce confusion in the future
+    settings.remove("darkTheme");
+    settings.setValue("appearance", mAppearance);
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -3883,9 +3889,15 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
         emit signal_showIconsOnMenusChanged(state);
     }
 }
-void mudlet::setDarkTheme(const bool& state)
+
+void mudlet::setAppearance(const Appearance state)
 {
-    if (state) {
+    bool enableDarkTheme = false;
+    if (state == Appearance::dark || state == Appearance::system && desktopInDarkMode()) {
+        enableDarkTheme = true;
+    }
+
+    if (enableDarkTheme) {
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         qApp->setStyle(new DarkTheme);
         getHostManager().changeAllHostColour(getActiveHost());
@@ -3894,8 +3906,8 @@ void mudlet::setDarkTheme(const bool& state)
         qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
         getHostManager().changeAllHostColour(getActiveHost());
     }
-    mDarkTheme = state;
-    emit signal_enableDarkThemeChanged(state);
+    mAppearance = state;
+    emit signal_appearanceChanged(state);
 }
 
 void mudlet::setInterfaceLanguage(const QString& languageCode)
@@ -4583,13 +4595,13 @@ bool mudlet::desktopInDarkMode()
         coreMacOS::CFRelease(uiStyle);
     }
     return isDark;
+#elif defined(Q_OS_LINUX)
+    QProcess process;
+    process.start(QStringLiteral("gsettings"), QStringList() << QStringLiteral("get") << QStringLiteral("org.gnome.desktop.interface") << QStringLiteral("gtk-theme"));
+    process.waitForFinished();
+    QString output = QString::fromUtf8(process.readAllStandardOutput());
+    return output.contains(QStringLiteral("-dark"), Qt::CaseInsensitive);
 #endif
-    // add Gnome and KDE settings detection
 
-
-    if (!qApp || !qApp->style())
-    {
-        return false;
-    }
-    return qApp->style()->standardPalette().color(QPalette::Window).toHsl().lightness() < 110;
+    return false;
 }

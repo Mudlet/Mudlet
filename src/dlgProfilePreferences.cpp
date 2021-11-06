@@ -159,7 +159,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         disableHostDetails();
         clearHostDetails();
     }
-    enableDarkTheme->setEnabled(true);
+
 #if defined(INCLUDE_UPDATER)
     if (mudlet::scmIsDevelopmentVersion) {
         // tick the box and make it be "un-untickable" as automatic updates are
@@ -253,9 +253,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(comboBox_menuBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowMenuBar);
     connect(comboBox_toolBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowToolBar);
 
-    if (pMudlet->mDarkTheme) {
-        enableDarkTheme->setChecked(true);
-    }
+    comboBox_appearance->setCurrentIndex(pMudlet->mAppearance);
 
     // This group of signal/slot connections handles updating *this* instance of
     // the "Profile preferences" form/dialog when a *different* profile saves
@@ -271,7 +269,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
     connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
     connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
-    connect(pMudlet, &mudlet::signal_enableDarkThemeChanged, this, &dlgProfilePreferences::slot_changeEnableDarkTheme);
+    connect(pMudlet, &mudlet::signal_appearanceChanged, this, &dlgProfilePreferences::slot_setAppearance);
 
     generateDiscordTooltips();
 
@@ -2720,7 +2718,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
-    pMudlet->setDarkTheme(enableDarkTheme->isChecked());
+    pMudlet->setAppearance(static_cast<mudlet::Appearance>(comboBox_appearance->currentIndex()));
 
     mudlet::self()->mDiscord.UpdatePresence();
 
@@ -3757,12 +3755,10 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
     label_languageChangeWarning->show();
 }
 
-// This slot is called when the QComboBox for enabling DarkTheme
-// is changed by the user.
-void dlgProfilePreferences::slot_changeEnableDarkTheme(const bool state)
+void dlgProfilePreferences::slot_setAppearance(const mudlet::Appearance state)
 {
-    if (enableDarkTheme->isChecked() != state) {
-        enableDarkTheme->setChecked(state);
+    if (comboBox_appearance->currentIndex() != state) {
+        comboBox_appearance->setCurrentIndex(state);
     }
 }
 
