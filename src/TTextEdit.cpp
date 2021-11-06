@@ -1352,6 +1352,15 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             popup->addAction(actionRestoreMainToolBar);
         }
 
+        if (mpConsole->getType() == TConsole::ErrorConsole) {
+            QAction* clearErrorConsole = new QAction(tr("Clear console"), this);
+            connect(clearErrorConsole, &QAction::triggered, this, [=]() {
+                mpConsole->buffer.clear();
+                mpConsole->print(tr("*** starting new session ***\n"));
+            });
+            popup->addAction(clearErrorConsole);
+        }
+
         // Add user actions
         QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
         while (it.hasNext()) {
