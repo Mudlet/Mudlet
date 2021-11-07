@@ -5917,7 +5917,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="217"/>
       <source>&lt;p&gt;Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being of &lt;i&gt;Ambiguous&lt;/i&gt; width when drawn in a font with a so-called &lt;i&gt;fixed&lt;/i&gt; pitch; in fact such text is &lt;i&gt;duo-spaced&lt;/i&gt; when not using a proportional font. These symbols can be drawn using either a half or the whole space of a full character. By default Mudlet tries to chose the right width automatically but you can override the setting for each profile.&lt;/p&gt;&lt;p&gt;This control has three settings:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;narrow&lt;/i&gt;&apos; = Draw ambiguous width characters in a single &apos;space&apos;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;wide&lt;/i&gt;&apos; = Draw ambiguous width characters two &apos;spaces&apos; wide.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use &apos;wide&apos; setting for MUD Server encodings of &lt;b&gt;Big5&lt;/b&gt;, &lt;b&gt;GBK&lt;/b&gt; or &lt;b&gt;GBK18030&lt;/b&gt; and &apos;narrow&apos; for all others.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This is a temporary arrangement and will probably change when Mudlet gains full support for languages other than English.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Niektóre wschodnioazjatyckie MUD mogą używać glifów (znaków), które Unicode klasyfikuje jako znaki o &lt;i&gt;nieokreślonej szerokości&lt;/i&gt; przy wyświetlaniu tekstu czcionką o stałej szerokości. Tak naprawdę takie znaki mają &lt;i&gt;podwójną szerokość&lt;/i&gt;, gdy nie są wyświetlane czcionką o zmiennej szerokości. Symbole te można rysować za pomocą jednej lub dwóch normalnych szerokości znaku. Domyślnie Mudlet próbuje automatycznie wybrać właściwą szerokość, ale można nadpisać ustawienie dla każdego profilu.&lt;/p&gt;&lt;p&gt;Ta opcja ma trzy ustawienia:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Niezaznaczone&lt;/b&gt; &apos;&lt;i&gt;wąskie&lt;/i&gt;&apos; = Narysuj dwuznaczne znaki jedną szerokością znaku&lt;li&gt;&lt;b&gt;Zaznaczone&lt;/b&gt; &apos;&lt;i&gt;o szerokim&lt;/i&gt;&apos; = Narysuj dwuznaczne znaki dwoma szerokościami zwykłego znaku.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Częściowo sprawdzone&lt;/b&gt; &lt;i&gt;(domyślnie) &apos;auto&apos;&lt;/i&gt; = Użyj ustawienia &apos;szeroki&apos; dla kodowania serwera MUD &lt;b&gt;Big5&lt;/b&gt; &lt;b&gt;GBK&lt;/b&gt; lub &lt;b&gt;GBK18030&lt;/b&gt; i &apos;wąski&apos; dla wszystkich innych.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;Jest to rozwiązanie tymczasowe i prawdopodobnie zmieni się, gdy Mudlet uzyska pełne wsparcie dla języków innych niż angielski.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="298"/>
@@ -6193,7 +6193,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3249"/>
       <source>&lt;p&gt;The room symbol will appear like this if only symbols (glyphs) from the specific font are used.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Symbol pomieszczenia będzie wyglądał w ten sposób, jeśli używane są tylko symbole (glify) z wybranej czcionki.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3931"/>
@@ -6208,7 +6208,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="204"/>
       <source>&lt;p&gt;Using a single font is likely to produce a more consistent style but may cause the &lt;i&gt;font replacement character&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; to show if the font does not have a needed glyph (a font&apos;s individual character/symbol) to represent the grapheme (what is to be represented).  Clearing this checkbox will allow the best alternative glyph from another font to be used to draw that grapheme.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Użycie jednej czcionki pozwala uzyskać bardziej spójny styl mapy, ale może spowodować, że &lt;i&gt;znak zastępczy&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; zostanie wyświetlony, jeśli czcionka nie ma potrzebnego glifu (pojedynczego znaku/symbolu czcionki) do narysowania grafemu który chcemy wyświetlić. Wyczyszczenie tego pola wyboru pozwoli na użycie najlepszego alternatywnego glifu z innej czcionki do narysowania tego grafemu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="143"/>
@@ -7661,23 +7661,23 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="453"/>
       <source>Show/Hide the errors console in the bottom right of this editor.</source>
-      <translation type="unfinished"/>
+      <translation>Pokazuje/ukrywa konsolę błędów w prawym dolnym rogu edytora.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="454"/>
       <source>Show/Hide errors console</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż/ukryj konsolę błędów</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="454"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8401"/>
       <source>Ctrl+8</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+8</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="458"/>
       <source>Generate a statistics summary display on the main profile console.</source>
-      <translation type="unfinished"/>
+      <translation>Wygeneruj podsumowanie statystyk na głównej konsoli profilu.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="459"/>
