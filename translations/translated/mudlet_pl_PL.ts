@@ -4271,7 +4271,7 @@ komunikat o błędzie to: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="770"/>
       <source>Allow this profile to use Mudlet&apos;s Discord &quot;Rich Presence&quot;  features</source>
-      <translation type="unfinished"/>
+      <translation>Pozwól temu profilowi używać funkcji &quot;Rich Presence&quot; Discorda</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="876"/>
