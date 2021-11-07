@@ -26,6 +26,7 @@
 
 #include "mudlet.h"
 
+#include "AltFocusMenuBarDisable.h"
 #include "EAction.h"
 #include "LuaInterface.h"
 #include "TCommandLine.h"
@@ -41,6 +42,7 @@
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "XMLimport.h"
+#include "DarkTheme.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgIRC.h"
@@ -74,6 +76,7 @@
 #include <QTimer>
 #include <QToolBar>
 #include <QToolButton>
+#include <QToolTip>
 #include <QVariantHash>
 #include <QRandomGenerator>
 #include <zip.h>
@@ -214,7 +217,6 @@ mudlet::mudlet()
 , mpActionDisconnect(nullptr)
 , mpActionFullScreenView(nullptr)
 , mpActionHelp(nullptr)
-, mpActionDiscord(nullptr)
 , mpActionIRC(nullptr)
 , mpButtonDiscord(nullptr)
 , mpActionKeys(nullptr)
@@ -248,17 +250,20 @@ mudlet::mudlet()
     }
 
     qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
+    mDefaultStyle = qApp->style()->objectName();
 
     scanForMudletTranslations(QStringLiteral(":/lang"));
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
-
-    if (QString stylefactory = qApp->style()->objectName(); QStringList{"windowsvista", "macintosh"}.contains(stylefactory, Qt::CaseInsensitive)) {
-        qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << stylefactory << "' has been detected as the style factory in use - QPushButton styling fix applied!";
+    if (mDarkTheme) {
+        setDarkTheme(mDarkTheme);
+    }
+    if (QStringList{"windowsvista", "macintosh"}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
+        qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - QPushButton styling fix applied!";
         mBG_ONLY_STYLESHEET = QStringLiteral("QPushButton {background-color: %1; border: 1px solid #8f8f91;}");
         mTEXT_ON_BG_STYLESHEET = QStringLiteral("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}");
     } else {
-        qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << stylefactory << "' has been detected as the style factory in use - no styling fixes applied.";
+        qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - no styling fixes applied.";
         mBG_ONLY_STYLESHEET = QStringLiteral("QPushButton {background-color: %1;}");
         mTEXT_ON_BG_STYLESHEET = QStringLiteral("QPushButton {color: %1; background-color: %2;}");
     }
@@ -401,6 +406,13 @@ mudlet::mudlet()
     mpActionDiscord->setIconText(QStringLiteral("Discord"));
     mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
 
+    mpActionMudletDiscord = new QAction(QIcon(QStringLiteral(":/icons/mudlet_discord.png")), tr("Mudlet chat"), this);
+    mpActionMudletDiscord->setToolTip(tr("Open a link to the Mudlet server on Discord"));
+    mpMainToolBar->addAction(mpActionMudletDiscord);
+    mpActionMudletDiscord->setObjectName(QStringLiteral("mudlet_discord"));
+    mpMainToolBar->widgetForAction(mpActionMudletDiscord)->setObjectName(mpActionMudletDiscord->objectName());
+    mpActionMudletDiscord->setVisible(false); // Mudlet Discord becomes visible if game has custom invite
+
     mpActionIRC = new QAction(tr("Open IRC"), this);
     mpActionIRC->setIcon(QIcon(QStringLiteral(":/icons/internet-telephony.png")));
     mpActionIRC->setObjectName(QStringLiteral("openIRC"));
@@ -540,6 +552,7 @@ mudlet::mudlet()
     connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_mapper);
     connect(mpActionIRC.data(), &QAction::triggered, this, &mudlet::slot_irc);
     connect(mpActionDiscord.data(), &QAction::triggered, this, &mudlet::slot_discord);
+    connect(mpActionMudletDiscord.data(), &QAction::triggered, this, &mudlet::slot_mudlet_discord);
     connect(mpActionPackageManager.data(), &QAction::triggered, this, &mudlet::slot_package_manager);
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_package_exporter);
@@ -558,7 +571,20 @@ mudlet::mudlet()
     connect(dactionForum, &QAction::triggered, this, &mudlet::slot_show_help_dialog_forum);
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_discord);
+    connect(dactionMudletDiscord, &QAction::triggered, this, &mudlet::slot_mudlet_discord);
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
+    connect(dactionShowErrors, &QAction::triggered, [=]() {
+        auto host = getActiveHost();
+        if (!host) {
+            return;
+        }
+        host->mpEditorDialog->slot_show_current();
+        host->mpEditorDialog->raise();
+        host->mpEditorDialog->showNormal();
+        host->mpEditorDialog->activateWindow();
+        host->mpEditorDialog->mpErrorConsole->setVisible(true);
+    });
+
 #if defined(INCLUDE_UPDATER)
     // Show the update option if the code is present AND if this is a
     // release OR a public test version:
@@ -1407,6 +1433,8 @@ void mudlet::slot_tab_changed(int tabID)
 
     dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
 
+    updateDiscordNamedIcon();
+
     // Restore the multi-view mode if it was enabled:
     if (mpTabBar->count() > 1) {
         if (!mpActionMultiView->isEnabled() || !dactionMultiView->isEnabled()) {
@@ -1499,13 +1527,14 @@ void mudlet::addConsoleForNewHost(Host* pH)
     int y = mpCurrentActiveHost->mpConsole->height();
     QSize s = QSize(x, y);
     QResizeEvent event(s, s);
+    updateDiscordNamedIcon();
     QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
 }
 
 
 void mudlet::slot_timer_fires()
 {
-    QTimer* pQT = (QTimer*)sender();
+    QTimer* pQT = qobject_cast<QTimer*>(sender());
     if (Q_UNLIKELY(!pQT)) {
         return;
     }
@@ -1549,19 +1578,17 @@ void mudlet::slot_timer_fires()
 
 void mudlet::disableToolbarButtons()
 {
-    mpMainToolBar->actions()[1]->setEnabled(false);
-    mpMainToolBar->actions()[2]->setEnabled(false);
-    mpMainToolBar->actions()[3]->setEnabled(false);
-    mpMainToolBar->actions()[4]->setEnabled(false);
-    mpMainToolBar->actions()[5]->setEnabled(false);
-    mpMainToolBar->actions()[6]->setEnabled(false);
-    mpMainToolBar->actions()[7]->setEnabled(false);
-    mpMainToolBar->actions()[9]->setEnabled(false);
-    mpMainToolBar->actions()[10]->setEnabled(false);
-    mpMainToolBar->actions()[12]->setEnabled(false);
-    mpMainToolBar->actions()[13]->setEnabled(false);
-    mpMainToolBar->actions()[14]->setEnabled(false);
-
+    mpActionTriggers->setEnabled(false);
+    mpActionAliases->setEnabled(false);
+    mpActionTimers->setEnabled(false);
+    mpActionButtons->setEnabled(false);
+    mpActionScripts->setEnabled(false);
+    mpActionKeys->setEnabled(false);
+    mpActionVariables->setEnabled(false);
+    mpActionMudletDiscord->setEnabled(false);
+    mpActionMapper->setEnabled(false);
+    mpActionNotes->setEnabled(false);
+    mpButtonPackageManagers->setEnabled(false);
     mpActionIRC->setEnabled(false);
     mpActionReplay->setEnabled(false);
     mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
@@ -1580,18 +1607,17 @@ void mudlet::disableToolbarButtons()
 
 void mudlet::enableToolbarButtons()
 {
-    mpMainToolBar->actions()[1]->setEnabled(true);
-    mpMainToolBar->actions()[2]->setEnabled(true);
-    mpMainToolBar->actions()[3]->setEnabled(true);
-    mpMainToolBar->actions()[4]->setEnabled(true);
-    mpMainToolBar->actions()[5]->setEnabled(true);
-    mpMainToolBar->actions()[6]->setEnabled(true);
-    mpMainToolBar->actions()[7]->setEnabled(true);
-    mpMainToolBar->actions()[9]->setEnabled(true);
-    mpMainToolBar->actions()[10]->setEnabled(true);
-    mpMainToolBar->actions()[12]->setEnabled(true);
-    mpMainToolBar->actions()[13]->setEnabled(true);
-    mpMainToolBar->actions()[14]->setEnabled(true);
+    mpActionTriggers->setEnabled(true);
+    mpActionAliases->setEnabled(true);
+    mpActionTimers->setEnabled(true);
+    mpActionButtons->setEnabled(true);
+    mpActionScripts->setEnabled(true);
+    mpActionKeys->setEnabled(true);
+    mpActionVariables->setEnabled(true);
+    mpActionMudletDiscord->setEnabled(true);
+    mpActionMapper->setEnabled(true);
+    mpActionNotes->setEnabled(true);
+    mpButtonPackageManagers->setEnabled(true);
     mpActionIRC->setEnabled(true);
 
     if (!mpToolBarReplay) {
@@ -1831,7 +1857,7 @@ void mudlet::readEarlySettings(const QSettings& settings)
         QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
         mEnableFullScreenMode = file_use_smallscreen.exists();
     }
-
+    mDarkTheme = settings.value(QStringLiteral("darkTheme"), QVariant(false)).toBool();
     mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
     mUserLocale = QLocale(mInterfaceLanguage);
     if (mUserLocale == QLocale::c()) {
@@ -2002,6 +2028,7 @@ void mudlet::writeSettings()
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
     settings.setValue("interfaceLanguage", mInterfaceLanguage);
+    settings.setValue("darkTheme", mDarkTheme);
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -2347,7 +2374,38 @@ void mudlet::slot_irc()
 
 void mudlet::slot_discord()
 {
+    Host* pHost = getActiveHost();
+    QString invite;
+    if (pHost) {
+        invite = pHost->getDiscordInviteURL();
+    }
+    openWebPage(invite.isEmpty() ? mMudletDiscordInvite : invite);
+}
+
+void mudlet::slot_mudlet_discord()
+{
     openWebPage(mMudletDiscordInvite);
+}
+
+void mudlet::updateDiscordNamedIcon()
+{
+    Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
+
+    QString gameName = pHost->getDiscordGameName();
+
+    bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
+    
+    mpActionDiscord->setIconText(gameName.isEmpty() ? QStringLiteral("Discord") : QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90));
+
+    if (mpActionMudletDiscord->isVisible() != hasCustom) {
+        mpActionMudletDiscord->setVisible(hasCustom);
+    }
+    if (dactionDiscord->isVisible() != hasCustom) {
+        dactionDiscord->setVisible(hasCustom);
+    }
 }
 
 void mudlet::slot_reconnect()
@@ -3782,7 +3840,6 @@ void mudlet::setShowMapAuditErrors(const bool state)
 
         emit signal_showMapAuditErrorsChanged(state);
     }
-
 }
 
 void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
@@ -3803,6 +3860,20 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
 
         emit signal_showIconsOnMenusChanged(state);
     }
+}
+void mudlet::setDarkTheme(const bool& state)
+{
+    if (state) {
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+        qApp->setStyle(new DarkTheme);
+        getHostManager().changeAllHostColour(getActiveHost());
+    } else {
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+        qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+        getHostManager().changeAllHostColour(getActiveHost());
+    }
+    mDarkTheme = state;
+    emit signal_enableDarkThemeChanged(state);
 }
 
 void mudlet::setInterfaceLanguage(const QString& languageCode)
@@ -4367,7 +4438,9 @@ void mudlet::activateProfile(Host* pHost)
             mpTabBar->blockSignals(false);
         }
         mpCurrentActiveHost = pHost;
+        updateDiscordNamedIcon();
         dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
+        pHost->updateDisplayDimensions();
     }
 }
 

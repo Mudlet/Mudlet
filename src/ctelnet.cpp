@@ -743,42 +743,52 @@ bool cTelnet::socketOutRaw(std::string& data)
     return true;
 }
 
-void cTelnet::setDisplayDimensions()
+void cTelnet::checkNAWS()
 {
-    int x = (mpHost->mScreenWidth < mpHost->mWrapAt) ? mpHost->mScreenWidth : mpHost->mWrapAt;
-    int y = mpHost->mScreenHeight;
-    if (myOptionState[static_cast<size_t>(OPT_NAWS)]) {
-        std::string s;
-        s = TN_IAC;
-        s += TN_SB;
-        s += OPT_NAWS;
-        char x1, x2, y1, y2;
-        x1 = x / 256;
-        x2 = x % 256;
-        y1 = y / 256;
-        y2 = y % 256;
-        //IAC must be doubled
-        s += x1;
-        if (x1 == TN_IAC) {
-            s += TN_IAC;
-        }
-        s += x2;
-        if (x2 == TN_IAC) {
-            s += TN_IAC;
-        }
-        s += y1;
-        if (y1 == TN_IAC) {
-            s += TN_IAC;
-        }
-        s += y2;
-        if (y2 == TN_IAC) {
-            s += TN_IAC;
-        }
-
-        s += TN_IAC;
-        s += TN_SE;
-        socketOutRaw(s);
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
     }
+    int naws_x = (pHost->mScreenWidth < pHost->mWrapAt) ? pHost->mScreenWidth : pHost->mWrapAt;
+    int naws_y = pHost->mScreenHeight;
+    if ((naws_y > 0) && (myOptionState[static_cast<size_t>(OPT_NAWS)]) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
+        sendNAWS(naws_x, naws_y);
+        mNaws_x = naws_x;
+        mNaws_y = naws_y;
+    }
+}
+
+void cTelnet::sendNAWS(int x, int y)
+{
+    std::string s;
+    s = TN_IAC;
+    s += TN_SB;
+    s += OPT_NAWS;
+    char x1 = static_cast<char>(x / 256);
+    char x2 = static_cast<char>(x % 256);
+    char y1 = static_cast<char>(y / 256);
+    char y2 = static_cast<char>(y % 256);
+    //IAC must be doubled
+    s += x1;
+    if (x1 == TN_IAC) {
+        s += TN_IAC;
+    }
+    s += x2;
+    if (x2 == TN_IAC) {
+        s += TN_IAC;
+    }
+    s += y1;
+    if (y1 == TN_IAC) {
+        s += TN_IAC;
+    }
+    s += y2;
+    if (y2 == TN_IAC) {
+        s += TN_IAC;
+    }
+
+    s += TN_IAC;
+    s += TN_SE;
+    socketOutRaw(s);
 }
 
 void cTelnet::sendTelnetOption(char type, char option)
@@ -1431,7 +1441,13 @@ void cTelnet::processTelnetCommand(const std::string& command)
         }
         if (option == OPT_NAWS) {
             //NAWS
-            setDisplayDimensions();
+            // Ensure that the stored copies of the screen dimensions have been
+            // reset before we do this so that they are different from real,
+            // used values:
+            mNaws_x = 0;
+            mNaws_y = 0;
+            // thus sending of the values is performed when we check them:
+            checkNAWS();
         }
         break;
     }
@@ -2332,7 +2348,7 @@ void cTelnet::postMessage(QString msg)
             if (prefix.contains(tr("ERROR", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("ERROR"))) {
                 mpHost->mpConsole->print(prefix, Qt::red, mpHost->mBgColor);                                  // Bright Red
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(255, 255, 50), mpHost->mBgColor); // Bright Yellow
-                for (quint8 _i = 0; _i < body.size(); ++_i) {
+                for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     // Fix for lua using tabs for indentation which was messing up justification:
@@ -2344,7 +2360,7 @@ void cTelnet::postMessage(QString msg)
             } else if (prefix.contains(tr("LUA", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("LUA"))) {
                 mpHost->mpConsole->print(prefix, QColor(80, 160, 255), mpHost->mBgColor);                    // Light blue
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 200, 50), mpHost->mBgColor); // Light green
-                for (quint8 _i = 0; _i < body.size(); ++_i) {
+                for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2355,7 +2371,7 @@ void cTelnet::postMessage(QString msg)
             } else if (prefix.contains(tr("WARN", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("WARN"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);                     // Cyan
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 150, 0), mpHost->mBgColor); // Orange
-                for (quint8 _i = 0; _i < body.size(); ++_i) {
+                for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2366,7 +2382,7 @@ void cTelnet::postMessage(QString msg)
             } else if (prefix.contains(tr("ALERT", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("ALERT"))) {
                 mpHost->mpConsole->print(prefix, QColor(190, 100, 50), mpHost->mBgColor);                     // Orange-ish
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 190, 50), mpHost->mBgColor); // Yellow
-                for (quint8 _i = 0; _i < body.size(); ++_i) {
+                for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2377,7 +2393,7 @@ void cTelnet::postMessage(QString msg)
             } else if (prefix.contains(tr("INFO", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("INFO"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);                   // Cyan
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
-                for (quint8 _i = 0; _i < body.size(); ++_i) {
+                for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2388,7 +2404,7 @@ void cTelnet::postMessage(QString msg)
             } else if (prefix.contains(tr("OK", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("OK"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 160, 0), mpHost->mBgColor);                        // Light Green
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orange-ish
-                for (quint8 _i = 0; _i < body.size(); ++_i) {
+                for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2399,7 +2415,7 @@ void cTelnet::postMessage(QString msg)
             } else {                                                                                        // Unrecognised but still in a "[ something ] -  message..." format
                 mpHost->mpConsole->print(prefix, QColor(190, 50, 50), mpHost->mBgColor);                    // Foreground red, background bright grey
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 50, 50), mpHost->mBgColor); //Foreground dark grey, background bright grey
-                for (quint8 _i = 0; _i < body.size(); ++_i) {
+                for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);

@@ -1786,7 +1786,7 @@ function ansi2decho(text, ansi_default_color)
       elseif tag < 16 then
         rgb = lightColours[tag - 8]
       elseif tag < 232 then
-        tag = tag - 16 -- because color 1-15 behave like normal ANSI colors      
+        tag = tag - 16 -- because color 1-15 behave like normal ANSI colors
         local b = tag % 6
         local g = (tag - b) / 6 % 6
         local r = (tag - b - g * 6) / 36 % 6
@@ -2176,10 +2176,15 @@ local function copy2color(name,win,str,inst)
       error(err)
     end
   end
+
   win = win or "main"
   str = str or line
   inst = inst or 1
-  local start, len = selectString(win, str, inst), #str
+  if str == "" then
+    -- happens when you try to use copy2decho() on an empty line
+    return ""
+  end
+  local start, len = selectString(win, str, inst), utf8.len(str)
   if not start then
     error(name..": string not found",3)
   end
@@ -2205,9 +2210,9 @@ local function copy2color(name,win,str,inst)
 
     if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
       cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
-      result = string.format(style, result and (result..endspan) or "", r, g, b, rb, gb, bb, line:sub(index, index))
+      result = string.format(style, result and (result..endspan) or "", r, g, b, rb, gb, bb, utf8.sub(line, index, index))
     else
-      result = result .. line:sub(index, index)
+      result = result .. utf8.sub(line, index, index)
     end
   end
   result = result .. endspan

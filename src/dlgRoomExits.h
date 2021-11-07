@@ -28,8 +28,10 @@
 #include <QCheckBox>
 #include <QDialog>
 #include <QPointer>
+#include <QSet>
 #include "post_guard.h"
 
+class QAction;
 class Host;
 class TRoom;
 
@@ -67,8 +69,22 @@ class dlgRoomExits : public QDialog, public Ui::room_exits
 
 public:
     Q_DISABLE_COPY(dlgRoomExits)
-    explicit dlgRoomExits(Host*, QWidget* parent = nullptr);
-    void init(int);
+    explicit dlgRoomExits(Host*, const int, QWidget* parent = nullptr);
+    ~dlgRoomExits();
+
+    void setActionOnExit(QLineEdit*, QAction*) const;
+    // FIXME: INTENDED TO BE USED IN A SEPARATE PR - DELETE THIS COMMENT LINE WHEN THAT GOES IN AND THE CODE IS UNCOMMENTED...
+//    QAction* getActionOnExit(QLineEdit*) const;
+
+
+    QSet<QAction*> mAllExitActionsSet;
+    QIcon mIcon_invalidExit;
+    QIcon mIcon_inAreaExit;
+    QIcon mIcon_otherAreaExit;
+    QAction* mpAction_noExit = nullptr;
+    QAction* mpAction_invalidExit = nullptr;
+    QAction* mpAction_inAreaExit = nullptr;
+    QAction* mpAction_otherAreaExit = nullptr;
 
 public slots:
     void save();
@@ -104,28 +120,36 @@ private slots:
     void slot_checkModified();
 
 private:
+    static QString generateToolTip(const QString& exitRoomName, const QString& exitAreaName, const bool outOfAreaExit, const int exitRoomWeight);
+    void init();
+    void initExit(int direction, int exitId, QLineEdit* exitLineEdit,
+                  QCheckBox* noRoute, QCheckBox* stub,
+                  QRadioButton* none, QRadioButton* open, QRadioButton* closed, QRadioButton* locked,
+                  QSpinBox* weight, const QString &validExitToolTip);
+    TExit* makeExitFromControls(int direction);
+    void normalExitEdited(const QString& roomExitIdText,
+                          QLineEdit* pExit,
+                          QCheckBox* pNoRoute, QCheckBox* pS,
+                          QSpinBox* pW,
+                          QRadioButton* pDoorType_none, QRadioButton* pDoorType_open, QRadioButton* pDoorType_closed, QRadioButton* pDoorType_locked,
+                          const QString& invalidExitToolTipText, const QString& noExitToolTipText);
+    void normalStubExitChanged(const int state,
+                               QLineEdit* pExit,
+                               QCheckBox* pNoRoute,
+                               QSpinBox* pW,
+                               QRadioButton* pDoorType_none, QRadioButton* pDoorType_open, QRadioButton* pDoorType_closed, QRadioButton* pDoorType_locked,
+                               const QString& noExitToolTipText) const;
+
     QPointer<Host> mpHost;
-    QTreeWidgetItem* mpEditItem;
-    TRoom* pR;
-    int mRoomID;
-    int mEditColumn;
+    QTreeWidgetItem* mpEditItem = nullptr;
+    TRoom* pR = nullptr;
+    int mRoomID = 0;
+    int mAreaID = 0;
+    int mEditColumn = -1;
 
     // key = (normal) exit DIR_***, value = exit class instance
     QMap<int, TExit*> originalExits;
     QMap<QString, TExit*> originalSpecialExits;
-
-    void initExit(int roomId,
-                  int direction,
-                  int exitId,
-                  QLineEdit* exitLineEdit,
-                  QCheckBox* noRoute,
-                  QCheckBox* stub,
-                  QRadioButton* none,
-                  QRadioButton* open,
-                  QRadioButton* closed,
-                  QRadioButton* locked,
-                  QSpinBox* weight);
-    TExit* makeExitFromControls(int direction);
 };
 
 #endif // MUDLET_DLGROOMEXITS_H
