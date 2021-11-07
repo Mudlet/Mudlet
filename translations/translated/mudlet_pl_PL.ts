@@ -5063,12 +5063,12 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s background color - however choosing this for both foreground and background is an error.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kliknij, aby wyzwalacz kolorów ignorował koloru tła tekstu. Wybranie tego zarówno dla tła jak i dla koloru samego tekstu jest błędem.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
       <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both foreground and background is an error.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kliknij, aby wyzwalacz kolorów ignorował koloru tekstu. Wybranie tego zarówno dla koloru tekstu jak i dla tła tekstu jest błędem.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="64"/>
@@ -5342,7 +5342,7 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1310"/>
       <source>Set custom color</source>
       <comment>Set a custom color to show for the profile in the connection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>Ustaw własny kolor</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1323"/>
@@ -5548,12 +5548,12 @@ Count</source>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="105"/>
       <source>Checking this box will cause the module to be saved and &lt;i&gt;resynchronised&lt;/i&gt; across all sessions that share it when the &lt;i&gt;Save Profile&lt;/i&gt; button is clicked in the Editor or if it is saved at the end of the session.</source>
-      <translation type="unfinished"/>
+      <translation>Zaznaczenie tego pola spowoduje, że moduł będzie zapisany i &lt;i&gt;synchronizowany&lt;/i&gt; we wszystkich sesjach, które go używają, gdy przycisk &lt;i&gt;Zapisz profil&lt;/i&gt; zostanie kliknięty w Edytorze lub gdy zostanie zapisany na końcu sesji.</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="111"/>
       <source>&lt;b&gt;Note:&lt;/b&gt; &lt;i&gt;.zip&lt;/i&gt; and &lt;i&gt;.mpackage&lt;/i&gt; modules are currently unable to be synced&lt;br&gt; only &lt;i&gt;.xml&lt;/i&gt; packages are able to be synchronized across profiles at the moment. </source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;Uwaga:&lt;/b&gt; moduły &lt;i&gt;.zip&lt;/i&gt; i &lt;i&gt;.mpackage&lt;/i&gt; obecnie nie mogą być synchronizowane&lt;br&gt; aktualnie tylko pakiety &lt;i&gt;.xml&lt;/i&gt; mogą być synchronizowane między profilami. </translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="149"/>
@@ -5578,18 +5578,18 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="29"/>
       <source>Package name here</source>
-      <translation type="unfinished"/>
+      <translation>Podaj nazwę pakietu</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="36"/>
       <source>or</source>
-      <translation type="unfinished"/>
+      <translation>lub</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="66"/>
       <location filename="../src/dlgPackageExporter.cpp" line="1459"/>
       <source>Select what to export</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz elementy do wyeksportowania</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="82"/>
@@ -5599,12 +5599,12 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="109"/>
       <source>(optional) add icon, description, and more</source>
-      <translation type="unfinished"/>
+      <translation>(opcjonalne) dodaj ikonę, opis i więcej</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="156"/>
       <source>Author</source>
-      <translation type="unfinished"/>
+      <translation>Autor</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="175"/>
@@ -5617,12 +5617,12 @@ Count</source>
       <location filename="../src/ui/dlgPackageExporter.ui" line="213"/>
       <location filename="../src/ui/dlgPackageExporter.ui" line="235"/>
       <source>Icon size of 512x512 recommended</source>
-      <translation type="unfinished"/>
+      <translation>Zalecana wielkość ikony to 512x512 pikseli</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="245"/>
       <source>512x512 recommended</source>
-      <translation type="unfinished"/>
+      <translation>zalecane 512x512 pikseli</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="288"/>
