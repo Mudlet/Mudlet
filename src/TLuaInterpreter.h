@@ -562,6 +562,7 @@ public:
     static int getAvailableFonts(lua_State* L);
     static int tempAnsiColorTrigger(lua_State*);
     static int setDiscordApplicationID(lua_State* L);
+    static int setDiscordGameUrl(lua_State* L);
     static int usingMudletsDiscordID(lua_State*);
     static int setDiscordState(lua_State*);
     static int setDiscordDetail(lua_State*);
@@ -581,6 +582,7 @@ public:
     static int getDiscordTimeStamps(lua_State*);
     static int getDiscordParty(lua_State*);
     static int setDiscordGame(lua_State*);
+    static int resetDiscordData(lua_State*);
     static int getPlayerRoom(lua_State*);
     static int getMapSelection(lua_State*);
     static int addWordToDictionary(lua_State*);

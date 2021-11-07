@@ -217,7 +217,6 @@ mudlet::mudlet()
 , mpActionDisconnect(nullptr)
 , mpActionFullScreenView(nullptr)
 , mpActionHelp(nullptr)
-, mpActionDiscord(nullptr)
 , mpActionIRC(nullptr)
 , mpButtonDiscord(nullptr)
 , mpActionKeys(nullptr)
@@ -407,6 +406,13 @@ mudlet::mudlet()
     mpActionDiscord->setIconText(QStringLiteral("Discord"));
     mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
 
+    mpActionMudletDiscord = new QAction(QIcon(QStringLiteral(":/icons/mudlet_discord.png")), tr("Mudlet chat"), this);
+    mpActionMudletDiscord->setToolTip(tr("Open a link to the Mudlet server on Discord"));
+    mpMainToolBar->addAction(mpActionMudletDiscord);
+    mpActionMudletDiscord->setObjectName(QStringLiteral("mudlet_discord"));
+    mpMainToolBar->widgetForAction(mpActionMudletDiscord)->setObjectName(mpActionMudletDiscord->objectName());
+    mpActionMudletDiscord->setVisible(false); // Mudlet Discord becomes visible if game has custom invite
+
     mpActionIRC = new QAction(tr("Open IRC"), this);
     mpActionIRC->setIcon(QIcon(QStringLiteral(":/icons/internet-telephony.png")));
     mpActionIRC->setObjectName(QStringLiteral("openIRC"));
@@ -546,6 +552,7 @@ mudlet::mudlet()
     connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_mapper);
     connect(mpActionIRC.data(), &QAction::triggered, this, &mudlet::slot_irc);
     connect(mpActionDiscord.data(), &QAction::triggered, this, &mudlet::slot_discord);
+    connect(mpActionMudletDiscord.data(), &QAction::triggered, this, &mudlet::slot_mudlet_discord);
     connect(mpActionPackageManager.data(), &QAction::triggered, this, &mudlet::slot_package_manager);
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_package_exporter);
@@ -564,6 +571,7 @@ mudlet::mudlet()
     connect(dactionForum, &QAction::triggered, this, &mudlet::slot_show_help_dialog_forum);
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_discord);
+    connect(dactionMudletDiscord, &QAction::triggered, this, &mudlet::slot_mudlet_discord);
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
     connect(dactionShowErrors, &QAction::triggered, [=]() {
         auto host = getActiveHost();
@@ -1425,6 +1433,8 @@ void mudlet::slot_tab_changed(int tabID)
 
     dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
 
+    updateDiscordNamedIcon();
+
     // Restore the multi-view mode if it was enabled:
     if (mpTabBar->count() > 1) {
         if (!mpActionMultiView->isEnabled() || !dactionMultiView->isEnabled()) {
@@ -1517,6 +1527,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     int y = mpCurrentActiveHost->mpConsole->height();
     QSize s = QSize(x, y);
     QResizeEvent event(s, s);
+    updateDiscordNamedIcon();
     QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
 }
 
@@ -1567,19 +1578,17 @@ void mudlet::slot_timer_fires()
 
 void mudlet::disableToolbarButtons()
 {
-    mpMainToolBar->actions()[1]->setEnabled(false);
-    mpMainToolBar->actions()[2]->setEnabled(false);
-    mpMainToolBar->actions()[3]->setEnabled(false);
-    mpMainToolBar->actions()[4]->setEnabled(false);
-    mpMainToolBar->actions()[5]->setEnabled(false);
-    mpMainToolBar->actions()[6]->setEnabled(false);
-    mpMainToolBar->actions()[7]->setEnabled(false);
-    mpMainToolBar->actions()[9]->setEnabled(false);
-    mpMainToolBar->actions()[10]->setEnabled(false);
-    mpMainToolBar->actions()[12]->setEnabled(false);
-    mpMainToolBar->actions()[13]->setEnabled(false);
-    mpMainToolBar->actions()[14]->setEnabled(false);
-
+    mpActionTriggers->setEnabled(false);
+    mpActionAliases->setEnabled(false);
+    mpActionTimers->setEnabled(false);
+    mpActionButtons->setEnabled(false);
+    mpActionScripts->setEnabled(false);
+    mpActionKeys->setEnabled(false);
+    mpActionVariables->setEnabled(false);
+    mpActionMudletDiscord->setEnabled(false);
+    mpActionMapper->setEnabled(false);
+    mpActionNotes->setEnabled(false);
+    mpButtonPackageManagers->setEnabled(false);
     mpActionIRC->setEnabled(false);
     mpActionReplay->setEnabled(false);
     mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
@@ -1598,18 +1607,17 @@ void mudlet::disableToolbarButtons()
 
 void mudlet::enableToolbarButtons()
 {
-    mpMainToolBar->actions()[1]->setEnabled(true);
-    mpMainToolBar->actions()[2]->setEnabled(true);
-    mpMainToolBar->actions()[3]->setEnabled(true);
-    mpMainToolBar->actions()[4]->setEnabled(true);
-    mpMainToolBar->actions()[5]->setEnabled(true);
-    mpMainToolBar->actions()[6]->setEnabled(true);
-    mpMainToolBar->actions()[7]->setEnabled(true);
-    mpMainToolBar->actions()[9]->setEnabled(true);
-    mpMainToolBar->actions()[10]->setEnabled(true);
-    mpMainToolBar->actions()[12]->setEnabled(true);
-    mpMainToolBar->actions()[13]->setEnabled(true);
-    mpMainToolBar->actions()[14]->setEnabled(true);
+    mpActionTriggers->setEnabled(true);
+    mpActionAliases->setEnabled(true);
+    mpActionTimers->setEnabled(true);
+    mpActionButtons->setEnabled(true);
+    mpActionScripts->setEnabled(true);
+    mpActionKeys->setEnabled(true);
+    mpActionVariables->setEnabled(true);
+    mpActionMudletDiscord->setEnabled(true);
+    mpActionMapper->setEnabled(true);
+    mpActionNotes->setEnabled(true);
+    mpButtonPackageManagers->setEnabled(true);
     mpActionIRC->setEnabled(true);
 
     if (!mpToolBarReplay) {
@@ -2366,7 +2374,38 @@ void mudlet::slot_irc()
 
 void mudlet::slot_discord()
 {
+    Host* pHost = getActiveHost();
+    QString invite;
+    if (pHost) {
+        invite = pHost->getDiscordInviteURL();
+    }
+    openWebPage(invite.isEmpty() ? mMudletDiscordInvite : invite);
+}
+
+void mudlet::slot_mudlet_discord()
+{
     openWebPage(mMudletDiscordInvite);
+}
+
+void mudlet::updateDiscordNamedIcon()
+{
+    Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
+
+    QString gameName = pHost->getDiscordGameName();
+
+    bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
+    
+    mpActionDiscord->setIconText(gameName.isEmpty() ? QStringLiteral("Discord") : QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90));
+
+    if (mpActionMudletDiscord->isVisible() != hasCustom) {
+        mpActionMudletDiscord->setVisible(hasCustom);
+    }
+    if (dactionDiscord->isVisible() != hasCustom) {
+        dactionDiscord->setVisible(hasCustom);
+    }
 }
 
 void mudlet::slot_reconnect()
@@ -4399,7 +4438,9 @@ void mudlet::activateProfile(Host* pHost)
             mpTabBar->blockSignals(false);
         }
         mpCurrentActiveHost = pHost;
+        updateDiscordNamedIcon();
         dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
+        pHost->updateDisplayDimensions();
     }
 }
 
