@@ -513,7 +513,8 @@ end</script>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Map Stop Alias</name>
-				<script>raiseEvent("mapStop")</script>
+				<script>raiseEvent("mapStop")
+raiseEvent("sysSpeedwalkStopped")</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^map stop$</regex>
@@ -647,7 +648,7 @@ end</script>
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.0.22"
+local version = "2.0.23"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -2786,6 +2787,7 @@ continue_walk = function(new_room)
         -- check to see if we are done
         if #map.walkDirs == 0 then
             walking = false
+            raiseEvent("sysSpeedwalkFinished")
         end
     end
     -- make tempTimer to send next command if necessary
@@ -2843,11 +2845,13 @@ function map.speedwalk(roomID, walkPath, walkDirs)
             send(dir)
         end
         walking = false
+        raiseEvent("sysSpeedwalkFinished")
     end
 end
 
 function doSpeedWalk()
     if #speedWalkPath ~= 0 then
+        raiseEvent("sysSpeedwalkStarted")
         map.speedwalk(nil, speedWalkPath, speedWalkDir)
     else
         map.echo("No path to chosen room found.",false,true)
