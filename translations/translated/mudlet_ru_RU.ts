@@ -4896,19 +4896,19 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="196"/>
       <source>Joined in December 2009 though he&apos;s been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.</source>
       <comment>about:Ben Smith</comment>
-      <translation type="unfinished"/>
+      <translation>Присоединился в декабре 2009 года, хотя он был гораздо больше. Вклад в Lua API и бывший сопровождающий Lua API.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="200"/>
       <source>Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.</source>
       <comment>about:Blaine von Roeder</comment>
-      <translation type="unfinished"/>
+      <translation>Присоединился в декабре 2009 года. Он внес свой вклад в Lua API, представил небольшие исправления ошибок и помог в управлении релизами 1.0.5.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="204"/>
       <source>Developed the original cmake build script and he has committed a number of patches.</source>
       <comment>about:Bruno Bigras</comment>
-      <translation type="unfinished"/>
+      <translation>Разработал оригинальный скрипт сборки cmake и он выполнил ряд патчей.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="207"/>
@@ -4932,13 +4932,13 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="218"/>
       <source>Joining us 2017 they have given us some useful C++ and Lua contributions.</source>
       <comment>about:Dicene</comment>
-      <translation type="unfinished"/>
+      <translation>Присоединившись к нам в 2017 году, они внесли нам полезный вклад в C++ и Lua.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="221"/>
       <source>Contributed the Geyser layout manager for Mudlet in March 2010. It is written in Lua and aims at simplifying user GUI scripting.</source>
       <comment>about:James Younquist</comment>
-      <translation type="unfinished"/>
+      <translation>В марте 2010 года предоставил менеджеру макетов Гейзера для Mudlet. Он написан в Lua и направлен на упрощение пользовательского интерфейса.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="225"/>
@@ -4962,19 +4962,19 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="234"/>
       <source>Worked on the manual, forum help and helps with GUI design and documentation.</source>
       <comment>about:Maksym Grinenko</comment>
-      <translation type="unfinished"/>
+      <translation>Работал над руководством, справкой на форуме и помогал с дизайном графического интерфейса и документацией.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="237"/>
       <source>Developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.</source>
       <comment>about:Stephen Hansen</comment>
-      <translation type="unfinished"/>
+      <translation>Разработал API Lua для баз данных, который позволяет намного проще использовать базы данных, и один из оригинальных инсталляторов OSX.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="240"/>
       <source>Designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. Visit his homepage at &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.</source>
       <comment>about:Thorsten Wilms</comment>
-      <translation type="unfinished"/>
+      <translation>Разработал наш красивый логотип, заставку, диалог about, наш сайт, несколько иконок и значков. Посети его домашнюю страницу по адресу &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="249"/>
