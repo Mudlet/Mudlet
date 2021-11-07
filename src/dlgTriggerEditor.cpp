@@ -625,8 +625,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
 
     // (Top) "Actions" toolbar:
+    //: This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.
     mpAction_restoreEditorActionsToolbar = new QAction(tr("Restore Actions toolbar"), this);
     // (Left) "Items" toolbar:
+    //: This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.
     mpAction_restoreEditorItemsToolbar = new QAction(tr("Restore Items toolbar"), this);
 
     connect(mpAction_restoreEditorActionsToolbar, &QAction::triggered, this, &dlgTriggerEditor::slot_restoreEditorActionsToolbar);
