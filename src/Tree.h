@@ -92,29 +92,29 @@ private:
 
 template <class T>
 Tree<T>::Tree()
-: mpParent( nullptr )
+: mpParent(nullptr)
 , mpMyChildrenList( new std::list<T *> )
-, mID( 0 )
-, mOK_init( true )
-, mOK_code( true )
-, mActive( false )
-, mUserActiveState( false )
-, mTemporary( false )
-, mFolder( false )
+, mID(0)
+, mOK_init(true)
+, mOK_code(true)
+, mActive(false)
+, mUserActiveState(false)
+, mTemporary(false)
+, mFolder(false)
 {
 }
 
 template <class T>
 Tree<T>::Tree( T * pParent )
-: mpParent( pParent )
+: mpParent(pParent)
 , mpMyChildrenList( new std::list<T *> )
-, mID( 0 )
-, mOK_init( true )
-, mOK_code( true )
-, mActive( false )
-, mUserActiveState( false )
-, mTemporary( false )
-, mFolder( false )
+, mID(0)
+, mOK_init(true)
+, mOK_code(true)
+, mActive(false)
+, mUserActiveState(false)
+, mTemporary(false)
+, mFolder(false)
 {
     if (pParent) {
         pParent->addChild(static_cast<T*>(this));

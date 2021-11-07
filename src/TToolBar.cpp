@@ -31,13 +31,13 @@
 
 
 TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
-: QDockWidget( pW )
-, mpTAction( pA )
-, mVerticalOrientation( false )
+: QDockWidget(pW)
+, mpTAction(pA)
+, mVerticalOrientation(false)
 , mpWidget( new QWidget( this ) )
-, mRecordMove( false )
-, mpLayout( nullptr )
-, mItemCount( 0 )
+, mRecordMove(false)
+, mpLayout(nullptr)
+, mItemCount(0)
 {
     setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     setWidget(mpWidget);
