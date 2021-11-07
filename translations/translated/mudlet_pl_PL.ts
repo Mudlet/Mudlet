@@ -1957,7 +1957,7 @@ Obszary: %2 z: %3   Lokacje: %4 z: %5   Etykiety: %6 z: %7...</translation>
     <message>
       <location filename="../src/TMap.cpp" line="3134"/>
       <source>invalid format version &quot;%1&quot; detected</source>
-      <translation type="unfinished"/>
+      <translation>wykryto niepoprawną wersję &quot;%1&quot; formatu mapy</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3140"/>
@@ -1967,7 +1967,7 @@ Obszary: %2 z: %3   Lokacje: %4 z: %5   Etykiety: %6 z: %7...</translation>
     <message>
       <location filename="../src/TMap.cpp" line="3146"/>
       <source>no areas detected</source>
-      <translation type="unfinished"/>
+      <translation>nie wykryto żadnych obszarów</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3171"/>
@@ -1992,33 +1992,34 @@ Obszary: %2 z: %3   Lokacji: %4 z: %5   Etykiety: %6 z: %7...</translation>
       <location filename="../src/TMap.cpp" line="1180"/>
       <source>[ ERROR ] - The format version &quot;%1&quot; you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Wersja formatu mapy &quot;%1&quot; w którym próbujesz zapisać mapę jest zbyt nowa dla tej wersji Mudleta. Obsługiwane są tylko formaty do wersji %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1196"/>
       <source>[ ALERT ] - Saving map in format version &quot;%1&quot; that is different than &quot;%2&quot; which
 it was loaded as. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Zapisujesz mapę w wersji formatu &quot;%1&quot;, która jest inna niż wersja formatu &quot;%2&quot; w której została załadowana mapa. To może być problemem jeśli chcesz udostępnić zapisany plik osobom które używają wersji formatu mapy w której została ona oryginalnie zapisana.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1206"/>
       <source>[ WARN ]  - Saving map in format version &quot;%1&quot; different from the
 recommended map version %2 for this version of Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>[ UWAGA ] - Zapisywanie mapy w formacie &quot;%1&quot;, innym niż
+zalecany format &quot;%2&quot; dla tej wersji Mudleta.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1544"/>
       <location filename="../src/TMap.cpp" line="1995"/>
       <source>[ ERROR ] - Unable to open map file for reading: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Nie można otworzyć pliku mapy do odczytu: &quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1566"/>
       <source>[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates
 its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. The file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ALERT ] - Plik nie wydaje się być plikiem mapy Mudleta. Odczytana z pliku wersja formatu to &quot;%1&quot; i to nie ma sensu. Plik to: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1581"/>
