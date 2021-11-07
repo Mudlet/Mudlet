@@ -6619,38 +6619,38 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1007"/>
       <source>Entered number is invalid, set the number of the room southeast of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, ustaw numer lokacji na południowy wschód od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1008"/>
       <location filename="../src/dlgRoomExits.cpp" line="1107"/>
       <location filename="../src/dlgRoomExits.cpp" line="1274"/>
       <source>Set the number of the room southeast of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer lokacji znajdującej się na południowy wschód od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1016"/>
       <source>Entered number is invalid, set the number of the room in from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, ustaw numer lokacji na wewnątrz od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1017"/>
       <location filename="../src/dlgRoomExits.cpp" line="1115"/>
       <location filename="../src/dlgRoomExits.cpp" line="1276"/>
       <source>Set the number of the room in from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer lokacji na wewnątrz od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1025"/>
       <source>Entered number is invalid, set the number of the room out from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, ustaw numer lokacji na zewnątrz od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1026"/>
       <location filename="../src/dlgRoomExits.cpp" line="1123"/>
       <location filename="../src/dlgRoomExits.cpp" line="1278"/>
       <source>Set the number of the room out from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer lokacji na zewnątrz od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="135"/>
@@ -7012,7 +7012,7 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="104"/>
       <source>&lt;p&gt;Alias react on user input. To add a new alias:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define an input &lt;strong&gt;pattern&lt;/strong&gt; either literally or with a Perl regular expression.&lt;/li&gt;&lt;li&gt;Define a &apos;substitution&apos; &lt;strong&gt;command&lt;/strong&gt; to send to the game in clear text &lt;strong&gt;instead of the alias pattern&lt;/strong&gt;, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the alias.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;That&apos;s it! If you&apos;d like to be able to create aliases from the input line, there are a &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;couple&lt;/a&gt; of &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;packages&lt;/a&gt; that can help you.&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Alias reaguje na komendy wpisane przez użytkownika. Aby dodać nowy alias:&lt;ol&gt;&lt;li&gt;Kliknij ikonę &apos;Dodaj element&apos; powyżej.&lt;/li&gt;&lt;li&gt;Zdefiniuj &lt;strong&gt;wzór komendy&lt;/strong&gt; na który alias ma reagować, dosłownie lub za pomocą wyrażenia regularnego Perl.&lt;/li&gt;&lt;li&gt;Zdefiniuj &lt;strong&gt;zmienioną komendę&lt;/strong&gt; którą należy wysłać do gry, &lt;strong&gt;zamiast&lt;/strong&gt; pierwotnie wpisanej komendy, lub napisz skrypt dla bardziej skomplikowanych potrzeb.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Aktywuj&lt;/strong&gt; alias.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;To tyle! Jeśli chcesz móc tworzyć aliasy z poziomu komend, istnieje &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;kilka&lt;/a&gt; &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;pakietów&lt;/a&gt;, które mogą pomóc.&lt;p&gt;Sprawdź instrukcję, aby uzyskać &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;więcej informacji&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="112"/>
