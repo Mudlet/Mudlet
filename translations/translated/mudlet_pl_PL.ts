@@ -5793,7 +5793,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="855"/>
       <source>%1 doesn&apos;t seem to exist anymore - can you double-check it?</source>
-      <translation type="unfinished"/>
+      <translation>%1 nie istnieje - upewnij się że plik istnieje zanim spróbujesz ponownie.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="785"/>
@@ -5825,7 +5825,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1028"/>
       <source>Export cancelled.</source>
-      <translation type="unfinished"/>
+      <translation>Eksport anulowany.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1440"/>
@@ -5872,7 +5872,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="175"/>
       <source>Author</source>
-      <translation type="unfinished"/>
+      <translation>Autor</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="175"/>
@@ -5882,12 +5882,12 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="175"/>
       <source>Created</source>
-      <translation type="unfinished"/>
+      <translation>Utworzono</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="175"/>
       <source>Dependencies</source>
-      <translation type="unfinished"/>
+      <translation>Zależności</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgPackageManager.cpp" line="246"/>
