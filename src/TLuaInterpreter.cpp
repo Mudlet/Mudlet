@@ -14769,7 +14769,9 @@ int TLuaInterpreter::startTempAlias(const QString& regex, const QString& functio
     pT->setIsActive(true);
     pT->setTemporary(true);
     pT->registerAlias();
-    pT->setScript(function);
+    if (!function.isEmpty()) {
+        pT->setScript(function);
+    }
     int id = pT->getID();
     pT->setName(QString::number(id));
     return id;
@@ -14813,7 +14815,9 @@ int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& fu
     pT->setIsActive(true);
     pT->setTemporary(true);
     pT->registerKey();
-    pT->setScript(function);
+    if (!function.isEmpty()) {
+        pT->setScript(function);
+    }
     int id = pT->getID();
     pT->setName(QString::number(id));
     return id;
