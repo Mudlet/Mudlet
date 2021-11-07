@@ -104,14 +104,20 @@ QWidget* RoomIdLineEditDelegate::createEditor(QWidget* parent, const QStyleOptio
                     exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
                 }
                 roomIdToolTipText = mpDlgRoomExits->generateToolTip(exitToRoom->name, exitAreaName, outOfAreaExit, exitToRoom->getWeight());
+            } else if (text.toInt() > 0) {
+                // A number but not valid:
+                mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_invalidExit);
+                roomIdToolTipText = doubleParagraph.arg(tr("Entered number is invalid. If left like this, this exit will be deleted when <tt>save</tt> is clicked."),
+                                                        tr("Set the number of the room that this special exit goes to."));
             } else if (text.isEmpty()) {
                 // Nothing is entered (or the text was the placeholder):
                 mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_noExit);
                 roomIdToolTipText = singleParagraph.arg(tr("Set the number of the room that this special exit goes to."));
             } else {
-                // Something is entered but it does not yield a valid exit roomID:
+                // Something else that isn't a positive number:
                 mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_invalidExit);
-                roomIdToolTipText = singleParagraph.arg(tr("Entered number is invalid, set the number of the room that this special exit goes to."));
+                roomIdToolTipText = singleParagraph.arg(tr("A positive roomID of the room that this special exit leads to is expected here. "
+                                                           "If left like this, this exit will be deleted when <tt>save</tt> is clicked."));
             }
         }
         // Set the tooltip for the QLineEdit:
@@ -153,7 +159,7 @@ void RoomIdLineEditDelegate::updateEditorGeometry(QWidget* pEditor, const QStyle
 void RoomIdLineEditDelegate::slot_specialRoomExitIdEdited(const QString& text) const
 {
     // We do not set an icon in the status column whilst we are editing the
-    // exit room ID.
+    // exit roomID.
 
     if (!mpHost || !mpItem || !mAreaID) {
         return;
@@ -176,17 +182,17 @@ void RoomIdLineEditDelegate::slot_specialRoomExitIdEdited(const QString& text) c
     } else if (text.toInt() > 0) {
         // A number but not valid
         mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_invalidExit);
-        roomIdToolTipText = singleParagraph.arg(tr("Entered number is invalid, set the number of the room that this special exit leads to; "
-                                                   "if left like this, this exit will be deleted when <tt>save</tt> is clicked."));
+        roomIdToolTipText = doubleParagraph.arg(tr("Entered number is invalid. If left like this, this exit will be deleted when <tt>save</tt> is clicked."),
+                                                tr("Set the number of the room that this special exit goes to."));
     } else if (text.isEmpty() || text == mpDlgRoomExits->mSpecialExitRoomIdPlaceholder) {
         // Nothing is entered:
         mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_noExit);
         roomIdToolTipText = singleParagraph.arg(tr("Set the number of the room that this special exit goes to."));
     } else {
-        // Something else that isn't a positive number
+        // Something else that isn't a positive number:
         mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_invalidExit);
-        roomIdToolTipText = singleParagraph.arg(tr("A positive room ID of the room that this special exit leads to is expected here; "
-                                                   "if left like this, this exit will be deleted when <tt>save</tt> is clicked."));
+        roomIdToolTipText = singleParagraph.arg(tr("A positive roomID of the room that this special exit leads to is expected here. "
+                                                   "If left like this, this exit will be deleted when <tt>save</tt> is clicked."));
     }
     mpEditor->setToolTip(roomIdToolTipText);
 
@@ -222,7 +228,7 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
     mpAction_otherAreaExit->setToolTip(QString());
     mpAction_otherAreaExit->setIcon(mIcon_otherAreaExit);
 
-    mSpecialExitRoomIdPlaceholder = tr("(room ID)", "Placeholder, if no room ID is set for an exit.");
+    mSpecialExitRoomIdPlaceholder = tr("(roomID)", "Placeholder, if no roomID is set for an exit.");
     mSpecialExitCommandPlaceholder = tr("(command or Lua script)", "Placeholder, if a special exit has no name/script set.");
     mAllExitActionsSet << mpAction_noExit << mpAction_invalidExit << mpAction_inAreaExit << mpAction_otherAreaExit;
 
@@ -337,7 +343,7 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
             if (column == ExitsTreeWidget::colIndex_exitRoomId) {
                 setIconAndToolTipsOnSpecialExit(pI, false);
                 // Hide the Edit Status icon (as the status will be replicated
-                // and adjusted within the Exit Room ID column's QLineEdit)
+                // and adjusted within the Exit roomID column's QLineEdit)
                 // whilst the value is being edited:
                 pI->setIcon(ExitsTreeWidget::colIndex_exitStatus, QIcon());
             }
@@ -913,7 +919,7 @@ void dlgRoomExits::setIconAndToolTipsOnSpecialExit(QTreeWidgetItem* pSpecialExit
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
         }
 
-        // This is the toolTip text for the room ID number column (and the
+        // This is the toolTip text for the roomID number column (and the
         // status icon)
         const QString roomIdToolTipText{generateToolTip(pExitToRoom->name, exitAreaName, outOfAreaExit, pExitToRoom->getWeight())};
         pSpecialExit->setIcon(ExitsTreeWidget::colIndex_exitStatus, showIconOnExitStatus ? (outOfAreaExit ? mIcon_otherAreaExit : mIcon_inAreaExit) : QIcon());
@@ -921,26 +927,25 @@ void dlgRoomExits::setIconAndToolTipsOnSpecialExit(QTreeWidgetItem* pSpecialExit
         pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitStatus, roomIdToolTipText);
 
     } else if (pSpecialExit->text(ExitsTreeWidget::colIndex_exitRoomId).toInt() > 0) {
-        // A number but not valid
+        // A number but not valid:
         pSpecialExit->setIcon(ExitsTreeWidget::colIndex_exitStatus, showIconOnExitStatus ? mIcon_invalidExit : QIcon());
-        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, singleParagraph.arg(tr("Entered number is invalid, set the number of the room that this special exit leads to; "
-                                                                                              "if left like this, this exit will be deleted when <tt>save</tt> is clicked.")));
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, doubleParagraph.arg(tr("Entered number is invalid. If left like this, this exit will be deleted when <tt>save</tt> is clicked."),
+                                                                                           tr("Set the number of the room that this special exit leads to.")));
     } else if (pSpecialExit->text(ExitsTreeWidget::colIndex_exitRoomId).isEmpty() || pSpecialExit->text(ExitsTreeWidget::colIndex_exitRoomId) == mSpecialExitRoomIdPlaceholder) {
-        // Nothing
+        // Nothing:
         pSpecialExit->setIcon(ExitsTreeWidget::colIndex_exitStatus, QIcon());
-        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, singleParagraph.arg(tr("A positive room ID of the room that this special exit leads to is expected here; "
-                                                                                              "if left like this, this exit will be deleted when <tt>save</tt> is clicked.")));
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, singleParagraph.arg(tr("Set the number of the room that this special exit goes to.")));
     } else {
-        // Something else that isn't a positive number
+        // Something else that isn't a positive number:
         pSpecialExit->setIcon(ExitsTreeWidget::colIndex_exitStatus, showIconOnExitStatus ? mIcon_invalidExit : QIcon());
-        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, singleParagraph.arg(tr("A positive room ID of the room that this special exit leads to is expected here; "
-                                                                                              "if left like this, this exit will be deleted when <tt>save</tt> is clicked.")));
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, singleParagraph.arg(tr("A positive roomID of the room that this special exit leads to is expected here. "
+                                                                                              "If left like this, this exit will be deleted when <tt>save</tt> is clicked.")));
     }
 
     if (pSpecialExit->text(ExitsTreeWidget::colIndex_command) == mSpecialExitCommandPlaceholder) {
         pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_command, singleParagraph.arg(tr("No command or Lua script entered, if left like this, this exit will be deleted when <tt>save</tt> is clicked.")));
     } else {
-        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_command, singleParagraph.arg(tr("(Lua scripts for some mapper packages {those using the <tt>mudlet-mapper/<tt>, i.e. I.R.E. Muds and StickMUD} need to be prefixed with \"script:\").")));
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_command, singleParagraph.arg(tr("(Lua scripts for those profiles using the <tt>mudlet-mapper</tt> package need to be prefixed with \"script:\").")));
     }
 }
 
@@ -1046,16 +1051,16 @@ void dlgRoomExits::normalExitEdited(const QString& roomExitIdText, QLineEdit* pE
         pExit->setToolTip(generateToolTip(exitToRoom->name, exitAreaName, outOfAreaExit, exitToRoom->getWeight()));
     } else {
         if (!roomExitIdText.isEmpty()) {
-            // Something is entered but it does not yield a valid exit roomID
+            // Something is entered but it does not yield a valid exit roomID:
             setActionOnExit(pExit, mpAction_invalidExit);
             pExit->setToolTip(invalidExitToolTipText);
         } else {
-            // Nothing is entered
+            // Nothing is entered:
             setActionOnExit(pExit, mpAction_noExit);
             pExit->setToolTip(noExitToolTipText);
         }
         // In either case we can enable the stub exit control but disable
-        // other controls that need either a valid exit room Id or an actual
+        // other controls that need either a valid exit roomID or an actual
         // stub exit to be chosen:
         pNoRoute->setEnabled(false);
         pWeight->setEnabled(false);
