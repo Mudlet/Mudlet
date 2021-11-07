@@ -3357,7 +3357,7 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>Search Engine</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_groupBox_searchEngineSelection">
+         <layout class="QVBoxLayout" name="verticalLayout_searchEngineSelection">
           <item>
            <widget class="QComboBox" name="search_engine_combobox"/>
           </item>
@@ -3434,7 +3434,7 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="4" column="0" colspan="2">
            <widget class="QWidget" name="widget_timerDebugOutputMinimumInterval" native="true">
-            <layout class="QHBoxLayout" name="horizontalLayout_widget_timerDebugOutputMinimumInterval" stretch="0,1">
+            <layout class="QHBoxLayout" name="horizontalLayout_timerDebugOutputMinimumInterval" stretch="0,1">
              <property name="leftMargin">
               <number>0</number>
              </property>
