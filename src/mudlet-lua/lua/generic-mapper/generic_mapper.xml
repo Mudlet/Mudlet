@@ -513,7 +513,8 @@ end</script>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Map Stop Alias</name>
-				<script>raiseEvent("mapStop")</script>
+				<script>raiseEvent("mapStop")
+raiseEvent("sysSpeedwalkStopped")</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^map stop$</regex>
@@ -2850,6 +2851,7 @@ end
 
 function doSpeedWalk()
     if #speedWalkPath ~= 0 then
+        raiseEvent("sysSpeedwalkStarted")
         map.speedwalk(nil, speedWalkPath, speedWalkDir)
     else
         map.echo("No path to chosen room found.",false,true)

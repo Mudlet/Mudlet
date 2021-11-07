@@ -457,6 +457,7 @@ function resumeSpeedwalk()
     return nil, "resumeSpeedwalk(): attempted to resume a speedwalk but no active speedwalk found"
   end
   speedwalktimer(speedwalkList, speedwalkDelay, speedwalkShow)
+  raiseEvent("sysSpeedwalkResumed")
   return true
 end
 
@@ -502,13 +503,15 @@ function speedwalk(dirString, backwards, delay, show)
     ni = "out",
     tuo = "in"
   }
+  raiseEvent("sysSpeedwalkStarted")
   if not backwards then
     for count, direction in string.gmatch(dirString, "([0-9]*)([neswudio][ewnu]?t?)") do
       count = (count == "" and 1 or count)
       for i = 1, count do
         if delay then
           walklist[#walklist + 1] = direction
-        else send(direction, show)
+        else
+          send(direction, show)
         end
       end
     end
@@ -518,7 +521,8 @@ function speedwalk(dirString, backwards, delay, show)
       for i = 1, count do
         if delay then
           walklist[#walklist + 1] = reversedir[direction]
-        else send(reversedir[direction], show)
+        else
+          send(reversedir[direction], show)
         end
       end
     end
