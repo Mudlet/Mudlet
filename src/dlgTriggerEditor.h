@@ -335,6 +335,14 @@ private:
     void selectActionByID(int id);
     void selectKeyByID(int id);
 
+    void clearTriggerForm();
+    void clearTimerForm();
+    void clearAliasForm();
+    void clearScriptForm();
+    void clearActionForm();
+    void clearKeyForm();
+    void clearVarForm();
+
     void expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pItem);
     void expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem* pWidgetItemParent);
     void expand_child_scripts(TScript* pTriggerParent, QTreeWidgetItem* pWidgetItemParent);
