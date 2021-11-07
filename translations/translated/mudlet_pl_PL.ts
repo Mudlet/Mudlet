@@ -6496,125 +6496,125 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="809"/>
       <source>Exit to &quot;%1&quot; in area: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Wyjście do &quot;%1&quot; w obszarze: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="825"/>
       <source>Exit to unnamed room in area: &quot;%1&quot;, is valid.</source>
-      <translation type="unfinished"/>
+      <translation>Wyjście do nienazwanej lokacji w obszarze: &quot;%1&quot;, jest poprawne.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="833"/>
       <source>Exit to unnamed room is valid.</source>
-      <translation type="unfinished"/>
+      <translation>Wyjście do nienazwanej lokacji jest poprawne.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="926"/>
       <source>Entered number is invalid, set the number of the room northwest of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, podaj numer lokacji na północny zachód od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="927"/>
       <location filename="../src/dlgRoomExits.cpp" line="1035"/>
       <location filename="../src/dlgRoomExits.cpp" line="1256"/>
       <source>Set the number of the room northwest of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer lokacji znajdującego się na północny zachód od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="935"/>
       <source>Entered number is invalid, set the number of the room north of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, podaj numer lokacji znajdującego się na północ od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="936"/>
       <location filename="../src/dlgRoomExits.cpp" line="1043"/>
       <location filename="../src/dlgRoomExits.cpp" line="1258"/>
       <source>Set the number of the room north of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer lokacji znajdującego się na północ od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="944"/>
       <source>Entered number is invalid, set the number of the room northeast of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, podaj numer lokacji na północny wschód od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="945"/>
       <location filename="../src/dlgRoomExits.cpp" line="1051"/>
       <location filename="../src/dlgRoomExits.cpp" line="1260"/>
       <source>Set the number of the room northeast of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer lokacji na północny wschód od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="953"/>
       <source>Entered number is invalid, set the number of the room up from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, podaj numer lokacji w górę od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="954"/>
       <location filename="../src/dlgRoomExits.cpp" line="1059"/>
       <location filename="../src/dlgRoomExits.cpp" line="1262"/>
       <source>Set the number of the room up from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer lokacji w górę od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="962"/>
       <source>Entered number is invalid, set the number of the room west of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, podaj numer lokacji znajdującej się na zachód od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="963"/>
       <location filename="../src/dlgRoomExits.cpp" line="1067"/>
       <location filename="../src/dlgRoomExits.cpp" line="1264"/>
       <source>Set the number of the room west of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer lokacji na zachód od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="971"/>
       <source>Entered number is invalid, set the number of the room east of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, podaj numer lokacji na wschód od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="972"/>
       <location filename="../src/dlgRoomExits.cpp" line="1075"/>
       <location filename="../src/dlgRoomExits.cpp" line="1266"/>
       <source>Set the number of the room east of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer lokacji na wschód od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="980"/>
       <source>Entered number is invalid, set the number of the room down from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, podaj numer lokacji w dół od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="981"/>
       <location filename="../src/dlgRoomExits.cpp" line="1083"/>
       <location filename="../src/dlgRoomExits.cpp" line="1268"/>
       <source>Set the number of the room down from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer lokacji w dół od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="989"/>
       <source>Entered number is invalid, set the number of the room southwest of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, podaj numer lokacji na południowy zachód od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="990"/>
       <location filename="../src/dlgRoomExits.cpp" line="1091"/>
       <location filename="../src/dlgRoomExits.cpp" line="1270"/>
       <source>Set the number of the room southwest of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer lokacji znajdującej się na południowy zachód od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="998"/>
       <source>Entered number is invalid, set the number of the room south of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, podaj numer lokacji znajdującej się na południe od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="999"/>
       <location filename="../src/dlgRoomExits.cpp" line="1099"/>
       <location filename="../src/dlgRoomExits.cpp" line="1272"/>
       <source>Set the number of the room south of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer lokacji znajdującej się na południe od aktualnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1007"/>
