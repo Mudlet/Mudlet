@@ -48,7 +48,7 @@
 #include <QTableWidget>
 #include <QToolBar>
 #include <QUiLoader>
-#include <../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h>
+#include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
