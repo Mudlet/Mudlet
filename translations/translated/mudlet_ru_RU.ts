@@ -2023,33 +2023,39 @@ for this version of Mudlet. Supported are only formats up to version %2.</source
       <source>[ ALERT ] - Saving map in format version &quot;%1&quot; that is different than &quot;%2&quot; which
 it was loaded as. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Сохранение карты в версии формата &quot;%1&quot; отличается от &quot;%2&quot; какой она была загружена. Это может быть проблема, если вы хотите поделиться 
+картой с другими на основе исходного формата.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1206"/>
       <source>[ WARN ]  - Saving map in format version &quot;%1&quot; different from the
 recommended map version %2 for this version of Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ]  - Сохранение карты в формате "%1" отличается от
+рекомендуемого формата %2 для этой версии Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1544"/>
       <location filename="../src/TMap.cpp" line="1995"/>
       <source>[ ERROR ] - Unable to open map file for reading: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Невозможно открыть файл карты для чтения: &quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1566"/>
       <source>[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates
 its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. The file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Файл, похоже, не является файлом карты Mudlet. Часть, которая указывает на
+его версию формата, кажется &quot;%1&quot; , и это не имеет смысла&apos;. Файл:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1581"/>
       <source>[ ALERT ] - Map file is too new. Its format version &quot;%1&quot; is higher than this version of
 Mudlet can handle (%2)! The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Файл карты слишком новый. Версия формата &quot;%1&quot; выше, чем версия
+Mudlet может работать (%2)! Файл:
+&quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1588"/>
@@ -2061,7 +2067,8 @@ Mudlet can handle (%2)! The file is:
       <source>[ ALERT ] - Map file is really old. Its format version &quot;%1&quot; is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try! The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Файл карты очень старый. Его версия формата &quot;%1&quot; настолько древняя, что эта версия Mudlet может не получить достаточно информации из
+него, но он попытается! Файл имеет вид: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1611"/>
@@ -3495,7 +3502,8 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="396"/>
       <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.
 </source>
-      <translation type="unfinished"/>
+      <translation>[Ошибка триггера:] %1 лимит захвата групп превышен, захватите меньше групп.
+</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="1156"/>
@@ -3978,7 +3986,8 @@ use. Mudlet will attempt to send the data using the ASCII encoding
 but will be limited to only unaccented characters of basic English.
 Note: this warning will only be issued once, until the encoding is
 changed.</source>
-      <translation type="unfinished"/>
+      <translation>[ОШИБКА] - Внутренняя ошибка, кодек для текущей настройки {&quot;%1&quot;} не найден, поэтому Mudlet не может отправлять данные в этом формате на игровой сервер. Пожалуйста, проверьте, есть ли альтернатива, которую MUD и Mudlet могут использовать. Mudlet попытается отправить данные с использованием кодировки ASCII, но будет ограничено только неакцентированными символами базового английского языка.
+Примечание: это предупреждение будет выдано только один раз, пока кодировка не изменится.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2332"/>
@@ -4294,7 +4303,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="694"/>
       <source>If provided will be sent, along with password to identify the user in the game.</source>
-      <translation type="unfinished"/>
+      <translation>Если он будет предоставлен, будет отправлен вместе с паролем для идентификации пользователя в игре.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="713"/>
@@ -4324,7 +4333,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="751"/>
       <source>If provided will be sent, along with the character name to identify the user in the game.</source>
-      <translation type="unfinished"/>
+      <translation>Если указано, будет отправлено вместе с именем персонажа, чтобы идентифицировать пользователя в игре.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="764"/>
@@ -4822,7 +4831,12 @@ Count</source>
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#7289DA;&quot;&gt;&lt;b&gt;Discord&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://www.mudlet.org/chat&quot;&gt;discord.gg&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Source code&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet&quot;&gt;github.com/Mudlet/Mudlet&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Features/bugs&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;github.com/Mudlet/Mudlet/issues&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Главная страница&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://www.mudlet.org/&quot;&gt;www.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Форумы&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://forums.mudlet.org/&quot;&gt;forums.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Документация&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://wiki.mudlet.org/w/Main_Page&quot;&gt;wiki.mudlet.org/w/Main_Page&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#7289DA;&quot;&gt;&lt;b&gt;Discord&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://www.mudlet.org/chat&quot;&gt;discord.gg&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Исходный код&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet&quot;&gt;github.com/Mudlet/Mudlet&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Идеи/ошибки&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;github.com/Mudlet/Mudlet/issues&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="155"/>
@@ -4846,37 +4860,37 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="172"/>
       <source>Former maintainer of the early Windows and Apple OSX packages. He also administers our server and helps the project in many ways.</source>
       <comment>about:demonnic</comment>
-      <translation type="unfinished"/>
+      <translation>Бывший сопровождатель ранних пакетов Windows и Apple OSX. Он также администрирует наш сервер и помогает проекту во многих отношениях.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="176"/>
       <source>Contributed many improvements to Mudlet&apos;s db: interface, event system, and has been around the project for a very long while assisting users.</source>
       <comment>about:keneanung</comment>
-      <translation type="unfinished"/>
+      <translation>Внес много улучшений в db: интерфейс, система событий и был вокруг проекта в течение очень долгого времени, помогая пользователям.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="180"/>
       <source>Does a ton of work in making Mudlet, the website and the wiki accessible to you regardless of the language you speak - and promoting our genre!</source>
       <comment>about:Leris</comment>
-      <translation type="unfinished"/>
+      <translation>Делает массу работы, делая Mudlet, веб-сайт и вики доступными для вас независимо от языка, на котором вы говорите, и продвигает наш жанр!</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="184"/>
       <source>Contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.</source>
       <comment>about:ahmedcharles</comment>
-      <translation type="unfinished"/>
+      <translation>Вклад в интеграцию Travis, сборку CMake и Visual C++, множество улучшений качества кода и управления памятью.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="188"/>
       <source>Developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.</source>
       <comment>about:Chris7</comment>
-      <translation type="unfinished"/>
+      <translation>Разработал систему общих модулей, которая позволяет совместно использовать пакеты скриптов между профилями, пользовательский интерфейс для просмотра переменных Lua, улучшения в маппере и всё вокруг.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="192"/>
       <source>Developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.</source>
       <comment>about:Ben Carlsen</comment>
-      <translation type="unfinished"/>
+      <translation>Разработал первую версию нашего установщика для Mac OSX. Он является бывшим сопровождающим Mac-версии Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="196"/>
