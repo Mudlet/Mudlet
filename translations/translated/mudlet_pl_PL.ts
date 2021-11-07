@@ -7682,23 +7682,23 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="459"/>
       <source>Generate statistics</source>
-      <translation type="unfinished"/>
+      <translation>Generuj statystyki</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="459"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8403"/>
       <source>Ctrl+9</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+9</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="463"/>
       <source>Show/Hide the separate Central Debug Console - when being displayed the system will be slower.</source>
-      <translation type="unfinished"/>
+      <translation>Pokazuje/ukrywa oddzielną Centralną Konsolę Debugowania - gdy jest wyświetlana system będzie wolniejszy.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="464"/>
       <source>Show/Hide Debug Console (Ctrl+0) -&gt; system will be &lt;b&gt;&lt;i&gt;slower&lt;/i&gt;&lt;/b&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Aktywuje komunikaty debugowania -&gt; system będzie &lt;b&gt;&lt;i&gt;wolniejszy&lt;/i&gt;&lt;/b&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="576"/>
@@ -7964,22 +7964,22 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="52"/>
       <source>Text to find (anywhere in the game output)</source>
-      <translation type="unfinished"/>
+      <translation>Tekst do znalezienia (gdziekolwiek w tekście z gry)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="55"/>
       <source>Text to find (as a regular expression pattern)</source>
-      <translation type="unfinished"/>
+      <translation>Tekst do znalezienia (jako wyrażenie regularne)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="58"/>
       <source>Text to find (from beginning of the line)</source>
-      <translation type="unfinished"/>
+      <translation>Tekst do znalezienia (od początku linii)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="61"/>
       <source>Exact line to match</source>
-      <translation type="unfinished"/>
+      <translation>Dokładny tekst linii do dopasowania</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="64"/>
