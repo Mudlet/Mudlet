@@ -5627,27 +5627,27 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="288"/>
       <source>optional. Markdown supported, and you can add images with drag and drop</source>
-      <translation type="unfinished"/>
+      <translation>opcjonalne, można używać Markdown, można przeciągać na to pole obrazki</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="182"/>
       <source>Icon</source>
-      <translation type="unfinished"/>
+      <translation>Ikona</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="216"/>
       <source>Add icon</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj ikonę</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="255"/>
       <source>Short description</source>
-      <translation type="unfinished"/>
+      <translation>Krótki opis</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="275"/>
       <source>Description</source>
-      <translation type="unfinished"/>
+      <translation>Opis</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="295"/>
@@ -5657,32 +5657,32 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="312"/>
       <source>Does this package make use of other packages? List them here as requirements</source>
-      <translation type="unfinished"/>
+      <translation>Czy ten pakiet korzysta z innych pakietów? Wymień je tutaj jako wymagania</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="315"/>
       <source>Required packages</source>
-      <translation type="unfinished"/>
+      <translation>Wymagane pakiety</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="404"/>
       <source>Include assets (images, sounds, fonts)</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj zasoby (obrazki, dźwięki, czcionki)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="414"/>
       <source>Drag and drop files and folders, or use the browse button below</source>
-      <translation type="unfinished"/>
+      <translation>Przeciągnij pliki lub foldery, lub użyj przyciski Przeglądaj poniżej</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="462"/>
       <source>Select files to include in package</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz pliki do załączenia w pakiecie</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="372"/>
       <source>Does this package make use of other packages? List them here as requirements. Press &apos;Delete&apos; to remove a package</source>
-      <translation type="unfinished"/>
+      <translation>Czy ten pakiet korzysta z innych pakietów? Wymień je tutaj jako wymagania. Naciśnij &apos;Usuń&apos;, aby usunąć pakiet</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
@@ -5692,7 +5692,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="512"/>
       <source>Select export location</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz miejsce zapisu</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="63"/>
@@ -5733,12 +5733,12 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="109"/>
       <source>update installed package</source>
-      <translation type="unfinished"/>
+      <translation>uaktualnij zainstalowane pakiety</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="110"/>
       <source>add dependencies</source>
-      <translation type="unfinished"/>
+      <translation>dodaj zależność</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="170"/>
@@ -5750,13 +5750,13 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="180"/>
       <source>Failed to add file &quot;%1&quot; to package. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when a file is to be placed into the package but cannot be done for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>Nie udało się dodać pliku &quot;%1&quot; do pakietu. Komunikat błędu: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="326"/>
       <location filename="../src/dlgPackageExporter.cpp" line="328"/>
       <source>Export to %1</source>
-      <translation type="unfinished"/>
+      <translation>Wyeksportuj do %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1031"/>
