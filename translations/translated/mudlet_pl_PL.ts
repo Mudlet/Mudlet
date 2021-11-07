@@ -3722,7 +3722,7 @@ a ten nie może go odczytać, potrzebujesz nowszego Mudleta!</translation>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="286"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wpisz jedno lub więcej poleceń, które przycisk ma wysłać bezpośrednio do gry, gdy ten przycisk zmieni stan z &lt;i&gt;właczonego&lt;/i&gt; na &lt;i&gt;wyłączony&lt;/i&gt;.&lt;/p&gt;&lt;p&gt;Aby wysyłać bardziej złożone polecenia, które mogą zależeć od zmiennych w tym profilu lub muszą je zmodyfikować, należy wprowadzić skrypt Lua &lt;i&gt;zamiast&lt;/i&gt; wpisanych komend w obszarze edytora poniżej. Wszystko, co zostanie wpisane w to pole, jest wysyłane do gry bez zmian.&lt;/p&gt;&lt;p&gt;Można wykorzystać jednocześnie to pole &lt;i&gt;oraz&lt;/i&amp;gt skrypt Lua - zawartość tego pola zostanie wtedy wysłana &lt;b&gt;przed&lt;/b&gt; uruchomieniem skryptu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="308"/>
@@ -3775,12 +3775,12 @@ a ten nie może go odczytać, potrzebujesz nowszego Mudleta!</translation>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="171"/>
       <source>&lt;p&gt;Type in one or more commands you want the alias to send directly to the game if the keys entered match the pattern. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wpisz jedno lub więcej poleceń, które alias na wysłać bezpośrednio do gry, jeśli wprowadzone polecenie jest zgodne ze wzorcem. (Opcjonalne)&lt;/p&gt;&lt;p&gt;Aby wysyłać bardziej złożone polecenia, które mogą zależeć od zmiennych w tym profilu lub je modyfikują, należy &lt;i&gt;zamiast&lt;/i&gt; tego wprowadzić skrypt Lua w obszarze edytora poniżej. Wszystko, co jet wpisane w to pole jest wysyłane go gry bez zmian.&lt;/p&gt;&lt;p&gt;Wszystko, co zostanie wpisane w to pole, jest wysyłane do gry bez zmian.&lt;/p&gt;&lt;p&gt;Można wykorzystać jednocześnie to pole &lt;i&gt;oraz&lt;/i&amp;gt skrypt Lua - zawartość tego pola zostanie wtedy wysłana &lt;b&gt;przed&lt;/b&gt; uruchomieniem skryptu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="174"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Tekst do wysłania do gry jak-jest (opcjonalne)</translation>
     </message>
   </context>
   <context>
