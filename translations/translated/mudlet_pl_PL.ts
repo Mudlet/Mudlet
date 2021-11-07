@@ -2593,12 +2593,12 @@ jakich nowych numerów identyfikatorów użyć.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="780"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messages related to this for each affected area ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Znaleziono niepoprawny (mniejszy niż +1 i nie będący -1) identyfikatory obszaru (liczba wystąpień: %1) na mapie! Oczekuj dalszych wiadomości związanych z tym problem dla poszczególnych obszarów...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="859"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messages related to this for each affected room ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Niepoprawny (mniejszy niż +1) identyfikator lokacji (wystąpienia: %1) na mapie! Oczekuj dalszych komunikatów dla poszczególnych lokacji...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="866"/>
@@ -3437,7 +3437,8 @@ obszaru) nie znaleziono, dodając &quot;%1&quot; w stosunku do zarezerwowanego -
       <location filename="../src/TTrigger.cpp" line="396"/>
       <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.
 </source>
-      <translation type="unfinished"/>
+      <translation>[Błąd wyzwalacza:] Limit %1 grup przechwytywania przekroczony, przechwyć mniej grup.
+</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="1156"/>
@@ -3701,7 +3702,7 @@ a ten nie może go odczytać, potrzebujesz nowszego Mudleta!</translation>
       <location filename="../src/ui/actions_main_area.ui" line="269"/>
       <location filename="../src/ui/actions_main_area.ui" line="289"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Tekst do wysłania do gry jak-jest (opcjonalne)</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="276"/>
