@@ -4854,7 +4854,7 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="213"/>
       <source>Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - if you are a &lt;i&gt;SpamBot&lt;/i&gt; you will not get onto our Fora now. They have also made some useful C++ core code contributions and we look forward to future reviews on and work in that area.</source>
       <comment>about:TheFae</comment>
-      <translation type="unfinished"/>
+      <translation>Zdziałał cuda przy odświeżaniu naszej strony w 2017 roku. Lubi prywatność - jeżeli jesteś &lt;i&gt;SpamBotem&lt;/i&gt; nie dostaniesz się już na nasze fora. Wykonał także kilka przydatnych zmian z podstawowym kodzie C++ aplikacji, mamy nadzieję na jego przyszły wkład i udział w ocenianiu zmian w kodzie.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="218"/>
