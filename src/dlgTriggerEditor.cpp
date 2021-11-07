@@ -2580,6 +2580,7 @@ void dlgTriggerEditor::delete_alias()
     }
     delete pT;
     mpCurrentAliasItem = nullptr;
+    clearAliasForm();
 }
 
 void dlgTriggerEditor::delete_action()
@@ -2610,6 +2611,7 @@ void dlgTriggerEditor::delete_action()
     delete pT;
     mpCurrentActionItem = nullptr;
     mpHost->getActionUnit()->updateToolbar();
+    clearActionForm();
 }
 
 void dlgTriggerEditor::delete_variable()
@@ -2637,6 +2639,7 @@ void dlgTriggerEditor::delete_variable()
         qDebug() << "ERROR: dlgTriggerEditor::delete_action() child to be deleted does not have a parent";
     }
     mpCurrentVarItem = nullptr;
+    clearVarForm();
 }
 
 void dlgTriggerEditor::delete_script()
@@ -2658,6 +2661,7 @@ void dlgTriggerEditor::delete_script()
     }
     delete pT;
     mpCurrentScriptItem = nullptr;
+    clearScriptForm();
 }
 
 void dlgTriggerEditor::delete_key()
@@ -2680,6 +2684,7 @@ void dlgTriggerEditor::delete_key()
     }
     delete pT;
     mpCurrentKeyItem = nullptr;
+    clearKeyForm();
 }
 
 void dlgTriggerEditor::delete_trigger()
@@ -2702,6 +2707,7 @@ void dlgTriggerEditor::delete_trigger()
     }
     delete pT;
     mpCurrentTriggerItem = nullptr;
+    clearTriggerForm();
 }
 
 void dlgTriggerEditor::delete_timer()
@@ -2724,6 +2730,7 @@ void dlgTriggerEditor::delete_timer()
     }
     delete pT;
     mpCurrentTimerItem = nullptr;
+    clearTimerForm();
 }
 
 
@@ -5171,9 +5178,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
     } else {
         // No details to show - as will be the case if the top item (ID = 0) is
         // selected - so show the help message:
-        mpTriggersMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddTrigger);
+        clearTriggerForm();
     }
 }
 
@@ -5181,9 +5186,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         // No details to show - so show the help message:
-        mpAliasMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddAlias);
+        clearAliasForm();
         return;
     }
 
@@ -5232,9 +5235,7 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         // No details to show - so show the help message:
-        mpKeysMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddKey);
+        clearKeyForm();
         return;
     }
 
@@ -5375,9 +5376,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem* pItem)
 {
     if (!pItem ||treeWidget_variables->indexOfTopLevelItem(pItem) == 0) {
         // Null item or it is for the first row of the tree
-        mpVarsMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddVar);
+        clearVarForm();
         return;
     }
 
@@ -5774,9 +5773,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         // No details to show - so show the help message:
-        mpTimersMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddTimer);
+        clearTimerForm();
         return;
     }
 
@@ -6858,9 +6855,7 @@ void dlgTriggerEditor::slot_show_scripts()
     if (!pI || pI == treeWidget_scripts->currentItem() || !pI->childCount()) {
         // There is no root item, we are on the root item or there are no other
         // items - so show the help message:
-        mpScriptsMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddScript);
+        clearScriptForm();
     } else {
         mpScriptsMainArea->show();
         mpSourceEditorArea->show();
@@ -7007,9 +7002,7 @@ void dlgTriggerEditor::slot_show_actions()
     if (!pI || pI == treeWidget_actions->currentItem() || !pI->childCount()) {
         // There is no root item, we are on the root item or there are no other
         // items - so show the help message:
-        mpActionsMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddButton);
+        clearActionForm();
     } else {
         mpActionsMainArea->show();
         mpSourceEditorArea->show();
@@ -9089,4 +9082,53 @@ void dlgTriggerEditor::setSearchOptions(const SearchOptions optionsState)
     mpAction_searchCaseSensitive->setChecked(optionsState & SearchOptionCaseSensitive);
     mpAction_searchIncludeVariables->setChecked(optionsState & SearchOptionIncludeVariables);
     createSearchOptionIcon();
+}
+
+void dlgTriggerEditor::clearTriggerForm()
+{
+    mpTriggersMainArea->hide();
+    mpSourceEditorArea->hide();
+    showInfo(msgInfoAddTrigger);
+}
+
+void dlgTriggerEditor::clearTimerForm()
+{
+    mpTimersMainArea->hide();
+    mpTimersMainArea->hide();
+    showInfo(msgInfoAddTimer);
+}
+
+void dlgTriggerEditor::clearAliasForm()
+{
+    mpAliasMainArea->hide();
+    mpSourceEditorArea->hide();
+    showInfo(msgInfoAddAlias);
+}
+
+void dlgTriggerEditor::clearScriptForm()
+{
+    mpScriptsMainArea->hide();
+    mpSourceEditorArea->hide();
+    showInfo(msgInfoAddScript);
+}
+
+void dlgTriggerEditor::clearActionForm()
+{
+    mpActionsMainArea->hide();
+    mpSourceEditorArea->hide();
+    showInfo(msgInfoAddButton);
+}
+
+void dlgTriggerEditor::clearKeyForm()
+{
+    mpKeysMainArea->hide();
+    mpSourceEditorArea->hide();
+    showInfo(msgInfoAddKey);
+}
+
+void dlgTriggerEditor::clearVarForm()
+{
+    mpVarsMainArea->hide();
+    mpSourceEditorArea->hide();
+    showInfo(msgInfoAddVar);
 }
