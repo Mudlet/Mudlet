@@ -910,7 +910,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2890"/>
       <source>Move selected room or group of rooms to the given coordinates in this area</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Przesuń wybrany pokój lub grupę pokoi na podane współrzędne w tym obszarze</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2896"/>
@@ -940,7 +940,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2909"/>
       <source>Set the player&apos;s current location to here</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Ustaw tutaj aktualną lokację gracza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2918"/>
@@ -1191,7 +1191,8 @@ rooms:</source>
       <location filename="../src/TAlias.cpp" line="200"/>
       <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ Błąd aliasu:] Przekroczono limit %1 grup przechwytywania, przechwyć mniej grup.
+</translation>
     </message>
     <message>
       <location filename="../src/TAlias.cpp" line="269"/>
@@ -1781,12 +1782,14 @@ Jest tyle danych, ale lepiej zacząć od nowa ...</translation>
       <source>[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:
 %1; the file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ALERT ] - Nie udało się załadować pliku mapy w formacie JSON, powód:
+%1; plik to:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1672"/>
       <source>[ INFO ]  - Ignoring this map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Ignorowanie tego pliku mapy.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1842"/>
@@ -1915,7 +1918,8 @@ i jest wystarczająco dużo miejsca na dysku. Operacja pobierania nie powiodła 
       <location filename="../src/TMap.cpp" line="3407"/>
       <source>Exporting JSON map data from %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>Eksport mapy w formacie JSON z %1
+Obszary: %2 z: %3   Lokacje: %4 z: %5   Etykiety: %6 z: %7...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2931"/>
@@ -1927,7 +1931,8 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="3066"/>
       <source>Exporting JSON map file from %1 - writing data to file:
 %2 ...</source>
-      <translation type="unfinished"/>
+      <translation>Eksportowanie mapy w formacie JSON z %1 - zapisywanie danych do pliku:
+%2 ...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3092"/>
@@ -1957,7 +1962,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
     <message>
       <location filename="../src/TMap.cpp" line="3140"/>
       <source>no format version detected</source>
-      <translation type="unfinished"/>
+      <translation>nie wykryto wersji formatu mapy</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3146"/>
