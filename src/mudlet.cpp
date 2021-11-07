@@ -3900,9 +3900,11 @@ void mudlet::setAppearance(const Appearance state)
 
     auto host = getActiveHost();
     if (enableDarkTheme) {
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         qApp->setStyle(new DarkTheme);
         getHostManager().changeAllHostColour(host);
     } else {
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
         getHostManager().changeAllHostColour(host);
     }
