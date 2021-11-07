@@ -149,7 +149,7 @@ for all of the %n selected rooms:</numerusform>
         <source>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
  Look for further messages related to the rooms that are supposed
  to be in this/these area(s)...</source>
-        <translation type="unfinished">
+        <translation>
             <numerusform>[ ALERT ] - %n area detected as missing in map: adding it in.
  Look for further messages related to the rooms that are supposed
  to be in this area...</numerusform>
@@ -163,7 +163,7 @@ for all of the %n selected rooms:</numerusform>
         <source>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
  Look for further messages related to the rooms that is/are supposed to
  be in this/these area(s)...</source>
-        <translation type="unfinished">
+        <translation>
             <numerusform>[ ALERT ] - %n area detected as missing in map: adding it in.
  Look for further messages related to the rooms that are supposed
  to be in this area...</numerusform>
@@ -177,7 +177,7 @@ for all of the %n selected rooms:</numerusform>
         <source>[ INFO ]  - The missing area(s) are now called:
 (ID) ==&gt; &quot;name&quot;</source>
         <comment>The last line is a headline explaining what follows is a list of lines, one for each area, in the form of the ID number followed by the new name of the area</comment>
-        <translation type="unfinished">
+        <translation>
             <numerusform>[ INFO ]  - The missing area is now called:
 (ID) ==&gt; &quot;name&quot;</numerusform>
             <numerusform>[ INFO ]  - The missing %n areas are now called:
@@ -188,7 +188,7 @@ for all of the %n selected rooms:</numerusform>
         <location filename="../../src/TRoomDB.cpp" line="773"/>
         <source>[ ALERT ] - %n bad area id(s) found in map! (less than +1 and not the reserved -1)
 Now working out what new id numbers to use...</source>
-        <translation type="unfinished">
+        <translation>
             <numerusform>[ ALERT ] - %n bad area id found in map! (less than +1 and not the reserved -1)
 Now working out what new id number to use...</numerusform>
             <numerusform>[ ALERT ] - %n bad area ids found in map! (less than +1 and not the reserved -1)
@@ -198,7 +198,7 @@ Now working out what new id numbers to use...</numerusform>
     <message numerus="yes">
         <location filename="../../src/TRoomDB.cpp" line="777"/>
         <source>[ ALERT ] - %n bad area id(s) found in map! (less than +1 and not the reserved -1)  Look for further messages related to this for each affected area ...</source>
-        <translation type="unfinished">
+        <translation>
             <numerusform>[ ALERT ] - %n bad area id found in map! (less than +1 and not the reserved -1)  Look for further messages related to this for each affected area ...</numerusform>
             <numerusform>[ ALERT ] - %n bad area ids found in map! (less than +1 and not the reserved -1)  Look for further messages related to this for each affected area ...</numerusform>
         </translation>
@@ -207,9 +207,9 @@ Now working out what new id numbers to use...</numerusform>
         <location filename="../../src/TRoomDB.cpp" line="851"/>
         <source>[ ALERT ] - %n bad room id(s) found in map! (less than +1)
 Now working out what new id numbers to use.</source>
-        <translation type="unfinished">
+        <translation>
             <numerusform>[ ALERT ] - %n bad room id found in map! (less than +1)
-Now working out what new id numbers to use.</numerusform>
+Now working out what new id number to use.</numerusform>
             <numerusform>[ ALERT ] - %n bad room ids found in map! (less than +1)
 Now working out what new id numbers to use.</numerusform>
         </translation>
@@ -217,7 +217,7 @@ Now working out what new id numbers to use.</numerusform>
     <message numerus="yes">
         <location filename="../../src/TRoomDB.cpp" line="855"/>
         <source>[ ALERT ] - %n bad room id(s) found in map! (less than +1)  Look for further messages related to this for each affected room ...</source>
-        <translation type="unfinished">
+        <translation>
             <numerusform>[ ALERT ] - %n bad room id found in map! (less than +1)  Look for further messages related to this for each affected room ...</numerusform>
             <numerusform>[ ALERT ] - %n bad room ids found in map! (less than +1)  Look for further messages related to this for each affected room ...</numerusform>
         </translation>
@@ -228,7 +228,7 @@ Now working out what new id numbers to use.</numerusform>
 should be recording as possessing. They are:
 %2.
 They have been added.</source>
-        <translation type="unfinished">
+        <translation>
             <numerusform>[ INFO ]  - In area with id: %1 there was %n room missing from those it
 should be recording as possessing. It is:
 %2.
@@ -242,7 +242,7 @@ They have been added.</numerusform>
     <message numerus="yes">
         <location filename="../../src/TRoomDB.cpp" line="1068"/>
         <source>[ INFO ]  - In this area there were %n room(s) missing from those it should be recorded as possessing.  They are: %1.  They have been added.</source>
-        <translation type="unfinished">
+        <translation>
             <numerusform>[ INFO ]  - In this area there was %n room missing from those it should be recorded as possessing.  It is: %1.  It has been added.</numerusform>
             <numerusform>[ INFO ]  - In this area there were %n rooms missing from those it should be recorded as possessing.  They are: %1.  They have been added.</numerusform>
         </translation>
@@ -268,9 +268,9 @@ They have been added.</numerusform>
         <location filename="../../src/dlgPackageExporter.cpp" line="1461"/>
         <source>Select what to export (%1 items)</source>
         <comment>Package exporter selection</comment>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
+        <translation>
+            <numerusform>Select what to export (%1 item)</numerusform>
+            <numerusform>Select what to export (%1 items)</numerusform>
         </translation>
     </message>
 </context>
@@ -280,9 +280,9 @@ They have been added.</numerusform>
         <location filename="../../src/dlgPackageManager.cpp" line="246"/>
         <source>Remove packages</source>
         <comment>Button in package manager to remove selected package(s)</comment>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
+        <translation>
+            <numerusform>Remove package</numerusform>
+            <numerusform>Remove packages</numerusform>
         </translation>
     </message>
 </context>
