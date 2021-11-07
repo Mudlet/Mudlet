@@ -164,7 +164,7 @@ static const char *bad_cmdline_value = "command line \"%s\" not found";
 
 #define COMMANDLINE(_L, _name)                                                                 \
     ({                                                                                         \
-        const QString& name_ = (_name);                                                         \
+        const QString& name_ = (_name);                                                        \
         auto console_ = getHostFromLua(_L).mpConsole;                                          \
         auto cmdLine_ = isMain(name_) ? &*console_->mpCommandLine                              \
                                     : console_->mSubCommandLineMap.value(name_);               \
