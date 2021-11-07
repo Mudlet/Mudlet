@@ -2026,36 +2026,41 @@ its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. 
       <source>[ ALERT ] - Map file is too new. Its format version &quot;%1&quot; is higher than this version of
 Mudlet can handle (%2)! The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Plik mapy jest zbyt nowy, jego wersja formatu to &quot;%1&quot; i jest wyższa niż ta wersja Mudleta może obsłużyć (%2)! Plik to:
+&quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1588"/>
       <source>[ INFO ]  - You will need to update your Mudlet to read the map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Musisz zaktualizować Mudlet, aby odczytać ten plik mapy.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1597"/>
       <source>[ ALERT ] - Map file is really old. Its format version &quot;%1&quot; is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try! The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Plik mapy jest naprawdę stary. Jego format w wersji &quot;%1&quot; jest tak stary, że
+ta wersja Mudleta może nie uzyskać wystarczającej ilości informacji z
+niego, ale będzie próbować! Plik to: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1611"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File:
 &quot;%2&quot;,
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Wczytywanie mapy. Wersja formatu: %1. Plik:
+&quot;%2&quot;,
+proszę czekać...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1614"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Wczytywanie mapy. Wersja formatu: %1. Plik: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2011"/>
       <source>[ INFO ]  - Checking map file &quot;%1&quot;, format version &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Sprawdzanie pliku mapy &quot;%1&quot;, wersja formatu: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2547"/>
@@ -2073,7 +2078,7 @@ please wait...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1573"/>
       <source>[ INFO ]  - Ignoring this unlikely map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Ignorowanie tego pliku, nie przypomina on pliku mapy.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2579"/>
@@ -2123,7 +2128,7 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2736"/>
       <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
-      <translation>[ ALERT] - Pobieranie mapy nie powiodło się, nie można zapisać pliku docelowego:
+      <translation>[ ALERT ] - Pobieranie mapy nie powiodło się, nie można zapisać pliku docelowego:
 %1.</translation>
     </message>
     <message>
