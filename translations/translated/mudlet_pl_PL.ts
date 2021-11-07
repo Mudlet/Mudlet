@@ -7017,12 +7017,12 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="112"/>
       <source>&lt;p&gt;Triggers react on game output. To add a new trigger:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define a &lt;strong&gt;pattern&lt;/strong&gt; that you want to trigger on.&lt;/li&gt;&lt;li&gt;Select the appropriate pattern &lt;strong&gt;type&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the trigger.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;That&apos;s it! If you&apos;d like to be able to create triggers from the input line, there are a &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;couple&lt;/a&gt; of &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;packages&lt;/a&gt; that can help you.&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wyzwalacze reagują na tekst wysyłany przez grę. Aby dodać nowy wyzwalacz:&lt;ol&gt;&lt;li&gt;Kliknij na ikonę &apos;Dodaj element&apos; powyżej.&lt;/li&gt;&lt;li&gt;Zdefiniuj &lt;strong&gt;wzór&lt;/strong&gt; wyzwalacza, na który chcesz zareagować.&lt;/li&gt;&lt;li&gt;Wybierz odpowiedni &lt;strong&gt;rodzaj wzoru&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Zdefiniuj tekst &lt;strong&gt;polecenia&lt;/strong&gt;, które chcesz wysłać do gry kiedy wyzwalacz znajdzie wzór w tekście gry, lub napisz skrypt dla bardziej skomplikowanych potrzeb.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Aktywuj&lt;/strong&gt; wyzwalacz.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;To wszystko! Jeśli chcesz mieć możliwość tworzenia wyzwalaczy za pomocą komend, jest &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;kilka&lt;/a&gt; &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;pakietów&lt;/a&gt;, które mogą Ci pomóc.&lt;p&gt;Sprawdź podręcznik, aby uzyskać &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;więcej informacji&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="177"/>
       <source>%1 - Editor</source>
-      <translation type="unfinished"/>
+      <translation>%1 - Edytor</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="462"/>
@@ -7073,7 +7073,7 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="821"/>
       <source>Text to find (trigger pattern)</source>
-      <translation type="unfinished"/>
+      <translation>Tekst do odnalezienia (wzór wyzwalacza)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2791"/>
@@ -7195,12 +7195,12 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3480"/>
       <source>New table name</source>
-      <translation type="unfinished"/>
+      <translation>Nowa nazwa tabeli</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3480"/>
       <source>New variable name</source>
-      <translation type="unfinished"/>
+      <translation>Nowa nazwa zmiennej</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3530"/>
@@ -7457,7 +7457,7 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7896"/>
       <source>Export Item</source>
-      <translation type="unfinished"/>
+      <translation>Eksportuj pozycję</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7910"/>
@@ -7499,7 +7499,7 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8405"/>
       <source>Ctrl+0</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+0</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8432"/>
@@ -7509,7 +7509,7 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8432"/>
       <source>Select Icon</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz ikonę</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8441"/>
@@ -7614,43 +7614,43 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
       <location filename="../src/dlgTriggerEditor.cpp" line="418"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8387"/>
       <source>Ctrl+1</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="423"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8389"/>
       <source>Ctrl+2</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="428"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8391"/>
       <source>Ctrl+3</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+3</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="433"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8393"/>
       <source>Ctrl+4</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+4</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="438"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8395"/>
       <source>Ctrl+5</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+5</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="443"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8397"/>
       <source>Ctrl+6</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+6</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="448"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8399"/>
       <source>Ctrl+7</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+7</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="452"/>
@@ -11962,7 +11962,7 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/profile_preferences.ui" line="3529"/>
       <source> seconds</source>
       <extracomment>For most locales a space should be included so that the text is separated from the number!</extracomment>
-      <translation type="unfinished"/>
+      <translation> sekund</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3599"/>
