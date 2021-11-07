@@ -728,7 +728,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             mpMap->postMessage(alertMsg);
         }
         mpMap->appendErrorMsgWithNoLf(tr("[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
-                                         " Look for further messages related to the rooms that is/are supposed to\n"
+                                         " Look for further messages related to the rooms that are supposed to\n"
                                          " be in this/these area(s)...", "",
                                          missingAreasNeeded.count()),
                                       true);
@@ -771,7 +771,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     if (!areaRemapping.isEmpty()) {
         if (mudlet::self()->showMapAuditErrors()) {
             QString alertMsg = tr("[ ALERT ] - %n bad area id(s) found in map! (less than +1 and not the reserved -1)\n"
-                                  "Now working out what new id numbers to use...", "", areaRemapping.count());
+                                  "Now working out what new id number(s) to use...", "", areaRemapping.count());
             mpMap->postMessage(alertMsg);
         }
         mpMap->appendErrorMsg(tr("[ ALERT ] - %n bad area id(s) found in map! (less than +1 and not the reserved -1)"
