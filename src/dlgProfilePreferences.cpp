@@ -377,45 +377,66 @@ void dlgProfilePreferences::disableHostDetails()
 {
     // The Host pointer is a nullptr so disable every control that depends on it
 
-    // on tab_general:
+    // Controls are (or should be) sorted by tab and then group in which they appear:
+    // ===== tab_general =====
     // groupBox_iconsAndToolbars is NOT dependent on pHost - so leave it alone
+    // ----- groupBox_encoding -----
     label_encoding->setEnabled(false);
     comboBox_encoding->setEnabled(false);
+
+    // ----- groupBox_miscellaneous -----
     mAlertOnNewData->setEnabled(false);
     acceptServerGUI->setEnabled(false);
     mFORCE_SAVE_ON_EXIT->setEnabled(false);
     acceptServerMedia->setEnabled(false);
+
     groupBox_protocols->setEnabled(false);
+    // ----- groupBox_protocols -----
     need_reconnect_for_data_protocol->hide();
 
-    // on tab_inputLine:
+    groupBox_logOptions->setEnabled(false);
+    // ----- groupBox_logOptions -----
+    lineEdit_logFileName->setVisible(false);
+    label_logFileName->setVisible(false);
+    label_logFileNameExtension->setVisible(false);
+
+    // ===== tab_inputLine =====
     groupBox_input->setEnabled(false);
+
     groupBox_spellCheck->setEnabled(false);
 
-    // on tab_display:
+    // ===== tab_display =====
     groupBox_font->setEnabled(false);
+
     groupBox_borders->setEnabled(false);
+
     groupBox_wrapping->setEnabled(false);
+
     groupBox_doubleClick->setEnabled(false);
+
     // Some of groupBox_displayOptions are usable, so must pick out and
     // disable the others:
+    // ----- groupBox_displayOptions -----
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
     checkBox_enableTextAnalyzer->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
-    widget_timerDebugOutputMinimumInterval->setEnabled(false);
 
-    // on tab_codeEditor:
+    // ===== tab_codeEditor =====
     groupbox_codeEditorThemeSelection->setEnabled(false);
+    // ----- groupbox_codeEditorThemeSelection -----
     theme_download_label->hide();
 
-    // on tab_displayColors:
+    groupBox_autoComplete->setEnabled(false);
+
+    // ===== tab_displayColors =====
     groupBox_displayColors->setEnabled(false);
 
-    // on tab_mapper:
+    // ===== tab_mapper =====
     // most of groupBox_mapFiles is disabled but there is ONE checkBox that
     // is accessible because it is application wide - so disable EVERYTHING
     // else that is not already disabled:
+    // ----- groupBox_mapFiles -----
     label_saveMap->setEnabled(false);
     pushButton_saveMap->setEnabled(false);
     label_loadMap->setEnabled(false);
@@ -425,79 +446,100 @@ void dlgProfilePreferences::disableHostDetails()
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->clear();
     label_mapFileActionResult->hide();
-    hidePasswordMigrationLabel();
+
+    groupBox_downloadMapOptions->setEnabled(false);
+
+    groupBox_mapViewOptions->setEnabled(false);
+    // ----- groupBox_mapViewOptions -----
     label_mapSymbolsFont->setEnabled(false);
     fontComboBox_mapSymbols->setEnabled(false);
     checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
     pushButton_showGlyphUsage->setEnabled(false);
 
-    groupBox_downloadMapOptions->setEnabled(false);
+
     // The above is actually normally hidden:
     groupBox_downloadMapOptions->hide();
-    groupBox_mapOptions->setEnabled(false);
+
     // This is actually normally hidden until a map is loaded:
     checkBox_showDefaultArea->hide();
 
-    // on tab_mapperColors:
+    // ===== tab_mapperColors =====
     groupBox_mapperColors->setEnabled(false);
 
-    // on groupBox_logOptions:
-    groupBox_logOptions->setEnabled(false);
-    lineEdit_logFileName->setVisible(false);
-    label_logFileName->setVisible(false);
-    label_logFileNameExtension->setVisible(false);
+    // ===== tab security =====
+    groupBox_ssl->setEnabled(false);
 
-    // on groupBox_specialOptions:
-    groupBox_specialOptions->setEnabled(false);
-
+    // ===== tab_chat =====
     groupBox_ircOptions->setEnabled(false);
-
-    need_reconnect_for_specialoption->hide();
-    groupbox_searchEngineSelection->setEnabled(false);
 
     groupBox_discordPrivacy->hide();
 
-    // tab security
-    groupBox_ssl->setEnabled(false);
+    // ===== tab_specialOptions =====
+    groupBox_specialOptions->setEnabled(false);
+    // ----- groupBox_specialOptions -----
+    need_reconnect_for_specialoption->hide();
+
+    groupbox_searchEngineSelection->setEnabled(false);
+    // ----- groupBox_debug -----
+    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(false);
+    // This acts on a label within this groupBox:
+    hidePasswordMigrationLabel();
+    checkBox_debugShowAllCodepointProblems->setEnabled(false);
+    widget_timerDebugOutputMinimumInterval->setEnabled(false);
+    label_networkPacketTimeout->setEnabled(false);
+    doubleSpinBox_networkPacketTimeout->setEnabled(false);
 }
 
 void dlgProfilePreferences::enableHostDetails()
 {
-    // on tab_general:
+    // ===== tab_general =====
+    // ----- groupBox_encoding -----
     label_encoding->setEnabled(true);
     comboBox_encoding->setEnabled(true);
+
+    // ----- groupBox_miscellaneous -----
     mAlertOnNewData->setEnabled(true);
     acceptServerGUI->setEnabled(true);
     mFORCE_SAVE_ON_EXIT->setEnabled(true);
     acceptServerMedia->setEnabled(true);
+
     groupBox_protocols->setEnabled(true);
 
-    // on tab_inputLine:
+    groupBox_logOptions->setEnabled(true);
+
+    // ===== tab_inputLine =====
     groupBox_input->setEnabled(true);
+
     groupBox_spellCheck->setEnabled(true);
 
-    // on tab_display:
+    // ===== tab_display =====
     groupBox_font->setEnabled(true);
+
     groupBox_borders->setEnabled(true);
+
     groupBox_wrapping->setEnabled(true);
+
     groupBox_doubleClick->setEnabled(true);
 
+    // ----- groupBox_displayOptions -----
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
     checkBox_enableTextAnalyzer->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
-    widget_timerDebugOutputMinimumInterval->setEnabled(true);
 
-    // on tab_codeEditor:
+    // ===== tab_codeEditor =====
     groupbox_codeEditorThemeSelection->setEnabled(true);
 
-    // on tab_displayColors:
+    groupBox_autoComplete->setEnabled(true);
+
+    // ===== tab_displayColors =====
     groupBox_displayColors->setEnabled(true);
 
-    // on tab_mapper:
+    // ===== tab_mapper =====
     // most of groupBox_mapFiles is disabled but there is ONE checkBox that
-    // is accessible because it is application wide - so disable EVERYTHING
-    // else that is not already disabled:
+    // is accessible because it is application wide - so enable EVERYTHING
+    // else:
+    // ----- groupBox_mapFiles -----
     label_saveMap->setEnabled(true);
     pushButton_saveMap->setEnabled(true);
     label_loadMap->setEnabled(true);
@@ -505,27 +547,34 @@ void dlgProfilePreferences::enableHostDetails()
     label_copyMap->setEnabled(true);
     label_mapFileSaveFormatVersion->setEnabled(true);
 
-    groupBox_downloadMapOptions->setEnabled(true);
-    groupBox_mapOptions->setEnabled(true);
 
-    // on tab_mapperColors:
+    groupBox_downloadMapOptions->setEnabled(true);
+
+    groupBox_mapViewOptions->setEnabled(true);
+
+    // ===== tab_mapperColors =====
     groupBox_mapperColors->setEnabled(true);
 
-    // on tab_logging:
-    groupBox_logOptions->setEnabled(true);
-
-    // on groupBox_specialOptions:
-    groupBox_specialOptions->setEnabled(true);
-
-    groupBox_ircOptions->setEnabled(true);
-
-    groupbox_searchEngineSelection->setEnabled(true);
-
+    // ===== tab security =====
 #if defined(QT_NO_SSL)
     groupBox_ssl->setEnabled(false);
 #else
     groupBox_ssl->setEnabled(QSslSocket::supportsSsl());
 #endif
+
+    // ===== tab_chat =====
+    groupBox_ircOptions->setEnabled(true);
+
+    // ===== tab_specialOptions =====
+    groupBox_specialOptions->setEnabled(true);
+
+    groupbox_searchEngineSelection->setEnabled(true);
+    // ----- groupBox_debug -----
+    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
+    widget_timerDebugOutputMinimumInterval->setEnabled(true);
+    checkBox_debugShowAllCodepointProblems->setEnabled(true);
+    label_networkPacketTimeout->setEnabled(true);
+    doubleSpinBox_networkPacketTimeout->setEnabled(true);
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
@@ -929,7 +978,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
 
     timeEdit_timerDebugOutputMinimumInterval->setTime(pHost->mTimerDebugOutputSuppressionInterval);
-    notificationArea->hide();
+    frame_notificationArea->hide();
     notificationAreaIconLabelWarning->hide();
     notificationAreaIconLabelError->hide();
     notificationAreaIconLabelInformation->hide();
@@ -953,7 +1002,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             if (!pHost->mTelnet.getSslErrors().empty()) {
                 // handle ssl errors
                 notificationAreaIconLabelWarning->show();
-                notificationArea->show();
+                frame_notificationArea->show();
                 notificationAreaMessageBox->show();
                 //notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
 
@@ -976,21 +1025,21 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             } else if (pHost->mTelnet.error() == QAbstractSocket::SslHandshakeFailedError) {
                 // handle failed handshake, likely not ssl socket
                 notificationAreaIconLabelError->show();
-                notificationArea->show();
+                frame_notificationArea->show();
                 notificationAreaMessageBox->show();
                 notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
             }
             if (pHost->mTelnet.error() == QAbstractSocket::SslInternalError) {
                 // handle ssl library error
                 notificationAreaIconLabelError->show();
-                notificationArea->show();
+                frame_notificationArea->show();
                 notificationAreaMessageBox->show();
                 notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
             }
             if (pHost->mTelnet.error() == QAbstractSocket::SslInvalidUserDataError) {
                 // handle invalid data (certificate, key, cypher, etc.)
                 notificationAreaIconLabelError->show();
-                notificationArea->show();
+                frame_notificationArea->show();
                 notificationAreaMessageBox->show();
                 notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
             }
@@ -1295,7 +1344,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_debugShowAllCodepointProblems->setChecked(false);
 
     groupBox_ssl_certificate->hide();
-    notificationArea->hide();
+    frame_notificationArea->hide();
     groupBox_proxy->setDisabled(true);
 
     // Remove the reference to the Host/profile in the title:
@@ -2019,7 +2068,7 @@ void dlgProfilePreferences::loadMap()
                            this,
                            tr("Load Mudlet map"),
                            mapSaveLoadDirectory(pHost),
-                           tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)",
+                           tr("Mudlet map (*.dat *.json);;Xml map data (*.xml);;Any file (*)",
                               "Do not change extensions (in braces) as they are used programmatically"));
     if (fileName.isEmpty()) {
         return;
@@ -2031,26 +2080,24 @@ void dlgProfilePreferences::loadMap()
     bool showAuditErrors = mudlet::self()->showMapAuditErrors();
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
+    bool success = false;
+    label_mapFileActionResult->setText(tr("Loading map - please wait..."));
+    qApp->processEvents(); // Needed to make the above message show up when loading big maps
     if (fileName.endsWith(QStringLiteral(".xml"), Qt::CaseInsensitive)) {
-        label_mapFileActionResult->setText(tr("Importing map - please wait..."));
         qApp->processEvents(); // Needed to make the above message show up when loading big maps
-
-        if (pHost->mpConsole->importMap(fileName)) {
-            label_mapFileActionResult->setText(tr("Imported map from %1.").arg(fileName));
-        } else {
-            label_mapFileActionResult->setText(tr("Could not import map from %1.").arg(fileName));
-        }
+        success = pHost->mpConsole->importMap(fileName);
+    } else if (fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
+        success = pHost->mpMap->readJsonMapFile(fileName).first;
     } else {
-        label_mapFileActionResult->setText(tr("Loading map - please wait..."));
-        qApp->processEvents(); // Needed to make the above message show up when loading big maps
-
-
-        if (pHost->mpConsole->loadMap(fileName)) {
-            label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
-        } else {
-            label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
-        }
+       success = pHost->mpConsole->loadMap(fileName);
     }
+
+    if (success) {
+        label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
+    } else {
+        label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
+    }
+
     QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 
     // Restore setting immediately before we used it
@@ -2065,12 +2112,12 @@ void dlgProfilePreferences::saveMap()
     }
 
     QString fileName =
-            QFileDialog::getSaveFileName(this, tr("Save Mudlet map"), mapSaveLoadDirectory(pHost), tr("Mudlet map (*.dat)", "Do not change the extension text (in braces) - it is needed programmatically!"));
+            QFileDialog::getSaveFileName(this, tr("Save Mudlet map"), mapSaveLoadDirectory(pHost), tr("Mudlet map (*.dat *.json);;", "Do not change the extension text (in braces) - it is needed programmatically!"));
     if (fileName.isEmpty()) {
         return;
     }
 
-    if (!fileName.endsWith(QStringLiteral(".dat"), Qt::CaseInsensitive)) {
+    if (!fileName.endsWith(QStringLiteral(".dat"), Qt::CaseInsensitive) && !fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
         fileName.append(QStringLiteral(".dat"));
     }
 
@@ -2084,7 +2131,14 @@ void dlgProfilePreferences::saveMap()
     bool showAuditErrors = mudlet::self()->showMapAuditErrors();
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
-    if (pHost->mpConsole->saveMap(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt())) {
+    bool success = false;
+    if (!fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
+        success = pHost->mpConsole->saveMap(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt());
+    } else {
+        success = pHost->mpMap->writeJsonMapFile(fileName).first;
+    }
+
+    if (success) {
         label_mapFileActionResult->setText(tr("Saved map to %1.").arg(fileName));
     } else {
         label_mapFileActionResult->setText(tr("Could not save map to %1.").arg(fileName));
@@ -2430,7 +2484,7 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->setUserDictionaryOptions(true, false);
         }
         pHost->mWrapAt = wrap_at_spinBox->value();
-        pHost->adjustNAWS();
+        pHost->updateDisplayDimensions();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
