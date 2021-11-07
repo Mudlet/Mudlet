@@ -198,7 +198,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                              "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
                                              "that make up that symbol, so that they can be identified even if they "
                                              "cannot be displayed; also, up to the first thirty two rooms that are using "
-                                             "that symbol are listed, which may help to identify any unexpected or odd cases.<p>"));
+                                             "that symbol are listed, which may help to identify any unexpected or odd cases.</p>"));
     fontComboBox_mapSymbols->setToolTip(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
                                            "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
     checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(tr("<p>Using a single font is likely to produce a more consistent style but may "
