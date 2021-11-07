@@ -509,19 +509,21 @@ void Host::createModuleBackup(const QString &filename, const QString &saveName)
     QFile::copy(filename, saveName + time);
 }
 
-void Host::writeModules(const QStringList &entry, const QString &moduleName, QString &filename)
+void Host::writeModule(const QString &moduleName, const QString &filename)
 {
+    QString xml_filename = filename;
     if (filename.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
-        filename = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
+        xml_filename = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
     }
     auto writer = new XMLexport(this);
-    writers.insert(filename, writer);
-    writer->writeModuleXML(moduleName, filename);
-    updateModuleZips(entry[0], moduleName);
+    writers.insert(xml_filename, writer);
+    writer->writeModuleXML(moduleName, xml_filename);
+    updateModuleZips(filename, moduleName);
 }
 
-void Host::waitForHostXmlSave()
+void Host::waitForAsyncXmlSave()
 {
+    // writers and futures are copied to prevent deletion during for loop (which would mean crash)
     auto myWriters = writers;
     for (auto& writer : myWriters) {
         auto myFutures = writer->saveFutures;
@@ -549,13 +551,13 @@ void Host::saveModules(int sync, bool backup)
         if (backup) {
             createModuleBackup(filename, savePath + moduleName);
         }
-        writeModules(entry, moduleName, filename);
+        writeModule(moduleName, filename);
         if (entry[1].toInt()) {
             mModulesToSync << moduleName;
         }
     }
     modulesToWrite.clear();
-    //only reload the Module when the xml is ready
+    // reload, or queue module reload for when xml is ready
     if (sync) {
         reloadModules();
     }
@@ -632,10 +634,10 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
     }
 }
 
-void Host::reloadModule(const QString& syncModuleName, const QString& syncHostName)
+void Host::reloadModule(const QString& syncModuleName, const QString& syncingFromHost)
 {
     //Wait till profile is finished saving
-    if (syncHostName.isEmpty() && currentlySavingProfile()) {
+    if (syncingFromHost.isEmpty() && currentlySavingProfile()) {
         //create a dummy object to singleshot connect (disconnect/delete after execution)
         QObject *obj = new QObject(this);
         connect(this, &Host::profileSaveFinished, obj, [=](){
@@ -652,9 +654,9 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncHostNa
         const auto& moduleLocation = moduleIterator.value()[0];
         QString fileName = moduleLocation;
         if (moduleName == syncModuleName) {
-            if (!syncHostName.isEmpty() && (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive))) {
+            if (!syncingFromHost.isEmpty() && (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive))) {
                 uninstallPackage(moduleName, 2);
-                fileName = mudlet::getMudletPath(mudlet::profilePackagePathFileName, syncHostName, moduleName);
+                fileName = mudlet::getMudletPath(mudlet::profilePackagePathFileName, syncingFromHost, moduleName);
                 installPackage(fileName, 2);
                 QStringList moduleEntry;
                 moduleEntry << moduleLocation;
@@ -807,14 +809,15 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     auto writer = new XMLexport(this);
     writers.insert(QStringLiteral("profile"), writer);
     writer->exportHost(filename_xml);
-    mWritingModules = true;
+    mWritingHostAndModules = true;
     auto watcher = new QFutureWatcher<void>;
-    moduleFuture = QtConcurrent::run([=]() {
-        waitForHostXmlSave();
+    mModuleFuture = QtConcurrent::run([=]() {
+        //wait for the host xml to be ready before starting to sync modules
+        waitForAsyncXmlSave();
         saveModules(syncModules ? 1 : 0, saveName != QStringLiteral("autosave"));
     });
-    QObject::connect(watcher, &QFutureWatcher<void>::finished, this, [=]() { mWritingModules = false; });
-    watcher->setFuture(moduleFuture);
+    QObject::connect(watcher, &QFutureWatcher<void>::finished, this, [=]() { mWritingHostAndModules = false; });
+    watcher->setFuture(mModuleFuture);
     return std::make_tuple(true, filename_xml, QString());
 }
 
@@ -848,14 +851,14 @@ void Host::xmlSaved(const QString& xmlName)
 
 bool Host::currentlySavingProfile()
 {
-    return (mWritingModules || !writers.empty());
+    return (mWritingHostAndModules || !writers.empty());
 }
 
 void Host::waitForProfileSave()
 {
-    waitForHostXmlSave();
-    if (moduleFuture.isRunning()) {
-        moduleFuture.waitForFinished();
+    waitForAsyncXmlSave();
+    if (mModuleFuture.isRunning()) {
+        mModuleFuture.waitForFinished();
     }
 }
 
