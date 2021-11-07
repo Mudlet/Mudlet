@@ -32,6 +32,7 @@ class ExitsTreeWidget : public QTreeWidget
 {
     Q_OBJECT
 
+    friend class RoomIdLineEditDelegate;
     friend class dlgRoomExits;
 
     // The indexes that are used to identify the columns in the special exits
@@ -42,13 +43,14 @@ class ExitsTreeWidget : public QTreeWidget
     // corresponding headings in the ./src/ui/room_exits.ui file will need
     // to be adjusted as well - and visa versa:
     static const int colIndex_exitRoomId = 0;
-    static const int colIndex_lockExit = 1;
-    static const int colIndex_exitWeight = 2;
-    static const int colIndex_doorNone = 3;
-    static const int colIndex_doorOpen = 4;
-    static const int colIndex_doorClosed = 5;
-    static const int colIndex_doorLocked = 6;
-    static const int colIndex_command = 7;
+    static const int colIndex_exitStatus = 1;
+    static const int colIndex_lockExit = 2;
+    static const int colIndex_exitWeight = 3;
+    static const int colIndex_doorNone = 4;
+    static const int colIndex_doorOpen = 5;
+    static const int colIndex_doorClosed = 6;
+    static const int colIndex_doorLocked = 7;
+    static const int colIndex_command = 8;
 
 public:
     Q_DISABLE_COPY(ExitsTreeWidget)
