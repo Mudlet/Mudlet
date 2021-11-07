@@ -22,13 +22,13 @@
 
 #include "TCommandLine.h"
 
-
 #include "Host.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TSplitter.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
+#include "TEvent.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -831,15 +831,21 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             } else {
                 popup->insertActions(separator_aboveStandardMenu, spellings_system);
             }
-            // else the word is in the dictionary - in either case show the context
+            // else the word is in the dictionary - in either ca`se show the context
             // menu - either the one with the prefixed spellings, or the standard
             // one:
         }
 
         popup->addSeparator();
         foreach(auto label, contextMenuItems.keys()) {
+            auto eventName = contextMenuItems.value(label);
             auto action = new QAction(label, this);
-            connect(action, &QAction::triggered, [=]() { contextMenuItems.value(label)(); });
+            connect(action, &QAction::triggered, [=]() {
+                TEvent event = {};
+                event.mArgumentList << eventName;
+                event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+                mpHost->raiseEvent(event);
+            });
             popup->addAction(action);
         }
 

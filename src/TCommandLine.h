@@ -36,8 +36,6 @@ class TConsole;
 class KeyUnit;
 class Host;
 
-using CustomMenuItem = QMap<QString, std::function<void()>>;
-
 class TCommandLine : public QPlainTextEdit //QLineEdit
 {
     Q_OBJECT
@@ -77,7 +75,7 @@ public:
     QPalette mRegularPalette;
     QString mCommandLineName;
 
-    CustomMenuItem contextMenuItems;
+    QMap<QString, QString> contextMenuItems;
 
 public slots:
     void slot_popupMenu();

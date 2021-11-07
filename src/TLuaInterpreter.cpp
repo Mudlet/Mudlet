@@ -14164,8 +14164,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addMouseEvent", TLuaInterpreter::addMouseEvent);
     lua_register(pGlobalLua, "removeMouseEvent", TLuaInterpreter::removeMouseEvent);
     lua_register(pGlobalLua, "getMouseEvents", TLuaInterpreter::getMouseEvents);
-    lua_register(pGlobalLua, "addCommandLineMenu", TLuaInterpreter::addCommandLineMenu);
-    lua_register(pGlobalLua, "removeCommandLineMenu", TLuaInterpreter::removeCommandLineMenu);
+    lua_register(pGlobalLua, "addCommandLineMenuEvent", TLuaInterpreter::addCommandLineMenuEvent);
+    lua_register(pGlobalLua, "removeCommandLineMenuEvent", TLuaInterpreter::removeCommandLineMenuEvent);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -16007,8 +16007,8 @@ int TLuaInterpreter::getMouseEvents(lua_State * L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCommandLineMenu
-int TLuaInterpreter::addCommandLineMenu(lua_State * L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCommandLineMenuEvent
+int TLuaInterpreter::addCommandLineMenuEvent(lua_State * L)
 {
     int args = 1;
     int argsCount = lua_gettop(L);
@@ -16020,39 +16020,17 @@ int TLuaInterpreter::addCommandLineMenu(lua_State * L)
         commandLineName = QStringLiteral("main");
     }
     auto menuLabel = getVerifiedString(L, __func__, args++, "menu label");
-
-    int callbackArgNo = args++;
-    if (!lua_isfunction(L, callbackArgNo)) {
-        lua_pushfstring(L, "addCommandLineMenu: bad argument #%d type (callback as function expected, got %s!)", callbackArgNo, luaL_typename(L, callbackArgNo));
-        return lua_error(L);
-    }
-    int callback = luaL_ref(L, LUA_REGISTRYINDEX);
+    auto eventName = getVerifiedString(L, __func__, args++, "event name");
 
     const auto& commandline = COMMANDLINE(L, commandLineName);
-
-    commandline->contextMenuItems.insert(menuLabel, [=]() {
-        lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
-        int error = lua_pcall(L, 0, 0, 0);
-        if (error) {
-            int errorCount = lua_gettop(L);
-            if (mudlet::debugMode) {
-                for (int i = 1; i <= errorCount; i++) {
-                    if (lua_isstring(L, i)) {
-                        auto errorMessage = lua_tostring(L, i);
-                        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: when running command line menu callback for '" << menuLabel << "\nreason: " << errorMessage << "\n" >> 0;
-                    }
-                }
-            }
-            lua_pop(L, errorCount);
-        }
-    });
+    commandline->contextMenuItems.insert(menuLabel, eventName);
 
     lua_pushboolean(L, true);
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeCommandLineMenu
-int TLuaInterpreter::removeCommandLineMenu(lua_State * L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeCommandLineMenuEvent
+int TLuaInterpreter::removeCommandLineMenuEvent(lua_State * L)
 {
     int args = 1;
     int argsCount = lua_gettop(L);
@@ -16069,7 +16047,7 @@ int TLuaInterpreter::removeCommandLineMenu(lua_State * L)
 
     if (commandline->contextMenuItems.remove(menuLabel) == 0) {
         lua_pushboolean(L, false);
-        lua_pushfstring(L, "removeCommandLineMenu: Cannot remove %s, menu does not exist.", menuLabel.toUtf8().constData());
+        lua_pushfstring(L, "removeCommandLineMenuEvent: Cannot remove '%s', menu item does not exist.", menuLabel.toUtf8().constData());
         return 2;
     }
     lua_pushboolean(L, true);
