@@ -5762,33 +5762,33 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="1031"/>
       <source>Failed to zip up the package. Error is: &quot;%1&quot;.</source>
       <comment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</comment>
-      <translation type="unfinished"/>
+      <translation>Nie udało się spakować pakietu. Błąd: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="347"/>
       <source>Open Icon</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz ikonę</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="347"/>
       <source>Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</source>
-      <translation type="unfinished"/>
+      <translation>Pliki obrazków (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="472"/>
       <source>Please enter the package name.</source>
-      <translation type="unfinished"/>
+      <translation>Wpisz nazwę pakietu.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="510"/>
       <location filename="../src/dlgPackageExporter.cpp" line="586"/>
       <source>Exporting package...</source>
-      <translation type="unfinished"/>
+      <translation>Eksportowanie pakietu...</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="530"/>
       <source>Failed to export. Could not open the folder &quot;%1&quot; for writing. Do you have the necessary permissions and free disk-space to write to that folder?</source>
-      <translation type="unfinished"/>
+      <translation>Eksport nie powiódł się. Nie można otworzyć folderu &quot;%1&quot; do zapisu. Czy masz niezbędne uprawnienia i wolną przestrzeń dyskową aby zapisać do tego folderu?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="855"/>
