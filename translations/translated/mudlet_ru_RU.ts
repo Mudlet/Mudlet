@@ -127,7 +127,7 @@ please wait...</source>
       <location filename="../src/KeyUnit.cpp" line="333"/>
       <source>%1undefined key (code: 0x%2)</source>
       <comment>%1 is a string describing the modifier keys (e.g. &quot;shift&quot; or &quot;control&quot;) used with the key, whose &apos;code&apos; number, in %2 is not one that we have a name for. This is probably one of those extra keys around the edge of the keyboard that some people have.</comment>
-      <translation type="unfinished"/>
+      <translation>%1неопределенный ключ (код: 0x%2)</translation>
     </message>
   </context>
   <context>
@@ -1205,7 +1205,8 @@ rooms:</source>
       <location filename="../src/TAlias.cpp" line="200"/>
       <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.
 </source>
-      <translation type="unfinished"/>
+      <translation>[Ошибка алиаса:] %1 лимит захвата групп превышен, захватите меньше групп.
+</translation>
     </message>
     <message>
       <location filename="../src/TAlias.cpp" line="269"/>
