@@ -289,9 +289,9 @@ function InstallLua() {
 }
 
 function InstallPcre() {
-  DownloadFile "https://ftp.pcre.org/pub/pcre/pcre-8.43.zip" "pcre.zip"
+  DownloadFile "https://deac-fra.dl.sourceforge.net/project/pcre/pcre/8.45/pcre-8.45.zip" "pcre.zip"
   ExtractZip "pcre.zip" "pcre"
-  Set-Location pcre\pcre-8.43
+  Set-Location pcre\pcre-8.45
   RunConfigure "--enable-utf --enable-unicode-properties --prefix=$Env:MINGW_BASE_DIR_BASH"
   RunMake
   RunMakeInstall
