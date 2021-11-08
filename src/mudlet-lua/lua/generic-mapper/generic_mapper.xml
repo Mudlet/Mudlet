@@ -319,8 +319,12 @@ setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 				<regexCodeList>
 					<string>^\s*这里明显的方向有 (.*)。</string>
 					<string>^\s*这里明显的出口有 (.*)。</string>
+					<string>^\s*这里明显的出口是 (.*)。</string>
+					<string>^\s*这里唯一的出口是 (.*)。</string>
 				</regexCodeList>
 				<regexCodePropertyList>
+					<integer>1</integer>
+					<integer>1</integer>
 					<integer>1</integer>
 					<integer>1</integer>
 				</regexCodePropertyList>
@@ -340,9 +344,13 @@ setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 				<colorTriggerBgColor>#000000</colorTriggerBgColor>
 				<regexCodeList>
 					<string>你又渴又饿，浑身无力，根本就走不动路。</string>
+					<string>这个方向没有出路。</string>
+					<string>^看来(\w+)不打算让你过去。</string>
 				</regexCodeList>
 				<regexCodePropertyList>
 					<integer>0</integer>
+					<integer>0</integer>
+					<integer>1</integer>
 				</regexCodePropertyList>
 			</Trigger>
 		</TriggerGroup>
