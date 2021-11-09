@@ -1898,14 +1898,14 @@ local function find_link(name, exits, dir, max_distance)
         -- find link from room hash first
         if map.prompt.hash then
             local room = getRoomIDbyHash(map.prompt.hash)
-            if room > 0 then
+            if room &gt; 0 then
                 match = room
             end
         else
             repeat
                 x, y, z = x + dx, y + dy, z + dz
                 rooms = getRoomsByPosition(map.currentArea,x,y,z)
-            until (x > maxx or x < minx or y > maxy or y < miny or z > maxz or z < minz or not table.is_empty(rooms))
+            until (x &gt; maxx or x &lt; minx or y &gt; maxy or y &lt; miny or z &gt; maxz or z &lt; minz or not table.is_empty(rooms))
             for k,v in pairs(rooms) do
                 if check_room(v,name,exits,false) then
                     match = v
@@ -2452,7 +2452,7 @@ function map.find_me(name, exits, dir, manual)
     -- find from room hash id
     if map.prompt.hash then
         local room = getRoomIDbyHash(map.prompt.hash)
-        if room > 0 then
+        if room &gt; 0 then
             set_room(room)
             map.echo("Room found, ID: " .. room, true)
             return
