@@ -9,7 +9,7 @@ init:
 image: Visual Studio 2019
 environment:
   signing_password:
-    secure: gOKqBtIvfDuGkEeaHGaguMmafynYAG06iVuD6Krem7M=
+    secure: JJDxNdreMgNn/IOcY+UVmlaqgDT4a7vcxsY3nfcgWY4=
   DEPLOY_KEY_PASS:
     secure: 81sr0SJzuWG+mgH3X6fJTh4rfX5/O1qa3MsItNvFukQ=
   DEPLOY_PATH:
