@@ -87,7 +87,7 @@
      <x>0</x>
      <y>0</y>
      <width>750</width>
-     <height>19</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEditor">
@@ -95,6 +95,7 @@
      <string>Toolbox</string>
     </property>
     <addaction name="dactionScriptEditor"/>
+    <addaction name="dactionShowErrors"/>
     <addaction name="dactionShowMap"/>
     <addaction name="dactionInputLine"/>
     <addaction name="dactionNotepad"/>
@@ -118,6 +119,7 @@
     <addaction name="dactionHelp"/>
     <addaction name="dactionVideo"/>
     <addaction name="dactionDiscord"/>
+    <addaction name="dactionMudletDiscord"/>
     <addaction name="dactionIRC"/>
     <addaction name="dactionForum"/>
    </widget>
@@ -184,6 +186,14 @@
     <string>&lt;p&gt;Opens the Editor for the different types of things that can be scripted by the user.&lt;/p&gt;</string>
    </property>
   </action>
+  <action name="dactionShowErrors">
+   <property name="text">
+    <string>Show errors</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Show errors from scripts that you have running&lt;/p&gt;</string>
+   </property>
+  </action>
   <action name="dactionNotepad">
    <property name="text">
     <string>Notepad</string>
@@ -213,7 +223,7 @@
     <string>IRC</string>
    </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Opens a built-in IRC chat.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionVideo">
@@ -250,7 +260,7 @@
     <string>Live help chat</string>
    </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Opens a built-in IRC chat.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionShowMap">
@@ -279,7 +289,7 @@
   </action>
   <action name="dactionPackageExporter">
    <property name="text">
-    <string>Package exporter (experimental)</string>
+    <string>Package exporter</string>
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Gather and bundle up collections of Mudlet Lua items and other reasources into a module.&lt;/p&gt;</string>
@@ -303,14 +313,14 @@
    </property>
   </action>
   <action name="dactionInputLine">
-   <property name="text">
-    <string>Compact input line</string>
-   </property>
    <property name="checkable">
-     <bool>true</bool>
+    <bool>true</bool>
    </property>
    <property name="checked">
-     <bool>false</bool>
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Compact input line</string>
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Hide / show the search area and buttons at the bottom of the screen.&lt;/p&gt;</string>
@@ -318,7 +328,21 @@
   </action>
   <action name="dactionDiscord">
    <property name="text">
+    <string>Discord</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Open a link to Discord.&lt;/p&gt;</string>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
+   </property>
+  </action>
+  <action name="dactionMudletDiscord">
+   <property name="text">
     <string>Discord help channel</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Open a link to the Mudlet server on Discord.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionReportIssue">

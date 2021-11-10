@@ -30,8 +30,8 @@
 
 TAlias::TAlias(TAlias* parent, Host* pHost)
 : Tree<TAlias>( parent )
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
+, mpHost(pHost)
+, mNeedsToBeCompiled(true)
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
@@ -41,9 +41,9 @@ TAlias::TAlias(TAlias* parent, Host* pHost)
 
 TAlias::TAlias(const QString& name, Host* pHost)
 : Tree<TAlias>(nullptr)
-, mName( name )
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
+, mName(name)
+, mpHost(pHost)
+, mNeedsToBeCompiled(true)
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
@@ -103,7 +103,7 @@ bool TAlias::match(const QString& toMatch)
 
 #if defined(Q_OS_WIN32)
     // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
-    char* subject = (char*)malloc(strlen(toMatch.toUtf8().constData()) + 1);
+    char* subject = static_cast<char*>(malloc(strlen(toMatch.toUtf8().constData()) + 1));
     strcpy(subject, toMatch.toUtf8().constData());
 #else
     char* subject = strndup(toMatch.toUtf8().constData(), strlen(toMatch.toUtf8().constData()));
@@ -174,7 +174,7 @@ bool TAlias::match(const QString& toMatch)
             tabptr += name_entry_size;
         }
     }
-    //TODO: add named groups seperately later as Lua::namedGroups
+    //TODO: add named groups separately later as Lua::namedGroups
     for (;;) {
         int options = 0;
         int start_offset = ovector[1];

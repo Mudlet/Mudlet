@@ -646,13 +646,18 @@ end
 
 
 
---- Replace the whole with a string you'd like.
+--- Replace an entire line with a string you'd like.
 ---
 --- @see deleteLine
-function replaceLine(what)
-  selectString(line, 1)
+function replaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+    text = window
+  else
+    selectCurrentLine(window)
+  end
   replace("")
-  insertText(what)
+  insertText(text)
 end
 
 
@@ -1724,7 +1729,7 @@ end
 local colours = {
   [0] = { 0, 0, 0 }, -- black
   [1] = { 128, 0, 0 }, -- red
-  [2] = { 0, 179, 0 }, -- green
+  [2] = { 0, 128, 0 }, -- green
   [3] = { 128, 128, 0 }, -- yellow
   [4] = { 0, 0, 128 }, --blue
   [5] = { 128, 0, 128 }, -- magenta
@@ -1741,35 +1746,6 @@ local lightColours = {
   [5] = { 255, 0, 255 }, -- magenta
   [6] = { 0, 255, 255 }, -- cyan
   [7] = { 255, 255, 255 }, -- white
-}
-
--- black + 23 tone grayscale up to white
--- The values are to be used for each of te r, g and b values
-local grayscaleComponents = {
-  [0] = 0,
-  [1] = 11,
-  [2] = 22,
-  [3] = 33,
-  [4] = 44,
-  [5] = 55,
-  [6] = 67,
-  [7] = 78,
-  [8] = 89,
-  [9] = 100,
-  [10] = 111,
-  [11] = 122,
-  [12] = 133,
-  [13] = 144,
-  [14] = 155,
-  [15] = 166,
-  [16] = 177,
-  [17] = 188,
-  [18] = 200,
-  [19] = 211,
-  [20] = 222,
-  [21] = 233,
-  [22] = 244,
-  [23] = 255
 }
 
 local ansiPattern = rex.new("\\e\\[([0-9:;]+?)m")
@@ -1811,13 +1787,15 @@ function ansi2decho(text, ansi_default_color)
         rgb = lightColours[tag - 8]
       elseif tag < 232 then
         tag = tag - 16 -- because color 1-15 behave like normal ANSI colors
-
-        r = floor(tag / 36)
-        g = floor((tag - (r * 36)) / 6)
-        b = floor((tag - (r * 36)) - (g * 6))
-        rgb = { r * 51, g * 51, b * 51 }
+        local b = tag % 6
+        local g = (tag - b) / 6 % 6
+        local r = (tag - b - g * 6) / 36 % 6
+        b = b ~= 0 and b * 40 + 55 or 0
+        r = r ~= 0 and r * 40 + 55 or 0
+        g = g ~= 0 and g * 40 + 55 or 0
+        rgb = { r, g, b }
       else
-        local component = grayscaleComponents[tag - 232]
+        local component = (tag - 232) * 10 + 8
         rgb = { component, component, component }
       end
 
@@ -2073,6 +2051,18 @@ function creplace(window, text)
   xReplace(window, text, 'c')
 end
 
+--- version of replaceLine function that allows for color, by way of cinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function creplaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+  else
+    selectCurrentLine(window)
+  end
+  creplace(window, text)
+end
+
 --- version of replace function that allows for color, by way of dinsertText
 --- @param windowName Optional name of the window to replace on
 --- @param text The text to replace the selection with.
@@ -2080,11 +2070,35 @@ function dreplace(window, text)
   xReplace(window, text, 'd')
 end
 
+--- version of replaceLine function that allows for color, by way of dinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function dreplaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+  else
+    selectCurrentLine(window)
+  end
+  dreplace(window, text)
+end
+
 --- version of replace function that allows for color, by way of hinsertText
 --- @param windowName Optional name of the window to replace on
 --- @param text The text to replace the selection with.
 function hreplace(window, text)
   xReplace(window, text, 'h')
+end
+
+--- version of replaceLine function that allows for color, by way of hinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function hreplaceLine(window, text)
+  if not text then
+    selectCurrentLine()
+  else
+    selectCurrentLine(window)
+  end
+  hreplace(window, text)
 end
 
 function resetLabelToolTip(label)
@@ -2162,10 +2176,15 @@ local function copy2color(name,win,str,inst)
       error(err)
     end
   end
+
   win = win or "main"
   str = str or line
   inst = inst or 1
-  local start, len = selectString(win, str, inst), #str
+  if str == "" then
+    -- happens when you try to use copy2decho() on an empty line
+    return ""
+  end
+  local start, len = selectString(win, str, inst), utf8.len(str)
   if not start then
     error(name..": string not found",3)
   end
@@ -2191,9 +2210,9 @@ local function copy2color(name,win,str,inst)
 
     if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
       cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
-      result = string.format(style, result and (result..endspan) or "", r, g, b, rb, gb, bb, line:sub(index, index))
+      result = string.format(style, result and (result..endspan) or "", r, g, b, rb, gb, bb, utf8.sub(line, index, index))
     else
-      result = result .. line:sub(index, index)
+      result = result .. utf8.sub(line, index, index)
     end
   end
   result = result .. endspan
@@ -2319,4 +2338,58 @@ end
 
 function resetMapWindowTitle()
   return setMapWindowTitle("")
+end
+
+--- This function takes in a color and returns the closest color from color_table. The following all return "ansi_001"
+--- closestColor({127,0,0})
+--- closestColor(127,0,0)
+--- closestColor("#7f0000")
+--- closestColor("|c7f0000")
+--- closestColor("<127,0,0>")
+function closestColor(r,g,b)
+  local rtype = type(r)
+  local rgb
+  if rtype == "table" then
+    rgb = {}
+    local tmp = r
+    local err = f"Could not parse {table.concat(tmp, ',')} into RGB coordinates to look for.\n"
+    if #tmp ~= 3 then
+      return nil, err
+    end
+    for index,coord in ipairs(tmp) do
+      local num = tonumber(coord)
+      if not num or num < 0 or num > 255 then
+        return nil, err
+      end
+      rgb[index] = num
+    end
+  elseif rtype == "string" and not tonumber(r) then
+    if color_table[r] then
+      return r
+    end
+    rgb = {Geyser.Color.parse(r)}
+    if rgb[1] == nil then
+      return nil, f"Could not parse {r} into a set of RGB coordinates to look for.\n"
+    end
+  elseif rtype == "number" or tonumber(r) then
+    local nr = tonumber(r)
+    local ng = tonumber(g)
+    local nb = tonumber(b)
+    if not nr or not ng or not nb or (nr < 0 or nr > 255) or (ng < 0 or ng > 255) or (nb < 0 or nb > 255) then
+      return nil, f"Could not parse {r},{g},{b} into a set of RGB coordinates to look for.\n"
+    end
+    rgb = {nr,ng,nb}
+  else
+    return nil, f"Could not parse your parameters into RGB coordinates.\n"
+  end
+  local least_distance = math.huge
+  local cname = ""
+  for name, color in pairs(color_table) do
+    local color_distance = math.sqrt((color[1] - rgb[1]) ^ 2 + (color[2] - rgb[2]) ^ 2 + (color[3] - rgb[3]) ^ 2)
+    if color_distance < least_distance then
+      least_distance = color_distance
+      cname = name
+    end
+  end
+  return cname
 end

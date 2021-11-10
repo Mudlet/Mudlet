@@ -99,6 +99,10 @@ Download for free from [mudlet.org](https://www.mudlet.org/download/)
     1. Pick a `Profile name`
     1. Hit `Connect`
 
+## Vision
+
+Mudlet's [vision](https://www.mudlet.org/about/vision/) is to build the best text gaming experience possible to nurture & grow this niche scene.
+
 ## Roadmap
 
 See the [project's roadmap](https://www.mudlet.org/2019/09/mudlet-5-roadmap-focus-on-first-time-player-experience/) to get an idea of where it's headed, as well as contribute!
@@ -143,3 +147,4 @@ GPL2+
 > [website](https://www.mudlet.org/) &nbsp;&middot;&nbsp;
 > [forums](https://forums.mudlet.org/) &nbsp;&middot;&nbsp;
 > [manual](https://wiki.mudlet.org/w/Manual:Contents)
+

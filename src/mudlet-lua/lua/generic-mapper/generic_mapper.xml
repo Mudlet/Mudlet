@@ -268,7 +268,7 @@ setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 				</regexCodePropertyList>
 			</Trigger>
 			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-				<name>Russion Vision Fail Trigger</name>
+				<name>Russian Vision Fail Trigger</name>
 				<script>raiseEvent("onVisionFail")</script>
 				<triggerType>0</triggerType>
 				<conditonLineDelta>0</conditonLineDelta>
@@ -513,7 +513,8 @@ end</script>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Map Stop Alias</name>
-				<script>raiseEvent("mapStop")</script>
+				<script>raiseEvent("mapStop")
+raiseEvent("sysSpeedwalkStopped")</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^map stop$</regex>
@@ -647,7 +648,7 @@ end</script>
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.0.22"
+local version = "2.0.23"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -1069,7 +1070,7 @@ map.help.path = [[
 
         This command tries to find a walking path from the current room to the
         named room. If an area name is given, only rooms within that area that
-        is given are checked. Neither the room name nore the area name are case
+        is given are checked. Neither the room name nor the area name are case
         sensitive, but otherwise an exact match is required. Note that a
         semicolon is required between the room name and area name, if an area
         name is given, but spaces before or after the semicolon are optional.
@@ -1137,7 +1138,7 @@ map.help.config = [[
         &lt;yellow&gt;search_on_look&lt;reset&gt; - When this is set, using the "look" command causes
             the map to verify your position using the room name and exits
             seen following using the command. This may be true or false.
-            
+
         &lt;yellow&gt;clear_lines_on_send&lt;reset&gt; - When this is set, any time a command is sent,
             any lines stored from the game used to search for the room name
             are cleared. This may be true or false.
@@ -1145,7 +1146,7 @@ map.help.config = [[
         &lt;yellow&gt;mode&lt;reset&gt; - This is the default mapping mode on startup, and defines how
             new rooms are added to the map. May be "lazy", "simple",
             "normal" or "complex".
-            
+
         &lt;yellow&gt;download_path&lt;reset&gt; - This is the path that updates are downloaded from.
             This may be any web address where the versions.lua and
             generic_mapper.xml files can be downloaded from.
@@ -1167,7 +1168,7 @@ map.help.config = [[
         &lt;yellow&gt;custom_name_search&lt;reset&gt; - When this is set, instead of running the default
             function name_search, a user-defined function called
             'mudlet.custom_name_search' is used instead. This may be true or false.
-            
+
         &lt;yellow&gt;use_translation&lt;reset&gt; - When this is set, the lang_dirs table is used to
             translate movement and status commands in some other language
             into the English used by the script. This may be true or false.
@@ -1594,7 +1595,7 @@ local function add_door(roomID, dir, status)
     end
     if type(status) ~= "number" then
         status = assert(table.index_of({"none","open","closed","locked"},status),
-            "Add Door: Invald status, must be none, open, closed, or locked") - 1
+            "Add Door: Invalid status, must be none, open, closed, or locked") - 1
     end
     local exits = getRoomExits(roomID)
     -- check handling of custom exits here
@@ -1722,10 +1723,10 @@ local function check_room(roomID, name, exits, onlyName)
         error("Check Room Error: No ID",2)
     end
     if name ~= getRoomName(roomID) then return false end
-    
+
     -- used in mode "lazy" to match only the room name
     if onlyName then return true end
-    
+
     local t_exits = table.union(getRoomExits(roomID),getRoomStubs(roomID))
     -- check handling of custom exits here
     for i = 13,#stubmap do
@@ -1862,7 +1863,7 @@ local function find_link(name, exits, dir, max_distance)
         for k,v in pairs(rooms) do
             if check_room(v,name,exits,false) then
                 match = v
-                break            
+                break
             elseif map.mode == "lazy" and check_room(v,name,exits,true) then
                 match = v
                 break
@@ -1917,7 +1918,7 @@ local function move_map()
               onlyName = true
             else
               onlyName = false
-            end 
+            end
             if exits[move] and (vision_fail or check_room(exits[move], map.currentName, map.currentExits, onlyName)) then
                 set_room(exits[move])
             elseif special[move] and (vision_fail or check_room(special[move], map.currentName, map.currentExits, onlyName)) then
@@ -2432,7 +2433,7 @@ function map.find_me(name, exits, dir, manual)
     if table.size(match_IDs) == 0 then
         match_IDs = rooms
     end
-    if table.contains(match_IDs,map.currentRoom) then
+    if table.index_of(match_IDs,map.currentRoom) then
         match_IDs = {map.currentRoom}
     end
     if not table.is_empty(match_IDs) and not find_portal then
@@ -2786,6 +2787,7 @@ continue_walk = function(new_room)
         -- check to see if we are done
         if #map.walkDirs == 0 then
             walking = false
+            raiseEvent("sysSpeedwalkFinished")
         end
     end
     -- make tempTimer to send next command if necessary
@@ -2843,11 +2845,13 @@ function map.speedwalk(roomID, walkPath, walkDirs)
             send(dir)
         end
         walking = false
+        raiseEvent("sysSpeedwalkFinished")
     end
 end
 
 function doSpeedWalk()
     if #speedWalkPath ~= 0 then
+        raiseEvent("sysSpeedwalkStarted")
         map.speedwalk(nil, speedWalkPath, speedWalkDir)
     else
         map.echo("No path to chosen room found.",false,true)
@@ -2938,11 +2942,11 @@ end
 function map.sanitizeRoomName(roomtitle)
   assert(type(roomtitle) == "string", "map.sanitizeRoomName: bad argument #1 expected room title, got "..type(roomtitle).."!")
   if not roomtitle:match("  ") then return roomtitle end
-  
+
   local parts = roomtitle:split("  ")
   table.sort(parts, function(a,b) return #a &lt; #b end)
   local longestpart = parts[#parts]
-  
+
   local trimmed = utf8.match(longestpart, "[%w ]+"):trim()
   return trimmed
 end
@@ -3015,7 +3019,7 @@ function map.eventHandler(event, ...)
         end
     end
 end
-				
+
 map.registeredEvents = {
 registerAnonymousEventHandler("sysDownloadDone", "map.eventHandler"),
 registerAnonymousEventHandler("sysLoadEvent", "map.eventHandler"),

@@ -19,27 +19,28 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QDebug>
 
 #include "LuaInterface.h"
-
-
-#include "Host.h"
 #include "VarUnit.h"
 
 #include <csetjmp>
 
+extern "C" {
+    #include <lauxlib.h>
+    #include <lua.h>
+    #include <lualib.h>
+}
 
 static jmp_buf buf;
 
-LuaInterface::LuaInterface(Host* pH)
-: mHostID(pH->getHostID())
-, depth()
-, interpreter(pH->getLuaInterpreter())
-, L()
+LuaInterface::LuaInterface(lua_State* L)
+: depth()
+, L(L)
 {
     varUnit.reset(new VarUnit());
     //set our panic function
-    lua_atpanic(interpreter->pGlobalLua, &onPanic);
+    lua_atpanic(L, &onPanic);
 }
 
 LuaInterface::~LuaInterface() = default;
@@ -256,7 +257,7 @@ bool LuaInterface::reparentVariable(QTreeWidgetItem* newP, QTreeWidgetItem* cIte
         return false;
     }
 
-    L = interpreter->pGlobalLua;
+
     TVar* newParent = varUnit->getWVar(newP);
     TVar* oldParent = varUnit->getWVar(oldP);
     TVar* from = oldParent;
@@ -355,7 +356,7 @@ bool LuaInterface::setCValue(QList<TVar*> vars)
 bool LuaInterface::setValue(TVar* var)
 {
     //This function assumes the var has been modified and then called
-    L = interpreter->pGlobalLua;
+
 
     QList<TVar*> vars = varOrder(var);
     QString variableChangeCode = vars[0]->getName();
@@ -406,7 +407,7 @@ bool LuaInterface::setValue(TVar* var)
 
 void LuaInterface::deleteVar(TVar* var)
 {
-    L = interpreter->pGlobalLua;
+
     QList<TVar*> vars = varOrder(var);
     QString oldName = vars[0]->getName();
     for (int i = 1; i < vars.size(); i++) {
@@ -440,7 +441,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
     //uses C Api to rename a variable.
     //dangerous function since you can get an api panic
     //and trash the stack
-    L = interpreter->pGlobalLua;
+
     TVar* var = vars.back();
     //make the new stack
     lua_getglobal(L, (vars[0]->getName()).toUtf8().constData());
@@ -554,7 +555,7 @@ bool LuaInterface::loadVar(TVar* var)
 {
     //puts the value of a variable on the -1 position of the stack
     if (setjmp(buf) == 0) {
-        L = interpreter->pGlobalLua;
+
         int kType = var->getKeyType();
         int vType = var->getValueType();
         if (vType == LUA_TTABLE) {
@@ -591,7 +592,7 @@ bool LuaInterface::loadVar(TVar* var)
 void LuaInterface::renameVar(TVar* var)
 {
     //this assumes anything like reparenting has been done
-    L = interpreter->pGlobalLua;
+
     QList<TVar*> vars = varOrder(var);
     QString oldVariable = vars.at(0)->getName();
     QString newName;
@@ -674,7 +675,7 @@ void LuaInterface::renameVar(TVar* var)
 QString LuaInterface::getValue(TVar* var)
 {
     if (setjmp(buf) == 0) {
-        L = interpreter->pGlobalLua;
+
         QList<TVar*> vars = varOrder(var);
         if (vars.empty()) {
             return QString();
@@ -786,7 +787,6 @@ void LuaInterface::getVars(bool hide)
     //returns the base item
     // QElapsedTimer t;
     // t.start();
-    L = interpreter->pGlobalLua;
     lua_pushnil(L);
     depth = 0;
     auto g = new TVar();

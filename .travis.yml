@@ -49,14 +49,6 @@ env:
 git:
   submodules: false # We selectively pull in the wanted submodules ourselves now
 jobs:
-  include:
-  - os: osx
-    osx_image: xcode11.3
-    compiler: clang
-    env:
-    - Q_OR_C_MAKE=qmake
-      DEPLOY=deploy
-
   - os: linux
     compiler: gcc
     env:
