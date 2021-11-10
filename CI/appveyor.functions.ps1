@@ -28,7 +28,7 @@ function SetQtBaseDir([string] $logFile) {
     }
     catch
     {
-      $Env:QT_BASE_DIR = "C:\Qt\5.15.2\mingw81_32"
+      $Env:QT_BASE_DIR = "C:\Qt\6.2.0\mingw81_32"
     }
   }
   Write-Output "Using $Env:QT_BASE_DIR as QT base directory." | Tee-Object -File "$logFile" -Append
