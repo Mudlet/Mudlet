@@ -164,7 +164,7 @@ static const char *bad_cmdline_value = "command line \"%s\" not found";
 
 #define COMMANDLINE(_L, _name)                                                                 \
     ({                                                                                         \
-        const QString name_ = (_name);                                                         \
+        const QString& name_ = (_name);                                                        \
         auto console_ = getHostFromLua(_L).mpConsole;                                          \
         auto cmdLine_ = isMain(name_) ? &*console_->mpCommandLine                              \
                                     : console_->mSubCommandLineMap.value(name_);               \
@@ -14164,6 +14164,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addMouseEvent", TLuaInterpreter::addMouseEvent);
     lua_register(pGlobalLua, "removeMouseEvent", TLuaInterpreter::removeMouseEvent);
     lua_register(pGlobalLua, "getMouseEvents", TLuaInterpreter::getMouseEvents);
+    lua_register(pGlobalLua, "addCommandLineMenuEvent", TLuaInterpreter::addCommandLineMenuEvent);
+    lua_register(pGlobalLua, "removeCommandLineMenuEvent", TLuaInterpreter::removeCommandLineMenuEvent);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -14767,7 +14769,9 @@ int TLuaInterpreter::startTempAlias(const QString& regex, const QString& functio
     pT->setIsActive(true);
     pT->setTemporary(true);
     pT->registerAlias();
-    pT->setScript(function);
+    if (!function.isEmpty()) {
+        pT->setScript(function);
+    }
     int id = pT->getID();
     pT->setName(QString::number(id));
     return id;
@@ -14811,7 +14815,9 @@ int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& fu
     pT->setIsActive(true);
     pT->setTemporary(true);
     pT->registerKey();
-    pT->setScript(function);
+    if (!function.isEmpty()) {
+        pT->setScript(function);
+    }
     int id = pT->getID();
     pT->setName(QString::number(id));
     return id;
@@ -16002,5 +16008,52 @@ int TLuaInterpreter::getMouseEvents(lua_State * L)
         // Add the mapEvent object to the result table
         lua_setfield(L, -2, it.key().toUtf8().constData());
     }
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCommandLineMenuEvent
+int TLuaInterpreter::addCommandLineMenuEvent(lua_State * L)
+{
+    int args = 1;
+    int argsCount = lua_gettop(L);
+
+    QString commandLineName;
+    if (argsCount >= 3) {
+        commandLineName = getVerifiedString(L, __func__, args++, "command line name");
+    } else {
+        commandLineName = QStringLiteral("main");
+    }
+    auto menuLabel = getVerifiedString(L, __func__, args++, "menu label");
+    auto eventName = getVerifiedString(L, __func__, args++, "event name");
+
+    const auto& commandline = COMMANDLINE(L, commandLineName);
+    commandline->contextMenuItems.insert(menuLabel, eventName);
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeCommandLineMenuEvent
+int TLuaInterpreter::removeCommandLineMenuEvent(lua_State * L)
+{
+    int args = 1;
+    int argsCount = lua_gettop(L);
+
+    QString commandLineName;
+    if (argsCount >= 2) {
+        commandLineName = getVerifiedString(L, __func__, args++, "command line name");
+    } else {
+        commandLineName = QStringLiteral("main");
+    }
+    auto menuLabel = getVerifiedString(L, __func__, args++, "menu label");
+
+    const auto& commandline = COMMANDLINE(L, commandLineName);
+
+    if (commandline->contextMenuItems.remove(menuLabel) == 0) {
+        lua_pushboolean(L, false);
+        lua_pushfstring(L, "removeCommandLineMenuEvent: Cannot remove '%s', menu item does not exist.", menuLabel.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
     return 1;
 }

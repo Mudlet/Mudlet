@@ -1600,8 +1600,14 @@ void XMLimport::readModulesDetailsMap(QMap<QString, QStringList>& map)
                 key = readElementText();
             } else if (name() == "filepath") {
                 entry << readElementText();
-            } else if (name() == "globalSave") {
+            } else if (name() == "zipSync") {
                 entry << readElementText();
+            } else if (name() == "globalSave") {
+                if (entry.size() < 2) {
+                    entry << readElementText();
+                } else {
+                    skipCurrentElement();
+                }
             } else if (name() == "priority") {
                 // The last expected detail for the entry - so store this
                 // completed entry into the QMap

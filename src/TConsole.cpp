@@ -762,6 +762,7 @@ void TConsole::closeEvent(QCloseEvent* event)
                 file_map.close();
             }
         }
+        mpHost->waitForProfileSave();
         event->accept();
         return;
     }
@@ -801,6 +802,7 @@ void TConsole::closeEvent(QCloseEvent* event)
                     file_map.close();
                 }
             }
+            mpHost->waitForProfileSave();
             event->accept();
             return;
 

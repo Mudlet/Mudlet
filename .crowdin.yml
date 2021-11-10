@@ -1,4 +1,5 @@
 commit_message: "[skip ci]"
+pull_request_title: "Improve: New Crowdin updates"
 
 files:
   - source: /translations/mudlet.ts
