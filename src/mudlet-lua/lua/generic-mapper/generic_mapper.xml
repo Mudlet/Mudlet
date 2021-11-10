@@ -441,6 +441,18 @@ end</script>
 				<packageName></packageName>
 				<regex>^map translate (\w+) (\w+) (\w+)$</regex>
 			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Clear All Map Data Alias</name>
+				<script>for id, name in pairs(getAreaTableSwap()) do
+  if id &gt; 0 then
+    deleteArea(id)
+  end
+end
+display([[Map data clear complete!]])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^clearAllMapData$</regex>
+			</Alias>
 		</AliasGroup>
 		<AliasGroup isActive="yes" isFolder="yes">
 			<name>Information Aliases</name>
