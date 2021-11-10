@@ -775,6 +775,9 @@ map.help = {[[
 
         &lt;yellow&gt;map.prompt.room&lt;reset&gt; - Can be set to specify the room name
         &lt;yellow&gt;map.prompt.exits&lt;reset&gt; - Can be set to specify the room exits
+        &lt;yellow&gt;map.prompt.hash&lt;reset&gt; - Can be set to specify the room hash
+            Notice: if you set this, mapper will only find room by
+            getRoomIDbyHash(hash)
         &lt;yellow&gt;map.character&lt;reset&gt; - Contains the current character name
         &lt;yellow&gt;map.save.recall&lt;reset&gt; - Contains a table of recall roomIDs for all
             characters
@@ -1682,7 +1685,7 @@ local function getRoomStubs(roomID)
     -- check handling of custom exits here
     local tmp
     for i = 13,#stubmap do
-        tmp = tonumber(getRoomUserData(roomID,"stub "..stubmap[i]))
+        tmp = tonumber(getRoomUserData(roomID,"stub "..stubmap[i])) or tonumber(getRoomUserData(roomID,"stub"..stubmap[i])) -- for old version
         if tmp then table.insert(stubs,tmp) end
     end
 
@@ -1762,7 +1765,7 @@ local function check_room(roomID, name, exits, onlyName)
     local t_exits = table.union(getRoomExits(roomID),getRoomStubs(roomID))
     -- check handling of custom exits here
     for i = 13,#stubmap do
-        t_exits[stubmap[i]] = tonumber(getRoomUserData(roomID,"exit " .. stubmap[i])) or (tonumber(getRoomUserData(roomID,"stub " .. stubmap[i])) and 0)
+        t_exits[stubmap[i]] = tonumber(getRoomUserData(roomID,"exit " .. stubmap[i])) or (tonumber(getRoomUserData(roomID,"stub " .. stubmap[i])) and 0) or (tonumber(getRoomUserData(roomID,"stub" .. stubmap[i])) and 0) -- for old version
     end
     for k,v in ipairs(exits) do
         if short[v] and not table.contains(t_exits,v) then return false end
