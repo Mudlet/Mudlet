@@ -7778,7 +7778,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="464"/>
       <source>Show/Hide Debug Console (Ctrl+0) -&gt; system will be &lt;b&gt;&lt;i&gt;slower&lt;/i&gt;&lt;/b&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Показать/скрыть консоль отладки (Ctrl+0) -&gt; система будет &lt;b&gt;&lt;i&gt;медленнее&lt;/i&gt;&lt;/b&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="576"/>
@@ -11594,7 +11594,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2248"/>
       <source>Room border color:</source>
-      <translation type="unfinished"/>
+      <translation>Цвет рамки комнаты:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2568"/>
@@ -12041,7 +12041,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3509"/>
       <source>Report all Codepoint problems immediately</source>
-      <translation type="unfinished"/>
+      <translation>Немедленно сообщайть обо всех проблемах с кодовыми точками</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3516"/>
