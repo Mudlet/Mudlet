@@ -55,7 +55,7 @@ public:
     bool showWindow(const QString& name);
     bool hideWindow(const QString& name);
     bool printWindow(const QString& name, const QString& text);
-    void setProfileName(const QString&);
+    void setProfileName(const QString&) override;
     void selectCurrentLine(std::string&);
     std::list<int> getFgColor(std::string& buf);
     std::list<int> getBgColor(std::string& buf);
