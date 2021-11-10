@@ -40,12 +40,13 @@ jobs:
             compiler: clang_64
             qt: '6.2.0'
             deploy: 'deploy'
-          - os: windows-2019
-            buildname: 'windows'
-            triplet: x64-mingw-dynamic
-            # compiler: flag not used in windows pipeline
-            qt: '6.2.0'
-            deploy: 'deploy'
+          # disabled temporarily due to PCRE dropping FTP; vcpkg needs an update
+          # - os: windows-2019
+          #   buildname: 'windows'
+          #   triplet: x64-mingw-dynamic
+          #   # compiler: flag not used in windows pipeline
+          #   qt: '6.2.0'
+          #   deploy: 'deploy'
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
