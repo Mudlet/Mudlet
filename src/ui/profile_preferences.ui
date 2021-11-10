@@ -1831,6 +1831,16 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="0" column="2">
+           <widget class="QCheckBox" name="checkBox_reportMapIssuesOnScreen">
+            <property name="toolTip">
+             <string>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps.&lt;/p&gt;&lt;p&gt;Unless this option is set, Mudlet will reduce the amount of on-screen messages by hiding many texts and showing a suggestion to review the report file instead.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Report map issues on screen</string>
+            </property>
+           </widget>
+          </item>
           <item row="1" column="0">
            <widget class="QLabel" name="label_loadMap">
             <property name="text">
@@ -1848,24 +1858,41 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="2">
-           <widget class="QCheckBox" name="checkBox_reportMapIssuesOnScreen">
-            <property name="toolTip">
-             <string>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps.&lt;/p&gt;&lt;p&gt;Unless this option is set, Mudlet will reduce the amount of on-screen messages by hiding many texts and showing a suggestion to review the report file instead.&lt;/p&gt;</string>
-            </property>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_deleteMap">
             <property name="text">
-             <string>Report map issues on screen</string>
+             <string>Delete map:</string>
+            </property>
+            <property name="buddy">
+             <cstring>checkBox_enablMapDeleteButton</cstring>
             </property>
            </widget>
           </item>
-          <item row="2" column="1" colspan="2">
+          <item row="2" column="1">
+           <widget class="QPushButton" name="pushButton_deleteMap">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Press to delete map</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QCheckBox" name="checkBox_enablMapDeleteButton">
+            <property name="text">
+             <string>Enable 'Delete map' button</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1" colspan="2">
            <widget class="Line" name="line_aboveCopyMap">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
+          <item row="4" column="0">
            <widget class="QLabel" name="label_copyMap">
             <property name="text">
              <string>Copy map to other profile(s):</string>
@@ -1875,7 +1902,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
+          <item row="4" column="1">
            <widget class="QPushButton" name="pushButton_chooseProfiles">
             <property name="enabled">
              <bool>false</bool>
@@ -1888,7 +1915,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="2">
+          <item row="4" column="2">
            <widget class="QPushButton" name="pushButton_copyMap">
             <property name="enabled">
              <bool>false</bool>
@@ -1901,22 +1928,13 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="0" colspan="3">
-           <widget class="QLabel" name="label_mapFileActionResult">
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>An action above happened</string>
-            </property>
-           </widget>
-          </item>
           <item row="5" column="0">
            <widget class="QLabel" name="label_mapFileSaveFormatVersion">
             <property name="text">
              <string>Map format version:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_mapFileSaveFormatVersion</cstring>
             </property>
            </widget>
           </item>
@@ -1948,6 +1966,18 @@ you can use it but there could be issues with aligning columns of text</string>
               <string># {default version}</string>
              </property>
             </item>
+           </widget>
+          </item>
+          <item row="6" column="0" colspan="3">
+           <widget class="QLabel" name="label_mapFileActionResult">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>An action above happened</string>
+            </property>
            </widget>
           </item>
          </layout>
@@ -3699,9 +3729,11 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_resetColors</tabstop>
   <tabstop>pushButton_saveMap</tabstop>
   <tabstop>pushButton_loadMap</tabstop>
+  <tabstop>pushButton_deleteMap</tabstop>
   <tabstop>pushButton_chooseProfiles</tabstop>
   <tabstop>comboBox_mapFileSaveFormatVersion</tabstop>
   <tabstop>checkBox_reportMapIssuesOnScreen</tabstop>
+  <tabstop>checkBox_enablMapDeleteButton</tabstop>
   <tabstop>pushButton_copyMap</tabstop>
   <tabstop>buttonDownloadMap</tabstop>
   <tabstop>mMapperUseAntiAlias</tabstop>

@@ -14166,6 +14166,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMouseEvents", TLuaInterpreter::getMouseEvents);
     lua_register(pGlobalLua, "addCommandLineMenuEvent", TLuaInterpreter::addCommandLineMenuEvent);
     lua_register(pGlobalLua, "removeCommandLineMenuEvent", TLuaInterpreter::removeCommandLineMenuEvent);
+    lua_register(pGlobalLua, "deleteMap", TLuaInterpreter::deleteMap);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -16054,6 +16055,30 @@ int TLuaInterpreter::removeCommandLineMenuEvent(lua_State * L)
         lua_pushfstring(L, "removeCommandLineMenuEvent: Cannot remove '%s', menu item does not exist.", menuLabel.toUtf8().constData());
         return 2;
     }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::deleteMap(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        // These tests pass even if the map is empty, however there can still
+        // be deleteable data present even in that case - and this test will
+        // still succeed immediately after this function has been used!
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+
+    host.mpMap->mapClear();
+    // We do not normally produce an on-screen message for Lua API actions but
+    // this function might confuse the user if it is done from a script/package
+    // without them knowing about it:
+    host.postMessage(tr("[  OK  ]  - Any existing map and its data has been destroyed by a Lua function call."));
+
+    // Also cause any displayed map to reset:
+    updateMap(L);
+
     lua_pushboolean(L, true);
     return 1;
 }
