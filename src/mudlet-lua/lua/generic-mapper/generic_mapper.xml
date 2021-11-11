@@ -1284,7 +1284,8 @@ map.defaults = {
     speedwalk_random = true,
     max_search_distance = 1,
     clear_lines_on_send = true,
-    map_window = {x = 0,
+    map_window = {
+        x = 0,
         y = 0,
         w = "30%",
         h = "40%",
@@ -2917,6 +2918,20 @@ function doSpeedWalk()
         map.speedwalk(nil, speedWalkPath, speedWalkDir)
     else
         map.echo("No path to chosen room found.",false,true)
+    end
+end
+
+function map.pauseSpeedwalk()
+    -- map.echo("pauseSpeedwalk!")
+    walking = false
+end
+
+function map.resumeSpeedwalk()
+    -- map.echo("resumeSpeedwalk!")
+    map.find_me(nil, nil, nil, true)
+    if #speedWalkDir ~= 0 then
+        walking = true
+        tempTimer(1, "doSpeedWalk()")
     end
 end
 
