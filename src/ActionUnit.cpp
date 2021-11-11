@@ -543,6 +543,11 @@ void ActionUnit::updateToolbar()
 {
     //get the non-thread safe functions to always execute in the main thread
     //solution from https://stackoverflow.com/questions/21646467/how-to-execute-a-functor-or-a-lambda-in-a-given-thread-in-qt-gcd-style/21653558#21653558
-    QTimer::singleShot(0, qApp, [=]() { getToolBarList(); });
-    QTimer::singleShot(0, qApp, [=]() { getEasyButtonBarList(); });
+    if (qApp->thread() == QThread::currentThread()) {
+        getToolBarList();
+        getEasyButtonBarList();
+    } else {
+        QTimer::singleShot(0, qApp, [=]() { getToolBarList(); });
+        QTimer::singleShot(0, qApp, [=]() { getEasyButtonBarList(); });
+    }
 }
