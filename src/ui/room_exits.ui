@@ -89,9 +89,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="nw">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>NW exit...</string>
            </property>
@@ -229,9 +226,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="n">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room north of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>N exit...</string>
            </property>
@@ -369,9 +363,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="ne">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>NE exit...</string>
            </property>
@@ -509,9 +500,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="up">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room up from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>Up exit...</string>
            </property>
@@ -649,9 +637,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="w">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room west of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="text">
             <string/>
            </property>
@@ -859,9 +844,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="e">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room east of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>E exit...</string>
            </property>
@@ -996,9 +978,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="down">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room down from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>Down exit...</string>
            </property>
@@ -1148,9 +1127,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="sw">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>SW exit...</string>
            </property>
@@ -1294,9 +1270,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="s">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room south of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>S exit...</string>
            </property>
@@ -1434,9 +1407,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="se">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>SE exit...</string>
            </property>
@@ -1574,9 +1544,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="in">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room in from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>In exit...</string>
            </property>
@@ -1665,6 +1632,142 @@
         </layout>
        </widget>
       </item>
+      <item row="3" column="0" colspan="3">
+       <widget class="QFrame" name="frame_key">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="cursor">
+         <cursorShape>WhatsThisCursor</cursorShape>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_key">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_key">
+           <property name="text">
+            <string>Key:</string>
+           </property>
+           <property name="textFormat">
+            <enum>Qt::PlainText</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QCheckBox" name="noroute_key">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="text">
+            <string>No route</string>
+           </property>
+           <property name="checkable">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QCheckBox" name="stub_key">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Stub Exit</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2" colspan="4">
+          <widget class="QLineEdit" name="key">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="placeholderText">
+            <string>Exit RoomID number</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0" colspan="2">
+          <widget class="QSpinBox" name="weight_key">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="specialValueText">
+            <string>Exit Weight (0=No override)</string>
+           </property>
+           <property name="maximum">
+            <number>9999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="2">
+          <widget class="QRadioButton" name="doortype_none_key">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>No door</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="3">
+          <widget class="QRadioButton" name="doortype_open_key">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Open door</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="4">
+          <widget class="QRadioButton" name="doortype_closed_key">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Closed door</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="5">
+          <widget class="QRadioButton" name="doortype_locked_key">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Locked door</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
       <item row="3" column="3">
        <widget class="QFrame" name="frame_out">
         <property name="sizePolicy">
@@ -1714,9 +1817,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="out">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room out from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>Out exit...</string>
            </property>
@@ -1805,194 +1905,7 @@
         </layout>
        </widget>
       </item>
-      <item row="3" column="0" colspan="3">
-       <widget class="QFrame" name="frame_key">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="cursor">
-         <cursorShape>WhatsThisCursor</cursorShape>
-        </property>
-        <layout class="QGridLayout">
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_key">
-           <property name="text">
-            <string>Key:</string>
-           </property>
-           <property name="textFormat">
-            <enum>Qt::PlainText</enum>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QCheckBox" name="noroute_key">
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
-           </property>
-           <property name="text">
-            <string>No route</string>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="QCheckBox" name="stub_key">
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Stub Exit</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="2" colspan="4">
-          <widget class="QLineEdit" name="key">
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room that's to the southwest here.&lt;/p&gt;</string>
-           </property>
-           <property name="placeholderText">
-            <string>Exit RoomID number</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="0" colspan="2">
-          <widget class="QSpinBox" name="weight_key">
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="specialValueText">
-            <string>Exit Weight (0=No override)</string>
-           </property>
-           <property name="maximum">
-            <number>9999</number>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="2">
-          <widget class="QRadioButton" name="doortype_none_key">
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>No door</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="3">
-          <widget class="QRadioButton" name="doortype_open_key">
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Open door</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="4">
-          <widget class="QRadioButton" name="doortype_closed_key">
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Closed door</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="5">
-          <widget class="QRadioButton" name="doortype_locked_key">
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Locked door</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
      </layout>
-    </widget>
-   </item>
-   <item row="2" column="2">
-    <spacer name="horizontalSpacer_controlButtons">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>40</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="2" column="3">
-    <widget class="QPushButton" name="button_save">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>140</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="toolTip">
-      <string>&lt;p&gt;Use this button to save any changes, will also remove any invalid Special exits.&lt;/p&gt;</string>
-     </property>
-     <property name="text">
-      <string>&amp;Save</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="4">
-    <widget class="QPushButton" name="button_cancel">
-     <property name="minimumSize">
-      <size>
-       <width>140</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="toolTip">
-      <string>&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;</string>
-     </property>
-     <property name="text">
-      <string>&amp;Cancel</string>
-     </property>
     </widget>
    </item>
    <item row="1" column="0" colspan="5">
@@ -2000,14 +1913,14 @@
      <property name="title">
       <string>Special exits:</string>
      </property>
-     <layout class="QGridLayout" name="gridLayout_specialExits">
-      <item row="0" column="0">
+     <layout class="QVBoxLayout" name="vBoxLayout_specialExits">
+      <item>
        <widget class="ExitsTreeWidget" name="specialExits">
         <property name="focusPolicy">
          <enum>Qt::StrongFocus</enum>
         </property>
         <property name="toolTip">
-         <string>&lt;p&gt;Click on an item to edit/change it, to DELETE a Special Exit set its Exit Room ID to zero.&lt;/p&gt;</string>
+         <string>&lt;p&gt;Click on an item to edit/change it. To delete a Special Exit, ether: select it and press the keyboard Delete key; or set its Exit roomID to less than one; or clear the name/command entry.&lt;/p&gt;</string>
         </property>
         <property name="frameShadow">
          <enum>QFrame::Raised</enum>
@@ -2046,6 +1959,15 @@ Room ID</string>
          </property>
          <property name="toolTip">
           <string>&lt;p&gt;Set the number of the room that this exit leads to, if set to zero the exit will be removed on saving the exits.&lt;/p&gt;</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Exit
+Status</string>
+         </property>
+         <property name="toolTip">
+          <string>&lt;p&gt;Indicates whether the exit is invalid, leads to another room in this area or leads to a room in another area.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2108,7 +2030,7 @@ Locked</string>
 or LUA script</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;(Lua scripts need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</string>
+          <string>&lt;p&gt;(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</string>
          </property>
         </column>
        </widget>
@@ -2148,6 +2070,54 @@ or LUA script</string>
      </property>
      <property name="text">
       <string>&amp;End S. Exits editing</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="2">
+    <spacer name="horizontalSpacer_controlButtons">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>40</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="2" column="3">
+    <widget class="QPushButton" name="button_save">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>140</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>&lt;p&gt;Use this button to save any changes, will also remove any invalid Special exits.&lt;/p&gt;</string>
+     </property>
+     <property name="text">
+      <string>&amp;Save</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="4">
+    <widget class="QPushButton" name="button_cancel">
+     <property name="minimumSize">
+      <size>
+       <width>140</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;</string>
+     </property>
+     <property name="text">
+      <string>&amp;Cancel</string>
      </property>
     </widget>
    </item>

@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016-2020 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2014, 2016-2021 by Stephen Lyons                   *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *                                                                         *
@@ -34,6 +34,8 @@
 #include <QPainter>
 #include <QScreen>
 #include <QSplashScreen>
+#include <QStringList>
+#include <QStringListIterator>
 #include "post_guard.h"
 #include "AltFocusMenuBarDisable.h"
 
@@ -77,7 +79,32 @@ void copyFont(const QString& externalPathName, const QString& resourcePathName, 
         fileToCopy.copy(QStringLiteral("%1/%2").arg(externalPathName, fileName));
     }
 }
-#endif
+
+#if defined(Q_OS_LINUX)
+void removeOldNoteColorEmojiFonts()
+{
+    // Identify old versions so that we can remove them and later on only try
+    // to load the latest (otherwise, as they all have the same family name
+    // only the first one found will be loaded by the FontManager class):
+    QStringList oldNotoFontDirectories;
+    oldNotoFontDirectories << QStringLiteral("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    oldNotoFontDirectories << QStringLiteral("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+
+    QStringListIterator itOldNotoFontDirectory(oldNotoFontDirectories);
+    while (itOldNotoFontDirectory.hasNext()) {
+        auto oldNotoFontDirectory = itOldNotoFontDirectory.next();
+        QDir oldDir{oldNotoFontDirectory};
+        if (oldDir.exists()) {
+            // This can fail but we do not worry about that too much, as long
+            // as it nukes any "NotoColorEmoji.ttf" files:
+            if (!oldDir.removeRecursively()) {
+                qDebug().nospace().noquote() << "main::removeOldNoteColorEmojiFonts() INFO - failed to remove old Noto Color Emoji font located at: " << oldDir.absolutePath();
+            }
+        }
+    }
+}
+#endif // defined(Q_OS_LINUX)
+#endif // defined(INCLUDE_FONTS)
 
 int main(int argc, char* argv[])
 {
@@ -177,6 +204,9 @@ int main(int argc, char* argv[])
 
     QCommandLineOption beQuiet(QStringList() << "q" << "quiet", QCoreApplication::translate("main", "Don't show the splash screen when starting"));
     parser.addOption(beQuiet);
+
+    QCommandLineOption mirrorToStdout(QStringList() << "m" << "mirror", QCoreApplication::translate("main", "Mirror output of all consoles to STDOUT"));
+    parser.addOption(mirrorToStdout);
 
     parser.parse(app->arguments());
 
@@ -362,7 +392,8 @@ int main(int argc, char* argv[])
     }
 #if defined(Q_OS_LINUX)
     // Only needed/works on Linux to provide color emojis:
-    QString notoFontDirectory(QStringLiteral("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    removeOldNoteColorEmojiFonts();
+    QString notoFontDirectory{QStringLiteral("%1/noto-color-emoji-2021-07-15-v2.028").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -417,9 +448,9 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
 #if defined(Q_OS_LINUX)
-    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2019-11-19-unicode12"), QStringLiteral("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2019-11-19-unicode12"), QStringLiteral("LICENSE"));
-    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2019-11-19-unicode12"), QStringLiteral("README"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2021-07-15-v2.028"), QStringLiteral("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2021-07-15-v2.028"), QStringLiteral("LICENSE"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2021-07-15-v2.028"), QStringLiteral("README"));
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
@@ -456,7 +487,7 @@ int main(int argc, char* argv[])
         QFile::link(homeDirectory, homeLink);
     }
 #endif
-
+    app->setStyle(new AltFocusMenuBarDisable);
     mudlet::start();
 
     if (first_launch) {
@@ -480,6 +511,7 @@ int main(int argc, char* argv[])
         splash.finish(mudlet::self());
     }
 
+    mudlet::self()->mMirrorToStdOut = parser.isSet(mirrorToStdout);
     mudlet::self()->show();
 
     mudlet::self()->startAutoLogin(cliProfile);
@@ -499,7 +531,6 @@ int main(int argc, char* argv[])
     });
 
     app->restoreOverrideCursor();
-    app->setStyle(new AltFocusMenuBarDisable());
 
     // NOTE: Must restore cursor - BEWARE DEBUGGERS if you terminate application
     // without doing/reaching this restore - it can be quite hard to accurately

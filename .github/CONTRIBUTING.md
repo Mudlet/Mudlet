@@ -2,7 +2,6 @@
 If you don't have previous Git experience, we highly recommend downloading and installing
 the free [Github for Desktop](https://desktop.github.com) app to contribute code to Mudlet 🌟
 
-
 # Coding guidelines
 
 If you're a first-timer, you're excluded, we'll go easy on you :wink:
@@ -97,6 +96,25 @@ Don't:
 * assume universal quote and number punctuation formats. There are languages that use « and » instead of " for "quoting" words or phrases. Qt can provide Locale specific displays of numbers/dates/times.
 
 # Git commit guidelines for core team
+
+## Refactoring
+
+* Refactors for linting or formatting should be their own PRs
+* Do not change code in code paths which are not a part of the PR
+  * If it needs to be refactored, it deserves to be its own PR
+
+## Danger enforced PR requirements
+
+* PR Title must start with `fix`, `improve`, `add`, or `infra`
+  * This facilitates automatic changelog gathering and categorization
+  * Cannot merge until it is fixed: core team can always adjust it before merging
+* Any new TODO in a source file must have a Mudlet github issue on the same line
+  * good:
+    * //TODO: https://github.com/Mudlet/Mudlet/issues/1234
+  * bad:
+    * //TODO: a thing we aren't actually tracking with an issue
+
+Danger will also give a heads up if the PR title is long, or if more than 10 source files are changed in a single PR. These are not blocked but the warnings should serve to draw attention to something which may require a double check. More info below.
 
 ## Mega PRs
 

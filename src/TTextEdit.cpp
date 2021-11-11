@@ -80,10 +80,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
         const auto hostFont = mpHost->getDisplayFont();
         mFontHeight = QFontMetrics(hostFont).height();
         mFontWidth = QFontMetrics(hostFont).averageCharWidth();
-        mScreenWidth = 100;
-        if ((width() / mFontWidth) < mScreenWidth) {
-            mScreenWidth = 100; //width()/mFontWidth;
-        }
 
         mpHost->setDisplayFontFixedPitch(true);
         setFont(hostFont);
@@ -100,15 +96,13 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
         mShowTimeStamps = true;
         mFontHeight = QFontMetrics(mDisplayFont).height();
         mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
-        mScreenWidth = 100;
+        mFgColor = QColor(192, 192, 192);
+        mBgColor = Qt::black;
+        mDisplayFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal);
         mDisplayFont.setFixedPitch(true);
         setFont(mDisplayFont);
-        // initialize after mFontHeight and mFontWidth have been set, because the function uses them!
-        initDefaultSettings();
     }
     mScreenHeight = height() / mFontHeight;
-
-    mScreenWidth = 100;
 
     setMouseTracking(true);
     setFocusPolicy(Qt::NoFocus);
@@ -208,17 +202,6 @@ void TTextEdit::slot_hScrollBarMoved(int offset)
     }
 }
 
-void TTextEdit::initDefaultSettings()
-{
-    mFgColor = QColor(192, 192, 192);
-    mBgColor = QColor(Qt::black);
-    mDisplayFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal);
-    mDisplayFont.setFixedPitch(true);
-    setFont(mDisplayFont);
-    mWrapAt = 100;
-    mWrapIndentCount = 5;
-}
-
 void TTextEdit::calculateHMaxRange()
 {
     if (mIsLowerPane) {
@@ -298,8 +281,7 @@ void TTextEdit::updateScreenView()
         // Note the values in the "parent" Host instance - for the UPPER pane
         // so that they are available for NAWS:
         if (!mIsLowerPane) {
-            mpHost->mScreenWidth = mScreenWidth;
-            mpHost->mScreenHeight = mScreenHeight;
+            mpHost->setScreenDimensions(mScreenWidth, mScreenHeight);
         }
     } else {
         mScreenWidth = currentScreenWidth;
@@ -768,10 +750,13 @@ void TTextEdit::paintEvent(QPaintEvent* e)
 
     if (mScreenHeight <= 0 || mScreenWidth <= 0) {
         mScreenHeight = height() / mFontHeight;
+        mScreenWidth = 100;
         if (mScreenHeight <= 0) {
             return;
         }
-        mScreenWidth = 100;
+        if (mpConsole->getType() == TConsole::MainConsole && !mIsLowerPane) {
+            mpHost->setScreenDimensions(mScreenWidth, mScreenHeight);
+        }
     }
 
     QPainter painter(this);
@@ -1341,7 +1326,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             // the hovered() signal can be *problematic* - as hitting a
             // breakpoint - or getting an OS signal (like a Segment Violation)
             // can hang not only Mudlet but also Qt Creator and possibly even
-            // your Desktop - though for *nix users swithing to a console and
+            // your Desktop - though for *nix users switching to a console and
             // killing the gdb debugger instance run by Qt Creator will restore
             // normality.
             connect(mpContextMenuAnalyser, &QAction::hovered, this, &TTextEdit::slot_analyseSelection);
@@ -1365,6 +1350,15 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             popup->addSeparator();
             popup->addAction(actionRestoreMainMenu);
             popup->addAction(actionRestoreMainToolBar);
+        }
+
+        if (mpConsole->getType() == TConsole::ErrorConsole) {
+            QAction* clearErrorConsole = new QAction(tr("Clear console"), this);
+            connect(clearErrorConsole, &QAction::triggered, this, [=]() {
+                mpConsole->buffer.clear();
+                mpConsole->print(tr("*** starting new session ***\n"));
+            });
+            popup->addAction(clearErrorConsole);
         }
 
         // Add user actions
@@ -1557,6 +1551,9 @@ bool TTextEdit::establishSelectedText()
         mScreenWidth = 100;
         if (mScreenHeight <= 0) {
             return false;
+        }
+        if (mpConsole->getType() == TConsole::MainConsole && !mIsLowerPane) {
+            mpHost->setScreenDimensions(mScreenWidth, mScreenHeight);
         }
     }
 
@@ -1765,12 +1762,8 @@ void TTextEdit::showEvent(QShowEvent* event)
 void TTextEdit::resizeEvent(QResizeEvent* event)
 {
     updateScreenView();
-    if (!mIsLowerPane && mpConsole->getType() != TConsole::CentralDebugConsole) {
-        // CHECKME: This looks suspect - it would seem to be called on resizing
-        // floating user windows, and the Editor's Error TConsole as well as
-        // components in the main window - for NAWS purposes it seems more
-        // likely to be needed ONLY on the main TConsole for the profile
-        mpHost->adjustNAWS();
+    if (!mIsLowerPane && mpConsole->getType() == TConsole::MainConsole) {
+        mpHost->updateDisplayDimensions();
     }
 
     QWidget::resizeEvent(event);
@@ -1789,7 +1782,7 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
     // Convert to degrees:
     delta /= 8.0;
     // Allow the control key to introduce a speed up - but also allow it to be
-    // overriden by a shift key to slow the scroll down to one line/character
+    // overridden by a shift key to slow the scroll down to one line/character
     // per click:
     delta.rx() *= (e->modifiers() & Qt::ShiftModifier ? 1.0 : (e->modifiers() & Qt::ControlModifier ? xSpeedUp : 3.0));
     delta.ry() *= (e->modifiers() & Qt::ShiftModifier ? 1.0 : (e->modifiers() & Qt::ControlModifier ? ySpeedUp : 3.0));
@@ -1920,7 +1913,7 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
         quint16 value = first.unicode();
         switch (value) {
         case 0x003c:                    return htmlCenter(QStringLiteral("&lt;")); break; // As '<' gets interpreted as an opening HTML tag we have to handle it specially
-        case 0x003e:                    return htmlCenter(QStringLiteral("&gt;")); break; // '>' does not seem to get interpreted as a closing HTML tag but for symetry it is probably best to also handle it in the same way
+        case 0x003e:                    return htmlCenter(QStringLiteral("&gt;")); break; // '>' does not seem to get interpreted as a closing HTML tag but for symmetry it is probably best to also handle it in the same way
         case QChar::Tabulation:         return htmlCenter(tr("{tab}", "Unicode U+0009 codepoint.")); break;
         case QChar::LineFeed:           return htmlCenter(tr("{line-feed}", "Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.")); break;
         case QChar::CarriageReturn:     return htmlCenter(tr("{carriage-return}", "Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.")); break;

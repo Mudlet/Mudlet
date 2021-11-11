@@ -20,11 +20,12 @@ jobs:
         include:
           # oldest OS supported for maximum compatibility of built AppImage
           - os: ubuntu-18.04
-            buildname: 'ubuntu / gcc'
+            buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
             qt: '5.14.2'
             deploy: 'deploy'
+            run_tests: 'true'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
@@ -41,12 +42,11 @@ jobs:
             compiler: clang_64
             qt: '5.14.2'
             deploy: 'deploy'
-          - os: windows-2019
-            buildname: 'windows'
-            triplet: x64-mingw-dynamic
-            # compiler: flag not used in windows pipeline
-            qt: '5.14.2'
-            deploy: 'deploy'
+#          - os: windows-2019
+#            buildname: 'windows'
+#            triplet: x64-mingw-dynamic
+#            # compiler: flag not used in windows pipeline
+#            qt: '5.14.2'
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
@@ -99,7 +99,21 @@ jobs:
         rm -rf boost_*/* download.tar.bz2 download.tar
       shell: bash
 
-    # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
+    # workaround a poor interaction between github actions/cmake/vcpkg, see https://github.com/lukka/run-vcpkg/issues/88#issuecomment-885758902
+    - name: Use CMake 3.20.1
+      uses: lukka/get-cmake@v3.20.1
+
+    - name: (macOS) Install non-vcpkg dependencies (1/2)
+      if: runner.os == 'macOS'
+      env:
+        HOMEBREW_NO_ANALYTICS: "ON"
+        HOMEBREW_NO_AUTO_UPDATE: "ON"
+        HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
+        HOMEBREW_NO_INSTALL_CLEANUP: "ON"
+      run: |
+        # dependencies needed for vcpkg specifically
+        brew install automake autoconf
+
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v7
       env:
@@ -109,7 +123,7 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
 
-    - name: (macOS) Install non-vcpkg dependencies
+    - name: (macOS) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'macOS'
       env:
         HOMEBREW_NO_ANALYTICS: "ON"
@@ -117,8 +131,10 @@ jobs:
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
+        # add new tap to brew for installing gon
+        brew tap mitchellh/gon
         # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip ccache luarocks expect
+        brew install pkg-config libzzip libzip ccache luarocks expect mitchellh/gon/gon
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
@@ -150,7 +166,9 @@ jobs:
 
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
-        sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 -y
+        # imagemagick is for the desktop screenshot
+        sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 \
+          libxkbcommon-x11-0 imagemagick -y
 
         # switch to GCC that supports C++17 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 7
@@ -234,12 +252,21 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
+        # enable for a debug build (1/2)
+        # buildWithCMakeArgs: --config RelWithDebInfo
         cmakeAppendedArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
           -DVCPKG_APPLOCAL_DEPS=OFF
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
+
+    - name: Upload GitHub Actions artifact of vcpkg build logs
+      if: failure()
+      uses: actions/upload-artifact@v2
+      with:
+        name: vcpkg-logs-${{ runner.os }}
+        path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
 
     - name: (Linux/macOS) check ccache stats post build
       if: runner.os == 'Linux' || runner.os == 'macOS'
@@ -258,8 +285,8 @@ jobs:
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-
       if: runner.os == 'Linux' || runner.os == 'macOS'
 
-    - name: (Linux/macOS) package Mudlet
-      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
+    - name: (Linux/macOS) install dependencies for packaging/tests
+      if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
 
@@ -280,12 +307,21 @@ jobs:
         run-luarocks install --local argparse
         run-luarocks install --local lunajson
 
+        # Lua-based tests
+        run-luarocks install --local busted
+
         # necessary for Qt multimedia and modern Qt
         if [ "${RUNNER_OS}" = "Linux" ]; then
           sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 -y
         fi
+      env:
+        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+        RUNNER_OS: ${{runner.os}}
+        DEPLOY: ${{matrix.deploy}}
 
-        ${{github.workspace}}/CI/travis.after_success.sh
+    - name: (Linux/macOS) package Mudlet
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
+      run: ${{github.workspace}}/CI/travis.after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
@@ -294,6 +330,8 @@ jobs:
         DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
         MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
+        AC_USERNAME: ${{secrets.APPLE_USERNAME}}
+        AC_PASSWORD: ${{secrets.APPLE_PASSWORD}}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v2
@@ -307,7 +345,33 @@ jobs:
       run: curl -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
 
-    - name: (windows) Show relevant logs logs
+    # we need to be in the right place for LuaGlobals.lua to load
+    - name: Prep binary for running tests
+      if: matrix.run_tests == 'true'
+      run: cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
+      shell: bash
+
+    - name: Run Lua tests
+      if: matrix.run_tests == 'true'
+      timeout-minutes: 5
+      uses: GabrielBB/xvfb-action@v1.5
+      with:
+        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      env:
+        AUTORUN_BUSTED_TESTS: 'true'
+        TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
+        QUIT_MUDLET_AFTER_TESTS: 'true'
+
+    - name: Passed Lua tests
+      if: matrix.run_tests == 'true'
+      run: |
+        if [ -e /tmp/busted-tests-failed ]
+        then
+          echo "Lua tests failed - see the action above for detailed output."
+          exit 1
+        fi
+
+    - name: (windows) Show relevant setup logs
       if: failure() && runner.os == 'Windows'
       run: |
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"

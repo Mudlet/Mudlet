@@ -106,10 +106,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                          "<li>Define an input <strong>pattern</strong> either literally or with a Perl regular expression.</li>"
                          "<li>Define a 'substitution' <strong>command</strong> to send to the game in clear text <strong>instead of the alias pattern</strong>, or write a script for more complicated needs.</li>"
                          "<li><strong>Activate</strong> the alias.</li></ol></p>"
-                         "<p><strong>Note:</strong> Aliases can also be defined from the command line in the main profile window like this:</p>"
-                         "<p><code>lua permAlias(&quot;my greets&quot;, &quot;&quot;, &quot;^hi$&quot;, [[send (&quot;say Greetings, traveller!&quot;) echo (&quot;We said hi!&quot;)]])</code></p>"
-                         "<p>You can now greet by typing 'hi'</p>"
-                         "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
+                         "<p>That's it! If you'd like to be able to create aliases from the input line, there are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you."
+                         "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Aliases'>more information</a>.</p>");
 
     msgInfoAddTrigger = tr("<p>Triggers react on game output. To add a new trigger:"
                            "<ol><li>Click on the 'Add Item' icon above.</li>"
@@ -117,10 +115,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                            "<li>Select the appropriate pattern <strong>type</strong>.</li>"
                            "<li>Define a clear text <strong>command</strong> that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..</li>"
                            "<li><strong>Activate</strong> the trigger.</li></ol></p>"
-                           "<p><strong>Note:</strong> Triggers can also be defined from the command line in the main profile window like this:</p>"
-                           "<p><code>lua permSubstringTrigger(&quot;My drink trigger&quot;, &quot;&quot;, &quot;You are thirsty.&quot;, function() send(&quot;drink water&quot;) end)</code></p>"
-                           "<p>This will keep you refreshed.</p>"
-                           "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
+                           "<p>That's it! If you'd like to be able to create triggers from the input line, there are a <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=22609'>couple</a> of <a href='https://forums.mudlet.org/viewtopic.php?f=6&t=16462'>packages</a> that can help you."
+                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Introduction#Triggers'>more information</a>.</p>");
 
     msgInfoAddScript = tr("<p>Scripts organize code and can react to events. To add a new script:"
                           "<ol><li>Click on the 'Add Item' icon above.</li>"
@@ -178,7 +174,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     setUnifiedTitleAndToolBarOnMac(true); //MAC OSX: make window moveable
     const QString hostName{mpHost->getName()};
-    setWindowTitle(hostName);
+    setWindowTitle(tr("%1 - Editor").arg(hostName));
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_editor.png")));
     auto statusBar = new QStatusBar(this);
     statusBar->setSizeGripEnabled(true);
@@ -579,7 +575,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addAction(saveAction);
     toolBar->setWindowTitle(tr("Editor Toolbar - %1 - Actions",
                                // Intentional comment to separate arguments
-                               "This is the toolbar that is initally placed at the top of the editor.")
+                               "This is the toolbar that is initially placed at the top of the editor.")
                             .arg(hostName));
 
     toolBar->addSeparator();
@@ -615,7 +611,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar2->setMovable(true);
     toolBar2->setWindowTitle(tr("Editor Toolbar - %1 - Items",
                                 // Intentional comment to separate arguments
-                                "This is the toolbar that is initally placed at the left side of the editor.")
+                                "This is the toolbar that is initially placed at the left side of the editor.")
                              .arg(hostName));
     toolBar2->setOrientation(Qt::Vertical);
 
@@ -2584,6 +2580,7 @@ void dlgTriggerEditor::delete_alias()
     }
     delete pT;
     mpCurrentAliasItem = nullptr;
+    clearAliasForm();
 }
 
 void dlgTriggerEditor::delete_action()
@@ -2614,6 +2611,7 @@ void dlgTriggerEditor::delete_action()
     delete pT;
     mpCurrentActionItem = nullptr;
     mpHost->getActionUnit()->updateToolbar();
+    clearActionForm();
 }
 
 void dlgTriggerEditor::delete_variable()
@@ -2641,6 +2639,7 @@ void dlgTriggerEditor::delete_variable()
         qDebug() << "ERROR: dlgTriggerEditor::delete_action() child to be deleted does not have a parent";
     }
     mpCurrentVarItem = nullptr;
+    clearVarForm();
 }
 
 void dlgTriggerEditor::delete_script()
@@ -2662,6 +2661,7 @@ void dlgTriggerEditor::delete_script()
     }
     delete pT;
     mpCurrentScriptItem = nullptr;
+    clearScriptForm();
 }
 
 void dlgTriggerEditor::delete_key()
@@ -2684,6 +2684,7 @@ void dlgTriggerEditor::delete_key()
     }
     delete pT;
     mpCurrentKeyItem = nullptr;
+    clearKeyForm();
 }
 
 void dlgTriggerEditor::delete_trigger()
@@ -2706,6 +2707,7 @@ void dlgTriggerEditor::delete_trigger()
     }
     delete pT;
     mpCurrentTriggerItem = nullptr;
+    clearTriggerForm();
 }
 
 void dlgTriggerEditor::delete_timer()
@@ -2728,6 +2730,7 @@ void dlgTriggerEditor::delete_timer()
     }
     delete pT;
     mpCurrentTimerItem = nullptr;
+    clearTimerForm();
 }
 
 
@@ -5045,7 +5048,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
 
         for (int i = 0; i < patternList.size(); i++) {
             if (i >= 50) {
-                break; //pattern liste ist momentan auf 50 begrenzt
+                break; // pattern list is limited to 50 at the moment
             }
             if (i >= pT->mColorPatternList.size()) {
                 break;
@@ -5175,9 +5178,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
     } else {
         // No details to show - as will be the case if the top item (ID = 0) is
         // selected - so show the help message:
-        mpTriggersMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddTrigger);
+        clearTriggerForm();
     }
 }
 
@@ -5185,9 +5186,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         // No details to show - so show the help message:
-        mpAliasMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddAlias);
+        clearAliasForm();
         return;
     }
 
@@ -5236,9 +5235,7 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         // No details to show - so show the help message:
-        mpKeysMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddKey);
+        clearKeyForm();
         return;
     }
 
@@ -5314,7 +5311,7 @@ void dlgTriggerEditor::recursiveSearchVariables(TVar* var, QList<TVar*>& list, b
 
 void dlgTriggerEditor::slot_var_changed(QTreeWidgetItem* pItem)
 {
-    // This handles a small case where the radio buttom is clicked while the item is currently selected
+    // This handles a small case where the radio button is clicked while the item is currently selected
     // which causes the variable to not save. In places where we populate the TreeWidgetItem, we have
     // to guard it with mChangingVar or else this will be called with every change such as the variable
     // name, etc.
@@ -5379,9 +5376,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem* pItem)
 {
     if (!pItem ||treeWidget_variables->indexOfTopLevelItem(pItem) == 0) {
         // Null item or it is for the first row of the tree
-        mpVarsMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddVar);
+        clearVarForm();
         return;
     }
 
@@ -5610,7 +5605,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem* pItem)
 
     mpCurrentActionItem = pItem; //remember what has been clicked to save it
     // ID will be 0 for the root of the treewidget and it is not appropriate
-    // to show any right hand side details - pT will also be Q_NULLPTR!
+    // to show any right hand side details - pT will also be nullptr!
     int ID = pItem->data(0, Qt::UserRole).toInt();
     TAction* pT = mpHost->getActionUnit()->getAction(ID);
     if (pT) {
@@ -5778,9 +5773,7 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         // No details to show - so show the help message:
-        mpTimersMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddTimer);
+        clearTimerForm();
         return;
     }
 
@@ -5805,12 +5798,6 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
     int ID = pItem->data(0, Qt::UserRole).toInt();
     TTimer* pT = mpHost->getTimerUnit()->getTimer(ID);
     if (pT) {
-        if (pT->getParent()) {
-            qDebug() << "[STATUS]: timer ID=" << pT->getID() << " name=" << pT->getName() << " mActive = " << pT->isActive() << " mUserActiveState=" << pT->shouldBeActive()
-                     << " parent=" << pT->getParent()->getName();
-        } else {
-            qDebug() << "[STATUS]: timer ID=" << pT->getID() << " name=" << pT->getName() << "> mActive = " << pT->isActive() << " mUserActiveState=" << pT->shouldBeActive() << " parent=0";
-        }
         QString command = pT->getCommand();
         QString name = pT->getName();
         mpTimersMainArea->lineEdit_timer_command->setText(command);
@@ -6862,9 +6849,7 @@ void dlgTriggerEditor::slot_show_scripts()
     if (!pI || pI == treeWidget_scripts->currentItem() || !pI->childCount()) {
         // There is no root item, we are on the root item or there are no other
         // items - so show the help message:
-        mpScriptsMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddScript);
+        clearScriptForm();
     } else {
         mpScriptsMainArea->show();
         mpSourceEditorArea->show();
@@ -7011,9 +6996,7 @@ void dlgTriggerEditor::slot_show_actions()
     if (!pI || pI == treeWidget_actions->currentItem() || !pI->childCount()) {
         // There is no root item, we are on the root item or there are no other
         // items - so show the help message:
-        mpActionsMainArea->hide();
-        mpSourceEditorArea->hide();
-        showInfo(msgInfoAddButton);
+        clearActionForm();
     } else {
         mpActionsMainArea->show();
         mpSourceEditorArea->show();
@@ -7897,7 +7880,7 @@ void dlgTriggerEditor::slot_export()
         return;
     }
 
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Triggers"), QDir::currentPath(), tr("Mudlet packages (*.xml)"));
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Export Item"), QDir::currentPath(), tr("Mudlet packages (*.xml)"));
     if (fileName.isEmpty()) {
         return;
     }
@@ -8935,7 +8918,7 @@ QColor dlgTriggerEditor::parseButtonStyleSheetColors(const QString& styleSheetTe
                 if (QColor::isValidColor(match.captured(1))) {
                     return QColor(match.captured(1));
                 } else {
-                    qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invaid string \"" <<  match.captured(1) << "\" found as name of foreground color!";
+                    qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invalid string \"" <<  match.captured(1) << "\" found as name of foreground color!";
                     return QColor();
                 }
             } else {
@@ -8969,7 +8952,7 @@ QColor dlgTriggerEditor::parseButtonStyleSheetColors(const QString& styleSheetTe
                 if (QColor::isValidColor(match.captured(1))) {
                     return QColor(match.captured(1));
                 } else {
-                    qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invaid string \"" <<  match.captured(1) << "\" found as name of background color!";
+                    qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invalid string \"" <<  match.captured(1) << "\" found as name of background color!";
                     return QColor();
                 }
             } else {
@@ -9093,4 +9076,53 @@ void dlgTriggerEditor::setSearchOptions(const SearchOptions optionsState)
     mpAction_searchCaseSensitive->setChecked(optionsState & SearchOptionCaseSensitive);
     mpAction_searchIncludeVariables->setChecked(optionsState & SearchOptionIncludeVariables);
     createSearchOptionIcon();
+}
+
+void dlgTriggerEditor::clearTriggerForm()
+{
+    mpTriggersMainArea->hide();
+    mpSourceEditorArea->hide();
+    showInfo(msgInfoAddTrigger);
+}
+
+void dlgTriggerEditor::clearTimerForm()
+{
+    mpTimersMainArea->hide();
+    mpTimersMainArea->hide();
+    showInfo(msgInfoAddTimer);
+}
+
+void dlgTriggerEditor::clearAliasForm()
+{
+    mpAliasMainArea->hide();
+    mpSourceEditorArea->hide();
+    showInfo(msgInfoAddAlias);
+}
+
+void dlgTriggerEditor::clearScriptForm()
+{
+    mpScriptsMainArea->hide();
+    mpSourceEditorArea->hide();
+    showInfo(msgInfoAddScript);
+}
+
+void dlgTriggerEditor::clearActionForm()
+{
+    mpActionsMainArea->hide();
+    mpSourceEditorArea->hide();
+    showInfo(msgInfoAddButton);
+}
+
+void dlgTriggerEditor::clearKeyForm()
+{
+    mpKeysMainArea->hide();
+    mpSourceEditorArea->hide();
+    showInfo(msgInfoAddKey);
+}
+
+void dlgTriggerEditor::clearVarForm()
+{
+    mpVarsMainArea->hide();
+    mpSourceEditorArea->hide();
+    showInfo(msgInfoAddVar);
 }
