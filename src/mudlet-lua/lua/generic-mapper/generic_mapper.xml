@@ -2924,14 +2924,15 @@ end
 function map.pauseSpeedwalk()
     -- map.echo("pauseSpeedwalk!")
     walking = false
+    raiseEvent("sysSpeedwalkPaused")
 end
 
-function map.resumeSpeedwalk()
+function map.resumeSpeedwalk(delay)
     -- map.echo("resumeSpeedwalk!")
     map.find_me(nil, nil, nil, true)
     if #speedWalkDir ~= 0 then
-        walking = true
-        tempTimer(1, "doSpeedWalk()")
+        raiseEvent("sysSpeedwalkResumed")
+        tempTimer(delay or 0, function() map.speedwalk(nil, speedWalkPath, speedWalkDir) end)
     end
 end
 
