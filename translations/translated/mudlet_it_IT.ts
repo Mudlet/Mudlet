@@ -6716,26 +6716,26 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1016"/>
       <source>Entered number is invalid, set the number of the room in from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Il numero inserito non è valido, imposta il numero della stanza "entrando" rispetto a questa.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1017"/>
       <location filename="../src/dlgRoomExits.cpp" line="1115"/>
       <location filename="../src/dlgRoomExits.cpp" line="1276"/>
       <source>Set the number of the room in from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Imposta il numero della stanza "entrando" rispetto a questa.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1025"/>
       <source>Entered number is invalid, set the number of the room out from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Il numero inserito non è valido, imposta il numero della stanza "uscendo" da questa.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1026"/>
       <location filename="../src/dlgRoomExits.cpp" line="1123"/>
       <location filename="../src/dlgRoomExits.cpp" line="1278"/>
       <source>Set the number of the room out from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Imposta il numero della stanza "uscendo" rispetto a questa.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="135"/>
