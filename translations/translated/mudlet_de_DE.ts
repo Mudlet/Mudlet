@@ -59,13 +59,13 @@
       <location filename="../src/Host.cpp" line="618"/>
       <source>Failed to open xml file &quot;%1&quot; inside module %2 to update it. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when the xml file inside the module zip cannot be updated for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Öffnen der XML-Datei &quot;%1&quot; zur Aktualisierung innerhalb des Moduls %2. Fehlernachricht: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="630"/>
       <source>Failed to save &quot;%1&quot; to module &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when a module is saved as package but cannot be done for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Speichern von &quot;%1&quot; in Modul &quot;%2&quot;. Fehlernachricht: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="915"/>
@@ -555,7 +555,7 @@ Bitte warten...</translation>
       <location filename="../src/dlgRoomExits.cpp" line="110"/>
       <location filename="../src/dlgRoomExits.cpp" line="185"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Die eingegebene Zahl ist ungültig. Wenn sie so bleibt, wird dieser Ausgang gelöscht, wenn &lt;tt&gt;speichern&lt;/tt&gt; angeklickt wird.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="111"/>
@@ -563,13 +563,13 @@ Bitte warten...</translation>
       <location filename="../src/dlgRoomExits.cpp" line="186"/>
       <location filename="../src/dlgRoomExits.cpp" line="190"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation type="unfinished"/>
+      <translation>Lege die Nummer des Raums fest, in den dieser Sonderausgang führt.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="119"/>
       <location filename="../src/dlgRoomExits.cpp" line="194"/>
       <source>A positive roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Hier wird eine positive Raum-ID des Raums erwartet, zu dem dieser spezielle Ausgang führt. Wenn sie so bleibt, wird dieser Ausgang gelöscht, wenn &lt;tt&gt;speichern&lt;/tt&gt; angeklickt wird.</translation>
     </message>
   </context>
   <context>
@@ -2941,7 +2941,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1356"/>
       <source>Clear console</source>
-      <translation type="unfinished"/>
+      <translation>Konsole leeren</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1359"/>
@@ -6127,13 +6127,13 @@ Nutzungen</translation>
       <location filename="../src/dlgProfilePreferences.cpp" line="2071"/>
       <source>Mudlet map (*.dat *.json);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet Karte (*.dat *.json);;Xml Kartendaten (*.xml);;Beliebige Datei (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2115"/>
       <source>Mudlet map (*.dat *.json);;</source>
       <comment>Do not change the extension text (in braces) - it is needed programmatically!</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet Karte (*.dat *.json);;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2125"/>
@@ -6507,7 +6507,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="231"/>
       <source>(roomID)</source>
       <comment>Placeholder, if no roomID is set for an exit.</comment>
-      <translation type="unfinished"/>
+      <translation>(roomID)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="232"/>
@@ -6520,7 +6520,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="401"/>
       <location filename="../src/dlgRoomExits.cpp" line="937"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation type="unfinished"/>
+      <translation>Lege die Nummer des Raums fest, in den dieser Sonderausgang führt.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="403"/>
@@ -6561,22 +6561,22 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="932"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Die eingegebene Zahl ist ungültig. Wenn sie so bleibt, wird dieser Ausgang gelöscht, wenn &lt;tt&gt;speichern&lt;/tt&gt; angeklickt wird.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="933"/>
       <source>Set the number of the room that this special exit leads to.</source>
-      <translation type="unfinished"/>
+      <translation>Lege die Nummer des Raums fest, in den dieser Sonderausgang führt.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="941"/>
       <source>A positive roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Hier wird eine positive Raum-ID des Raums erwartet, zu dem dieser spezielle Ausgang führt. Wenn sie so bleibt, wird dieser Ausgang gelöscht, wenn &lt;tt&gt;speichern&lt;/tt&gt; angeklickt wird.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="946"/>
       <source>No command or Lua script entered, if left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Kein Kommando oder Lua-Skript eingegeben. Wenn das so bleibt, wird dieser Ausgang gelöscht, wenn &lt;tt&gt;speichern&lt;/tt&gt; angeklickt wird.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="948"/>
