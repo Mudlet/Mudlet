@@ -2915,7 +2915,8 @@ obszaru) nie znaleziono, dodając &quot;%1&quot; w stosunku do zarezerwowanego -
       <location filename="../src/TTextEdit.cpp" line="1359"/>
       <source>*** starting new session ***
 </source>
-      <translation type="unfinished"/>
+      <translation>*** rozpoczęcie nowej sesji ***
+</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1444"/>
@@ -6473,7 +6474,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
       <location filename="../src/dlgRoomExits.cpp" line="232"/>
       <source>(command or Lua script)</source>
       <comment>Placeholder, if a special exit has no name/script set.</comment>
-      <translation type="unfinished"/>
+      <translation>(polecenie lub skrypt Lua)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="397"/>
@@ -8123,7 +8124,7 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="53"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Tekst do wysłania do gry jak-jest (opcjonalne)</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="60"/>
@@ -8383,7 +8384,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/ui/main_window.ui" line="331"/>
       <source>Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="334"/>
@@ -10532,7 +10533,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager.ui" line="219"/>
       <source>Remove packages</source>
-      <translation type="unfinished"/>
+      <translation>Usuń pakiety</translation>
     </message>
   </context>
   <context>
@@ -12527,7 +12528,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="77"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Tekst do wysłania do gry jak-jest (opcjonalne)</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="89"/>
@@ -12620,7 +12621,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="127"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Tekst do wysłania do gry jak-jest (opcjonalne)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="201"/>
