@@ -2898,7 +2898,8 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1359"/>
       <source>*** starting new session ***
 </source>
-      <translation type="unfinished"/>
+      <translation>*** 開始新的工作階段 ***
+</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1444"/>
