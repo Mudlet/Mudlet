@@ -8709,7 +8709,12 @@ There is NO WARRANTY, to the extent permitted by law.
 &lt;p&gt;The &lt;b&gt;&lt;i&gt;Sync&lt;/i&gt;&lt;/b&gt; option, if it is enabled, will, when the module in &lt;b&gt;this profile&lt;/b&gt; is saved &lt;b&gt;to disk&lt;/b&gt;, cause it to be then reloaded into all profiles which also are using the same file that contains the module. To make several profiles use the same module, install it in each profile through this module manager (which should be opened when the particular profile is the one currently in the foreground).&lt;/p&gt;&lt;p&gt;
 &lt;p&gt;For each save operation, modules are backed up to a directory, &lt;i&gt;moduleBackups&lt;/i&gt;, within your Mudlet profile directory.&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Модули - это способ использовать общий пакет во многих сессиях - в отличие от пакетов, которые устанавливаются по каждому профилю.&lt;/p&gt;
+&lt;p&gt;Модули загружаются в порядке возрастания приоритета (1 загружается раньше 2 и так далее), модули с одинаковым приоритетом загружаются в алфавитном порядке.&lt;/p&gt;
+&lt;p&gt;Модули с отрицательным приоритетом будут загружаться перед пакетами скриптов.&lt;/p&gt;
+&lt;p&gt;Опция &lt;b&gt;&lt;i&gt;Sync&lt;/i&gt;&lt;/b&gt;, если она включена, будет, когда модуль в &lt;b&gt;данном профиле&lt;/b&gt; будет сохранен &lt;b&gt;на диск&lt;/b&gt;, вызывать его последующую перезагрузку во все профили, которые также используют тот же файл, содержащий модуль. Чтобы заставить несколько профилей использовать один и тот же модуль, установи его в каждый профиль через этот менеджер модулей (который должен быть открыт, когда конкретный профиль находится в данный момент на переднем плане).&lt;/p&gt;&lt;p&gt;
+&lt;p&gt;Для каждой операции сохранения модули резервируются в каталог &lt;i&gt;moduleBackups&lt;/i&gt;, внутри каталога твоего профиля Mudlet.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="128"/>
