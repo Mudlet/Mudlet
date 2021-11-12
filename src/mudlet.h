@@ -441,7 +441,7 @@ public:
     };
     Appearance mAppearance = Appearance::system;
     void setAppearance(Appearance, const bool& loading = false);
-    bool inDarkMode() { return mDarkMode; };
+    const bool inDarkMode() { return mDarkMode; };
 
     // mirror everything shown in any console to stdout. Helpful for CI environments
     inline static bool mMirrorToStdOut;
