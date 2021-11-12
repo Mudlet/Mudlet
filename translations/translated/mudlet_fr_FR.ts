@@ -6310,7 +6310,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="232"/>
       <source>(command or Lua script)</source>
       <comment>Placeholder, if a special exit has no name/script set.</comment>
-      <translation type="unfinished"/>
+      <translation>(commande ou script Lua)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="397"/>
@@ -8171,7 +8171,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="331"/>
       <source>Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="334"/>
