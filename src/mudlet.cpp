@@ -3890,21 +3890,23 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
 
 void mudlet::setAppearance(const Appearance state, const bool& loading)
 {
-    // FIXME: use loading param if (mDarkTheme == state && !loading) { return;
-    bool enableDarkTheme = false;
-    if (state == Appearance::dark || state == Appearance::system && desktopInDarkMode()) {
-        enableDarkTheme = true;
+    if (state == mAppearance && !loading) {
+        return;
     }
 
-    auto host = getActiveHost();
-    if (enableDarkTheme) {
+    mDarkMode = false;
+    if (state == Appearance::dark || (state == Appearance::system && desktopInDarkMode())) {
+        mDarkMode = true;
+    }
+
+    if (mDarkMode) {
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         qApp->setStyle(new DarkTheme);
-        getHostManager().changeAllHostColour(host);
+        getHostManager().changeAllHostColour(getActiveHost());
     } else {
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
-        getHostManager().changeAllHostColour(host);
+        getHostManager().changeAllHostColour(getActiveHost());
     }
     mAppearance = state;
     emit signal_appearanceChanged(state);

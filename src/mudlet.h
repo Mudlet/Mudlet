@@ -440,7 +440,8 @@ public:
         dark = 2
     };
     Appearance mAppearance = Appearance::system;
-    void setAppearance(Appearance, const bool &loading = false);
+    void setAppearance(Appearance, const bool& loading = false);
+    bool inDarkMode() { return mDarkMode; };
 
     // mirror everything shown in any console to stdout. Helpful for CI environments
     inline static bool mMirrorToStdOut;
@@ -729,6 +730,10 @@ private:
 
     // Whether multi-view is in effect:
     bool mMultiView;
+
+    // read-only value to see if the interface is light or dark. To set the value,
+    // use setAppearance instead
+    bool mDarkMode = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

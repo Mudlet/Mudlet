@@ -271,7 +271,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
     connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
     connect(pMudlet, &mudlet::signal_appearanceChanged, this, &dlgProfilePreferences::slot_setAppearance);
-    connect(enableDarkTheme, &QComboBox::currentIndexChanged, this, &dlgProfilePreferences::slot_changeEnableDarkTheme);
+    connect(comboBox_appearance, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) { dlgProfilePreferences::slot_setAppearance(mudlet::Appearance(index)); });
 
     generateDiscordTooltips();
 
@@ -3822,7 +3822,9 @@ void dlgProfilePreferences::slot_setAppearance(const mudlet::Appearance state)
         comboBox_appearance->setCurrentIndex(state);
     }
 
-    mudlet::self()->setDarkTheme(state);
+    mudlet::self()->setAppearance(state);
+
+    label_darkEditorPrompt->setVisible(mudlet::self()->inDarkMode());
 }
 
 // This slot is called when the mudlet singleton tells everything that the
