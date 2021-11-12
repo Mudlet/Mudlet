@@ -61,13 +61,13 @@
       <location filename="../src/Host.cpp" line="618"/>
       <source>Failed to open xml file &quot;%1&quot; inside module %2 to update it. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when the xml file inside the module zip cannot be updated for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>Не удалось открыть xml-файл &quot;%1&quot; внутри модуля %2 для его обновления. Сообщение об ошибке: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="630"/>
       <source>Failed to save &quot;%1&quot; to module &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when a module is saved as package but cannot be done for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>Не удалось сохранить &quot;%1&quot; в модуль &quot;%2&quot;. Сообщение об ошибке было: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="915"/>
@@ -563,7 +563,7 @@ please wait...</source>
       <location filename="../src/dlgRoomExits.cpp" line="110"/>
       <location filename="../src/dlgRoomExits.cpp" line="185"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Введенный номер недействителен. Если оставить как это, этот выход будет удален при нажатии на &lt;tt&gt;сохранить&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="111"/>
@@ -571,13 +571,13 @@ please wait...</source>
       <location filename="../src/dlgRoomExits.cpp" line="186"/>
       <location filename="../src/dlgRoomExits.cpp" line="190"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation type="unfinished"/>
+      <translation>Задать номер комнаты, к которой приходит этот специальный выход.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="119"/>
       <location filename="../src/dlgRoomExits.cpp" line="194"/>
       <source>A positive roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Здесь ожидается положительный номер комнаты, в которую ведет этот специальный выход. Если оставить это так, этот выход будет удален при нажатии &lt;tt&gt;сохранить&lt;/tt&gt;.</translation>
     </message>
   </context>
   <context>
@@ -2974,7 +2974,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1356"/>
       <source>Clear console</source>
-      <translation type="unfinished"/>
+      <translation>Очистить консоль</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1359"/>
@@ -6030,7 +6030,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="196"/>
       <source>&lt;p&gt;This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specified font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Это выведет на экран все символы, используемые в текущей карте, и покажет, можно ли их рисовать только указанным шрифтом, любым другим шрифтом или вообще не рисовать. Он также показывает последовательность кодовых точек Unicode &lt;i&gt;&lt;/i&gt;, которые составляют этот символ, чтобы их можно было идентифицировать, даже если они не могут быть отображены; также перечисляются до первых тридцати двух номеров, которые используют этот символ, что может помочь определить любые неожиданные или странные случаи.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="202"/>
@@ -6165,13 +6165,13 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="2071"/>
       <source>Mudlet map (*.dat *.json);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet карта (*.dat *.json);;Xml данные карты (*.xml);;Любой файл (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2115"/>
       <source>Mudlet map (*.dat *.json);;</source>
       <comment>Do not change the extension text (in braces) - it is needed programmatically!</comment>
-      <translation type="unfinished"/>
+      <translation>Карта Mudlet (*.dat *.json);;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2125"/>
@@ -6544,7 +6544,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="231"/>
       <source>(roomID)</source>
       <comment>Placeholder, if no roomID is set for an exit.</comment>
-      <translation type="unfinished"/>
+      <translation>(номер комнаты)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="232"/>
@@ -6557,7 +6557,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="401"/>
       <location filename="../src/dlgRoomExits.cpp" line="937"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation type="unfinished"/>
+      <translation>Задать номер комнаты, к которой приходит этот специальный выход.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="403"/>
@@ -6598,27 +6598,27 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="932"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Введенный номер недействителен. Если оставить как это, этот выход будет удален при нажатии на &lt;tt&gt;сохранить&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="933"/>
       <source>Set the number of the room that this special exit leads to.</source>
-      <translation type="unfinished"/>
+      <translation>Задать номер комнаты, к которой приходит этот специальный выход.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="941"/>
       <source>A positive roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Здесь ожидается положительный номер комнаты, в которую ведет этот специальный выход. Если оставить это так, этот выход будет удален при нажатии &lt;tt&gt;сохранить&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="946"/>
       <source>No command or Lua script entered, if left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Не введена команда или Lua-скрипт, если оставить так, то этот выход будет удален при нажатии &lt;tt&gt;сохранить&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="948"/>
       <source>(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>(Lua-скрипты для тех профилей, которые используют пакет &lt;tt&gt;mudlet-mapper&lt;/tt&gt; нужно снабдить префиксом &quot;script:&quot;).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1000"/>
@@ -12346,23 +12346,24 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1923"/>
       <source>&lt;p&gt;Click on an item to edit/change it. To delete a Special Exit, ether: select it and press the keyboard Delete key; or set its Exit roomID to less than one; or clear the name/command entry.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Щелкните по элементу, чтобы изменить/изменить его. Чтобы удалить специальный выход, эфир: выберите его и нажмите клавишу "Delete" клавиатуры или задайте для своего номера обработчика "Выход" меньше одного; или отмените ввод имени/команды.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1966"/>
       <source>Exit
 Status</source>
-      <translation type="unfinished"/>
+      <translation>Выход в
+Статус</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1970"/>
       <source>&lt;p&gt;Indicates whether the exit is invalid, leads to another room in this area or leads to a room in another area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Указывает, является ли выход недействительным, ведет ли он в другую комнату в этой зоне или ведет в комнату в другой зоне.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2033"/>
       <source>&lt;p&gt;(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;(Lua-скрипты для тех профилей, которые используют пакет &lt;tt&gt;mudlet-mapper&lt;/tt&gt; нужно снабдить префиксом &quot;script:&quot;).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2101"/>
