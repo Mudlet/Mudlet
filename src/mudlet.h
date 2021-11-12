@@ -300,7 +300,7 @@ public:
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     void show_options_dialog(const QString& tab);
     void setInterfaceLanguage(const QString &languageCode);
-    void setDarkTheme(const bool &state);
+    void setDarkTheme(const bool &state, const bool &loading = false);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     const QLocale& getUserLocale() const { return mUserLocale; }
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
@@ -434,7 +434,7 @@ public:
 
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
-    bool mDarkTheme;
+    bool mDarkTheme = false;
 
     // mirror everything shown in any console to stdout. Helpful for CI environments
     inline static bool mMirrorToStdOut;

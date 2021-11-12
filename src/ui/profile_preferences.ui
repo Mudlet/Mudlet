@@ -225,45 +225,60 @@
          <layout class="QGridLayout" name="gridLayout_groupBox_miscellaneous">
           <item row="0" column="0">
            <widget class="QCheckBox" name="enableDarkTheme">
-            <property name="text">
-             <string>Use a dark theme</string>
-            </property>
             <property name="toolTip">
              <string>&lt;p&gt;Changes your Mudlet Style to a Dark Fusion Style.&lt;/p&gt;</string>
             </property>
+            <property name="text">
+             <string>Use a dark theme</string>
+            </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="2" column="0">
            <widget class="QCheckBox" name="mAlertOnNewData">
-            <property name="text">
-             <string>Notify on new data</string>
-            </property>
             <property name="toolTip">
              <string>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</string>
             </property>
+            <property name="text">
+             <string>Notify on new data</string>
+            </property>
            </widget>
           </item>
-          <item row="1" column="1">
+          <item row="2" column="1">
            <widget class="QCheckBox" name="acceptServerGUI">
             <property name="text">
              <string>Allow server to install script packages</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
+          <item row="3" column="0">
            <widget class="QCheckBox" name="mFORCE_SAVE_ON_EXIT">
             <property name="text">
              <string>Auto save on exit</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="3" column="1">
            <widget class="QCheckBox" name="acceptServerMedia">
+            <property name="toolTip">
+             <string>&lt;p&gt;This also needs GMCP to be enabled in the next group below.&lt;/p&gt;</string>
+            </property>
             <property name="text">
              <string>Allow server to download and play media</string>
             </property>
-            <property name="toolTip">
-             <string>&lt;p&gt;This also needs GMCP to be enabled in the next group below.&lt;/p&gt;</string>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_darkEditorPrompt">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Set dark theme in &lt;a href=&quot;dark-code-editor&quot;&gt;code editor&lt;/a&gt; as well?</string>
+            </property>
+            <property name="textFormat">
+             <enum>Qt::RichText</enum>
             </property>
            </widget>
           </item>
@@ -3455,14 +3470,14 @@ you can use it but there could be issues with aligning columns of text</string>
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
+               <property name="toolTip">
+                <string comment="The term in '...' refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.">&lt;p&gt;Show 'LUA OK' messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</string>
+               </property>
                <property name="text">
                 <string>Show debug messages for timers not smaller than:</string>
                </property>
                <property name="buddy">
                 <cstring>timeEdit_timerDebugOutputMinimumInterval</cstring>
-               </property>
-               <property name="toolTip">
-                <string comment="The term in '...' refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.">&lt;p&gt;Show 'LUA OK' messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</string>
                </property>
               </widget>
              </item>
@@ -3775,5 +3790,22 @@ you can use it but there could be issues with aligning columns of text</string>
  <resources>
   <include location="../mudlet.qrc"/>
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>enableDarkTheme</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>label_darkEditorPrompt</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>81</x>
+     <y>278</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>82</x>
+     <y>305</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>
