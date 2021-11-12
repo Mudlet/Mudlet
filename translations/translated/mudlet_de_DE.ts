@@ -2947,7 +2947,8 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1359"/>
       <source>*** starting new session ***
 </source>
-      <translation type="unfinished"/>
+      <translation>*** Neue Sitzung wird gestartet ***
+</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1444"/>
@@ -6512,7 +6513,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="232"/>
       <source>(command or Lua script)</source>
       <comment>Placeholder, if a special exit has no name/script set.</comment>
-      <translation type="unfinished"/>
+      <translation>(Befehl oder Lua-Skript)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="397"/>
