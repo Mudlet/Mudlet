@@ -5992,7 +5992,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="196"/>
       <source>&lt;p&gt;This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specified font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Hiermit werden alle Symbole angezeigt, die in der aktuellen Karte genutzt werden, und ob sie nur mit der angegebenen Schriftart dargestellt werden können, oder mit einer anderen Schriftart, oder überhaupt nicht. Es wird auch eine Sequenz von Unicode-&lt;i&gt;Code-Punkten&lt;/i&gt; angezeigt, aus denen das Symbol zusammengesetzt wird, damit es auch identifiziert werden kann, falls es nicht dargestellt werden kann. Außerdem werden bis zu 32 Räume aufgelistet, die dieses Symbol benutzen, wodurch man unerwartete oder seltsame Fälle aufdecken kann.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="202"/>
@@ -6581,7 +6581,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="948"/>
       <source>(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>(Lua-Skripte für die Profile, die das Paket &lt;tt&gt;mudlet-mapper&lt;/tt&gt; verwenden, müssen mit &quot;script:&quot; beginnen).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1000"/>
@@ -8675,7 +8675,12 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
 &lt;p&gt;The &lt;b&gt;&lt;i&gt;Sync&lt;/i&gt;&lt;/b&gt; option, if it is enabled, will, when the module in &lt;b&gt;this profile&lt;/b&gt; is saved &lt;b&gt;to disk&lt;/b&gt;, cause it to be then reloaded into all profiles which also are using the same file that contains the module. To make several profiles use the same module, install it in each profile through this module manager (which should be opened when the particular profile is the one currently in the foreground).&lt;/p&gt;&lt;p&gt;
 &lt;p&gt;For each save operation, modules are backed up to a directory, &lt;i&gt;moduleBackups&lt;/i&gt;, within your Mudlet profile directory.&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Module sind eine Möglichkeit, ein gemeinsames Paket für viele Sitzungen zu nutzen - im Gegensatz zu Paketen, die pro Profil installiert werden.&lt;/p&gt;
+&lt;p&gt;Module werden in aufsteigender Priorität geladen (1 wird vor 2 geladen und so weiter), Module mit der gleichen Priorität werden in alphabetischer Reihenfolge geladen.&lt;/p&gt;
+&lt;p&gt;Module mit negativer Priorität werden vor den Skriptpaketen geladen.&lt;/p&gt;
+&lt;p&gt;Wenn die Option &lt;b&gt;&lt;i&gt;Sync&lt;/i&gt;&lt;/b&gt; aktiviert ist, wird sie, wenn das Modul in &lt;b&gt;diesem Profil&lt;/b&gt; auf der Festplatte &lt;b&gt;gespeichert wird&lt;/b&gt;, dazu führen, dass es in alle Profile neu geladen wird, die ebenfalls die gleiche Datei verwenden, die das Modul enthält. Wenn mehrere Profile dasselbe Modul verwenden sollen, installiere es in jedem Profil über diesen Modulmanager (der geöffnet werden sollte, wenn das jeweilige Profil im Vordergrund ist).&lt;/p&gt;&lt;p&gt;
+&lt;p&gt;Bei jedem Speichervorgang werden die Module in einem Verzeichnis, &lt;i&gt;moduleBackups&lt;/i&gt;, in deinem Mudlet-Profilverzeichnis gesichert.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="128"/>
@@ -12307,23 +12312,24 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/room_exits.ui" line="1923"/>
       <source>&lt;p&gt;Click on an item to edit/change it. To delete a Special Exit, ether: select it and press the keyboard Delete key; or set its Exit roomID to less than one; or clear the name/command entry.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Klicke auf ein Element, um es zu bearbeiten/ändern. Um einen Sonderausgang zu löschen, wähle ihn aus und drücke Löschen auf der Tastatur; oder setze seine Raum-ID auf weniger als eins; oder lösche den eingetragenen Namen/Befehl.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1966"/>
       <source>Exit
 Status</source>
-      <translation type="unfinished"/>
+      <translation>Ausgang
+Status</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1970"/>
       <source>&lt;p&gt;Indicates whether the exit is invalid, leads to another room in this area or leads to a room in another area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zeigt an, ob der Ausgang ungültig ist, zu einem anderen Raum in diesem Gebiet führt oder zu einem Raum in einem anderen Gebiet führt.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2033"/>
       <source>&lt;p&gt;(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;(Lua-Skripte für die Profile, die das Paket &lt;tt&gt;mudlet-mapper&lt;/tt&gt; verwenden, müssen mit &quot;script:&quot; beginnen).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2101"/>
