@@ -2906,7 +2906,8 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1359"/>
       <source>*** starting new session ***
 </source>
-      <translation type="unfinished"/>
+      <translation>*** 开始新的会话 ***
+</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1444"/>
@@ -6470,7 +6471,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="232"/>
       <source>(command or Lua script)</source>
       <comment>Placeholder, if a special exit has no name/script set.</comment>
-      <translation type="unfinished"/>
+      <translation>(命令或Lua脚本)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="397"/>
@@ -6553,7 +6554,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1024"/>
       <source>Exit to unnamed room is valid.</source>
-      <translation type="unfinished"/>
+      <translation>有效的出口通往未命名的房间.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1117"/>
@@ -8364,7 +8365,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="331"/>
       <source>Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="334"/>
