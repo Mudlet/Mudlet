@@ -2978,7 +2978,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1356"/>
       <source>Clear console</source>
-      <translation type="unfinished"/>
+      <translation>Svuota console</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1359"/>
@@ -6174,13 +6174,13 @@ Utilizzi</translation>
       <location filename="../src/dlgProfilePreferences.cpp" line="2071"/>
       <source>Mudlet map (*.dat *.json);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mappa Mudlet (*.dat *.json);;Mappa Xml (*.xml);;Tutti i file (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2115"/>
       <source>Mudlet map (*.dat *.json);;</source>
       <comment>Do not change the extension text (in braces) - it is needed programmatically!</comment>
-      <translation type="unfinished"/>
+      <translation>Mappa Mudlet (*.dat *.json);;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2125"/>
@@ -6553,7 +6553,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
       <location filename="../src/dlgRoomExits.cpp" line="231"/>
       <source>(roomID)</source>
       <comment>Placeholder, if no roomID is set for an exit.</comment>
-      <translation type="unfinished"/>
+      <translation>(ID stanza)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="232"/>
@@ -6566,7 +6566,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
       <location filename="../src/dlgRoomExits.cpp" line="401"/>
       <location filename="../src/dlgRoomExits.cpp" line="937"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation type="unfinished"/>
+      <translation>Imposta il numero della stanza di destinazione per questa uscita speciale.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="403"/>
@@ -12353,7 +12353,8 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/room_exits.ui" line="1966"/>
       <source>Exit
 Status</source>
-      <translation type="unfinished"/>
+      <translation>Stato
+Uscita</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1970"/>
