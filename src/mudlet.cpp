@@ -267,14 +267,14 @@ mudlet::mudlet()
     }
 
     qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
-    setAppearance(mAppearance);
+    setAppearance(mAppearance, true);
     mDefaultStyle = qApp->style()->objectName();
 
     scanForMudletTranslations(QStringLiteral(":/lang"));
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
 
-    if (QStringList{"windowsvista", "macintosh"}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
+  if (QStringList{"windowsvista", "macintosh"}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
         qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - QPushButton styling fix applied!";
         mBG_ONLY_STYLESHEET = QStringLiteral("QPushButton {background-color: %1; border: 1px solid #8f8f91;}");
         mTEXT_ON_BG_STYLESHEET = QStringLiteral("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}");
@@ -1592,19 +1592,17 @@ void mudlet::slot_timer_fires()
 
 void mudlet::disableToolbarButtons()
 {
-    mpMainToolBar->actions()[1]->setEnabled(false);
-    mpMainToolBar->actions()[2]->setEnabled(false);
-    mpMainToolBar->actions()[3]->setEnabled(false);
-    mpMainToolBar->actions()[4]->setEnabled(false);
-    mpMainToolBar->actions()[5]->setEnabled(false);
-    mpMainToolBar->actions()[6]->setEnabled(false);
-    mpMainToolBar->actions()[7]->setEnabled(false);
-    mpMainToolBar->actions()[9]->setEnabled(false);
-    mpMainToolBar->actions()[10]->setEnabled(false);
-    mpMainToolBar->actions()[12]->setEnabled(false);
-    mpMainToolBar->actions()[13]->setEnabled(false);
-    mpMainToolBar->actions()[14]->setEnabled(false);
-
+    mpActionTriggers->setEnabled(false);
+    mpActionAliases->setEnabled(false);
+    mpActionTimers->setEnabled(false);
+    mpActionButtons->setEnabled(false);
+    mpActionScripts->setEnabled(false);
+    mpActionKeys->setEnabled(false);
+    mpActionVariables->setEnabled(false);
+    mpActionMudletDiscord->setEnabled(false);
+    mpActionMapper->setEnabled(false);
+    mpActionNotes->setEnabled(false);
+    mpButtonPackageManagers->setEnabled(false);
     mpActionIRC->setEnabled(false);
     mpActionReplay->setEnabled(false);
     mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
@@ -1623,18 +1621,17 @@ void mudlet::disableToolbarButtons()
 
 void mudlet::enableToolbarButtons()
 {
-    mpMainToolBar->actions()[1]->setEnabled(true);
-    mpMainToolBar->actions()[2]->setEnabled(true);
-    mpMainToolBar->actions()[3]->setEnabled(true);
-    mpMainToolBar->actions()[4]->setEnabled(true);
-    mpMainToolBar->actions()[5]->setEnabled(true);
-    mpMainToolBar->actions()[6]->setEnabled(true);
-    mpMainToolBar->actions()[7]->setEnabled(true);
-    mpMainToolBar->actions()[9]->setEnabled(true);
-    mpMainToolBar->actions()[10]->setEnabled(true);
-    mpMainToolBar->actions()[12]->setEnabled(true);
-    mpMainToolBar->actions()[13]->setEnabled(true);
-    mpMainToolBar->actions()[14]->setEnabled(true);
+    mpActionTriggers->setEnabled(true);
+    mpActionAliases->setEnabled(true);
+    mpActionTimers->setEnabled(true);
+    mpActionButtons->setEnabled(true);
+    mpActionScripts->setEnabled(true);
+    mpActionKeys->setEnabled(true);
+    mpActionVariables->setEnabled(true);
+    mpActionMudletDiscord->setEnabled(true);
+    mpActionMapper->setEnabled(true);
+    mpActionNotes->setEnabled(true);
+    mpButtonPackageManagers->setEnabled(true);
     mpActionIRC->setEnabled(true);
 
     if (!mpToolBarReplay) {
@@ -3891,8 +3888,9 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
     }
 }
 
-void mudlet::setAppearance(const Appearance state)
+void mudlet::setAppearance(const Appearance state, const bool& loading)
 {
+    // FIXME: use loading param if (mDarkTheme == state && !loading) { return;
     bool enableDarkTheme = false;
     if (state == Appearance::dark || state == Appearance::system && desktopInDarkMode()) {
         enableDarkTheme = true;
@@ -4476,6 +4474,7 @@ void mudlet::activateProfile(Host* pHost)
         mpCurrentActiveHost = pHost;
         updateDiscordNamedIcon();
         dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
+        pHost->updateDisplayDimensions();
     }
 }
 

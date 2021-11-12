@@ -52,6 +52,7 @@
 
 #include "pre_guard.h"
 #include <chrono>
+#include <QtConcurrent>
 #include <QDialog>
 #include <QtUiTools>
 #include <QNetworkProxy>
@@ -502,6 +503,36 @@ void Host::loadPackageInfo()
     }
 }
 
+void Host::createModuleBackup(const QString &filename, const QString &saveName)
+{
+    QString time = QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss");
+    QFile::copy(filename, saveName + time);
+}
+
+void Host::writeModule(const QString &moduleName, const QString &filename)
+{
+    QString xml_filename = filename;
+    if (filename.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
+        xml_filename = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
+    }
+    auto writer = new XMLexport(this);
+    writers.insert(xml_filename, writer);
+    writer->writeModuleXML(moduleName, xml_filename);
+    updateModuleZips(filename, moduleName);
+}
+
+void Host::waitForAsyncXmlSave()
+{
+    // writers and futures are copied to prevent deletion during for loop (which would mean crash)
+    auto myWriters = writers;
+    for (auto& writer : myWriters) {
+        auto myFutures = writer->saveFutures;
+        for (auto& future : myFutures) {
+            future.waitForFinished();
+        }
+    }
+}
+
 void Host::saveModules(int sync, bool backup)
 {
     QMapIterator<QString, QStringList> it(modulesToWrite);
@@ -515,33 +546,25 @@ void Host::saveModules(int sync, bool backup)
         it.next();
         QStringList entry = it.value();
         QString moduleName = it.key();
-        QString filename_xml = entry[0];
+        QString filename = entry[0];
 
         if (backup) {
-            QString time = QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss");
-            savePathDir.rename(filename_xml, savePath + moduleName + time); //move the old file, use the key (module name) as the file
+            createModuleBackup(filename, savePath + moduleName);
         }
-
-        auto writer = new XMLexport(this);
-        writers.insert(filename_xml, writer);
-        writer->writeModuleXML(moduleName, filename_xml);
-
+        writeModule(moduleName, filename);
         if (entry[1].toInt()) {
             mModulesToSync << moduleName;
         }
     }
     modulesToWrite.clear();
-
+    // reload, or queue module reload for when xml is ready
     if (sync) {
-        connect(this, &Host::profileSaveFinished, this, &Host::slot_reloadModules);
+        reloadModules();
     }
 }
 
-void Host::slot_reloadModules()
+void Host::reloadModules()
 {
-    // update the module zips
-    updateModuleZips();
-
     //synchronize modules across sessions
     for (auto otherHost : mudlet::self()->getHostManager()) {
         if (otherHost == this || !otherHost->mpConsole) {
@@ -563,59 +586,62 @@ void Host::slot_reloadModules()
             for (int i = 0, total = moduleList.size(); i < total; ++i) {
                 QString moduleName = moduleList[i];
                 if (mModulesToSync.contains(moduleName)) {
-                    otherHost->reloadModule(moduleName);
+                    otherHost->reloadModule(moduleName, mHostName);
                 }
             }
         }
     }
-
-    // disconnect the one-time event so we're not always reloading modules whenever a profile save happens
     mModulesToSync.clear();
-    QObject::disconnect(this, &Host::profileSaveFinished, this, &Host::slot_reloadModules);
 }
 
-void Host::updateModuleZips() const
+void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
 {
-    QMapIterator<QString, QStringList> it(modulesToWrite);
-    while (it.hasNext()) {
-        it.next();
-        QStringList entry = it.value();
-        QString moduleName = it.key();
-        QString filename_xml = entry[0];
+    if (!(zipName.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || zipName.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive))) {
+        return;
+    }
+    zip* zipFile = nullptr;
+    QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
+    QString filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
+    int err = 0;
+    zipFile = zip_open(zipName.toStdString().c_str(), ZIP_CREATE, &err);
+    if (!zipFile) {
+        return;
+    }
+    QDir packageDir = QDir(packagePathName);
+    if (!packageDir.exists()) {
+        packageDir.mkpath(packagePathName);
+    }
+    int xmlIndex = zip_name_locate(zipFile, QStringLiteral("%1.xml").arg(moduleName).toUtf8().constData(), ZIP_FL_ENC_GUESS);
+    zip_delete(zipFile, xmlIndex);
+    struct zip_source* s = zip_source_file(zipFile, filename_xml.toUtf8().constData(), 0, -1);
+    if (mudlet::debugMode && s == nullptr) {
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to open xml file \"%1\" inside module %2 to update it. Error message was: \"%3\".",
+                                                         // Intentional comment to separate arguments
+                                                         "This error message will appear when the xml file inside the module zip cannot be updated for some reason.")
+                                                              .arg(filename_xml, zipName, zip_strerror(zipFile));
+    }
+    err = zip_file_add(zipFile, QStringLiteral("%1.xml").arg(moduleName).toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE);
 
-        QString zipName;
-        zip* zipFile = nullptr;
-        if (filename_xml.endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || filename_xml.endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
-            QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
-            filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
-            int err;
-            zipFile = zip_open(entry[0].toStdString().c_str(), ZIP_CREATE, &err);
-            zipName = filename_xml;
-            QDir packageDir = QDir(packagePathName);
-            if (!packageDir.exists()) {
-                packageDir.mkpath(packagePathName);
-            }
+    if (zipFile) {
+        err = zip_close(zipFile);
+    }
 
-            struct zip_source* s = zip_source_file(zipFile, filename_xml.toStdString().c_str(), 0, 0);
-            err = zip_add(zipFile, QString(moduleName + ".xml").toStdString().c_str(), s);
-            //FIXME: error checking
-            if (zipFile) {
-                err = zip_close(zipFile);
-                //FIXME: error checking
-            }
-        }
+    if (mudlet::debugMode && err == -1) {
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to save \"%1\" to module \"%2\". Error message was: \"%3\".",
+                                                         // Intentional comment to separate arguments
+                                                         "This error message will appear when a module is saved as package but cannot be done for some reason.")
+                                                              .arg(moduleName, zipName, zip_strerror(zipFile));
     }
 }
 
-
-void Host::reloadModule(const QString& reloadModuleName)
+void Host::reloadModule(const QString& syncModuleName, const QString& syncingFromHost)
 {
     //Wait till profile is finished saving
-    if (currentlySavingProfile()) {
+    if (syncingFromHost.isEmpty() && currentlySavingProfile()) {
         //create a dummy object to singleshot connect (disconnect/delete after execution)
         QObject *obj = new QObject(this);
         connect(this, &Host::profileSaveFinished, obj, [=](){
-            reloadModule(reloadModuleName);
+            reloadModule(syncModuleName);
             obj->deleteLater();
         });
         return;
@@ -626,10 +652,25 @@ void Host::reloadModule(const QString& reloadModuleName)
         moduleIterator.next();
         const auto& moduleName = moduleIterator.key();
         const auto& moduleLocation = moduleIterator.value()[0];
-
-        if (moduleName == reloadModuleName) {
-            uninstallPackage(moduleName, 2);
-            installPackage(moduleLocation, 2);
+        QString fileName = moduleLocation;
+        if (moduleName == syncModuleName) {
+            if (!syncingFromHost.isEmpty() && (fileName.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive) || fileName.endsWith(QStringLiteral(".mpackage"), Qt::CaseInsensitive))) {
+                uninstallPackage(moduleName, 2);
+                fileName = mudlet::getMudletPath(mudlet::profilePackagePathFileName, syncingFromHost, moduleName);
+                installPackage(fileName, 2);
+                QStringList moduleEntry;
+                moduleEntry << moduleLocation;
+                moduleEntry << QStringLiteral("0");
+                mInstalledModules[moduleName] = moduleEntry;
+                //Write the module to the own profile directory to save it on restart
+                fileName = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
+                auto writer = new XMLexport(this);
+                writers.insert(fileName, writer);
+                writer->writeModuleXML(moduleName, fileName);
+            } else {
+                uninstallPackage(moduleName, 2);
+                installPackage(fileName, 2);
+            }
         }
     }
     //iterate through mInstalledModules again and reset the entry flag to be correct.
@@ -650,12 +691,6 @@ std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const
 
     if (mInstalledModules.contains(moduleName)) {
         QStringList moduleStringList = mInstalledModules[moduleName];
-        QFileInfo moduleFile = moduleStringList[0];
-        QStringList accepted_suffix;
-        accepted_suffix << "xml" << "trigger";
-        if (!accepted_suffix.contains(moduleFile.suffix().trimmed(), Qt::CaseInsensitive)) {
-            return {false, QStringLiteral("module has to be a .xml file")};
-        }
         moduleStringList[1] = value;
         mInstalledModules[moduleName] = moduleStringList;
         return {true, QString()};
@@ -774,7 +809,15 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     auto writer = new XMLexport(this);
     writers.insert(QStringLiteral("profile"), writer);
     writer->exportHost(filename_xml);
-    saveModules(syncModules ? 1 : 0, saveName == QStringLiteral("autosave") ? false : true);
+    mWritingHostAndModules = true;
+    auto watcher = new QFutureWatcher<void>;
+    mModuleFuture = QtConcurrent::run([=]() {
+        //wait for the host xml to be ready before starting to sync modules
+        waitForAsyncXmlSave();
+        saveModules(syncModules ? 1 : 0, saveName != QStringLiteral("autosave"));
+    });
+    QObject::connect(watcher, &QFutureWatcher<void>::finished, this, [=]() { mWritingHostAndModules = false; });
+    watcher->setFuture(mModuleFuture);
     return std::make_tuple(true, filename_xml, QString());
 }
 
@@ -798,7 +841,7 @@ void Host::xmlSaved(const QString& xmlName)
 {
     if (writers.contains(xmlName)) {
         auto writer = writers.take(xmlName);
-        delete writer;
+        writer->deleteLater();
     }
 
     if (writers.empty()) {
@@ -808,15 +851,14 @@ void Host::xmlSaved(const QString& xmlName)
 
 bool Host::currentlySavingProfile()
 {
-    return !writers.empty();
+    return (mWritingHostAndModules || !writers.empty());
 }
 
 void Host::waitForProfileSave()
 {
-    for (auto& writer : writers) {
-        for (auto& future: writer->saveFutures) {
-            future.waitForFinished();
-        }
+    waitForAsyncXmlSave();
+    if (mModuleFuture.isRunning()) {
+        mModuleFuture.waitForFinished();
     }
 }
 
@@ -1021,9 +1063,9 @@ void Host::startSpeedWalk(int sourceRoom, int targetRoom)
     mLuaInterpreter.call(f, n);
 }
 
-void Host::adjustNAWS()
+void Host::updateDisplayDimensions()
 {
-    mTelnet.setDisplayDimensions();
+    mTelnet.checkNAWS();
 }
 
 void Host::stopAllTriggers()
@@ -1821,6 +1863,7 @@ bool Host::installPackage(const QString& fileName, int module)
         mpPackageManager->resetPackageTable();
     }
 
+
     return true;
 }
 
@@ -1874,7 +1917,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
             return false;
         }
     }
-    //module == 2 seems to be only used for reloading/syncing, which doesn't work for mpackages anyway
+    //module == 2 seems to be only used for reloading/syncing
     //No need to remove package info as it can cause the info to be lost
     if (module != 2) {
         removePackageInfo(packageName, module > 0);
