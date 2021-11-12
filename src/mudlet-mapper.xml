@@ -5460,14 +5460,6 @@ end</script>
 						<regex>(?i)^manselink (\w+) (\w+)$</regex>
 					</Alias>
 					<Alias isActive="yes" isFolder="no">
-						<name>Astral jumping boots</name>
-						<script>mmp.astroboots(matches[2]:lower()=="on")
-mmp.echo("&lt;yellow&gt;Astral jumping "..(matches[2]:lower()=="on" and "enabled" or "disabled").."!")</script>
-						<command></command>
-						<packageName></packageName>
-						<regex>(?i)astroboots (on|off)$</regex>
-					</Alias>
-					<Alias isActive="yes" isFolder="no">
 						<name>Wildnodes toggle</name>
 						<script>if mmp.game ~= "lusternia" then return end
 mmp.wildnodes(matches[2]:lower()=="on")
@@ -5671,7 +5663,7 @@ mmp.lagtable =
     [4] = {description = "Bad. Terrible. Terribad.", time = 5},
     [5] = {description = "Carrier Pigeon", time = 10},
   }
-local newversion = "21.11.1"
+local newversion = "21.11.2"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo("Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.")
@@ -5795,6 +5787,7 @@ function mmp.startup()
   
   --Lusternia other travel things
   private_settings["compass"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use the Compass of the Basin?", nil, {lusternia = true})
+  private_settings["astrojump"] = createOption(false, mmp.astroboots, {"boolean"}, "Use Astral Jumping boots?", nil, {lusternia = true})
   
   
   --I have no idea what this does tbh
@@ -10689,67 +10682,89 @@ end</script>
 					<Script isActive="yes" isFolder="no">
 						<name>Astral utilities</name>
 						<packageName></packageName>
-						<script>local astralExits = {
-	{5079,5175,"n"},
-	{4072,5065,"w"},
-	{5088, 5132, "e"},
-	{5145, 5176, "s"},
-	{5138, 5146, "e"},
-	{5158, 5192, "s"},
-	{5152, 5041, "e"},
-	{5031, 5042, "e"},
-	{5022, 5131, "n"},
-	{5116, 5198, "w"},
-	{5130, 5096, "e"},
-	{5089, 5058, "n"},
-	{5102, 5115, "e"},
-	{5111, 5159, "e"},	
-	{5103, 5071, "n"},
-	{5059, 5053, "w"},
-	{5187, 5169, "w"},
-	{5190, 5204, "e"},
-	{5065,5072,"e"},
-}
-local mirrorExits = {
-	n="s",
-	ne="sw",
-	e="w",
-	se="nw",
-	s="n",
-	sw="ne",
-	w="e",
-	nw="se",
-	u="d",
-	d="u",
-	out="in",
-	["in"]="out",
-}
-function mmp.astroboots(create)
-	if mmp.game ~= "lusternia" then return end
-	for k, v in pairs(astralExits) do
-		if create then
-			addSpecialExit(v[1],v[2],"astrojump")
-			setExitWeight(v[1],"astrojump",5)
-			addSpecialExit(v[2],v[1],"astrojump")
-			setExitWeight(v[2],"astrojump",5)
-		else
-			removeSpecialExit(v[1],"astrojump")
-			removeSpecialExit(v[2],"astrojump")
-		end
-	end
+						<script>local astralExits =
+  {
+    {5079, 5175, "n"},
+    {5072, 5065, "w"},
+    {5088, 5132, "e"},
+    {5145, 5176, "s"},
+    {5138, 5146, "e"},
+    {5158, 5192, "s"},
+    {5152, 5041, "e"},
+    {5031, 5042, "e"},
+    {5022, 5131, "n"},
+    {5116, 5198, "w"},
+    {5130, 5096, "e"},
+    {5089, 5058, "n"},
+    {5102, 5115, "e"},
+    {5111, 5159, "e"},
+    {5103, 5071, "n"},
+    {5059, 5053, "w"},
+    {5187, 5169, "w"},
+    {5190, 5204, "e"},
+    {5065, 5072, "e"},
+    {45333, 5093, "u"},
+    {45334, 5113, "u"},
+    {45356, 5075, "u"},
+    {45335, 5171, "u"},
+    {45357, 5066, "u"},
+    {45329, 5156, "u"},
+    {45330, 5201, "u"},
+    {45331, 5121, "u"},
+    {45324, 5055, "u"},
+    {45354, 5177, "u"},
+    {45325, 5024, "u"},
+    {45355, 5133, "u"},
+  }
+local mirror =
+  {
+    n = "s",
+    ne = "sw",
+    e = "w",
+    se = "nw",
+    s = "n",
+    sw = "ne",
+    w = "e",
+    nw = "se",
+    u = "d",
+    d = "u",
+    out = "in",
+    ["in"] = "out",
+  }
+
+function mmp.astroboots()
+  if mmp.game ~= "lusternia" then
+    return
+  end
+  local option = mmp.settings.astrojump
+  mmp.echo("&lt;green&gt;" .. (option and "Set up" or "Removed") .. " &lt;white&gt;Astrojump &lt;green&gt;exits")
+  local exitString = [[script:if gmcp.Room.Info.exits.%s then send("%s", false) else send("astrojump", false) end]]
+  for k, v in pairs(astralExits) do
+    if option then
+      addSpecialExit(v[1], v[2], string.format(exitString, v[3], v[3]))
+      addSpecialExit(v[2], v[1], string.format(exitString, mirror[v[3]], mirror[v[3]]))
+    else
+      removeSpecialExit(v[1], "astrojump")
+      removeSpecialExit(v[2], "astrojump")
+      removeSpecialExit(v[1], string.format(exitString, v[3], v[3]))
+      removeSpecialExit(v[2], string.format(exitString, mirror[v[3]], mirror[v[3]]))
+    end
+  end
 end
 
 function mmp.wildnodes(create)
-	if mmp.game ~= "lusternia" then return end
-	for k, v in pairs(astralExits) do
-		if create then
-			setExit(v[1],v[2],v[3])
-			setExit(v[2],v[1],mirrorExits[v[3]])
-		else
-			setExit(v[1],-1,v[3])
-			setExit(v[2],-1,mirrorExits[v[3]])
-		end
-	end
+  if mmp.game ~= "lusternia" then
+    return
+  end
+  for k, v in pairs(astralExits) do
+    if create then
+      setExit(v[1], v[2], v[3])
+      setExit(v[2], v[1], mirrorExits[v[3]])
+    else
+      setExit(v[1], -1, v[3])
+      setExit(v[2], -1, mirrorExits[v[3]])
+    end
+  end
 end</script>
 						<eventHandlerList />
 					</Script>
@@ -10964,6 +10979,20 @@ function mmp.lusterniaInBasin()
   return basinAreas[gmcp.Room.Info.area] or false
 end</script>
 						<eventHandlerList />
+					</Script>
+					<Script isActive="yes" isFolder="no">
+						<name>mmp.lusterniaMapUpdated</name>
+						<packageName></packageName>
+						<script>function mmp.lusterniaMapUpdated()
+  if mmp.game == "lusternia" then
+    mmp.lockPathways()
+    mmp.astroboots()
+  end
+end</script>
+						<eventHandlerList>
+							<string>mmapper updated map</string>
+							<string>sysMapDownloadEvent</string>
+						</eventHandlerList>
 					</Script>
 				</Script>
 				<Script isActive="yes" isFolder="no">
