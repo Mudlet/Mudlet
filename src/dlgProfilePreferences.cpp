@@ -944,6 +944,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         spinBox_playerRoomInnerDiameter->setEnabled(pHost->mpMap->mPlayerRoomStyle != 0);
         setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
         setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
+
+        connect(checkBox_enablMapDeleteButton, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleMapDeleteButton);
+        connect(pushButton_deleteMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_deleteMap);
         connect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changePlayerRoomStyle);
         connect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomPrimaryColor);
         connect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomSecondaryColor);
@@ -4038,4 +4041,46 @@ void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
     }
 
     qWarning() << "unknown link clicked in profile preferences:" << link;
+}
+
+void dlgProfilePreferences::slot_toggleMapDeleteButton(const bool state)
+{
+    // Enable/Disable map deletion button:
+    pushButton_deleteMap->setEnabled(state);
+}
+
+void dlgProfilePreferences::slot_deleteMap()
+{
+    Host* pHost = mpHost;
+    if (!pHost || !pHost->mpMap) {
+        return;
+    }
+
+    // Disable the button, but set it to be down until process is complete
+    pushButton_deleteMap->setEnabled(false);
+    pushButton_deleteMap->setCheckable(true);
+    pushButton_deleteMap->setChecked(true);
+
+    // Move the focus to the load map button, otherwise it will jump down to
+    // the next button in the tab stop sequence (Copy map to other profiles)
+    // which is not really appropriate:
+    pushButton_loadMap->setFocus(Qt::OtherFocusReason);
+
+    label_mapFileActionResult->show();
+    label_mapFileActionResult->setText(tr("Deleting map - please wait..."));
+    qApp->processEvents(); // Allow the above message to show up when erasing big maps
+    pHost->mpMap->mapClear();
+    pHost->mpMap->update();
+
+    // Reset the button but leave it disabled
+    pushButton_deleteMap->setChecked(false);
+    pushButton_deleteMap->setCheckable(false);
+
+    // Also reset the checkBox that enables the button:
+    checkBox_enablMapDeleteButton->setChecked(false);
+
+    label_mapFileActionResult->setText(tr("Deleted map."));
+    qApp->processEvents(); // Allow the above message to show up when erasing big maps
+
+    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 }
