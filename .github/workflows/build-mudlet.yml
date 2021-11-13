@@ -352,7 +352,7 @@ jobs:
     - name: Run Lua tests
       if: matrix.run_tests == 'true'
       timeout-minutes: 5
-      uses: GabrielBB/xvfb-action@v1.5
+      uses: GabrielBB/xvfb-action@v1.6
       with:
         run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
