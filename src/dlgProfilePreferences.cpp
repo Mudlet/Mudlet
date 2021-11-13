@@ -48,6 +48,7 @@
 #include <QTableWidget>
 #include <QToolBar>
 #include <QUiLoader>
+#include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
@@ -272,6 +273,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
     connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
     connect(pMudlet, &mudlet::signal_enableDarkThemeChanged, this, &dlgProfilePreferences::slot_changeEnableDarkTheme);
+    connect(enableDarkTheme, &QCheckBox::stateChanged, this, &dlgProfilePreferences::slot_changeEnableDarkTheme);
 
     generateDiscordTooltips();
 
@@ -338,6 +340,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     }
 
     setupPasswordsMigration();
+
+    connect(label_darkEditorPrompt, &QLabel::linkActivated, this, &dlgProfilePreferences::slot_enableDarkEditor);
+    label_darkEditorPrompt->hide();
 }
 
 void dlgProfilePreferences::setupPasswordsMigration()
@@ -939,6 +944,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         spinBox_playerRoomInnerDiameter->setEnabled(pHost->mpMap->mPlayerRoomStyle != 0);
         setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
         setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
+
+        connect(checkBox_enablMapDeleteButton, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleMapDeleteButton);
+        connect(pushButton_deleteMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_deleteMap);
         connect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changePlayerRoomStyle);
         connect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomPrimaryColor);
         connect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomSecondaryColor);
@@ -2774,7 +2782,6 @@ void dlgProfilePreferences::slot_save_and_exit()
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
-    pMudlet->setDarkTheme(enableDarkTheme->isChecked());
 
     mudlet::self()->mDiscord.UpdatePresence();
 
@@ -3078,6 +3085,8 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                         QObject::connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
                             if (future.result()) {
                                 populateThemesList();
+
+                                emit signal_themeUpdateCompleted();
                             }
 
                             theme_download_label->hide();
@@ -3811,13 +3820,13 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
     label_languageChangeWarning->show();
 }
 
-// This slot is called when the QComboBox for enabling DarkTheme
-// is changed by the user.
 void dlgProfilePreferences::slot_changeEnableDarkTheme(const bool state)
 {
     if (enableDarkTheme->isChecked() != state) {
         enableDarkTheme->setChecked(state);
     }
+
+    mudlet::self()->setDarkTheme(state);
 }
 
 // This slot is called when the mudlet singleton tells everything that the
@@ -4002,4 +4011,76 @@ void dlgProfilePreferences::slot_setPostingTimeout(const double timeout)
     }
 
     pHost->mTelnet.setPostingTimeout(qRound(1000.0 * timeout));
+}
+
+void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
+{
+    if (link == QStringLiteral("dark-code-editor")) {
+        const auto darkTheme = QStringLiteral("Monokai");
+
+        label_darkEditorPrompt->hide();
+
+        // switch to code editor tab
+        tabWidget->setCurrentIndex(3);
+
+        auto monokaiIndex = code_editor_theme_selection_combobox->findText(darkTheme);
+        if (monokaiIndex != -1) {
+            code_editor_theme_selection_combobox->setCurrentIndex(monokaiIndex);
+            return;
+        }
+
+        // in case no theme index is available yet, so it as soon as one is available
+        KDToolBox::connectSingleShot(this, &dlgProfilePreferences::signal_themeUpdateCompleted,  [=]() {
+            auto monokaiIndex = code_editor_theme_selection_combobox->findText(darkTheme);
+            if (monokaiIndex != -1) {
+                code_editor_theme_selection_combobox->setCurrentIndex(monokaiIndex);
+            }
+        });
+
+        return;
+    }
+
+    qWarning() << "unknown link clicked in profile preferences:" << link;
+}
+
+void dlgProfilePreferences::slot_toggleMapDeleteButton(const bool state)
+{
+    // Enable/Disable map deletion button:
+    pushButton_deleteMap->setEnabled(state);
+}
+
+void dlgProfilePreferences::slot_deleteMap()
+{
+    Host* pHost = mpHost;
+    if (!pHost || !pHost->mpMap) {
+        return;
+    }
+
+    // Disable the button, but set it to be down until process is complete
+    pushButton_deleteMap->setEnabled(false);
+    pushButton_deleteMap->setCheckable(true);
+    pushButton_deleteMap->setChecked(true);
+
+    // Move the focus to the load map button, otherwise it will jump down to
+    // the next button in the tab stop sequence (Copy map to other profiles)
+    // which is not really appropriate:
+    pushButton_loadMap->setFocus(Qt::OtherFocusReason);
+
+    label_mapFileActionResult->show();
+    label_mapFileActionResult->setText(tr("Deleting map - please wait..."));
+    qApp->processEvents(); // Allow the above message to show up when erasing big maps
+    pHost->mpMap->mapClear();
+    pHost->mpMap->update();
+
+    // Reset the button but leave it disabled
+    pushButton_deleteMap->setChecked(false);
+    pushButton_deleteMap->setCheckable(false);
+
+    // Also reset the checkBox that enables the button:
+    checkBox_enablMapDeleteButton->setChecked(false);
+
+    label_mapFileActionResult->setText(tr("Deleted map."));
+    qApp->processEvents(); // Allow the above message to show up when erasing big maps
+
+    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 }

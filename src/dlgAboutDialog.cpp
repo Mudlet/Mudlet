@@ -909,6 +909,10 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     QString QtKeyChainHeader(tr("<h2><u>QtKeyChain - Platform-independent Qt API for storing passwords securely</u></h2>"
                                  "<h3>Copyright © 2011-2019 Frank Osterfeld &lt;frank.osterfeld@gmail.com&gt;.</h3>"));
 
+    QString SingleConnectHeader(tr("<h2><u>singleshot_connect.h - part of KDToolBox</u><br>(https://github.com/KDAB/KDToolBox).</h2>"
+                                   "<h3>Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &lt;info@kdab.comF&gt;.</h3>"));
+
+
     // Now start to assemble the fragments above:
     QStringList license_3rdParty_texts;
     license_3rdParty_texts.append(qsl("<html>%1<body>%2<hr>")
@@ -998,6 +1002,10 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                   .arg(QtKeyChainHeader,                       // 35 - QtKeyChain header - translatable
                                        BSD2Clause_Body                         // 36 - QtKeyChain body BSD2 ("AUTHOR") - not translatable
                                        .arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR"))));
+
+    license_3rdParty_texts.append(qsl("<hr>%37%38")
+                                  .arg(SingleConnectHeader,                    // 37 - singleshot_connect header - translatable
+                                       MIT_Body));                             // 38 - singleshot_connect body MIT - not translatable
 
     license_3rdParty_texts.append(qsl("</body></html>"));
 

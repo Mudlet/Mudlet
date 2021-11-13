@@ -256,7 +256,7 @@ mudlet::mudlet()
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
     if (mDarkTheme) {
-        setDarkTheme(mDarkTheme);
+        setDarkTheme(mDarkTheme, true);
     }
     if (QStringList{"windowsvista", "macintosh"}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
         qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - QPushButton styling fix applied!";
@@ -3861,8 +3861,15 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
         emit signal_showIconsOnMenusChanged(state);
     }
 }
-void mudlet::setDarkTheme(const bool& state)
+
+// during Mudlet load, darktheme will already be set to 'true' -
+// so pass a separate flag to override the state check
+void mudlet::setDarkTheme(const bool& state, const bool& loading)
 {
+    if (mDarkTheme == state && !loading) {
+        return;
+    }
+
     if (state) {
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         qApp->setStyle(new DarkTheme);
