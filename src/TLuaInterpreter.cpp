@@ -16071,10 +16071,6 @@ int TLuaInterpreter::deleteMap(lua_State* L)
     }
 
     host.mpMap->mapClear();
-    // We do not normally produce an on-screen message for Lua API actions but
-    // this function might confuse the user if it is done from a script/package
-    // without them knowing about it:
-    host.postMessage(tr("[  OK  ]  - Any existing map and its data has been destroyed by a Lua function call."));
 
     // Also cause any displayed map to reset:
     updateMap(L);
