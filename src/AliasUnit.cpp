@@ -232,7 +232,7 @@ int AliasUnit::getNewID()
 bool AliasUnit::processDataStream(const QString& data)
 {
     TLuaInterpreter* Lua = mpHost->getLuaInterpreter();
-    Lua->set_lua_string(QStringLiteral("command"), data);
+    Lua->set_lua_string(qsl("command"), data);
     bool state = false;
     //Using copy fixes https://github.com/Mudlet/Mudlet/issues/4297
     auto copyOfNodeList = mAliasRootNodeList;
@@ -359,9 +359,9 @@ QString AliasUnit::assembleReport()
         }
     }
     QStringList msg;
-    msg << QStringLiteral("Aliases current total: ") << QString::number(statsAliasTotal) << QStringLiteral("\n")
-        << QStringLiteral("tempAliases current total: ") << QString::number(statsTempAliases) << QStringLiteral("\n")
-        << QStringLiteral("active Aliases: ") << QString::number(statsActiveAliases) << QStringLiteral("\n");
+    msg << qsl("Aliases current total: ") << QString::number(statsAliasTotal) << qsl("\n")
+        << qsl("tempAliases current total: ") << QString::number(statsTempAliases) << qsl("\n")
+        << qsl("active Aliases: ") << QString::number(statsActiveAliases) << qsl("\n");
         /*<< "active Aliases max this session: " << QString::number(statsActiveAliasesMax) << "\n"
         << "active Aliases min this session: " << QString::number(statsActiveAliasesMin) << "\n"
         << "active Aliases average this session: " << QString::number(statsActiveAliasesAverage) << "\n"*/

@@ -115,9 +115,9 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     // than that in the initialisation list so that it is processed as a change
     // to set up the initial encoder
     encodingChanged("UTF-8");
-    termType = QStringLiteral("Mudlet " APP_VERSION);
+    termType = qsl("Mudlet " APP_VERSION);
     if (QByteArray(APP_BUILD).trimmed().length()) {
-        termType.append(QStringLiteral(APP_BUILD));
+        termType.append(qsl(APP_BUILD));
     }
 
     command = "";
@@ -332,7 +332,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
             // output in cTelnet::sendData(...)
             mEncoding.clear();
             if (saveValue) {
-                mpHost->writeProfileData(QStringLiteral("encoding"), reportedEncoding);
+                mpHost->writeProfileData(qsl("encoding"), reportedEncoding);
             }
         }
     } else if (!(mAcceptableEncodings.contains(newEncoding) || mAcceptableEncodings.contains("M_" + newEncoding))) {
@@ -363,7 +363,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
     } else if (mEncoding != newEncoding && ("M_" + mEncoding) != newEncoding) {
         encodingChanged(newEncoding);
         if (saveValue) {
-            mpHost->writeProfileData(QStringLiteral("encoding"), QLatin1String(mEncoding));
+            mpHost->writeProfileData(qsl("encoding"), QLatin1String(mEncoding));
         }
     }
 
@@ -477,7 +477,7 @@ void cTelnet::handle_socket_signal_connected()
     } else {
         msg = tr("[ INFO ]  - A connection has been established successfully.");
     }
-    msg.append(QStringLiteral("\n    \n    "));
+    msg.append(qsl("\n    \n    "));
     postMessage(msg);
     QString func = "onConnect";
     QString nothing = "";
@@ -489,7 +489,7 @@ void cTelnet::handle_socket_signal_connected()
     emit signal_connected(mpHost);
 
     TEvent event {};
-    event.mArgumentList.append(QStringLiteral("sysConnectionEvent"));
+    event.mArgumentList.append(qsl("sysConnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
 }
@@ -506,7 +506,7 @@ void cTelnet::handle_socket_signal_disconnected()
 
     emit signal_disconnected(mpHost);
 
-    event.mArgumentList.append(QStringLiteral("sysDisconnectionEvent"));
+    event.mArgumentList.append(qsl("sysDisconnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
 
@@ -542,18 +542,18 @@ void cTelnet::handle_socket_signal_disconnected()
             mDontReconnect = true;
 
             for (int a = 0; a < sslErrors.count(); ++a) {
-                reason.append(QStringLiteral("        %1\n").arg(QString(sslErrors.at(a).errorString())));
+                reason.append(qsl("        %1\n").arg(QString(sslErrors.at(a).errorString())));
             }
             QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: ") % reason;
             postMessage(err);
         } else {
 #endif
             if (mDontReconnect) {
-                reason = QStringLiteral("User Disconnected");
+                reason = qsl("User Disconnected");
             } else {
                 reason = socket.errorString();
             }
-            if (reason == QStringLiteral("Error during SSL handshake: error:140770FC:SSL routines:SSL23_GET_SERVER_HELLO:unknown protocol")) {
+            if (reason == qsl("Error during SSL handshake: error:140770FC:SSL routines:SSL23_GET_SERVER_HELLO:unknown protocol")) {
                 reason = tr("Secure connections aren't supported by this game on this port - try turning the option off.");
             }
             QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: ") % reason;
@@ -564,7 +564,7 @@ void cTelnet::handle_socket_signal_disconnected()
     }
 
     if (sslerr) {
-        mudlet::self()->show_options_dialog(QStringLiteral("tab_connection"));
+        mudlet::self()->show_options_dialog(qsl("tab_connection"));
     }
 #endif
 
@@ -635,7 +635,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
 
     if (Q_LIKELY(permitDataSendRequestEvent)) {
         TEvent event{};
-        event.mArgumentList.append(QStringLiteral("sysDataSendRequest"));
+        event.mArgumentList.append(qsl("sysDataSendRequest"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(data);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -947,7 +947,7 @@ QString cTelnet::decodeOption(const unsigned char ch) const
     // Official:
     case 255:   return QLatin1String("EXTENDED_OPTIONS_LIST (255)");
     default:
-        return QStringLiteral("UNKNOWN (%1)").arg(ch, 3);
+        return qsl("UNKNOWN (%1)").arg(ch, 3);
     }
 }
 
@@ -1661,7 +1661,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 // encoding is wrong.
                 QString msg = decodeBytes(payload);
                 QString version = msg.section(QChar::LineFeed, 0);
-                version.remove(QStringLiteral("Client.GUI "), Qt::CaseInsensitive);
+                version.remove(qsl("Client.GUI "), Qt::CaseInsensitive);
                 version.replace(QChar::LineFeed, QChar::Space);
                 version = version.section(QChar::Space, 0, 0);
 
@@ -1670,10 +1670,10 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 QString fileName = packageName;
                 // As this is a file name it must be handled case insensitively to allow
                 // for platforms which may not be case sensitive (MacOs!):
-                packageName.remove(QStringLiteral(".zip"), Qt::CaseInsensitive);
-                packageName.remove(QStringLiteral(".trigger"), Qt::CaseInsensitive);
-                packageName.remove(QStringLiteral(".xml"), Qt::CaseInsensitive);
-                packageName.remove(QStringLiteral(".mpackage"), Qt::CaseInsensitive);
+                packageName.remove(qsl(".zip"), Qt::CaseInsensitive);
+                packageName.remove(qsl(".trigger"), Qt::CaseInsensitive);
+                packageName.remove(qsl(".xml"), Qt::CaseInsensitive);
+                packageName.remove(qsl(".mpackage"), Qt::CaseInsensitive);
                 packageName.remove(QLatin1Char('/'));
                 packageName.remove(QLatin1Char('\\'));
                 packageName.remove(QLatin1Char('.'));
@@ -1681,10 +1681,10 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 if (mpHost->mServerGUI_Package_version != version) {
                     postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
                                    "Uninstalling old version '%2'.")
-                                .arg(version, mpHost->mServerGUI_Package_version != QStringLiteral("-1") ? mpHost->mServerGUI_Package_version : QStringLiteral("(unknown)")));
+                                .arg(version, mpHost->mServerGUI_Package_version != qsl("-1") ? mpHost->mServerGUI_Package_version : qsl("(unknown)")));
                     // uninstall by previous known package name or current if we don't
                     // know it (in case of manual installation)
-                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != QStringLiteral("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
                     mpHost->mServerGUI_Package_version = version;
                 }
 
@@ -1860,7 +1860,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
         }
 
         TEvent event {};
-        event.mArgumentList.append(QStringLiteral("sysTelnetEvent"));
+        event.mArgumentList.append(qsl("sysTelnetEvent"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(QString::number(type));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -1968,7 +1968,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         data = transcodedMsg.section(QChar::LineFeed, 1);
     }
 
-    if (transcodedMsg.startsWith(QStringLiteral("Client.GUI"), Qt::CaseInsensitive)) {
+    if (transcodedMsg.startsWith(qsl("Client.GUI"), Qt::CaseInsensitive)) {
         if (!mpHost->mAcceptServerGUI) {
             return;
         }
@@ -2010,7 +2010,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
                 return;
             }
 
-            auto versionJSON = json.value(QStringLiteral("version"));
+            auto versionJSON = json.value(qsl("version"));
 
             if (versionJSON != QJsonValue::Undefined && !versionJSON.toString().isEmpty()) {
                 version = versionJSON.toString();
@@ -2018,7 +2018,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
                 return;
             }
 
-            auto urlJSON = json.value(QStringLiteral("url"));
+            auto urlJSON = json.value(qsl("url"));
 
             if (urlJSON != QJsonValue::Undefined && !urlJSON.toString().isEmpty()) {
                 url = urlJSON.toString();
@@ -2031,10 +2031,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         QString fileName = packageName;
         // As this is a file name it must be handled case insensitively to allow
         // for platforms which may not be case sensitive (MacOs!):
-        packageName.remove(QStringLiteral(".zip"), Qt::CaseInsensitive);
-        packageName.remove(QStringLiteral(".trigger"), Qt::CaseInsensitive);
-        packageName.remove(QStringLiteral(".xml"), Qt::CaseInsensitive);
-        packageName.remove(QStringLiteral(".mpackage"), Qt::CaseInsensitive);
+        packageName.remove(qsl(".zip"), Qt::CaseInsensitive);
+        packageName.remove(qsl(".trigger"), Qt::CaseInsensitive);
+        packageName.remove(qsl(".xml"), Qt::CaseInsensitive);
+        packageName.remove(qsl(".mpackage"), Qt::CaseInsensitive);
         packageName.remove(QLatin1Char('/'));
         packageName.remove(QLatin1Char('\\'));
         packageName.remove(QLatin1Char('.'));
@@ -2043,10 +2043,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         if (mpHost->mServerGUI_Package_version != version) {
             postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
                            "Uninstalling old version '%2'.")
-                        .arg(version, mpHost->mServerGUI_Package_version != QStringLiteral("-1") ? mpHost->mServerGUI_Package_version : QStringLiteral("(unknown)")));
+                        .arg(version, mpHost->mServerGUI_Package_version != qsl("-1") ? mpHost->mServerGUI_Package_version : qsl("(unknown)")));
             // uninstall by previous known package name or current if we don't
             // know it (in case of manual installation)
-            mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != QStringLiteral("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+            mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
             mpHost->mServerGUI_Package_version = version;
         }
 
@@ -2081,7 +2081,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpHost->processDiscordGMCP(packageMessage, data);
     }
 
-    if (mpHost->mAcceptServerMedia && packageMessage.startsWith(QStringLiteral("Client.Media"), Qt::CaseInsensitive)) {
+    if (mpHost->mAcceptServerMedia && packageMessage.startsWith(qsl("Client.Media"), Qt::CaseInsensitive)) {
         mpHost->mpMedia->parseGMCP(packageMessage, data);
     }
 
@@ -2130,7 +2130,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
     transcodedMsg.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
 
-    if (!transcodedMsg.endsWith(QStringLiteral(")"))) {
+    if (!transcodedMsg.endsWith(qsl(")"))) {
         return;
     } else {
         // Met the MSP standard so far. Remove this last right parenthesis.
@@ -2141,12 +2141,12 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolMSP);
 
-    if (transcodedMsg.startsWith(QStringLiteral("!!SOUND("))) {
+    if (transcodedMsg.startsWith(qsl("!!SOUND("))) {
         mediaData.setMediaType(TMediaData::MediaTypeSound);
-        transcodedMsg.remove(QStringLiteral("!!SOUND("));
-    } else if (transcodedMsg.startsWith(QStringLiteral("!!MUSIC("))) {
+        transcodedMsg.remove(qsl("!!SOUND("));
+    } else if (transcodedMsg.startsWith(qsl("!!MUSIC("))) {
         mediaData.setMediaType(TMediaData::MediaTypeMusic);
-        transcodedMsg.remove(QStringLiteral("!!MUSIC("));
+        transcodedMsg.remove(qsl("!!MUSIC("));
     } else {
         // Does not meet the MSP standard.
         return;

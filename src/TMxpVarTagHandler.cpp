@@ -28,7 +28,7 @@ bool TMxpVarTagHandler::supports(TMxpContext& ctx, TMxpClient& client, MxpTag* t
 {
     Q_UNUSED(ctx)
     Q_UNUSED(client)
-    return tag->isNamed(QStringLiteral("VAR")) || tag->isNamed(QStringLiteral("V"));
+    return tag->isNamed(qsl("VAR")) || tag->isNamed(qsl("V"));
 }
 
 TMxpTagHandlerResult TMxpVarTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
