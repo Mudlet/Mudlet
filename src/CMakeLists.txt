@@ -294,6 +294,7 @@ set(mudlet_HDRS
     TTrigger.h
     TVar.h
     VarUnit.h
+    utils.h
     widechar_width.h
     XMLexport.h
     XMLimport.h)
