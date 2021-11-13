@@ -169,8 +169,6 @@ void TMap::mapClear()
     mCustomEnvColors[271] = mpHost->mLightWhite_2;
     mCustomEnvColors[272] = mpHost->mLightBlack_2;
     roomidToIndex.clear();
-    // Not used:    pixNameTable.clear();
-    // Not used:    pixTable.clear();
     edgeHash.clear();
     locations.clear();
     mMapGraphNeedsUpdate = true;
