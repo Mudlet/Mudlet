@@ -528,7 +528,7 @@ raiseEvent("sysSpeedwalkStopped")</script>
 				<regex>^map stop$</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
-				<name>Toogle Speedwalk Alias</name>
+				<name>Toggle Speedwalk Alias</name>
 				<script>map.toggleSpeedwalk(matches[2])</script>
 				<command></command>
 				<packageName></packageName>
