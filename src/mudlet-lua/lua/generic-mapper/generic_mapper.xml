@@ -2954,7 +2954,7 @@ function map.stopSpeedwalk()
         walking = false
         map.walkDirs, speedWalkDir, speedWalkPath, speedWalkWeight = {}, {}, {}, {}
         raiseEvent("sysSpeedwalkStopped")
-        map.echo("Speedwalking stoped.")
+        map.echo("Speedwalking stopped.")
     else
         map.echo("Not currently speedwalking.")
     end
