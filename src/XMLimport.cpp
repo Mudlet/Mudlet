@@ -825,6 +825,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mMapperUseAntiAlias = attributes().value(QStringLiteral("mMapperUseAntiAlias")) == YES;
     pHost->mMapperShowRoomBorders = readDefaultTrueBool(QStringLiteral("mMapperShowRoomBorders"));
     pHost->mEditorAutoComplete = (attributes().value(QStringLiteral("mEditorAutoComplete")) == YES);
+    pHost->mEditorShowBidi = (attributes().value(QStringLiteral("mEditorShowBidi")) == YES);
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
     pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();

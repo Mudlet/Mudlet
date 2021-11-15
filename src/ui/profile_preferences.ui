@@ -1216,7 +1216,7 @@ you can use it but there could be issues with aligning columns of text</string>
       <attribute name="title">
        <string>Editor</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_tab_codeEditor">
+      <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
         <widget class="QGroupBox" name="groupbox_codeEditorThemeSelection">
          <property name="title">
@@ -1307,6 +1307,25 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QCheckBox" name="checkBox_autocompleteLuaCode">
             <property name="text">
              <string>Autocomplete Lua functions in code editor</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_advancedEditor">
+         <property name="title">
+          <string>Advanced</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout">
+          <item>
+           <widget class="QCheckBox" name="checkBox_showBidi">
+            <property name="toolTip">
+             <string>Shows bidirection Unicode characters which can be used to change the meaning of source code while remaining invisible to the eye</string>
+            </property>
+            <property name="text">
+             <string>Show invisible Unicode control characters</string>
             </property>
            </widget>
           </item>
