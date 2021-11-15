@@ -59,7 +59,7 @@ on_failure:
 - powershell "Push-AppveyorArtifact ./verbose_output.log"
 - echo "Build failed - see verbose_output.log artifact upload for more information."
 
- on successful build we may need to use the after_build stage in order to have
+# on successful build we may need to use the after_build stage in order to have
 # the produced files be made available as a "artifact" - at present it makes
 # sure that all the needed files are in the C:\\projects\\mudlet\\package dir:
 after_build:
