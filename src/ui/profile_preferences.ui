@@ -1318,7 +1318,7 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>Advanced</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout">
+         <layout class="QVBoxLayout" name="verticalLayout_groupBox_advancedEditor">
           <item>
            <widget class="QCheckBox" name="checkBox_showBidi">
             <property name="toolTip">
