@@ -177,6 +177,12 @@ void TMap::mapClear()
     mUserData.clear();
     // mSaveVersion is not reset - so that any new Mudlet map file saves are to
     // whatever version was previously set/deduced
+
+    // Must also reset the mapper area selection control to reflect that it now
+    // only has the "Default Area" after TRoomDB::clearMapDB() has been run.
+    if (mpMapper) {
+        mpMapper->updateAreaComboBox();
+    }
 }
 
 void TMap::logError(QString& msg)
