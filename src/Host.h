@@ -507,6 +507,7 @@ public:
     int mWrapIndentCount;
 
     bool mEditorAutoComplete;
+    bool mEditorShowBidi = true;
 
     // code editor theme (human-friendly name)
     QString mEditorTheme;
