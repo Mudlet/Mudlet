@@ -300,7 +300,6 @@ public:
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     void show_options_dialog(const QString& tab);
     void setInterfaceLanguage(const QString &languageCode);
-    void setDarkTheme(const bool &state, const bool &loading = false);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     const QLocale& getUserLocale() const { return mUserLocale; }
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
@@ -434,7 +433,15 @@ public:
 
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
-    bool mDarkTheme = false;
+
+    enum Appearance {
+        system = 0,
+        light = 1,
+        dark = 2
+    };
+    Appearance mAppearance = Appearance::system;
+    void setAppearance(Appearance, const bool& loading = false);
+    const bool inDarkMode() { return mDarkMode; };
 
     // mirror everything shown in any console to stdout. Helpful for CI environments
     inline static bool mMirrorToStdOut;
@@ -544,7 +551,7 @@ signals:
     void signal_setTreeIconSize(int);
     void signal_hostCreated(Host*, quint8);
     void signal_hostDestroyed(Host*, quint8);
-    void signal_enableDarkThemeChanged(bool);
+    void signal_appearanceChanged(Appearance);
     void signal_enableFulScreenModeChanged(bool);
     void signal_showMapAuditErrorsChanged(bool);
     void signal_menuBarVisibilityChanged(const controlsVisibility);
@@ -604,6 +611,7 @@ private:
     QString autodetectPreferredLanguage();
     void installModulesList(Host*, QStringList);
     void setupTrayIcon();
+    static bool desktopInDarkMode();
 
     QWidget* mpWidget_profileContainer;
     QHBoxLayout* mpHBoxLayout_profileContainer;
@@ -722,6 +730,10 @@ private:
 
     // Whether multi-view is in effect:
     bool mMultiView;
+
+    // read-only value to see if the interface is light or dark. To set the value,
+    // use setAppearance instead
+    bool mDarkMode = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
