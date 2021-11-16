@@ -2140,7 +2140,7 @@ please wait...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1573"/>
       <source>[ INFO ]  - Ignoring this unlikely map file.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Игнорируется этот маловероятный файл карты.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2579"/>
