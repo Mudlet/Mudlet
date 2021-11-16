@@ -2072,12 +2072,14 @@ void dlgProfilePreferences::loadMap()
         return;
     }
 
-    QString fileName = QFileDialog::getOpenFileName(
-                           this,
-                           tr("Load Mudlet map"),
-                           mapSaveLoadDirectory(pHost),
-                           tr("Mudlet map (*.dat *.json);;Xml map data (*.xml);;Any file (*)",
-                              "Do not change extensions (in braces) as they are used programmatically"));
+    auto loadExtensions (QStringList()
+        <<   tr("Mudlet binary (*.dat)", "Do not change extensions (in braces) as they are used programmatically")
+        <<   tr("Mudlet JSON map (*.json)", "Do not change extensions (in braces) as they are used programmatically")
+        <<   tr("Xml map data (*.xml)", "Do not change extensions (in braces) as they are used programmatically")
+        <<   tr("Any file (*)", "Do not change extensions (in braces) as they are used programmatically")
+    );
+
+    QString fileName = QFileDialog::getOpenFileName(this,tr("Load Mudlet map"),mapSaveLoadDirectory(pHost),loadExtensions.join(";;"));
     if (fileName.isEmpty()) {
         return;
     }
@@ -2119,15 +2121,32 @@ void dlgProfilePreferences::saveMap()
         return;
     }
 
-    QString fileName =
-            QFileDialog::getSaveFileName(this, tr("Save Mudlet map"), mapSaveLoadDirectory(pHost), tr("Mudlet map (*.dat *.json);;", "Do not change the extension text (in braces) - it is needed programmatically!"));
-    if (fileName.isEmpty()) {
+    auto datFilter = tr("Mudlet binary (*.dat)", "Do not change extensions (in braces) as they are used programmatically");
+    auto jsonFilter = tr("Mudlet JSON map (*.json)", "Do not change extensions (in braces) as they are used programmatically");
+    auto saveExtensions (QStringList()
+        << datFilter
+        << jsonFilter
+    );
+
+    QFileDialog dialog(this);
+    dialog.setWindowTitle(tr("Save Mudlet map"));
+    dialog.setDirectory(mapSaveLoadDirectory(pHost));
+    dialog.setNameFilter(saveExtensions.join(";;"));
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDefaultSuffix("dat");
+    connect(&dialog,  &QFileDialog::filterSelected, this, [&dialog, datFilter, jsonFilter](const QString& filter) {
+        if (filter == datFilter) {
+            dialog.setDefaultSuffix("dat");
+        }
+        if (filter == jsonFilter) {
+            dialog.setDefaultSuffix("json");
+        }
+    });
+
+    if (!dialog.exec() || dialog.selectedFiles().isEmpty()) {
         return;
     }
-
-    if (!fileName.endsWith(QStringLiteral(".dat"), Qt::CaseInsensitive) && !fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
-        fileName.append(QStringLiteral(".dat"));
-    }
+    auto fileName = dialog.selectedFiles().first();
 
     label_mapFileActionResult->show();
     label_mapFileActionResult->setText(tr("Saving map - please wait..."));
