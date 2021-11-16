@@ -2468,7 +2468,7 @@ function map.find_me(name, exits, dir, manual)
             map.echo("Room found, ID: " .. room, true)
             return
         else
-            map.echo("Room not found in map database!", false, true)
+            map.echo("Room not found in map database!", not manual and true or false, true)
             return
         end
     end
