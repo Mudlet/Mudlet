@@ -2072,14 +2072,14 @@ void dlgProfilePreferences::loadMap()
         return;
     }
 
-    auto loadExtensions (QStringList()
+    auto loadExtensions(QStringList()
         <<   tr("Mudlet binary (*.dat)", "Do not change extensions (in braces) as they are used programmatically")
         <<   tr("Mudlet JSON map (*.json)", "Do not change extensions (in braces) as they are used programmatically")
         <<   tr("Xml map data (*.xml)", "Do not change extensions (in braces) as they are used programmatically")
-        <<   tr("Any file (*)", "Do not change extensions (in braces) as they are used programmatically")
-    );
+        <<   tr("Any file (*)", "Do not change extensions (in braces) as they are used programmatically"));
 
-    QString fileName = QFileDialog::getOpenFileName(this,tr("Load Mudlet map"),mapSaveLoadDirectory(pHost),loadExtensions.join(";;"));
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet map"), mapSaveLoadDirectory(pHost),
+                                                    loadExtensions.join(";;"));
     if (fileName.isEmpty()) {
         return;
     }
@@ -2123,10 +2123,7 @@ void dlgProfilePreferences::saveMap()
 
     auto datFilter = tr("Mudlet binary (*.dat)", "Do not change extensions (in braces) as they are used programmatically");
     auto jsonFilter = tr("Mudlet JSON map (*.json)", "Do not change extensions (in braces) as they are used programmatically");
-    auto saveExtensions (QStringList()
-        << datFilter
-        << jsonFilter
-    );
+    auto saveExtensions(QStringList() << datFilter << jsonFilter);
 
     QFileDialog dialog(this);
     dialog.setWindowTitle(tr("Save Mudlet map"));
