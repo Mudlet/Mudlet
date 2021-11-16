@@ -825,6 +825,9 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mMapperUseAntiAlias = attributes().value(QStringLiteral("mMapperUseAntiAlias")) == YES;
     pHost->mMapperShowRoomBorders = readDefaultTrueBool(QStringLiteral("mMapperShowRoomBorders"));
     pHost->mEditorAutoComplete = (attributes().value(QStringLiteral("mEditorAutoComplete")) == YES);
+    if (!attributes().hasAttribute("mEditorShowBidi") || (attributes().value(QStringLiteral("mEditorShowBidi")) == YES)) {
+        pHost->mEditorShowBidi = true;
+    }
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
     pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
@@ -1600,8 +1603,14 @@ void XMLimport::readModulesDetailsMap(QMap<QString, QStringList>& map)
                 key = readElementText();
             } else if (name() == "filepath") {
                 entry << readElementText();
-            } else if (name() == "globalSave") {
+            } else if (name() == "zipSync") {
                 entry << readElementText();
+            } else if (name() == "globalSave") {
+                if (entry.size() < 2) {
+                    entry << readElementText();
+                } else {
+                    skipCurrentElement();
+                }
             } else if (name() == "priority") {
                 // The last expected detail for the entry - so store this
                 // completed entry into the QMap

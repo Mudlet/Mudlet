@@ -40,11 +40,11 @@ jobs:
             compiler: clang_64
             qt: '5.14.2'
             deploy: 'deploy'
-          - os: windows-2019
-            buildname: 'windows'
-            triplet: x64-mingw-dynamic
-            # compiler: flag not used in windows pipeline
-            qt: '5.14.2'
+#          - os: windows-2019
+#            buildname: 'windows'
+#            triplet: x64-mingw-dynamic
+#            # compiler: flag not used in windows pipeline
+#            qt: '5.14.2'
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
@@ -352,7 +352,7 @@ jobs:
     - name: Run Lua tests
       if: matrix.run_tests == 'true'
       timeout-minutes: 5
-      uses: GabrielBB/xvfb-action@v1.5
+      uses: GabrielBB/xvfb-action@v1.6
       with:
         run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:

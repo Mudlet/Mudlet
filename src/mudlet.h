@@ -300,7 +300,6 @@ public:
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     void show_options_dialog(const QString& tab);
     void setInterfaceLanguage(const QString &languageCode);
-    void setDarkTheme(const bool &state);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     const QLocale& getUserLocale() const { return mUserLocale; }
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
@@ -328,6 +327,7 @@ public:
     int64_t getPhysicalMemoryTotal();
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     void refreshTabBar();
+    void updateDiscordNamedIcon();
 
     bool firstLaunch = false;
     // Needed to work around a (likely only Windows) issue:
@@ -433,7 +433,15 @@ public:
 
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
-    bool mDarkTheme;
+
+    enum Appearance {
+        system = 0,
+        light = 1,
+        dark = 2
+    };
+    Appearance mAppearance = Appearance::system;
+    void setAppearance(Appearance, const bool& loading = false);
+    const bool inDarkMode() { return mDarkMode; };
 
     // mirror everything shown in any console to stdout. Helpful for CI environments
     inline static bool mMirrorToStdOut;
@@ -474,7 +482,7 @@ public:
                         "<center><a href='http://www.materiamagica.com'>http://www.materiamagica.com</a></center>",
                         ":/materiaMagicaIcon"}},
         {"Realms of Despair", {"realmsofdespair.com", 4000, false, "<center><a href='http://www.realmsofdespair.com/'>http://www.realmsofdespair.com</a></center>", ":/icons/120x30RoDLogo.png"}},
-        {"ZombieMUD", {"zombiemud.org", 23, false, "<center><a href='http://www.zombiemud.org/'>http://www.zombiemud.org</a></center>", ":/icons/zombiemud.png"}},
+        {"ZombieMUD", {"zombiemud.org", 3000, false, "<center><a href='http://www.zombiemud.org/'>http://www.zombiemud.org</a></center>", ":/icons/zombiemud.png"}},
         {"Aetolia", {"aetolia.com", 23, false, "<center><a href='http://www.aetolia.com/'>http://www.aetolia.com</a></center>", ":/icons/aetolia_120_30.png"}},
         {"Imperian", {"imperian.com", 23, false, "<center><a href='http://www.imperian.com/'>http://www.imperian.com</a></center>", ":/icons/imperian_120_30.png"}},
         {"WoTMUD", {"game.wotmud.org", 2224, false, "<center><a href='http://www.wotmud.org/'>Main website</a></center>\n"
@@ -492,6 +500,7 @@ public:
         {"Cleft of Dimensions", {"cleftofdimensions.net", 4354, false, "<center><a href='https://www.cleftofdimensions.net/'>cleftofdimensions.net</a></center>", ":/icons/cleftofdimensions.png"}},
         {"Legends of the Jedi", {"legendsofthejedi.com", 5656, false, "<center><a href='https://www.legendsofthejedi.com/'>legendsofthejedi.com</a></center>", ":/icons/legendsofthejedi_120x30.png"}},
         {"CoreMUD", {"coremud.org", 4020, true, "<center><a href='https://coremud.org/'>coremud.org</a></center>", ":/icons/coremud_icon.jpg"}},
+        {"Multi-Users in Middle-earth", {"mume.org", 4242, true, "<center><a href='https://mume.org/'>mume.org</a></center>", ":/icons/mume.png"}},
     };
     // clang-format on
 
@@ -518,6 +527,7 @@ public slots:
     void slot_close_profile_requested(int);
     void slot_irc();
     void slot_discord();
+    void slot_mudlet_discord();
     void slot_package_manager();
     void slot_package_exporter();
     void slot_module_manager();
@@ -541,7 +551,7 @@ signals:
     void signal_setTreeIconSize(int);
     void signal_hostCreated(Host*, quint8);
     void signal_hostDestroyed(Host*, quint8);
-    void signal_enableDarkThemeChanged(bool);
+    void signal_appearanceChanged(Appearance);
     void signal_enableFulScreenModeChanged(bool);
     void signal_showMapAuditErrorsChanged(bool);
     void signal_menuBarVisibilityChanged(const controlsVisibility);
@@ -601,6 +611,7 @@ private:
     QString autodetectPreferredLanguage();
     void installModulesList(Host*, QStringList);
     void setupTrayIcon();
+    static bool desktopInDarkMode();
 
     QWidget* mpWidget_profileContainer;
     QHBoxLayout* mpHBoxLayout_profileContainer;
@@ -657,6 +668,7 @@ private:
     QPointer<QAction> mpActionFullScreenView;
     QPointer<QAction> mpActionHelp;
     QPointer<QAction> mpActionDiscord;
+    QPointer<QAction> mpActionMudletDiscord;
     QPointer<QAction> mpActionIRC;
     QPointer<QToolButton> mpButtonDiscord;
     QPointer<QAction> mpActionKeys;
@@ -682,7 +694,7 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
-    
+
     QString mDefaultStyle;
 
     // Has default form of "en_US" but can be just an ISO language code e.g. "fr" for french,
@@ -718,6 +730,10 @@ private:
 
     // Whether multi-view is in effect:
     bool mMultiView;
+
+    // read-only value to see if the interface is light or dark. To set the value,
+    // use setAppearance instead
+    bool mDarkMode = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
