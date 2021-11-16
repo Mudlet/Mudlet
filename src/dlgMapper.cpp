@@ -196,7 +196,7 @@ void dlgMapper::updateAreaComboBox()
         return;
     }
 
-    if ( areaNames.count() == ((areaNames.contains(mpMap->getDefaultAreaName()) && !mShowDefaultArea) ? 2 : 1)) {
+    if (areaNames.count() == ((areaNames.contains(mpMap->getDefaultAreaName()) && !mShowDefaultArea) ? 2 : 1)) {
         // IF we have exactly 2 (if we are NOT showing the default area AND the names include it)
         //         OR exactly 1 otherwise
         // THEN
