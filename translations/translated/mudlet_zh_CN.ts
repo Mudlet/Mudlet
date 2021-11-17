@@ -58,13 +58,13 @@
       <location filename="../src/Host.cpp" line="618"/>
       <source>Failed to open xml file &quot;%1&quot; inside module %2 to update it. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when the xml file inside the module zip cannot be updated for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>无法打开并更新模块 %2 中的 xml 文件 &quot;%1&quot;。 错误消息为：&quot;%3&quot;。</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="630"/>
       <source>Failed to save &quot;%1&quot; to module &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when a module is saved as package but cannot be done for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>无法将 &quot;%1&quot; 保存到模块 &quot;%2&quot;。错误信息为：&quot;%3&quot;。</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="915"/>
@@ -554,7 +554,7 @@ please wait...</source>
       <location filename="../src/dlgRoomExits.cpp" line="110"/>
       <location filename="../src/dlgRoomExits.cpp" line="185"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效。如果这样离开，该出口将在点击 &lt;tt&gt;save&lt;/tt&gt; 时删除。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="111"/>
@@ -562,7 +562,7 @@ please wait...</source>
       <location filename="../src/dlgRoomExits.cpp" line="186"/>
       <location filename="../src/dlgRoomExits.cpp" line="190"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation type="unfinished"/>
+      <translation>设置该出口去往的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="119"/>
@@ -6086,13 +6086,13 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="2071"/>
       <source>Mudlet map (*.dat *.json);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet 地图 (*.dat *.json);;Xml 地图数据 (*.xml);;所有文件 (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2115"/>
       <source>Mudlet map (*.dat *.json);;</source>
       <comment>Do not change the extension text (in braces) - it is needed programmatically!</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet 地图 (*.dat *.json);;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2125"/>
@@ -6465,7 +6465,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="231"/>
       <source>(roomID)</source>
       <comment>Placeholder, if no roomID is set for an exit.</comment>
-      <translation type="unfinished"/>
+      <translation>(房间ID)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="232"/>
