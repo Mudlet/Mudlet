@@ -2460,7 +2460,7 @@ function map.find_me(name, exits, dir, manual)
     -- tries to locate the player using the current room name and exits, and if provided, direction of movement
     -- if direction of movement is given, narrows down possibilities using previous room info
     if move ~= "recall" then move_queue = {} end
-    -- find from room hash id
+    -- find from room hash id - map.find_me(nil, nil, nil, true)
     if map.prompt.hash then
         local room = getRoomIDbyHash(map.prompt.hash)
         if room &gt; 0 then
