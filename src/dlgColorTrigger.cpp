@@ -242,37 +242,7 @@ void dlgColorTrigger::slot_setRBGButtonFocus()
 void dlgColorTrigger::slot_grayColorChanged(int sliderValue)
 {
     mGrayAnsiColorNumber = 232 + sliderValue;
-    // clang-format off
-    int value = 128;
-    switch (sliderValue) {
-        case 0:     value =   0; break; //   0.000
-        case 1:     value =  11; break; //  11.087
-        case 2:     value =  22; break; //  22.174
-        case 3:     value =  33; break; //  33.261
-        case 4:     value =  44; break; //  44.348
-        case 5:     value =  55; break; //  55.435
-        case 6:     value =  67; break; //  66.522
-        case 7:     value =  78; break; //  77.609
-        case 8:     value =  89; break; //  88.696
-        case 9:     value = 100; break; //  99.783
-        case 10:    value = 111; break; // 110.870
-        case 11:    value = 122; break; // 121.957
-        case 12:    value = 133; break; // 133.043
-        case 13:    value = 144; break; // 144.130
-        case 14:    value = 155; break; // 155.217
-        case 15:    value = 166; break; // 166.304
-        case 16:    value = 177; break; // 177.391
-        case 17:    value = 188; break; // 188.478
-        case 18:    value = 200; break; // 199.565
-        case 19:    value = 211; break; // 210.652
-        case 20:    value = 222; break; // 221.739
-        case 21:    value = 233; break; // 232.826
-        case 22:    value = 244; break; // 243.913
-        case 23:    value = 255; break; // 255.000
-        default:
-            Q_UNREACHABLE();
-    }
-    // clang-format on
+    int value = (sliderValue - 232) * 10 + 8;
 
     mGrayAnsiColor = QColor(value, value, value);
     label_grayValue->setText(QStringLiteral("[%1]").arg(QString::number(mGrayAnsiColorNumber)));
@@ -399,7 +369,7 @@ void dlgColorTrigger::slot_moreColorsClicked()
     // Used to pull the button down if this slot is called from the constructor:
     buttonBox->button(QDialogButtonBox::Apply)->setChecked(true);
 
-    // Impliment a one-shot action by disabling it once it is pressed:
+    // Implement a one-shot action by disabling it once it is pressed:
     buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
 
     buttonBox->button(QDialogButtonBox::Apply)->setToolTip(tr("All color options are showing."));

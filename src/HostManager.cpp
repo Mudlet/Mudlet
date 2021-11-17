@@ -22,6 +22,7 @@
 
 #include "HostManager.h"
 
+#include "dlgMapper.h"
 #include "mudlet.h"
 
 bool HostManager::deleteHost(const QString& hostname)
@@ -119,6 +120,28 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event, con
 
     for (int validHost : qAsConst(allValidHosts)) {
         hostList.at(validHost)->raiseEvent(event);
+    }
+}
+
+void HostManager::changeAllHostColour(const Host* pHost)
+{
+    if (!pHost) {
+        return;
+    }
+    //change all main and subconsoles color
+    const QList<QSharedPointer<Host>> hostList = mHostPool.values();
+    for (int i = 0; i < hostList.size(); i++) {
+        hostList.at(i)->mpConsole->changeColors();
+        // Mapper also needs a refresh of its colours
+        auto mapper = hostList.at(i)->mpMap->mpMapper;
+        if (mapper) {
+            mapper->setPalette(QApplication::palette());
+        }
+        QMutableMapIterator<QString, TConsole*> itSubConsole(hostList.at(i)->mpConsole->mSubConsoleMap);
+        while (itSubConsole.hasNext()) {
+            itSubConsole.next();
+            itSubConsole.value()->changeColors();
+        }
     }
 }
 

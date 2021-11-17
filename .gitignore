@@ -12,6 +12,8 @@ qrc_*.cpp
 mudlet
 
 # ignore macOS apps in general, but keep the Autoupdater from Sparkle
+3rdparty/boost/*
+3rdparty/cocoapods/*
 !3rdparty/sparkle/Sparkle.framework/Versions/A/Resources/Autoupdate.app
 
 translations/translated/lrelease_output.txt
