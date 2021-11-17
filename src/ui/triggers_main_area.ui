@@ -126,9 +126,6 @@
         <property name="placeholderText">
          <string>Text to send to the game as-is (optional)</string>
         </property>
-        <property name="placeholderText">
-         <string>Text to send to the game as-is (optional)</string>
-        </property>
        </widget>
       </item>
      </layout>
