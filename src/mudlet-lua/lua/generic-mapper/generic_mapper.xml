@@ -3112,6 +3112,15 @@ function map.eventHandler(event, ...)
         elseif string.ends(file,"/generic_mapper.xml") then
             update_version()
         end
+    elseif event == "sysDownloadError" and downloading then
+        local file = arg[1]
+        if string.ends(file,"/versions.lua") and mudlet.translations.interfacelanguage == "zh_CN" then
+            -- update to the current download path for chinese user
+            if map.configs.download_path == "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper" then
+                map.configs.download_path = "https://gitee.com/mudlet/Mudlet/raw/development/src/mudlet-lua/lua/generic-mapper"
+                map.checkVersion()
+            end
+        end
     elseif event == "sysLoadEvent" or event == "sysInstall" then
         config()
     elseif event == "mapOpenEvent" then
@@ -3135,6 +3144,7 @@ end
 
 map.registeredEvents = {
 registerAnonymousEventHandler("sysDownloadDone", "map.eventHandler"),
+registerAnonymousEventHandler("sysDownloadError", "map.eventHandler"),
 registerAnonymousEventHandler("sysLoadEvent", "map.eventHandler"),
 registerAnonymousEventHandler("sysConnectionEvent", "map.eventHandler"),
 registerAnonymousEventHandler("sysInstall", "map.eventHandler"),
