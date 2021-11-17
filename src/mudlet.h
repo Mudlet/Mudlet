@@ -455,6 +455,7 @@ public:
     };
 
     // clang-format off
+    // games are to be added here in alphabetical order
     inline static const OrderedMap<QString, GameDetails> scmDefaultGames = {
         {"Avalon.de", {"avalon.mud.de", 23, false,
                         "<center><a href='http://avalon.mud.de'>http://avalon.mud.de</a></center>",
