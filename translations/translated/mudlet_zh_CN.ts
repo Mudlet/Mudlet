@@ -562,7 +562,7 @@ please wait...</source>
       <location filename="../src/dlgRoomExits.cpp" line="186"/>
       <location filename="../src/dlgRoomExits.cpp" line="190"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation>设置该出口去往的房间编号。</translation>
+      <translation>设置该出口通向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="119"/>
