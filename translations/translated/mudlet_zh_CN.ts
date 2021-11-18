@@ -955,7 +955,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2902"/>
       <source>Create label to show text or an image</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>创建标签以显示文本或图像</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2908"/>
@@ -967,7 +967,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2909"/>
       <source>Set the player&apos;s current location to here</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>将角色的当前位置设置在此处</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2918"/>
@@ -2900,7 +2900,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1356"/>
       <source>Clear console</source>
-      <translation type="unfinished"/>
+      <translation>清空控制台</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1359"/>
@@ -7457,7 +7457,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7883"/>
       <source>Export Item</source>
-      <translation type="unfinished"/>
+      <translation>导出项目</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7897"/>
@@ -8305,7 +8305,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="191"/>
       <source>Show errors</source>
-      <translation type="unfinished"/>
+      <translation>显示错误</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="194"/>
@@ -8964,7 +8964,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="409"/>
       <source>Mudlet chat</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet 闲聊</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="410"/>
@@ -11076,7 +11076,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2645"/>
       <source>Use a secure connection</source>
-      <translation type="unfinished"/>
+      <translation>使用安全连接</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3496"/>
@@ -11092,7 +11092,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="229"/>
       <source>Use a dark theme</source>
-      <translation type="unfinished"/>
+      <translation>使用暗色主题</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="232"/>
@@ -12244,7 +12244,8 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/room_exits.ui" line="1966"/>
       <source>Exit
 Status</source>
-      <translation type="unfinished"/>
+      <translation>退出
+状态</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1970"/>
