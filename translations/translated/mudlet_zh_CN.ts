@@ -6493,7 +6493,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="401"/>
       <location filename="../src/dlgRoomExits.cpp" line="937"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation type="unfinished"/>
+      <translation>设置该出口通向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="403"/>
@@ -6534,7 +6534,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="932"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效。如果这样离开，该出口将在点击 &lt;tt&gt;save&lt;/tt&gt; 时删除。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="933"/>
