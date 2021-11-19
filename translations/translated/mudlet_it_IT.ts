@@ -12143,7 +12143,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3607"/>
       <source>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) and &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) signalling tells Mudlet when the game server is done sending text. On games that do not provide &lt;tt&gt;GA&lt;/tt&gt; or &lt;tt&gt;EOR&lt;/tt&gt;, this option controls how long Mudlet will wait for more text to arrive. Greater values will help reduce the risk that Mudlet will split a large piece of text (with unintended line-breaks in the middle) which can stop some triggers from working. Lesser values increases the risk of text getting broken up, but may make the game feel more responsive.&lt;/p&gt;&lt;p&gt;&lt;i&gt;The default value, which was what Mudlet used before this control was added, is 0.300 Seconds.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>La segnalazione &lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) e &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) indicano a Mudlet quando il server del gioco ha finito di inviare testo. Sui giochi che non forniscono &lt;tt&gt;GA&lt;/tt&gt; o &lt;tt&gt;EOR&lt;/tt&gt;, questa opzione controlla quanto tempo Mudlet aspetterà che arrivi altro testo. Valori maggiori aiutano a ridurre il rischio che Mudlet divida un grande pezzo di testo (con interruzioni di riga non volute nel mezzo) che potrebbero impedire ad alcuni trigger di funzionare. Valori inferiori aumentano il rischio che il testo venga spezzato, ma rendono il gioco più reattivo.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Il valore predefinito, utilizzato da Mudlet prima che questo controllo fosse aggiunto, è 0,300 secondi.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3610"/>
@@ -12412,7 +12412,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1923"/>
       <source>&lt;p&gt;Click on an item to edit/change it. To delete a Special Exit, ether: select it and press the keyboard Delete key; or set its Exit roomID to less than one; or clear the name/command entry.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Clicca su un elemento per modificarlo/cambiarlo. Per eliminare un'uscita Speciale, puoi: selezionarla e premere il tasto Canc della tastiera o impostare il roomID dell'uscita a meno di uno oppure cancellare il contenuto dei campi nome/comando.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1966"/>
@@ -12424,7 +12424,7 @@ Uscita</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1970"/>
       <source>&lt;p&gt;Indicates whether the exit is invalid, leads to another room in this area or leads to a room in another area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Indica se l'uscita non è valida, conduce ad un'altra stanza in questa area o conduce ad una stanza in un'altra area.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2033"/>
