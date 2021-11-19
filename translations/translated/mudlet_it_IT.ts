@@ -59,13 +59,13 @@
       <location filename="../src/Host.cpp" line="614"/>
       <source>Failed to open xml file &quot;%1&quot; inside module %2 to update it. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when the xml file inside the module zip cannot be updated for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>Impossibile aprire il file xml &quot;%1&quot; nel modulo %2 per effettuare l'aggiornamento. Il messaggio di errore è: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="626"/>
       <source>Failed to save &quot;%1&quot; to module &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when a module is saved as package but cannot be done for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>Impossibile salvare &quot;%1&quot; nel modulo &quot;%2&quot;. Il messaggio di errore è: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="917"/>
@@ -557,7 +557,7 @@ attendere prego...</translation>
       <location filename="../src/dlgRoomExits.cpp" line="110"/>
       <location filename="../src/dlgRoomExits.cpp" line="185"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Il numero inserito non è valido. In caso non venga corretto, questa uscita sarà cancellata alla pressione del pulsante &lt;tt&gt;salva&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="111"/>
@@ -5147,7 +5147,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="912"/>
       <source>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - part of KDToolBox&lt;/u&gt;&lt;br&gt;(https://github.com/KDAB/KDToolBox).&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - parte di KDToolBox&lt;/u&gt;&lt;br&gt;(https://github.com/KDAB/KDToolBox).&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, una società del gruppo KDAB, &amp;lt;info@kdab.com&amp;gt;.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1065"/>
@@ -6044,7 +6044,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="197"/>
       <source>&lt;p&gt;This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specified font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Questa impostazione permette di mostrare una finestra con tutti i simboli utilizzati nella mappa corrente e come vengono disegnati usando solo il carattere specificato, un altro carattere o se non possono essere disegnati affatto. Mostra anche la sequenza di &lt;i&gt;codici&lt;/i&gt;Unicode che compongono un determinato simbolo, in modo da poterli identificare anche se non è possibile visualizzarli; inoltre, sono elencate le prime trentadue stanze che utilizzano quel simbolo, in modo da aiutare a riconoscere eventuali casi anomali o inaspettati.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="203"/>
@@ -6545,7 +6545,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4074"/>
       <source>Deleting map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Eliminazione della mappa - attendere...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4086"/>
@@ -6622,12 +6622,12 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="932"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Il numero inserito non è valido. In caso non venga corretto, questa uscita sarà cancellata alla pressione del pulsante &lt;tt&gt;salva&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="933"/>
       <source>Set the number of the room that this special exit leads to.</source>
-      <translation type="unfinished"/>
+      <translation>Imposta il numero della stanza di destinazione a cui questa uscita speciale appartiene.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="941"/>
@@ -11204,7 +11204,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1934"/>
       <source>Enable &apos;Delete map&apos; button</source>
-      <translation type="unfinished"/>
+      <translation>Abilitare il pulsante &apos;Elimina mappa&apos;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2722"/>
@@ -11275,7 +11275,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="294"/>
       <source>Set dark theme in &lt;a href=&quot;dark-code-editor&quot;&gt;code editor&lt;/a&gt; as well?</source>
-      <translation type="unfinished"/>
+      <translation>Imposta il tema scuro anche nell'editor di codice &lt;a href=&quot;dark-code-editor&quot;&gt;&lt;/a&gt;?</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="346"/>
@@ -11312,17 +11312,17 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1319"/>
       <source>Advanced</source>
-      <translation type="unfinished"/>
+      <translation>Avanzate</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1325"/>
       <source>Shows bidirection Unicode characters which can be used to change the meaning of source code while remaining invisible to the eye</source>
-      <translation type="unfinished"/>
+      <translation>Mostra i caratteri Unicode di controllo bidirezionali invisibili che possono essere utilizzati per cambiare il significato del codice sorgente</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1328"/>
       <source>Show invisible Unicode control characters</source>
-      <translation type="unfinished"/>
+      <translation>Mostra i caratteri di controllo Unicode invisibili</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1371"/>
