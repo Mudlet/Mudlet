@@ -5052,7 +5052,7 @@ Count</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="912"/>
       <source>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - part of KDToolBox&lt;/u&gt;&lt;br&gt;(https://github.com/KDAB/KDToolBox).&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - part of KDToolBox&lt;/u&gt;&lt;br&gt;(https://github.com/KDAB/KDToolBox).&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1065"/>
@@ -6447,12 +6447,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4074"/>
       <source>Deleting map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Deleting map - please wait...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4086"/>
       <source>Deleted map.</source>
-      <translation type="unfinished"/>
+      <translation>Deleted map.</translation>
     </message>
   </context>
   <context>
@@ -11075,17 +11075,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1914"/>
       <source>Delete map:</source>
-      <translation type="unfinished"/>
+      <translation>Delete map:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1927"/>
       <source>Press to delete map</source>
-      <translation type="unfinished"/>
+      <translation>Press to delete map</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1934"/>
       <source>Enable &apos;Delete map&apos; button</source>
-      <translation type="unfinished"/>
+      <translation>Enable &apos;Delete map&apos; button</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2722"/>
@@ -11141,22 +11141,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="230"/>
       <source>System setting</source>
-      <translation type="unfinished"/>
+      <translation>System setting</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="235"/>
       <source>Light</source>
-      <translation type="unfinished"/>
+      <translation>Light</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="240"/>
       <source>Dark</source>
-      <translation type="unfinished"/>
+      <translation>Dark</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="294"/>
       <source>Set dark theme in &lt;a href=&quot;dark-code-editor&quot;&gt;code editor&lt;/a&gt; as well?</source>
-      <translation type="unfinished"/>
+      <translation>Set dark theme in &lt;a href=&quot;dark-code-editor&quot;&gt;code editor&lt;/a&gt; as well?</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="346"/>
@@ -11193,17 +11193,17 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1319"/>
       <source>Advanced</source>
-      <translation type="unfinished"/>
+      <translation>Advanced</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1325"/>
       <source>Shows bidirection Unicode characters which can be used to change the meaning of source code while remaining invisible to the eye</source>
-      <translation type="unfinished"/>
+      <translation>Shows bidirection Unicode characters which can be used to change the meaning of source code while remaining invisible to the eye</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1328"/>
       <source>Show invisible Unicode control characters</source>
-      <translation type="unfinished"/>
+      <translation>Show invisible Unicode control characters</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1371"/>
