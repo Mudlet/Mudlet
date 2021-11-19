@@ -565,7 +565,7 @@ attendere prego...</translation>
       <location filename="../src/dlgRoomExits.cpp" line="186"/>
       <location filename="../src/dlgRoomExits.cpp" line="190"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation type="unfinished"/>
+      <translation>Imposta il numero della stanza di destinazione per questa uscita speciale.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="119"/>
