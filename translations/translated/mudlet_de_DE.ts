@@ -5100,7 +5100,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="912"/>
       <source>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - part of KDToolBox&lt;/u&gt;&lt;br&gt;(https://github.com/KDAB/KDToolBox).&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - Teil von KDToolBox&lt;/u&gt;&lt;br&gt;(https://github.com/KDAB/KDToolBox).&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1065"/>
@@ -6499,12 +6499,12 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4074"/>
       <source>Deleting map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Karte wird gelöscht, bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4086"/>
       <source>Deleted map.</source>
-      <translation type="unfinished"/>
+      <translation>Karte gelöscht.</translation>
     </message>
   </context>
   <context>
@@ -11158,17 +11158,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1914"/>
       <source>Delete map:</source>
-      <translation type="unfinished"/>
+      <translation>Karte löschen:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1927"/>
       <source>Press to delete map</source>
-      <translation type="unfinished"/>
+      <translation>Karte löschen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1934"/>
       <source>Enable &apos;Delete map&apos; button</source>
-      <translation type="unfinished"/>
+      <translation>Aktiviere den &apos;Karte löschen&apos; Button</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2722"/>
