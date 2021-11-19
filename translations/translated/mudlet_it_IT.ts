@@ -571,7 +571,7 @@ attendere prego...</translation>
       <location filename="../src/dlgRoomExits.cpp" line="119"/>
       <location filename="../src/dlgRoomExits.cpp" line="194"/>
       <source>A positive roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Qui va inserito un roomID positivo della stanza a cui appartiene questa uscita speciale. Se lasciata così, questa uscita sarà cancellata alla pressione del pulsante &lt;tt&gt;salva&lt;/tt&gt;.</translation>
     </message>
   </context>
   <context>
@@ -6632,17 +6632,17 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="941"/>
       <source>A positive roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Qui va inserito un roomID positivo della stanza a cui appartiene questa uscita speciale. Se lasciata così, questa uscita sarà cancellata alla pressione del pulsante &lt;tt&gt;salva&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="946"/>
       <source>No command or Lua script entered, if left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Nessun comando o script Lua inserito, se lasciato così, questa uscita sarà cancellata alla pressione del pulsante &lt;tt&gt;save&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="948"/>
       <source>(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>(Gli script Lua di quei profili che usano il pacchetto &lt;tt&gt;mudlet-mapper&lt;/tt&gt; devono essere preceduti da &quot;script:&quot;).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1000"/>
@@ -8730,7 +8730,12 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
 &lt;p&gt;The &lt;b&gt;&lt;i&gt;Sync&lt;/i&gt;&lt;/b&gt; option, if it is enabled, will, when the module in &lt;b&gt;this profile&lt;/b&gt; is saved &lt;b&gt;to disk&lt;/b&gt;, cause it to be then reloaded into all profiles which also are using the same file that contains the module. To make several profiles use the same module, install it in each profile through this module manager (which should be opened when the particular profile is the one currently in the foreground).&lt;/p&gt;&lt;p&gt;
 &lt;p&gt;For each save operation, modules are backed up to a directory, &lt;i&gt;moduleBackups&lt;/i&gt;, within your Mudlet profile directory.&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;I Moduli sono un modo di utilizzare dei package condividendoli fra differenti profili di gioco - a differenza dei package normali che sono installati per un singolo profilo.&lt;/p&gt;
+&lt;p&gt;I Moduli sono caricati in ordine di priorità (il numero 1 sarà caricato prima del 2 e via di seguito), moduli con la medesima priorità saranno caricati in ordine alfabetico.&lt;/p&gt;
+&lt;p&gt;I Moduli con priorità negativa saranno caricati prima degli script dei package.&lt;/p&gt;
+&lt;p&gt;L'opzione &lt;b&gt;&lt;i&gt;Sincronizza&lt;/i&gt;&lt;/b&gt; se abilitata, ricarica automaticamente il modulo in tutti i profili quando viene salvato &lt;b&gt;su disco&lt;/b&gt; nel &lt;b&gt;profilo&lt;/b&gt; corrente. Per consentire a più profili di utilizzare lo stesso modulo è sufficiente installarlo in ognuno di questi utilizzando il gestore dei moduli (da aprire quando il profilo desiderato è in primo piano).&lt;/p&gt;&lt;p&gt;
+&lt;p&gt;Ad ogni operazione di salvataggio viene fatto un backup nella cartella, &lt;i&gt;moduleBackups&lt;/i&gt;, all'interno della cartella del profilo di Mudlet.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="128"/>
@@ -12424,7 +12429,7 @@ Uscita</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2033"/>
       <source>&lt;p&gt;(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;(Gli script Lua di quei profili che usano il pacchetto &lt;tt&gt;mudlet-mapper&lt;/tt&gt; devono essere preceduti da &quot;script:&quot;).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2101"/>
