@@ -6802,7 +6802,8 @@ for the selected room:</numerusform>
       <location filename="../src/dlgTriggerEditor.cpp" line="328"/>
       <source>*** starting new session ***
 </source>
-      <translation type="unfinished"/>
+      <translation>*** starting new session ***
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="416"/>
