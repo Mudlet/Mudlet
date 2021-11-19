@@ -11224,22 +11224,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="230"/>
       <source>System setting</source>
-      <translation type="unfinished"/>
+      <translation>System-Einstellung</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="235"/>
       <source>Light</source>
-      <translation type="unfinished"/>
+      <translation>Hell</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="240"/>
       <source>Dark</source>
-      <translation type="unfinished"/>
+      <translation>Dunkel</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="294"/>
       <source>Set dark theme in &lt;a href=&quot;dark-code-editor&quot;&gt;code editor&lt;/a&gt; as well?</source>
-      <translation type="unfinished"/>
+      <translation>Das dunkle Design auch im &lt;a href=&quot;dark-code-editor&quot;&gt;Code-Editor&lt;/a&gt; einstellen?</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="346"/>
@@ -11277,17 +11277,17 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1319"/>
       <source>Advanced</source>
-      <translation type="unfinished"/>
+      <translation>Fortgeschrittene Einstellungen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1325"/>
       <source>Shows bidirection Unicode characters which can be used to change the meaning of source code while remaining invisible to the eye</source>
-      <translation type="unfinished"/>
+      <translation>Zeigt bidirektionale Unicode-Zeichen an, die verwendet werden können, um die Bedeutung von Quellcode zu ändern, dabei aber für das Auge unsichtbar bleiben</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1328"/>
       <source>Show invisible Unicode control characters</source>
-      <translation type="unfinished"/>
+      <translation>Unsichtbare Unicode-Steuerzeichen anzeigen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1371"/>
