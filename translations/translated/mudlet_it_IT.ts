@@ -6550,7 +6550,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4086"/>
       <source>Deleted map.</source>
-      <translation type="unfinished"/>
+      <translation>Mappa eliminata.</translation>
     </message>
   </context>
   <context>
@@ -11194,12 +11194,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1914"/>
       <source>Delete map:</source>
-      <translation type="unfinished"/>
+      <translation>Elimina mappa:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1927"/>
       <source>Press to delete map</source>
-      <translation type="unfinished"/>
+      <translation>Premi per eliminare la mappa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1934"/>
@@ -11260,17 +11260,17 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="230"/>
       <source>System setting</source>
-      <translation type="unfinished"/>
+      <translation>Impostazioni di sistema</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="235"/>
       <source>Light</source>
-      <translation type="unfinished"/>
+      <translation>Chiaro</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="240"/>
       <source>Dark</source>
-      <translation type="unfinished"/>
+      <translation>Scuro</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="294"/>
