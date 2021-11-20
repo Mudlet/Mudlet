@@ -338,6 +338,7 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
     job->start();
 }
 
+// Only used by migrateSecuredPassword(...)
 void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
 {
     auto* job = new QKeychain::DeletePasswordJob(QStringLiteral("Mudlet profile"));
@@ -490,7 +491,9 @@ void dlgConnectionProfiles::slot_save_name()
         return;
     }
 
-    migrateSecuredPassword(currentProfileEditName, newProfileName);
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        migrateSecuredPassword(currentProfileEditName, newProfileName);
+    }
 
     setItemName(pItem, newProfileName);
 
@@ -908,13 +911,18 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     // by the copy method
     if (!mCopyingProfile) {
         character_password_entry->setText(QString());
-        loadSecuredPassword(profile_name, [this, profile_name](const QString& password) {
-            if (!password.isEmpty()) {
-                character_password_entry->setText(password);
-            } else {
-                character_password_entry->setText(readProfileData(profile_name, QStringLiteral("password")));
-            }
-        });
+        if (mudlet::self()->storingPasswordsSecurely()) {
+            loadSecuredPassword(profile_name, [this, profile_name](const QString& password) {
+                if (!password.isEmpty()) {
+                    character_password_entry->setText(password);
+                } else {
+                    character_password_entry->setText(readProfileData(profile_name, QStringLiteral("password")));
+                }
+            });
+
+        } else {
+            character_password_entry->setText(readProfileData(profile_name, QStringLiteral("password")));
+        }
     }
 
     val = readProfileData(profile_name, QStringLiteral("login"));
@@ -1229,7 +1237,9 @@ void dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidge
     profile->setIcon(icon);
 }
 
-// When a profile is renamed, migrate password storage to the new profile
+// When a profile is renamed, migrate password storage to the new profile.
+// This is only used by slot_save_name(...) and that now only when passwords
+// are stored securely:
 void dlgConnectionProfiles::migrateSecuredPassword(const QString& oldProfile, const QString& newProfile)
 {
     const auto& password = character_password_entry->text().trimmed();
@@ -1253,8 +1263,10 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callba
         if (job->error()) {
             const auto error = job->errorString();
             if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
-                qDebug() << "dlgConnectionProfiles::loadSecuredPassword ERROR: couldn't retrieve secure password for" << profile << ", error is:" << error;
+                // Report to debug output the problem if it was something other than a couple of 'normal' failure mechanisms:
+                qDebug().nospace().noquote() << "dlgConnectionProfiles::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << profile << "\", error is: " << error << ".";
             }
+
         }
 
         auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
