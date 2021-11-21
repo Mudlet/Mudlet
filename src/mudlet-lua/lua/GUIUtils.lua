@@ -1824,6 +1824,30 @@ function ansi2decho(text, ansi_default_color)
       elseif code == "22" then
         -- not light or bold
         coloursToUse = colours
+      elseif code == "3" then
+        -- italics, but we set isColorCode to true to avoid repeating the fg color below
+        isColorCode = true
+        output[#output+1] = "<i>"
+      elseif code == "23" then
+        -- turn off italics
+        isColorCode = true
+        output[#output+1] = "</i>"
+      elseif code == "4" then
+        -- underline
+        isColorCode = true
+        output[#output+1] = "<u>"
+      elseif code == "24" then
+        -- turn off underline
+        isColorCode = true
+        output[#output+1] = "</u>"
+      elseif code == "9" then
+        -- strikethrough
+        isColorCode = true
+        output[#output+1] = "<s>"
+      elseif code == "29" then
+        -- turn off strikethrough
+        isColorCode = true
+        output[#output+1] = "</s>"
       else
         isColorCode = true
         local layerCode = floor(code / 10)  -- extract the "layer": 3 is fore
