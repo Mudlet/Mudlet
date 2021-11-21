@@ -2460,7 +2460,7 @@ function map.find_me(name, exits, dir, manual)
     -- tries to locate the player using the current room name and exits, and if provided, direction of movement
     -- if direction of movement is given, narrows down possibilities using previous room info
     if move ~= "recall" then move_queue = {} end
-    -- find from room hash id
+    -- find from room hash id - map.find_me(nil, nil, nil, false)
     if map.prompt.hash then
         local room = getRoomIDbyHash(map.prompt.hash)
         if room &gt; 0 then
@@ -2468,7 +2468,7 @@ function map.find_me(name, exits, dir, manual)
             map.echo("Room found, ID: " .. room, true)
             return
         else
-            map.echo("Room not found in map database!", false, true)
+            map.echo("Room not found in map database!", not manual, true)
             return
         end
     end
@@ -2524,11 +2524,7 @@ function map.find_me(name, exits, dir, manual)
         end
         find_portal = false
     elseif table.is_empty(match_IDs) then
-        if not manual then
-            map.echo("Room not found in map database", true, true)
-        else
-            map.echo("Room not found in map database", false, true)
-        end
+        map.echo("Room not found in map database", not manual, true)
     end
 end
 
