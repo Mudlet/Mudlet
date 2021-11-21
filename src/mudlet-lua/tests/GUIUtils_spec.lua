@@ -49,6 +49,14 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end
     end)
 
+    it("Should match the user's custom colours if they've changed them", function()
+      color_table.ansi_000 = {0,0,1}
+      local expected = "<0,0,1>"
+      local actual = ansi2decho("\27[30m", "<0,0,0>")
+      color_table.ansi_000= {0,0,0}
+      assert.are.same(expected, actual)
+    end)
+
     it("Should combine tags correctly", function()
       local sequences = {
         {"\27[0;30m", "<r><0,0,0>"},
