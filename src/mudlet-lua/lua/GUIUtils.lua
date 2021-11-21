@@ -1540,13 +1540,24 @@ if rex then
   function decho2ansi(text)
     local colorPattern = _Echos.Patterns.Decimal[1]
     local result = ""
+    local resets = {
+      r = "\27[0m",
+      i = "\27[3m",
+      ["/i"] = "\27[23m",
+      b = "\27[1m",
+      ["/b"] = "\27[22m",
+      u = "\27[4m",
+      ["/u"] = "\27[24m",
+      s = "\27[9m",
+      ["/s"] = "\27[29m"
+    }
     for str, color, res in rex.split(text, colorPattern) do
       result = result .. str
       if color then
         result = result .. rgbToAnsi(color:match("<(.+)>"))
       end
       if res then
-        result = result .. "\27[0m"
+        result = result .. resets[res]
       end
     end
     return result
