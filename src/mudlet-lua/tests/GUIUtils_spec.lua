@@ -156,6 +156,40 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
+  describe("Tests the functionality of hecho2ansi()", function()
+    local simple_original = "#800000This is in red#r And then reset."
+    local simple_expected = "\27[38:2::128:0:0mThis is in red\27[0m And then reset."
+
+    it("should convert a simple hecho string to an equivalent ansi string", function()
+      local actual = hecho2ansi(simple_original)
+      assert.equals(simple_expected, actual)
+    end)
+
+    it("should handle bold", function()
+      local expected = "\27[1mbold\27[22m"
+      local actual = hecho2ansi("#bbold#/b")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle underline", function()
+      local expected = "\27[4munderline\27[24m"
+      local actual = hecho2ansi("#uunderline#/u")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle italics", function()
+      local expected = "\27[3mitalics\27[23m"
+      local actual = hecho2ansi("#iitalics#/i")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle strikeout", function()
+      local expected = "\27[9mstrikeout\27[29m"
+      local actual = hecho2ansi("#sstrikeout#/s")
+      assert.equals(expected, actual)
+    end)
+  end)
+
   describe("Tests the functionality of ansi2string()", function()
     it("should return the string fed into it with ansi codes removed", function()
       local original = '\27[38;5;179;48;5;230mYou say in a baritone voice, "Test."\27[0;37;40m'

@@ -1445,6 +1445,20 @@ if rex then
     ctable["ansi_" .. key] = key
   end
 
+  -- local lookup table to find ansi escapes for to ansi conversions
+  local resets = {
+    r = "\27[0m",
+    reset = "\27[0m",
+    i = "\27[3m",
+    ["/i"] = "\27[23m",
+    b = "\27[1m",
+    ["/b"] = "\27[22m",
+    u = "\27[4m",
+    ["/u"] = "\27[24m",
+    s = "\27[9m",
+    ["/s"] = "\27[29m"
+  }
+
   -- take a color name and turn it into an ANSI escape string
   local function colorToAnsi(colorName)
     local result = ""
@@ -1452,8 +1466,9 @@ if rex then
     local fore = cols[1]
     local back = cols[2]
     if fore ~= "" then
-      if fore == "r" or fore == "reset" then
-        result = result .. "\27[0m"
+      local res = resets[fore]
+      if res then
+        result = result .. res
       else
         local colorNumber = ctable[fore]
         if colorNumber then
@@ -1540,17 +1555,6 @@ if rex then
   function decho2ansi(text)
     local colorPattern = _Echos.Patterns.Decimal[1]
     local result = ""
-    local resets = {
-      r = "\27[0m",
-      i = "\27[3m",
-      ["/i"] = "\27[23m",
-      b = "\27[1m",
-      ["/b"] = "\27[22m",
-      u = "\27[4m",
-      ["/u"] = "\27[24m",
-      s = "\27[9m",
-      ["/s"] = "\27[29m"
-    }
     for str, color, res in rex.split(text, colorPattern) do
       result = result .. str
       if color then
@@ -1590,7 +1594,7 @@ if rex then
         result = result .. hexToAnsi(color:sub(2,-1))
       end
       if res then
-        result = result .. "\27[0m"
+        result = result .. resets[res]
       end
     end
     return result
