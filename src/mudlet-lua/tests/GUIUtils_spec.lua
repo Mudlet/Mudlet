@@ -130,6 +130,45 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
+  describe("Tests the functionality of cecho2ansi()", function()
+    local simple_original = "<red>This is in red<r> And then reset."
+    local simple_expected = "\27[38:5:1mThis is in red\27[0m And then reset."
+
+    it("should convert a simple cecho string to an equivalent ansi string", function()
+      local actual = cecho2ansi(simple_original)
+      assert.equals(simple_expected, actual)
+    end)
+
+    it("should convert a color name which doesn't have a direct ansi named equivalent", function()
+      local actual = cecho2ansi("<DodgerBlue>")
+      assert.equals("\27[38:2::30:144:255m", actual)
+    end)
+
+    it("should handle bold", function()
+      local expected = "\27[1mbold\27[22m"
+      local actual = cecho2ansi("<b>bold</b>")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle underline", function()
+      local expected = "\27[4munderline\27[24m"
+      local actual = cecho2ansi("<u>underline</u>")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle italics", function()
+      local expected = "\27[3mitalics\27[23m"
+      local actual = cecho2ansi("<i>italics</i>")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle strikeout", function()
+      local expected = "\27[9mstrikeout\27[29m"
+      local actual = cecho2ansi("<s>strikeout</s>")
+      assert.equals(expected, actual)
+    end)
+  end)
+
   describe("Tests the functionality of ansi2string()", function()
     it("should return the string fed into it with ansi codes removed", function()
       local original = '\27[38;5;179;48;5;230mYou say in a baritone voice, "Test."\27[0;37;40m'
