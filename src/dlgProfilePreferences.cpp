@@ -2073,45 +2073,54 @@ void dlgProfilePreferences::loadMap()
     }
 
     auto loadExtensions(QStringList()
-        <<   tr("Mudlet binary (*.dat)", "Do not change extensions (in braces) as they are used programmatically")
+        <<   tr("Mudlet binary map (*.dat)", "Do not change extensions (in braces) as they are used programmatically")
         <<   tr("Mudlet JSON map (*.json)", "Do not change extensions (in braces) as they are used programmatically")
-        <<   tr("Xml map data (*.xml)", "Do not change extensions (in braces) as they are used programmatically")
+        <<   tr("Mudlet XML map (*.xml)", "Do not change extensions (in braces) as they are used programmatically")
+        <<   tr("Any map file (*.dat *.json *.xml)", "Do not change extensions (in braces) as they are used programmatically")
         <<   tr("Any file (*)", "Do not change extensions (in braces) as they are used programmatically"));
 
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet map"), mapSaveLoadDirectory(pHost),
-                                                    loadExtensions.join(";;"));
-    if (fileName.isEmpty()) {
-        return;
-    }
 
-    label_mapFileActionResult->show();
+    QFileDialog* dialog = new QFileDialog(this);
+    dialog->setWindowTitle(tr("Load Mudlet map"));
+    dialog->setDirectory(mapSaveLoadDirectory(pHost));
+    dialog->setNameFilter(loadExtensions.join(QStringLiteral(";;")));
+    connect(dialog, &QDialog::finished, this, [=](int result) {
+        if (result == QDialog::Rejected) {
+            return;
+        }
 
-    // Ensure the setting is already made as the loadMap(...) uses the set value
-    bool showAuditErrors = mudlet::self()->showMapAuditErrors();
-    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+        auto fileName = dialog->selectedFiles().first();
 
-    bool success = false;
-    label_mapFileActionResult->setText(tr("Loading map - please wait..."));
-    qApp->processEvents(); // Needed to make the above message show up when loading big maps
-    if (fileName.endsWith(QStringLiteral(".xml"), Qt::CaseInsensitive)) {
+        label_mapFileActionResult->show();
+
+        // Ensure the setting is already made as the loadMap(...) uses the set value
+        bool showAuditErrors = mudlet::self()->showMapAuditErrors();
+        mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+
+        bool success = false;
+        label_mapFileActionResult->setText(tr("Loading map - please wait..."));
         qApp->processEvents(); // Needed to make the above message show up when loading big maps
-        success = pHost->mpConsole->importMap(fileName);
-    } else if (fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
-        success = pHost->mpMap->readJsonMapFile(fileName).first;
-    } else {
-       success = pHost->mpConsole->loadMap(fileName);
-    }
+        if (fileName.endsWith(QStringLiteral(".xml"), Qt::CaseInsensitive)) {
+            qApp->processEvents(); // Needed to make the above message show up when loading big maps
+            success = pHost->mpConsole->importMap(fileName);
+        } else if (fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
+            success = pHost->mpMap->readJsonMapFile(fileName).first;
+        } else {
+            success = pHost->mpConsole->loadMap(fileName);
+        }
 
-    if (success) {
-        label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
-    } else {
-        label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
-    }
+        if (success) {
+            label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
+        } else {
+            label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
+        }
 
-    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+        QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 
-    // Restore setting immediately before we used it
-    mudlet::self()->setShowMapAuditErrors(showAuditErrors);
+        // Restore setting immediately before we used it
+        mudlet::self()->setShowMapAuditErrors(showAuditErrors);
+    });
+    dialog->open();
 }
 
 void dlgProfilePreferences::saveMap()
@@ -2121,55 +2130,59 @@ void dlgProfilePreferences::saveMap()
         return;
     }
 
-    auto datFilter = tr("Mudlet binary (*.dat)", "Do not change extensions (in braces) as they are used programmatically");
+    auto datFilter = tr("Mudlet binary map (*.dat)", "Do not change extensions (in braces) as they are used programmatically");
     auto jsonFilter = tr("Mudlet JSON map (*.json)", "Do not change extensions (in braces) as they are used programmatically");
     auto saveExtensions(QStringList() << datFilter << jsonFilter);
 
-    QFileDialog dialog(this);
-    dialog.setWindowTitle(tr("Save Mudlet map"));
-    dialog.setDirectory(mapSaveLoadDirectory(pHost));
-    dialog.setNameFilter(saveExtensions.join(";;"));
-    dialog.setAcceptMode(QFileDialog::AcceptSave);
-    dialog.setDefaultSuffix("dat");
-    connect(&dialog,  &QFileDialog::filterSelected, this, [&dialog, datFilter, jsonFilter](const QString& filter) {
+    QFileDialog* dialog = new QFileDialog(this);
+    dialog->setWindowTitle(tr("Save Mudlet map"));
+    dialog->setDirectory(mapSaveLoadDirectory(pHost));
+    dialog->setNameFilter(saveExtensions.join(QStringLiteral(";;")));
+    dialog->setAcceptMode(QFileDialog::AcceptSave);
+    dialog->setDefaultSuffix(QStringLiteral("dat"));
+    connect(dialog,  &QFileDialog::filterSelected, this, [=](const QString& filter) {
         if (filter == datFilter) {
-            dialog.setDefaultSuffix("dat");
+            dialog->setDefaultSuffix(QStringLiteral("dat"));
         }
         if (filter == jsonFilter) {
-            dialog.setDefaultSuffix("json");
+            dialog->setDefaultSuffix(QStringLiteral("json"));
         }
     });
 
-    if (!dialog.exec() || dialog.selectedFiles().isEmpty()) {
-        return;
-    }
-    auto fileName = dialog.selectedFiles().first();
+    connect(dialog, &QFileDialog::finished, this, [=](int result) {
+        if (result == QDialog::Rejected) {
+            return;
+        }
 
-    label_mapFileActionResult->show();
-    label_mapFileActionResult->setText(tr("Saving map - please wait..."));
-    qApp->processEvents(); // Copied from "Loading map - please wait..." case
-                           // Just in case is needed to make the above message
-                           // show up when saving big maps
+        auto fileName = dialog->selectedFiles().first();
 
-    // Ensure the setting is already made as the saveMap(...) uses the set value
-    bool showAuditErrors = mudlet::self()->showMapAuditErrors();
-    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+        label_mapFileActionResult->show();
+        label_mapFileActionResult->setText(tr("Saving map - please wait..."));
+        qApp->processEvents(); // Copied from "Loading map - please wait..." case
+        // Just in case is needed to make the above message
+        // show up when saving big maps
 
-    bool success = false;
-    if (!fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
-        success = pHost->mpConsole->saveMap(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt());
-    } else {
-        success = pHost->mpMap->writeJsonMapFile(fileName).first;
-    }
+        // Ensure the setting is already made as the saveMap(...) uses the set value
+        bool showAuditErrors = mudlet::self()->showMapAuditErrors();
+        mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
-    if (success) {
-        label_mapFileActionResult->setText(tr("Saved map to %1.").arg(fileName));
-    } else {
-        label_mapFileActionResult->setText(tr("Could not save map to %1.").arg(fileName));
-    }
-    mudlet::self()->setShowMapAuditErrors(showAuditErrors);
+        bool success = false;
+        if (!fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
+            success = pHost->mpConsole->saveMap(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt());
+        } else {
+            success = pHost->mpMap->writeJsonMapFile(fileName).first;
+        }
 
-    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+        if (success) {
+            label_mapFileActionResult->setText(tr("Saved map to %1.").arg(fileName));
+        } else {
+            label_mapFileActionResult->setText(tr("Could not save map to %1.").arg(fileName));
+        }
+        mudlet::self()->setShowMapAuditErrors(showAuditErrors);
+
+        QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+    });
+    dialog->open();
 }
 
 QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost) {
