@@ -101,7 +101,7 @@ isEmpty( BUILD ) {
 # "-dev" for the development build
 # "-ptb" for the public test build
 # "" for the release build
-   BUILD = "-dev"
+   BUILD = ""
 }
 
 # As the above also modifies the splash screen image (so developers get reminded
