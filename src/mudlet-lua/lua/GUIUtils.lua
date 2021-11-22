@@ -1759,11 +1759,11 @@ function ansi2decho(text, ansi_default_color)
       return color_table[ansi] or false
     end
     local colours = {}
-    for i=0,7 do
+    for i = 0, 7 do
       colours[i] = convertindex(i)
     end
     local lightColours = {}
-    for i=0,7 do
+    for i = 0, 7 do
       lightColours[i] = convertindex(i+8)
     end
     local coloursToUse = colours
