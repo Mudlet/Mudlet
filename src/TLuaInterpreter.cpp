@@ -11191,7 +11191,7 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
     }
 
     std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
-    for (const QString dropThis : dontSpeak) {
+    for (const QString& dropThis : dontSpeak) {
         if (textToSay.contains(dropThis)) {
             textToSay.replace(dropThis, QString());
             if (mudlet::debugMode) {
@@ -11468,7 +11468,7 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
     }
 
     std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
-    for (const QString dropThis : dontSpeak) {
+    for (const QString& dropThis : dontSpeak) {
         if (inputText.contains(dropThis)) {
             inputText.replace(dropThis, QString());
             if (mudlet::debugMode) {
