@@ -6,7 +6,7 @@ the free [Github for Desktop](https://desktop.github.com) app to contribute code
 
 If you're a first-timer, you're excluded, we'll go easy on you :wink:
 
-## Use QLatin1String over qsl if the function takes it
+## Use QLatin1String over qsl (a *shorter* preprocessor macro we define for Qt's own `QStringLiteral` macro) if the function takes it
 
 Some methods in the Qt API have overloads for either taking a QString, or a QLatin1String object.
 This is because Latin1 is simpler to parse than UTF-16, and therefore the QLatin1String version can
