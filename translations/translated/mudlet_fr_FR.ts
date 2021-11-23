@@ -874,7 +874,7 @@ veuillez patienter...</translation>
       <location filename="../src/T2DMap.cpp" line="2805"/>
       <source>Create new room here</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Créer une nouvelle salle ici</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2817"/>
@@ -940,7 +940,7 @@ veuillez patienter...</translation>
       <location filename="../src/T2DMap.cpp" line="2901"/>
       <source>Create label...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Créer une étiquette...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2902"/>
@@ -964,7 +964,7 @@ veuillez patienter...</translation>
       <location filename="../src/T2DMap.cpp" line="2918"/>
       <source>Switch to editing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Passer au mode édition</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2919"/>
