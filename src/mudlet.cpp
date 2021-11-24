@@ -571,12 +571,10 @@ mudlet::mudlet()
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_package_exporter);
 
-    // PLACEMARKER: Save for later restoration (1 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
-    // QAction* mactionCloseProfile = new QAction(tr("Close"), this);
-
     connect(dactionConnect, &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
     connect(dactionReconnect, &QAction::triggered, this, &mudlet::slot_reconnect);
     connect(dactionDisconnect, &QAction::triggered, this, &mudlet::slot_disconnect);
+    connect(dactionCloseProfile, &QAction::triggered, this, &mudlet::slot_close_current_profile);
     connect(dactionNotepad, &QAction::triggered, this, &mudlet::slot_notes);
     connect(dactionReplay, &QAction::triggered, this, &mudlet::slot_replay);
 
@@ -1297,6 +1295,17 @@ void mudlet::slot_package_exporter()
     d->show();
 }
 
+void mudlet::slot_close_current_profile() {
+    Host* pH = getActiveHost();
+    if (!pH) {
+        return;
+    }
+    slot_close_profile_requested(mpTabBar->currentIndex());
+
+    if (!getActiveHost()) {
+        slot_show_connection_dialog();
+    }
+}
 
 void mudlet::slot_close_profile_requested(int tab)
 {

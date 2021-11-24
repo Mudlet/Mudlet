@@ -524,6 +524,7 @@ public slots:
     void slot_disconnect();
     void slot_notes();
     void slot_reconnect();
+    void slot_close_current_profile();
     void slot_close_profile_requested(int);
     void slot_irc();
     void slot_discord();
