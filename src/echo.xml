@@ -1,16 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE MudletPackage>
-<MudletPackage version="1.0">
-    <AliasPackage>
-        <Alias isActive="yes" isFolder="no">
-            <name>`echo</name>
-            <script>local s = matches[2]
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>`echo</name>
+			<script>local s = matches[2]
 
-s = string.gsub(s, &quot;%$&quot;, &quot;\n&quot;)
-feedTriggers(&quot;\n&quot; .. s .. &quot;\n&quot;)
-echo(&quot;\n&quot;)</script>
-            <command></command>
-            <regex>`echo (.+)</regex>
-        </Alias>
-    </AliasPackage>
+s = string.gsub(s, "%$", "\n")
+feedTriggers("\n" .. s .. "\n")
+echo("\n")</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>`echo (.+)</regex>
+		</Alias>
+		<Alias isActive="yes" isFolder="no">
+			<name>`cecho</name>
+			<script>local s = matches[2]
+
+s = string.gsub(s, "%$", "\n")
+cfeedTriggers("\n" .. s .. "\n")
+echo("\n")</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>`cecho (.+)</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage />
+	<KeyPackage />
+	<HelpPackage>
+		<helpURL></helpURL>
+	</HelpPackage>
 </MudletPackage>
