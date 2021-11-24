@@ -48,6 +48,7 @@
 #include <QTableWidget>
 #include <QToolBar>
 #include <QUiLoader>
+#include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
@@ -183,7 +184,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     tabWidget->setCurrentIndex(0);
 
     // To be moved to a slot that is used on GUI language change when that gets
-    // implimented:
+    // implemented:
 
     // Set the tooltip on the containing widget so both the label and the
     // control have the same tool-tip:
@@ -198,7 +199,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                              "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
                                              "that make up that symbol, so that they can be identified even if they "
                                              "cannot be displayed; also, up to the first thirty two rooms that are using "
-                                             "that symbol are listed, which may help to identify any unexpected or odd cases.<p>"));
+                                             "that symbol are listed, which may help to identify any unexpected or odd cases.</p>"));
     fontComboBox_mapSymbols->setToolTip(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
                                            "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
     checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(tr("<p>Using a single font is likely to produce a more consistent style but may "
@@ -240,7 +241,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                              "<li><b>Checked</b> '<i>on</i>' = Allow menus to be drawn with icons.</li>"
                                              "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
                                              "<p><i>This setting is only processed when individual menus are created and changes may not "
-                                             "propogate everywhere until Mudlet is restarted.</i></p>"));
+                                             "propagate everywhere until Mudlet is restarted.</i></p>"));
 
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
@@ -252,6 +253,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // have to state which one we want to use for these two:
     connect(comboBox_menuBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowMenuBar);
     connect(comboBox_toolBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowToolBar);
+
+    comboBox_appearance->setCurrentIndex(pMudlet->mAppearance);
 
     // This group of signal/slot connections handles updating *this* instance of
     // the "Profile preferences" form/dialog when a *different* profile saves
@@ -267,6 +270,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
     connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
     connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
+    connect(pMudlet, &mudlet::signal_appearanceChanged, this, &dlgProfilePreferences::slot_setAppearance);
+    connect(comboBox_appearance, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) { dlgProfilePreferences::slot_setAppearance(mudlet::Appearance(index)); });
 
     generateDiscordTooltips();
 
@@ -333,6 +338,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     }
 
     setupPasswordsMigration();
+
+    connect(label_darkEditorPrompt, &QLabel::linkActivated, this, &dlgProfilePreferences::slot_enableDarkEditor);
+    label_darkEditorPrompt->hide();
 }
 
 void dlgProfilePreferences::setupPasswordsMigration()
@@ -372,42 +380,66 @@ void dlgProfilePreferences::disableHostDetails()
 {
     // The Host pointer is a nullptr so disable every control that depends on it
 
-    // on tab_general:
+    // Controls are (or should be) sorted by tab and then group in which they appear:
+    // ===== tab_general =====
     // groupBox_iconsAndToolbars is NOT dependent on pHost - so leave it alone
+    // ----- groupBox_encoding -----
     label_encoding->setEnabled(false);
     comboBox_encoding->setEnabled(false);
-    groupBox_miscellaneous->setEnabled(false);
+
+    // ----- groupBox_miscellaneous -----
+    mAlertOnNewData->setEnabled(false);
+    acceptServerGUI->setEnabled(false);
+    mFORCE_SAVE_ON_EXIT->setEnabled(false);
+    acceptServerMedia->setEnabled(false);
+
     groupBox_protocols->setEnabled(false);
+    // ----- groupBox_protocols -----
     need_reconnect_for_data_protocol->hide();
 
-    // on tab_inputLine:
+    groupBox_logOptions->setEnabled(false);
+    // ----- groupBox_logOptions -----
+    lineEdit_logFileName->setVisible(false);
+    label_logFileName->setVisible(false);
+    label_logFileNameExtension->setVisible(false);
+
+    // ===== tab_inputLine =====
     groupBox_input->setEnabled(false);
+
     groupBox_spellCheck->setEnabled(false);
 
-    // on tab_display:
+    // ===== tab_display =====
     groupBox_font->setEnabled(false);
+
     groupBox_borders->setEnabled(false);
+
     groupBox_wrapping->setEnabled(false);
+
     groupBox_doubleClick->setEnabled(false);
+
     // Some of groupBox_displayOptions are usable, so must pick out and
     // disable the others:
+    // ----- groupBox_displayOptions -----
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
     checkBox_enableTextAnalyzer->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
-    widget_timerDebugOutputMinimumInterval->setEnabled(false);
 
-    // on tab_codeEditor:
+    // ===== tab_codeEditor =====
     groupbox_codeEditorThemeSelection->setEnabled(false);
+    // ----- groupbox_codeEditorThemeSelection -----
     theme_download_label->hide();
 
-    // on tab_displayColors:
+    groupBox_autoComplete->setEnabled(false);
+
+    // ===== tab_displayColors =====
     groupBox_displayColors->setEnabled(false);
 
-    // on tab_mapper:
+    // ===== tab_mapper =====
     // most of groupBox_mapFiles is disabled but there is ONE checkBox that
-    // is accessable because it is application wide - so disable EVERYTHING
+    // is accessible because it is application wide - so disable EVERYTHING
     // else that is not already disabled:
+    // ----- groupBox_mapFiles -----
     label_saveMap->setEnabled(false);
     pushButton_saveMap->setEnabled(false);
     label_loadMap->setEnabled(false);
@@ -417,76 +449,100 @@ void dlgProfilePreferences::disableHostDetails()
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->clear();
     label_mapFileActionResult->hide();
-    hidePasswordMigrationLabel();
+
+    groupBox_downloadMapOptions->setEnabled(false);
+
+    groupBox_mapViewOptions->setEnabled(false);
+    // ----- groupBox_mapViewOptions -----
     label_mapSymbolsFont->setEnabled(false);
     fontComboBox_mapSymbols->setEnabled(false);
     checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
     pushButton_showGlyphUsage->setEnabled(false);
 
-    groupBox_downloadMapOptions->setEnabled(false);
+
     // The above is actually normally hidden:
     groupBox_downloadMapOptions->hide();
-    groupBox_mapOptions->setEnabled(false);
+
     // This is actually normally hidden until a map is loaded:
     checkBox_showDefaultArea->hide();
 
-    // on tab_mapperColors:
+    // ===== tab_mapperColors =====
     groupBox_mapperColors->setEnabled(false);
 
-    // on groupBox_logOptions:
-    groupBox_logOptions->setEnabled(false);
-    lineEdit_logFileName->setVisible(false);
-    label_logFileName->setVisible(false);
-    label_logFileNameExtension->setVisible(false);
+    // ===== tab security =====
+    groupBox_ssl->setEnabled(false);
 
-    // on groupBox_specialOptions:
-    groupBox_specialOptions->setEnabled(false);
-
+    // ===== tab_chat =====
     groupBox_ircOptions->setEnabled(false);
-
-    need_reconnect_for_specialoption->hide();
-    groupbox_searchEngineSelection->setEnabled(false);
 
     groupBox_discordPrivacy->hide();
 
-    // tab security
-    groupBox_ssl->setEnabled(false);
+    // ===== tab_specialOptions =====
+    groupBox_specialOptions->setEnabled(false);
+    // ----- groupBox_specialOptions -----
+    need_reconnect_for_specialoption->hide();
+
+    groupbox_searchEngineSelection->setEnabled(false);
+    // ----- groupBox_debug -----
+    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(false);
+    // This acts on a label within this groupBox:
+    hidePasswordMigrationLabel();
+    checkBox_debugShowAllCodepointProblems->setEnabled(false);
+    widget_timerDebugOutputMinimumInterval->setEnabled(false);
+    label_networkPacketTimeout->setEnabled(false);
+    doubleSpinBox_networkPacketTimeout->setEnabled(false);
 }
 
 void dlgProfilePreferences::enableHostDetails()
 {
-    // on tab_general:
+    // ===== tab_general =====
+    // ----- groupBox_encoding -----
     label_encoding->setEnabled(true);
     comboBox_encoding->setEnabled(true);
-    groupBox_miscellaneous->setEnabled(true);
+
+    // ----- groupBox_miscellaneous -----
+    mAlertOnNewData->setEnabled(true);
+    acceptServerGUI->setEnabled(true);
+    mFORCE_SAVE_ON_EXIT->setEnabled(true);
+    acceptServerMedia->setEnabled(true);
+
     groupBox_protocols->setEnabled(true);
 
-    // on tab_inputLine:
+    groupBox_logOptions->setEnabled(true);
+
+    // ===== tab_inputLine =====
     groupBox_input->setEnabled(true);
+
     groupBox_spellCheck->setEnabled(true);
 
-    // on tab_display:
+    // ===== tab_display =====
     groupBox_font->setEnabled(true);
+
     groupBox_borders->setEnabled(true);
+
     groupBox_wrapping->setEnabled(true);
+
     groupBox_doubleClick->setEnabled(true);
 
+    // ----- groupBox_displayOptions -----
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
     checkBox_enableTextAnalyzer->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
-    widget_timerDebugOutputMinimumInterval->setEnabled(true);
 
-    // on tab_codeEditor:
+    // ===== tab_codeEditor =====
     groupbox_codeEditorThemeSelection->setEnabled(true);
 
-    // on tab_displayColors:
+    groupBox_autoComplete->setEnabled(true);
+
+    // ===== tab_displayColors =====
     groupBox_displayColors->setEnabled(true);
 
-    // on tab_mapper:
+    // ===== tab_mapper =====
     // most of groupBox_mapFiles is disabled but there is ONE checkBox that
-    // is accessable because it is application wide - so disable EVERYTHING
-    // else that is not already disabled:
+    // is accessible because it is application wide - so enable EVERYTHING
+    // else:
+    // ----- groupBox_mapFiles -----
     label_saveMap->setEnabled(true);
     pushButton_saveMap->setEnabled(true);
     label_loadMap->setEnabled(true);
@@ -494,27 +550,34 @@ void dlgProfilePreferences::enableHostDetails()
     label_copyMap->setEnabled(true);
     label_mapFileSaveFormatVersion->setEnabled(true);
 
-    groupBox_downloadMapOptions->setEnabled(true);
-    groupBox_mapOptions->setEnabled(true);
 
-    // on tab_mapperColors:
+    groupBox_downloadMapOptions->setEnabled(true);
+
+    groupBox_mapViewOptions->setEnabled(true);
+
+    // ===== tab_mapperColors =====
     groupBox_mapperColors->setEnabled(true);
 
-    // on tab_logging:
-    groupBox_logOptions->setEnabled(true);
-
-    // on groupBox_specialOptions:
-    groupBox_specialOptions->setEnabled(true);
-
-    groupBox_ircOptions->setEnabled(true);
-
-    groupbox_searchEngineSelection->setEnabled(true);
-
+    // ===== tab security =====
 #if defined(QT_NO_SSL)
     groupBox_ssl->setEnabled(false);
 #else
     groupBox_ssl->setEnabled(QSslSocket::supportsSsl());
 #endif
+
+    // ===== tab_chat =====
+    groupBox_ircOptions->setEnabled(true);
+
+    // ===== tab_specialOptions =====
+    groupBox_specialOptions->setEnabled(true);
+
+    groupbox_searchEngineSelection->setEnabled(true);
+    // ----- groupBox_debug -----
+    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
+    widget_timerDebugOutputMinimumInterval->setEnabled(true);
+    checkBox_debugShowAllCodepointProblems->setEnabled(true);
+    label_networkPacketTimeout->setEnabled(true);
+    doubleSpinBox_networkPacketTimeout->setEnabled(true);
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
@@ -537,6 +600,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     ircHostName->setText(dlgIRC::readIrcHostName(pHost));
     ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(pHost)));
+    ircHostSecure->setChecked(dlgIRC::readIrcHostSecure(pHost));
     ircChannels->setText(dlgIRC::readIrcChannels(pHost).join(" "));
     ircNick->setText(dlgIRC::readIrcNickName(pHost));
 
@@ -614,7 +678,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
         }
 
-        // Reenable sorting now we have populated the widget:
+        // Re-enable sorting now we have populated the widget:
         dictList->setSortingEnabled(true);
         // Actually do the sort:
         dictList->sortItems();
@@ -804,7 +868,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     hidePasswordMigrationLabel();
 
-    //doubleclick ignore
+    //double-click ignore
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
     while (it.hasNext()) {
@@ -819,7 +883,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     label_mapFileSaveFormatVersion->setEnabled(false);
     if (pHost->mpMap->mMaxVersion > pHost->mpMap->mDefaultVersion || pHost->mpMap->mMinVersion < pHost->mpMap->mDefaultVersion) {
-        for (short int i = pHost->mpMap->mMinVersion; i <= pHost->mpMap->mMaxVersion; ++i) {
+        for (int i = pHost->mpMap->mMinVersion; i <= pHost->mpMap->mMaxVersion; ++i) {
             if (i == pHost->mpMap->mDefaultVersion) {
                 continue;
             }
@@ -878,6 +942,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         spinBox_playerRoomInnerDiameter->setEnabled(pHost->mpMap->mPlayerRoomStyle != 0);
         setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
         setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
+
+        connect(checkBox_enablMapDeleteButton, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleMapDeleteButton);
+        connect(pushButton_deleteMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_deleteMap);
         connect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changePlayerRoomStyle);
         connect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomPrimaryColor);
         connect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomSecondaryColor);
@@ -919,7 +986,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     generateLoginTexts();
 
     timeEdit_timerDebugOutputMinimumInterval->setTime(pHost->mTimerDebugOutputSuppressionInterval);
-    notificationArea->hide();
+    frame_notificationArea->hide();
     notificationAreaIconLabelWarning->hide();
     notificationAreaIconLabelError->hide();
     notificationAreaIconLabelInformation->hide();
@@ -943,7 +1010,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             if (!pHost->mTelnet.getSslErrors().empty()) {
                 // handle ssl errors
                 notificationAreaIconLabelWarning->show();
-                notificationArea->show();
+                frame_notificationArea->show();
                 notificationAreaMessageBox->show();
                 //notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
 
@@ -966,21 +1033,21 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             } else if (pHost->mTelnet.error() == QAbstractSocket::SslHandshakeFailedError) {
                 // handle failed handshake, likely not ssl socket
                 notificationAreaIconLabelError->show();
-                notificationArea->show();
+                frame_notificationArea->show();
                 notificationAreaMessageBox->show();
                 notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
             }
             if (pHost->mTelnet.error() == QAbstractSocket::SslInternalError) {
                 // handle ssl library error
                 notificationAreaIconLabelError->show();
-                notificationArea->show();
+                frame_notificationArea->show();
                 notificationAreaMessageBox->show();
                 notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
             }
             if (pHost->mTelnet.error() == QAbstractSocket::SslInvalidUserDataError) {
                 // handle invalid data (certificate, key, cypher, etc.)
                 notificationAreaIconLabelError->show();
-                notificationArea->show();
+                frame_notificationArea->show();
                 notificationAreaMessageBox->show();
                 notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
             }
@@ -1004,6 +1071,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
+    doubleSpinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout() / 1000.0);
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -1085,6 +1153,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
     connect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_logFileNameFormatChange);
     connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml);
+    connect(doubleSpinBox_networkPacketTimeout, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPostingTimeout);
 
     //Security tab
 
@@ -1283,7 +1352,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_debugShowAllCodepointProblems->setChecked(false);
 
     groupBox_ssl_certificate->hide();
-    notificationArea->hide();
+    frame_notificationArea->hide();
     groupBox_proxy->setDisabled(true);
 
     // Remove the reference to the Host/profile in the title:
@@ -1313,6 +1382,8 @@ void dlgProfilePreferences::loadEditorTab()
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setFont(pHost->getDisplayFont());
     config->setAutocompleteAutoShow(pHost->mEditorAutoComplete);
+    config->setRenderBidiContolCharacters(pHost->mEditorShowBidi);
+    config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
     edbeePreviewWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QStringLiteral("Buck.lua")));
     // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
@@ -1344,6 +1415,7 @@ void dlgProfilePreferences::loadEditorTab()
     theme_download_label->hide();
 
     checkBox_autocompleteLuaCode->setChecked(pHost->mEditorAutoComplete);
+    checkBox_showBidi->setChecked(pHost->mEditorShowBidi);
 
     // changes the theme being previewed
     connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_theme_selected);
@@ -1633,8 +1705,7 @@ void dlgProfilePreferences::setCommandBgColor()
 void dlgProfilePreferences::setFontSize()
 {
     mFontSize = fontSize->currentIndex() + 1;
-    // delay setting pHost->mDisplayFont until save is clicked by the user.
-    //setDisplayFont();
+    setDisplayFont();
 }
 
 void dlgProfilePreferences::setDisplayFont()
@@ -2007,7 +2078,7 @@ void dlgProfilePreferences::loadMap()
                            this,
                            tr("Load Mudlet map"),
                            mapSaveLoadDirectory(pHost),
-                           tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)",
+                           tr("Mudlet map (*.dat *.json);;Xml map data (*.xml);;Any file (*)",
                               "Do not change extensions (in braces) as they are used programmatically"));
     if (fileName.isEmpty()) {
         return;
@@ -2019,26 +2090,24 @@ void dlgProfilePreferences::loadMap()
     bool showAuditErrors = mudlet::self()->showMapAuditErrors();
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
+    bool success = false;
+    label_mapFileActionResult->setText(tr("Loading map - please wait..."));
+    qApp->processEvents(); // Needed to make the above message show up when loading big maps
     if (fileName.endsWith(QStringLiteral(".xml"), Qt::CaseInsensitive)) {
-        label_mapFileActionResult->setText(tr("Importing map - please wait..."));
         qApp->processEvents(); // Needed to make the above message show up when loading big maps
-
-        if (pHost->mpConsole->importMap(fileName)) {
-            label_mapFileActionResult->setText(tr("Imported map from %1.").arg(fileName));
-        } else {
-            label_mapFileActionResult->setText(tr("Could not import map from %1.").arg(fileName));
-        }
+        success = pHost->mpConsole->importMap(fileName);
+    } else if (fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
+        success = pHost->mpMap->readJsonMapFile(fileName).first;
     } else {
-        label_mapFileActionResult->setText(tr("Loading map - please wait..."));
-        qApp->processEvents(); // Needed to make the above message show up when loading big maps
-
-
-        if (pHost->mpConsole->loadMap(fileName)) {
-            label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
-        } else {
-            label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
-        }
+       success = pHost->mpConsole->loadMap(fileName);
     }
+
+    if (success) {
+        label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
+    } else {
+        label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
+    }
+
     QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 
     // Restore setting immediately before we used it
@@ -2053,12 +2122,12 @@ void dlgProfilePreferences::saveMap()
     }
 
     QString fileName =
-            QFileDialog::getSaveFileName(this, tr("Save Mudlet map"), mapSaveLoadDirectory(pHost), tr("Mudlet map (*.dat)", "Do not change the extension text (in braces) - it is needed programmatically!"));
+            QFileDialog::getSaveFileName(this, tr("Save Mudlet map"), mapSaveLoadDirectory(pHost), tr("Mudlet map (*.dat *.json);;", "Do not change the extension text (in braces) - it is needed programmatically!"));
     if (fileName.isEmpty()) {
         return;
     }
 
-    if (!fileName.endsWith(QStringLiteral(".dat"), Qt::CaseInsensitive)) {
+    if (!fileName.endsWith(QStringLiteral(".dat"), Qt::CaseInsensitive) && !fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
         fileName.append(QStringLiteral(".dat"));
     }
 
@@ -2072,7 +2141,14 @@ void dlgProfilePreferences::saveMap()
     bool showAuditErrors = mudlet::self()->showMapAuditErrors();
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
-    if (pHost->mpConsole->saveMap(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt())) {
+    bool success = false;
+    if (!fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
+        success = pHost->mpConsole->saveMap(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt());
+    } else {
+        success = pHost->mpMap->writeJsonMapFile(fileName).first;
+    }
+
+    if (success) {
         label_mapFileActionResult->setText(tr("Saved map to %1.").arg(fileName));
     } else {
         label_mapFileActionResult->setText(tr("Could not save map to %1.").arg(fileName));
@@ -2301,7 +2377,7 @@ void dlgProfilePreferences::copyMap()
     mudlet::self()->requestProfilesToReloadMaps(toProfilesRoomIdMap.keys());
     // GOTCHA: keys() is a QList<QString>, however, though it IS equivalent to a
     // QStringList in many ways, the SLOT/SIGNAL system treats them as different
-    // - I thinK - so use QList<QString> thoughout the SIGNAL/SLOT links Slysven!
+    // - I thinK - so use QList<QString> throughout the SIGNAL/SLOT links Slysven!
     label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
     QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 
@@ -2333,7 +2409,7 @@ void dlgProfilePreferences::slot_setLogDir()
      * QFileDialog constructors."
      *
      * That warning suggests *bad things* would happen if the "Save" button or
-     * the widget title bar close button was pressed on the Profile Preferrences
+     * the widget title bar close button was pressed on the Profile Preferences
      * dialog while the directory selector is open...!
      */
     // Seems to return "." when Cancel is hit:
@@ -2418,7 +2494,7 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->setUserDictionaryOptions(true, false);
         }
         pHost->mWrapAt = wrap_at_spinBox->value();
-        pHost->adjustNAWS();
+        pHost->updateDisplayDimensions();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
@@ -2426,7 +2502,6 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mCommandSeparator = command_separator_lineedit->text();
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
         pHost->mAcceptServerMedia = acceptServerMedia->isChecked();
-        pHost->mUSE_IRE_DRIVER_BUGFIX = checkBox_USE_IRE_DRIVER_BUGFIX->isChecked();
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
         pHost->mEnableTextAnalyzer = checkBox_enableTextAnalyzer->isChecked();
         pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
@@ -2504,11 +2579,13 @@ void dlgProfilePreferences::slot_save_and_exit()
         QString oldIrcNick = dlgIRC::readIrcNickName(pHost);
         QString oldIrcHost = dlgIRC::readIrcHostName(pHost);
         QString oldIrcPort = QString::number(dlgIRC::readIrcHostPort(pHost));
+        bool oldIrcSecure = dlgIRC::readIrcHostSecure(pHost);
         QString oldIrcChannels = dlgIRC::readIrcChannels(pHost).join(" ");
 
         QString newIrcNick = ircNick->text();
         QString newIrcHost = ircHostName->text();
         QString newIrcPort = ircHostPort->text();
+        bool newIrcSecure = ircHostSecure->isChecked();
         QString newIrcChannels = ircChannels->text();
         QStringList newChanList;
         int nIrcPort = dlgIRC::DefaultHostPort;
@@ -2572,6 +2649,11 @@ void dlgProfilePreferences::slot_save_and_exit()
             restartIrcClient = true;
         }
 
+        if (oldIrcSecure != newIrcSecure) {
+            dlgIRC::writeIrcHostSecure(pHost, newIrcSecure);
+            restartIrcClient = true;
+        }
+
         // restart the irc client if it is active and we have changed host/port.
         if (restartIrcClient && pHost->mpDlgIRC) {
             pHost->mpDlgIRC->ircRestart();
@@ -2592,6 +2674,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
+        pHost->mEditorShowBidi = checkBox_showBidi->isChecked();
         if (pHost->mpEditorDialog) {
             pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
         }
@@ -2702,6 +2785,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
+    pMudlet->setAppearance(static_cast<mudlet::Appearance>(comboBox_appearance->currentIndex()));
 
     mudlet::self()->mDiscord.UpdatePresence();
 
@@ -3005,6 +3089,8 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                         QObject::connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
                             if (future.result()) {
                                 populateThemesList();
+
+                                emit signal_themeUpdateCompleted();
                             }
 
                             theme_download_label->hide();
@@ -3509,7 +3595,7 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont & font)
 
 // These next two prevent BOTH controls being set to never to prevent the lose
 // of access to the setting/controls completely - once there is a profile loaded
-// access to the settings/controls can be overriden by a context menu action on
+// access to the settings/controls can be overridden by a context menu action on
 // any TConsole instance:
 void dlgProfilePreferences::slot_changeShowMenuBar(int newIndex)
 {
@@ -3603,7 +3689,7 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
                                       .scaled(iconBackground.width(), iconBackground.height(), Qt::KeepAspectRatioByExpanding));
             painter.fillRect(0, 0, iconBackground.width(), iconBackground.height(), disabledColor);
             painter.end();
-            // Because the button is disabled we have to explictly force our
+            // Because the button is disabled we have to explicitly force our
             // icon to be used for that state otherwise the built-in icon engine
             // will assume our image is for the normal state and grey it out
             // completely by automagic means instead of making use of the
@@ -3738,6 +3824,17 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
     label_languageChangeWarning->show();
 }
 
+void dlgProfilePreferences::slot_setAppearance(const mudlet::Appearance state)
+{
+    if (comboBox_appearance->currentIndex() != state) {
+        comboBox_appearance->setCurrentIndex(state);
+    }
+
+    mudlet::self()->setAppearance(state);
+
+    label_darkEditorPrompt->setVisible(mudlet::self()->inDarkMode());
+}
+
 // This slot is called when the mudlet singleton tells everything that the
 // locale/language selection has been changed (new translators installed)
 // It probably came about because the control for it on THIS dialog was changed
@@ -3757,7 +3854,7 @@ void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
 
     // Now change the displayed texts that are translated - importantly this
     // is done so that the message that says "restart Mudlet to finish changing
-    // the language" is shown in the newly selected langauge - on the basis that
+    // the language" is shown in the newly selected language - on the basis that
     // it is the one the user understands rather than the currently used one.
     retranslateUi(this);
 
@@ -3955,4 +4052,86 @@ void dlgProfilePreferences::setPlayerRoomColor(QPushButton* b, QColor& c)
         // visible and adjusts the saturation of a disabled button:
         setButtonColor(b, color);
     }
+}
+
+void dlgProfilePreferences::slot_setPostingTimeout(const double timeout)
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    pHost->mTelnet.setPostingTimeout(qRound(1000.0 * timeout));
+}
+
+void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
+{
+    if (link == QStringLiteral("dark-code-editor")) {
+        const auto darkTheme = QStringLiteral("Monokai");
+
+        label_darkEditorPrompt->hide();
+
+        // switch to code editor tab
+        tabWidget->setCurrentIndex(3);
+
+        auto monokaiIndex = code_editor_theme_selection_combobox->findText(darkTheme);
+        if (monokaiIndex != -1) {
+            code_editor_theme_selection_combobox->setCurrentIndex(monokaiIndex);
+            return;
+        }
+
+        // in case no theme index is available yet, so it as soon as one is available
+        KDToolBox::connectSingleShot(this, &dlgProfilePreferences::signal_themeUpdateCompleted,  [=]() {
+            auto monokaiIndex = code_editor_theme_selection_combobox->findText(darkTheme);
+            if (monokaiIndex != -1) {
+                code_editor_theme_selection_combobox->setCurrentIndex(monokaiIndex);
+            }
+        });
+
+        return;
+    }
+
+    qWarning() << "unknown link clicked in profile preferences:" << link;
+}
+
+void dlgProfilePreferences::slot_toggleMapDeleteButton(const bool state)
+{
+    // Enable/Disable map deletion button:
+    pushButton_deleteMap->setEnabled(state);
+}
+
+void dlgProfilePreferences::slot_deleteMap()
+{
+    Host* pHost = mpHost;
+    if (!pHost || !pHost->mpMap) {
+        return;
+    }
+
+    // Disable the button, but set it to be down until process is complete
+    pushButton_deleteMap->setEnabled(false);
+    pushButton_deleteMap->setCheckable(true);
+    pushButton_deleteMap->setChecked(true);
+
+    // Move the focus to the load map button, otherwise it will jump down to
+    // the next button in the tab stop sequence (Copy map to other profiles)
+    // which is not really appropriate:
+    pushButton_loadMap->setFocus(Qt::OtherFocusReason);
+
+    label_mapFileActionResult->show();
+    label_mapFileActionResult->setText(tr("Deleting map - please wait..."));
+    qApp->processEvents(); // Allow the above message to show up when erasing big maps
+    pHost->mpMap->mapClear();
+    pHost->mpMap->update();
+
+    // Reset the button but leave it disabled
+    pushButton_deleteMap->setChecked(false);
+    pushButton_deleteMap->setCheckable(false);
+
+    // Also reset the checkBox that enables the button:
+    checkBox_enablMapDeleteButton->setChecked(false);
+
+    label_mapFileActionResult->setText(tr("Deleted map."));
+    qApp->processEvents(); // Allow the above message to show up when erasing big maps
+
+    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 }

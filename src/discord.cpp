@@ -57,7 +57,9 @@ Discord::Discord(QObject* parent)
               {"lusternia", {"lusternia.com", "iron-lus.ironrealms.com"}},
               {"starmourn", {"starmourn.com"}},
               {"stickmud", {"stickmud.com"}},
-              {"clessidra", {"clessidra.it", "mud.clessidra.it"}}
+              {"clessidra", {"clessidra.it", "mud.clessidra.it"}},
+              {"mume", {"mume.org"}},
+              {"asteria", {"asteriamud.com"}},
             }
 {
 #if defined(Q_OS_WIN64)
@@ -486,7 +488,7 @@ QString Discord::deduceGameName(const QString& address)
         fragments.removeLast();
         otherName = fragments.join(QLatin1String("."));
         if (otherName.startsWith(QLatin1String("game."))) {
-            // WoTMUD type case - so take remaing term in the middle of original
+            // WoTMUD type case - so take remaining term in the middle of original
             otherName = otherName.split(QChar('.')).last();
             break;
         } else if (otherName.startsWith(QLatin1String("www."))) {
@@ -585,6 +587,21 @@ bool Discord::setApplicationID(Host* pHost, const QString& text)
     } else {
         return false;
     }
+}
+
+void Discord::resetData(Host* pHost){
+    mStartTimes.remove(pHost);
+    mEndTimes.remove(pHost);
+    mDetailTexts[pHost] = QStringLiteral("www.mudlet.org");
+    mStateTexts.remove(pHost);
+    mLargeImages.remove(pHost);
+    mLargeImageTexts.remove(pHost);
+    mSmallImages.remove(pHost);
+    mSmallImageTexts.remove(pHost);
+    mPartySize.remove(pHost);
+    mPartyMax.remove(pHost);
+    mHostApplicationIDs.remove(pHost);
+    UpdatePresence();
 }
 
 // Returns Host set app ID or the default Mudlet one if none set for the

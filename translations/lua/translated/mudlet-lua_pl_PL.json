@@ -1,4 +1,8 @@
 {
+  "AdjustableContainer.attach": {
+    "message": "Przyłącz do:",
+    "description": "attaches your container to a border"
+  },
   "AdjustableContainer.bottom": {
     "message": "dół",
     "description": "one of the borders the container can be attached to"
@@ -7,9 +11,29 @@
     "message": "góra",
     "description": "one of the borders the container can be attached to"
   },
+  "AdjustableContainer.custom": {
+    "message": "Własne:",
+    "description": "a menu item in the right click menu. it contains user/package made custom items"
+  },
   "AdjustableContainer.lock": {
     "message": "Zablokuj",
     "description": "locks your container. Which means it's not movable/resizable anymore and changes some other properties depending on the Lockstyle (like hiding the borders)"
+  },
+  "AdjustableContainer.lockstyle": {
+    "message": "Styl blokowania:",
+    "description": "different modes/styles to choose which will be the lock behaviour of the container"
+  },
+  "AdjustableContainer.standard": {
+    "message": "standardowy",
+    "description": "one of the Lockstyles. This Lockstyle is the standard setting, with a small margin on top to keep the right click menu usable"
+  },
+  "AdjustableContainer.light": {
+    "message": "prosty",
+    "description": "one of the Lockstyles. Can also be translated as simple. It is only hiding the min/restore labels the borders and margin stay intact"
+  },
+  "AdjustableContainer.full": {
+    "message": "pełny",
+    "description": "one of the Lockstyles. Can also be translated as complete as it's locking the container without any margin left for the right click menu."
   },
   "AdjustableContainer.save": {
     "message": "Zapisz",
@@ -18,6 +42,10 @@
   "AdjustableContainer.load": {
     "message": "Załaduj",
     "description": "loads the previously saved settings of the container"
+  },
+  "AdjustableContainer.min_restore": {
+    "message": "Min./Przywróć",
+    "description": "label to minimize/restore the container"
   },
   "AdjustableContainer.connectTo": {
     "message": "Połącz z: ",

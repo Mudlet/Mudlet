@@ -25,8 +25,14 @@
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	"forwardPorts": [5900, 5901, 6080],
 
+	"portsAttributes": {
+		"6080": {
+			"label": "Open Mudlet"
+		}
+	}
+
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "gcc -v",
+	"postCreateCommand": "git submodule update --init",
 
 	// Comment out this line to run as root instead.
 	"remoteUser": "vscode",

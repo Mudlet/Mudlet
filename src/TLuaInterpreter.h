@@ -60,6 +60,7 @@ extern "C" {
 
 
 class Host;
+class TAction;
 class TEvent;
 class TLuaThread;
 class TMapLabel;
@@ -70,6 +71,8 @@ class TTrigger;
 #define USERCOMMAND 2
 #define PROMPT 3
 #define RAWDATA 4
+
+using NamedMatchesRanges = QMap<QString, QPair<int, int>>;
 
 
 class TLuaInterpreter : public QThread
@@ -89,6 +92,8 @@ public:
     void msdp2Lua(const char*);
     void initLuaGlobals();
     void initIndenterGlobals();
+    lua_State* getLuaGlobalState();
+
     bool call(const QString& function, const QString& mName, const bool muteDebugOutput = false);
     std::pair<bool, bool> callReturnBool(const QString& function, const QString& mName);
     bool callMulti(const QString& function, const QString& mName);
@@ -115,7 +120,7 @@ public:
     void set_lua_string(const QString& varName, const QString& varValue);
     void set_lua_table(const QString& tableName, QStringList& variableList);
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
-    void setCaptureNameGroups(const NameGroupMatches&);
+    void setCaptureNameGroups(const NameGroupMatches&, const NamedMatchesRanges&);
     void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<NameGroupMatches>& nameMatches);
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
@@ -236,6 +241,7 @@ public:
     static int getSpecialExitsSwap(lua_State*);
     static int appendCmdLine(lua_State*);
     static int getCmdLine(lua_State* L);
+    static int selectCmdLineText(lua_State* L);
     static int addCmdLineSuggestion(lua_State* L);
     static int removeCmdLineSuggestion(lua_State* L);
     static int clearCmdLineSuggestions(lua_State* L);
@@ -340,6 +346,7 @@ public:
     static int disableKey(lua_State* L);
     static int killKey(lua_State* L);
     static int debug(lua_State* L);
+    static int errorc(lua_State* L);
     static int showHandlerError(lua_State* L);
     static int setWindowWrap(lua_State*);
     static int getWindowWrap(lua_State*);
@@ -404,6 +411,7 @@ public:
     static int selectCurrentLine(lua_State*);
     static int spawn(lua_State*);
     static int getButtonState(lua_State*);
+    static int setButtonState(lua_State*);
     static int showToolBar(lua_State*);
     static int hideToolBar(lua_State*);
     static int loadReplay(lua_State*);
@@ -554,6 +562,7 @@ public:
     static int getAvailableFonts(lua_State* L);
     static int tempAnsiColorTrigger(lua_State*);
     static int setDiscordApplicationID(lua_State* L);
+    static int setDiscordGameUrl(lua_State* L);
     static int usingMudletsDiscordID(lua_State*);
     static int setDiscordState(lua_State*);
     static int setDiscordDetail(lua_State*);
@@ -573,6 +582,7 @@ public:
     static int getDiscordTimeStamps(lua_State*);
     static int getDiscordParty(lua_State*);
     static int setDiscordGame(lua_State*);
+    static int resetDiscordData(lua_State*);
     static int getPlayerRoom(lua_State*);
     static int getMapSelection(lua_State*);
     static int addWordToDictionary(lua_State*);
@@ -610,6 +620,12 @@ public:
     static int getProfileTabNumber(lua_State*);
     static int addFileWatch(lua_State*);
     static int removeFileWatch(lua_State*);
+    static int addMouseEvent(lua_State* L);
+    static int removeMouseEvent(lua_State* L);
+    static int getMouseEvents(lua_State* L);
+    static int addCommandLineMenuEvent(lua_State* L);
+    static int removeCommandLineMenuEvent(lua_State* L);
+    static int deleteMap(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
@@ -657,6 +673,8 @@ private:
     bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
     void insertNativeSeparatorsFunction(lua_State* L);
     static void pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel& label);
+    static std::pair<int, TAction*> getTActionFromIdOrName(lua_State*, const int, const char*);
+
     const int LUA_FUNCTION_MAX_ARGS = 50;
 
 
@@ -667,6 +685,7 @@ private:
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
     QVector<QPair<QString, QString>> mCapturedNameGroups;
+    QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
 
     QMap<QNetworkReply*, QString> downloadMap;

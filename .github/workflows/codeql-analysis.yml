@@ -10,6 +10,7 @@ on:
     branches: [development, main]
   schedule:
     - cron: '0 7 * * 3'
+  workflow_dispatch:
 
 jobs:
   analyze:
@@ -42,7 +43,7 @@ jobs:
         submodules: true
 
     - name: Restore Qt cache
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.6
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
@@ -58,7 +59,7 @@ jobs:
         aqtversion: '==1.1.2'
 
     - name: Restore Boost cache
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.6
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
@@ -83,11 +84,16 @@ jobs:
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v1
       with:
+        config-file: ./.github/codeql/codeql-config.yml
         languages: ${{ matrix.language }}
         # If you wish to specify custom queries, you can do so here or in a config file.
         # By default, queries listed here will override any specified in a config file.
         # Prefix the list here with "+" to use these queries and those in the config file.
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
+
+    # workaround a poor interaction between github actions/cmake/vcpkg, see https://github.com/lukka/run-vcpkg/issues/88#issuecomment-885758902
+    - name: Use CMake 3.20.1
+      uses: lukka/get-cmake@v3.20.1
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg

@@ -115,7 +115,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
      * the most efficient way of putting together a set of large QStrings
      * some of which will shortly be made translable, it is intended to make
      * it easier to add and remove sections according to the build settings
-     * and for boiler-plate licences to be reused mulitple times if necessary.
+     * and for boiler-plate licences to be reused multiple times if necessary.
      */
 
     // A uniform header for all tabs:
@@ -294,7 +294,7 @@ void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
     QString headerText(tr("<p>Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.</p>\n"
                           "<p>Mudlet is released under the GPL license version 2, which is reproduced below:</p>",
                           "For non-english language versions please append a translation of the following "
-                          "to explain why the GPL is NOT reproduced in the relevent language: 'but only "
+                          "to explain why the GPL is NOT reproduced in the relevant language: 'but only "
                           "the English form is considered the official version of the license, so the "
                           "following is reproduced in that language:' to replace 'which is reproduced below:'..."));
 
@@ -909,6 +909,10 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     QString QtKeyChainHeader(tr("<h2><u>QtKeyChain - Platform-independent Qt API for storing passwords securely</u></h2>"
                                  "<h3>Copyright © 2011-2019 Frank Osterfeld &lt;frank.osterfeld@gmail.com&gt;.</h3>"));
 
+    QString SingleConnectHeader(tr("<h2><u>singleshot_connect.h - part of KDToolBox</u><br>(https://github.com/KDAB/KDToolBox).</h2>"
+                                   "<h3>Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &lt;info@kdab.comF&gt;.</h3>"));
+
+
     // Now start to assemble the fragments above:
     QStringList license_3rdParty_texts;
     license_3rdParty_texts.append(QStringLiteral("<html>%1<body>%2<hr>")
@@ -988,7 +992,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 #endif
 
     license_3rdParty_texts.append(QStringLiteral("<hr><br>"
-                                                 "<center><img src=\":/icons/Discord-Logo+Wordmark-Color_400x136px.png\"/></center><br>"
+                                                 "<center><img src=\":/icons/Discord-Logo+Wordmark-Color_438x120px.png\"/></center><br>"
                                                  "%33%34")
                                   .arg(DiscordHeader,                          // 33 - Discord header - translatable
                                        MIT_Body));                             // 34 - Discord body MIT - not translatable
@@ -998,6 +1002,10 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                   .arg(QtKeyChainHeader,                       // 35 - QtKeyChain header - translatable
                                        BSD2Clause_Body                         // 36 - QtKeyChain body BSD2 ("AUTHOR") - not translatable
                                        .arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR"))));
+
+    license_3rdParty_texts.append(QStringLiteral("<hr>%37%38")
+                                  .arg(SingleConnectHeader,                    // 37 - singleshot_connect header - translatable
+                                       MIT_Body));                             // 38 - singleshot_connect body MIT - not translatable
 
     license_3rdParty_texts.append(QStringLiteral("</body></html>"));
 

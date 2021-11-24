@@ -45,6 +45,7 @@
 #include <QShortcut>
 #include <QTextBoundaryFinder>
 #include <QTextCodec>
+#include <QTextStream>
 #include <QPainter>
 #include "post_guard.h"
 
@@ -140,7 +141,7 @@ std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name,
 
 void TMainConsole::toggleLogging(bool isMessageEnabled)
 {
-    // CHECKME: This path seems suspicious, it is shared amoungst ALL profiles
+    // CHECKME: This path seems suspicious, it is shared amongst ALL profiles
     // but the action is "Per Profile"...!
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("autolog")));
     QDateTime logDateTime = QDateTime::currentDateTime();
@@ -647,6 +648,7 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
             mpMapper->mp2dMap->init();
             mpMapper->updateAreaComboBox();
             mpMapper->resetAreaComboBoxToPlayerRoomArea();
+            mpMapper->show();
         }
 
         mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
@@ -1278,7 +1280,7 @@ bool TMainConsole::importMap(const QString& location, QString* errMsg)
             filePathNameString = QDir::cleanPath(mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileInfo.filePath()));
         } else {
             if (fileInfo.exists()) {
-                filePathNameString = fileInfo.canonicalFilePath(); // Cannot use cannonical path if file doesn't exist!
+                filePathNameString = fileInfo.canonicalFilePath(); // Cannot use canonical path if file doesn't exist!
             } else {
                 filePathNameString = fileInfo.absoluteFilePath();
             }
@@ -1351,4 +1353,63 @@ void TMainConsole::slot_reloadMap(QList<QString> profilesList)
     }
 
     pHost->postMessage(outcomeMsg);
+}
+
+void TMainConsole::resizeEvent(QResizeEvent* event)
+{
+    // Process the event like other TConsoles
+    TConsole::resizeEvent(event);
+
+    auto pHost = getHost();
+    if (!pHost) {
+        return;
+    }
+
+    // Update the record of the text area size for NAWS purposes:
+    pHost->updateDisplayDimensions();
+}
+
+void TMainConsole::showStatistics()
+{
+    QStringList header;
+    header << "\n"
+           << "+--------------------------------------------------------------+\n"
+           << "|               system statistics                              |\n"
+           << "+--------------------------------------------------------------+\n";
+
+    QString h = header.join("");
+    QString msg = h;
+    print(msg, QColor(150, 120, 0), Qt::black);
+
+    QString script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nGMCP events:\n]]);setUnderline(false);setFgColor(150,120,0);display( gmcp );";
+    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
+    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nATCP events:\n]]);setUnderline(false);setFgColor(150,120,0); display( atcp );";
+    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
+    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nchannel102 events:\n]]);setUnderline(false);setFgColor(150,120,0);display( channel102 );";
+    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
+
+
+    script = "setFgColor(190,150,0); setUnderline(true); echo([[\n\nTrigger Report:\n\n]]); setBold(false);setUnderline(false);setFgColor(150,120,0)";
+    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
+    QString r1 = mpHost->getTriggerUnit()->assembleReport();
+    msg = r1;
+    print(msg, QColor(150, 120, 0), Qt::black);
+    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nTimer Report:\n\n]]);setBold(false);setUnderline(false);setFgColor(150,120,0)";
+    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
+    QString r2 = mpHost->getTimerUnit()->assembleReport();
+    msg = r2;
+    print(msg, QColor(150, 120, 0), Qt::black);
+
+    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nKeybinding Report:\n\n]]);setBold(false);setUnderline(false);setFgColor(150,120,0)";
+    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
+    QString r3 = mpHost->getKeyUnit()->assembleReport();
+    msg = r3;
+    print(msg, QColor(150, 120, 0), Qt::black);
+
+    QString footer = QString("\n+--------------------------------------------------------------+\n");
+    mpHost->mpConsole->print(footer, QColor(150, 120, 0), Qt::black);
+    script = "resetFormat();";
+    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
+
+    mpHost->mpConsole->raise();
 }

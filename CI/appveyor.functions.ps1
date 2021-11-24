@@ -28,7 +28,7 @@ function SetQtBaseDir([string] $logFile) {
     }
     catch
     {
-      $Env:QT_BASE_DIR = "C:\Qt\5.12.10\mingw73_32"
+      $Env:QT_BASE_DIR = "C:\Qt\5.14.2\mingw73_32"
     }
   }
   Write-Output "Using $Env:QT_BASE_DIR as QT base directory." | Tee-Object -File "$logFile" -Append
@@ -289,9 +289,9 @@ function InstallLua() {
 }
 
 function InstallPcre() {
-  DownloadFile "https://ftp.pcre.org/pub/pcre/pcre-8.43.zip" "pcre.zip"
+  DownloadFile "https://deac-fra.dl.sourceforge.net/project/pcre/pcre/8.45/pcre-8.45.zip" "pcre.zip"
   ExtractZip "pcre.zip" "pcre"
-  Set-Location pcre\pcre-8.43
+  Set-Location pcre\pcre-8.45
   RunConfigure "--enable-utf --enable-unicode-properties --prefix=$Env:MINGW_BASE_DIR_BASH"
   RunMake
   RunMakeInstall
@@ -324,9 +324,9 @@ function InstallZlib() {
 
 function InstallLibzip() {
   $Env:Path = $NoShPath
-  DownloadFile "https://libzip.org/download/libzip-1.5.2.tar.gz" "libzip.tar.gz"
+  DownloadFile "https://libzip.org/download/libzip-1.7.3.tar.gz" "libzip.tar.gz"
   ExtractTar "$workingBaseDir\libzip.tar.gz" "$workingBaseDir\libzip"
-  Set-Location "$workingBaseDir\libzip\libzip-1.5.2"
+  Set-Location "$workingBaseDir\libzip\libzip-1.7.3"
   if (!(Test-Path -Path "build" -PathType Container)) {
     Step "Creating libzip build path"
     New-Item build -ItemType Directory >> "$logFile" 2>&1

@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2019 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2019, 2021 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -155,7 +155,7 @@ public:
     bool purgeMediaCache();
     void atcpComposerCancel();
     void atcpComposerSave(QString);
-    void setDisplayDimensions();
+    void checkNAWS();
     void setAutoReconnect(bool status);
     void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
@@ -187,6 +187,8 @@ public:
     QString decodeOption(const unsigned char) const;
     QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
     std::tuple<QString, int, bool> getConnectionInfo() const;
+    void setPostingTimeout(const int);
+    int getPostingTimeout() const { return mTimeOut; }
 
     const bool& getCanLuaSendPassword() const { return mLuaSendPasswordEnable; }
     void sendCharacterName();
@@ -217,7 +219,7 @@ public:
 
 public slots:
     void setDownloadProgress(qint64, qint64);
-    void replyFinished(QNetworkReply*);
+    void slot_replyFinished(QNetworkReply*);
     void slot_processReplayChunk();
     void handle_socket_signal_hostFound(QHostInfo);
     void handle_socket_signal_connected();
@@ -251,6 +253,7 @@ private:
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void setKeepAlive(int socketHandle);
     void processChunks();
+    void sendNAWS(int x, int y);
 
 
     QPointer<Host> mpHost;
@@ -293,7 +296,14 @@ private:
     QString termType;
     QByteArray mEncoding;
     QTimer* mpPostingTimer;
+    // We do not directly adjust the interval for the above because doing so
+    // while it is active changes the timerId which might have unforeseen
+    // effects - so instead we change the following and the revised value is
+    // then used the next time the timer is stopped and then started:
+    int mTimeOut = 300;
     bool mUSE_IRE_DRIVER_BUGFIX;
+
+    QNetworkReply* mpPackageDownloadReply = nullptr;
 
     int mCommands;
     bool mMCCP_version_1;
@@ -336,6 +346,11 @@ private:
 
     // server problem w/ not terminating IAC SB: only warn once
     bool mIncompleteSB;
+
+    // Need to track the current width and height of the TMainConsole so that
+    // we can send NAWS data when it changes:
+    int mNaws_x = 0;
+    int mNaws_y = 0;
 
 private slots:
 #if !defined(QT_NO_SSL)

@@ -12,7 +12,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         {"\27[00m", "<r>"},
         {"\27[30m", "<0,0,0>"},
         {"\27[31m", "<128,0,0>"},
-        {"\27[32m", "<0,179,0>"},
+        {"\27[32m", "<0,128,0>"},
         {"\27[33m", "<128,128,0>"},
         {"\27[34m", "<0,0,128>"},
         {"\27[35m", "<128,0,128>"},
@@ -20,7 +20,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         {"\27[37m", "<192,192,192>"},
         {"\27[40m", "<:0,0,0>"},
         {"\27[41m", "<:128,0,0>"},
-        {"\27[42m", "<:0,179,0>"},
+        {"\27[42m", "<:0,128,0>"},
         {"\27[43m", "<:128,128,0>"},
         {"\27[44m", "<:0,0,128>"},
         {"\27[45m", "<:128,0,128>"},
@@ -49,12 +49,20 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end
     end)
 
+    it("Should match the user's custom colours if they've changed them", function()
+      color_table.ansi_000 = { 0, 0, 1 }
+      local expected = "<0,0,1>"
+      local actual = ansi2decho("\27[30m", "<0,0,0>")
+      color_table.ansi_000= { 0, 0, 0 }
+      assert.are.same(expected, actual)
+    end)
+
     it("Should combine tags correctly", function()
       local sequences = {
         {"\27[0;30m", "<r><0,0,0>"},
         {"\27[1;30m", "<128,128,128>"},
         {"\27[1;40m", "<:0,0,0>"},
-        {"\27[31;42m", "<128,0,0:0,179,0>"},
+        {"\27[31;42m", "<128,0,0:0,128,0>"},
         {"\27[30;0m", "<r>"},
         {"\27[0;1;30;40m", "<r><128,128,128:0,0,0>"},
       }
@@ -90,12 +98,12 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         { "\27[38;5;10m", "<0,255,0>"},
         { "\27[48;5;9m", "<:255,0,0>"},
         { "\27[38;5;10;48;5;9m", "<0,255,0:255,0,0>"},
-        { "\27[38;5;159m", "<153,255,255>"},
-        { "\27[48;5;106m", "<:102,153,0>"},
-        { "\27[38;5;159;48;5;106m", "<153,255,255:102,153,0>"},
-        { "\27[38;5;240m", "<89,89,89>"},
-        { "\27[48;5;245m", "<:144,144,144>"},
-        { "\27[38;5;240;48;5;245m", "<89,89,89:144,144,144>"},
+        { "\27[38;5;159m", "<175,255,255>"},
+        { "\27[48;5;106m", "<:135,175,0>"},
+        { "\27[38;5;159;48;5;106m", "<175,255,255:135,175,0>"},
+        { "\27[38;5;240m", "<88,88,88>"},
+        { "\27[48;5;245m", "<:138,138,138>"},
+        { "\27[38;5;240;48;5;245m", "<88,88,88:138,138,138>"},
       }
       for _, seq in ipairs(sequences) do
         local actualResult = ansi2decho(seq[1])
@@ -105,9 +113,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
     it("Should convert some real life examples correctly", function()
       local sequences = {
-        {"\27[4z<PROMPT>\27[0;32;40m4876h, \27[0;1;33;40m3539m, \27[0;1;31;40m22200e, \27[0;1;32;40m21648w \27[0;37;40mcexkdb-\27[4z</PROMPT>", "\27[4z<PROMPT><r><0,179,0:0,0,0>4876h, <r><255,255,0:0,0,0>3539m, <r><255,0,0:0,0,0>22200e, <r><0,255,0:0,0,0>21648w <r><192,192,192:0,0,0>cexkdb-\27[4z</PROMPT>"},
+        {"\27[4z<PROMPT>\27[0;32;40m4876h, \27[0;1;33;40m3539m, \27[0;1;31;40m22200e, \27[0;1;32;40m21648w \27[0;37;40mcexkdb-\27[4z</PROMPT>", "\27[4z<PROMPT><r><0,128,0:0,0,0>4876h, <r><255,255,0:0,0,0>3539m, <r><255,0,0:0,0,0>22200e, <r><0,255,0:0,0,0>21648w <r><192,192,192:0,0,0>cexkdb-\27[4z</PROMPT>"},
         {'\27[0;1;36;40mYou say in a baritone voice, "Test."\27[0;37;40m', '<r><0,255,255:0,0,0>You say in a baritone voice, "Test."<r><192,192,192:0,0,0>'},
-        {'\27[38;5;179;48;5;230mYou say in a baritone voice, "Test."\27[0;37;40m', '<204,153,51:255,255,204>You say in a baritone voice, "Test."<r><192,192,192:0,0,0>'}
+        {'\27[38;5;179;48;5;230mYou say in a baritone voice, "Test."\27[0;37;40m', '<215,175,95:255,255,215>You say in a baritone voice, "Test."<r><192,192,192:0,0,0>'}
       }
       for _, seq in ipairs(sequences) do
         local actualResult = ansi2decho(seq[1])
@@ -183,6 +191,93 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
   end)
 
+  describe("Tests the functionality of closestColor", function()
+    it("Should handle a table of {R,G,B} components: closestColor({R,G,B})", function()
+      local expected = "ansi_001"
+      local actual = closestColor({127,0,0})
+      assert.equals(expected, actual)
+    end)
+
+    it("Should handle separate R,G,B parameters: closestColor(R,G,B)", function()
+      local expected = "ansi_001"
+      local actual = closestColor(127,0,0)
+      assert.equals(expected, actual)
+    end)
+
+    it("Should handle a decho color string: closestColor('<R,G,B>')", function()
+      local expected = "ansi_001"
+      local actual = closestColor({127,0,0})
+      assert.equals(expected, actual)
+    end)
+
+    it("Should handle an hecho # color string: closestColor('#RRGGBB')", function()
+      local expected = "ansi_001"
+      local actual = closestColor("#7f0000")
+      assert.equals(expected, actual)
+    end)
+
+    it("Should handle an hecho |c color string: closestColor('|cRRGGBB')", function()
+      local expected = "ansi_001"
+      local actual = closestColor("|c7f0000")
+      assert.equals(expected, actual)
+    end)
+
+    it("Should handle return the parameter if it's an entry in color_table: closestColor('purple')", function()
+      local expected = "purple"
+      local actual = closestColor("purple")
+      assert.equals(expected, actual)
+    end)
+
+    it("Should return nil + error if handed garbage: closestColor('asdf')", function()
+      local expectedErr = "Could not parse asdf into a set of RGB coordinates to look for.\n"
+      local actual, actualErr = closestColor("asdf")
+      assert.is_nil(actual)
+      assert.equals(expectedErr, actualErr)
+    end)
+
+    it("Should return nil + error if handed garbage: closestColor({'tea', 1, 1})", function()
+      local expectedErr = "Could not parse tea,1,1 into RGB coordinates to look for.\n"
+      local actual, actualErr = closestColor({'tea', 1, 1})
+      assert.is_nil(actual)
+      assert.equals(expectedErr, actualErr)
+    end)
+
+    it("Should return nil + error if handed garbage: closestColor({1, 1})", function()
+      local expectedErr = "Could not parse 1,1 into RGB coordinates to look for.\n"
+      local actual, actualErr = closestColor({1, 1})
+      assert.is_nil(actual)
+      assert.equals(expectedErr, actualErr)
+    end)
+
+    it("Should return nil + error if handed garbage: closestColor({500, 0, 1})", function()
+      local expectedErr = "Could not parse 500,0,1 into RGB coordinates to look for.\n"
+      local actual, actualErr = closestColor({500, 0, 1})
+      assert.is_nil(actual)
+      assert.equals(expectedErr, actualErr)
+    end)
+
+    it("Should return nil + error if handed garbage: closestColor(true)", function()
+      local expectedErr = "Could not parse your parameters into RGB coordinates.\n"
+      local actual, actualErr = closestColor(true)
+      assert.is_nil(actual)
+      assert.equals(expectedErr, actualErr)
+    end)
+  end)
+
+  describe("Tests the functionality of copy2decho", function()
+    it ("Should return an empty string if line == ''", function()
+      local oldgcl = getCurrentLine
+      _G.getCurrentLine = spy.new(function()
+        return ""
+      end)
+      local expected = ""
+      local actual = copy2decho()
+      assert.equals(expected, actual)
+      assert.spy(_G.getCurrentLine).was.called()
+      _G.getCurrentLine = oldgcl
+    end)
+  end)
+
   describe("Tests the functionality of _Echoes.Process()", function()
     it("Should parse hex patterns correctly", function()
       assert.are.same(
@@ -208,6 +303,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are.same(
         _Echos.Process('#uUnderline#/u', 'Hex'),
         { "", "\27underline", "Underline", "\27underlineoff", "" }
+      )
+
+      assert.are.same(
+        _Echos.Process('#sStrikethrough#/s', 'Hex'),
+        { "", "\27strikethrough", "Strikethrough", "\27strikethroughoff", "" }
       )
     end)
 
@@ -236,6 +336,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         _Echos.Process('<u>Underline</u>', 'Decimal'),
         { "", "\27underline", "Underline", "\27underlineoff", "" }
       )
+
+      assert.are.same(
+        _Echos.Process('<s>Strikethrough</s>', 'Decimal'),
+        { "", "\27strikethrough", "Strikethrough", "\27strikethroughoff", "" }
+      )
     end)
 
     it("Should parse color patterns correctly", function()
@@ -263,6 +368,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         _Echos.Process('<u>Underline</u>', 'Color'),
         { "", "\27underline", "Underline", "\27underlineoff", "" }
       )
+
+      assert.are.same(
+        _Echos.Process('<s>Strikethrough</s>', 'Color'),
+        { "", "\27strikethrough", "Strikethrough", "\27strikethroughoff", "" }
+      )
     end)
   end)
 end)
+
+--[[
+  TODO:
+    replaceLine and variants
+--]]

@@ -39,10 +39,10 @@
 using namespace std::chrono_literals;
 
 dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
-: QWidget( parent )
-, mpMap( pM )
-, mpHost( pH )
-, mShowDefaultArea( true )
+: QWidget(parent)
+, mpMap(pM)
+, mpHost(pH)
+, mShowDefaultArea(true)
 {
     setupUi(this);
 
@@ -272,7 +272,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
 
 void dlgMapper::slot_roomSize(int d)
 {
-    float s = (float)d / 10.0;
+    float s = static_cast<float>(d / 10.0);
     mp2dMap->setRoomSize(s);
     mp2dMap->update();
 }
