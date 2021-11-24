@@ -26,6 +26,28 @@ echo("\n")</script>
 			<packageName></packageName>
 			<regex>`cecho (.+)</regex>
 		</Alias>
+		<Alias isActive="yes" isFolder="no">
+			<name>`decho</name>
+			<script>local s = matches[2]
+
+s = string.gsub(s, "%$", "\n")
+dfeedTriggers("\n" .. s .. "\n")
+echo("\n")</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>`decho (.+)</regex>
+		</Alias>
+		<Alias isActive="yes" isFolder="no">
+			<name>`hecho</name>
+			<script>local s = matches[2]
+
+s = string.gsub(s, "%$", "\n")
+hfeedTriggers("\n" .. s .. "\n")
+echo("\n")</script>
+			<command></command>
+			<packageName></packageName>
+			<regex>`hecho (.+)</regex>
+		</Alias>
 	</AliasPackage>
 	<ActionPackage />
 	<ScriptPackage />
