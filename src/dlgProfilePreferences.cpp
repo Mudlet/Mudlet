@@ -3884,7 +3884,7 @@ void dlgProfilePreferences::generateLoginTexts()
     }
 
     comboBox_customLoginText->blockSignals(true);
-    // TODO: If/when mudlet::htmlWrapper gets revised to just put in a pair of "<p>"..."</p>" tags (pending in another PR I {SlySven} have not yet published) also revise this to use it:
+    // TODO: If/when mudlet::htmlWrapper gets revised to just put in a pair of "<p>"..."</p>" tags (pending in another PR I {SlySven} have not yet published) also revise this to use it - https://github.com/Mudlet/Mudlet/issues/5691 :
     comboBox_customLoginText->setToolTip(QStringLiteral("<p>%1</p>")
                                                  .arg(tr("Provides a means to send both of the character name and the password in a single "
                                                          "line to the Game server for those that have a requirement that cannot be met by "

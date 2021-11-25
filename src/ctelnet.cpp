@@ -562,7 +562,7 @@ void cTelnet::handle_socket_signal_connected()
     // Code that was here has been moved to the Lua function "doLogin()" in
     // LuaGlobal.lua which can be replaced by a user function to do things in
     // a MUD specific way - or replaced by an empty function to do it via
-    // permenant (or temporary) triggers - or via a sysConnctionEvent handler:
+    // permanent (or temporary) triggers - or via a sysConnctionEvent handler:
     func = QStringLiteral("doLogin");
     mpHost->mLuaInterpreter.call(func, nothing);
 
