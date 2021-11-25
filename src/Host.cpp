@@ -3807,15 +3807,23 @@ std::optional<QString> Host::windowType(const QString& name) const
 {
     if (mpConsole->mLabelMap.contains(name)) {
         return {QStringLiteral("label")};
-    } else if (mpConsole->mSubConsoleMap.contains(name)) {
+    }
+
+    if (mpConsole->mSubConsoleMap.contains(name)) {
         auto userwindow = mpConsole->mDockWidgetMap.value(name);
         if (userwindow) {
             return {QStringLiteral("userwindow")};
         } else {
             return {QStringLiteral("miniconsole")};
         }
-    } else if (mpConsole->mSubCommandLineMap.contains(name)) {
+    }
+
+    if (mpConsole->mSubCommandLineMap.contains(name)) {
         return {QStringLiteral("commandline")};
+    }
+
+    if (name == QLatin1String("main")) {
+        return {QStringLiteral("miniconsole")};
     }
 
     return {};
