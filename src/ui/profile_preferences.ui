@@ -3513,7 +3513,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0" alignment="Qt::AlignRight">
+          <item row="3" column="0">
            <widget class="QLabel" name="label_customLoginText">
             <property name="text">
              <string>Custom login text:</string>
