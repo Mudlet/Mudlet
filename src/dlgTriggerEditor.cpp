@@ -503,7 +503,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
     // only take effect if the treeview is selected, otherwise it hijacks the shortcut from edbee
     copyAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
-    copyAction->setToolTip(mudlet::htmlWrapper(tr("Copy the trigger/script/alias/etc.")));
+    copyAction->setToolTip(mudlet::htmlWrapper(tr("Copy the trigger/script/alias/etc")));
     copyAction->setStatusTip(tr("Copy the trigger/script/alias/etc"));
     treeWidget_triggers->addAction(copyAction);
     treeWidget_aliases->addAction(copyAction);
@@ -691,13 +691,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mpAction_searchCaseSensitive = new QAction(tr("Case sensitive"), this);
     mpAction_searchCaseSensitive->setObjectName(QStringLiteral("mpAction_searchCaseSensitive"));
-    mpAction_searchCaseSensitive->setToolTip(mudlet::htmlWrapper(tr("Match case precisely.")));
+    mpAction_searchCaseSensitive->setToolTip(mudlet::htmlWrapper(tr("Match case precisely")));
     mpAction_searchCaseSensitive->setCheckable(true);
     pMenu_searchOptions->insertAction(nullptr, mpAction_searchCaseSensitive);
 
     mpAction_searchIncludeVariables = new QAction(tr("Include variables"), this);
     mpAction_searchIncludeVariables->setObjectName(QStringLiteral("mpAction_searchIncludeVariables"));
-    mpAction_searchIncludeVariables->setToolTip(mudlet::htmlWrapper(tr("Search variables (slower).")));
+    mpAction_searchIncludeVariables->setToolTip(mudlet::htmlWrapper(tr("Search variables (slower)")));
     mpAction_searchIncludeVariables->setCheckable(true);
     pMenu_searchOptions->insertAction(nullptr, mpAction_searchIncludeVariables);
 

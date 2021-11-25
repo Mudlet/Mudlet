@@ -148,7 +148,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         // We can fix this with a bit of fancy editing of the text - replacing a
         // particular sequence of characters with an image generated from the
         // actual icon in use.
-        pWelcome_document->setHtml(mudlet::htmlWrapper(Welcome_text_template.arg(QStringLiteral("NEW_PROFILE_ICON"), QStringLiteral("CONNECT_PROFILE_ICON"))));
+        pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>").arg(Welcome_text_template.arg(QStringLiteral("NEW_PROFILE_ICON"), QStringLiteral("CONNECT_PROFILE_ICON"))));
 
         // As we are repurposing the cancel to be a close button we do want to
         // change it anyhow:
@@ -186,7 +186,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         cursor.insertImage(image_connect);
         cursor.clearSelection();
     } else {
-        pWelcome_document->setHtml(mudlet::htmlWrapper(Welcome_text_template.arg(QString(), QString())));
+        pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>").arg(Welcome_text_template.arg(QString(), QString())));
     }
 
     welcome_message->setDocument(pWelcome_document);
@@ -198,9 +198,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     character_password_entry->addAction(mpAction_revealPassword, QLineEdit::TrailingPosition);
     if (mudlet::self()->storingPasswordsSecurely()) {
-        character_password_entry->setToolTip(mudlet::htmlWrapper(tr("Character's password, stored securely in the computer's credential manager.")));
+        character_password_entry->setToolTip(mudlet::htmlWrapper(tr("Characters password, stored securely in the computer's credential manager")));
     } else {
-        character_password_entry->setToolTip(mudlet::htmlWrapper(tr("Character's password. Note that the password is not encrypted in storage.")));
+        character_password_entry->setToolTip(mudlet::htmlWrapper(tr("Characters password. Note that the password is not encrypted in storage")));
     }
 
     connect(mpAction_revealPassword, &QAction::triggered, this, &dlgConnectionProfiles::slot_togglePasswordVisibility);
@@ -1054,16 +1054,16 @@ void dlgConnectionProfiles::updateDiscordStatus()
     if (!discordLoaded) {
         discord_optin_checkBox->setEnabled(false);
         discord_optin_checkBox->setChecked(false);
-        discord_optin_checkBox->setToolTip(mudlet::htmlWrapper(tr("Discord integration not available on this platform.")));
+        discord_optin_checkBox->setToolTip(mudlet::htmlWrapper(tr("Discord integration not available on this platform")));
     } else if (mDiscordApplicationId.isEmpty() && !mudlet::self()->mDiscord.gameIntegrationSupported(host_name_entry->text().trimmed()).first) {
         // Disable discord support if it is not recognised by name and a
         // Application Id has not been previously entered:
         discord_optin_checkBox->setEnabled(false);
         discord_optin_checkBox->setChecked(false);
-        discord_optin_checkBox->setToolTip(mudlet::htmlWrapper(tr("Discord integration not supported by game.")));
+        discord_optin_checkBox->setToolTip(mudlet::htmlWrapper(tr("Discord integration not supported by game")));
     } else {
         discord_optin_checkBox->setEnabled(true);
-        discord_optin_checkBox->setToolTip(mudlet::htmlWrapper(tr("Check to enable Discord integration.")));
+        discord_optin_checkBox->setToolTip(mudlet::htmlWrapper(tr("Check to enable Discord integration")));
     }
 }
 

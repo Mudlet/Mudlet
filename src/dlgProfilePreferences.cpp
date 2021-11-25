@@ -3393,19 +3393,19 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
                 pDummyButton->setToolTip(tr("<p>The symbol cannot be made entirely from glyphs in the specified font, but, "
                                             "using other fonts in the system, it can. Either un-check the <i>Only use symbols "
                                             "(glyphs) from chosen font</i> option or try and choose another font that does "
-                                            "have the needed glyphs.</p><p><i>You need not close this table to try another font, "
-                                            "changing it on the main preferences dialogue will update this table after a slight "
-                                            "delay.</i></p>"));
+                                            "have the needed glyphs.</p>"
+                                            "<p><i>You need not close this table to try another font, changing it on the main "
+                                            "preferences dialogue will update this table after a slight delay.</i></p>"));
             } else {
                 pSymbolAnyFont->setText(QString(QChar::ReplacementCharacter));
                 pDummyButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-error.png")));
-                pDummyButton->setToolTip(tr("<p>The symbol cannot be drawn using any of the fonts in the system, either an "
-                                            "invalid string was entered as the symbol for the indicated rooms or the map was "
-                                            "created on a different systems with a different set of fonts available to use. "
-                                            "You may be able to correct this by installing an additional font using whatever "
-                                            "method is appropriate for this system or by editing the map to use a different "
-                                            "symbol. It may be possible to do the latter via a lua script using the "
-                                            "<i>getRoomChar</i> and <i>setRoomChar</i> functions.</p>"));
+                pDummyButton->setToolTip(mudlet::htmlWrapper(tr("The symbol cannot be drawn using any of the fonts in the system, either an "
+                                                                "invalid string was entered as the symbol for the indicated rooms or the map was "
+                                                                "created on a different systems with a different set of fonts available to use. "
+                                                                "You may be able to correct this by installing an additional font using whatever "
+                                                                "method is appropriate for this system or by editing the map to use a different "
+                                                                "symbol. It may be possible to do the latter via a lua script using the "
+                                                                "<i>getRoomChar</i> and <i>setRoomChar</i> functions."));
             }
         }
         pTableWidget->setCellWidget(++row, 0, pDummyButton);

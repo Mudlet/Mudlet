@@ -364,7 +364,7 @@ mudlet::mudlet()
     mpButtonConnect->setDefaultAction(mpActionConnect);
 
     mpActionTriggers = new QAction(QIcon(QStringLiteral(":/icons/tools-wizard.png")), tr("Triggers"), this);
-    mpActionTriggers->setToolTip(htmlWrapper(tr("Show and edit triggers.")));
+    mpActionTriggers->setToolTip(htmlWrapper(tr("Show and edit triggers")));
     mpMainToolBar->addAction(mpActionTriggers);
     mpActionTriggers->setObjectName(QStringLiteral("triggers_action"));
     // add name to the action's widget in the toolbar, which doesn't have one by default
@@ -372,37 +372,37 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionTriggers)->setObjectName(mpActionTriggers->objectName());
 
     mpActionAliases = new QAction(QIcon(QStringLiteral(":/icons/system-users.png")), tr("Aliases"), this);
-    mpActionAliases->setToolTip(htmlWrapper(tr("Show and edit aliases.")));
+    mpActionAliases->setToolTip(htmlWrapper(tr("Show and edit aliases")));
     mpMainToolBar->addAction(mpActionAliases);
     mpActionAliases->setObjectName(QStringLiteral("aliases_action"));
     mpMainToolBar->widgetForAction(mpActionAliases)->setObjectName(mpActionAliases->objectName());
 
     mpActionTimers = new QAction(QIcon(QStringLiteral(":/icons/chronometer.png")), tr("Timers"), this);
-    mpActionTimers->setToolTip(htmlWrapper(tr("Show and edit timers.")));
+    mpActionTimers->setToolTip(htmlWrapper(tr("Show and edit timers")));
     mpMainToolBar->addAction(mpActionTimers);
     mpActionTimers->setObjectName(QStringLiteral("timers_action"));
     mpMainToolBar->widgetForAction(mpActionTimers)->setObjectName(mpActionTimers->objectName());
 
     mpActionButtons = new QAction(QIcon(QStringLiteral(":/icons/bookmarks.png")), tr("Buttons"), this);
-    mpActionButtons->setToolTip(htmlWrapper(tr("Show and edit easy buttons.")));
+    mpActionButtons->setToolTip(htmlWrapper(tr("Show and edit easy buttons")));
     mpMainToolBar->addAction(mpActionButtons);
     mpActionButtons->setObjectName(QStringLiteral("buttons_action"));
     mpMainToolBar->widgetForAction(mpActionButtons)->setObjectName(mpActionButtons->objectName());
 
     mpActionScripts = new QAction(QIcon(QStringLiteral(":/icons/document-properties.png")), tr("Scripts"), this);
-    mpActionScripts->setToolTip(htmlWrapper(tr("Show and edit scripts.")));
+    mpActionScripts->setToolTip(htmlWrapper(tr("Show and edit scripts")));
     mpMainToolBar->addAction(mpActionScripts);
     mpActionScripts->setObjectName(QStringLiteral("scripts_action"));
     mpMainToolBar->widgetForAction(mpActionScripts)->setObjectName(mpActionScripts->objectName());
 
     mpActionKeys = new QAction(QIcon(QStringLiteral(":/icons/preferences-desktop-keyboard.png")), tr("Keys"), this);
-    mpActionKeys->setToolTip(htmlWrapper(tr("Show and edit keys.")));
+    mpActionKeys->setToolTip(htmlWrapper(tr("Show and edit keys")));
     mpMainToolBar->addAction(mpActionKeys);
     mpActionKeys->setObjectName(QStringLiteral("keys_action"));
     mpMainToolBar->widgetForAction(mpActionKeys)->setObjectName(mpActionKeys->objectName());
 
     mpActionVariables = new QAction(QIcon(QStringLiteral(":/icons/variables.png")), tr("Variables"), this);
-    mpActionVariables->setToolTip(htmlWrapper(tr("Show and edit Lua variables.")));
+    mpActionVariables->setToolTip(htmlWrapper(tr("Show and edit Lua variables")));
     mpMainToolBar->addAction(mpActionVariables);
     mpActionVariables->setObjectName(QStringLiteral("variables_action"));
     mpMainToolBar->widgetForAction(mpActionVariables)->setObjectName(mpActionVariables->objectName());
@@ -421,7 +421,7 @@ mudlet::mudlet()
     mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
 
     mpActionMudletDiscord = new QAction(QIcon(QStringLiteral(":/icons/mudlet_discord.png")), tr("Mudlet chat"), this);
-    mpActionMudletDiscord->setToolTip(htmlWrapper(tr("Open a link to the Mudlet server on Discord.")));
+    mpActionMudletDiscord->setToolTip(htmlWrapper(tr("Open a link to the Mudlet server on Discord")));
     mpMainToolBar->addAction(mpActionMudletDiscord);
     mpActionMudletDiscord->setObjectName(QStringLiteral("mudlet_discord"));
     mpMainToolBar->widgetForAction(mpActionMudletDiscord)->setObjectName(mpActionMudletDiscord->objectName());
@@ -436,19 +436,19 @@ mudlet::mudlet()
     mpButtonDiscord->setDefaultAction(mpActionDiscord);
 
     mpActionMapper = new QAction(QIcon(QStringLiteral(":/icons/applications-internet.png")), tr("Map"), this);
-    mpActionMapper->setToolTip(htmlWrapper(tr("Show/hide the map.")));
+    mpActionMapper->setToolTip(htmlWrapper(tr("Show/hide the map")));
     mpMainToolBar->addAction(mpActionMapper);
     mpActionMapper->setObjectName(QStringLiteral("map_action"));
     mpMainToolBar->widgetForAction(mpActionMapper)->setObjectName(mpActionMapper->objectName());
 
     mpActionHelp = new QAction(QIcon(QStringLiteral(":/icons/help-hint.png")), tr("Manual"), this);
-    mpActionHelp->setToolTip(htmlWrapper(tr("Browse reference material and documentation.")));
+    mpActionHelp->setToolTip(htmlWrapper(tr("Browse reference material and documentation")));
     mpMainToolBar->addAction(mpActionHelp);
     mpActionHelp->setObjectName(QStringLiteral("manual_action"));
     mpMainToolBar->widgetForAction(mpActionHelp)->setObjectName(mpActionHelp->objectName());
 
     mpActionOptions = new QAction(QIcon(QStringLiteral(":/icons/configure.png")), tr("Settings"), this);
-    mpActionOptions->setToolTip(htmlWrapper(tr("See and edit profile preferences.")));
+    mpActionOptions->setToolTip(htmlWrapper(tr("See and edit profile preferences")));
     mpMainToolBar->addAction(mpActionOptions);
     mpActionOptions->setObjectName(QStringLiteral("settings_action"));
     mpMainToolBar->widgetForAction(mpActionOptions)->setObjectName(mpActionOptions->objectName());
@@ -457,7 +457,7 @@ mudlet::mudlet()
     // now used for the window when the visual change to the toolbar caused can
     // be managed
     mpActionNotes = new QAction(QIcon(QStringLiteral(":/icons/applications-accessories.png")), tr("Notepad"), this);
-    mpActionNotes->setToolTip(htmlWrapper(tr("Open a notepad that you can store your notes in.")));
+    mpActionNotes->setToolTip(htmlWrapper(tr("Open a notepad that you can store your notes in")));
     mpMainToolBar->addAction(mpActionNotes);
     mpActionNotes->setObjectName(QStringLiteral("notepad_action"));
     mpMainToolBar->widgetForAction(mpActionNotes)->setObjectName(mpActionNotes->objectName());
@@ -495,7 +495,7 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionReplay)->setObjectName(mpActionReplay->objectName());
 
     mpActionReconnect = new QAction(QIcon(QStringLiteral(":/icons/system-restart.png")), tr("Reconnect"), this);
-    mpActionReconnect->setToolTip(htmlWrapper(tr("Disconnects you from the game and connects once again.")));
+    mpActionReconnect->setToolTip(htmlWrapper(tr("Disconnects you from the game and connects once again")));
     mpMainToolBar->addAction(mpActionReconnect);
     mpActionReconnect->setObjectName(QStringLiteral("reconnect_action"));
     mpMainToolBar->widgetForAction(mpActionReconnect)->setObjectName(mpActionReconnect->objectName());

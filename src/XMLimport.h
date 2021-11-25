@@ -49,7 +49,7 @@ class TVar;
 
 class XMLimport : public QXmlStreamReader
 {
-    Q_DECLARE_TR_FUNCTIONS(XMLimport)
+    Q_DECLARE_TR_FUNCTIONS(XMLimport);
 
 public:
     XMLimport(Host*);
