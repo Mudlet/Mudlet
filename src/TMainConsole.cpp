@@ -308,8 +308,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
                                                   "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
 
         }
-        logButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                              .arg(tr("<p>Stop logging game output to log file.</p>")));
+        logButton->setToolTip(mudlet::htmlWrapper(tr("Stop logging game output to log file.")));
     } else {
         // Logging is being turned off
         buffer.logRemainingOutput();
@@ -325,8 +324,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
         }
         mLogFile.flush();
         mLogFile.close();
-        logButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                              .arg(tr("<p>Start logging game output to log file.</p>")));
+        logButton->setToolTip(mudlet::htmlWrapper(tr("Start logging game output to log file.")));
     }
 }
 

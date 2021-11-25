@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2020 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2021 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -1330,7 +1330,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             // killing the gdb debugger instance run by Qt Creator will restore
             // normality.
             connect(mpContextMenuAnalyser, &QAction::hovered, this, &TTextEdit::slot_analyseSelection);
-            mpContextMenuAnalyser->setToolTip(tr("<p>Hover on this item to display the Unicode codepoints in the selection <i>(only the first line!)</i></p>"));
+            mpContextMenuAnalyser->setToolTip(mudlet::htmlWrapper(tr("Hover on this item to display the Unicode codepoints in the selection <i>(only the first line!)</i>")));
             popup->addSeparator();
             popup->addAction(mpContextMenuAnalyser);
         }
@@ -1341,11 +1341,11 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         if (!mudlet::self()->isControlsVisible()) {
             QAction* actionRestoreMainMenu = new QAction(tr("restore Main menu"), this);
             connect(actionRestoreMainMenu, &QAction::triggered, mudlet::self(), &mudlet::slot_restoreMainMenu);
-            actionRestoreMainMenu->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("Use this to restore the Main menu to get access to controls.")));
+            actionRestoreMainMenu->setToolTip(mudlet::htmlWrapper(tr("Use this to restore the Main menu to get access to controls.")));
 
             QAction* actionRestoreMainToolBar = new QAction(tr("restore Main Toolbar"), this);
             connect(actionRestoreMainToolBar, &QAction::triggered, mudlet::self(), &mudlet::slot_restoreMainToolBar);
-            actionRestoreMainToolBar->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("Use this to restore the Main Toolbar to get access to controls.")));
+            actionRestoreMainToolBar->setToolTip(mudlet::htmlWrapper(tr("Use this to restore the Main Toolbar to get access to controls.")));
 
             popup->addSeparator();
             popup->addAction(actionRestoreMainMenu);
@@ -2342,7 +2342,7 @@ void TTextEdit::slot_analyseSelection()
             // if this is still true then we only have a short, single line of
             // less than 16 codepoints
             mpContextMenuAnalyser->setToolTip(
-                    QStringLiteral("<html><head/><body>%1"
+                    QStringLiteral("%1"
                                    "<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
                                    "<tr><th>%2</th>%3</tr>"
                                    "<tr><th>%4</th>%5</tr>"
@@ -2350,7 +2350,7 @@ void TTextEdit::slot_analyseSelection()
                                    "<tr><th>%8</th>%9</tr>"
                                    "<tr><th>%10</th>%11</tr>"
                                    "<tr><th>%12</th>%13</tr>"
-                                   "</table></small></body></html>")
+                                   "</table></small>")
                             .arg(completedRows)
                             .arg(tr("Index (UTF-16)", "1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}"),
                                  utf16indexes)
@@ -2377,7 +2377,7 @@ void TTextEdit::slot_analyseSelection()
                                  luaCodes));
         } else {
             mpContextMenuAnalyser->setToolTip(
-                    QStringLiteral("<html><head/><body>%1"
+                    QStringLiteral("%1"
                                    "<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
                                    "<tr>%2</tr>"
                                    "<tr>%3</tr>"
@@ -2385,7 +2385,7 @@ void TTextEdit::slot_analyseSelection()
                                    "<tr>%5</tr>"
                                    "<tr>%6</tr>"
                                    "<tr>%7</tr>"
-                                   "</table></small></body></html>")
+                                   "</table></small>")
                             .arg(completedRows, utf16indexes, utf16Vals, graphemes, utf8Indexes, utf8Vals, luaCodes));
         }
     }

@@ -20,21 +20,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-/*
- * Eventually these should be defined for whole application to force explicit
- * definition of all strings as:
- * EITHER: QStringLiteral("<string>") for internal non-user visible use not
- * subject to translation
- * OR: tr("<string>") for GUI or other user visible strings that need to be
- * handled by the translation system {or qApp->translate("<classname>",
- * "<string>") for classes NOT derived from qobject...
- */
-#define QT_NO_CAST_FROM_ASCII
-#define QT_NO_CAST_TO_ASCII
 
 #include "dlgRoomExits.h"
 
 
+#include "mudlet.h"
 #include "Host.h"
 #include "TArea.h"
 #include "TRoomDB.h"
@@ -44,9 +34,8 @@
 #include <QAction>
 #include "post_guard.h"
 
-// A couple of templates for tooltip HTML formatting so that we do not have
-// 65/30 copies of the same QString s in the read-only segment of the code:
-const QString singleParagraph{QStringLiteral("<p>%1</p>")};
+// A template for tooltip HTML formatting so that we do not have
+// 30 copies of the same QString in the read-only segment of the code:
 const QString doubleParagraph{QStringLiteral("<p>%1</p><p>%2</p>")};
 
 RoomIdLineEditDelegate::RoomIdLineEditDelegate(QObject* parent)
@@ -112,11 +101,11 @@ QWidget* RoomIdLineEditDelegate::createEditor(QWidget* parent, const QStyleOptio
             } else if (text.isEmpty()) {
                 // Nothing is entered (or the text was the placeholder):
                 mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_noExit);
-                roomIdToolTipText = singleParagraph.arg(tr("Set the number of the room that this special exit goes to."));
+                roomIdToolTipText = mudlet::htmlWrapper(tr("Set the number of the room that this special exit goes to."));
             } else {
                 // Something else that isn't a positive number:
                 mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_invalidExit);
-                roomIdToolTipText = singleParagraph.arg(tr("A positive roomID of the room that this special exit leads to is expected here. "
+                roomIdToolTipText = mudlet::htmlWrapper(tr("A positive roomID of the room that this special exit leads to is expected here. "
                                                            "If left like this, this exit will be deleted when <tt>save</tt> is clicked."));
             }
         }
@@ -187,11 +176,11 @@ void RoomIdLineEditDelegate::slot_specialRoomExitIdEdited(const QString& text) c
     } else if (text.isEmpty() || text == mpDlgRoomExits->mSpecialExitRoomIdPlaceholder) {
         // Nothing is entered:
         mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_noExit);
-        roomIdToolTipText = singleParagraph.arg(tr("Set the number of the room that this special exit goes to."));
+        roomIdToolTipText = mudlet::htmlWrapper(tr("Set the number of the room that this special exit goes to."));
     } else {
         // Something else that isn't a positive number:
         mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_invalidExit);
-        roomIdToolTipText = singleParagraph.arg(tr("A positive roomID of the room that this special exit leads to is expected here. "
+        roomIdToolTipText = mudlet::htmlWrapper(tr("A positive roomID of the room that this special exit leads to is expected here. "
                                                    "If left like this, this exit will be deleted when <tt>save</tt> is clicked."));
     }
     mpEditor->setToolTip(roomIdToolTipText);
@@ -394,27 +383,27 @@ void dlgRoomExits::slot_addSpecialExit()
 {
     auto pI = new QTreeWidgetItem(specialExits);
     pI->setText(ExitsTreeWidget::colIndex_exitRoomId, mSpecialExitRoomIdPlaceholder); //Exit RoomID
-    pI->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, singleParagraph.arg(tr("Set the number of the room that this special exit goes to.")));
+    pI->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, mudlet::htmlWrapper(tr("Set the number of the room that this special exit goes to.")));
     pI->setTextAlignment(ExitsTreeWidget::colIndex_exitRoomId, Qt::AlignRight);
 
     // No icon for the status of a new exit
-    pI->setToolTip(ExitsTreeWidget::colIndex_exitStatus, singleParagraph.arg(tr("Set the number of the room that this special exit goes to.")));
+    pI->setToolTip(ExitsTreeWidget::colIndex_exitStatus, mudlet::htmlWrapper(tr("Set the number of the room that this special exit goes to.")));
 
-    pI->setToolTip(ExitsTreeWidget::colIndex_lockExit, singleParagraph.arg(tr("Prevent a route being created via this exit, equivalent to an infinite exit weight.")));
+    pI->setToolTip(ExitsTreeWidget::colIndex_lockExit, mudlet::htmlWrapper(tr("Prevent a route being created via this exit, equivalent to an infinite exit weight.")));
     pI->setCheckState(ExitsTreeWidget::colIndex_lockExit, Qt::Unchecked); //Locked
 
     pI->setText(ExitsTreeWidget::colIndex_exitWeight, QStringLiteral("0")); //Exit Weight
     pI->setTextAlignment(ExitsTreeWidget::colIndex_exitWeight, Qt::AlignRight);
-    pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, singleParagraph.arg(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
+    pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, mudlet::htmlWrapper(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
 
     pI->setCheckState(ExitsTreeWidget::colIndex_doorNone, Qt::Checked); //Doortype: none
-    pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, singleParagraph.arg(tr("No door symbol is drawn on 2D Map for this exit (only functional choice currently).")));
+    pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, mudlet::htmlWrapper(tr("No door symbol is drawn on 2D Map for this exit (only functional choice currently).")));
     pI->setCheckState(ExitsTreeWidget::colIndex_doorOpen, Qt::Unchecked); //Doortype: open
-    pI->setToolTip(ExitsTreeWidget::colIndex_doorOpen, singleParagraph.arg(tr("Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+    pI->setToolTip(ExitsTreeWidget::colIndex_doorOpen, mudlet::htmlWrapper(tr("Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
     pI->setCheckState(ExitsTreeWidget::colIndex_doorClosed, Qt::Unchecked); //Doortype: closed
-    pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, singleParagraph.arg(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+    pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, mudlet::htmlWrapper(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
     pI->setCheckState(ExitsTreeWidget::colIndex_doorLocked, Qt::Unchecked); //Doortype: locked
-    pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, singleParagraph.arg(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+    pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, mudlet::htmlWrapper(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
 
     pI->setText(ExitsTreeWidget::colIndex_command, mSpecialExitCommandPlaceholder); //Exit command
     pI->setTextAlignment(ExitsTreeWidget::colIndex_command, Qt::AlignLeft);
@@ -934,18 +923,18 @@ void dlgRoomExits::setIconAndToolTipsOnSpecialExit(QTreeWidgetItem* pSpecialExit
     } else if (pSpecialExit->text(ExitsTreeWidget::colIndex_exitRoomId).isEmpty() || pSpecialExit->text(ExitsTreeWidget::colIndex_exitRoomId) == mSpecialExitRoomIdPlaceholder) {
         // Nothing:
         pSpecialExit->setIcon(ExitsTreeWidget::colIndex_exitStatus, QIcon());
-        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, singleParagraph.arg(tr("Set the number of the room that this special exit goes to.")));
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, mudlet::htmlWrapper(tr("Set the number of the room that this special exit goes to.")));
     } else {
         // Something else that isn't a positive number:
         pSpecialExit->setIcon(ExitsTreeWidget::colIndex_exitStatus, showIconOnExitStatus ? mIcon_invalidExit : QIcon());
-        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, singleParagraph.arg(tr("A positive roomID of the room that this special exit leads to is expected here. "
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, mudlet::htmlWrapper(tr("A positive roomID of the room that this special exit leads to is expected here. "
                                                                                               "If left like this, this exit will be deleted when <tt>save</tt> is clicked.")));
     }
 
     if (pSpecialExit->text(ExitsTreeWidget::colIndex_command) == mSpecialExitCommandPlaceholder) {
-        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_command, singleParagraph.arg(tr("No command or Lua script entered, if left like this, this exit will be deleted when <tt>save</tt> is clicked.")));
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_command, mudlet::htmlWrapper(tr("No command or Lua script entered, if left like this, this exit will be deleted when <tt>save</tt> is clicked.")));
     } else {
-        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_command, singleParagraph.arg(tr("(Lua scripts for those profiles using the <tt>mudlet-mapper</tt> package need to be prefixed with \"script:\").")));
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_command, mudlet::htmlWrapper(tr("(Lua scripts for those profiles using the <tt>mudlet-mapper</tt> package need to be prefixed with \"script:\").")));
     }
 }
 
@@ -1086,7 +1075,7 @@ void dlgRoomExits::normalStubExitChanged(const int state, QLineEdit* pExit, QChe
         }
         pNoRoute->setEnabled(false); // Disable "lock" on this exit
         pExit->setEnabled(false);         // Prevent entry of an exit roomID
-        pExit->setToolTip(singleParagraph.arg(tr("Clear the stub exit for this exit to enter an exit roomID.")));
+        pExit->setToolTip(mudlet::htmlWrapper(tr("Clear the stub exit for this exit to enter an exit roomID.")));
         pDoorType_none->setEnabled(true);
         pDoorType_open->setEnabled(true);
         pDoorType_closed->setEnabled(true);
@@ -1114,8 +1103,8 @@ void dlgRoomExits::slot_nw_textEdited(const QString& text)
 {
     normalExitEdited(text, nw, noroute_nw, stub_nw, weight_nw,
                      doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room northwest of this one.")),
-                     singleParagraph.arg(tr("Set the number of the room northwest of this one.")));
+                     mudlet::htmlWrapper(tr("Entered number is invalid, set the number of the room northwest of this one.")),
+                     mudlet::htmlWrapper(tr("Set the number of the room northwest of this one.")));
     slot_checkModified();
 }
 
@@ -1123,8 +1112,8 @@ void dlgRoomExits::slot_n_textEdited(const QString& text)
 {
     normalExitEdited(text, n, noroute_n, stub_n, weight_n,
                      doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room north of this one.")),
-                     singleParagraph.arg(tr("Set the number of the room north of this one.")));
+                     mudlet::htmlWrapper(tr("Entered number is invalid, set the number of the room north of this one.")),
+                     mudlet::htmlWrapper(tr("Set the number of the room north of this one.")));
     slot_checkModified();
 }
 
@@ -1132,8 +1121,8 @@ void dlgRoomExits::slot_ne_textEdited(const QString& text)
 {
     normalExitEdited(text, ne, noroute_ne, stub_ne, weight_ne,
                      doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room northeast of this one.")),
-                     singleParagraph.arg(tr("Set the number of the room northeast of this one.")));
+                     mudlet::htmlWrapper(tr("Entered number is invalid, set the number of the room northeast of this one.")),
+                     mudlet::htmlWrapper(tr("Set the number of the room northeast of this one.")));
     slot_checkModified();
 }
 
@@ -1141,8 +1130,8 @@ void dlgRoomExits::slot_up_textEdited(const QString& text)
 {
     normalExitEdited(text, up, noroute_up, stub_up, weight_up,
                      doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room up from this one.")),
-                     singleParagraph.arg(tr("Set the number of the room up from this one.")));
+                     mudlet::htmlWrapper(tr("Entered number is invalid, set the number of the room up from this one.")),
+                     mudlet::htmlWrapper(tr("Set the number of the room up from this one.")));
     slot_checkModified();
 }
 
@@ -1150,8 +1139,8 @@ void dlgRoomExits::slot_w_textEdited(const QString& text)
 {
     normalExitEdited(text, w, noroute_w, stub_w, weight_w,
                      doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room west of this one.")),
-                     singleParagraph.arg(tr("Set the number of the room west of this one.")));
+                     mudlet::htmlWrapper(tr("Entered number is invalid, set the number of the room west of this one.")),
+                     mudlet::htmlWrapper(tr("Set the number of the room west of this one.")));
     slot_checkModified();
 }
 
@@ -1159,8 +1148,8 @@ void dlgRoomExits::slot_e_textEdited(const QString& text)
 {
     normalExitEdited(text, e, noroute_e, stub_e, weight_e,
                      doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room east of this one.")),
-                     singleParagraph.arg(tr("Set the number of the room east of this one.")));
+                     mudlet::htmlWrapper(tr("Entered number is invalid, set the number of the room east of this one.")),
+                     mudlet::htmlWrapper(tr("Set the number of the room east of this one.")));
     slot_checkModified();
 }
 
@@ -1168,8 +1157,8 @@ void dlgRoomExits::slot_down_textEdited(const QString& text)
 {
     normalExitEdited(text, down, noroute_down, stub_down, weight_down,
                      doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room down from this one.")),
-                     singleParagraph.arg(tr("Set the number of the room down from this one.")));
+                     mudlet::htmlWrapper(tr("Entered number is invalid, set the number of the room down from this one.")),
+                     mudlet::htmlWrapper(tr("Set the number of the room down from this one.")));
     slot_checkModified();
 }
 
@@ -1177,8 +1166,8 @@ void dlgRoomExits::slot_sw_textEdited(const QString& text)
 {
     normalExitEdited(text, sw, noroute_sw, stub_sw, weight_sw,
                      doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room southwest of this one.")),
-                     singleParagraph.arg(tr("Set the number of the room southwest of this one.")));
+                     mudlet::htmlWrapper(tr("Entered number is invalid, set the number of the room southwest of this one.")),
+                     mudlet::htmlWrapper(tr("Set the number of the room southwest of this one.")));
     slot_checkModified();
 }
 
@@ -1186,8 +1175,8 @@ void dlgRoomExits::slot_s_textEdited(const QString& text)
 {
     normalExitEdited(text, s, noroute_s, stub_s, weight_s,
                      doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room south of this one.")),
-                     singleParagraph.arg(tr("Set the number of the room south of this one.")));
+                     mudlet::htmlWrapper(tr("Entered number is invalid, set the number of the room south of this one.")),
+                     mudlet::htmlWrapper(tr("Set the number of the room south of this one.")));
     slot_checkModified();
 }
 
@@ -1195,8 +1184,8 @@ void dlgRoomExits::slot_se_textEdited(const QString& text)
 {
     normalExitEdited(text, se, noroute_se, stub_se, weight_se,
                      doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room southeast of this one.")),
-                     singleParagraph.arg(tr("Set the number of the room southeast of this one.")));
+                     mudlet::htmlWrapper(tr("Entered number is invalid, set the number of the room southeast of this one.")),
+                     mudlet::htmlWrapper(tr("Set the number of the room southeast of this one.")));
     slot_checkModified();
 }
 
@@ -1204,8 +1193,8 @@ void dlgRoomExits::slot_in_textEdited(const QString& text)
 {
     normalExitEdited(text, in, noroute_in, stub_in, weight_in,
                      doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room in from this one.")),
-                     singleParagraph.arg(tr("Set the number of the room in from this one.")));
+                     mudlet::htmlWrapper(tr("Entered number is invalid, set the number of the room in from this one.")),
+                     mudlet::htmlWrapper(tr("Set the number of the room in from this one.")));
     slot_checkModified();
 }
 
@@ -1213,8 +1202,8 @@ void dlgRoomExits::slot_out_textEdited(const QString& text)
 {
     normalExitEdited(text, out, noroute_out, stub_out, weight_out,
                      doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out,
-                     singleParagraph.arg(tr("Entered number is invalid, set the number of the room out from this one.")),
-                     singleParagraph.arg(tr("Set the number of the room out from this one.")));
+                     mudlet::htmlWrapper(tr("Entered number is invalid, set the number of the room out from this one.")),
+                     mudlet::htmlWrapper(tr("Set the number of the room out from this one.")));
     slot_checkModified();
 }
 
@@ -1223,7 +1212,7 @@ void dlgRoomExits::slot_stub_nw_stateChanged(int state)
 {
     normalStubExitChanged(state, nw, noroute_nw, weight_nw,
                           doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_n,
-                          singleParagraph.arg(tr("Set the number of the room northwest of this one.")));
+                          mudlet::htmlWrapper(tr("Set the number of the room northwest of this one.")));
     slot_checkModified();
 }
 
@@ -1231,7 +1220,7 @@ void dlgRoomExits::slot_stub_n_stateChanged(int state)
 {
     normalStubExitChanged(state, n, noroute_n, weight_n,
                           doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n,
-                          singleParagraph.arg(tr("Set the number of the room north of this one.")));
+                          mudlet::htmlWrapper(tr("Set the number of the room north of this one.")));
     slot_checkModified();
 }
 
@@ -1239,7 +1228,7 @@ void dlgRoomExits::slot_stub_ne_stateChanged(int state)
 {
     normalStubExitChanged(state, ne, noroute_ne, weight_ne,
                           doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne,
-                          singleParagraph.arg(tr("Set the number of the room northeast of this one.")));
+                          mudlet::htmlWrapper(tr("Set the number of the room northeast of this one.")));
     slot_checkModified();
 }
 
@@ -1247,7 +1236,7 @@ void dlgRoomExits::slot_stub_up_stateChanged(int state)
 {
     normalStubExitChanged(state, up, noroute_up, weight_up,
                           doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up,
-                          singleParagraph.arg(tr("Set the number of the room up from this one.")));
+                          mudlet::htmlWrapper(tr("Set the number of the room up from this one.")));
     slot_checkModified();
 }
 
@@ -1255,7 +1244,7 @@ void dlgRoomExits::slot_stub_w_stateChanged(int state)
 {
     normalStubExitChanged(state, w, noroute_w, weight_w,
                           doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w,
-                          singleParagraph.arg(tr("Set the number of the room west of this one.")));
+                          mudlet::htmlWrapper(tr("Set the number of the room west of this one.")));
     slot_checkModified();
 }
 
@@ -1263,7 +1252,7 @@ void dlgRoomExits::slot_stub_e_stateChanged(int state)
 {
     normalStubExitChanged(state, e, noroute_e, weight_e,
                           doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e,
-                          singleParagraph.arg(tr("Set the number of the room east of this one.")));
+                          mudlet::htmlWrapper(tr("Set the number of the room east of this one.")));
     slot_checkModified();
 }
 
@@ -1271,7 +1260,7 @@ void dlgRoomExits::slot_stub_down_stateChanged(int state)
 {
     normalStubExitChanged(state, down, noroute_down, weight_down,
                           doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down,
-                          singleParagraph.arg(tr("Set the number of the room down from this one.")));
+                          mudlet::htmlWrapper(tr("Set the number of the room down from this one.")));
     slot_checkModified();
 }
 
@@ -1279,7 +1268,7 @@ void dlgRoomExits::slot_stub_sw_stateChanged(int state)
 {
     normalStubExitChanged(state, sw, noroute_sw, weight_sw,
                           doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw,
-                          singleParagraph.arg(tr("Set the number of the room southwest of this one.")));
+                          mudlet::htmlWrapper(tr("Set the number of the room southwest of this one.")));
     slot_checkModified();
 }
 
@@ -1287,7 +1276,7 @@ void dlgRoomExits::slot_stub_s_stateChanged(int state)
 {
     normalStubExitChanged(state, s, noroute_s, weight_s,
                           doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s,
-                          singleParagraph.arg(tr("Set the number of the room south of this one.")));
+                          mudlet::htmlWrapper(tr("Set the number of the room south of this one.")));
     slot_checkModified();
 }
 
@@ -1295,7 +1284,7 @@ void dlgRoomExits::slot_stub_se_stateChanged(int state)
 {
     normalStubExitChanged(state, se, noroute_se, weight_se,
                           doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se,
-                          singleParagraph.arg(tr("Set the number of the room southeast of this one.")));
+                          mudlet::htmlWrapper(tr("Set the number of the room southeast of this one.")));
     slot_checkModified();
 }
 
@@ -1303,7 +1292,7 @@ void dlgRoomExits::slot_stub_in_stateChanged(int state)
 {
     normalStubExitChanged(state, in, noroute_in, weight_in,
                           doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in,
-                          singleParagraph.arg(tr("Set the number of the room in from this one.")));
+                          mudlet::htmlWrapper(tr("Set the number of the room in from this one.")));
     slot_checkModified();
 }
 
@@ -1311,7 +1300,7 @@ void dlgRoomExits::slot_stub_out_stateChanged(int state)
 {
     normalStubExitChanged(state, out, noroute_out, weight_out,
                           doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out,
-                          singleParagraph.arg(tr("Set the number of the room out from this one.")));
+                          mudlet::htmlWrapper(tr("Set the number of the room out from this one.")));
     slot_checkModified();
 }
 
@@ -1402,7 +1391,7 @@ void dlgRoomExits::initExit(int direction,
         stub->setEnabled(true);     //Enable stub exit control
         if (pR->hasExitStub(direction)) {
             exitLineEdit->setEnabled(false); //There is a stub exit, so prevent exit number entry...
-            exitLineEdit->setToolTip(singleParagraph.arg(tr("Clear the stub exit for this exit to enter an exit roomID.")));
+            exitLineEdit->setToolTip(mudlet::htmlWrapper(tr("Clear the stub exit for this exit to enter an exit roomID.")));
             stub->setChecked(true);
             none->setEnabled(true); //Enable door type controls, can have a door on a stub exit..
             open->setEnabled(true);
@@ -1444,29 +1433,29 @@ void dlgRoomExits::init()
     // Because we are manipulating the settings for the exit we need to know
     // explicitly where the weight comes from, pR->getExitWeight() hides that
     // detail deliberately for normal usage
-    initExit(DIR_NORTHWEST, pR->getExit(DIR_NORTHWEST), nw, noroute_nw, stub_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, weight_nw, singleParagraph.arg(tr("Set the number of the room northwest of this one.")));
+    initExit(DIR_NORTHWEST, pR->getExit(DIR_NORTHWEST), nw, noroute_nw, stub_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, weight_nw, mudlet::htmlWrapper(tr("Set the number of the room northwest of this one.")));
 
-    initExit(DIR_NORTH, pR->getExit(DIR_NORTH), n, noroute_n, stub_n, doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n, weight_n, singleParagraph.arg(tr("Set the number of the room north of this one.")));
+    initExit(DIR_NORTH, pR->getExit(DIR_NORTH), n, noroute_n, stub_n, doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n, weight_n, mudlet::htmlWrapper(tr("Set the number of the room north of this one.")));
 
-    initExit(DIR_NORTHEAST, pR->getExit(DIR_NORTHEAST), ne, noroute_ne, stub_ne, doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne, weight_ne, singleParagraph.arg(tr("Set the number of the room northeast of this one.")));
+    initExit(DIR_NORTHEAST, pR->getExit(DIR_NORTHEAST), ne, noroute_ne, stub_ne, doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne, weight_ne, mudlet::htmlWrapper(tr("Set the number of the room northeast of this one.")));
 
-    initExit(DIR_UP, pR->getExit(DIR_UP), up, noroute_up, stub_up, doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up, weight_up, singleParagraph.arg(tr("Set the number of the room up from this one.")));
+    initExit(DIR_UP, pR->getExit(DIR_UP), up, noroute_up, stub_up, doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up, weight_up, mudlet::htmlWrapper(tr("Set the number of the room up from this one.")));
 
-    initExit(DIR_WEST, pR->getExit(DIR_WEST), w, noroute_w, stub_w, doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w, weight_w, singleParagraph.arg(tr("Set the number of the room west of this one.")));
+    initExit(DIR_WEST, pR->getExit(DIR_WEST), w, noroute_w, stub_w, doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w, weight_w, mudlet::htmlWrapper(tr("Set the number of the room west of this one.")));
 
-    initExit(DIR_EAST, pR->getExit(DIR_EAST), e, noroute_e, stub_e, doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e, weight_e, singleParagraph.arg(tr("Set the number of the room east of this one.")));
+    initExit(DIR_EAST, pR->getExit(DIR_EAST), e, noroute_e, stub_e, doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e, weight_e, mudlet::htmlWrapper(tr("Set the number of the room east of this one.")));
 
-    initExit(DIR_DOWN, pR->getExit(DIR_DOWN), down, noroute_down, stub_down, doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down, weight_down, singleParagraph.arg(tr("Set the number of the room down from this one.")));
+    initExit(DIR_DOWN, pR->getExit(DIR_DOWN), down, noroute_down, stub_down, doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down, weight_down, mudlet::htmlWrapper(tr("Set the number of the room down from this one.")));
 
-    initExit(DIR_SOUTHWEST, pR->getExit(DIR_SOUTHWEST), sw, noroute_sw, stub_sw, doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw, weight_sw, singleParagraph.arg(tr("Set the number of the room southwest of this one.")));
+    initExit(DIR_SOUTHWEST, pR->getExit(DIR_SOUTHWEST), sw, noroute_sw, stub_sw, doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw, weight_sw, mudlet::htmlWrapper(tr("Set the number of the room southwest of this one.")));
 
-    initExit(DIR_SOUTH, pR->getExit(DIR_SOUTH), s, noroute_s, stub_s, doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s, weight_s, singleParagraph.arg(tr("Set the number of the room south of this one.")));
+    initExit(DIR_SOUTH, pR->getExit(DIR_SOUTH), s, noroute_s, stub_s, doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s, weight_s, mudlet::htmlWrapper(tr("Set the number of the room south of this one.")));
 
-    initExit(DIR_SOUTHEAST, pR->getExit(DIR_SOUTHEAST), se, noroute_se, stub_se, doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se, weight_se, singleParagraph.arg(tr("Set the number of the room southeast of this one.")));
+    initExit(DIR_SOUTHEAST, pR->getExit(DIR_SOUTHEAST), se, noroute_se, stub_se, doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se, weight_se, mudlet::htmlWrapper(tr("Set the number of the room southeast of this one.")));
 
-    initExit(DIR_IN, pR->getExit(DIR_IN), in, noroute_in, stub_in, doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in, weight_in, singleParagraph.arg(tr("Set the number of the room in from this one.")));
+    initExit(DIR_IN, pR->getExit(DIR_IN), in, noroute_in, stub_in, doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in, weight_in, mudlet::htmlWrapper(tr("Set the number of the room in from this one.")));
 
-    initExit(DIR_OUT, pR->getExit(DIR_OUT), out, noroute_out, stub_out, doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out, weight_out, singleParagraph.arg(tr("Set the number of the room out from this one.")));
+    initExit(DIR_OUT, pR->getExit(DIR_OUT), out, noroute_out, stub_out, doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out, weight_out, mudlet::htmlWrapper(tr("Set the number of the room out from this one.")));
 
     QMapIterator<QString, int> it(pR->getSpecialExits());
     while (it.hasNext()) {
@@ -1500,13 +1489,13 @@ void dlgRoomExits::init()
             pI->setCheckState(ExitsTreeWidget::colIndex_lockExit, Qt::Unchecked);
             pSpecialExit->hasNoRoute = false;
         }
-        pI->setToolTip(ExitsTreeWidget::colIndex_lockExit, singleParagraph.arg(tr("Prevent a route being created via this exit, equivalent to an infinite exit weight.")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_lockExit, mudlet::htmlWrapper(tr("Prevent a route being created via this exit, equivalent to an infinite exit weight.")));
 
         //ExitsTreeWidget::colIndex_exitWeight
         pI->setData(ExitsTreeWidget::colIndex_exitWeight, Qt::EditRole, pR->hasExitWeight(dir) ? pR->getExitWeight(dir) : 0);
         pI->setTextAlignment(ExitsTreeWidget::colIndex_exitWeight, Qt::AlignRight);
         pSpecialExit->weight = pI->data(ExitsTreeWidget::colIndex_exitWeight, Qt::EditRole).toInt();
-        pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, singleParagraph.arg(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, mudlet::htmlWrapper(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
 
 
         //ExitsTreeWidget::colIndex_doorNone-ExitsTreeWidget::colIndex_doorLocked
@@ -1516,10 +1505,10 @@ void dlgRoomExits::init()
         pI->setCheckState(ExitsTreeWidget::colIndex_doorOpen, Qt::Unchecked);
         pI->setCheckState(ExitsTreeWidget::colIndex_doorClosed, Qt::Unchecked);
         pI->setCheckState(ExitsTreeWidget::colIndex_doorLocked, Qt::Unchecked);
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, singleParagraph.arg(tr("No door symbol is drawn on 2D Map for this exit (only functional choice currently).")));
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorOpen, singleParagraph.arg(tr("Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, singleParagraph.arg(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, singleParagraph.arg(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, mudlet::htmlWrapper(tr("No door symbol is drawn on 2D Map for this exit (only functional choice currently).")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorOpen, mudlet::htmlWrapper(tr("Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, mudlet::htmlWrapper(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, mudlet::htmlWrapper(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
         {
             int specialDoor = pR->getDoor(dir);
             switch (specialDoor) {

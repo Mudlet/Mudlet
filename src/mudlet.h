@@ -287,7 +287,7 @@ public:
     // This construct will be very useful for formatting tooltips and by
     // defining a static function/method here we can save using the same
     // QStringLiteral all over the place:
-    static QString htmlWrapper(const QString& text) { return QStringLiteral("<html><head/><body>%1</body></html>").arg(text); }
+    static QString htmlWrapper(const QString& text) { return QStringLiteral("<p>%1</p>").arg(text); }
 
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
     // "How to find and replace string?" by "Czarek Tomczak":

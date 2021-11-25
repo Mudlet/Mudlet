@@ -139,10 +139,10 @@ T2DMap::T2DMap(QWidget* parent)
     QStringList headerLabels;
     headerLabels << tr("ID", "Room ID in the mapper widget") << tr("Name", "Room name in the mapper widget");
     mMultiSelectionListWidget.setHeaderLabels(headerLabels);
-    mMultiSelectionListWidget.setToolTip(tr("<p>Click on a line to select or deselect that room number (with the given name if the "
-                                                 "rooms are named) to add or remove the room from the selection.  Click on the "
-                                                 "relevant header to sort by that method.  Note that the name column will only "
-                                                 "show if at least one of the rooms has a name.</p>"));
+    mMultiSelectionListWidget.setToolTip(mudlet::htmlWrapper(tr("Click on a line to select or deselect that room number (with the given name if the "
+                                                                "rooms are named) to add or remove the room from the selection.  Click on the "
+                                                                "relevant header to sort by that method.  Note that the name column will only "
+                                                                "show if at least one of the rooms has a name.")));
     mMultiSelectionListWidget.setUniformRowHeights(true);
     mMultiSelectionListWidget.setItemsExpandable(false);
     mMultiSelectionListWidget.setSelectionMode(QAbstractItemView::MultiSelection); // Was ExtendedSelection
@@ -2713,11 +2713,13 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 auto customLineProperties = new QAction(tr("Properties", "2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)"), this);
                 customLineProperties->setText(
                         tr("properties...", "2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)"));
-                customLineProperties->setToolTip(tr("Change the properties of this line", "2D Mapper context menu (drawing custom exit line) item tooltip"));
+                customLineProperties->setToolTip(mudlet::htmlWrapper(tr("Change the properties of this line.",
+                                                                        "2D Mapper context menu (drawing custom exit line) item tooltip")));
                 connect(customLineProperties, &QAction::triggered, this, &T2DMap::slot_customLineProperties);
 
                 auto customLineFinish = new QAction(tr("Finish", "2D Mapper context menu (drawing custom exit line) item"), this);
-                customLineFinish->setToolTip(tr("Finish drawing this line", "2D Mapper context menu (drawing custom exit line) item tooltip"));
+                customLineFinish->setToolTip(mudlet::htmlWrapper(tr("Finish drawing this line.",
+                                                                    "2D Mapper context menu (drawing custom exit line) item tooltip")));
                 connect(customLineFinish, &QAction::triggered, this, &T2DMap::slot_doneCustomLine);
 
                 room->calcRoomDimensions();
@@ -2822,11 +2824,13 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 if (selectionSize == 1) {
                     auto customExitLine = new QAction(tr("Create exit line...", "2D Mapper context menu (room) item"), this);
                     if (pArea && !pArea->gridMode) {
-                        customExitLine->setToolTip(tr("Replace an exit line with a custom line", "2D Mapper context menu (room) item tooltip (enabled state)"));
+                        customExitLine->setToolTip(mudlet::htmlWrapper(tr("Replace an exit line with a custom line.",
+                                                                          "2D Mapper context menu (room) item tooltip (enabled state)")));
                         connect(customExitLine, &QAction::triggered, this, &T2DMap::slot_setCustomLine);
                     } else {
                         // Disable custom exit lines in grid mode as they aren't visible anyway
-                        customExitLine->setToolTip(tr("Custom exit lines are not shown and are not editable in grid mode", "2D Mapper context menu (room) item tooltip (disabled state)"));
+                        customExitLine->setToolTip(mudlet::htmlWrapper(tr("Custom exit lines are not shown and are not editable in grid mode.",
+                                                                          "2D Mapper context menu (room) item tooltip (disabled state)")));
                         customExitLine->setEnabled(false);
                     }
                     popup->addAction(customExitLine);
@@ -2840,21 +2844,24 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
                 if (selectionSize > 0) {
                     auto roomSymbol = new QAction(tr("Set symbol...", "2D Mapper context menu (room) item"), this);
-                    roomSymbol->setToolTip(tr("Set one or more symbols or letters to mark special rooms", "2D Mapper context menu (room) item tooltip"));
+                    roomSymbol->setToolTip(mudlet::htmlWrapper(tr("Set one or more symbols or letters to mark special rooms.",
+                                                                  "2D Mapper context menu (room) item tooltip")));
                     connect(roomSymbol, &QAction::triggered, this, &T2DMap::slot_showSymbolSelection);
                     popup->addAction(roomSymbol);
                 }
 
                 if (selectionSize > 1) {
                     auto spreadRooms = new QAction(tr("Spread...", "2D Mapper context menu (room) item"), this);
-                    spreadRooms->setToolTip(tr("Increase map X-Y spacing for the selected group of rooms", "2D Mapper context menu (room) item tooltip"));
+                    spreadRooms->setToolTip(mudlet::htmlWrapper(tr("Increase map X-Y spacing for the selected group of rooms.",
+                                                                   "2D Mapper context menu (room) item tooltip")));
                     connect(spreadRooms, &QAction::triggered, this, &T2DMap::slot_spread);
                     popup->addAction(spreadRooms);
                 }
 
                 if (selectionSize > 1) {
                     auto shrinkRooms = new QAction(tr("Shrink...", "2D Mapper context menu (room) item"), this);
-                    shrinkRooms->setToolTip(tr("Decrease map X-Y spacing for the selected group of rooms", "2D Mapper context menu (room) item tooltip"));
+                    shrinkRooms->setToolTip(mudlet::htmlWrapper(tr("Decrease map X-Y spacing for the selected group of rooms.",
+                                                                   "2D Mapper context menu (room) item tooltip")));
                     connect(shrinkRooms, &QAction::triggered, this, &T2DMap::slot_shrink);
                     popup->addAction(shrinkRooms);
                 }
@@ -2863,12 +2870,14 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     // TODO: Do not show both action simultaneously, if all selected rooms have same status.
 
                     auto lockRoom = new QAction(tr("Lock", "2D Mapper context menu (room) item"), this);
-                    lockRoom->setToolTip(tr("Lock room for speed walks", "2D Mapper context menu (room) item tooltip"));
+                    lockRoom->setToolTip(mudlet::htmlWrapper(tr("Lock room for speed walks.",
+                                                                "2D Mapper context menu (room) item tooltip")));
                     connect(lockRoom, &QAction::triggered, this, &T2DMap::slot_lockRoom);
                     popup->addAction(lockRoom);
 
                     auto unlockRoom = new QAction(tr("Unlock", "2D Mapper context menu (room) item"), this);
-                    unlockRoom->setToolTip(tr("Unlock room for speed walks", "2D Mapper context menu (room) item tooltip"));
+                    unlockRoom->setToolTip(mudlet::htmlWrapper(tr("Unlock room for speed walks.",
+                                                                  "2D Mapper context menu (room) item tooltip")));
                     connect(unlockRoom, &QAction::triggered, this, &T2DMap::slot_unlockRoom);
                     popup->addAction(unlockRoom);
                 }
@@ -2887,7 +2896,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
                 if (selectionSize > 0) {
                     auto moveRoomXY = new QAction(tr("Move to position...", "2D Mapper context menu (room) item"), this);
-                    moveRoomXY->setToolTip(tr("Move selected room or group of rooms to the given coordinates in this area", "2D Mapper context menu (room) item tooltip"));
+                    moveRoomXY->setToolTip(mudlet::htmlWrapper(tr("Move selected room or group of rooms to the given coordinates in this area", "2D Mapper context menu (room) item tooltip")));
                     connect(moveRoomXY, &QAction::triggered, this, &T2DMap::slot_movePosition);
                     popup->addAction(moveRoomXY);
                 }
@@ -2899,14 +2908,15 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 }
 
                 auto createLabel = new QAction(tr("Create label...", "2D Mapper context menu (room) item"), this);
-                createLabel->setToolTip(tr("Create label to show text or an image", "2D Mapper context menu (room) item tooltip"));
+                createLabel->setToolTip(mudlet::htmlWrapper(tr("Create label to show text or an image", "2D Mapper context menu (room) item tooltip")));
                 connect(createLabel, &QAction::triggered, this, &T2DMap::slot_createLabel);
                 popup->addAction(createLabel);
             }
 
             if (selectionSize == 1) {
                 auto setPlayerLocation = new QAction(tr("Set player location", "2D Mapper context menu (room) item"), this);
-                setPlayerLocation->setToolTip(tr("Set the player's current location to here", "2D Mapper context menu (room) item tooltip (enabled state)"));
+                setPlayerLocation->setToolTip(mudlet::htmlWrapper(tr("Set the player's current location to here.",
+                                                                     "2D Mapper context menu (room) item tooltip (enabled state)")));
                 connect(setPlayerLocation, &QAction::triggered, this, &T2DMap::slot_setPlayerLocation);
                 popup->addAction(setPlayerLocation);
             }
@@ -2948,11 +2958,12 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     // on the exit direction - and we can now add even to it
                     {
                         connect(addPoint, &QAction::triggered, this, &T2DMap::slot_customLineAddPoint);
-                        addPoint->setToolTip(tr("Divide segment by adding a new point mid-way along", "2D Mapper context menu (custom line editing) item tooltip (enabled state)"));
+                        addPoint->setToolTip(mudlet::htmlWrapper(tr("Divide segment by adding a new point mid-way along.",
+                                                                    "2D Mapper context menu (custom line editing) item tooltip (enabled state)")));
                     } else {
                         addPoint->setEnabled(false);
-                        addPoint->setToolTip(tr("Select a point first, then add a new point mid-way along the segment towards room",
-                                                "2D Mapper context menu (custom line editing) item tooltip (disabled state, i.e must do the suggested action first)"));
+                        addPoint->setToolTip(mudlet::htmlWrapper(tr("Select a point first, then add a new point mid-way along the segment towards room.",
+                                                                    "2D Mapper context menu (custom line editing) item tooltip (disabled state, i.e must do the suggested action first)")));
                     }
 
                     auto removePoint = new QAction(tr("Remove point", "2D Mapper context menu (custom line editing) item"), this);
@@ -2962,23 +2973,22 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                         if (room->customLines.value(mCustomLineSelectedExit).count() > 1) {
                             connect(removePoint, &QAction::triggered, this, &T2DMap::slot_customLineRemovePoint);
                             if ((mCustomLineSelectedPoint + 1) < room->customLines.value(mCustomLineSelectedExit).count()) {
-                                removePoint->setToolTip(tr("Merge pair of segments by removing this point",
-                                                           "2D Mapper context menu (custom line editing) item tooltip (enabled state but will be able to be done again on this item)"));
+                                removePoint->setToolTip(mudlet::htmlWrapper(tr("Merge pair of segments by removing this point.",
+                                                                               "2D Mapper context menu (custom line editing) item tooltip (enabled state but will be able to be done again on this item)")));
 
                             } else {
-                                removePoint->setToolTip(tr("Remove last segment by removing this point",
-                                                           "2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)"));
+                                removePoint->setToolTip(mudlet::htmlWrapper(tr("Remove last segment by removing this point.",
+                                                                               "2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)")));
                             }
                         } else {
                             removePoint->setEnabled(false);
-                            removePoint->setToolTip(tr(
-                                    R"(use "delete line" to remove the only segment ending in an editable point)",
-                                    R"(2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action "delete line" should match the translation for that action))"));
+                            removePoint->setToolTip(mudlet::htmlWrapper(tr(R"(Use "delete line" to remove the only segment ending in an editable point.)",
+                                                                           R"(2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action "delete line" should match the translation for that action))")));
                         }
                     } else {
                         removePoint->setEnabled(false);
-                        removePoint->setToolTip(tr("Select a point first, then remove it",
-                                                   "2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)"));
+                        removePoint->setToolTip(mudlet::htmlWrapper(tr("Select a point first, then remove it.",
+                                                                       "2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)")));
                     }
 
                     auto lineProperties = new QAction(tr("Properties", "2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)"), this);
@@ -2986,11 +2996,11 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     // (tooltip and/or object name IIRC) whereas the ellipsis is meant only for display
                     lineProperties->setText(
                             tr("properties...", "2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise"));
-                    lineProperties->setToolTip(tr("Change the properties of this custom line"));
+                    lineProperties->setToolTip(mudlet::htmlWrapper(tr("Change the properties of this custom line.")));
                     connect(lineProperties, &QAction::triggered, this, &T2DMap::slot_customLineProperties);
 
                     auto deleteLine = new QAction(tr("Delete line", "2D Mapper context menu (custom line editing) item"), this);
-                    deleteLine->setToolTip(tr("Delete all of this custom line", "2D Mapper context menu (custom line editing) item tooltip"));
+                    deleteLine->setToolTip(mudlet::htmlWrapper(tr("Delete all of this custom line.", "2D Mapper context menu (custom line editing) item tooltip")));
                     connect(deleteLine, &QAction::triggered, this, &T2DMap::slot_deleteCustomExitLine);
 
                     popup->addAction(addPoint);
