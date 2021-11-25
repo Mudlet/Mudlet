@@ -3813,9 +3813,9 @@ std::optional<QString> Host::windowType(const QString& name) const
         auto userwindow = mpConsole->mDockWidgetMap.value(name);
         if (userwindow) {
             return {QStringLiteral("userwindow")};
-        } else {
-            return {QStringLiteral("miniconsole")};
         }
+
+        return {QStringLiteral("miniconsole")};
     }
 
     if (mpConsole->mSubCommandLineMap.contains(name)) {
