@@ -3566,7 +3566,7 @@ void mudlet::slot_updateAvailable(const int updateCount)
     mpActionAbout->setToolTip(htmlWrapper(tr("Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.",
                                              // Intentional comment
                                              "Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - "
-                                             "please ensure all have the same translation)."));
+                                             "please ensure all have the same translation).")));
 
     // Create a new button (QActions actually turn into QToolButtons when they
     // are placed on a QToolBar - but we need to generate one ourselves so we
@@ -3600,7 +3600,7 @@ void mudlet::slot_updateAvailable(const int updateCount)
     pActionReview->setToolTip(htmlWrapper(tr("Review the update(s) available...",
                                              // Intentional comment
                                              "Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here",
-                                             updateCount));
+                                             updateCount)));
     // Override the default hide tooltips state:
     pUpdateMenu->setToolTipsVisible(true);
     // Screw the menu onto the button

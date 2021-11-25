@@ -167,7 +167,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         // disabled in dev builds
         checkbox_noAutomaticUpdates->setChecked(true);
         checkbox_noAutomaticUpdates->setDisabled(true);
-        checkbox_noAutomaticUpdates->setToolTip(mudlet::htmlWrapper(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet."));
+        checkbox_noAutomaticUpdates->setToolTip(mudlet::htmlWrapper(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.")));
     } else {
         checkbox_noAutomaticUpdates->setChecked(!pMudlet->updater->updateAutomatically());
         // This is the extra connect(...) relating to settings' changes saved by
