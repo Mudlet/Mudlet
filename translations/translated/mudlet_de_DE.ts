@@ -7536,7 +7536,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7884"/>
       <source>Export Item</source>
-      <translation type="unfinished"/>
+      <translation>Element exportieren</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7898"/>
@@ -8385,12 +8385,12 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/ui/main_window.ui" line="191"/>
       <source>Show errors</source>
-      <translation type="unfinished"/>
+      <translation>Fehler anzeigen</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="194"/>
       <source>&lt;p&gt;Show errors from scripts that you have running&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Fehler von ausgeführten Skripten anzeigen&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="223"/>
@@ -8430,7 +8430,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/ui/main_window.ui" line="292"/>
       <source>Package exporter</source>
-      <translation type="unfinished"/>
+      <translation>Paket exportieren</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="295"/>
@@ -10218,12 +10218,12 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/mudlet.cpp" line="996"/>
       <source>Vietnamese (DauCu variant - old-style diacritics)</source>
-      <translation type="unfinished"/>
+      <translation>Vietnamesisch (DauCu Variante - alte Diakritika)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="997"/>
       <source>Vietnamese (DauMoi variant - new-style diacritics)</source>
-      <translation type="unfinished"/>
+      <translation>Vietnamesisch (DauMoi Variante - neue Diakritika)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1006"/>
