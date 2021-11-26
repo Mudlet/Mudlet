@@ -3804,7 +3804,7 @@ void mudlet::slot_password_migrated_to_secure(QKeychain::Job* job)
 bool mudlet::migratePasswordsToProfileStorage()
 {
     if (!mProfilePasswordsToMigrate.isEmpty()) {
-        qWarning() << "mudlet::migratePasswordsToProfileStorage() WARMING - password migration is already in progress, so not starting a duplicate action.";
+        qWarning() << "mudlet::migratePasswordsToProfileStorage() WARNING - password migration is already in progress, so not starting a duplicate action.";
         return false;
     }
     mStorePasswordsSecurely = false;
