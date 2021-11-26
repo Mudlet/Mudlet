@@ -11233,11 +11233,6 @@ tenta di nuovo quando sarà terminato.</translation>
       <translation>Completamento automatico</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="265"/>
-      <source>Use a dark theme</source>
-      <translation>Usa il tema scuro</translation>
-    </message>
-    <message>
       <location filename="../src/ui/profile_preferences.ui" line="251"/>
       <source>Notify on new data</source>
       <translation>Notifica nuovi dati</translation>
@@ -11276,6 +11271,11 @@ tenta di nuovo quando sarà terminato.</translation>
       <location filename="../src/ui/profile_preferences.ui" line="240"/>
       <source>Dark</source>
       <translation>Scuro</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="265"/>
+      <source>Appearance</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="294"/>
