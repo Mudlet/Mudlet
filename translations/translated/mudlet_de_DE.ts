@@ -11192,11 +11192,6 @@ try again when it has finished.</source>
       <translation>Autovervollständigung</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="265"/>
-      <source>Use a dark theme</source>
-      <translation>Dunkles Design verwenden</translation>
-    </message>
-    <message>
       <location filename="../src/ui/profile_preferences.ui" line="251"/>
       <source>Notify on new data</source>
       <translation>Benachrichtigung bei neuen Daten</translation>
@@ -11235,6 +11230,11 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="240"/>
       <source>Dark</source>
       <translation>Dunkel</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="265"/>
+      <source>Appearance</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="294"/>
