@@ -10938,11 +10938,6 @@ try again when it has finished.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/profile_preferences.ui" line="265"/>
-        <source>Use a dark theme</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location filename="../src/ui/profile_preferences.ui" line="251"/>
         <source>Notify on new data</source>
         <translation type="unfinished"></translation>
@@ -10980,6 +10975,11 @@ try again when it has finished.</source>
     <message>
         <location filename="../src/ui/profile_preferences.ui" line="240"/>
         <source>Dark</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/profile_preferences.ui" line="265"/>
+        <source>Appearance</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
