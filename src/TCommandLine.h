@@ -36,7 +36,6 @@ class TConsole;
 class KeyUnit;
 class Host;
 
-
 class TCommandLine : public QPlainTextEdit //QLineEdit
 {
     Q_OBJECT
@@ -75,6 +74,8 @@ public:
     int mActionFunction = 0;
     QPalette mRegularPalette;
     QString mCommandLineName;
+
+    QMap<QString, QString> contextMenuItems;
 
 public slots:
     void slot_popupMenu();

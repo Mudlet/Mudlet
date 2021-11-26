@@ -845,7 +845,7 @@ mmp.locateAndEcho(matches[3], matches[2])</script>
 				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 					<name>Angel/Demon presences</name>
 					<script>disableTrigger("Angel sense")
-
+disableTrigger("Demon sense")
 mmp.pdb_lastupdate = {}</script>
 					<triggerType>0</triggerType>
 					<conditonLineDelta>0</conditonLineDelta>
@@ -890,7 +890,8 @@ mmp.pdb_lastupdate = {}</script>
 					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 						<name>Stop (angel presences)</name>
 						<script>setTriggerStayOpen("Angel/Demon presences", 0)
-enableTrigger("Angel sense")</script>
+enableTrigger("Angel sense")
+enableTrigger("Demon sense")</script>
 						<triggerType>0</triggerType>
 						<conditonLineDelta>0</conditonLineDelta>
 						<mStayOpen>0</mStayOpen>
@@ -1648,6 +1649,89 @@ end</script>
 						<integer>3</integer>
 					</regexCodePropertyList>
 				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Forestwatch</name>
+					<script>mmp.locateAndEcho(matches[3], matches[2])</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^(\w+) has entered the forest at (.+)\.$</string>
+						<string>^(\w+) leaves the forest from (.+)\.$</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Grove Eyes</name>
+					<script>mmp.pdb_lastupdate = {}</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>100</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>You detect the following people disturbing the tranquility of the forest.</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>3</integer>
+					</regexCodePropertyList>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Each person</name>
+						<script>mmp.locateAndEchoSide(matches[3], matches[2])</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>^(\w+) at (.+?)$</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>1</integer>
+						</regexCodePropertyList>
+					</Trigger>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>prompt</name>
+						<script>setTriggerStayOpen("Grove Eyes", 0)
+enableTrigger("Grove Eyes")</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string></string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>7</integer>
+						</regexCodePropertyList>
+					</Trigger>
+				</Trigger>
 			</TriggerGroup>
 			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>Aetolia</name>
@@ -1680,6 +1764,43 @@ mmp.game = "aetolia"</script>
 					<colorTriggerBgColor>#000000</colorTriggerBgColor>
 					<regexCodeList>
 						<string>Password correct. Welcome to Aetolia.</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>3</integer>
+					</regexCodePropertyList>
+				</Trigger>
+			</TriggerGroup>
+			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>Asteria</name>
+				<script></script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList />
+				<regexCodePropertyList />
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Login</name>
+					<script>raiseEvent("mmp logged in", "Asteria")
+mmp.game = "asteria"</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>99</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>Welcome to Asteria.</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>3</integer>
@@ -2738,6 +2859,69 @@ end</script>
 						<integer>3</integer>
 					</regexCodePropertyList>
 				</Trigger>
+				<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Delayed bix movement.</name>
+					<script></script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList />
+					<regexCodePropertyList />
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Teleport Delays</name>
+						<script>mmp.customwalkdelay(10)</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>You run your fingers across the surface of .* and still your mind, preparing for the journey ahead.</string>
+							<string>^You reach out and touch the \w+-facing landmark of the Compass of the Basin, and the spinning needle within fixes on that direction. The compass begins vibrating sympathetically with strands of aether\.$</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>1</integer>
+							<integer>1</integer>
+						</regexCodePropertyList>
+					</Trigger>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Immediately retry on failed teleport</name>
+						<script>if mmp.autowalking then
+  mmp.customwalkdelay(0)
+  mmp.move()
+end</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>Your action disrupts your concentration and you cease reaching out to harness</string>
+							<string>You cease concentrating on traveling the planar paths.</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>2</integer>
+							<integer>3</integer>
+						</regexCodePropertyList>
+					</Trigger>
+				</TriggerGroup>
 			</TriggerGroup>
 			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>Imperian</name>
@@ -3708,11 +3892,13 @@ mmp.echo("We're connected to StickMUD.")</script>
 						<string>There is a door in the way.</string>
 						<string>A closed door is in the way. You need to OPEN DOOR</string>
 						<string>There is an? (?:walnut|pine|oak|iron|reinforced) door in the way.</string>
+						<string>The door to the (\w+) is closed.</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>2</integer>
 						<integer>3</integer>
 						<integer>2</integer>
+						<integer>1</integer>
 						<integer>1</integer>
 					</regexCodePropertyList>
 				</Trigger>
@@ -5313,14 +5499,6 @@ end</script>
 						<regex>(?i)^manselink (\w+) (\w+)$</regex>
 					</Alias>
 					<Alias isActive="yes" isFolder="no">
-						<name>Astral jumping boots</name>
-						<script>mmp.astroboots(matches[2]:lower()=="on")
-mmp.echo("&lt;yellow&gt;Astral jumping "..(matches[2]:lower()=="on" and "enabled" or "disabled").."!")</script>
-						<command></command>
-						<packageName></packageName>
-						<regex>(?i)astroboots (on|off)$</regex>
-					</Alias>
-					<Alias isActive="yes" isFolder="no">
 						<name>Wildnodes toggle</name>
 						<script>if mmp.game ~= "lusternia" then return end
 mmp.wildnodes(matches[2]:lower()=="on")
@@ -5524,7 +5702,7 @@ mmp.lagtable =
     [4] = {description = "Bad. Terrible. Terribad.", time = 5},
     [5] = {description = "Carrier Pigeon", time = 10},
   }
-local newversion = "21.10.1"
+local newversion = "21.11.3"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo("Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.")
@@ -5543,7 +5721,7 @@ function mmp.startup()
   --General settings
   
   private_settings["echocolour"] = createOption("cyan", mmp.changeEchoColour, {"string"}, "Set the color for room number echos?", function(newSetting) return color_table[newSetting] ~= nil end)
-  private_settings["crowdmap"] = createOption(false, mmp.changeMapSource, {"boolean"}, "Use a crowd-sourced map instead of IREs default?", nil, {achaea = true, starmourn = true, lusternia = true, stickmud = true})
+  private_settings["crowdmap"] = createOption(false, mmp.changeMapSource, {"boolean"}, "Use a crowd-sourced map instead of IREs default?", nil, {achaea = true, starmourn = true, lusternia = true, stickmud = true, asteria = true})
   private_settings["showcmds"] = createOption(true, mmp.changeBoolFunc, {"boolean"}, "Show walking commands?")
   private_settings["laglevel"] = createOption(1, mmp.changeLaglevel, {"number"}, "How laggy is your connection, (fast 1&lt;-&gt;5 slow)?", mmp.verifyLaglevel)
   private_settings["slowwalk"] = createOption(false, mmp.setSlowWalk, {"boolean"}, "Walk slowly instead of as quick as possible?")
@@ -5605,15 +5783,23 @@ function mmp.startup()
   private_settings["medallion"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Medallion?", nil, {lusternia = true})
   
   --Lusternia Bubblixes
+  private_settings["twist"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Mt. Dio Bix?", nil, {lusternia = true})
+  private_settings["figurine"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Icewynd Bix?", nil, {lusternia = true})
+  private_settings["periscope"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Aquagoria Bix?", nil, {lusternia = true})
+  private_settings["pebble"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Lyraa Bix?", nil, {lusternia = true})
+  private_settings["shard"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Xion Bix?", nil, {lusternia = true})
+  private_settings["tibia"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Cankermore Bix?", nil, {lusternia = true})
+  private_settings["mud"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Mucklemarsh Bix?", nil, {lusternia = true})
+  private_settings["cookie"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Crumkindivia Bix?", nil, {lusternia = true})
+  private_settings["icicle"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Frosticia Bix?", nil, {lusternia = true})
+  private_settings["screwdriver"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Facility Bix?", nil, {lusternia = true})
+  private_settings["snowglobe"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Tree of Trees Bix?", nil, {lusternia = true})
+  private_settings["head"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Bottledowns Bix?", nil, {lusternia = true})
+  private_settings["wheel"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Dramube Bix?", nil, {lusternia = true})
   
-  private_settings["tibia"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Tibia?", nil, {lusternia = true})
-  private_settings["mud"] = createOption(false, mmp.setMud, {"boolean"}, "Make use of your Mud?", nil, {lusternia = true})
-  private_settings["cookie"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Cookie?", nil, {lusternia = true})
-  private_settings["icicle"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Icicle?", nil, {lusternia = true})
-  private_settings["screwdriver"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Screwdriver?", nil, {lusternia = true})
-  private_settings["snowglobe"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Snowglobe?", nil, {lusternia = true})
-  private_settings["head"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Doll's Head?", nil, {lusternia = true})
-  private_settings["wheel"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Quartz Wheel?", nil, {lusternia = true})
+  --lusternia athergoop setButtons 
+  
+  private_settings["buttons"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of Aethergoop Buttons?", nil, {lusternia = true})
   
   --Lusternia Curio collections
   
@@ -5623,7 +5809,7 @@ function mmp.startup()
   private_settings["figurecurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Figure curios?", nil, {lusternia = true})
   private_settings["flowercurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Flower curios?", nil, {lusternia = true})
   private_settings["fluttercurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Flutter curios?", nil, {lusternia = true})
-  private_settings["toolcurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Tool curios]?", nil, {lusternia = true})
+  private_settings["toolcurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Tool curios?", nil, {lusternia = true})
   private_settings["vernalcurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Vernal curios?", nil, {lusternia = true})
   private_settings["utensilcurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Utensil curios?", nil, {lusternia = true})
   private_settings["toycurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Toy curios?", nil, {lusternia = true})
@@ -5637,6 +5823,11 @@ function mmp.startup()
   private_settings["mandala"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Mandala?", nil, {lusternia = true})
   private_settings["mantle"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Mantle?", nil, {lusternia = true})
   private_settings["key"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Key?", nil, {lusternia = true})
+  
+  --Lusternia other travel things
+  private_settings["compass"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use the Compass of the Basin?", nil, {lusternia = true})
+  private_settings["astrojump"] = createOption(false, mmp.astroboots, {"boolean"}, "Use Astral Jumping boots?", nil, {lusternia = true})
+  
   
   --I have no idea what this does tbh
   
@@ -5940,6 +6131,26 @@ function mmp.openDoor()
   if not mmp.speedWalkDir[speedWalkCounter] then
     return
   end
+  if mmp.game == "asteria" then
+   send(
+    "open " ..
+    mmp.speedWalkDir[speedWalkCounter]:gsub("sprint ", ""):gsub("dash ", ""):gsub("gallop ", ""):gsub(
+      "runaway ", ""
+    ),
+    false
+  )
+  if mmp.settings.showcmds then
+    cecho(
+      string.format(
+        "&lt;red&gt;(&lt;maroon&gt;%d - &lt;dark_slate_grey&gt;open %s&lt;red&gt;)",
+        #mmp.speedWalkDir - speedWalkCounter + 1,
+        mmp.speedWalkDir[speedWalkCounter]:gsub("sprint ", ""):gsub("dash ", ""):gsub("gallop ", ""):gsub(
+          "runaway ", ""
+        )
+      )
+    )
+  end
+else
   send(
     "open door " ..
     mmp.speedWalkDir[speedWalkCounter]:gsub("sprint ", ""):gsub("dash ", ""):gsub("gallop ", ""):gsub(
@@ -5958,6 +6169,7 @@ function mmp.openDoor()
       )
     )
   end
+end
   mmp.hasty = true
   mmp.setmovetimer(getNetworkLatency())
 end
@@ -6032,7 +6244,7 @@ function mmp.canmove(fromtimer)
   end
   -- Achaea
   -- Lusternia
-  if
+ if
     (
       gmcp.Char and
       (not gmcp.Char.Vitals.bal or gmcp.Char.Vitals.bal == "1") and
@@ -6051,8 +6263,8 @@ function mmp.canmove(fromtimer)
       (not gmcp.Char.Balance or gmcp.Char.Balance.List.rarm == "1") and
       (not gmcp.Char.Balance or gmcp.Char.Balance.List.larm == "1") and
       (not gmcp.Char.Balance or gmcp.Char.Balance.List.legs == "1") and
-      (not gmcp.Char.Vitals.prone or (gmcp.Char.Vitals.prone == "0" or gmcp.Char.Vitals.prone == 0))
-    )
+      (not gmcp.Char.Vitals.prone or (gmcp.Char.Vitals.prone == "0" or gmcp.Char.Vitals.prone == 0)
+    ))
   then
     if fromtimer then
       mmp.move()
@@ -7022,31 +7234,9 @@ registerAnonymousEventHandler("mmp link externals", "mmp.achaeaBetterWings")</sc
 					<packageName></packageName>
 					<script>registerAnonymousEventHandler("mmp link externals", "mmp.addWingsLusternia")
 
-local function linkBubblix(area, entranceRoom, command)
-  -- always add this link to allow pathfinding to the bubble regardless of indoor/outdoor
-  mmp.tempSpecialExit(148, entranceRoom, command)
-  -- always add this link to allow pathfinding from the bubbe regardless of indoor/outdoor
-  mmp.tempSpecialExit(entranceRoom, 6831, command)
-  if mmp.usebubblix() then
-    if not table.contains(gmcp.Room.Info.details, "an Aetherbubble") then
-      -- we are not in an Aetherbubble and could use a bubblix, so allow its use from here
-      mmp.tempSpecialExit(entranceRoom, command)
-    elseif gmcp.Room.Info.area == area then
-      -- we are in an Aetherbubble and it's the one the bubblix belongs to and we could use a bubblix, so allow its use from here
-      mmp.tempSpecialExit(6831, command)
-    end
-  end
-end
-
 function mmp.addWingsLusternia()
   if mmp.game ~= "lusternia" then
     return
-  end
-  --that dorky prism
-  if mmp.useprism() then
-    if mmp.settings.prism then
-      mmp.tempSpecialExit(6182, "touch prism")
-    end
   end
   --items that use standard bix rules
   if mmp.usebix() then
@@ -7079,7 +7269,13 @@ function mmp.addWingsLusternia()
     if mmp.settings.key then
       mmp.tempSpecialExit(18732, "touch key")
     end
-    --curio collections!
+  end
+  --things which use prism rules
+  if mmp.useprism() then
+    if mmp.settings.prism then
+      mmp.tempSpecialExit(6182, "touch prism")
+    end
+    --curio collections
     if mmp.settings.bonecurio then
       mmp.tempSpecialExit(28613, "curio collection activate bone")
     end
@@ -7115,29 +7311,99 @@ function mmp.addWingsLusternia()
     end
   end
   --all the bubblixes!
-  if mmp.settings.screwdriver then
-    linkBubblix("the Facility", 10185, "touch screwdriver")
+  local bubblixes =
+    {
+      {
+        setting = "figurine",
+        item = "icebix",
+        room = 23187,
+        areas = {"Northern Icewynd Mountains", "Southern Icewynd Mountains"},
+      },
+      {setting = "twist", item = "diobix", room = 18203, areas = {"Mount Dio"}},
+      {setting = "snowglobe", item = "treebix", room = 10992, areas = {"the Great Spirit Tree"}},
+      {setting = "periscope", item = "aquabix", room = 36073, areas = {"Aquagoria"}},
+      {setting = "pebble", item = "lyraabix", room = 33825, areas = {"Lyraa Ey Rielys"}},
+      {setting = "shard", item = "xionbix", room = 12652, areas = {"the Workshop of Xion"}},
+      {setting = "cookie", item = "crumbix", room = 9888, areas = {"Crumkindivia"}},
+      {setting = "wheel", item = "drambix", room = 10509, areas = {"the Dramube Triangle"}},
+      {setting = "head", item = "bottlebix", room = 11811, areas = {"the Bubble of Bottledowns"}},
+      {setting = "icicle", item = "frostbix", room = 10457, areas = {"Frosticia"}},
+      {setting = "screwdriver", item = "facbix", room = 10185, areas = {"the Facility"}},
+      {setting = "mud", item = "mucklebix", room = 9985, areas = {"Mucklemarsh"}},
+      {
+        setting = "tibia",
+        item = "cankerbix",
+        room = 11600,
+        areas = {"the Cankermore Battlegrounds"},
+      },
+    }
+  local shortcutCreated = false
+  for _, bubblix in pairs(bubblixes) do
+    if mmp.settings[bubblix.setting] then
+      local command = "touch " .. bubblix.item
+      if not shortcutCreated then
+        --for the first bubblix in the list, let it be used as a shortcut to aetherplex.
+        mmp.tempSpecialExit(bubblix.room, 6831, command)
+        shortcutCreated = true
+      end
+      --for every bix, create an exit from outside aetherplex to the bubble.
+      mmp.tempSpecialExit(148, bubblix.room, command)
+      if mmp.usebubblix() then
+        if table.contains(bubblix.areas, gmcp.Room.Info.area) then
+          mmp.tempSpecialExit(mmp.currentroom, 6831, command)
+        elseif not table.contains(gmcp.Room.Info.details, "an Aetherbubble") then
+          mmp.tempSpecialExit(mmp.currentroom, bubblix.room, command)
+        end
+      end
+    end
   end
-  if mmp.settings.wheel then
-    linkBubblix("the Dramube Triangle", 10509, "touch wheel")
+  --one use button travel!
+  if mmp.settings.buttons then
+    local colors =
+      {
+        blue = 36073,
+        brown = 11811,
+        black = 11600,
+        yellow = 9888,
+        red = 10509,
+        steel = 10185,
+        white = 10457,
+        purple = 47812,
+        green = 9985,
+        crystal = 12652,
+        wooden = 10992,
+      }
+    local exitScript = [[script:sendAll("outr %sbutton", "touch %sbutton", false)]]
+    if
+      table.contains(gmcp.Room.Info.details, "the Prime Material Plane") and
+      table.contains(gmcp.Room.Info.details, "outdoors")
+    then
+      for color, room in pairs(colors) do
+        mmp.tempSpecialExit(mmp.currentroom, room, exitScript:format(color, color), 20)
+      end
+    else
+      for color, room in pairs(colors) do
+        mmp.tempSpecialExit(148, room, exitScript:format(color, color), 20)
+      end
+    end
   end
-  if mmp.settings.mud then
-    linkBubblix("Mucklemarsh", 9985, "touch mud")
-  end
-  if mmp.settings.snowglobe then
-    linkBubblix("the Great Spirit Tree", 10992, "shake snowglobe")
-  end
-  if mmp.settings.cookie then
-    linkBubblix("Crumkindivia", 9888, "touch cookie")
-  end
-  if mmp.settings.head then
-    linkBubblix("the Bubble of Bottledowns", 11811, "touch doll")
-  end
-  if mmp.settings.icicle then
-    linkBubblix("Frosticia", 10457, "touch icicle")
-  end
-  if mmp.settings.tibia then
-    linkBubblix("the Cankermore Battlegrounds", 11600, "touch tibia")
+  --basin of life specific travel devices
+  if mmp.settings.compass then
+    local startingRoom = mmp.lusterniaInBasin() and mmp.currentroom or 148
+    local compassPoints =
+      {
+        north = 21695,
+        northeast = 10742,
+        northwest = 6546,
+        east = 9789,
+        southeast = 14998,
+        south = 10670,
+        southwest = 19613,
+        west = 20037,
+      }
+    for direction, destinationRoom in pairs(compassPoints) do
+      mmp.tempSpecialExit(startingRoom, destinationRoom, "Touch compass " .. direction, 40)
+    end
   end
   mmp.clearpathcache()
 end</script>
@@ -8697,8 +8963,8 @@ end
 
 function mmp.changeMapSource()
   local use = mmp.settings.crowdmap and true or false
-  if use and not (mmp.game == "achaea" or mmp.game == "starmourn" or mmp.game == "lusternia" or mmp.game == "stickmud") then
-    mmp.echo("Sorry - the crowdsourced map is only available for use in Achaea, Starmourn, Lusternia and StickMUD. If you'd like to help start one for your game, please post at http://forums.mudlet.org/viewtopic.php?f=13&amp;t=1696. If you are playing one of the games, then it is likely that you just downloaded the script - and it doesn't know what you are playing. Reconnect and it'll know.")
+  if use and not (mmp.game == "achaea" or mmp.game == "starmourn" or mmp.game == "lusternia" or mmp.game == "stickmud" or mmp.game == "asteria") then
+    mmp.echo("Sorry - the crowdsourced map is only available for use in Achaea, Starmourn, Lusternia, StickMUD and Asteria. If you'd like to help start one for your game, please post at http://forums.mudlet.org/viewtopic.php?f=13&amp;t=1696. If you are playing one of the games, then it is likely that you just downloaded the script - and it doesn't know what you are playing. Reconnect and it'll know.")
     mmp.settings.crowdmap = false
   elseif use and not loadMap then
    mmp.echo("Sorry - your Mudlet is too old and can't load maps. Please update: http://forums.mudlet.org/viewtopic.php?f=5&amp;t=1874")
@@ -9964,8 +10230,9 @@ function mmp_mapping_newroom(_, num)
               "."
           end
           -- check indoors status
-          local indoors = table.contains(gmcp.Room.Info.details, "indoors")
-          if indoors and (getRoomUserData(num, "indoors") == '' or getRoomUserData(num,"outdoors") ~= '') then
+          if mmp.game ~= "asteria" then
+            local indoors = table.contains(gmcp.Room.Info.details, "indoors")
+            if indoors and (getRoomUserData(num, "indoors") == '' or getRoomUserData(num,"outdoors") ~= '') then
             setRoomUserData(num, "indoors", "y")
             clearRoomUserDataItem(num, "outdoors")
             s = s .. (#s &gt; 0 and " " or "") .. "Updated room to be indoors."
@@ -9974,7 +10241,8 @@ function mmp_mapping_newroom(_, num)
             setRoomUserData(num, "outdoors", "y")
             s = s .. (#s &gt; 0 and " " or "") .. "Updated room to be outdoors."
           end
-
+        end
+        
           -- check server area name (Achaea only for now)
           if mmp.game == "achaea" then
             local serverArea = gmcp.Room.Info.area
@@ -10327,6 +10595,129 @@ end</script>
 					</Script>
 				</Script>
 				<Script isActive="yes" isFolder="no">
+					<name>Asteria</name>
+					<packageName></packageName>
+					<script></script>
+					<eventHandlerList />
+					<Script isActive="yes" isFolder="no">
+						<name>asteria_stop_speedwalk_for_wrong_dir</name>
+						<packageName></packageName>
+						<script>function asteria_stop_speedwalk_for_wrong_dir()
+  if mmp.game and mmp.game ~= "asteria" then
+    return
+  end
+  if #mmp.speedWalkPath &gt; 0 then
+    echo("Can't go \"" .. gmcp.Room.WrongDir .. "\". Stopping speedwalk.")
+    mmp.stop()
+  end
+end</script>
+						<eventHandlerList>
+							<string>gmcp.Room.WrongDir</string>
+						</eventHandlerList>
+					</Script>
+					<Script isActive="yes" isFolder="no">
+						<name>register_asterias_envdata</name>
+						<packageName></packageName>
+						<script>function register_asterias_envdata(_, game)
+  if game ~= "Asteria" then
+    return
+  end
+  mmp.envids =
+    {
+      Air = 20,
+      Airship = 21,
+      Badland = 22,
+      Beach = 23,
+      Carriage = 24,
+      Cave = 25,
+      City = 26,
+      Coast = 27,
+      Default = 28,
+      Desert = 29,
+      Field = 30,
+      Forest = 31,
+      Ghetto = 32,
+      Hills = 33,
+      Home = 34,
+      Inn = 35,
+      Inside = 36,
+      Marsh = 37,
+      Mountain = 38,
+      Road = 39,
+      Ship = 40,
+      Shop = 41,
+      Temple = 42,
+      Tundra = 43,
+      Underwater = 44,
+      Vehicle = 45,
+      Water = 46,
+    }
+  mmp.waterenvs = {}
+  mmp.envidsr = {}
+  for name, id in pairs(mmp.envids) do
+    mmp.envidsr[id] = name
+  end
+
+
+mmp.colorcodes = {}
+mmp.colorcodes[20] = {176, 224, 230, 255}
+mmp.colorcodes[21] = {160, 82, 45, 255}
+mmp.colorcodes[22] = {205, 133, 63, 255}
+mmp.colorcodes[23] = {218, 165, 32, 255}
+mmp.colorcodes[24] = {132, 112, 255, 255}
+mmp.colorcodes[25] = {47, 79, 79, 255}
+mmp.colorcodes[26] = {190, 190, 190, 255}
+mmp.colorcodes[27] = {210, 180, 140, 255}
+mmp.colorcodes[28] = {255, 69, 0, 255}
+mmp.colorcodes[29] = {255, 215, 0, 255}
+mmp.colorcodes[30] = {127, 255, 0, 255}
+mmp.colorcodes[31] = {0, 100, 0, 255}
+mmp.colorcodes[32] = {184, 134, 11, 255}
+mmp.colorcodes[33] = {50, 205, 50, 255}
+mmp.colorcodes[34] = {102, 205, 170, 255}
+mmp.colorcodes[35] = {0, 128, 128, 255}
+mmp.colorcodes[36] = {255, 250, 205, 255}
+mmp.colorcodes[37] = {107, 142, 35, 255}
+mmp.colorcodes[38] = {139, 69, 19, 255}
+mmp.colorcodes[39] = {112, 128, 144, 255}
+mmp.colorcodes[40] = {265, 42, 42, 255}
+mmp.colorcodes[41] = {0, 190, 255, 255}
+mmp.colorcodes[42] = {138, 43, 226, 255}
+mmp.colorcodes[43] = {255, 250, 250, 255}
+mmp.colorcodes[44] = {65, 105, 225, 255}
+mmp.colorcodes[45] = {90, 158, 160, 255}
+mmp.colorcodes[46] = {30, 144, 255, 255}
+
+function set_asteria_colorcodes()
+  for id, rgba in pairs(mmp.colorcodes) do
+    setCustomEnvColor(id, rgba[1], rgba[2], rgba[3], rgba[4])
+  end
+ end
+end</script>
+						<eventHandlerList>
+							<string>mmp logged in</string>
+						</eventHandlerList>
+					</Script>
+					<Script isActive="yes" isFolder="no">
+						<name>asteria_can_move</name>
+						<packageName></packageName>
+						<script>-- Asteria's GMCP butts heads with existing GMCP 'able' checks in the speedwalking script. This works around it.
+
+function asteria_can_move(_, game)
+  if game ~= "Asteria" then
+    return
+  end
+
+  function mapper_can_move()
+    return gmcp.Char and gmcp.Char.Balance and gmcp.Char.Balance.balance == 0
+  end
+end</script>
+						<eventHandlerList>
+							<string>mmp logged in</string>
+						</eventHandlerList>
+					</Script>
+				</Script>
+				<Script isActive="yes" isFolder="no">
 					<name>Dragonswords</name>
 					<packageName></packageName>
 					<script></script>
@@ -10423,6 +10814,7 @@ end</script>
     ["constructed underground"] = 2,
     ["deep ocean"]              = 24,
     ["natural underground"]     = 3,
+    ["constructed underwater"]  = 41,
     aether                      = 36,
     astral                      = 35,
     beach                       = 5,
@@ -10457,6 +10849,8 @@ end</script>
     valley                      = 13,
     volcanic                    = 32,
     wasteland                   = 29,
+    badlands                    = 40,
+    wetlands                    = 31,
   }
 
   mmp.waterenvs = {}
@@ -10473,67 +10867,89 @@ end</script>
 					<Script isActive="yes" isFolder="no">
 						<name>Astral utilities</name>
 						<packageName></packageName>
-						<script>local astralExits = {
-	{5079,5175,"n"},
-	{4072,5065,"w"},
-	{5088, 5132, "e"},
-	{5145, 5176, "s"},
-	{5138, 5146, "e"},
-	{5158, 5192, "s"},
-	{5152, 5041, "e"},
-	{5031, 5042, "e"},
-	{5022, 5131, "n"},
-	{5116, 5198, "w"},
-	{5130, 5096, "e"},
-	{5089, 5058, "n"},
-	{5102, 5115, "e"},
-	{5111, 5159, "e"},	
-	{5103, 5071, "n"},
-	{5059, 5053, "w"},
-	{5187, 5169, "w"},
-	{5190, 5204, "e"},
-	{5065,5072,"e"},
-}
-local mirrorExits = {
-	n="s",
-	ne="sw",
-	e="w",
-	se="nw",
-	s="n",
-	sw="ne",
-	w="e",
-	nw="se",
-	u="d",
-	d="u",
-	out="in",
-	["in"]="out",
-}
-function mmp.astroboots(create)
-	if mmp.game ~= "lusternia" then return end
-	for k, v in pairs(astralExits) do
-		if create then
-			addSpecialExit(v[1],v[2],"astrojump")
-			setExitWeight(v[1],"astrojump",5)
-			addSpecialExit(v[2],v[1],"astrojump")
-			setExitWeight(v[2],"astrojump",5)
-		else
-			removeSpecialExit(v[1],"astrojump")
-			removeSpecialExit(v[2],"astrojump")
-		end
-	end
+						<script>local astralExits =
+  {
+    {5079, 5175, "n"},
+    {5072, 5065, "w"},
+    {5088, 5132, "e"},
+    {5145, 5176, "s"},
+    {5138, 5146, "e"},
+    {5158, 5192, "s"},
+    {5152, 5041, "e"},
+    {5031, 5042, "e"},
+    {5022, 5131, "n"},
+    {5116, 5198, "w"},
+    {5130, 5096, "e"},
+    {5089, 5058, "n"},
+    {5102, 5115, "e"},
+    {5111, 5159, "e"},
+    {5103, 5071, "n"},
+    {5059, 5053, "w"},
+    {5187, 5169, "w"},
+    {5190, 5204, "e"},
+    {5065, 5072, "e"},
+    {45333, 5093, "u"},
+    {45334, 5113, "u"},
+    {45356, 5075, "u"},
+    {45335, 5171, "u"},
+    {45357, 5066, "u"},
+    {45329, 5156, "u"},
+    {45330, 5201, "u"},
+    {45331, 5121, "u"},
+    {45324, 5055, "u"},
+    {45354, 5177, "u"},
+    {45325, 5024, "u"},
+    {45355, 5133, "u"},
+  }
+local mirror =
+  {
+    n = "s",
+    ne = "sw",
+    e = "w",
+    se = "nw",
+    s = "n",
+    sw = "ne",
+    w = "e",
+    nw = "se",
+    u = "d",
+    d = "u",
+    out = "in",
+    ["in"] = "out",
+  }
+
+function mmp.astroboots()
+  if mmp.game ~= "lusternia" then
+    return
+  end
+  local option = mmp.settings.astrojump
+  mmp.echo("&lt;green&gt;" .. (option and "Set up" or "Removed") .. " &lt;white&gt;Astrojump &lt;green&gt;exits")
+  local exitString = [[script:if gmcp.Room.Info.exits.%s then send("%s", false) else send("astrojump", false) end]]
+  for k, v in pairs(astralExits) do
+    if option then
+      addSpecialExit(v[1], v[2], string.format(exitString, v[3], v[3]))
+      addSpecialExit(v[2], v[1], string.format(exitString, mirror[v[3]], mirror[v[3]]))
+    else
+      removeSpecialExit(v[1], "astrojump")
+      removeSpecialExit(v[2], "astrojump")
+      removeSpecialExit(v[1], string.format(exitString, v[3], v[3]))
+      removeSpecialExit(v[2], string.format(exitString, mirror[v[3]], mirror[v[3]]))
+    end
+  end
 end
 
 function mmp.wildnodes(create)
-	if mmp.game ~= "lusternia" then return end
-	for k, v in pairs(astralExits) do
-		if create then
-			setExit(v[1],v[2],v[3])
-			setExit(v[2],v[1],mirrorExits[v[3]])
-		else
-			setExit(v[1],-1,v[3])
-			setExit(v[2],-1,mirrorExits[v[3]])
-		end
-	end
+  if mmp.game ~= "lusternia" then
+    return
+  end
+  for k, v in pairs(astralExits) do
+    if create then
+      setExit(v[1], v[2], v[3])
+      setExit(v[2], v[1], mirrorExits[v[3]])
+    else
+      setExit(v[1], -1, v[3])
+      setExit(v[2], -1, mirrorExits[v[3]])
+    end
+  end
 end</script>
 						<eventHandlerList />
 					</Script>
@@ -10642,6 +11058,126 @@ function mmp.lockpaths(lock)
   mmp.echo((lock and "Locked " or "Unlocked ") .. count .. " pathfinding exits.")
 end</script>
 						<eventHandlerList />
+					</Script>
+					<Script isActive="yes" isFolder="no">
+						<name>Lusternia basin areas</name>
+						<packageName></packageName>
+						<script>local basinAreas =
+  {
+    ["Ackleberry Highway"] = true,
+    ["Alabaster Road"] = true,
+    ["Avechna's Peak"] = true,
+    ["Avechna's Teeth"] = true,
+    ["Balach Swamp"] = true,
+    ["Bondero Bay"] = true,
+    ["Caoimhe Dell"] = true,
+    ["Cay of Cloadahi"] = true,
+    ["Emerald Road"] = true,
+    ["Epicure's Alley"] = true,
+    ["Glomdoring Forest"] = true,
+    ["Great Southern Highway"] = true,
+    ["Highwater Keep"] = true,
+    ["Irshaw Heights"] = true,
+    ["Mornhai Sanctuary"] = true,
+    ["Mount Krog"] = true,
+    ["Mount Wend"] = true,
+    ["Mount Zoaka"] = true,
+    ["Old Imperial Road"] = true,
+    ["Snow Valley"] = true,
+    ["Spectre Isle"] = true,
+    ["St. Gathlyn's Orphanage for the Dispossessed"] = true,
+    ["The Emerald Enclave"] = true,
+    ["Tolborolla Valley"] = true,
+    ["Verasavir Valley"] = true,
+    ["Waste Storage Facility"] = true,
+    ["Wyrden Isle"] = true,
+    ["the Base of Operations"] = true,
+    ["the Blasted Land"] = true,
+    ["the Carai Caroo"] = true,
+    ["the Caverns of Muhanlesh"] = true,
+    ["the Caves of Hhuhur"] = true,
+    ["the Chancel of Clangoran Mysteries"] = true,
+    ["the City of Gaudiguch"] = true,
+    ["the City of Hallifax"] = true,
+    ["the City of Magnagora"] = true,
+    ["the City of New Celest"] = true,
+    ["the Clarramore Cloud Gardens"] = true,
+    ["the Crimson Lady"] = true,
+    ["the Divine Luck Club"] = true,
+    ["the Dracnari Nomad Camp"] = true,
+    ["the Empress' Last Breath"] = true,
+    ["the Estengare River"] = true,
+    ["the Feyranti Estate"] = true,
+    ["the Floating Island of the Forgotten"] = true,
+    ["the Gloriana River"] = true,
+    ["the Grand Junction Bazaar"] = true,
+    ["the Grey Moors"] = true,
+    ["the Hifarae Hills"] = true,
+    ["the Inner Sea"] = true,
+    ["the Isle of Itecia"] = true,
+    ["the Isle of Nyalia"] = true,
+    ["the Isle of Olimsito"] = true,
+    ["the Isle of Vesucia"] = true,
+    ["the Kelpie Maiden"] = true,
+    ["the Kiakodan Nature Reserve"] = true,
+    ["the Lucidian Mesa Compound"] = true,
+    ["the Meliashmora of Imperial Secrets"] = true,
+    ["the New Celest sewer system"] = true,
+    ["the Northern Mountains"] = true,
+    ["the Oleanvir Valley"] = true,
+    ["the Presidio of the Damned"] = true,
+    ["the Razine Mountain Range"] = true,
+    ["the Rhizoda Mangrove"] = true,
+    ["the Ruins of Shallach"] = true,
+    ["the Scorpion Caverns"] = true,
+    ["the Sea of Despair"] = true,
+    ["the Serenwilde Forest"] = true,
+    ["the Shallach River"] = true,
+    ["the Shallamurine Cathedral"] = true,
+    ["the Skarch Desert"] = true,
+    ["the Southern Mountains"] = true,
+    ["the Tainted Broadcast Centre"] = true,
+    ["the Tar Pits"] = true,
+    ["the Tosha Monastery"] = true,
+    ["the Transcendental Fulcrux"] = true,
+    ["the Triple Junction Inn"] = true,
+    ["the Upper Peaks of the Razines"] = true,
+    ["the Upper Peaks of the Southern Mountains"] = true,
+    ["the Village of Acknor"] = true,
+    ["the Village of Angkrag"] = true,
+    ["the Village of Dairuchi"] = true,
+    ["the Village of Delport"] = true,
+    ["the Village of Duum"] = true,
+    ["the Village of Estelbar"] = true,
+    ["the Village of Paavik"] = true,
+    ["the Village of Rikenfriez"] = true,
+    ["the Village of Rockholm"] = true,
+    ["the Village of Shanthmark"] = true,
+    ["the Village of Southgard"] = true,
+    ["the Village of Stewartsville"] = true,
+    ["the Village of Talthos"] = true,
+    ["the i'Xiia Asylum"] = true,
+    ["the sewers of Magnagora"] = true,
+  }
+
+function mmp.lusterniaInBasin()
+  return basinAreas[gmcp.Room.Info.area] or false
+end</script>
+						<eventHandlerList />
+					</Script>
+					<Script isActive="yes" isFolder="no">
+						<name>mmp.lusterniaMapUpdated</name>
+						<packageName></packageName>
+						<script>function mmp.lusterniaMapUpdated()
+  if mmp.game == "lusternia" then
+    mmp.lockPathways()
+    mmp.astroboots()
+  end
+end</script>
+						<eventHandlerList>
+							<string>mmapper updated map</string>
+							<string>sysMapDownloadEvent</string>
+						</eventHandlerList>
 					</Script>
 				</Script>
 				<Script isActive="yes" isFolder="no">
@@ -11268,6 +11804,10 @@ function mmp.checkforupdate()
         downloadFile(
           mmp.mapfile, "http://ire-mudlet-mapping.github.io/LusterniaCrowdmap/Map/version.txt"
         )
+      elseif game == "asteria" then
+        downloadFile(
+          mmp.mapfile, "http://asteria-ui.github.io/AsteriaCrowdmap/Map/version.txt"
+        )
       elseif game == "stickmud" then
         downloadFile(
           mmp.mapfile, "http://stickmud.github.io/StickMUDCrowdmap/Map/version.txt"
@@ -11321,6 +11861,11 @@ function mmp.retrievecrowdchangelog()
     downloadFile(
       mmp.crowdchangelogfile,
       "http://ire-mudlet-mapping.github.io/LusterniaCrowdmap/Map/changelog.txt"
+    )
+  elseif mmp.game == "asteria" then
+    downloadFile(
+      mmp.crowdchangelogfile,
+      "http://asteria-ui.github.io/AsteriaCrowdmap/Map/changelog.txt"
     )
   elseif mmp.game == "stickmud" then
     downloadFile(
@@ -11384,6 +11929,8 @@ function mmp.downloadcrowdmap(newversion)
     downloadFile(mmp.crowdmapfile, "http://ire-mudlet-mapping.github.io/StarmournCrowdmap/Map/map")
   elseif mmp.game == "lusternia" then
     downloadFile(mmp.crowdmapfile, "http://ire-mudlet-mapping.github.io/LusterniaCrowdmap/Map/map")
+  elseif mmp.game == "asteria" then
+    downloadFile(mmp.crowdmapfile, "http://asteria-ui.github.io/AsteriaCrowdmap/Map/map")
   elseif mmp.game == "stickmud" then
     downloadFile(mmp.crowdmapfile, "http://stickmud.github.io/StickMUDCrowdmap/Map/map")
   end

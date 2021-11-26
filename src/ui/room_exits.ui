@@ -89,9 +89,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="nw">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>NW exit...</string>
            </property>
@@ -229,9 +226,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="n">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room north of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>N exit...</string>
            </property>
@@ -369,9 +363,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="ne">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>NE exit...</string>
            </property>
@@ -509,9 +500,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="up">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room up from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>Up exit...</string>
            </property>
@@ -649,9 +637,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="w">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room west of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="text">
             <string/>
            </property>
@@ -859,9 +844,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="e">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room east of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>E exit...</string>
            </property>
@@ -996,9 +978,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="down">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room down from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>Down exit...</string>
            </property>
@@ -1148,9 +1127,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="sw">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>SW exit...</string>
            </property>
@@ -1294,9 +1270,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="s">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room south of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>S exit...</string>
            </property>
@@ -1434,9 +1407,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="se">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>SE exit...</string>
            </property>
@@ -1574,9 +1544,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="in">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room in from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>In exit...</string>
            </property>
@@ -1727,9 +1694,6 @@
              <pointsize>8</pointsize>
             </font>
            </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room that's to the southwest here.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>Exit RoomID number</string>
            </property>
@@ -1853,9 +1817,6 @@
          </item>
          <item row="0" column="2" colspan="4">
           <widget class="QLineEdit" name="out">
-           <property name="toolTip">
-            <string>&lt;p&gt;Set the number of the room out from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</string>
-           </property>
            <property name="placeholderText">
             <string>Out exit...</string>
            </property>
@@ -1959,7 +1920,7 @@
          <enum>Qt::StrongFocus</enum>
         </property>
         <property name="toolTip">
-         <string>&lt;p&gt;Click on an item to edit/change it, to DELETE a Special Exit set its Exit Room ID to zero.&lt;/p&gt;</string>
+         <string>&lt;p&gt;Click on an item to edit/change it. To delete a Special Exit, ether: select it and press the keyboard Delete key; or set its Exit roomID to less than one; or clear the name/command entry.&lt;/p&gt;</string>
         </property>
         <property name="frameShadow">
          <enum>QFrame::Raised</enum>
@@ -1998,6 +1959,15 @@ Room ID</string>
          </property>
          <property name="toolTip">
           <string>&lt;p&gt;Set the number of the room that this exit leads to, if set to zero the exit will be removed on saving the exits.&lt;/p&gt;</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Exit
+Status</string>
+         </property>
+         <property name="toolTip">
+          <string>&lt;p&gt;Indicates whether the exit is invalid, leads to another room in this area or leads to a room in another area.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2060,7 +2030,7 @@ Locked</string>
 or LUA script</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;(Lua scripts need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</string>
+          <string>&lt;p&gt;(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</string>
          </property>
         </column>
        </widget>

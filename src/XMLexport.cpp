@@ -43,83 +43,83 @@
 #include "post_guard.h"
 
 XMLexport::XMLexport( Host * pH )
-: mpHost( pH )
-, mpTrigger( nullptr )
-, mpTimer( nullptr )
-, mpAlias( nullptr )
-, mpAction( nullptr )
-, mpScript( nullptr )
-, mpKey( nullptr )
+: mpHost(pH)
+, mpTrigger(nullptr)
+, mpTimer(nullptr)
+, mpAlias(nullptr)
+, mpAction(nullptr)
+, mpScript(nullptr)
+, mpKey(nullptr)
 {
 }
 
 XMLexport::XMLexport( TTrigger * pT )
-: mpHost( nullptr )
-, mpTrigger( pT )
-, mpTimer( nullptr )
-, mpAlias( nullptr )
-, mpAction( nullptr )
-, mpScript( nullptr )
-, mpKey( nullptr )
+: mpHost(nullptr)
+, mpTrigger(pT)
+, mpTimer(nullptr)
+, mpAlias(nullptr)
+, mpAction(nullptr)
+, mpScript(nullptr)
+, mpKey(nullptr)
 {
 }
 
 XMLexport::XMLexport( TTimer * pT )
-: mpHost( nullptr )
-, mpTrigger( nullptr )
-, mpTimer( pT )
-, mpAlias( nullptr )
-, mpAction( nullptr )
-, mpScript( nullptr )
-, mpKey( nullptr )
+: mpHost(nullptr)
+, mpTrigger(nullptr)
+, mpTimer(pT)
+, mpAlias(nullptr)
+, mpAction(nullptr)
+, mpScript(nullptr)
+, mpKey(nullptr)
 {
 }
 
 XMLexport::XMLexport( TAlias * pT )
-: mpHost( nullptr )
-, mpTrigger( nullptr )
-, mpTimer( nullptr )
-, mpAlias( pT )
-, mpAction( nullptr )
-, mpScript( nullptr )
-, mpKey( nullptr )
+: mpHost(nullptr)
+, mpTrigger(nullptr)
+, mpTimer(nullptr)
+, mpAlias(pT)
+, mpAction(nullptr)
+, mpScript(nullptr)
+, mpKey(nullptr)
 {
 }
 
 XMLexport::XMLexport( TAction * pT )
-: mpHost( nullptr )
-, mpTrigger( nullptr )
-, mpTimer( nullptr )
-, mpAlias( nullptr )
-, mpAction( pT )
-, mpScript( nullptr )
-, mpKey( nullptr )
+: mpHost(nullptr)
+, mpTrigger(nullptr)
+, mpTimer(nullptr)
+, mpAlias(nullptr)
+, mpAction(pT)
+, mpScript(nullptr)
+, mpKey(nullptr)
 {
 }
 
 XMLexport::XMLexport( TScript * pT )
-: mpHost( nullptr )
-, mpTrigger( nullptr )
-, mpTimer( nullptr )
-, mpAlias( nullptr )
-, mpAction( nullptr )
-, mpScript( pT )
-, mpKey( nullptr )
+: mpHost(nullptr)
+, mpTrigger(nullptr)
+, mpTimer(nullptr)
+, mpAlias(nullptr)
+, mpAction(nullptr)
+, mpScript(pT)
+, mpKey(nullptr)
 {
 }
 
 XMLexport::XMLexport( TKey * pT )
-: mpHost( nullptr )
-, mpTrigger( nullptr )
-, mpTimer( nullptr )
-, mpAlias( nullptr )
-, mpAction( nullptr )
-, mpScript( nullptr )
-, mpKey( pT )
+: mpHost(nullptr)
+, mpTrigger(nullptr)
+, mpTimer(nullptr)
+, mpAlias(nullptr)
+, mpAction(nullptr)
+, mpScript(nullptr)
+, mpKey(pT)
 {
 }
 
-void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileName)
+void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileName, bool async)
 {
     auto pHost = mpHost;
     auto mudletPackage = writeXmlHeader();
@@ -191,12 +191,16 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
     } else {
         helpPackage.append_child("helpURL").text().set("");
     }
-
-    auto future = QtConcurrent::run(this, &XMLexport::saveXml, fileName);
-    auto watcher = new QFutureWatcher<bool>;
-    QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(fileName); });
-    watcher->setFuture(future);
-    saveFutures.append(future);
+    if (async) {
+        auto future = QtConcurrent::run(this, &XMLexport::saveXml, fileName);
+        auto watcher = new QFutureWatcher<bool>;
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(fileName); });
+        watcher->setFuture(future);
+        saveFutures.append(future);
+    } else {
+        saveXml(fileName);
+        mpHost->xmlSaved(fileName);
+    }
 }
 
 void XMLexport::exportHost(const QString& filename_pugi_xml)
@@ -422,6 +426,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
     host.append_attribute("mEditorAutoComplete") = pHost->mEditorAutoComplete ? "yes" : "no";
+    host.append_attribute("mEditorShowBidi") = pHost->mEditorShowBidi ? "yes" : "no";
     host.append_attribute("mEditorTheme") = pHost->mEditorTheme.toUtf8().constData();
     host.append_attribute("mEditorThemeFile") = pHost->mEditorThemeFile.toUtf8().constData();
     host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toUtf8().constData();
@@ -483,7 +488,13 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
                 mInstalledModules.append_child("key").text().set(it.key().toUtf8().constData());
                 QStringList entry = it.value();
                 mInstalledModules.append_child("filepath").text().set(entry.at(0).toUtf8().constData());
-                mInstalledModules.append_child("globalSave").text().set(entry.at(1).toUtf8().constData());
+                if (entry.at(0).endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || entry.at(0).endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
+                    mInstalledModules.append_child("zipSync").text().set(entry.at(1).toUtf8().constData());
+                    // ensure compatibility with previous versions
+                    mInstalledModules.append_child("globalSave").text().set(0);
+                } else {
+                    mInstalledModules.append_child("globalSave").text().set(entry.at(1).toUtf8().constData());
+                }
                 if (entry.at(1).toInt()) {
                     pHost->modulesToWrite.insert(it.key(), entry);
                 }

@@ -981,11 +981,11 @@ if rex then
   _Echos = {
     Patterns = {
       Hex = {
-        [[(\x5c?(?:#|\|c)?(?:[0-9a-fA-F]{6}|(?:#,|\|c,)[0-9a-fA-F]{6,8})(?:,[0-9a-fA-F]{6,8})?)|(?:\||#)(\/?[biru])]],
+        [[(\x5c?(?:#|\|c)?(?:[0-9a-fA-F]{6}|(?:#,|\|c,)[0-9a-fA-F]{6,8})(?:,[0-9a-fA-F]{6,8})?)|(?:\||#)(\/?[birus])]],
         rex.new [[(?:#|\|c)(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?)?]],
       },
       Decimal = {
-        [[(<[0-9,:]+>)|<(/?[biru])>]],
+        [[(<[0-9,:]+>)|<(/?[birus])>]],
         rex.new [[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}),?([0-9]{1,3})?)?>]],
       },
       Color = {
@@ -1029,6 +1029,10 @@ if rex then
           t[#t + 1] = "\27underline"
         elseif r == "/u" then
           t[#t + 1] = "\27underlineoff"
+        elseif r == "s" then
+          t[#t + 1] = "\27strikethrough"
+        elseif r == "/s" then
+          t[#t + 1] = "\27strikethroughoff"
         end
         if c then
           if style == 'Hex' or style == 'Decimal' then
@@ -1078,6 +1082,10 @@ if rex then
               t[#t + 1] = "\27underline"
             elseif c == "</u>" then
               t[#t + 1] = "\27underlineoff"
+            elseif c == "<s>" then
+              t[#t + 1] = "\27strikethrough"
+            elseif c == "</s>" then
+              t[#t + 1] = "\27strikethroughoff"
             else
               local fcolor, bcolor = _Echos.Patterns[style][2]:match(c)
               local color = {}
@@ -1188,6 +1196,10 @@ if rex then
         setUnderline(win, true)
       elseif v == "\27underlineoff" then
         setUnderline(win, false)
+      elseif v == "\27strikethrough" then
+        setStrikeOut(win, true)
+      elseif v == "\27strikethroughoff" then
+        setStrikeOut(win, false)
       elseif v == "\27reset" then
         resetFormat(win)
       else
@@ -1445,6 +1457,20 @@ if rex then
     ctable["ansi_" .. key] = key
   end
 
+  -- local lookup table to find ansi escapes for to ansi conversions
+  local resets = {
+    r = "\27[0m",
+    reset = "\27[0m",
+    i = "\27[3m",
+    ["/i"] = "\27[23m",
+    b = "\27[1m",
+    ["/b"] = "\27[22m",
+    u = "\27[4m",
+    ["/u"] = "\27[24m",
+    s = "\27[9m",
+    ["/s"] = "\27[29m"
+  }
+
   -- take a color name and turn it into an ANSI escape string
   local function colorToAnsi(colorName)
     local result = ""
@@ -1452,8 +1478,9 @@ if rex then
     local fore = cols[1]
     local back = cols[2]
     if fore ~= "" then
-      if fore == "r" or fore == "reset" then
-        result = result .. "\27[0m"
+      local res = resets[fore]
+      if res then
+        result = result .. res
       else
         local colorNumber = ctable[fore]
         if colorNumber then
@@ -1546,7 +1573,7 @@ if rex then
         result = result .. rgbToAnsi(color:match("<(.+)>"))
       end
       if res then
-        result = result .. "\27[0m"
+        result = result .. resets[res]
       end
     end
     return result
@@ -1579,7 +1606,7 @@ if rex then
         result = result .. hexToAnsi(color:sub(2,-1))
       end
       if res then
-        result = result .. "\27[0m"
+        result = result .. resets[res]
       end
     end
     return result
@@ -1726,27 +1753,7 @@ do
 end
 
 
-local colours = {
-  [0] = { 0, 0, 0 }, -- black
-  [1] = { 128, 0, 0 }, -- red
-  [2] = { 0, 128, 0 }, -- green
-  [3] = { 128, 128, 0 }, -- yellow
-  [4] = { 0, 0, 128 }, --blue
-  [5] = { 128, 0, 128 }, -- magenta
-  [6] = { 0, 128, 128 }, -- cyan
-  [7] = { 192, 192, 192 }, -- white
-}
 
-local lightColours = {
-  [0] = { 128, 128, 128 }, -- black
-  [1] = { 255, 0, 0 }, -- red
-  [2] = { 0, 255, 0 }, -- green
-  [3] = { 255, 255, 0 }, -- yellow
-  [4] = { 0, 0, 255 }, --blue
-  [5] = { 255, 0, 255 }, -- magenta
-  [6] = { 0, 255, 255 }, -- cyan
-  [7] = { 255, 255, 255 }, -- white
-}
 
 local ansiPattern = rex.new("\\e\\[([0-9:;]+?)m")
 
@@ -1762,7 +1769,6 @@ end
 -- bold is emulated so it is supported, up to an extent
 function ansi2decho(text, ansi_default_color)
   assert(type(text) == 'string', 'ansi2decho: bad argument #1 type (expected string, got '..type(text)..'!)')
-  local coloursToUse = colours
   local lastColour = ansi_default_color
 
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
@@ -1776,31 +1782,18 @@ function ansi2decho(text, ansi_default_color)
 
     -- given an xterm256 index, returns an rgb string for decho use
     local function convertindex(tag)
-      local floor = math.floor
-      -- code from Mudlets own decoding in TBuffer::translateToPlainText
-
-      local rgb
-
-      if tag < 8 then
-        rgb = colours[tag]
-      elseif tag < 16 then
-        rgb = lightColours[tag - 8]
-      elseif tag < 232 then
-        tag = tag - 16 -- because color 1-15 behave like normal ANSI colors      
-        local b = tag % 6
-        local g = (tag - b) / 6 % 6
-        local r = (tag - b - g * 6) / 36 % 6
-        b = b ~= 0 and b * 40 + 55 or 0
-        r = r ~= 0 and r * 40 + 55 or 0
-        g = g ~= 0 and g * 40 + 55 or 0
-        rgb = { r, g, b }
-      else
-        local component = (tag - 232) * 10 + 8
-        rgb = { component, component, component }
-      end
-
-      return rgb
+      local ansi = string.format("ansi_%03d", tag)
+      return color_table[ansi] or false
     end
+    local colours = {}
+    for i = 0, 7 do
+      colours[i] = convertindex(i)
+    end
+    local lightColours = {}
+    for i = 0, 7 do
+      lightColours[i] = convertindex(i+8)
+    end
+    local coloursToUse = colours
 
     -- since fg/bg can come in different order and we need them as fg:bg for decho, collect
     -- the data first, then assemble it in the order we need at the end
@@ -2176,6 +2169,7 @@ local function copy2color(name,win,str,inst)
       error(err)
     end
   end
+
   win = win or "main"
   str = str or line
   inst = inst or 1
@@ -2183,7 +2177,7 @@ local function copy2color(name,win,str,inst)
     -- happens when you try to use copy2decho() on an empty line
     return ""
   end
-  local start, len = selectString(win, str, inst), #str
+  local start, len = selectString(win, str, inst), utf8.len(str)
   if not start then
     error(name..": string not found",3)
   end
@@ -2209,9 +2203,9 @@ local function copy2color(name,win,str,inst)
 
     if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
       cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
-      result = string.format(style, result and (result..endspan) or "", r, g, b, rb, gb, bb, line:sub(index, index))
+      result = string.format(style, result and (result..endspan) or "", r, g, b, rb, gb, bb, utf8.sub(line, index, index))
     else
-      result = result .. line:sub(index, index)
+      result = result .. utf8.sub(line, index, index)
     end
   end
   result = result .. endspan

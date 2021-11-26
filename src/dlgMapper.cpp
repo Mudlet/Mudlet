@@ -39,10 +39,10 @@
 using namespace std::chrono_literals;
 
 dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
-: QWidget( parent )
-, mpMap( pM )
-, mpHost( pH )
-, mShowDefaultArea( true )
+: QWidget(parent)
+, mpMap(pM)
+, mpHost(pH)
+, mShowDefaultArea(true)
 {
     setupUi(this);
 

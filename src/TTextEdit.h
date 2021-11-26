@@ -86,7 +86,7 @@ public:
 // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b, int a ) { mBgColor = QColor(r, g, b, a); }
     void resetHScrollbar() { mScreenOffset = 0; mMaxHRange = 0; }
-    int getScreenHeight() { return mScreenHeight; }
+    int getScreenHeight() const { return mScreenHeight; }
     void searchSelectionOnline();
     int getColumnCount();
     int getRowCount();
@@ -111,8 +111,6 @@ public:
     int mScrollVector;
     QRegion mSelectedRegion;
     bool mShowTimeStamps;
-    int mWrapAt;
-    int mWrapIndentCount {};
 
 public slots:
     void slot_toggleTimeStamps(const bool);
@@ -134,7 +132,6 @@ private slots:
     void slot_toggleCopyTimeStamps(const bool);
 
 private:
-    void initDefaultSettings();
     QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false, const bool padFirstLine = false);
     static QString htmlCenter(const QString&);
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
@@ -177,7 +174,7 @@ private:
     int mScreenHeight;
     // currently viewed screen area
     QPixmap mScreenMap;
-    int mScreenWidth;
+    int mScreenWidth = 100;
     int mScreenOffset;
     int mMaxHRange;
     QElapsedTimer mLastClickTimer;
