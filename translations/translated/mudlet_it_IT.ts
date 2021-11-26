@@ -11275,7 +11275,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="265"/>
       <source>Appearance</source>
-      <translation type="unfinished"/>
+      <translation>Aspetto</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="294"/>
