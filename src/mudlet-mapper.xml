@@ -1771,6 +1771,43 @@ mmp.game = "aetolia"</script>
 				</Trigger>
 			</TriggerGroup>
 			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>Asteria</name>
+				<script></script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList />
+				<regexCodePropertyList />
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Login</name>
+					<script>raiseEvent("mmp logged in", "Asteria")
+mmp.game = "asteria"</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>99</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>Welcome to Asteria.</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>3</integer>
+					</regexCodePropertyList>
+				</Trigger>
+			</TriggerGroup>
+			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>Dragonswords</name>
 				<script></script>
 				<triggerType>0</triggerType>
@@ -3855,11 +3892,13 @@ mmp.echo("We're connected to StickMUD.")</script>
 						<string>There is a door in the way.</string>
 						<string>A closed door is in the way. You need to OPEN DOOR</string>
 						<string>There is an? (?:walnut|pine|oak|iron|reinforced) door in the way.</string>
+						<string>The door to the (\w+) is closed.</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>2</integer>
 						<integer>3</integer>
 						<integer>2</integer>
+						<integer>1</integer>
 						<integer>1</integer>
 					</regexCodePropertyList>
 				</Trigger>
@@ -5663,7 +5702,7 @@ mmp.lagtable =
     [4] = {description = "Bad. Terrible. Terribad.", time = 5},
     [5] = {description = "Carrier Pigeon", time = 10},
   }
-local newversion = "21.11.2"
+local newversion = "21.11.3"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo("Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.")
@@ -5682,7 +5721,7 @@ function mmp.startup()
   --General settings
   
   private_settings["echocolour"] = createOption("cyan", mmp.changeEchoColour, {"string"}, "Set the color for room number echos?", function(newSetting) return color_table[newSetting] ~= nil end)
-  private_settings["crowdmap"] = createOption(false, mmp.changeMapSource, {"boolean"}, "Use a crowd-sourced map instead of IREs default?", nil, {achaea = true, starmourn = true, lusternia = true, stickmud = true})
+  private_settings["crowdmap"] = createOption(false, mmp.changeMapSource, {"boolean"}, "Use a crowd-sourced map instead of IREs default?", nil, {achaea = true, starmourn = true, lusternia = true, stickmud = true, asteria = true})
   private_settings["showcmds"] = createOption(true, mmp.changeBoolFunc, {"boolean"}, "Show walking commands?")
   private_settings["laglevel"] = createOption(1, mmp.changeLaglevel, {"number"}, "How laggy is your connection, (fast 1&lt;-&gt;5 slow)?", mmp.verifyLaglevel)
   private_settings["slowwalk"] = createOption(false, mmp.setSlowWalk, {"boolean"}, "Walk slowly instead of as quick as possible?")
@@ -6092,6 +6131,26 @@ function mmp.openDoor()
   if not mmp.speedWalkDir[speedWalkCounter] then
     return
   end
+  if mmp.game == "asteria" then
+   send(
+    "open " ..
+    mmp.speedWalkDir[speedWalkCounter]:gsub("sprint ", ""):gsub("dash ", ""):gsub("gallop ", ""):gsub(
+      "runaway ", ""
+    ),
+    false
+  )
+  if mmp.settings.showcmds then
+    cecho(
+      string.format(
+        "&lt;red&gt;(&lt;maroon&gt;%d - &lt;dark_slate_grey&gt;open %s&lt;red&gt;)",
+        #mmp.speedWalkDir - speedWalkCounter + 1,
+        mmp.speedWalkDir[speedWalkCounter]:gsub("sprint ", ""):gsub("dash ", ""):gsub("gallop ", ""):gsub(
+          "runaway ", ""
+        )
+      )
+    )
+  end
+else
   send(
     "open door " ..
     mmp.speedWalkDir[speedWalkCounter]:gsub("sprint ", ""):gsub("dash ", ""):gsub("gallop ", ""):gsub(
@@ -6110,6 +6169,7 @@ function mmp.openDoor()
       )
     )
   end
+end
   mmp.hasty = true
   mmp.setmovetimer(getNetworkLatency())
 end
@@ -6184,7 +6244,7 @@ function mmp.canmove(fromtimer)
   end
   -- Achaea
   -- Lusternia
-  if
+ if
     (
       gmcp.Char and
       (not gmcp.Char.Vitals.bal or gmcp.Char.Vitals.bal == "1") and
@@ -6203,8 +6263,8 @@ function mmp.canmove(fromtimer)
       (not gmcp.Char.Balance or gmcp.Char.Balance.List.rarm == "1") and
       (not gmcp.Char.Balance or gmcp.Char.Balance.List.larm == "1") and
       (not gmcp.Char.Balance or gmcp.Char.Balance.List.legs == "1") and
-      (not gmcp.Char.Vitals.prone or (gmcp.Char.Vitals.prone == "0" or gmcp.Char.Vitals.prone == 0))
-    )
+      (not gmcp.Char.Vitals.prone or (gmcp.Char.Vitals.prone == "0" or gmcp.Char.Vitals.prone == 0)
+    ))
   then
     if fromtimer then
       mmp.move()
@@ -8903,8 +8963,8 @@ end
 
 function mmp.changeMapSource()
   local use = mmp.settings.crowdmap and true or false
-  if use and not (mmp.game == "achaea" or mmp.game == "starmourn" or mmp.game == "lusternia" or mmp.game == "stickmud") then
-    mmp.echo("Sorry - the crowdsourced map is only available for use in Achaea, Starmourn, Lusternia and StickMUD. If you'd like to help start one for your game, please post at http://forums.mudlet.org/viewtopic.php?f=13&amp;t=1696. If you are playing one of the games, then it is likely that you just downloaded the script - and it doesn't know what you are playing. Reconnect and it'll know.")
+  if use and not (mmp.game == "achaea" or mmp.game == "starmourn" or mmp.game == "lusternia" or mmp.game == "stickmud" or mmp.game == "asteria") then
+    mmp.echo("Sorry - the crowdsourced map is only available for use in Achaea, Starmourn, Lusternia, StickMUD and Asteria. If you'd like to help start one for your game, please post at http://forums.mudlet.org/viewtopic.php?f=13&amp;t=1696. If you are playing one of the games, then it is likely that you just downloaded the script - and it doesn't know what you are playing. Reconnect and it'll know.")
     mmp.settings.crowdmap = false
   elseif use and not loadMap then
    mmp.echo("Sorry - your Mudlet is too old and can't load maps. Please update: http://forums.mudlet.org/viewtopic.php?f=5&amp;t=1874")
@@ -10170,8 +10230,9 @@ function mmp_mapping_newroom(_, num)
               "."
           end
           -- check indoors status
-          local indoors = table.contains(gmcp.Room.Info.details, "indoors")
-          if indoors and (getRoomUserData(num, "indoors") == '' or getRoomUserData(num,"outdoors") ~= '') then
+          if mmp.game ~= "asteria" then
+            local indoors = table.contains(gmcp.Room.Info.details, "indoors")
+            if indoors and (getRoomUserData(num, "indoors") == '' or getRoomUserData(num,"outdoors") ~= '') then
             setRoomUserData(num, "indoors", "y")
             clearRoomUserDataItem(num, "outdoors")
             s = s .. (#s &gt; 0 and " " or "") .. "Updated room to be indoors."
@@ -10180,7 +10241,8 @@ function mmp_mapping_newroom(_, num)
             setRoomUserData(num, "outdoors", "y")
             s = s .. (#s &gt; 0 and " " or "") .. "Updated room to be outdoors."
           end
-
+        end
+        
           -- check server area name (Achaea only for now)
           if mmp.game == "achaea" then
             local serverArea = gmcp.Room.Info.area
@@ -10526,6 +10588,129 @@ end</script>
 
   mmp.envidsr = {};
   for name, id in pairs(mmp.envids) do mmp.envidsr[id] = name end
+end</script>
+						<eventHandlerList>
+							<string>mmp logged in</string>
+						</eventHandlerList>
+					</Script>
+				</Script>
+				<Script isActive="yes" isFolder="no">
+					<name>Asteria</name>
+					<packageName></packageName>
+					<script></script>
+					<eventHandlerList />
+					<Script isActive="yes" isFolder="no">
+						<name>asteria_stop_speedwalk_for_wrong_dir</name>
+						<packageName></packageName>
+						<script>function asteria_stop_speedwalk_for_wrong_dir()
+  if mmp.game and mmp.game ~= "asteria" then
+    return
+  end
+  if #mmp.speedWalkPath &gt; 0 then
+    echo("Can't go \"" .. gmcp.Room.WrongDir .. "\". Stopping speedwalk.")
+    mmp.stop()
+  end
+end</script>
+						<eventHandlerList>
+							<string>gmcp.Room.WrongDir</string>
+						</eventHandlerList>
+					</Script>
+					<Script isActive="yes" isFolder="no">
+						<name>register_asterias_envdata</name>
+						<packageName></packageName>
+						<script>function register_asterias_envdata(_, game)
+  if game ~= "Asteria" then
+    return
+  end
+  mmp.envids =
+    {
+      Air = 20,
+      Airship = 21,
+      Badland = 22,
+      Beach = 23,
+      Carriage = 24,
+      Cave = 25,
+      City = 26,
+      Coast = 27,
+      Default = 28,
+      Desert = 29,
+      Field = 30,
+      Forest = 31,
+      Ghetto = 32,
+      Hills = 33,
+      Home = 34,
+      Inn = 35,
+      Inside = 36,
+      Marsh = 37,
+      Mountain = 38,
+      Road = 39,
+      Ship = 40,
+      Shop = 41,
+      Temple = 42,
+      Tundra = 43,
+      Underwater = 44,
+      Vehicle = 45,
+      Water = 46,
+    }
+  mmp.waterenvs = {}
+  mmp.envidsr = {}
+  for name, id in pairs(mmp.envids) do
+    mmp.envidsr[id] = name
+  end
+
+
+mmp.colorcodes = {}
+mmp.colorcodes[20] = {176, 224, 230, 255}
+mmp.colorcodes[21] = {160, 82, 45, 255}
+mmp.colorcodes[22] = {205, 133, 63, 255}
+mmp.colorcodes[23] = {218, 165, 32, 255}
+mmp.colorcodes[24] = {132, 112, 255, 255}
+mmp.colorcodes[25] = {47, 79, 79, 255}
+mmp.colorcodes[26] = {190, 190, 190, 255}
+mmp.colorcodes[27] = {210, 180, 140, 255}
+mmp.colorcodes[28] = {255, 69, 0, 255}
+mmp.colorcodes[29] = {255, 215, 0, 255}
+mmp.colorcodes[30] = {127, 255, 0, 255}
+mmp.colorcodes[31] = {0, 100, 0, 255}
+mmp.colorcodes[32] = {184, 134, 11, 255}
+mmp.colorcodes[33] = {50, 205, 50, 255}
+mmp.colorcodes[34] = {102, 205, 170, 255}
+mmp.colorcodes[35] = {0, 128, 128, 255}
+mmp.colorcodes[36] = {255, 250, 205, 255}
+mmp.colorcodes[37] = {107, 142, 35, 255}
+mmp.colorcodes[38] = {139, 69, 19, 255}
+mmp.colorcodes[39] = {112, 128, 144, 255}
+mmp.colorcodes[40] = {265, 42, 42, 255}
+mmp.colorcodes[41] = {0, 190, 255, 255}
+mmp.colorcodes[42] = {138, 43, 226, 255}
+mmp.colorcodes[43] = {255, 250, 250, 255}
+mmp.colorcodes[44] = {65, 105, 225, 255}
+mmp.colorcodes[45] = {90, 158, 160, 255}
+mmp.colorcodes[46] = {30, 144, 255, 255}
+
+function set_asteria_colorcodes()
+  for id, rgba in pairs(mmp.colorcodes) do
+    setCustomEnvColor(id, rgba[1], rgba[2], rgba[3], rgba[4])
+  end
+ end
+end</script>
+						<eventHandlerList>
+							<string>mmp logged in</string>
+						</eventHandlerList>
+					</Script>
+					<Script isActive="yes" isFolder="no">
+						<name>asteria_can_move</name>
+						<packageName></packageName>
+						<script>-- Asteria's GMCP butts heads with existing GMCP 'able' checks in the speedwalking script. This works around it.
+
+function asteria_can_move(_, game)
+  if game ~= "Asteria" then
+    return
+  end
+
+  function mapper_can_move()
+    return gmcp.Char and gmcp.Char.Balance and gmcp.Char.Balance.balance == 0
+  end
 end</script>
 						<eventHandlerList>
 							<string>mmp logged in</string>
@@ -11619,6 +11804,10 @@ function mmp.checkforupdate()
         downloadFile(
           mmp.mapfile, "http://ire-mudlet-mapping.github.io/LusterniaCrowdmap/Map/version.txt"
         )
+      elseif game == "asteria" then
+        downloadFile(
+          mmp.mapfile, "http://asteria-ui.github.io/AsteriaCrowdmap/Map/version.txt"
+        )
       elseif game == "stickmud" then
         downloadFile(
           mmp.mapfile, "http://stickmud.github.io/StickMUDCrowdmap/Map/version.txt"
@@ -11672,6 +11861,11 @@ function mmp.retrievecrowdchangelog()
     downloadFile(
       mmp.crowdchangelogfile,
       "http://ire-mudlet-mapping.github.io/LusterniaCrowdmap/Map/changelog.txt"
+    )
+  elseif mmp.game == "asteria" then
+    downloadFile(
+      mmp.crowdchangelogfile,
+      "http://asteria-ui.github.io/AsteriaCrowdmap/Map/changelog.txt"
     )
   elseif mmp.game == "stickmud" then
     downloadFile(
@@ -11735,6 +11929,8 @@ function mmp.downloadcrowdmap(newversion)
     downloadFile(mmp.crowdmapfile, "http://ire-mudlet-mapping.github.io/StarmournCrowdmap/Map/map")
   elseif mmp.game == "lusternia" then
     downloadFile(mmp.crowdmapfile, "http://ire-mudlet-mapping.github.io/LusterniaCrowdmap/Map/map")
+  elseif mmp.game == "asteria" then
+    downloadFile(mmp.crowdmapfile, "http://asteria-ui.github.io/AsteriaCrowdmap/Map/map")
   elseif mmp.game == "stickmud" then
     downloadFile(mmp.crowdmapfile, "http://stickmud.github.io/StickMUDCrowdmap/Map/map")
   end
