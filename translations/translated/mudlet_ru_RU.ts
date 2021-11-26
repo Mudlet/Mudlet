@@ -11275,7 +11275,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="265"/>
       <source>Appearance</source>
-      <translation type="unfinished"/>
+      <translation>Внешний вид</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="294"/>
