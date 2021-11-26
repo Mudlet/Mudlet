@@ -11096,6 +11096,7 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     int args = lua_gettop(L);
     int secure = false;
     int port = 6667;
+    QString password;
     std::string addr = getVerifiedString(L, __func__, 1, "hostname").toStdString();
     if (addr.empty()) {
         return warnArgumentValue(L, __func__, "hostname must not be empty");
@@ -11108,6 +11109,11 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     }
     if (args > 2) {
         secure = getVerifiedBool(L, __func__, 3, "secure {default = false}", true);
+    }
+    if (args > 3) {
+        if(!lua_isnoneornil(L,4)) {
+            password = getVerifiedString(L, __func__, 4, "server password {default = empty string}", true);
+        }
     }
 
     Host* pHost = &getHostFromLua(L);
@@ -11124,6 +11130,11 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     result = dlgIRC::writeIrcHostSecure(pHost, secure);
     if (!result.first) {
         return warnArgumentValue(L, __func__, QStringLiteral("unable to save secure, reason: %1").arg(result.second));
+    }
+
+    result = dlgIRC::writeIrcPassword(pHost, password);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, QStringLiteral("unable to save password, reason: %1").arg(result.second));
     }
 
     lua_pushboolean(L, true);
