@@ -217,8 +217,10 @@ function Geyser.MiniConsole:setFontSize(size)
   if size then
     self.parent.setFontSize(self, size)
   end
-
   setMiniConsoleFontSize(self.name, size)
+  if self.autoWrap then
+    self:resetAutoWrap()
+  end
 end
 
 --- Appends copied selection to this miniconsole.
@@ -292,7 +294,7 @@ function Geyser.MiniConsole:dechoLink(...)
   dechoLink(self.name, ...)
 end
 
---- inserts hexidecimal color formatted clickable text into the miniconsole at the end of the current line.
+--- inserts hexadecimal color formatted clickable text into the miniconsole at the end of the current line.
 -- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hechoLink
 function Geyser.MiniConsole:hechoLink(...)
   hechoLink(self.name, ...)
@@ -310,7 +312,7 @@ function Geyser.MiniConsole:dinsertLink(...)
   dinsertLink(self.name, ...)
 end
 
---- inserts hexidecimal color formatted clickable text into the miniconsole at the end of the current cursor position.
+--- inserts hexadecimal color formatted clickable text into the miniconsole at the end of the current cursor position.
 -- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hinsertLink
 function Geyser.MiniConsole:hinsertLink(...)
   hinsertLink(self.name, ...)
@@ -328,7 +330,7 @@ function Geyser.MiniConsole:dechoLink(...)
   dechoLink(self.name, ...)
 end
 
---- inserts hexidecimal color formatted clickable text into the miniconsole at the end of the current line.
+--- inserts hexadecimal color formatted clickable text into the miniconsole at the end of the current line.
 -- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hechoLink
 function Geyser.MiniConsole:hechoLink(...)
   hechoLink(self.name, ...)
@@ -346,7 +348,7 @@ function Geyser.MiniConsole:dechoPopup(...)
   dechoPopup(self.name, ...)
 end
 
---- inserts hexidecimal color formatted clickable text with right-click menu into the miniconsole at the end of the current line.
+--- inserts hexadecimal color formatted clickable text with right-click menu into the miniconsole at the end of the current line.
 -- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hechoPopup
 function Geyser.MiniConsole:hechoPopup(...)
   hechoPopup(self.name, ...)
@@ -364,7 +366,7 @@ function Geyser.MiniConsole:dinsertPopup(...)
   dinsertPopup(self.name, ...)
 end
 
---- inserts hexidecimal color formatted clickable text with right-click menu into the miniconsole at the end of the current current cursor position.
+--- inserts hexadecimal color formatted clickable text with right-click menu into the miniconsole at the end of the current current cursor position.
 -- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hinsertPopup
 function Geyser.MiniConsole:hinsertPopup(...)
   hinsertPopup(self.name, ...)

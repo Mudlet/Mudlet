@@ -241,6 +241,7 @@ public:
     static int getSpecialExitsSwap(lua_State*);
     static int appendCmdLine(lua_State*);
     static int getCmdLine(lua_State* L);
+    static int selectCmdLineText(lua_State* L);
     static int addCmdLineSuggestion(lua_State* L);
     static int removeCmdLineSuggestion(lua_State* L);
     static int clearCmdLineSuggestions(lua_State* L);
@@ -345,6 +346,7 @@ public:
     static int disableKey(lua_State* L);
     static int killKey(lua_State* L);
     static int debug(lua_State* L);
+    static int errorc(lua_State* L);
     static int showHandlerError(lua_State* L);
     static int setWindowWrap(lua_State*);
     static int getWindowWrap(lua_State*);
@@ -560,6 +562,7 @@ public:
     static int getAvailableFonts(lua_State* L);
     static int tempAnsiColorTrigger(lua_State*);
     static int setDiscordApplicationID(lua_State* L);
+    static int setDiscordGameUrl(lua_State* L);
     static int usingMudletsDiscordID(lua_State*);
     static int setDiscordState(lua_State*);
     static int setDiscordDetail(lua_State*);
@@ -579,6 +582,7 @@ public:
     static int getDiscordTimeStamps(lua_State*);
     static int getDiscordParty(lua_State*);
     static int setDiscordGame(lua_State*);
+    static int resetDiscordData(lua_State*);
     static int getPlayerRoom(lua_State*);
     static int getMapSelection(lua_State*);
     static int addWordToDictionary(lua_State*);
@@ -614,6 +618,9 @@ public:
     static int addMouseEvent(lua_State* L);
     static int removeMouseEvent(lua_State* L);
     static int getMouseEvents(lua_State* L);
+    static int addCommandLineMenuEvent(lua_State* L);
+    static int removeCommandLineMenuEvent(lua_State* L);
+    static int deleteMap(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 

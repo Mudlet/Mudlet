@@ -89,7 +89,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.12.0
+VERSION = 4.13.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -150,8 +150,8 @@ isEmpty( FONT_TEST ) | !equals(FONT_TEST, "NO" ) {
     # It would be nice if we could automate the download and extraction of all
     # the font and associate documentation (but NOT the "sources" sub-directory)
     # contents into the ./src/fonts/ directory structure only if this option is
-    # set to ON; however that would be plaform specific and add more complexity
-    # and it is not obvious that there is a demand to do this currenly.
+    # set to ON; however that would be platform specific and add more complexity
+    # and it is not obvious that there is a demand to do this currently.
 }
 
 ######################### Auto Updater setting detection #########,#############
@@ -215,7 +215,7 @@ isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
 # from the executable's location will be used.  Mudlet will now moan and ask
 # the user to find them if the files (and specifically the <10KByte
-# "LuaGlobal.lua" one) is not accessable (read access only required) during
+# "LuaGlobal.lua" one) is not accessible (read access only required) during
 # startup.  The precise directory is remembered once found (and stored in the
 # Mudlet configuration file as "systemLuaFilePath") but if the installer places
 # the files in the place documented here the user will not be bothered by this.
@@ -413,6 +413,10 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
+    !exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
+        message("git submodule for required Qt ordered map source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${PWD}\.. & git submodule update --init 3rdparty/qt-ordered-map")
+    }
     contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
             message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
@@ -427,6 +431,10 @@ win32 {
     !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
+    }
+    !exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
+        message("git submodule for required Qt ordered map source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qt-ordered-map")
     }
     contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
@@ -472,6 +480,10 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
 }
 
+!exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
+    error("Cannot locate Qt ordered map submodule source code, build abandoned!")
+}
+
 contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
     exists("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri") {
         include("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri")
@@ -490,7 +502,7 @@ contains( DEFINES, INCLUDE_UPDATER ) {
 
     macx {
         # We do not actually have to do anything to include it here - it is
-        # pulled in by the Sparkle complation below
+        # pulled in by the Sparkle compilation below
         !exists("$${PWD}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
             error("Cannot locate Sparkle glue library submodule source code, build abandoned!")
         }
@@ -502,6 +514,7 @@ SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
     AltFocusMenuBarDisable.cpp \
+    DarkTheme.cpp \
     ctelnet.cpp \
     discord.cpp \
     dlgAboutDialog.cpp \
@@ -610,6 +623,7 @@ HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
+    DarkTheme.h \
     ctelnet.h \
     discord.h \
     dlgAboutDialog.h \
@@ -840,7 +854,7 @@ TRANSLATIONS = $$files(../translations/translated/*.ts)
 #
 # Select Qt Creator's "Project" Side tab and under the "Build and Run" top tab
 # choose your Build Kit's "Run"->"Run Settings" ensure you have a "Make" step
-# that - if you are NOT runnning QT Creator as root, which is the safest way
+# that - if you are NOT running QT Creator as root, which is the safest way
 # (i.e safe = NOT root) - against:
 # "Override <path to?>/make" has the entry: "/usr/bin/sudo"
 # without the quotes, assuming /usr/bin is the location of "sudo"
@@ -866,6 +880,7 @@ LUA.files = \
     $${PWD}/mudlet-lua/lua/DebugTools.lua \
     $${PWD}/mudlet-lua/lua/GMCP.lua \
     $${PWD}/mudlet-lua/lua/GUIUtils.lua \
+    $${PWD}/mudlet-lua/lua/IDManager.lua \
     $${PWD}/mudlet-lua/lua/KeyCodes.lua \
     $${PWD}/mudlet-lua/lua/TTSValues.lua \
     $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
@@ -1483,7 +1498,7 @@ OTHER_FILES += \
 
 # Unix Makefile installer:
 # lua file installation, needs install, sudo, and a setting in /etc/sudo.conf
-# or via enviromental variable SUDO_ASKPASS to something like ssh-askpass
+# or via environmental variable SUDO_ASKPASS to something like ssh-askpass
 # to provide a graphic password requestor needed to install software
 unix:!macx {
 # say what we want to get installed by "make install" (executed by 'deployment' step):
@@ -1557,6 +1572,9 @@ unix:!macx {
 
 
 DISTFILES += \
+    ../docker/Dockerfile \
+    ../docker/docker-compose.override.linux.yml \
+    ../docker/docker-compose.yml \
     CF-loader.xml \
     CMakeLists.txt \
     .clang-format \

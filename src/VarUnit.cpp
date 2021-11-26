@@ -112,7 +112,7 @@ void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
             wVars.insert(pItem, child);
             cList.append(pItem);
             if (child->getValueType() == 5) {
-                buildVarTree((QTreeWidgetItem*)pItem, child, showHidden);
+                buildVarTree(pItem, child, showHidden);
             }
         }
     }

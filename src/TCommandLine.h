@@ -36,7 +36,6 @@ class TConsole;
 class KeyUnit;
 class Host;
 
-
 class TCommandLine : public QPlainTextEdit //QLineEdit
 {
     Q_OBJECT
@@ -70,10 +69,13 @@ public:
     void addSuggestion(const QString&);
     void removeSuggestion(const QString&);
     void clearSuggestions();
+    void adjustHeight();
 
     int mActionFunction = 0;
     QPalette mRegularPalette;
     QString mCommandLineName;
+
+    QMap<QString, QString> contextMenuItems;
 
 public slots:
     void slot_popupMenu();
@@ -89,7 +91,6 @@ private:
     void handleTabCompletion(bool);
     void historyMove(MoveDirection);
     void enterCommand(QKeyEvent*);
-    void adjustHeight();
     void processNormalKey(QEvent*);
     bool keybindingMatched(QKeyEvent*);
     void spellCheckWord(QTextCursor& c);
