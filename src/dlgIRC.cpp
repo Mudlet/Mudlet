@@ -40,6 +40,7 @@ QString dlgIRC::HostNameCfgItem = QStringLiteral("irc_host");
 QString dlgIRC::HostPortCfgItem = QStringLiteral("irc_port");
 QString dlgIRC::HostSecureCfgItem = QStringLiteral("irc_secure");
 QString dlgIRC::NickNameCfgItem = QStringLiteral("irc_nick");
+QString dlgIRC::PasswordCfgItem = QStringLiteral("irc_password");
 QString dlgIRC::ChannelsCfgItem = QStringLiteral("irc_channels");
 QString dlgIRC::DefaultHostName = QStringLiteral("irc.libera.chat");
 int dlgIRC::DefaultHostPort = 6667;
@@ -97,6 +98,7 @@ dlgIRC::dlgIRC(Host* pHost)
     connect(connection, &IrcConnection::numericMessageReceived, this, &dlgIRC::slot_receiveNumericMessage);
 
     mUserName = QStringLiteral("mudlet");
+    mPassword = readIrcPassword(mpHost);
     mRealName = mudlet::self()->version;
     mHostName = readIrcHostName(mpHost);
     mHostPort = readIrcHostPort(mpHost);
@@ -106,6 +108,7 @@ dlgIRC::dlgIRC(Host* pHost)
 
     connection->setNickName(mNickName);
     connection->setUserName(mUserName);
+    connection->setPassword(mPassword);
     connection->setRealName(mRealName);
     connection->setHost(mHostName);
     connection->setPort(mHostPort);
@@ -234,11 +237,13 @@ void dlgIRC::ircRestart(bool reloadConfigs)
         mHostSecure = readIrcHostSecure(mpHost);
         mNickName = readIrcNickName(mpHost);
         mChannels = readIrcChannels(mpHost);
+        mPassword = readIrcPassword(mpHost);
 
         connection->setNickName(mNickName);
         connection->setHost(mHostName);
         connection->setPort(mHostPort);
         connection->setSecure(mHostSecure);
+        connection->setPassword(mPassword);
     }
 
     // queue auto-joined channels and reopen the connection.
@@ -779,6 +784,12 @@ QString dlgIRC::readIrcNickName(Host* pH)
     return nick;
 }
 
+QString dlgIRC::readIrcPassword(Host* pH)
+{
+    QString pass = pH->readProfileData(dlgIRC::PasswordCfgItem);
+    return pass;
+}
+
 QString dlgIRC::readAppDefaultIrcNick()
 {
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("irc_nick")));
@@ -846,6 +857,11 @@ QPair<bool, QString> dlgIRC::writeIrcNickName(Host* pH, const QString& nickname)
     writeAppDefaultIrcNick(nickname);
 
     return pH->writeProfileData(dlgIRC::NickNameCfgItem, nickname);
+}
+
+QPair<bool, QString> dlgIRC::writeIrcPassword(Host* pH, const QString& password)
+{
+    return pH->writeProfileData(dlgIRC::PasswordCfgItem, password);
 }
 
 QPair<bool, QString> dlgIRC::writeIrcChannels(Host* pH, const QStringList& channels)

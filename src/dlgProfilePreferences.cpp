@@ -603,6 +603,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     ircHostSecure->setChecked(dlgIRC::readIrcHostSecure(pHost));
     ircChannels->setText(dlgIRC::readIrcChannels(pHost).join(" "));
     ircNick->setText(dlgIRC::readIrcNickName(pHost));
+    ircPassword->setText(dlgIRC::readIrcPassword(pHost));
 
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
     dictList->clear();
@@ -1263,6 +1264,7 @@ void dlgProfilePreferences::clearHostDetails()
     ircHostPort->clear();
     ircChannels->clear();
     ircNick->clear();
+    ircPassword->clear();
 
     dictList->clear();
     checkBox_spellCheck->setChecked(false);
@@ -2575,12 +2577,14 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
         QString oldIrcNick = dlgIRC::readIrcNickName(pHost);
+        QString oldIrcPass = dlgIRC::readIrcPassword(pHost);
         QString oldIrcHost = dlgIRC::readIrcHostName(pHost);
         QString oldIrcPort = QString::number(dlgIRC::readIrcHostPort(pHost));
         bool oldIrcSecure = dlgIRC::readIrcHostSecure(pHost);
         QString oldIrcChannels = dlgIRC::readIrcChannels(pHost).join(" ");
 
         QString newIrcNick = ircNick->text();
+        QString newIrcPass = ircPassword->text();
         QString newIrcHost = ircHostName->text();
         QString newIrcPort = ircHostPort->text();
         bool newIrcSecure = ircHostSecure->isChecked();
@@ -2631,6 +2635,11 @@ void dlgProfilePreferences::slot_save_and_exit()
             if (pHost->mpDlgIRC) {
                 pHost->mpDlgIRC->connection->setNickName(newIrcNick);
             }
+        }
+
+        if (oldIrcPass != newIrcPass) {
+            dlgIRC::writeIrcPassword(pHost, newIrcPass);
+            restartIrcClient = true;
         }
 
         if (oldIrcChannels != newIrcChannels) {
