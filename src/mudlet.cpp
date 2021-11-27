@@ -661,7 +661,7 @@ mudlet::mudlet()
     connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_update_shortcuts);
     connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assign_shortcuts_from_profile);
     connect(this, &mudlet::signal_profileActivated, this, &mudlet::slot_assign_shortcuts_from_profile);
-    connect(this, &mudlet::signal_tabChanged, this, [=](const QString& name) {
+    connect(this, &mudlet::signal_tabChanged, this, [=]() {
         slot_assign_shortcuts_from_profile(getActiveHost());
     });
 

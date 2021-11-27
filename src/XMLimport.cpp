@@ -1881,6 +1881,7 @@ void XMLimport::readProfileShortcuts() {
                 auto sequenceString = readElementText();
                 QKeySequence* sequence = !sequenceString.isEmpty() ? new QKeySequence(sequenceString) : new QKeySequence();
                 mpHost->profileShortcuts.value(key.toString())->swap(*sequence);
+                delete sequence;
             }
         }
     }

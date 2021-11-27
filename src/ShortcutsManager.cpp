@@ -30,6 +30,7 @@ void ShortcutsManager::setShortcut(const QString& key, QKeySequence* sequence)
 {
     QKeySequence* newSequence = new QKeySequence(*sequence);
     shortcuts.value(key)->swap(*newSequence);
+    delete newSequence;
 }
 
 QKeySequence* ShortcutsManager::getSequence(const QString& key)
