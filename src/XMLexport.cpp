@@ -569,7 +569,16 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             mapInfoContributor.text().set(iterator.next().toUtf8().constData());
         }
     }
-
+    {
+        auto shortcuts = host.append_child("profileShortcuts");
+        auto iterator = mudlet::self()->mShortcutsManager->iterator();
+        while (iterator.hasNext()) {
+            auto key = iterator.next();
+            auto shortcut = shortcuts.append_child("profileShortcut");
+            shortcut.append_attribute("key") = key.toUtf8().constData();
+            shortcut.text().set(pHost->profileShortcuts.value(key)->toString().toUtf8().constData());
+        }
+    }
     {
         auto stopwatches = host.append_child("stopwatches");
         QListIterator<int> itStopWatchId(pHost->getStopWatchIds());

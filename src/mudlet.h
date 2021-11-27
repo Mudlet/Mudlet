@@ -36,6 +36,7 @@
 #endif
 
 #include "discord.h"
+#include "ShortcutsManager.h"
 
 #include "pre_guard.h"
 #include <QDir>
@@ -117,6 +118,7 @@ class dlgIRC;
 class dlgAboutDialog;
 class dlgConnectionProfiles;
 class dlgProfilePreferences;
+class ShortcutManager;
 
 class translation;
 
@@ -345,6 +347,8 @@ public:
     int mEditorTreeWidgetIconSize;
     bool mWindowMinimized;
 
+    QPointer<ShortcutsManager> mShortcutsManager;
+
     // used by developers in everyday coding
     static const bool scmIsDevelopmentVersion;
     // unofficial "nightly" build - still a type of a release
@@ -551,6 +555,7 @@ signals:
     void signal_setTreeIconSize(int);
     void signal_hostCreated(Host*, quint8);
     void signal_hostDestroyed(Host*, quint8);
+    void signal_profileActivated(Host *, quint8);
     void signal_appearanceChanged(Appearance);
     void signal_enableFulScreenModeChanged(bool);
     void signal_showMapAuditErrorsChanged(bool);
@@ -561,6 +566,7 @@ signals:
     void signal_passwordsMigratedToSecure();
     void signal_passwordMigratedToSecure(const QString&);
     void signal_passwordsMigratedToProfiles();
+    void signal_shortcutsChanged();
 
 
 private slots:
@@ -577,6 +583,7 @@ private slots:
     void show_variable_dialog();
     void slot_update_shortcuts();
     void slot_show_options_dialog();
+    void slot_assign_shortcuts_from_profile(Host* pHost = nullptr);
 #ifdef QT_GAMEPAD_LIB
     void slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value);
     void slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button);
