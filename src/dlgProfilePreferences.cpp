@@ -2826,7 +2826,6 @@ void dlgProfilePreferences::slot_save_and_exit()
 
     mudlet::self()->mDiscord.UpdatePresence();
 
-    qDebug() << "EMIT SAVE";
     emit signal_preferencesSaved();
 
     close();
