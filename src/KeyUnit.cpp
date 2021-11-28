@@ -397,9 +397,9 @@ std::tuple<QString, int, int, int> KeyUnit::assembleReport()
 
     return {
         msg.join(QString()),
-        statsActiveKeys,
         statsKeyTotal,
-        statsTempKeys
+        statsTempKeys,
+        statsActiveKeys
     };
 }
 

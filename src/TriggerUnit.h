@@ -62,7 +62,7 @@ public:
     void setTriggerStayOpen(const QString&, int);
     void stopAllTriggers();
     void reenableAllTriggers();
-    std::tuple<QString, int, int, int> assembleReport();
+    std::tuple<QString, int, int, int, int> assembleReport();
     std::list<TTrigger*> mCleanupList;
     int getNewID();
     QMultiMap<QString, TTrigger*> mLookupTable;

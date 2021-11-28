@@ -373,9 +373,9 @@ std::tuple<QString, int, int, int> AliasUnit::assembleReport()
         //<< "min line processing time: " << QString::number(statsMinLineProcessingTime) << "\n";
     return {
         msg.join(QString()),
-        statsActiveAliases,
         statsAliasTotal,
-        statsTempAliases
+        statsTempAliases,
+        statsActiveAliases
     };
 }
 

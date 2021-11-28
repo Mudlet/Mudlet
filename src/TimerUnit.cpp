@@ -430,9 +430,9 @@ std::tuple<QString, int, int, int> TimerUnit::assembleReport()
 
     return {
         msg.join(QString()),
-        statsActiveTriggers,
         statsTriggerTotal,
-        statsTempTriggers
+        statsTempTriggers,
+        statsActiveTriggers
     };
 }
 
