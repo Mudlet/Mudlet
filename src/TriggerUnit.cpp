@@ -360,7 +360,7 @@ void TriggerUnit::_assembleReport(TTrigger* pChild)
     }
 }
 
-QString TriggerUnit::assembleReport()
+std::tuple<QString, int, int, int> TriggerUnit::assembleReport()
 {
     statsActiveTriggers = 0;
     statsTriggerTotal = 0;
@@ -393,7 +393,12 @@ QString TriggerUnit::assembleReport()
         << "trigger patterns total: " << QString::number(statsPatterns) << "\n"
         << "tempTriggers current total: " << QString::number(statsTempTriggers) << "\n"
         << "active triggers: " << QString::number(statsActiveTriggers) << "\n";
-    return msg.join("");
+    return {
+        msg.join(QString()),
+        statsActiveTriggers,
+        statsTriggersTotal,
+        statsTempTriggers
+    };
 }
 
 void TriggerUnit::doCleanup()

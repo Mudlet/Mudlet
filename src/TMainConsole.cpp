@@ -1391,19 +1391,17 @@ void TMainConsole::showStatistics()
 
     script = "setFgColor(190,150,0); setUnderline(true); echo([[\n\nTrigger Report:\n\n]]); setBold(false);setUnderline(false);setFgColor(150,120,0)";
     mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    QString r1 = mpHost->getTriggerUnit()->assembleReport();
-    msg = r1;
+    msg = std::get<0>(mpHost->getTriggerUnit()->assembleReport());
     print(msg, QColor(150, 120, 0), Qt::black);
+
     script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nTimer Report:\n\n]]);setBold(false);setUnderline(false);setFgColor(150,120,0)";
     mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    QString r2 = mpHost->getTimerUnit()->assembleReport();
-    msg = r2;
+    msg = std::get<0>(mpHost->getTimerUnit()->assembleReport());;
     print(msg, QColor(150, 120, 0), Qt::black);
 
     script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nKeybinding Report:\n\n]]);setBold(false);setUnderline(false);setFgColor(150,120,0)";
     mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    QString r3 = mpHost->getKeyUnit()->assembleReport();
-    msg = r3;
+    msg = std::get<0>(mpHost->getKeyUnit()->assembleReport());
     print(msg, QColor(150, 120, 0), Qt::black);
 
     QString footer = QString("\n+--------------------------------------------------------------+\n");

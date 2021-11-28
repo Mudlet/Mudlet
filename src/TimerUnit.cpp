@@ -398,7 +398,7 @@ void TimerUnit::_assembleReport(TTimer* pChild)
     }
 }
 
-QString TimerUnit::assembleReport()
+std::tuple<QString, int, int, int> TimerUnit::assembleReport()
 {
     statsActiveTriggers = 0;
     statsTriggerTotal = 0;
@@ -428,7 +428,12 @@ QString TimerUnit::assembleReport()
         << "tempTimers current total: " << QString::number(statsTempTriggers) << "\n"
         << "active timers: " << QString::number(statsActiveTriggers) << "\n";
 
-    return msg.join("");
+    return {
+        msg.join(QString()),
+        statsActiveTriggers,
+        statsTriggersTotal,
+        statsTempTriggers
+    };
 }
 
 void TimerUnit::changeHostName(const QString& newName)
