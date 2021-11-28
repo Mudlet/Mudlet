@@ -2110,8 +2110,9 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         if (lineBuffer.back().size() >= mWrapAt) {
             for (int i = lineBuffer.back().size() - 1; i >= 0; --i) {
                 if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1) {
-                    QString tmp = lineBuffer.back().mid(0, i + 1);
-                    QString lineRest = lineBuffer.back().mid(i + 1);
+                    const int linebreakPos = (i != 0) ? i + 1 : lineBuffer.back().size();
+                    QString tmp = lineBuffer.back().mid(0, linebreakPos);
+                    QString lineRest = lineBuffer.back().mid(linebreakPos);
                     lineBuffer.back() = tmp;
                     std::deque<TChar> newLine;
 
