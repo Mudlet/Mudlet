@@ -628,6 +628,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                   : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
+    config->setRenderBidiContolCharacters(mpHost->mEditorShowBidi);
     config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
 
@@ -8713,6 +8714,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     config->setIndentSize(2);
     config->setCaretWidth(1);
     config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
+    config->setRenderBidiContolCharacters(mpHost->mEditorShowBidi);
     config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
 
@@ -8738,6 +8740,7 @@ void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
                                                : edbee::TextEditorConfig::HideWhitespaces);
     localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     localConfig->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
+    localConfig->setRenderBidiContolCharacters(mpHost->mEditorShowBidi);
     localConfig->setAutocompleteMinimalCharacters(3);
     localConfig->endChanges();
 }

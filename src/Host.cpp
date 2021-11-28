@@ -533,7 +533,7 @@ void Host::waitForAsyncXmlSave()
     }
 }
 
-void Host::saveModules(int sync, bool backup)
+void Host::saveModules(bool backup)
 {
     QMapIterator<QString, QStringList> it(modulesToWrite);
     mModulesToSync.clear();
@@ -557,10 +557,6 @@ void Host::saveModules(int sync, bool backup)
         }
     }
     modulesToWrite.clear();
-    // reload, or queue module reload for when xml is ready
-    if (sync) {
-        reloadModules();
-    }
 }
 
 void Host::reloadModules()
@@ -639,8 +635,8 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
     //Wait till profile is finished saving
     if (syncingFromHost.isEmpty() && currentlySavingProfile()) {
         //create a dummy object to singleshot connect (disconnect/delete after execution)
-        QObject *obj = new QObject(this);
-        connect(this, &Host::profileSaveFinished, obj, [=](){
+        QObject* obj = new QObject(this);
+        connect(this, &Host::profileSaveFinished, obj, [=]() {
             reloadModule(syncModuleName);
             obj->deleteLater();
         });
@@ -666,7 +662,7 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
                 fileName = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
                 auto writer = new XMLexport(this);
                 writers.insert(fileName, writer);
-                writer->writeModuleXML(moduleName, fileName);
+                writer->writeModuleXML(moduleName, fileName, true);
             } else {
                 uninstallPackage(moduleName, 2);
                 installPackage(fileName, 2);
@@ -814,9 +810,15 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     mModuleFuture = QtConcurrent::run([=]() {
         //wait for the host xml to be ready before starting to sync modules
         waitForAsyncXmlSave();
-        saveModules(syncModules ? 1 : 0, saveName != qsl("autosave"));
+        saveModules(saveName != QStringLiteral("autosave"));
     });
-    QObject::connect(watcher, &QFutureWatcher<void>::finished, this, [=]() { mWritingHostAndModules = false; });
+    QObject::connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
+        // reload, or queue module reload for when xml is ready
+        if (syncModules) {
+            reloadModules();
+        }
+        mWritingHostAndModules = false;
+    });
     watcher->setFuture(mModuleFuture);
     return std::make_tuple(true, filename_xml, QString());
 }

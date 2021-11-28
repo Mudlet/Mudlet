@@ -527,6 +527,13 @@ raiseEvent("sysSpeedwalkStopped")</script>
 				<packageName></packageName>
 				<regex>^map stop$</regex>
 			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Toggle Speedwalk Alias</name>
+				<script>map.toggleSpeedwalk(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^mpp(?:\s?(on|off))?$</regex>
+			</Alias>
 		</AliasGroup>
 		<AliasGroup isActive="yes" isFolder="yes">
 			<name>Map Creation Aliases</name>
@@ -1284,7 +1291,8 @@ map.defaults = {
     speedwalk_random = true,
     max_search_distance = 1,
     clear_lines_on_send = true,
-    map_window = {x = 0,
+    map_window = {
+        x = 0,
         y = 0,
         w = "30%",
         h = "40%",
@@ -2452,7 +2460,7 @@ function map.find_me(name, exits, dir, manual)
     -- tries to locate the player using the current room name and exits, and if provided, direction of movement
     -- if direction of movement is given, narrows down possibilities using previous room info
     if move ~= "recall" then move_queue = {} end
-    -- find from room hash id
+    -- find from room hash id - map.find_me(nil, nil, nil, false)
     if map.prompt.hash then
         local room = getRoomIDbyHash(map.prompt.hash)
         if room &gt; 0 then
@@ -2460,7 +2468,7 @@ function map.find_me(name, exits, dir, manual)
             map.echo("Room found, ID: " .. room, true)
             return
         else
-            map.echo("Room not found in map database!", false, true)
+            map.echo("Room not found in map database!", not manual, true)
             return
         end
     end
@@ -2516,11 +2524,7 @@ function map.find_me(name, exits, dir, manual)
         end
         find_portal = false
     elseif table.is_empty(match_IDs) then
-        if not manual then
-            map.echo("Room not found in map database", true, true)
-        else
-            map.echo("Room not found in map database", false, true)
-        end
+        map.echo("Room not found in map database", not manual, true)
     end
 end
 
@@ -2849,6 +2853,7 @@ continue_walk = function(new_room)
         -- check to see if we are done
         if #map.walkDirs == 0 then
             walking = false
+            speedWalkPath, speedWalkWeight = {}, {}
             raiseEvent("sysSpeedwalkFinished")
         end
     end
@@ -2917,6 +2922,48 @@ function doSpeedWalk()
         map.speedwalk(nil, speedWalkPath, speedWalkDir)
     else
         map.echo("No path to chosen room found.",false,true)
+    end
+end
+
+function map.pauseSpeedwalk()
+    if #speedWalkDir ~= 0 then
+        walking = false
+        raiseEvent("sysSpeedwalkPaused")
+        map.echo("Speedwalking paused.")
+    else
+        map.echo("Not currently speedwalking.")
+    end
+end
+
+function map.resumeSpeedwalk(delay)
+    if #speedWalkDir ~= 0 then
+        map.find_me(nil, nil, nil, true)
+        raiseEvent("sysSpeedwalkResumed")
+        map.echo("Speedwalking resumed.")
+        tempTimer(delay or 0, function() map.speedwalk(nil, speedWalkPath, speedWalkDir) end)
+    else
+        map.echo("Not currently speedwalking.")
+    end
+end
+
+function map.stopSpeedwalk()
+    if #speedWalkDir ~= 0 then
+        walking = false
+        map.walkDirs, speedWalkDir, speedWalkPath, speedWalkWeight = {}, {}, {}, {}
+        raiseEvent("sysSpeedwalkStopped")
+        map.echo("Speedwalking stopped.")
+    else
+        map.echo("Not currently speedwalking.")
+    end
+end
+
+function map.toggleSpeedwalk(what)
+    assert(what == nil or what == "on" or what == "off", "map.toggleSpeedwalk wants 'on', 'off' or nothing as an argument")
+
+    if what == "on" or (what == nil and walking) then
+        map.pauseSpeedwalk()
+    elseif what == "off" or (what == nil and not walking) then
+        map.resumeSpeedwalk()
     end
 end
 
@@ -3061,6 +3108,15 @@ function map.eventHandler(event, ...)
         elseif string.ends(file,"/generic_mapper.xml") then
             update_version()
         end
+    elseif event == "sysDownloadError" and downloading then
+        local file = arg[1]
+        if string.ends(file,"/versions.lua") and mudlet.translations.interfacelanguage == "zh_CN" then
+            -- update to the current download path for chinese user
+            if map.configs.download_path == "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper" then
+                map.configs.download_path = "https://gitee.com/mudlet/Mudlet/raw/development/src/mudlet-lua/lua/generic-mapper"
+                map.checkVersion()
+            end
+        end
     elseif event == "sysLoadEvent" or event == "sysInstall" then
         config()
     elseif event == "mapOpenEvent" then
@@ -3084,6 +3140,7 @@ end
 
 map.registeredEvents = {
 registerAnonymousEventHandler("sysDownloadDone", "map.eventHandler"),
+registerAnonymousEventHandler("sysDownloadError", "map.eventHandler"),
 registerAnonymousEventHandler("sysLoadEvent", "map.eventHandler"),
 registerAnonymousEventHandler("sysConnectionEvent", "map.eventHandler"),
 registerAnonymousEventHandler("sysInstall", "map.eventHandler"),

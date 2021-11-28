@@ -507,6 +507,7 @@ public:
     int mWrapIndentCount;
 
     bool mEditorAutoComplete;
+    bool mEditorShowBidi = true;
 
     // code editor theme (human-friendly name)
     QString mEditorTheme;
@@ -652,7 +653,7 @@ private:
     static void createModuleBackup(const QString &filename, const QString& saveName);
     void writeModule(const QString &moduleName, const QString &filename);
     void waitForAsyncXmlSave();
-    void saveModules(int sync, bool backup = true);
+    void saveModules(bool backup = true);
     void updateModuleZips(const QString &zipName, const QString &moduleName);
     void reloadModules();
 

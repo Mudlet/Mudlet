@@ -119,7 +119,7 @@ XMLexport::XMLexport( TKey * pT )
 {
 }
 
-void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileName)
+void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileName, bool async)
 {
     auto pHost = mpHost;
     auto mudletPackage = writeXmlHeader();
@@ -191,9 +191,16 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
     } else {
         helpPackage.append_child("helpURL").text().set("");
     }
-
-    saveXml(fileName);
-    mpHost->xmlSaved(fileName);
+    if (async) {
+        auto future = QtConcurrent::run(this, &XMLexport::saveXml, fileName);
+        auto watcher = new QFutureWatcher<bool>;
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(fileName); });
+        watcher->setFuture(future);
+        saveFutures.append(future);
+    } else {
+        saveXml(fileName);
+        mpHost->xmlSaved(fileName);
+    }
 }
 
 void XMLexport::exportHost(const QString& filename_pugi_xml)
@@ -419,6 +426,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
     host.append_attribute("mEditorAutoComplete") = pHost->mEditorAutoComplete ? "yes" : "no";
+    host.append_attribute("mEditorShowBidi") = pHost->mEditorShowBidi ? "yes" : "no";
     host.append_attribute("mEditorTheme") = pHost->mEditorTheme.toUtf8().constData();
     host.append_attribute("mEditorThemeFile") = pHost->mEditorThemeFile.toUtf8().constData();
     host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toUtf8().constData();
