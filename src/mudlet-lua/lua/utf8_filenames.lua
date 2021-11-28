@@ -2,7 +2,8 @@
 -- Module: utf8_filenames
 ------------------------------------------------------------------------------------------------------------------------------
 -- Filename: utf8_filenames.lua
--- Version:  2019-01-17
+-- Version:  2019-07-13
+-- License:  MIT (see at the end of this file)
 
 -- This module modifies standard Lua functions so that they work with UTF-8 filenames on Windows:
 --    io.open
@@ -164,9 +165,17 @@ local function modify_lua_functions(all_compressed_mappings)
       print"-------------------------------------------------"
    end
 
-   if getOS() == "windows" then
+   if (os.getenv"os" or ""):match"^Windows" then
 
-      local codepage = getWindowsCodepage()
+      local function get_windows_ansi_codepage()
+         -- returns string "1253" for Greek, "1251" for Russian, etc.
+         local pipe = assert(io.popen[[reg query HKLM\SYSTEM\CurrentControlSet\Control\Nls\CodePage /v ACP]])
+         local codepage = pipe:read"*a":match"%sACP%s+REG_SZ%s+(.-)%s*$"
+         pipe:close()
+         return assert(codepage, "Failed to determine Windows ANSI codepage from Windows registry")
+      end
+
+      local codepage = get_windows_ansi_codepage()
       -- print("Your codepage is "..codepage)
       local compressed_mapping = all_compressed_mappings[codepage]
       if compressed_mapping then
@@ -224,10 +233,8 @@ local function modify_lua_functions(all_compressed_mappings)
          function os.execute(command)
             if command then
                command = convert_from_utf8(command)
-               return orig_os_execute(command)
-            else
-               return orig_os_execute()
             end
+            return orig_os_execute(command)
          end
 
          local orig_io_open = io.open
@@ -258,10 +265,8 @@ local function modify_lua_functions(all_compressed_mappings)
          function dofile(filename)
             if filename then
                filename = convert_from_utf8(filename)
-               return orig_dofile(filename)
-            else
-               return orig_dofile()
             end
+            return orig_dofile(filename)
          end
 
          local orig_loadfile = loadfile
@@ -269,10 +274,8 @@ local function modify_lua_functions(all_compressed_mappings)
          function loadfile(filename, ...)
             if filename then
                filename = convert_from_utf8(filename)
-               return orig_loadfile(filename, ...)
-            else
-               return orig_loadfile()
             end
+            return orig_loadfile(filename, ...)
          end
 
          local orig_require = require
@@ -300,61 +303,6 @@ local function modify_lua_functions(all_compressed_mappings)
             return orig_io_output(file)
          end
 
-         local orig_lfs_attributes = lfs.attributes
-
-         function lfs.attributes(file, optional)
-            file = convert_from_utf8(file)
-            return orig_lfs_attributes(file, optional)
-         end
-
-         local orig_lfs_chdir = lfs.chdir
-
-         function lfs.chdir(path)
-            path = convert_from_utf8(path)
-            return orig_lfs_chdir(path)
-         end
-
-         local orig_lfs_lock_dir = lfs.lock_dir
-
-         function lfs.lock_dir(path, seconds_stale)
-            path = convert_from_utf8(path)
-            return orig_lfs_lock_dir(path, seconds_stale)
-         end
-
-         local orig_lfs_dir = lfs.dir
-
-         function lfs.dir(path)
-            path = convert_from_utf8(path)
-            return orig_lfs_dir(path)
-         end
-
-         local orig_lfs_mkdir = lfs.mkdir
-
-         function lfs.mkdir(dirname)
-            dirname = convert_from_utf8(dirname)
-            return orig_lfs_mkdir(dirname)
-         end
-
-         local orig_lfs_rmdir = lfs.rmdir
-
-         function lfs.rmdir(dirname)
-            dirname = convert_from_utf8(dirname)
-            return orig_lfs_rmdir(dirname)
-         end
-
-         local orig_lfs_symlinkattributes = lfs.symlinkattributes
-
-         function lfs.symlinkattributes(filepath, aname)
-            filepath = convert_from_utf8(filepath)
-            return orig_lfs_symlinkattributes(filepath, aname)
-         end
-
-         local orig_lfs_touch = lfs.touch
-
-         function lfs.touch(filepath, atime, mtime)
-            filepath = convert_from_utf8(filepath)
-            return orig_lfs_touch(filepath, atime, mtime)
-         end
       else
          -- print("Mapping for codepage "..codepage.." not found")
       end
@@ -1302,3 +1250,29 @@ return modify_lua_functions{
       ZXcFgkq"'Fy1Y&1(9JUd}Ocsef`q@Mqhp9qF,L&bZ%{fJM?;=gO;]2C,fTC!8N)06E3>|]=],
 
 }
+
+--[[
+
+MIT License
+
+Copyright (c) 2019  Egor Skriptunoff
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+]]
