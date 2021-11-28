@@ -300,7 +300,6 @@ public:
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     void show_options_dialog(const QString& tab);
     void setInterfaceLanguage(const QString &languageCode);
-    void setDarkTheme(const bool &state);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     const QLocale& getUserLocale() const { return mUserLocale; }
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
@@ -434,7 +433,15 @@ public:
 
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
-    bool mDarkTheme;
+
+    enum Appearance {
+        system = 0,
+        light = 1,
+        dark = 2
+    };
+    Appearance mAppearance = Appearance::system;
+    void setAppearance(Appearance, const bool& loading = false);
+    bool inDarkMode() const { return mDarkMode; }
 
     // mirror everything shown in any console to stdout. Helpful for CI environments
     inline static bool mMirrorToStdOut;
@@ -448,6 +455,7 @@ public:
     };
 
     // clang-format off
+    // games are to be added here in alphabetical order
     inline static const OrderedMap<QString, GameDetails> scmDefaultGames = {
         {"Avalon.de", {"avalon.mud.de", 23, false,
                         "<center><a href='http://avalon.mud.de'>http://avalon.mud.de</a></center>",
@@ -475,7 +483,7 @@ public:
                         "<center><a href='http://www.materiamagica.com'>http://www.materiamagica.com</a></center>",
                         ":/materiaMagicaIcon"}},
         {"Realms of Despair", {"realmsofdespair.com", 4000, false, "<center><a href='http://www.realmsofdespair.com/'>http://www.realmsofdespair.com</a></center>", ":/icons/120x30RoDLogo.png"}},
-        {"ZombieMUD", {"zombiemud.org", 23, false, "<center><a href='http://www.zombiemud.org/'>http://www.zombiemud.org</a></center>", ":/icons/zombiemud.png"}},
+        {"ZombieMUD", {"zombiemud.org", 3000, false, "<center><a href='http://www.zombiemud.org/'>http://www.zombiemud.org</a></center>", ":/icons/zombiemud.png"}},
         {"Aetolia", {"aetolia.com", 23, false, "<center><a href='http://www.aetolia.com/'>http://www.aetolia.com</a></center>", ":/icons/aetolia_120_30.png"}},
         {"Imperian", {"imperian.com", 23, false, "<center><a href='http://www.imperian.com/'>http://www.imperian.com</a></center>", ":/icons/imperian_120_30.png"}},
         {"WoTMUD", {"game.wotmud.org", 2224, false, "<center><a href='http://www.wotmud.org/'>Main website</a></center>\n"
@@ -544,7 +552,7 @@ signals:
     void signal_setTreeIconSize(int);
     void signal_hostCreated(Host*, quint8);
     void signal_hostDestroyed(Host*, quint8);
-    void signal_enableDarkThemeChanged(bool);
+    void signal_appearanceChanged(Appearance);
     void signal_enableFulScreenModeChanged(bool);
     void signal_showMapAuditErrorsChanged(bool);
     void signal_menuBarVisibilityChanged(const controlsVisibility);
@@ -604,6 +612,7 @@ private:
     QString autodetectPreferredLanguage();
     void installModulesList(Host*, QStringList);
     void setupTrayIcon();
+    static bool desktopInDarkMode();
 
     QWidget* mpWidget_profileContainer;
     QHBoxLayout* mpHBoxLayout_profileContainer;
@@ -722,6 +731,10 @@ private:
 
     // Whether multi-view is in effect:
     bool mMultiView;
+
+    // read-only value to see if the interface is light or dark. To set the value,
+    // use setAppearance instead
+    bool mDarkMode = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

@@ -618,6 +618,9 @@ public:
     static int addMouseEvent(lua_State* L);
     static int removeMouseEvent(lua_State* L);
     static int getMouseEvents(lua_State* L);
+    static int addCommandLineMenuEvent(lua_State* L);
+    static int removeCommandLineMenuEvent(lua_State* L);
+    static int deleteMap(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 

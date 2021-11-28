@@ -45,6 +45,8 @@ public:
     explicit TMainConsole(Host*, QWidget* parent = nullptr);
     ~TMainConsole();
 
+    void resizeEvent(QResizeEvent* event) override;
+
     void resetMainConsole();
 
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
@@ -53,7 +55,7 @@ public:
     bool showWindow(const QString& name);
     bool hideWindow(const QString& name);
     bool printWindow(const QString& name, const QString& text);
-    void setProfileName(const QString&);
+    void setProfileName(const QString&) override;
     void selectCurrentLine(std::string&);
     std::list<int> getFgColor(std::string& buf);
     std::list<int> getBgColor(std::string& buf);
@@ -79,6 +81,9 @@ public:
 
     void setSystemSpellDictionary(const QString&);
     void setProfileSpellDictionary();
+
+    void showStatistics();
+
     const QString& getSystemSpellDictionary() const { return mSpellDic; }
     QTextCodec* getHunspellCodec_system() const { return mpHunspellCodec_system; }
     Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }

@@ -541,6 +541,6 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
 
 void ActionUnit::updateToolbar()
 {
-    getToolBarList();
-    getEasyButtonBarList();
+        getToolBarList();
+        getEasyButtonBarList();
 }

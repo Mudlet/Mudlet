@@ -546,7 +546,7 @@ void TConsole::resizeConsole()
 
 void TConsole::resizeEvent(QResizeEvent* event)
 {
-    if (mType & (MainConsole|Buffer)) {
+    if (mType & MainConsole) {
         mMainFrameTopHeight = mpHost->mBorderTopHeight;
         mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
         mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
@@ -584,7 +584,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
         return;
     }
 
-    if (mType & (MainConsole|Buffer)) {
+    if (mType & MainConsole) {
         TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
         QString func = "handleWindowResizeEvent";
         QString n = "WindowResizeEvent";
@@ -762,6 +762,7 @@ void TConsole::closeEvent(QCloseEvent* event)
                 file_map.close();
             }
         }
+        mpHost->waitForProfileSave();
         event->accept();
         return;
     }
@@ -801,6 +802,7 @@ void TConsole::closeEvent(QCloseEvent* event)
                     file_map.close();
                 }
             }
+            mpHost->waitForProfileSave();
             event->accept();
             return;
 
@@ -939,11 +941,6 @@ void TConsole::changeColors()
         mFormatCurrent.setColors(mpHost->mFgColor, mpHost->mBgColor);
     } else {
         Q_ASSERT_X(false, "TConsole::changeColors()", "invalid TConsole type detected");
-    }
-
-    if (mType & (CentralDebugConsole|MainConsole|Buffer)) {
-        mUpperPane->mWrapAt = mWrapAt;
-        mLowerPane->mWrapAt = mWrapAt;
     }
 
     buffer.updateColors();
@@ -1766,51 +1763,6 @@ void TConsole::slot_stop_all_triggers(bool b)
         mpHost->reenableAllTriggers();
         emergencyStop->setIcon(QIcon(QStringLiteral(":/icons/edit-bomb.png")));
     }
-}
-
-void TConsole::showStatistics()
-{
-    QStringList header;
-    header << "\n"
-           << "+--------------------------------------------------------------+\n"
-           << "|               system statistics                              |\n"
-           << "+--------------------------------------------------------------+\n";
-
-    QString h = header.join("");
-    QString msg = h;
-    print(msg, QColor(150, 120, 0), Qt::black);
-
-    QString script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nGMCP events:\n]]);setUnderline(false);setFgColor(150,120,0);display( gmcp );";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nATCP events:\n]]);setUnderline(false);setFgColor(150,120,0); display( atcp );";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nchannel102 events:\n]]);setUnderline(false);setFgColor(150,120,0);display( channel102 );";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-
-
-    script = "setFgColor(190,150,0); setUnderline(true); echo([[\n\nTrigger Report:\n\n]]); setBold(false);setUnderline(false);setFgColor(150,120,0)";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    QString r1 = mpHost->getTriggerUnit()->assembleReport();
-    msg = r1;
-    print(msg, QColor(150, 120, 0), Qt::black);
-    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nTimer Report:\n\n]]);setBold(false);setUnderline(false);setFgColor(150,120,0)";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    QString r2 = mpHost->getTimerUnit()->assembleReport();
-    msg = r2;
-    print(msg, QColor(150, 120, 0), Qt::black);
-
-    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nKeybinding Report:\n\n]]);setBold(false);setUnderline(false);setFgColor(150,120,0)";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    QString r3 = mpHost->getKeyUnit()->assembleReport();
-    msg = r3;
-    print(msg, QColor(150, 120, 0), Qt::black);
-
-    QString footer = QString("\n+--------------------------------------------------------------+\n");
-    mpHost->mpConsole->print(footer, QColor(150, 120, 0), Qt::black);
-    script = "resetFormat();";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-
-    mpHost->mpConsole->raise();
 }
 
 void TConsole::slot_searchBufferUp()

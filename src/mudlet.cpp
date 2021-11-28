@@ -56,6 +56,7 @@
 #include "VarUnit.h"
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QtUiTools/quiloader.h>
 #include <QDesktopServices>
 #include <QDesktopWidget>
@@ -80,6 +81,20 @@
 #include <QVariantHash>
 #include <QRandomGenerator>
 #include <zip.h>
+#include <QStyle>
+#ifdef Q_OS_LINUX
+#elif defined(Q_OS_WIN32)
+#include <QSettings>
+#endif
+
+#if defined(Q_OS_MAC)
+// wrap in namespace since `Collection` defined in these headers will clash with Boost
+namespace coreMacOS {
+#include <CoreFoundation/CoreFoundation.h>
+#include <CoreServices/CoreServices.h>
+}
+#endif
+
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
@@ -240,6 +255,8 @@ mudlet::mudlet()
 , mHunspell_sharedDictionary(nullptr)
 , mMultiView(false)
 {
+    firstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
+
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
     readEarlySettings(*mpSettings);
@@ -250,15 +267,14 @@ mudlet::mudlet()
     }
 
     qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
+    setAppearance(mAppearance, true);
     mDefaultStyle = qApp->style()->objectName();
 
     scanForMudletTranslations(QStringLiteral(":/lang"));
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
-    if (mDarkTheme) {
-        setDarkTheme(mDarkTheme);
-    }
-    if (QStringList{"windowsvista", "macintosh"}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
+
+  if (QStringList{"windowsvista", "macintosh"}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
         qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - QPushButton styling fix applied!";
         mBG_ONLY_STYLESHEET = QStringLiteral("QPushButton {background-color: %1; border: 1px solid #8f8f91;}");
         mTEXT_ON_BG_STYLESHEET = QStringLiteral("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}");
@@ -326,8 +342,6 @@ mudlet::mudlet()
     } else {
         mAutolog = false;
     }
-
-    firstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
 
     mpButtonConnect = new QToolButton(this);
     mpButtonConnect->setText(tr("Connect"));
@@ -1578,19 +1592,17 @@ void mudlet::slot_timer_fires()
 
 void mudlet::disableToolbarButtons()
 {
-    mpMainToolBar->actions()[1]->setEnabled(false);
-    mpMainToolBar->actions()[2]->setEnabled(false);
-    mpMainToolBar->actions()[3]->setEnabled(false);
-    mpMainToolBar->actions()[4]->setEnabled(false);
-    mpMainToolBar->actions()[5]->setEnabled(false);
-    mpMainToolBar->actions()[6]->setEnabled(false);
-    mpMainToolBar->actions()[7]->setEnabled(false);
-    mpMainToolBar->actions()[9]->setEnabled(false);
-    mpMainToolBar->actions()[10]->setEnabled(false);
-    mpMainToolBar->actions()[12]->setEnabled(false);
-    mpMainToolBar->actions()[13]->setEnabled(false);
-    mpMainToolBar->actions()[14]->setEnabled(false);
-
+    mpActionTriggers->setEnabled(false);
+    mpActionAliases->setEnabled(false);
+    mpActionTimers->setEnabled(false);
+    mpActionButtons->setEnabled(false);
+    mpActionScripts->setEnabled(false);
+    mpActionKeys->setEnabled(false);
+    mpActionVariables->setEnabled(false);
+    mpActionMudletDiscord->setEnabled(false);
+    mpActionMapper->setEnabled(false);
+    mpActionNotes->setEnabled(false);
+    mpButtonPackageManagers->setEnabled(false);
     mpActionIRC->setEnabled(false);
     mpActionReplay->setEnabled(false);
     mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
@@ -1609,18 +1621,17 @@ void mudlet::disableToolbarButtons()
 
 void mudlet::enableToolbarButtons()
 {
-    mpMainToolBar->actions()[1]->setEnabled(true);
-    mpMainToolBar->actions()[2]->setEnabled(true);
-    mpMainToolBar->actions()[3]->setEnabled(true);
-    mpMainToolBar->actions()[4]->setEnabled(true);
-    mpMainToolBar->actions()[5]->setEnabled(true);
-    mpMainToolBar->actions()[6]->setEnabled(true);
-    mpMainToolBar->actions()[7]->setEnabled(true);
-    mpMainToolBar->actions()[9]->setEnabled(true);
-    mpMainToolBar->actions()[10]->setEnabled(true);
-    mpMainToolBar->actions()[12]->setEnabled(true);
-    mpMainToolBar->actions()[13]->setEnabled(true);
-    mpMainToolBar->actions()[14]->setEnabled(true);
+    mpActionTriggers->setEnabled(true);
+    mpActionAliases->setEnabled(true);
+    mpActionTimers->setEnabled(true);
+    mpActionButtons->setEnabled(true);
+    mpActionScripts->setEnabled(true);
+    mpActionKeys->setEnabled(true);
+    mpActionVariables->setEnabled(true);
+    mpActionMudletDiscord->setEnabled(true);
+    mpActionMapper->setEnabled(true);
+    mpActionNotes->setEnabled(true);
+    mpButtonPackageManagers->setEnabled(true);
     mpActionIRC->setEnabled(true);
 
     if (!mpToolBarReplay) {
@@ -1860,7 +1871,17 @@ void mudlet::readEarlySettings(const QSettings& settings)
         QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
         mEnableFullScreenMode = file_use_smallscreen.exists();
     }
-    mDarkTheme = settings.value(QStringLiteral("darkTheme"), QVariant(false)).toBool();
+
+    // PTBs had a boolean setting, migrate it to one that can respect the system setting as well
+    auto oldDarkTheme = settings.value(QStringLiteral("darkTheme"), QVariant(false)).toBool();
+
+    auto appearance = settings.value(QStringLiteral("appearance"), QVariant(0)).toInt();
+    if (appearance == 0) {
+        mAppearance = settings.contains(QStringLiteral("darkTheme")) ? (oldDarkTheme ? Appearance::dark : Appearance::light) : Appearance::system;
+    } else {
+        mAppearance = static_cast<Appearance>(appearance);
+    }
+
     mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
     mUserLocale = QLocale(mInterfaceLanguage);
     if (mUserLocale == QLocale::c()) {
@@ -2031,7 +2052,9 @@ void mudlet::writeSettings()
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
     settings.setValue("interfaceLanguage", mInterfaceLanguage);
-    settings.setValue("darkTheme", mDarkTheme);
+    // value only used during PTBs, remove it to reduce confusion in the future
+    settings.remove("darkTheme");
+    settings.setValue("appearance", mAppearance);
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -2400,7 +2423,7 @@ void mudlet::updateDiscordNamedIcon()
     QString gameName = pHost->getDiscordGameName();
 
     bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
-    
+
     mpActionDiscord->setIconText(gameName.isEmpty() ? QStringLiteral("Discord") : QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90));
 
     if (mpActionMudletDiscord->isVisible() != hasCustom) {
@@ -3864,9 +3887,19 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
         emit signal_showIconsOnMenusChanged(state);
     }
 }
-void mudlet::setDarkTheme(const bool& state)
+
+void mudlet::setAppearance(const Appearance state, const bool& loading)
 {
-    if (state) {
+    if (state == mAppearance && !loading) {
+        return;
+    }
+
+    mDarkMode = false;
+    if (state == Appearance::dark || (state == Appearance::system && desktopInDarkMode())) {
+        mDarkMode = true;
+    }
+
+    if (mDarkMode) {
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         qApp->setStyle(new DarkTheme);
         getHostManager().changeAllHostColour(getActiveHost());
@@ -3875,8 +3908,8 @@ void mudlet::setDarkTheme(const bool& state)
         qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
         getHostManager().changeAllHostColour(getActiveHost());
     }
-    mDarkTheme = state;
-    emit signal_enableDarkThemeChanged(state);
+    mAppearance = state;
+    emit signal_appearanceChanged(state);
 }
 
 void mudlet::setInterfaceLanguage(const QString& languageCode)
@@ -4443,6 +4476,7 @@ void mudlet::activateProfile(Host* pHost)
         mpCurrentActiveHost = pHost;
         updateDiscordNamedIcon();
         dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
+        pHost->updateDisplayDimensions();
     }
 }
 
@@ -4544,4 +4578,33 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
     if (!mudlet::self()->packagesToInstallList.contains(QStringLiteral(":/mudlet-mapper.xml"))) {
         mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
     }
+}
+
+// Referenced from github.com/keepassxreboot/keepassxc. Licensed under GPL2/3.
+// Copyright (C) 2020 KeePassXC Team <team@keepassxc.org>
+bool mudlet::desktopInDarkMode()
+{
+#if defined(Q_OS_WIN32)
+    QSettings settings(R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)", QSettings::NativeFormat);
+    return settings.value("AppsUseLightTheme", 1).toInt() == 0;
+#elif defined(Q_OS_MAC)
+    bool isDark = false;
+    CFStringRef uiStyleKey = CFSTR("AppleInterfaceStyle");
+    CFStringRef uiStyle = nullptr;
+    CFStringRef darkUiStyle = CFSTR("Dark");
+    if (uiStyle = (CFStringRef) coreMacOS::CFPreferencesCopyAppValue(uiStyleKey, coreMacOS::kCFPreferencesCurrentApplication); uiStyle)
+    {
+        isDark = (coreMacOS::kCFCompareEqualTo == coreMacOS::CFStringCompare(uiStyle, darkUiStyle, 0));
+        coreMacOS::CFRelease(uiStyle);
+    }
+    return isDark;
+#elif defined(Q_OS_LINUX)
+    QProcess process;
+    process.start(QStringLiteral("gsettings"), QStringList() << QStringLiteral("get") << QStringLiteral("org.gnome.desktop.interface") << QStringLiteral("gtk-theme"));
+    process.waitForFinished();
+    QString output = QString::fromUtf8(process.readAllStandardOutput());
+    return output.contains(QStringLiteral("-dark"), Qt::CaseInsensitive);
+#endif
+
+    return false;
 }
