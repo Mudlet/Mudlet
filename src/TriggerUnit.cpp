@@ -396,7 +396,7 @@ std::tuple<QString, int, int, int> TriggerUnit::assembleReport()
     return {
         msg.join(QString()),
         statsActiveTriggers,
-        statsTriggersTotal,
+        statsTriggerTotal,
         statsTempTriggers
     };
 }
