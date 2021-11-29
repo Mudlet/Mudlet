@@ -24,6 +24,7 @@
 
 
 #include "mudlet.h"
+#include "Host.h"
 #include "TVar.h"
 
 #include "pre_guard.h"
