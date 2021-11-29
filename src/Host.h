@@ -384,6 +384,7 @@ public:
     void setToolbarLayoutUpdated(TToolBar*);
     bool commitLayoutUpdates(bool flush = false);
     void setScreenDimensions(const int width, const int height) { mScreenWidth = width; mScreenHeight = height; }
+    std::optional<QString> windowType(const QString& name) const;
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
