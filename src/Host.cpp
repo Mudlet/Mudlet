@@ -3802,3 +3802,43 @@ void Host::setupIreDriverBugfix()
         set_USE_IRE_DRIVER_BUGFIX(true);
     }
 }
+
+std::optional<QString> Host::windowType(const QString& name) const
+{
+    if (mpConsole->mLabelMap.contains(name)) {
+        return {QStringLiteral("label")};
+    }
+
+    if (name == QLatin1String("main")) {
+        return {QLatin1String("main")};
+    }
+
+    auto pWindow = mpConsole->mSubConsoleMap.value(name);
+    if (pWindow) {
+        switch (pWindow->getType()) {
+        case TConsole::UserWindow:
+            return {QStringLiteral("userwindow")};
+        case TConsole::Buffer:
+            return {QStringLiteral("buffer")};
+        case TConsole::SubConsole:
+            return {QStringLiteral("miniconsole")};
+        case TConsole::UnknownType:
+            [[fallthrough]];
+        case TConsole::CentralDebugConsole:
+            [[fallthrough]];
+        case TConsole::ErrorConsole:
+            [[fallthrough]];
+        case TConsole::MainConsole:
+            [[fallthrough]];
+        default:
+            Q_UNREACHABLE();
+            return {};
+        }
+    }
+
+    if (mpConsole->mSubCommandLineMap.contains(name)) {
+        return {QStringLiteral("commandline")};
+    }
+
+    return {};
+}
