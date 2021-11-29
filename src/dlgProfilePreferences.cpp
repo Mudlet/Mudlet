@@ -24,7 +24,6 @@
 
 #include "dlgProfilePreferences.h"
 
-
 #include "Host.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
@@ -1160,15 +1159,16 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     //Shortcuts tab
     QMapIterator<QString, QKeySequence*> i(pHost->profileShortcuts);
-    int shortcutsRow = 1;
+    int shortcutsRow = 0;
     while (i.hasNext()) {
         i.next();
         QKeySequence* sequence = new QKeySequence(*i.value());
         currentShortcuts.insert(i.key(), sequence);
         auto sequenceEdit = new QKeySequenceEdit(*sequence);
 
-        gridLayout_groupBox_shortcuts->addWidget(new QLabel(i.key()), shortcutsRow, 0);
-        gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, shortcutsRow++, 1);
+        gridLayout_groupBox_shortcuts->addWidget(new QLabel(i.key()), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
+        gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
+        shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
             QKeySequence newSequence;
             if (sequenceEdit->keySequence().isEmpty()) {

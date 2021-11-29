@@ -3377,7 +3377,11 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item>
-           <layout class="QGridLayout" name="gridLayout_groupBox_shortcuts"/>
+           <layout class="QGridLayout" name="gridLayout_groupBox_shortcuts">
+            <property name="horizontalSpacing">
+             <number>20</number>
+            </property>
+           </layout>
           </item>
           <item alignment="Qt::AlignRight">
            <widget class="QPushButton" name="pushButton_resetMainWindowShortctus">
