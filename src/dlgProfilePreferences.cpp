@@ -3405,7 +3405,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
                                                                 "You may be able to correct this by installing an additional font using whatever "
                                                                 "method is appropriate for this system or by editing the map to use a different "
                                                                 "symbol. It may be possible to do the latter via a lua script using the "
-                                                                "<i>getRoomChar</i> and <i>setRoomChar</i> functions."));
+                                                                "<i>getRoomChar</i> and <i>setRoomChar</i> functions.")));
             }
         }
         pTableWidget->setCellWidget(++row, 0, pDummyButton);
