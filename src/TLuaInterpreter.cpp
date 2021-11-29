@@ -8323,7 +8323,7 @@ int TLuaInterpreter::windowType(lua_State* L)
     }
 
     lua_pushnil(L);
-    lua_pushfstring(L, "'%s' is not a known label, miniconsole, userwindow, nor command line", windowName.toUtf8().constData());
+    lua_pushfstring(L, "'%s' is not a known label, any type of console, nor command line", windowName.toUtf8().constData());
     return 2;
 }
 
