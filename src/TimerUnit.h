@@ -62,7 +62,7 @@ public:
     void reenableAllTriggers();
     void markCleanup(TTimer*);
     void doCleanup();
-    QString assembleReport();
+    std::tuple<QString, int, int, int> assembleReport();
     int getNewID();
     void uninstall(const QString&);
     void _uninstall(TTimer* pChild, const QString& packageName);
