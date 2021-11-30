@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia..com        *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -85,7 +86,7 @@ void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
             auto pItem = new QTreeWidgetItem(s1);
             pItem->setText(0, child->getName());
             pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
-            pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
+            pItem->setToolTip(0, tr("Checked variables will be saved and loaded with your profile."));
             pItem->setCheckState(0, Qt::Unchecked);
             if (isSaved(child)) {
                 pItem->setCheckState(0, Qt::Checked);
@@ -93,7 +94,7 @@ void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
             if (!shouldSave(child)) { // 6 is lua_tfunction, parent must be saveable as well if not global
                 pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
                 pItem->setForeground(0, QBrush(QColor("grey")));
-                pItem->setToolTip(0, "");
+                pItem->setToolTip(0, QString());
             }
             pItem->setData(0, Qt::UserRole, child->getValueType());
             QIcon icon;
