@@ -1170,23 +1170,24 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
-            QKeySequence newSequence;
+            QKeySequence* newSequence = nullptr;
             if (sequenceEdit->keySequence().isEmpty()) {
-                newSequence = *sequence;
+                newSequence = sequence;
             } else if (sequenceEdit->keySequence().matches(QKeySequence(Qt::Key_Escape))) {
-                newSequence = QKeySequence();
+                newSequence = new QKeySequence();
             } else {
-                newSequence = sequenceEdit->keySequence();
+                newSequence = new QKeySequence(sequenceEdit->keySequence());
             }
             sequenceEdit->blockSignals(true);
-            sequenceEdit->setKeySequence(newSequence);
+            sequenceEdit->setKeySequence(*newSequence);
             sequenceEdit->blockSignals(false);
-            sequence->swap(newSequence);
+            sequence->swap(*newSequence);
+            delete newSequence;
         });
         connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=]() {
             sequenceEdit->setKeySequence(*mudlet::self()->mShortcutsManager->getDefault(key));
-            QKeySequence newSequence = QKeySequence(*mudlet::self()->mShortcutsManager->getDefault(key));
-            sequence->swap(newSequence);
+            QKeySequence* newSequence = new QKeySequence(*mudlet::self()->mShortcutsManager->getDefault(key));
+            sequence->swap(*newSequence);
         });
     }
 
