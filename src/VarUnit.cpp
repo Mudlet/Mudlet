@@ -22,7 +22,7 @@
 
 #include "VarUnit.h"
 
-
+#include "mudlet.h"
 #include "TVar.h"
 
 #include "pre_guard.h"
@@ -86,7 +86,7 @@ void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
             auto pItem = new QTreeWidgetItem(s1);
             pItem->setText(0, child->getName());
             pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
-            pItem->setToolTip(0, tr("Checked variables will be saved and loaded with your profile."));
+            pItem->setToolTip(0, mudlet::htmlWrapper(tr("Checked variables will be saved and loaded with your profile.")));
             pItem->setCheckState(0, Qt::Unchecked);
             if (isSaved(child)) {
                 pItem->setCheckState(0, Qt::Checked);
