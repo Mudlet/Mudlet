@@ -1158,15 +1158,15 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(doubleSpinBox_networkPacketTimeout, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPostingTimeout);
 
     //Shortcuts tab
-    QMapIterator<QString, QKeySequence*> i(pHost->profileShortcuts);
+    auto shortcutKeys = mudlet::self()->mShortcutsManager->iterator();
     int shortcutsRow = 0;
-    while (i.hasNext()) {
-        i.next();
-        QKeySequence* sequence = new QKeySequence(*i.value());
-        currentShortcuts.insert(i.key(), sequence);
+    while (shortcutKeys.hasNext()) {
+        auto key = shortcutKeys.next();
+        QKeySequence* sequence = new QKeySequence(*pHost->profileShortcuts.value(key));
+        currentShortcuts.insert(key, sequence);
         auto sequenceEdit = new QKeySequenceEdit(*sequence);
 
-        gridLayout_groupBox_shortcuts->addWidget(new QLabel(i.key()), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
+        gridLayout_groupBox_shortcuts->addWidget(new QLabel(key), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
@@ -1184,7 +1184,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             sequence->swap(newSequence);
         });
         connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=]() {
-            sequenceEdit->setKeySequence(*mudlet::self()->mShortcutsManager->getDefault(i.key()));
+            sequenceEdit->setKeySequence(*mudlet::self()->mShortcutsManager->getDefault(key));
+            QKeySequence newSequence = QKeySequence(*mudlet::self()->mShortcutsManager->getDefault(key));
+            sequence->swap(newSequence);
         });
     }
 
