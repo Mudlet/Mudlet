@@ -1178,9 +1178,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             } else {
                 newSequence = new QKeySequence(sequenceEdit->keySequence());
             }
-            sequenceEdit->blockSignals(true);
             sequenceEdit->setKeySequence(*newSequence);
-            sequenceEdit->blockSignals(false);
             sequence->swap(*newSequence);
             delete newSequence;
         });
