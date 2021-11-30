@@ -14185,6 +14185,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "removeCommandLineMenuEvent", TLuaInterpreter::removeCommandLineMenuEvent);
     lua_register(pGlobalLua, "deleteMap", TLuaInterpreter::deleteMap);
     lua_register(pGlobalLua, "windowType", TLuaInterpreter::windowType);
+    lua_register(pGlobalLua, "getProfileStats", TLuaInterpreter::getProfileStats);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -16094,5 +16095,91 @@ int TLuaInterpreter::deleteMap(lua_State* L)
     updateMap(L);
 
     lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::getProfileStats(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    auto [_1, triggersTotal, triggerPatterns, tempTriggers, activeTriggers] = host.getTriggerUnit()->assembleReport();
+    auto [_2, aliasesTotal, tempAliases, activeAliases] = host.getAliasUnit()->assembleReport();
+    auto [_3, timersTotal, tempTimers, activeTimers] = host.getTimerUnit()->assembleReport();
+    auto [_4, keysTotal, tempKeys, activeKeys] = host.getKeyUnit()->assembleReport();
+
+    lua_newtable(L);
+
+    // Triggers
+    lua_pushstring(L, "triggers");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, triggersTotal);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "patterns");
+    lua_pushnumber(L, triggerPatterns);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "temp");
+    lua_pushnumber(L, tempTriggers);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeTriggers);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
+
+    // Aliases
+    lua_pushstring(L, "aliases");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, aliasesTotal);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "temp");
+    lua_pushnumber(L, tempAliases);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeAliases);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
+
+    // Timers
+    lua_pushstring(L, "timers");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, timersTotal);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "temp");
+    lua_pushnumber(L, tempTimers);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeTimers);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
+
+    // Keys
+    lua_pushstring(L, "keys");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, keysTotal);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "temp");
+    lua_pushnumber(L, tempKeys);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeKeys);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
+
     return 1;
 }

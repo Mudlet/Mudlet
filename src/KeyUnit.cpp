@@ -365,7 +365,7 @@ void KeyUnit::_assembleReport(TKey* pChild)
     }
 }
 
-QString KeyUnit::assembleReport()
+std::tuple<QString, int, int, int> KeyUnit::assembleReport()
 {
     statsActiveKeys = 0;
     statsKeyTotal = 0;
@@ -394,7 +394,13 @@ QString KeyUnit::assembleReport()
     msg << "Keys current total: " << QString::number(statsKeyTotal) << "\n"
         << "tempKeys current total: " << QString::number(statsTempKeys) << "\n"
         << "active Keys: " << QString::number(statsActiveKeys) << "\n";
-    return msg.join("");
+
+    return {
+        msg.join(QString()),
+        statsKeyTotal,
+        statsTempKeys,
+        statsActiveKeys
+    };
 }
 
 void KeyUnit::markCleanup(TKey* pT)
