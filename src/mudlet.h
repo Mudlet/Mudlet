@@ -663,6 +663,7 @@ private:
     QKeySequence connectKeySequence;
     QKeySequence disconnectKeySequence;
     QKeySequence reconnectKeySequence;
+    QKeySequence closeProfileKeySequence;
 
     QPointer<QAction> mpActionReplay;
 

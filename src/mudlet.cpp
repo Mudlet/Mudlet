@@ -643,6 +643,7 @@ mudlet::mudlet()
     connectKeySequence = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_C);
     disconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_D);
     reconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_R);
+    closeProfileKeySequence = QKeySequence(Qt::CTRL | Qt::Key_W);
 #else
     triggersKeySequence = QKeySequence(Qt::ALT | Qt::Key_E);
     showMapKeySequence = QKeySequence(Qt::ALT | Qt::Key_M);
@@ -655,6 +656,7 @@ mudlet::mudlet()
     connectKeySequence = QKeySequence(Qt::ALT | Qt::Key_C);
     disconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_D);
     reconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_R);
+    closeProfileKeySequence = QKeySequence(Qt::ALT | Qt::Key_W);
 #endif
     connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_update_shortcuts);
     connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assign_shortcuts_from_profile);
@@ -675,6 +677,7 @@ mudlet::mudlet()
     mShortcutsManager->registerShortcut(tr("Play"), &connectKeySequence);
     mShortcutsManager->registerShortcut(tr("Disconnect"), &disconnectKeySequence);
     mShortcutsManager->registerShortcut(tr("Reconnect"), &reconnectKeySequence);
+    mShortcutsManager->registerShortcut(tr("Close profile"), &closeProfileKeySequence);
 
     mpSettings = getQSettings();
     readLateSettings(*mpSettings);
@@ -2317,6 +2320,8 @@ void mudlet::slot_update_shortcuts()
         reconnectShortcut = new QShortcut(reconnectKeySequence, this);
         connect(reconnectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_reconnect);
         dactionReconnect->setShortcut(QKeySequence());
+
+        dactionCloseProfile->setShortcut(QKeySequence());
     } else {
         triggersShortcut.clear();
         dactionScriptEditor->setShortcut(triggersKeySequence);
@@ -2350,6 +2355,8 @@ void mudlet::slot_update_shortcuts()
 
         reconnectShortcut.clear();
         dactionReconnect->setShortcut(reconnectKeySequence);
+
+        dactionCloseProfile->setShortcut(closeProfileKeySequence);
     }
 }
 
