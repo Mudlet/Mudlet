@@ -555,6 +555,7 @@ SOURCES += \
     mudlet.cpp \
     MxpTag.cpp \
     ScriptUnit.cpp \
+    ShortcutsManager.cpp \
     T2DMap.cpp \
     TAction.cpp \
     TAlias.cpp \
@@ -664,6 +665,7 @@ HEADERS += \
     pre_guard.h \
     post_guard.h \
     ScriptUnit.h \
+    ShortcutsManager.h \
     T2DMap.h \
     TAction.h \
     TAlias.h \

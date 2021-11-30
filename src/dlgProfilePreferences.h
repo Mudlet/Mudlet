@@ -165,6 +165,8 @@ private slots:
 
 signals:
     void signal_themeUpdateCompleted();
+    void signal_preferencesSaved();
+    void signal_resetMainWindowShortcutsToDefaults();
 
 private:
     void setColors();
@@ -200,6 +202,7 @@ private:
     QPointer<QDialog> mpDialogMapGlyphUsage;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
+    QMap<QString, QKeySequence*> currentShortcuts;
 
     QString mLogDirPath;
     // Needed to remember the state on construction so that we can sent the same

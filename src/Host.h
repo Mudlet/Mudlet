@@ -626,6 +626,8 @@ public:
     // string list: 0 - event name, 1 - display label, 2 - tooltip text
     QMap<QString, QStringList> mConsoleActions;
 
+    QMap<QString, QKeySequence*> profileShortcuts;
+
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:

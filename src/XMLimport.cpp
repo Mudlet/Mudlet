@@ -1105,6 +1105,8 @@ void XMLimport::readHostPackage(Host* pHost)
                 Q_UNUSED(readElementText());
             } else if (name() == "mMapInfoContributors") {
                 readMapInfoContributors();
+            } else if (name() == "profileShortcuts") {
+                readProfileShortcuts();
             } else if (name() == "stopwatches") {
                 readStopWatchMap();
             } else {
@@ -1858,9 +1860,28 @@ void XMLimport::readMapInfoContributors()
         readNext();
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == "mapInfoContributor") {
                 mpHost->mMapInfoContributors.insert(readElementText());
+            }
+        }
+    }
+}
+
+void XMLimport::readProfileShortcuts() {
+    while (!atEnd()) {
+        readNext();
+        if (isEndElement()) {
+            break;
+        }
+        if (isStartElement()) {
+            if (name() == "profileShortcut") {
+                auto key = attributes().value(QStringLiteral("key"));
+                auto sequenceString = readElementText();
+                QKeySequence* sequence = !sequenceString.isEmpty() ? new QKeySequence(sequenceString) : new QKeySequence();
+                mpHost->profileShortcuts.value(key.toString())->swap(*sequence);
+                delete sequence;
             }
         }
     }

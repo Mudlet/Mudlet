@@ -477,6 +477,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     // enable by default in case of offline connection; if the profile connects - timer will be disabled
     purgeTimer.start(1min);
+
+    auto i = mudlet::self()->mShortcutsManager->iterator();
+    while (i.hasNext()) {
+        auto entry = i.next();
+        profileShortcuts.insert(entry, new QKeySequence(*mudlet::self()->mShortcutsManager->getSequence(entry)));
+    }
 }
 
 Host::~Host()
