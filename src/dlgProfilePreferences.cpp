@@ -1188,6 +1188,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             sequenceEdit->setKeySequence(*mudlet::self()->mShortcutsManager->getDefault(key));
             QKeySequence* newSequence = new QKeySequence(*mudlet::self()->mShortcutsManager->getDefault(key));
             sequence->swap(*newSequence);
+            delete newSequence;
         });
     }
 
