@@ -198,9 +198,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     character_password_entry->addAction(mpAction_revealPassword, QLineEdit::TrailingPosition);
     if (mudlet::self()->storingPasswordsSecurely()) {
-        character_password_entry->setToolTip(tr("Characters password, stored securely in the computer's credential manager"));
+        character_password_entry->setToolTip(mudlet::htmlWrapper(tr("Characters password, stored securely in the computer's credential manager")));
     } else {
-        character_password_entry->setToolTip(tr("Characters password. Note that the password isn't encrypted in storage"));
+        character_password_entry->setToolTip(mudlet::htmlWrapper(tr("Characters password. Note that the password is not encrypted in storage")));
     }
 
     connect(mpAction_revealPassword, &QAction::triggered, this, &dlgConnectionProfiles::slot_togglePasswordVisibility);
@@ -1054,16 +1054,16 @@ void dlgConnectionProfiles::updateDiscordStatus()
     if (!discordLoaded) {
         discord_optin_checkBox->setEnabled(false);
         discord_optin_checkBox->setChecked(false);
-        discord_optin_checkBox->setToolTip(tr("Discord integration not available on this platform"));
+        discord_optin_checkBox->setToolTip(mudlet::htmlWrapper(tr("Discord integration not available on this platform")));
     } else if (mDiscordApplicationId.isEmpty() && !mudlet::self()->mDiscord.gameIntegrationSupported(host_name_entry->text().trimmed()).first) {
         // Disable discord support if it is not recognised by name and a
         // Application Id has not been previously entered:
         discord_optin_checkBox->setEnabled(false);
         discord_optin_checkBox->setChecked(false);
-        discord_optin_checkBox->setToolTip(tr("Discord integration not supported by game"));
+        discord_optin_checkBox->setToolTip(mudlet::htmlWrapper(tr("Discord integration not supported by game")));
     } else {
         discord_optin_checkBox->setEnabled(true);
-        discord_optin_checkBox->setToolTip(tr("Check to enable Discord integration"));
+        discord_optin_checkBox->setToolTip(mudlet::htmlWrapper(tr("Check to enable Discord integration")));
     }
 }
 
@@ -1125,7 +1125,7 @@ void dlgConnectionProfiles::fillout_form()
         profiles_tree_widget->addItem(pItem);
         description = getDescription(QStringLiteral("mudlet.org"), 0, mudServer);
         if (!description.isEmpty()) {
-            pItem->setToolTip(QStringLiteral("<p>%1</p>").arg(description));
+            pItem->setToolTip(mudlet::htmlWrapper(description));
         }
     }
 #endif
@@ -1217,7 +1217,7 @@ void dlgConnectionProfiles::loadCustomProfile(const QString& profileName) const
     setCustomIcon(profileName, pItem);
     auto description = getDescription(profileName, 0, profileName);
     if (!description.isEmpty()) {
-        pItem->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        pItem->setToolTip(mudlet::htmlWrapper(description));
     }
     profiles_tree_widget->addItem(pItem);
 }
@@ -1738,7 +1738,7 @@ bool dlgConnectionProfiles::validateProfile()
 
 #if defined(QT_NO_SSL)
         port_ssl_tsl->setEnabled(false);
-        port_ssl_tsl->setToolTip(tr("Mudlet is not configured for secure connections."));
+        port_ssl_tsl->setToolTip(mudlet::htmlWrapper(tr("Mudlet is not configured for secure connections.")));
         if (port_ssl_tsl->isChecked()) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(QStringLiteral("%1\n%2\n\n").arg(notificationAreaMessageBox->text(), tr("Mudlet is not configured for secure connections.")));
@@ -1799,7 +1799,7 @@ bool dlgConnectionProfiles::validateProfile()
 
             if (offline_button) {
                 offline_button->setEnabled(true);
-                offline_button->setToolTip(tr("<p>Load profile without connecting.</p>"));
+                offline_button->setToolTip(mudlet::htmlWrapper(tr("Load profile without connecting.")));
                 offline_button->setAccessibleDescription(btn_load_enabled_accessDesc);
             }
             if (connect_button) {
@@ -1815,12 +1815,12 @@ bool dlgConnectionProfiles::validateProfile()
             }
             if (offline_button) {
                 offline_button->setEnabled(false);
-                offline_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before loading.</p>"));
+                offline_button->setToolTip(mudlet::htmlWrapper(tr("Please set a valid profile name, game server address and the game port before loading.")));
                 offline_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
             }
             if (connect_button) {
                 connect_button->setEnabled(false);
-                connect_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before connecting.</p>"));
+                connect_button->setToolTip(mudlet::htmlWrapper(tr("Please set a valid profile name, game server address and the game port before connecting.")));
                 connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
             }
             return false;
@@ -1873,11 +1873,11 @@ void dlgConnectionProfiles::slot_togglePasswordVisibility(const bool showPasswor
         // different QPixmaps for the QIcon for different states - so let's do it
         // directly:
         mpAction_revealPassword->setIcon(QIcon::fromTheme(QStringLiteral("password-show-on"), QIcon(QStringLiteral(":/icons/password-show-on.png"))));
-        mpAction_revealPassword->setToolTip(tr("<p>Click to hide the password; it will also hide if another profile is selected.</p>"));
+        mpAction_revealPassword->setToolTip(mudlet::htmlWrapper(tr("Click to hide the password; it will also hide if another profile is selected.")));
     } else {
         character_password_entry->setEchoMode(QLineEdit::Password);
         mpAction_revealPassword->setIcon(QIcon::fromTheme(QStringLiteral("password-show-off"), QIcon(QStringLiteral(":/icons/password-show-off.png"))));
-        mpAction_revealPassword->setToolTip(tr("<p>Click to reveal the password for this profile.</p>"));
+        mpAction_revealPassword->setToolTip(mudlet::htmlWrapper(tr("Click to reveal the password for this profile.")));
     }
 }
 
@@ -1936,7 +1936,7 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
         setCustomIcon(mudServer, pItem);
     }
     if (!serverDescription.isEmpty()) {
-        pItem->setToolTip(QStringLiteral("<p>%1</p>").arg(serverDescription));
+        pItem->setToolTip(mudlet::htmlWrapper(serverDescription));
     }
 }
 
