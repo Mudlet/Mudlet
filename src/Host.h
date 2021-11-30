@@ -384,6 +384,7 @@ public:
     void setToolbarLayoutUpdated(TToolBar*);
     bool commitLayoutUpdates(bool flush = false);
     void setScreenDimensions(const int width, const int height) { mScreenWidth = width; mScreenHeight = height; }
+    std::optional<QString> windowType(const QString& name) const;
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -624,6 +625,8 @@ public:
 
     // string list: 0 - event name, 1 - display label, 2 - tooltip text
     QMap<QString, QStringList> mConsoleActions;
+
+    QMap<QString, QKeySequence*> profileShortcuts;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous

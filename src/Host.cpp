@@ -477,6 +477,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     // enable by default in case of offline connection; if the profile connects - timer will be disabled
     purgeTimer.start(1min);
+
+    auto i = mudlet::self()->mShortcutsManager->iterator();
+    while (i.hasNext()) {
+        auto entry = i.next();
+        profileShortcuts.insert(entry, new QKeySequence(*mudlet::self()->mShortcutsManager->getSequence(entry)));
+    }
 }
 
 Host::~Host()
@@ -3801,4 +3807,44 @@ void Host::setupIreDriverBugfix()
     if (ireGameUrls.contains(getUrl(), Qt::CaseInsensitive)) {
         set_USE_IRE_DRIVER_BUGFIX(true);
     }
+}
+
+std::optional<QString> Host::windowType(const QString& name) const
+{
+    if (mpConsole->mLabelMap.contains(name)) {
+        return {QStringLiteral("label")};
+    }
+
+    if (name == QLatin1String("main")) {
+        return {QLatin1String("main")};
+    }
+
+    auto pWindow = mpConsole->mSubConsoleMap.value(name);
+    if (pWindow) {
+        switch (pWindow->getType()) {
+        case TConsole::UserWindow:
+            return {QStringLiteral("userwindow")};
+        case TConsole::Buffer:
+            return {QStringLiteral("buffer")};
+        case TConsole::SubConsole:
+            return {QStringLiteral("miniconsole")};
+        case TConsole::UnknownType:
+            [[fallthrough]];
+        case TConsole::CentralDebugConsole:
+            [[fallthrough]];
+        case TConsole::ErrorConsole:
+            [[fallthrough]];
+        case TConsole::MainConsole:
+            [[fallthrough]];
+        default:
+            Q_UNREACHABLE();
+            return {};
+        }
+    }
+
+    if (mpConsole->mSubCommandLineMap.contains(name)) {
+        return {QStringLiteral("commandline")};
+    }
+
+    return {};
 }
