@@ -22,8 +22,6 @@
 
 #include "VarUnit.h"
 
-
-#include "Host.h"
 #include "TVar.h"
 
 #include "pre_guard.h"
@@ -87,8 +85,9 @@ void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
             auto pItem = new QTreeWidgetItem(s1);
             pItem->setText(0, child->getName());
             pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
-            // TODO: find a way to #include "mudlet.h" so mudlet::htmlWrapper(tr(...)) can be used here without breaking CMake CI - https://github.com/Mudlet/Mudlet/issues/????
-            pItem->setToolTip(0, QStringLiteral("<p>Checked variables will be saved and loaded with your profile.</p>"));
+            // This is one place we cannot use mudlet::htmlWrapper(...) as an
+            // #include of "mudlet.h" completely messess up CMake builds...
+            pItem->setToolTip(0, QStringLiteral("<p>%1</p>").arg(tr("Checked variables will be saved and loaded with your profile.")));
             pItem->setCheckState(0, Qt::Unchecked);
             if (isSaved(child)) {
                 pItem->setCheckState(0, Qt::Checked);
