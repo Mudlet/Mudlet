@@ -477,6 +477,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     // enable by default in case of offline connection; if the profile connects - timer will be disabled
     purgeTimer.start(1min);
+
+    auto i = mudlet::self()->mShortcutsManager->iterator();
+    while (i.hasNext()) {
+        auto entry = i.next();
+        profileShortcuts.insert(entry, new QKeySequence(*mudlet::self()->mShortcutsManager->getSequence(entry)));
+    }
 }
 
 Host::~Host()
@@ -533,7 +539,7 @@ void Host::waitForAsyncXmlSave()
     }
 }
 
-void Host::saveModules(int sync, bool backup)
+void Host::saveModules(bool backup)
 {
     QMapIterator<QString, QStringList> it(modulesToWrite);
     mModulesToSync.clear();
@@ -557,10 +563,6 @@ void Host::saveModules(int sync, bool backup)
         }
     }
     modulesToWrite.clear();
-    // reload, or queue module reload for when xml is ready
-    if (sync) {
-        reloadModules();
-    }
 }
 
 void Host::reloadModules()
@@ -639,8 +641,8 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
     //Wait till profile is finished saving
     if (syncingFromHost.isEmpty() && currentlySavingProfile()) {
         //create a dummy object to singleshot connect (disconnect/delete after execution)
-        QObject *obj = new QObject(this);
-        connect(this, &Host::profileSaveFinished, obj, [=](){
+        QObject* obj = new QObject(this);
+        connect(this, &Host::profileSaveFinished, obj, [=]() {
             reloadModule(syncModuleName);
             obj->deleteLater();
         });
@@ -666,7 +668,7 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
                 fileName = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
                 auto writer = new XMLexport(this);
                 writers.insert(fileName, writer);
-                writer->writeModuleXML(moduleName, fileName);
+                writer->writeModuleXML(moduleName, fileName, true);
             } else {
                 uninstallPackage(moduleName, 2);
                 installPackage(fileName, 2);
@@ -814,9 +816,15 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     mModuleFuture = QtConcurrent::run([=]() {
         //wait for the host xml to be ready before starting to sync modules
         waitForAsyncXmlSave();
-        saveModules(syncModules ? 1 : 0, saveName != QStringLiteral("autosave"));
+        saveModules(saveName != QStringLiteral("autosave"));
     });
-    QObject::connect(watcher, &QFutureWatcher<void>::finished, this, [=]() { mWritingHostAndModules = false; });
+    QObject::connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
+        // reload, or queue module reload for when xml is ready
+        if (syncModules) {
+            reloadModules();
+        }
+        mWritingHostAndModules = false;
+    });
     watcher->setFuture(mModuleFuture);
     return std::make_tuple(true, filename_xml, QString());
 }
@@ -3799,4 +3807,44 @@ void Host::setupIreDriverBugfix()
     if (ireGameUrls.contains(getUrl(), Qt::CaseInsensitive)) {
         set_USE_IRE_DRIVER_BUGFIX(true);
     }
+}
+
+std::optional<QString> Host::windowType(const QString& name) const
+{
+    if (mpConsole->mLabelMap.contains(name)) {
+        return {QStringLiteral("label")};
+    }
+
+    if (name == QLatin1String("main")) {
+        return {QLatin1String("main")};
+    }
+
+    auto pWindow = mpConsole->mSubConsoleMap.value(name);
+    if (pWindow) {
+        switch (pWindow->getType()) {
+        case TConsole::UserWindow:
+            return {QStringLiteral("userwindow")};
+        case TConsole::Buffer:
+            return {QStringLiteral("buffer")};
+        case TConsole::SubConsole:
+            return {QStringLiteral("miniconsole")};
+        case TConsole::UnknownType:
+            [[fallthrough]];
+        case TConsole::CentralDebugConsole:
+            [[fallthrough]];
+        case TConsole::ErrorConsole:
+            [[fallthrough]];
+        case TConsole::MainConsole:
+            [[fallthrough]];
+        default:
+            Q_UNREACHABLE();
+            return {};
+        }
+    }
+
+    if (mpConsole->mSubCommandLineMap.contains(name)) {
+        return {QStringLiteral("commandline")};
+    }
+
+    return {};
 }

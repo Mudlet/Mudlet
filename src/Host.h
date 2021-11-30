@@ -384,6 +384,7 @@ public:
     void setToolbarLayoutUpdated(TToolBar*);
     bool commitLayoutUpdates(bool flush = false);
     void setScreenDimensions(const int width, const int height) { mScreenWidth = width; mScreenHeight = height; }
+    std::optional<QString> windowType(const QString& name) const;
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -625,6 +626,8 @@ public:
     // string list: 0 - event name, 1 - display label, 2 - tooltip text
     QMap<QString, QStringList> mConsoleActions;
 
+    QMap<QString, QKeySequence*> profileShortcuts;
+
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
@@ -653,7 +656,7 @@ private:
     static void createModuleBackup(const QString &filename, const QString& saveName);
     void writeModule(const QString &moduleName, const QString &filename);
     void waitForAsyncXmlSave();
-    void saveModules(int sync, bool backup = true);
+    void saveModules(bool backup = true);
     void updateModuleZips(const QString &zipName, const QString &moduleName);
     void reloadModules();
 

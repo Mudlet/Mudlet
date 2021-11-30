@@ -8311,6 +8311,23 @@ int TLuaInterpreter::deleteMapLabel(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#windowType
+int TLuaInterpreter::windowType(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    QString windowName = getVerifiedString(L, __func__, 1, "window name");
+
+    if (auto kind = host.windowType(windowName)) {
+        lua_pushstring(L, kind->toUtf8().constData());
+        return 1;
+    }
+
+    lua_pushnil(L);
+    lua_pushfstring(L, "'%s' is not a known label, any type of console, nor command line", windowName.toUtf8().constData());
+    return 2;
+}
+
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapLabels
 int TLuaInterpreter::getMapLabels(lua_State* L)
 {
@@ -11191,7 +11208,7 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
     }
 
     std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
-    for (const QString dropThis : dontSpeak) {
+    for (const QString& dropThis : dontSpeak) {
         if (textToSay.contains(dropThis)) {
             textToSay.replace(dropThis, QString());
             if (mudlet::debugMode) {
@@ -11468,7 +11485,7 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
     }
 
     std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
-    for (const QString dropThis : dontSpeak) {
+    for (const QString& dropThis : dontSpeak) {
         if (inputText.contains(dropThis)) {
             inputText.replace(dropThis, QString());
             if (mudlet::debugMode) {
@@ -14167,6 +14184,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addCommandLineMenuEvent", TLuaInterpreter::addCommandLineMenuEvent);
     lua_register(pGlobalLua, "removeCommandLineMenuEvent", TLuaInterpreter::removeCommandLineMenuEvent);
     lua_register(pGlobalLua, "deleteMap", TLuaInterpreter::deleteMap);
+    lua_register(pGlobalLua, "windowType", TLuaInterpreter::windowType);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;

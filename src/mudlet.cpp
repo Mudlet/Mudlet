@@ -657,6 +657,24 @@ mudlet::mudlet()
     reconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_R);
 #endif
     connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_update_shortcuts);
+    connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assign_shortcuts_from_profile);
+    connect(this, &mudlet::signal_profileActivated, this, &mudlet::slot_assign_shortcuts_from_profile);
+    connect(this, &mudlet::signal_tabChanged, this, [=]() {
+        slot_assign_shortcuts_from_profile(getActiveHost());
+    });
+
+    mShortcutsManager = new ShortcutsManager();
+    mShortcutsManager->registerShortcut(tr("Script editor"), &triggersKeySequence);
+    mShortcutsManager->registerShortcut(tr("Show Map"), &showMapKeySequence);
+    mShortcutsManager->registerShortcut(tr("Compact input line"), &inputLineKeySequence);
+    mShortcutsManager->registerShortcut(tr("Preferences"), &optionsKeySequence);
+    mShortcutsManager->registerShortcut(tr("Notepad"), &notepadKeySequence);
+    mShortcutsManager->registerShortcut(tr("Package manager"), &packagesKeySequence);
+    mShortcutsManager->registerShortcut(tr("Module manager"), &modulesKeySequence);
+    mShortcutsManager->registerShortcut(tr("MultiView"), &multiViewKeySequence);
+    mShortcutsManager->registerShortcut(tr("Play"), &connectKeySequence);
+    mShortcutsManager->registerShortcut(tr("Disconnect"), &disconnectKeySequence);
+    mShortcutsManager->registerShortcut(tr("Reconnect"), &reconnectKeySequence);
 
     mpSettings = getQSettings();
     readLateSettings(*mpSettings);
@@ -2227,6 +2245,9 @@ void mudlet::show_options_dialog(const QString& tab)
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_data_protocol, &QWidget::hide);
         connect(mpActionReconnect.data(), &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
+        connect(pPrefs, &dlgProfilePreferences::signal_preferencesSaved, this, [=]() {
+            slot_assign_shortcuts_from_profile(getActiveHost());
+        });
         pPrefs->setAttribute(Qt::WA_DeleteOnClose);
     }
 
@@ -2236,6 +2257,18 @@ void mudlet::show_options_dialog(const QString& tab)
     pPrefs->setTab(tab);
     pPrefs->raise();
     pPrefs->show();
+}
+
+void mudlet::slot_assign_shortcuts_from_profile(Host* pHost)
+{
+    if (pHost) {
+        auto iterator = mShortcutsManager->iterator();
+        while (iterator.hasNext()) {
+            auto key = iterator.next();
+            mShortcutsManager->setShortcut(key, pHost->profileShortcuts.value(key));
+        }
+    }
+    slot_update_shortcuts();
 }
 
 void mudlet::slot_update_shortcuts()
@@ -4486,6 +4519,7 @@ void mudlet::activateProfile(Host* pHost)
         updateDiscordNamedIcon();
         dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
         pHost->updateDisplayDimensions();
+        emit signal_profileActivated(pHost, tabToBeActive);
     }
 }
 
