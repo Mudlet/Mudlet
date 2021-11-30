@@ -622,6 +622,7 @@ public:
     static int removeCommandLineMenuEvent(lua_State* L);
     static int deleteMap(lua_State*);
     static int windowType(lua_State*);
+    static int getProfileStats(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
 
