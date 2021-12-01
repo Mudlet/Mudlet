@@ -3837,7 +3837,7 @@ void mudlet::slot_password_migrated_to_secure(QKeychain::Job* job)
 bool mudlet::migratePasswordsToProfileStorage()
 {
     if (!mProfilePasswordsToMigrate.isEmpty()) {
-        qWarning() << "mudlet::migratePasswordsToProfileStorage() warning: password migration is already in progress, won't start another.";
+        qWarning() << "mudlet::migratePasswordsToProfileStorage() WARNING - password migration is already in progress, so not starting a duplicate action.";
         return false;
     }
     mStorePasswordsSecurely = false;
@@ -3871,8 +3871,9 @@ void mudlet::slot_password_migrated_to_profile(QKeychain::Job* job)
     if (job->error()) {
         const auto error = job->errorString();
         if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
-            qWarning() << "mudlet::slot_password_migrated_to_profile ERROR: couldn't migrate for" << profileName << "; error was:" << error;
+            qWarning().nospace().noquote() << "mudlet::slot_password_migrated_to_profile(...) ERROR - could not migrate for \"" << profileName << "\"; error was: " << error << ".";
         }
+
     } else {
         auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
         writeProfileData(profileName, QStringLiteral("password"), readJob->textData());
