@@ -338,7 +338,6 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
     job->start();
 }
 
-// Only used by migrateSecuredPassword(...)
 void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
 {
     auto* job = new QKeychain::DeletePasswordJob(QStringLiteral("Mudlet profile"));
@@ -1238,8 +1237,6 @@ void dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidge
 }
 
 // When a profile is renamed, migrate password storage to the new profile.
-// This is only used by slot_save_name(...) and that now only when passwords
-// are stored securely:
 void dlgConnectionProfiles::migrateSecuredPassword(const QString& oldProfile, const QString& newProfile)
 {
     const auto& password = character_password_entry->text().trimmed();
@@ -1263,7 +1260,6 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callba
         if (job->error()) {
             const auto error = job->errorString();
             if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
-                // Report to debug output the problem if it was something other than a couple of 'normal' failure mechanisms:
                 qDebug().nospace().noquote() << "dlgConnectionProfiles::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << profile << "\", error is: " << error << ".";
             }
 

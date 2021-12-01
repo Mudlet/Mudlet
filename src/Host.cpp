@@ -460,7 +460,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
 
     if (mudlet::self()->storingPasswordsSecurely()) {
-        // This will not insert the password into the mPass member immediately:
         loadSecuredPassword();
     } else {
         QString password{readProfileData(QStringLiteral("password"))};
@@ -2713,7 +2712,6 @@ void Host::loadSecuredPassword()
     connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* job) {
         if (job->error()) {
             const auto error = job->errorString();
-            // Report to debug output the problem if it was something other than the password not being found
             if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
                 qDebug().nospace().noquote() << "Host::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << getName() << "\", error is: " << error << ".";
             }
