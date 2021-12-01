@@ -2700,7 +2700,6 @@ void Host::setDisplayFontFixedPitch(bool enable)
     mDisplayFont.setFixedPitch(enable);
 }
 
-// Only used in the constructor - and only when passwords are stored securely
 void Host::loadSecuredPassword()
 {
     auto *job = new QKeychain::ReadPasswordJob(QStringLiteral("Mudlet profile"));

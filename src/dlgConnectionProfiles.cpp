@@ -1236,7 +1236,7 @@ void dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidge
     profile->setIcon(icon);
 }
 
-// When a profile is renamed, migrate password storage to the new profile.
+// When a profile is renamed, migrate password storage to the new profile
 void dlgConnectionProfiles::migrateSecuredPassword(const QString& oldProfile, const QString& newProfile)
 {
     const auto& password = character_password_entry->text().trimmed();
