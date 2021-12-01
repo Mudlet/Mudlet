@@ -72,6 +72,27 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end
     end)
 
+    it("Should handle italics", function()
+      local sample = "\27[3mitalics\27[23m"
+      local expected = "<i>italics</i>"
+      local actual = ansi2decho(sample)
+      assert.equals(expected, actual)
+    end)
+
+    it("Should handle underline", function()
+      local sample = "\27[4munderline\27[24m"
+      local expected = "<u>underline</u>"
+      local actual = ansi2decho(sample)
+      assert.equals(expected, actual)
+    end)
+
+    it("Should handle strikethrough", function()
+      local sample = "\27[9mstrikethrough\27[29m"
+      local expected = "<s>strikethrough</s>"
+      local actual = ansi2decho(sample)
+      assert.equals(expected, actual)
+    end)
+
     it("Should leave normal text and other escape sequences alone", function()
       local sequences = {
         {"Hello World", "Hello World"},
