@@ -1485,12 +1485,20 @@ if rex then
         local colorNumber = ctable[fore]
         if colorNumber then
           result = string.format("%s\27[38:5:%sm", result, colorNumber)
+        elseif color_table[fore] then
+          local rgb = color_table[fore]
+          result = string.format("%s\27[38:2::%s:%s:%sm", result, rgb[1], rgb[2], rgb[3])
         end
       end
     end
     if back then
       local colorNumber = ctable[back]
-      result = string.format("%s\27[48:5:%sm", result, colorNumber)
+      if colorNumber then
+        result = string.format("%s\27[48:5:%sm", result, colorNumber)
+      elseif color_table[back] then
+        local rgb = color_table[back]
+        result = string.format("%s\27[48:2::%s:%s:%sm", result, rgb[1], rgb[2], rgb[3])
+      end
     end
     return result
   end
@@ -1537,6 +1545,18 @@ if rex then
     return result
   end
 
+  function cecho2ansi(text)
+    local colorPattern = _Echos.Patterns.Color[1]
+    local result = ""
+    for str, color in rex.split(text, colorPattern) do
+      result = result .. str
+      if color then
+        result = result .. colorToAnsi(color:match("<(.+)>"))
+      end
+    end
+    return result
+  end
+
   --- feedTriggers with cecho style color information.
   -- Valid colors are  black,red,green,yellow,blue,magenta,cyan,white and light_* versions of same
   -- Can also pass in a number between 0 and 255 to use the expanded ansi 255 colors. IE <124> will set foreground to the color ANSI124
@@ -1546,15 +1566,7 @@ if rex then
   --@see cecho
   --@see cinsertText
   function cfeedTriggers(text)
-    local colorPattern = _Echos.Patterns.Color[1]
-    local result = ""
-    for str, color in rex.split(text, colorPattern) do
-      result = result .. str
-      if color then
-        result = result .. colorToAnsi(color:match("<(.+)>"))
-      end
-    end
-    feedTriggers(result .. "\n")
+    feedTriggers(cecho2ansi(text) .. "\n")
     echo("")
   end
 
