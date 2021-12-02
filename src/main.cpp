@@ -487,7 +487,7 @@ int main(int argc, char* argv[])
         QFile::link(homeDirectory, homeLink);
     }
 #endif
-    app->setStyle(new AltFocusMenuBarDisable);
+
     mudlet::start();
 
     if (first_launch) {
