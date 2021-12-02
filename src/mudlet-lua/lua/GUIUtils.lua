@@ -981,11 +981,11 @@ if rex then
   _Echos = {
     Patterns = {
       Hex = {
-        [[(\x5c?(?:#|\|c)?(?:[0-9a-fA-F]{6}|(?:#,|\|c,)[0-9a-fA-F]{6,8})(?:,[0-9a-fA-F]{6,8})?)|(?:\||#)(\/?[birus])]],
+        [[(\x5c?(?:#|\|c)?(?:[0-9a-fA-F]{6}|(?:#,|\|c,)[0-9a-fA-F]{6,8})(?:,[0-9a-fA-F]{6,8})?)|(?:\||#)(\/?[biruso])]],
         rex.new [[(?:#|\|c)(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?)?]],
       },
       Decimal = {
-        [[(<[0-9,:]+>)|<(/?[birus])>]],
+        [[(<[0-9,:]+>)|<(/?[biruso])>]],
         rex.new [[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}),?([0-9]{1,3})?)?>]],
       },
       Color = {
@@ -1033,6 +1033,10 @@ if rex then
           t[#t + 1] = "\27strikethrough"
         elseif r == "/s" then
           t[#t + 1] = "\27strikethroughoff"
+        elseif r == "o" then
+          t[#t + 1] = "\27overline"
+        elseif r == "/o" then
+          t[#t + 1] = "\27overlineoff"
         end
         if c then
           if style == 'Hex' or style == 'Decimal' then
@@ -1086,6 +1090,10 @@ if rex then
               t[#t + 1] = "\27strikethrough"
             elseif c == "</s>" then
               t[#t + 1] = "\27strikethroughoff"
+            elseif c == "<o>" then
+              t[#t + 1] = "\27overline"
+            elseif c == "</o>" then
+              t[#t + 1] = "\27overlineoff"
             else
               local fcolor, bcolor = _Echos.Patterns[style][2]:match(c)
               local color = {}
@@ -1200,6 +1208,10 @@ if rex then
         setStrikeOut(win, true)
       elseif v == "\27strikethroughoff" then
         setStrikeOut(win, false)
+      elseif v == "\27overline" then
+        setOverline(win, true)
+      elseif v == "\27overlineoff" then
+        setOverline(win, false)
       elseif v == "\27reset" then
         resetFormat(win)
       else

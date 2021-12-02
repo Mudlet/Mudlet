@@ -429,6 +429,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         _Echos.Process('#sStrikethrough#/s', 'Hex'),
         { "", "\27strikethrough", "Strikethrough", "\27strikethroughoff", "" }
       )
+
+      assert.are.same(
+        _Echos.Process('#oOverline#/o', 'Hex'),
+        { "", "\27overline", "Overline", "\27overlineoff", "" }
+      )
     end)
 
     it("Should parse decimal patterns correctly", function()
@@ -461,6 +466,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         _Echos.Process('<s>Strikethrough</s>', 'Decimal'),
         { "", "\27strikethrough", "Strikethrough", "\27strikethroughoff", "" }
       )
+
+      assert.are.same(
+        _Echos.Process('<o>Overline</o>', 'Decimal'),
+        { "", "\27overline", "Overline", "\27overlineoff", "" }
+      )
     end)
 
     it("Should parse color patterns correctly", function()
@@ -492,6 +502,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are.same(
         _Echos.Process('<s>Strikethrough</s>', 'Color'),
         { "", "\27strikethrough", "Strikethrough", "\27strikethroughoff", "" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<o>Overline</o>', 'Color'),
+        { "", "\27overline", "Overline", "\27overlineoff", "" }
       )
     end)
   end)
