@@ -93,6 +93,13 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals(expected, actual)
     end)
 
+    it("Should handle overline", function()
+      local sample = "\27[53moverline\27[55m"
+      local expected = "<o>overline</o>"
+      local actual = ansi2decho(sample)
+      assert.equals(expected, actual)
+    end)
+
     it("Should leave normal text and other escape sequences alone", function()
       local sequences = {
         {"Hello World", "Hello World"},
@@ -183,6 +190,12 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local actual = decho2ansi("<s>strikeout</s>")
       assert.equals(expected, actual)
     end)
+
+    it("should handle overline", function()
+      local expected = "\27[53moverline\27[55m"
+      local actual = decho2ansi("<o>overline</o>")
+      assert.equals(expected, actual)
+    end)
   end)
 
   describe("Tests the functionality of hecho2ansi()", function()
@@ -215,6 +228,12 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     it("should handle strikeout", function()
       local expected = "\27[9mstrikeout\27[29m"
       local actual = hecho2ansi("#sstrikeout#/s")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle overline", function()
+      local expected = "\27[53moverline\27[55m"
+      local actual = hecho2ansi("#ooverline#/o")
       assert.equals(expected, actual)
     end)
   end)
@@ -254,6 +273,12 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     it("should handle strikeout", function()
       local expected = "\27[9mstrikeout\27[29m"
       local actual = cecho2ansi("<s>strikeout</s>")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle overline", function()
+      local expected = "\27[53moverline\27[55m"
+      local actual = cecho2ansi("<o>overline</o>")
       assert.equals(expected, actual)
     end)
   end)

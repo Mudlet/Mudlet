@@ -1471,16 +1471,18 @@ if rex then
 
   -- local lookup table to find ansi escapes for to ansi conversions
   local resets = {
-    r = "\27[0m",
-    reset = "\27[0m",
-    i = "\27[3m",
-    ["/i"] = "\27[23m",
-    b = "\27[1m",
-    ["/b"] = "\27[22m",
-    u = "\27[4m",
-    ["/u"] = "\27[24m",
-    s = "\27[9m",
-    ["/s"] = "\27[29m"
+    ["r"]     = "\27[0m",
+    ["reset"] = "\27[0m",
+    ["i"]     = "\27[3m",
+    ["/i"]    = "\27[23m",
+    ["b"]     = "\27[1m",
+    ["/b"]    = "\27[22m",
+    ["u"]     = "\27[4m",
+    ["/u"]    = "\27[24m",
+    ["s"]     = "\27[9m",
+    ["/s"]    = "\27[29m",
+    ["o"]     = "\27[53m",
+    ["/o"]    = "\27[55m"
   }
 
   -- take a color name and turn it into an ANSI escape string
@@ -1827,7 +1829,7 @@ function ansi2decho(text, ansi_default_color)
 
     while i <= #t do
       local code = t[i]
-      local isColorCode = false
+      local formatCodeHandled = false
 
       if code == '0' or code == '00' then
         -- reset attributes
@@ -1842,31 +1844,38 @@ function ansi2decho(text, ansi_default_color)
         -- not light or bold
         coloursToUse = colours
       elseif code == "3" then
-        -- italics, but we set isColorCode to true to avoid repeating the fg color below
-        isColorCode = true
+        formatCodeHandled = true
         output[#output+1] = "<i>"
       elseif code == "23" then
         -- turn off italics
-        isColorCode = true
+        formatCodeHandled = true
         output[#output+1] = "</i>"
       elseif code == "4" then
         -- underline
-        isColorCode = true
+        formatCodeHandled = true
         output[#output+1] = "<u>"
       elseif code == "24" then
         -- turn off underline
-        isColorCode = true
+        formatCodeHandled = true
         output[#output+1] = "</u>"
       elseif code == "9" then
         -- strikethrough
-        isColorCode = true
+        formatCodeHandled = true
         output[#output+1] = "<s>"
       elseif code == "29" then
         -- turn off strikethrough
-        isColorCode = true
+        formatCodeHandled = true
         output[#output+1] = "</s>"
+      elseif code == "53" then
+        -- turn on overline
+        formatCodeHandled = true
+        output[#output+1] = "<o>"
+      elseif code == "55" then
+        -- turn off overline
+        formatCodeHandled = true
+        output[#output+1] = "</o>"
       else
-        isColorCode = true
+        formatCodeHandled = true
         local layerCode = floor(code / 10)  -- extract the "layer": 3 is fore
         --                      4 is back
         local cmd = code - (layerCode * 10) -- extract the actual "command"
@@ -1905,11 +1914,11 @@ function ansi2decho(text, ansi_default_color)
         end
       end
 
-      -- If isColorCode is false it means that we've encountered a SGBR
+      -- If formatCodeHandled is false it means that we've encountered a SGBR
       -- code such as 'bold' or 'dim'.
       -- In those cases, if there's a previous color, we are supposed to
       -- modify it
-      if not isColorCode and lastColour then
+      if not formatCodeHandled and lastColour then
         fg = coloursToUse[lastColour]
       end
 
