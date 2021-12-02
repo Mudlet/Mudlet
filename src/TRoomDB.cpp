@@ -34,6 +34,8 @@ const QString ROOM_UI_SHOWNAME = QStringLiteral("room.ui_showName");
 const QString ROOM_UI_NAMEPOS = QStringLiteral("room.ui_nameOffset");
 const QString ROOM_UI_NAMEFONT = QStringLiteral("room.ui_nameFont");
 const QString ROOM_UI_NAMESIZE = QStringLiteral("room.ui_nameSize");
+const QString ROOM_UI_DONTSHOWAREAEXITNAME = QStringLiteral("room.ui_dontShowAreaExitName");
+const QString ROOM_UI_AREAEXITNAMEOFFSET = QStringLiteral("room.ui_areaExitNameOffset");
 
 TRoomDB::TRoomDB(TMap* pMap)
 : mpMap(pMap)
