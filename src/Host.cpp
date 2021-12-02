@@ -459,7 +459,15 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         mDiscordDisableServerSide = optin.toInt() == Qt::Unchecked ? true : false;
     }
 
-    loadSecuredPassword();
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        loadSecuredPassword();
+    } else {
+        QString password{readProfileData(QStringLiteral("password"))};
+        if (!password.isEmpty()) {
+            setPass(password);
+            password.clear();
+        }
+    }
 
     if (mudlet::scmIsPublicTestVersion) {
         thankForUsingPTB();
@@ -2710,8 +2718,9 @@ void Host::loadSecuredPassword()
         if (job->error()) {
             const auto error = job->errorString();
             if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
-                qDebug() << "Host::loadSecuredPassword ERROR: couldn't retrieve secure password for" << getName() << ", error is:" << error;
+                qDebug().nospace().noquote() << "Host::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << getName() << "\", error is: " << error << ".";
             }
+
         } else {
             auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
             setPass(readJob->textData());
