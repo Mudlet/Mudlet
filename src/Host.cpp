@@ -3612,7 +3612,7 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
     return false;
 }
 
-QColor Host::getBackgroundColor(const QString& name)
+QColor Host::getBackgroundColor(const QString& name) const
 {
     if (!mpConsole) {
         return QColor();
@@ -3622,7 +3622,9 @@ QColor Host::getBackgroundColor(const QString& name)
     auto pL = mpConsole->mLabelMap.value(name);
     if (pC) {
         return pC->mBgColor;
-    } else if (pL) {
+    }
+
+    if (pL) {
         return pL->palette().color(QPalette::Window);
     }
 
