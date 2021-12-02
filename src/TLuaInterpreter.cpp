@@ -3895,6 +3895,32 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     return 1;
 }
 
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getBackgroundColor
+int TLuaInterpreter::getBackgroundColor(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    QColor color;
+
+    QString windowName = QStringLiteral("main");
+    int n = lua_gettop(L);
+    if (n > 0) {
+        windowName = getVerifiedString(L, __func__, 1, "console name");
+    }
+
+    if (isMain(windowName)) {
+        color = host.mpConsole->getConsoleBgColor();
+    } else {
+        color = host.getBackgroundColor(windowName);
+    }
+
+    lua_pushnumber(L, color.red());
+    lua_pushnumber(L, color.green());
+    lua_pushnumber(L, color.blue());
+    lua_pushnumber(L, color.alpha());
+    return 4;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#calcFontSize
 int TLuaInterpreter::calcFontSize(lua_State* L)
 {
@@ -14186,6 +14212,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "deleteMap", TLuaInterpreter::deleteMap);
     lua_register(pGlobalLua, "windowType", TLuaInterpreter::windowType);
     lua_register(pGlobalLua, "getProfileStats", TLuaInterpreter::getProfileStats);
+    lua_register(pGlobalLua, "getBackgroundColor", TLuaInterpreter::getBackgroundColor);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -16183,3 +16210,4 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 
     return 1;
 }
+
