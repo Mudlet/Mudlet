@@ -8839,7 +8839,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="674"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>Instellingen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="676"/>
@@ -8854,7 +8854,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="679"/>
       <source>Play</source>
-      <translation type="unfinished"/>
+      <translation>Speel</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="826"/>
