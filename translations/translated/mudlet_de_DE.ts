@@ -9091,7 +9091,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/mudlet.cpp" line="672"/>
       <source>Show Map</source>
-      <translation type="unfinished"/>
+      <translation>Karte zeigen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="673"/>
@@ -11222,17 +11222,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3345"/>
       <source>Shortcuts</source>
-      <translation type="unfinished"/>
+      <translation>Tastaturkürzel</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3360"/>
       <source>Main window shortcuts</source>
-      <translation type="unfinished"/>
+      <translation>Tastaturkürzel für das Hauptfenster</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3372"/>
       <source>To disable shortcut input &apos;Esc&apos; key.</source>
-      <translation type="unfinished"/>
+      <translation>&apos;Esc&apos; eingeben, um das Tastaturkürzel zu deaktivieren.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3389"/>
