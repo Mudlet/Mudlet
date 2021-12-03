@@ -36,7 +36,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 if(APPLE)
-  # needed for fetching Spark
+  # needed for fetching Sparkle
   cmake_minimum_required(VERSION 3.18)
   # minimum supported version by Apple
   set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "")
