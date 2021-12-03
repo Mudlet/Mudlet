@@ -8969,7 +8969,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="671"/>
       <source>Script editor</source>
-      <translation type="unfinished"/>
+      <translation>脚本编辑器</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="672"/>
@@ -8979,27 +8979,27 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="673"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>簡潔的指令列</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="674"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>首选项</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="676"/>
       <source>Package manager</source>
-      <translation type="unfinished"/>
+      <translation>包管理器</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="677"/>
       <source>Module manager</source>
-      <translation type="unfinished"/>
+      <translation>模块管理器</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="679"/>
       <source>Play</source>
-      <translation type="unfinished"/>
+      <translation>开始</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="826"/>
