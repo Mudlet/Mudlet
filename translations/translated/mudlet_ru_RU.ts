@@ -9120,37 +9120,37 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="671"/>
       <source>Script editor</source>
-      <translation type="unfinished"/>
+      <translation>Редактор скриптов</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="672"/>
       <source>Show Map</source>
-      <translation type="unfinished"/>
+      <translation>Показать карту</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="673"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>Компактная строка ввода</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="674"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>Настройки</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="676"/>
       <source>Package manager</source>
-      <translation type="unfinished"/>
+      <translation>Менеджер пакетов</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="677"/>
       <source>Module manager</source>
-      <translation type="unfinished"/>
+      <translation>Менеджер модулей</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="679"/>
       <source>Play</source>
-      <translation type="unfinished"/>
+      <translation>Играть</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="826"/>
@@ -11263,22 +11263,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3345"/>
       <source>Shortcuts</source>
-      <translation type="unfinished"/>
+      <translation>Ярлыки</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3360"/>
       <source>Main window shortcuts</source>
-      <translation type="unfinished"/>
+      <translation>Ярлыки главного окна</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3372"/>
       <source>To disable shortcut input &apos;Esc&apos; key.</source>
-      <translation type="unfinished"/>
+      <translation>Чтобы отключить ввод сочетаний клавиш &apos;Esc&apos;.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3389"/>
       <source>Reset to defaults</source>
-      <translation type="unfinished"/>
+      <translation>Настройки по умолчанию</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3645"/>
