@@ -51,36 +51,36 @@
   <context>
     <name>Host</name>
     <message>
-      <location filename="../src/Host.cpp" line="470"/>
+      <location filename="../src/Host.cpp" line="478"/>
       <source>Text to send to the game</source>
       <translation>Text, der zum Spiel gesendet werden soll</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="614"/>
+      <location filename="../src/Host.cpp" line="628"/>
       <source>Failed to open xml file &quot;%1&quot; inside module %2 to update it. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when the xml file inside the module zip cannot be updated for some reason.</comment>
       <translation>Fehler beim Öffnen der XML-Datei &quot;%1&quot; zur Aktualisierung innerhalb des Moduls %2. Fehlernachricht: &quot;%3&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="626"/>
+      <location filename="../src/Host.cpp" line="640"/>
       <source>Failed to save &quot;%1&quot; to module &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when a module is saved as package but cannot be done for some reason.</comment>
       <translation>Fehler beim Speichern von &quot;%1&quot; in Modul &quot;%2&quot;. Fehlernachricht: &quot;%3&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="917"/>
+      <location filename="../src/Host.cpp" line="931"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
       <translation>[  OK  ]  - %1 Vielen Dank für die Nutzung der öffentlichen Testversion!</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="918"/>
+      <location filename="../src/Host.cpp" line="932"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
       <translation>[  OK  ]  - %1 Hilf uns, Mudlet zu verbessern, indem Du Probleme meldest.</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1718"/>
+      <location filename="../src/Host.cpp" line="1732"/>
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
@@ -89,7 +89,7 @@ please wait...</source>
 Bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1720"/>
+      <location filename="../src/Host.cpp" line="1734"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
@@ -98,35 +98,35 @@ please wait...</source>
 Bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1724"/>
+      <location filename="../src/Host.cpp" line="1738"/>
       <source>Unpacking</source>
       <translation>Entpacke</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2367"/>
+      <location filename="../src/Host.cpp" line="2381"/>
       <source>Playing %1</source>
       <translation>Spielt %1</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2369"/>
-      <location filename="../src/Host.cpp" line="2375"/>
+      <location filename="../src/Host.cpp" line="2383"/>
+      <location filename="../src/Host.cpp" line="2389"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
       <translation>%1 bei %2:%3</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2761"/>
-      <location filename="../src/Host.cpp" line="3693"/>
+      <location filename="../src/Host.cpp" line="2776"/>
+      <location filename="../src/Host.cpp" line="3708"/>
       <source>Map - %1</source>
       <translation>Karte - %1</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="3709"/>
+      <location filename="../src/Host.cpp" line="3724"/>
       <source>Pre-Map loading(3) report</source>
       <translation>Bericht bevor die Karte geladen wird(3)</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="3719"/>
+      <location filename="../src/Host.cpp" line="3734"/>
       <source>Loading map(3) at %1 report</source>
       <translation>Bericht der geladenen Karte(3) bei %1</translation>
     </message>
@@ -1405,89 +1405,89 @@ Ganzzahl eingeben:</translation>
   <context>
     <name>TLuaInterpreter</name>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="10279"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="10296"/>
       <source>Playing %1</source>
       <translation>Spielt %1</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="12738"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="12759"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12755"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12776"/>
       <source>ERROR</source>
       <translation>FEHLER</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="12739"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="12750"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12756"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12767"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
       <translation>Objekt</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="12739"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="12750"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12756"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12767"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
       <translation>Funktion</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14240"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14259"/>
       <source>Some functions may not be available.</source>
       <translation>Einige Funktionen sind möglicherweise nicht verfügbar.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13647"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13664"/>
       <source>No error message available from Lua</source>
       <translation>Keine Fehlermeldung von Lua verfügbar</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13649"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13666"/>
       <source>Lua error: %1</source>
       <translation>Lua-Fehler: %1</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13651"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13668"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
       <translation>[FEHLER] - Konnte Lua-Modul %1 nicht finden.%2%3%4</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13665"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13682"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name (may specify which variant) of the module.</comment>
       <translation>[  OK  ]  - Lua-Modul %1 geladen.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14227"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14246"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
       <translation>Wahrscheinlich wird es nicht möglich sein, auf Mudlet Lua-Code zuzugreifen.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14245"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14264"/>
       <source>Database support will not be available.</source>
       <translation>Datenbankunterstützung wird nicht verfügbar sein.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14252"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14271"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
       <translation>utf8.* Lua Funktionen werden nicht verfügbar sein.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14258"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14277"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
       <translation>yajl.* Lua Funktionen werden nicht verfügbar sein.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14443"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14462"/>
       <source>No error message available from Lua.</source>
       <translation>Keine Fehlermeldung von Lua verfügbar.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14445"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14464"/>
       <source>Lua error: %1.</source>
       <translation>Lua-Fehler: %1.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14447"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14466"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
       <translation>[FEHLER] - Code-Formatierer kann nicht geladen werden.
@@ -1495,34 +1495,34 @@ Die Einrückungungsfunktion wird nicht verfügbar sein.
 </translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14524"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14543"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
       <translation>%1 (nicht vorhanden)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14529"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14548"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
       <translation>%1 (ist keine Datei oder ein Symlink auf eine Datei)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14538"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14557"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
       <translation>%1 (ist keine lesbare Datei oder ein Symlink auf eine lesbare Datei)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14556"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14575"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
       <translation>%1 (konnte Datei nicht lesen)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14562"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14581"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
       <translation>[  OK  ]  - Mudlet-Lua-API &amp; Geyser Layoutmanager geladen.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14569"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14588"/>
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
@@ -4690,145 +4690,145 @@ Nutzungen</translation>
   <context>
     <name>directions</name>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14293"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14312"/>
       <source>north</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>norden</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14295"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14314"/>
       <source>n</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>n</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14297"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14316"/>
       <source>east</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>osten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14299"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14318"/>
       <source>e</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>o</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14301"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14320"/>
       <source>south</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>süden</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14303"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14322"/>
       <source>s</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>s</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14305"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14324"/>
       <source>west</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>westen</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14307"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14326"/>
       <source>w</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>w</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14309"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14328"/>
       <source>northeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>nordosten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14311"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14330"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>no</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14313"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14332"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>südosten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14315"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14334"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>so</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14317"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14336"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>südwesten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14319"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14338"/>
       <source>sw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>sw</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14321"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14340"/>
       <source>northwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>nordwesten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14323"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14342"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>nw</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14325"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14344"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>rein</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14327"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14346"/>
       <source>i</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>rein</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14329"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14348"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>raus</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14331"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14350"/>
       <source>o</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>raus</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14333"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14352"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>oben</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14335"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14354"/>
       <source>u</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>ob</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14337"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14356"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>unten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14339"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14358"/>
       <source>d</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>u</translation>
@@ -5284,27 +5284,27 @@ Nutzungen</translation>
       <translation>Name des Spiels: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1010"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1017"/>
       <source>This profile is currently loaded - close it before changing the connection parameters.</source>
       <translation>Dieses Profil ist momentan geladen - Beende es, bevor die Verbindungsparameter geändert werden.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1700"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1708"/>
       <source>The %1 character is not permitted. Use one of the following:</source>
       <translation>Das Zeichen %1 ist nicht erlaubt. Verwende eines der Folgenden:</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1723"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1731"/>
       <source>You have to enter a number. Other characters are not permitted.</source>
       <translation>Du musst eine Zahl eingeben. Andere Zeichen sind nicht erlaubt.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1712"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1720"/>
       <source>This profile name is already in use.</source>
       <translation>Dieser Profilname wird bereits verwendet.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="509"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="511"/>
       <source>Could not rename your profile data on the computer.</source>
       <translation>Konnte deine Profil-Daten auf dem Computer nicht umbenennen.</translation>
     </message>
@@ -5381,111 +5381,111 @@ Nutzungen</translation>
       <translation>Schaltfläche, um ein Spiel zum Spielen auszuwählen. Klicke doppelt darauf, um eine Verbindung herzustellen und das Spiel zu beginnen.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="517"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="519"/>
       <source>Could not create the new profile folder on your computer.</source>
       <translation>Konnte den neuen Profil-Ordner auf dem Computer nicht erstellen.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="553"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="555"/>
       <source>new profile name</source>
       <translation>neuer Profilname</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="666"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="668"/>
       <source>Deleting &apos;%1&apos;</source>
       <translation>Lösche &apos;%1&apos;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1057"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1064"/>
       <source>Discord integration not available on this platform</source>
       <translation>Discord Integration ist auf dieser Plattform nicht verfügbar</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1063"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1070"/>
       <source>Discord integration not supported by game</source>
       <translation>Discord Integration wird durch dieses Spiel nicht unterstützt</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1066"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1073"/>
       <source>Check to enable Discord integration</source>
       <translation>Aktiviere die Discord Integration</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1303"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1311"/>
       <source>Reset icon</source>
       <comment>Reset the custom picture for this profile in the connection dialog and show the default one instead</comment>
       <translation>Bild zurücksetzen</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1306"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1314"/>
       <source>Set custom icon</source>
       <comment>Set a custom picture to show for the profile in the connection dialog</comment>
       <translation>Neues Bild wählen</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1310"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1318"/>
       <source>Set custom color</source>
       <comment>Set a custom color to show for the profile in the connection dialog</comment>
       <translation>Neue Farbe wählen</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1323"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1331"/>
       <source>Select custom image for profile (should be 120x30)</source>
       <translation>Wählen ein neues Bild für das Profil (sollte 120x30 sein)</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1323"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1331"/>
       <source>Images (%1)</source>
       <translation>Bilder (%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1733"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1741"/>
       <source>Port number must be above zero and below 65535.</source>
       <translation>Die Portnummer muss größer als null sein und unter 65535.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1753"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1761"/>
       <source>Mudlet can not load support for secure connections.</source>
       <translation>Mudlet kann keine Unterstützung für sichere Verbindungen laden.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1775"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1783"/>
       <source>Please enter the URL or IP address of the Game server.</source>
       <translation>Bitte gib die URL oder IP-Adresse des Spielservers ein.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1785"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1793"/>
       <source>SSL connections require the URL of the Game server.</source>
       <translation>SSL-Verbindungen erfordern die URL des Spielservers.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1802"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1810"/>
       <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Profil laden ohne zu verbinden.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1818"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1826"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Bitte stelle vor dem Laden einen gültigen Profilnamen ein, sowie Adresse und Port des Spielservers.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1823"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1831"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Bitte stelle vor dem Verbinden einen gültigen Profilnamen ein, sowie Adresse und Port des Spielservers.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1876"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1884"/>
       <source>&lt;p&gt;Click to hide the password; it will also hide if another profile is selected.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Klicke hier, um das Kennwort auszublenden. Es wird auch ausgeblendet, wenn ein anderes Profil ausgewählt wird.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1880"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1888"/>
       <source>&lt;p&gt;Click to reveal the password for this profile.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Klicke hier, um das Kennwort für dieses Profil einzublenden.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1741"/>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1744"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1749"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1752"/>
       <source>Mudlet is not configured for secure connections.</source>
       <translation>Mudlet ist nicht für sichere Verbindungen konfiguriert.</translation>
     </message>
@@ -5984,189 +5984,189 @@ Nutzungen</translation>
   <context>
     <name>dlgProfilePreferences</name>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="143"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="144"/>
       <source>&lt;p&gt;Location which will be used to store log files - matching logs will be appended to.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Standort, der zum Speichern von Log-Dateien verwendet wird - übereinstimmende Logs werden angehängt.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="151"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="152"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2}).</comment>
       <translation>Protokolldatei</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="197"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="198"/>
       <source>&lt;p&gt;This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specified font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Hiermit werden alle Symbole angezeigt, die in der aktuellen Karte genutzt werden, und ob sie nur mit der angegebenen Schriftart dargestellt werden können, oder mit einer anderen Schriftart, oder überhaupt nicht. Es wird auch eine Sequenz von Unicode-&lt;i&gt;Code-Punkten&lt;/i&gt; angezeigt, aus denen das Symbol zusammengesetzt wird, damit es auch identifiziert werden kann, falls es nicht dargestellt werden kann. Außerdem werden bis zu 32 Räume aufgelistet, die dieses Symbol benutzen, wodurch man unerwartete oder seltsame Fälle aufdecken kann.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="203"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="204"/>
       <source>&lt;p&gt;Select the only or the primary font used (depending on &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; setting) to produce the 2D mapper room symbols.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Wähle die einzige oder hauptsächlich benutzte Schriftart (je nach der Einstellung &lt;i&gt;Verwende nur Symbole (Glyphen) aus der gewählten Schriftart&lt;/i&gt;), um die Symbole der Räume auf der 2D-Karte erstellen.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="218"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="219"/>
       <source>&lt;p&gt;Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being of &lt;i&gt;Ambiguous&lt;/i&gt; width when drawn in a font with a so-called &lt;i&gt;fixed&lt;/i&gt; pitch; in fact such text is &lt;i&gt;duo-spaced&lt;/i&gt; when not using a proportional font. These symbols can be drawn using either a half or the whole space of a full character. By default Mudlet tries to chose the right width automatically but you can override the setting for each profile.&lt;/p&gt;&lt;p&gt;This control has three settings:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;narrow&lt;/i&gt;&apos; = Draw ambiguous width characters in a single &apos;space&apos;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;wide&lt;/i&gt;&apos; = Draw ambiguous width characters two &apos;spaces&apos; wide.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use &apos;wide&apos; setting for MUD Server encodings of &lt;b&gt;Big5&lt;/b&gt;, &lt;b&gt;GBK&lt;/b&gt; or &lt;b&gt;GBK18030&lt;/b&gt; and &apos;narrow&apos; for all others.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This is a temporary arrangement and will probably change when Mudlet gains full support for languages other than English.&lt;/i&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="298"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="302"/>
       <source>%1 (%2% done)</source>
       <comment>%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done.</comment>
       <translation>%1 (%2% fertig)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="354"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="358"/>
       <source>Migrated all passwords to secure storage.</source>
       <translation>Alle Kennwörter wurden in den sicheren Speicher migriert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="361"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="365"/>
       <source>Migrated %1...</source>
       <comment>This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely</comment>
       <translation>%1 migriert...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="365"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="369"/>
       <source>Migrated all passwords to profile storage.</source>
       <translation>Alle Kennwörter wurden in den Profilspeicher migriert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="802"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="806"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</source>
       <translation>yyyy-MM-dd#HH-mm-ss (z.B., 1970-01-01#00-00-00%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="804"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="808"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</source>
       <translation>yyyy-MM-ddTHH-mm-ss (z.B., 1970-01-01T00-00-00%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="805"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="809"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)</source>
       <translation>yyyy-MM-dd (Logs eines Tages aneinander hängen, z.B. 1970-01-01%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="808"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="812"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01%1)</source>
       <translation>yyyy-MM (Logs eines Monats aneinander hängen, z.B. 1970-01%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="809"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="813"/>
       <source>Named file (concatenate logs in one file)</source>
       <translation>Benannte Datei (Logs in einer Datei aneinander hängen)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="842"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="846"/>
       <source>Other profiles to Map to:</source>
       <translation>Andere Profile für die Karte:</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="882"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="886"/>
       <source>%1 {Default, recommended}</source>
       <translation>%1 {Standard, empfohlen}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="893"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="897"/>
       <source>%1 {Upgraded, experimental/testing, NOT recommended}</source>
       <translation>%1 {Neuere Version, experimentell/testweise, NICHT empfohlen}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="895"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="899"/>
       <source>%1 {Downgraded, for sharing with older version users, NOT recommended}</source>
       <translation>%1 {Ältere Version, zum Austausch mit anderen Benutzern, NICHT empfohlen}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="904"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="908"/>
       <source>2D Map Room Symbol scaling factor:</source>
       <translation>Skalierungsfaktor des Symbols für Räume der 2D Karte:</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="924"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="928"/>
       <source>Show &quot;%1&quot; in the map area selection</source>
       <translation>Zeige &quot;%1&quot; in der Auswahl der Kartengebiete</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="965"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="969"/>
       <source>%1 (*Error, report to Mudlet Makers*)</source>
       <comment>The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!</comment>
       <translation>%1 (*Fehler, bitte an Mudlet-Entwickler melden*)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1080"/>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3866"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1084"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3907"/>
       <source>Profile preferences - %1</source>
       <translation>Profil-Einstellungen - %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1357"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1389"/>
       <source>Profile preferences</source>
       <translation>Profil-Einstellungen</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2077"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2109"/>
       <source>Load Mudlet map</source>
       <translation>Mudlet Karte laden</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2092"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2124"/>
       <source>Loading map - please wait...</source>
       <translation>Karte wird geladen, bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2104"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2136"/>
       <source>Loaded map from %1.</source>
       <translation>Karte geladen von %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2106"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2138"/>
       <source>Could not load map from %1.</source>
       <translation>Karte konnte nicht geladen werden von %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2123"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2155"/>
       <source>Save Mudlet map</source>
       <translation>Mudlet Karte speichern</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2079"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2111"/>
       <source>Mudlet map (*.dat *.json);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
       <translation>Mudlet Karte (*.dat *.json);;Xml Kartendaten (*.xml);;Beliebige Datei (*)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2123"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2155"/>
       <source>Mudlet map (*.dat *.json);;</source>
       <comment>Do not change the extension text (in braces) - it is needed programmatically!</comment>
       <translation>Mudlet Karte (*.dat *.json);;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2133"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2165"/>
       <source>Saving map - please wait...</source>
       <translation>Karte wird gespeichert, bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2150"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2182"/>
       <source>Saved map to %1.</source>
       <translation>Karte gespeichert nach %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2152"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2184"/>
       <source>Could not save map to %1.</source>
       <translation>Konnte die Karte nicht nach %1 speichern.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2180"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2212"/>
       <source>Migrating passwords to secure storage...</source>
       <translation>Alle Kennwörter werden in den sicheren Speicher migriert...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2187"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2219"/>
       <source>Migrating passwords to profiles...</source>
       <translation>Kennwörter werden in die Profile migriert...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2219"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2251"/>
       <source>[ ERROR ] - Unable to use or create directory to store map for other profile &quot;%1&quot;.
 Please check that you have permissions/access to:
 &quot;%2&quot;
@@ -6178,331 +6178,331 @@ Prüfe bitte, dass du die Berechtigungen und Zugriff hast auf:
 und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2226"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2258"/>
       <source>Creating a destination directory failed...</source>
       <translation>Erstellen eines Ziel-Verzeichnisses ist fehlgeschlagen...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2310"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2342"/>
       <source>Backing up current map - please wait...</source>
       <translation>Sichern der aktuellen Karte - bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2320"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2352"/>
       <source>Could not backup the map - saving it failed.</source>
       <translation>Karte konnte nicht gesichert werden - Speichern schlug fehl.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2345"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2377"/>
       <source>Could not copy the map - failed to work out which map file we just saved the map as!</source>
       <translation>Konnte Karte nicht kopieren - Wusste nicht mehr, als welche Datei die Karte gerade gespeichert wurde.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2357"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2389"/>
       <source>Copying over map to %1 - please wait...</source>
       <translation>Kopiere Karte herüber nach %1 - bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2363"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2395"/>
       <source>Could not copy the map to %1 - unable to copy the new map file over.</source>
       <translation>Konnte Karte nicht kopieren nach %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2367"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2399"/>
       <source>Map copied successfully to other profile %1.</source>
       <translation>Karte erfolgreich in das andere Profil %1 kopiert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2379"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2411"/>
       <source>Map copied, now signalling other profiles to reload it.</source>
       <translation>Karte kopiert. Signalisiere den anderen Profilen, sie neu zu laden.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2415"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2447"/>
       <source>Where should Mudlet save log files?</source>
       <translation>Wo soll Mudlet Protokolldateien speichern?</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2808"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2849"/>
       <source>%1 selected - press to change</source>
       <translation>%1 gewählt - drücken zum ändern</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2811"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2852"/>
       <source>Press to pick destination(s)</source>
       <translation>Drücken, um Ziel(e) zu wählen</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3052"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3093"/>
       <source>Could not update themes: %1</source>
       <translation>Designs konnten nicht aktualisiert werden: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3055"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3096"/>
       <source>Updating themes from colorsublime.github.io...</source>
       <translation>Aktualisiere Designs von colorsublime.github.io...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3174"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3215"/>
       <source>{missing, possibly recently deleted trigger item}</source>
       <translation>(Fehlender Trigger, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3177"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3218"/>
       <source>{missing, possibly recently deleted alias item}</source>
       <translation>(Fehlendes Alias, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3180"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3221"/>
       <source>{missing, possibly recently deleted script item}</source>
       <translation>(Fehlendes Skript, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3183"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3224"/>
       <source>{missing, possibly recently deleted timer item}</source>
       <translation>(Fehlender Timer, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3186"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3227"/>
       <source>{missing, possibly recently deleted key item}</source>
       <translation>(Fehlende Taste, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3189"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3230"/>
       <source>{missing, possibly recently deleted button item}</source>
       <translation>(Fehlender Button, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3314"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3355"/>
       <source>&lt;p&gt;The room symbol will appear like this if only symbols (glyphs) from the specific font are used.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Das Raumsymbol erscheint wie folgt, wenn nur Symbole (Glyphen) aus der spezifischen Schriftart verwendet werden.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3998"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="4039"/>
       <source>Set outer color of player room mark.</source>
       <translation>Wähle die äußere Farbe der Markierung des Spielerraums.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3999"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="4040"/>
       <source>Set inner color of player room mark.</source>
       <translation>Wähle die innere Farbe der Markierung des Spielerraums.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="205"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="206"/>
       <source>&lt;p&gt;Using a single font is likely to produce a more consistent style but may cause the &lt;i&gt;font replacement character&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; to show if the font does not have a needed glyph (a font&apos;s individual character/symbol) to represent the grapheme (what is to be represented).  Clearing this checkbox will allow the best alternative glyph from another font to be used to draw that grapheme.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Mit einer einzigen Schriftart ist es wahrscheinlicher, einen einheitlicheren Stil zu erzeugen, aber das &lt;i&gt;Ersetzungszeichen&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; könnte gezeigt werden, falls die Schriftart ein benötigte Glyphe nicht hat (ein einzelnes Zeichen oder Symbol der Schriftart), um das gewünschte Graphem darzustellen. Diese Markierung zu löschen führt dazu, dass die beste alternative Glyphe einer anderen Schriftart benutzt wird, um das Graphem zu zeichnen.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="144"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="145"/>
       <source>&lt;p&gt;Select a directory where logs will be saved.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Wähle ein Verzeichnis, in dem Protokolle gespeichert werden.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="145"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="146"/>
       <source>&lt;p&gt;Reset the directory so that logs are saved to the profile&apos;s &lt;i&gt;log&lt;/i&gt; directory.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Setze das Verzeichnis zurück, damit Protokolle in den &lt;i&gt;log&lt;/i&gt;-Ordner des Profils gespeichert werden.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="146"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="147"/>
       <source>&lt;p&gt;This option sets the format of the log name.&lt;/p&gt;&lt;p&gt;If &lt;i&gt;Named file&lt;/i&gt; is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)&lt;/p&gt;</source>
       <translation>&lt;p&gt;Diese Option bestimmt das Format des Namens der Protokolldatei.&lt;/p&gt;&lt;p&gt;Wenn &lt;i&gt;Benannte Datei&lt;/i&gt; ausgewählt wird, kannst du einen eigenen Namen definieren. (Die Protokolle werden angehängt, wenn bereits eine Datei mit dem gleichen Namen existiert.)&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="149"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="150"/>
       <source>&lt;p&gt;Set a custom name for your log. (New logs are appended if a log file of the same name already exists).&lt;/p&gt;</source>
       <translation>&lt;p&gt;Bestimme einen eigenen Namens für deine Protokolldatei. (Neue Protokolle werden angehängt, wenn bereits eine Datei mit dem gleichen Namen existiert.)&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="170"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="171"/>
       <source>&lt;p&gt;Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Automatische Updates sind in Entwicklungsversionen deaktiviert, um zu verhindern, dass ein Update dein Mudlet überschreibt.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="191"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="192"/>
       <source>&lt;p&gt;A timer with a short interval will quickly fill up the &lt;i&gt;Central Debug Console&lt;/i&gt; windows with messages that it ran correctly on &lt;i&gt;each&lt;/i&gt; occasion it is called.  This (per profile) control adjusts a threshold that will hide those messages in just that window for those timers which run &lt;b&gt;correctly&lt;/b&gt; when the timer&apos;s interval is less than this setting.&lt;/p&gt;&lt;p&gt;&lt;u&gt;Any timer script that has errors will still have its error messages reported whatever the setting.&lt;/u&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ein Timer mit kurzem Intervall wird schnell das Fenster für die &lt;i&gt;Zentrale Debug-Konsole&lt;/i&gt; füllen, weil er bei &lt;i&gt;jedem Aufruf&lt;/i&gt; melden wird, dass er richtig gelaufen ist. Die folgende (profilspezifische) Einstellung regelt eine Schwelle, unter der diese Meldungen an das Fenster unterdrückt werden, wenn ein Timer &lt;b&gt;richtig&lt;/b&gt; gelaufen ist, und sein Intervall kleiner ist als diese Einstellung.&lt;/p&gt;&lt;p&gt;&lt;u&gt;Wenn ein Skript eines Timers einen Fehler meldet, werden diese weiter unabhängig von dieser Einstellung erscheinen.&lt;/u&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="210"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="211"/>
       <source>&lt;p&gt;If &lt;b&gt;not&lt;/b&gt; checked Mudlet will only react to the first matching keybinding (combination of key and modifiers) even if more than one of them is set to be active. This means that a temporary keybinding (not visible in the Editor) created by a script or package may be used in preference to a permanent one that is shown and is set to be active. If checked then all matching keybindings will be run.&lt;/p&gt;&lt;p&gt;&lt;i&gt;It is recommended to not enable this option if you need to maintain compatibility with scripts or packages for Mudlet versions prior to &lt;b&gt;3.9.0&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="230"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="231"/>
       <source>&lt;p&gt;Enable a context (right click) menu action on any console/user window that, when the mouse cursor is hovered over it, will display the UTF-16 and UTF-8 items that make up each Unicode codepoint on the &lt;b&gt;first&lt;/b&gt; line of any selection.&lt;/p&gt;&lt;p&gt;This utility feature is intended to help the user identify any grapheme (visual equivalent to a &lt;i&gt;character&lt;/i&gt;) that a Game server may send even if it is composed of multiple bytes as any non-ASCII character will be in the Lua sub-system which uses the UTF-8 encoding system.&lt;p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="237"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="238"/>
       <source>&lt;p&gt;Some Desktop Environments tell Qt applications like Mudlet whether they should shown icons on menus, others, however do not. This control allows the user to override the setting, if needed, as follows:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;off&lt;/i&gt;&apos; = Prevent menus from being drawn with icons.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;on&lt;/i&gt;&apos; = Allow menus to be drawn with icons.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use the setting that the system provides.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This setting is only processed when individual menus are created and changes may not propagate everywhere until Mudlet is restarted.&lt;/i&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="635"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="639"/>
       <source>Mudlet dictionaries:</source>
       <comment>On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones.</comment>
       <translation>Mudlet-Wörterbücher:</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="637"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="641"/>
       <source>System dictionaries:</source>
       <comment>On *nix systems where we find the system ones we use them.</comment>
       <translation>System-Wörterbücher:</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="668"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="672"/>
       <source>&lt;p&gt;From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).&lt;/p&gt;</source>
       <translation>&lt;p&gt;Aus der Wörterbuchdatei &lt;tt&gt;%1.dic&lt;/tt&gt; (und der begleitenden Affix &lt;tt&gt;.aff&lt;/tt&gt; Datei).&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="670"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="674"/>
       <source>%1 - not recognised</source>
       <translation>%1 - nicht erkannt</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="671"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="675"/>
       <source>&lt;p&gt;Mudlet does not recognise the code &quot;%1&quot;, please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!&lt;/p&gt;&lt;p&gt;The file &lt;tt&gt;%2.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file) is still usable.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Mudlet erkennt den Code &quot;%1&quot; nicht. Bitte melde ihn bei den Mudlet-Entwicklern, damit wir ihn in zukünftigen Mudlet-Versionen richtig beschreiben können!&lt;/p&gt;&lt;p&gt;Die Datei &lt;tt&gt;%2.dic&lt;/tt&gt; (und die zugehörige &lt;tt&gt;.aff&lt;/tt&gt; Affix-Datei) ist weiterhin verwendbar.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="696"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="700"/>
       <source>No Hunspell dictionary files found, spell-checking will not be available.</source>
       <translation>Es wurden keine Hunspell-Wörterbuchdateien gefunden. Rechtschreibprüfung ist nicht verfügbar.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3320"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3361"/>
       <source>&lt;p&gt;The room symbol will appear like this if symbols (glyphs) from any font can be used.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Das Raumsymbol erscheint wie folgt, wenn Symbole (Glyphen) aus jeder Schriftart verwendet werdet dürfen.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3349"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3390"/>
       <source>&lt;p&gt;These are the sequence of hexadecimal numbers that are used by the Unicode consortium to identify the graphemes needed to create the symbol.  These numbers can be utilised to determine precisely what is to be drawn even if some fonts have glyphs that are the same for different codepoints or combination of codepoints.&lt;/p&gt;&lt;p&gt;Character entry utilities such as &lt;i&gt;charmap.exe&lt;/i&gt; on &lt;i&gt;Windows&lt;/i&gt; or &lt;i&gt;gucharmap&lt;/i&gt; on many Unix type operating systems will also use these numbers which cover everything from U+0020 {Space} to U+10FFFD the last usable number in the &lt;i&gt;Private Use Plane 16&lt;/i&gt; via most of the written marks that humanity has ever made.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3362"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3403"/>
       <source>&lt;p&gt;How many rooms in the whole map have this symbol.</source>
       <translation>&lt;p&gt;Wie viele Räume in der gesamten Karte haben dieses Symbol.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3374"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3415"/>
       <source>more - not shown...</source>
       <translation>mehr - nicht angezeigt...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3381"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3422"/>
       <source>&lt;p&gt;The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Die Räume mit diesem Symbol, maximal 32. Falls es mehr sind, wird es angezeigt, aber sie werden nicht gelistet.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3390"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3431"/>
       <source>&lt;p&gt;The symbol can be made entirely from glyphs in the specified font.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Das Symbol kann vollständig aus Glypthen der gewählten Schriftart erstellt werden.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3400"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3441"/>
       <source>&lt;p&gt;The symbol cannot be made entirely from glyphs in the specified font, but, using other fonts in the system, it can. Either un-check the &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; option or try and choose another font that does have the needed glyphs.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You need not close this table to try another font, changing it on the main preferences dialogue will update this table after a slight delay.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;Das Symbol kann nicht vollständig aus Glypthen der gewählten Schriftart erstellt werden, aber mit anderen Schriftarten geht es. Bitte deaktiviere entweder die Einstellung &lt;i&gt;Das Symbol kann vollständig aus Glypthen der gewählten Schriftart erstellt werden.&lt;/i&gt; oder versuche eine andere Schriftart mit den benötigten Glyphen.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Du brauchst diese Tabelle nicht zu schließen, um eine andere Schriftart auszuprobieren. Wenn du sie in den Einstellungen änderst, wird sich diese Tabelle kurz darauf aktualisieren.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3410"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3451"/>
       <source>&lt;p&gt;The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different systems with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3499"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3540"/>
       <source>Large icon</source>
       <comment>Discord Rich Presence large icon</comment>
       <translation>Großes Symbol</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3500"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3541"/>
       <source>Detail</source>
       <comment>Discord Rich Presence detail</comment>
       <translation>Detail</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3502"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3543"/>
       <source>Small icon</source>
       <comment>Discord Rich Presence small icon</comment>
       <translation>Kleines Symbol</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3503"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3544"/>
       <source>State</source>
       <comment>Discord Rich Presence state</comment>
       <translation>Zustand</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3505"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3546"/>
       <source>Party size</source>
       <comment>Discord Rich Presence party size</comment>
       <translation>Gruppengröße</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3506"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3547"/>
       <source>Party max</source>
       <comment>Discord Rich Presence maximum party size</comment>
       <translation>Maximale Gruppengröße</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3507"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3548"/>
       <source>Time</source>
       <comment>Discord Rich Presence time until or time elapsed</comment>
       <translation>Zeit</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3542"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3583"/>
       <source>Map symbol usage - %1</source>
       <translation>Benutzung des Kartensymbols - %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3619"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3660"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)</source>
       <translation>yyyy-MM-dd#HH-mm-ss (z.B., 1970-01-01#00-00-00.html)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3620"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3661"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)</source>
       <translation>yyyy-MM-ddTHH-mm-ss (z.B., 1970-01-01T00-00-00.html)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3621"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3662"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)</source>
       <translation>yyyy-MM-dd (Logs eines Tages aneinander hängen, z.B. 1970-01-01.html)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3622"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3663"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.html)</source>
       <translation>yyyy-MM (Logs eines Monats aneinander hängen, z.B. 1970-01.html)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3625"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3666"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)</source>
       <translation>yyyy-MM-dd#HH-mm-ss (z.B., 1970-01-01#00-00-00.txt)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3626"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3667"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)</source>
       <translation>yyyy-MM-ddTHH-mm-ss (z.B., 1970-01-01T00-00-00.txt)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3627"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3668"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)</source>
       <translation>yyyy-MM-dd (Logs eines Tages aneinander hängen, z.B. 1970-01-01.txt)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3628"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3669"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)</source>
       <translation>yyyy-MM (Logs eines Monats aneinander hängen, z.B. 1970-01.txt)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="4074"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="4115"/>
       <source>Deleting map - please wait...</source>
       <translation>Karte wird gelöscht, bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="4086"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="4127"/>
       <source>Deleted map.</source>
       <translation>Karte gelöscht.</translation>
     </message>
@@ -8716,1311 +8716,1346 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
   <context>
     <name>mudlet</name>
     <message>
-      <location filename="../src/mudlet.cpp" line="748"/>
+      <location filename="../src/mudlet.cpp" line="768"/>
       <source>Afrikaans</source>
       <extracomment>In the translation source texts the language is the leading term, with, generally, the (primary) country(ies) in the brackets, with a trailing language disabiguation after a &apos;-&apos; Chinese is an exception!</extracomment>
       <translation>Afrikaans</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="749"/>
+      <location filename="../src/mudlet.cpp" line="769"/>
       <source>Afrikaans (South Africa)</source>
       <translation>Afrikaans (Südafrika)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="750"/>
+      <location filename="../src/mudlet.cpp" line="770"/>
       <source>Aragonese</source>
       <translation>Aragonese</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="751"/>
+      <location filename="../src/mudlet.cpp" line="771"/>
       <source>Aragonese (Spain)</source>
       <translation>Aragon (Spanien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="752"/>
+      <location filename="../src/mudlet.cpp" line="772"/>
       <source>Arabic</source>
       <translation>Arabisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="753"/>
+      <location filename="../src/mudlet.cpp" line="773"/>
       <source>Arabic (United Arab Emirates)</source>
       <translation>Arabisch (Vereinigte Arabische Emirate)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="754"/>
+      <location filename="../src/mudlet.cpp" line="774"/>
       <source>Arabic (Bahrain)</source>
       <translation>Arabisch (Bahrain)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="755"/>
+      <location filename="../src/mudlet.cpp" line="775"/>
       <source>Arabic (Algeria)</source>
       <translation>Arabisch (Algerien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="757"/>
+      <location filename="../src/mudlet.cpp" line="777"/>
       <source>Arabic (India)</source>
       <translation>Arabisch (Indien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="758"/>
+      <location filename="../src/mudlet.cpp" line="778"/>
       <source>Arabic (Iraq)</source>
       <translation>Arabisch (Irak)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="759"/>
+      <location filename="../src/mudlet.cpp" line="779"/>
       <source>Arabic (Jordan)</source>
       <translation>Arabisch (Jordanien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="760"/>
+      <location filename="../src/mudlet.cpp" line="780"/>
       <source>Arabic (Kuwait)</source>
       <translation>Arabisch (Kuwait)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="761"/>
+      <location filename="../src/mudlet.cpp" line="781"/>
       <source>Arabic (Lebanon)</source>
       <translation>Arabisch (Libanon)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="762"/>
+      <location filename="../src/mudlet.cpp" line="782"/>
       <source>Arabic (Libya)</source>
       <translation>Arabisch (Libyen)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="763"/>
+      <location filename="../src/mudlet.cpp" line="783"/>
       <source>Arabic (Morocco)</source>
       <translation>Arabisch (Marokko)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="764"/>
+      <location filename="../src/mudlet.cpp" line="784"/>
       <source>Arabic (Oman)</source>
       <translation>Arabisch (Oman)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="765"/>
+      <location filename="../src/mudlet.cpp" line="785"/>
       <source>Arabic (Qatar)</source>
       <translation>Arabisch (Katar)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="766"/>
+      <location filename="../src/mudlet.cpp" line="786"/>
       <source>Arabic (Saudi Arabia)</source>
       <translation>Arabisch (Saudi Arabien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="767"/>
+      <location filename="../src/mudlet.cpp" line="787"/>
       <source>Arabic (Sudan)</source>
       <translation>Arabisch (Sudan)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="768"/>
+      <location filename="../src/mudlet.cpp" line="788"/>
       <source>Arabic (Syria)</source>
       <translation>Arabisch (Syrien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="769"/>
+      <location filename="../src/mudlet.cpp" line="789"/>
       <source>Arabic (Tunisia)</source>
       <translation>Arabisch (Tunesien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="770"/>
+      <location filename="../src/mudlet.cpp" line="790"/>
       <source>Arabic (Yemen)</source>
       <translation>Arabisch (Jemen)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="771"/>
+      <location filename="../src/mudlet.cpp" line="791"/>
       <source>Belarusian</source>
       <translation>Weißrussisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="772"/>
+      <location filename="../src/mudlet.cpp" line="792"/>
       <source>Belarusian (Belarus)</source>
       <translation>Weißrussisch (Weißrussland)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="773"/>
+      <location filename="../src/mudlet.cpp" line="793"/>
       <source>Belarusian (Russia)</source>
       <translation>Weißrussisch (Russland)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="774"/>
+      <location filename="../src/mudlet.cpp" line="794"/>
       <source>Bulgarian</source>
       <translation>Bulgarisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="775"/>
+      <location filename="../src/mudlet.cpp" line="795"/>
       <source>Bulgarian (Bulgaria)</source>
       <translation>Bulgarisch (Bulgarien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="776"/>
+      <location filename="../src/mudlet.cpp" line="796"/>
       <source>Bangla</source>
       <translation>Bangla</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="777"/>
+      <location filename="../src/mudlet.cpp" line="797"/>
       <source>Bangla (Bangladesh)</source>
       <translation>Bangla (Bangladesch)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="778"/>
+      <location filename="../src/mudlet.cpp" line="798"/>
       <source>Bangla (India)</source>
       <translation>Bangla (Indien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="779"/>
+      <location filename="../src/mudlet.cpp" line="799"/>
       <source>Tibetan</source>
       <translation>Tibetisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="780"/>
+      <location filename="../src/mudlet.cpp" line="800"/>
       <source>Tibetan (China)</source>
       <translation>Tibetisch (China)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="781"/>
+      <location filename="../src/mudlet.cpp" line="801"/>
       <source>Tibetan (India)</source>
       <translation>Tibetisch (Indien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="782"/>
+      <location filename="../src/mudlet.cpp" line="802"/>
       <source>Breton</source>
       <translation>Breton</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="783"/>
+      <location filename="../src/mudlet.cpp" line="803"/>
       <source>Breton (France)</source>
       <translation>Breton (Frankreich)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="784"/>
+      <location filename="../src/mudlet.cpp" line="804"/>
       <source>Bosnian</source>
       <translation>Bosnisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="785"/>
+      <location filename="../src/mudlet.cpp" line="805"/>
       <source>Bosnian (Bosnia/Herzegovina)</source>
       <translation>Bosnisch (Bosnien/Herzegowina)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="786"/>
+      <location filename="../src/mudlet.cpp" line="806"/>
       <source>Bosnian (Bosnia/Herzegovina - Cyrillic alphabet)</source>
       <translation>Bosnisch (Bosnien/Herzegowina - kyrillisches Alphabet)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="787"/>
+      <location filename="../src/mudlet.cpp" line="807"/>
       <source>Catalan</source>
       <translation>Katalanisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="788"/>
+      <location filename="../src/mudlet.cpp" line="808"/>
       <source>Catalan (Spain)</source>
       <translation>Katalanisch (Spanien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="789"/>
+      <location filename="../src/mudlet.cpp" line="809"/>
       <source>Catalan (Spain - Valencian)</source>
       <translation>Katalanisch (Spanien-Valencianisch)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="790"/>
+      <location filename="../src/mudlet.cpp" line="810"/>
       <source>Central Kurdish</source>
       <translation>Mittelkurdisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="791"/>
+      <location filename="../src/mudlet.cpp" line="811"/>
       <source>Central Kurdish (Iraq)</source>
       <translation>Mittelkurdisch (Irak)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="792"/>
+      <location filename="../src/mudlet.cpp" line="812"/>
       <source>Czech</source>
       <translation>Tschechisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="793"/>
+      <location filename="../src/mudlet.cpp" line="813"/>
       <source>Czech (Czechia)</source>
       <translation>Tschechisch (Tschechei)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="794"/>
+      <location filename="../src/mudlet.cpp" line="814"/>
       <source>Danish</source>
       <translation>Dänisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="795"/>
+      <location filename="../src/mudlet.cpp" line="815"/>
       <source>Danish (Denmark)</source>
       <translation>Dänisch (Dänemark)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="796"/>
+      <location filename="../src/mudlet.cpp" line="816"/>
       <source>German</source>
       <translation>Deutsch (German)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="797"/>
+      <location filename="../src/mudlet.cpp" line="817"/>
       <source>German (Austria)</source>
       <translation>Deutsch (Österreich)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="798"/>
+      <location filename="../src/mudlet.cpp" line="818"/>
       <source>German (Austria, revised by F M Baumann)</source>
       <translation>Deutsch (Österreich, überarbeitet von F M Baumann)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="799"/>
+      <location filename="../src/mudlet.cpp" line="819"/>
       <source>German (Belgium)</source>
       <translation>Deutsch (Belgien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="800"/>
+      <location filename="../src/mudlet.cpp" line="820"/>
       <source>German (Switzerland)</source>
       <translation>Deutsch (Schweiz)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="801"/>
+      <location filename="../src/mudlet.cpp" line="821"/>
       <source>German (Switzerland, revised by F M Baumann)</source>
       <translation>Deutsch (Schweiz, überarbeitet von F M Baumann)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="802"/>
+      <location filename="../src/mudlet.cpp" line="822"/>
       <source>German (Germany/Belgium/Luxemburg)</source>
       <translation>Deutsch (Deutschland/Belgien/Luxemburg)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="803"/>
+      <location filename="../src/mudlet.cpp" line="823"/>
       <source>German (Germany/Belgium/Luxemburg, revised by F M Baumann)</source>
       <translation>Deutsch (Deutschland/Belgien/Luxemburg, überarbeitet von F M Baumann)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="804"/>
+      <location filename="../src/mudlet.cpp" line="824"/>
       <source>German (Liechtenstein)</source>
       <translation>Deutsch (Liechtenstein)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="805"/>
+      <location filename="../src/mudlet.cpp" line="825"/>
       <source>German (Luxembourg)</source>
       <translation>Deutsch (Luxemburg)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="808"/>
+      <location filename="../src/mudlet.cpp" line="828"/>
       <source>Greek</source>
       <translation>Griechisch (Greek)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="809"/>
+      <location filename="../src/mudlet.cpp" line="829"/>
       <source>Greek (Greece)</source>
       <translation>Griechisch (Griechenland)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="810"/>
+      <location filename="../src/mudlet.cpp" line="830"/>
       <source>English</source>
       <translation>Englisch (American English)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="811"/>
+      <location filename="../src/mudlet.cpp" line="831"/>
       <source>English (Antigua/Barbuda)</source>
       <translation>Englisch (Antigua/Barbuda)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="812"/>
+      <location filename="../src/mudlet.cpp" line="832"/>
       <source>English (Australia)</source>
       <translation>Englisch (Australien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="814"/>
+      <location filename="../src/mudlet.cpp" line="834"/>
       <source>English (Bahamas)</source>
       <translation>Englisch (Bahamas)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="815"/>
+      <location filename="../src/mudlet.cpp" line="835"/>
       <source>English (Botswana)</source>
       <translation>Englisch (Botswana)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="816"/>
+      <location filename="../src/mudlet.cpp" line="836"/>
       <source>English (Belize)</source>
       <translation>Englisch (Belize)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="756"/>
+      <location filename="../src/mudlet.cpp" line="776"/>
       <source>Arabic (Egypt)</source>
       <translation>Arabisch (Ägypten)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="423"/>
+      <location filename="../src/mudlet.cpp" line="425"/>
       <source>Mudlet chat</source>
       <translation>Mudlet Chat</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="424"/>
+      <location filename="../src/mudlet.cpp" line="426"/>
       <source>Open a link to the Mudlet server on Discord</source>
       <translation>Öffne einen Link zum Mudlet-Server auf Discord</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="466"/>
+      <location filename="../src/mudlet.cpp" line="468"/>
       <source>Packages (exp.)</source>
       <translation>Pakete (exp.)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="473"/>
+      <location filename="../src/mudlet.cpp" line="475"/>
       <source>Package Manager (experimental)</source>
       <translation>Paket verwalten (experimentell)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="475"/>
+      <location filename="../src/mudlet.cpp" line="477"/>
       <source>Packages (exp.)</source>
       <comment>exp. stands for experimental; shortened so it doesn&apos;t make buttons huge in the main interface</comment>
       <translation>Pakete (exp.)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="504"/>
+      <location filename="../src/mudlet.cpp" line="506"/>
       <source>&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</source>
       <comment>Same text is used in 2 places.</comment>
       <translation>&lt;p&gt;Teilt den Mudlet-Bildschirm auf, um mehrere Profile gleichzeitig anzuzeigen. Deaktiviert, wenn weniger als zwei geladen sind.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="516"/>
+      <location filename="../src/mudlet.cpp" line="518"/>
       <source>Report issue</source>
       <translation>Problem melden</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="806"/>
+      <location filename="../src/mudlet.cpp" line="671"/>
+      <source>Script editor</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="672"/>
+      <source>Show Map</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="673"/>
+      <source>Compact input line</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="674"/>
+      <source>Preferences</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="676"/>
+      <source>Package manager</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="677"/>
+      <source>Module manager</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="679"/>
+      <source>Play</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="826"/>
       <source>Dzongkha</source>
       <translation>Dzongkha</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="807"/>
+      <location filename="../src/mudlet.cpp" line="827"/>
       <source>Dzongkha (Bhutan)</source>
       <translation>Dzongkha (Bhutan)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="813"/>
+      <location filename="../src/mudlet.cpp" line="833"/>
       <source>English (Australia, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
       <translation>Englisch (Australien, groß)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="817"/>
+      <location filename="../src/mudlet.cpp" line="837"/>
       <source>English (Canada)</source>
       <translation>Englisch (Kanada)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="818"/>
+      <location filename="../src/mudlet.cpp" line="838"/>
       <source>English (Canada, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
       <translation>Englisch (Kanada, groß)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="819"/>
+      <location filename="../src/mudlet.cpp" line="839"/>
       <source>English (Denmark)</source>
       <translation>Englisch (Dänemark)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="820"/>
+      <location filename="../src/mudlet.cpp" line="840"/>
       <source>English (United Kingdom)</source>
       <translation>Englisch (Großbritannien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="821"/>
+      <location filename="../src/mudlet.cpp" line="841"/>
       <source>English (United Kingdom, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
       <translation>Englisch (Großbritannien, groß)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="822"/>
+      <location filename="../src/mudlet.cpp" line="842"/>
       <source>English (United Kingdom - &apos;ise&apos; not &apos;ize&apos;)</source>
       <comment>This dictionary prefers the British &apos;ise&apos; form over the American &apos;ize&apos; one.</comment>
       <translation>Englisch (Großbritannien - &apos;ise&apos; nicht &apos;ize&apos;)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="823"/>
+      <location filename="../src/mudlet.cpp" line="843"/>
       <source>English (Ghana)</source>
       <translation>Englisch (Ghana)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="824"/>
+      <location filename="../src/mudlet.cpp" line="844"/>
       <source>English (Hong Kong SAR China)</source>
       <translation>Englisch (Sonderverwaltungszone Hongkong)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="825"/>
+      <location filename="../src/mudlet.cpp" line="845"/>
       <source>English (Ireland)</source>
       <translation>Englisch (Irland)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="826"/>
+      <location filename="../src/mudlet.cpp" line="846"/>
       <source>English (India)</source>
       <translation>Englisch (Indien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="827"/>
+      <location filename="../src/mudlet.cpp" line="847"/>
       <source>English (Jamaica)</source>
       <translation>Englisch (Jamaika)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="828"/>
+      <location filename="../src/mudlet.cpp" line="848"/>
       <source>English (Namibia)</source>
       <translation>Englisch (Namibia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="829"/>
+      <location filename="../src/mudlet.cpp" line="849"/>
       <source>English (Nigeria)</source>
       <translation>Englisch (Nigeria)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="830"/>
+      <location filename="../src/mudlet.cpp" line="850"/>
       <source>English (New Zealand)</source>
       <translation>Englisch (Neuseeland)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="831"/>
+      <location filename="../src/mudlet.cpp" line="851"/>
       <source>English (Philippines)</source>
       <translation>Englisch (Philippinen)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="832"/>
+      <location filename="../src/mudlet.cpp" line="852"/>
       <source>English (Singapore)</source>
       <translation>Englisch (Singapur)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="833"/>
+      <location filename="../src/mudlet.cpp" line="853"/>
       <source>English (Trinidad/Tobago)</source>
       <translation>Englisch (Trinidad/Tobago)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="834"/>
+      <location filename="../src/mudlet.cpp" line="854"/>
       <source>English (United States)</source>
       <translation>Englisch (USA)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="835"/>
+      <location filename="../src/mudlet.cpp" line="855"/>
       <source>English (United States, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
       <translation>Englisch (USA, groß)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="836"/>
+      <location filename="../src/mudlet.cpp" line="856"/>
       <source>English (South Africa)</source>
       <translation>Englisch (Südafrika)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="837"/>
+      <location filename="../src/mudlet.cpp" line="857"/>
       <source>English (Zimbabwe)</source>
       <translation>Englisch (Simbabwe)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="838"/>
+      <location filename="../src/mudlet.cpp" line="858"/>
       <source>Spanish</source>
       <translation>Spanisch (Spanish)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="839"/>
+      <location filename="../src/mudlet.cpp" line="859"/>
       <source>Spanish (Argentina)</source>
       <translation>Spanisch (Argentinien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="840"/>
+      <location filename="../src/mudlet.cpp" line="860"/>
       <source>Spanish (Bolivia)</source>
       <translation>Spanisch (Bolivien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="841"/>
+      <location filename="../src/mudlet.cpp" line="861"/>
       <source>Spanish (Chile)</source>
       <translation>Spanisch (Chile)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="842"/>
+      <location filename="../src/mudlet.cpp" line="862"/>
       <source>Spanish (Colombia)</source>
       <translation>Spanisch (Kolumbien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="843"/>
+      <location filename="../src/mudlet.cpp" line="863"/>
       <source>Spanish (Costa Rica)</source>
       <translation>Spanisch (Costa Rica)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="844"/>
+      <location filename="../src/mudlet.cpp" line="864"/>
       <source>Spanish (Cuba)</source>
       <translation>Spanisch (Kuba)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="845"/>
+      <location filename="../src/mudlet.cpp" line="865"/>
       <source>Spanish (Dominican Republic)</source>
       <translation>Spanisch (Dominikanische Republik)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="846"/>
+      <location filename="../src/mudlet.cpp" line="866"/>
       <source>Spanish (Ecuador)</source>
       <translation>Spanisch (Ecuador)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="847"/>
+      <location filename="../src/mudlet.cpp" line="867"/>
       <source>Spanish (Spain)</source>
       <translation>Spanisch (Spanien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="848"/>
+      <location filename="../src/mudlet.cpp" line="868"/>
       <source>Spanish (Guatemala)</source>
       <translation>Spanisch (Guatemala)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="849"/>
+      <location filename="../src/mudlet.cpp" line="869"/>
       <source>Spanish (Honduras)</source>
       <translation>Spanisch (Honduras)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="850"/>
+      <location filename="../src/mudlet.cpp" line="870"/>
       <source>Spanish (Mexico)</source>
       <translation>Spanisch (Mexiko)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="851"/>
+      <location filename="../src/mudlet.cpp" line="871"/>
       <source>Spanish (Nicaragua)</source>
       <translation>Spanisch (Nicaragua)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="852"/>
+      <location filename="../src/mudlet.cpp" line="872"/>
       <source>Spanish (Panama)</source>
       <translation>Spanisch (Panama)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="853"/>
+      <location filename="../src/mudlet.cpp" line="873"/>
       <source>Spanish (Peru)</source>
       <translation>Spanisch (Peru)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="854"/>
+      <location filename="../src/mudlet.cpp" line="874"/>
       <source>Spanish (Puerto Rico)</source>
       <translation>Spanisch (Puerto Rico)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="855"/>
+      <location filename="../src/mudlet.cpp" line="875"/>
       <source>Spanish (Paraguay)</source>
       <translation>Spanisch (Paraguay)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="856"/>
+      <location filename="../src/mudlet.cpp" line="876"/>
       <source>Spanish (El Savador)</source>
       <translation>Spanisch (El Savador)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="857"/>
+      <location filename="../src/mudlet.cpp" line="877"/>
       <source>Spanish (United States)</source>
       <translation>Spanisch (USA)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="858"/>
+      <location filename="../src/mudlet.cpp" line="878"/>
       <source>Spanish (Uruguay)</source>
       <translation>Spanisch (Uruguay)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="859"/>
+      <location filename="../src/mudlet.cpp" line="879"/>
       <source>Spanish (Venezuela)</source>
       <translation>Spanisch (Venezuela)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="860"/>
+      <location filename="../src/mudlet.cpp" line="880"/>
       <source>Estonian</source>
       <translation>Estnisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="861"/>
+      <location filename="../src/mudlet.cpp" line="881"/>
       <source>Estonian (Estonia)</source>
       <translation>Estnisch (Estland)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="862"/>
+      <location filename="../src/mudlet.cpp" line="882"/>
       <source>Basque</source>
       <translation>Baskisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="863"/>
+      <location filename="../src/mudlet.cpp" line="883"/>
       <source>Basque (Spain)</source>
       <translation>Baskisch (Spanien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="864"/>
+      <location filename="../src/mudlet.cpp" line="884"/>
       <source>Basque (France)</source>
       <translation>Baskisch (Frankreich)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="865"/>
-      <location filename="../src/mudlet.cpp" line="866"/>
+      <location filename="../src/mudlet.cpp" line="885"/>
+      <location filename="../src/mudlet.cpp" line="886"/>
       <source>Finnish</source>
       <translation>Finnisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="867"/>
+      <location filename="../src/mudlet.cpp" line="887"/>
       <source>French</source>
       <translation>Französisch (French)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="868"/>
+      <location filename="../src/mudlet.cpp" line="888"/>
       <source>French (Belgium)</source>
       <translation>Französisch (Belgien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="869"/>
+      <location filename="../src/mudlet.cpp" line="889"/>
       <source>French (Catalan)</source>
       <translation>Französisch (Katalanisch)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="870"/>
+      <location filename="../src/mudlet.cpp" line="890"/>
       <source>French (Switzerland)</source>
       <translation>Französisch (Schweiz)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="871"/>
+      <location filename="../src/mudlet.cpp" line="891"/>
       <source>French (France)</source>
       <translation>Französisch (Frankreich)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="872"/>
+      <location filename="../src/mudlet.cpp" line="892"/>
       <source>French (Luxemburg)</source>
       <translation>Französisch (Luxemburg)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="873"/>
+      <location filename="../src/mudlet.cpp" line="893"/>
       <source>French (Monaco)</source>
       <translation>Französisch (Monaco)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="874"/>
+      <location filename="../src/mudlet.cpp" line="894"/>
       <source>Gaelic</source>
       <translation>Gälisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="875"/>
+      <location filename="../src/mudlet.cpp" line="895"/>
       <source>Gaelic (United Kingdom {Scots})</source>
       <translation>Gälisch (Vereinigtes Königreich {Scots})</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="876"/>
+      <location filename="../src/mudlet.cpp" line="896"/>
       <source>Galician</source>
       <translation>Galizisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="877"/>
+      <location filename="../src/mudlet.cpp" line="897"/>
       <source>Galician (Spain)</source>
       <translation>Galizisch (Spanien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="878"/>
-      <location filename="../src/mudlet.cpp" line="883"/>
+      <location filename="../src/mudlet.cpp" line="898"/>
+      <location filename="../src/mudlet.cpp" line="903"/>
       <source>Guarani</source>
       <translation>Guarani</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="879"/>
-      <location filename="../src/mudlet.cpp" line="884"/>
+      <location filename="../src/mudlet.cpp" line="899"/>
+      <location filename="../src/mudlet.cpp" line="904"/>
       <source>Guarani (Paraguay)</source>
       <translation>Guarani (Paraguay)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="880"/>
+      <location filename="../src/mudlet.cpp" line="900"/>
       <source>Gujarati</source>
       <translation>Gujarati</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="881"/>
+      <location filename="../src/mudlet.cpp" line="901"/>
       <source>Gujarati (India)</source>
       <translation>Gujarati (Indien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="885"/>
+      <location filename="../src/mudlet.cpp" line="905"/>
       <source>Hebrew</source>
       <translation>Hebräisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="886"/>
+      <location filename="../src/mudlet.cpp" line="906"/>
       <source>Hebrew (Israel)</source>
       <translation>Hebräisch (Israel)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="887"/>
+      <location filename="../src/mudlet.cpp" line="907"/>
       <source>Hindi</source>
       <translation>Hindi</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="888"/>
+      <location filename="../src/mudlet.cpp" line="908"/>
       <source>Hindi (India)</source>
       <translation>Hindi (Indien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="889"/>
+      <location filename="../src/mudlet.cpp" line="909"/>
       <source>Croatian</source>
       <translation>Kroatisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="890"/>
+      <location filename="../src/mudlet.cpp" line="910"/>
       <source>Croatian (Croatia)</source>
       <translation>Kroatisch (Kroatien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="891"/>
+      <location filename="../src/mudlet.cpp" line="911"/>
       <source>Hungarian</source>
       <translation>Ungarisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="892"/>
+      <location filename="../src/mudlet.cpp" line="912"/>
       <source>Hungarian (Hungary)</source>
       <translation>Ungarisch (Ungarn)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="893"/>
+      <location filename="../src/mudlet.cpp" line="913"/>
       <source>Armenian</source>
       <translation>Armenisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="894"/>
+      <location filename="../src/mudlet.cpp" line="914"/>
       <source>Armenian (Armenia)</source>
       <translation>Armenisch (Armenien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="895"/>
+      <location filename="../src/mudlet.cpp" line="915"/>
       <source>Indonesian</source>
       <translation>Indonesisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="896"/>
+      <location filename="../src/mudlet.cpp" line="916"/>
       <source>Indonesian (Indonesia)</source>
       <translation>Indonesisch (Indonesien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="897"/>
+      <location filename="../src/mudlet.cpp" line="917"/>
       <source>Interlingue</source>
       <comment>formerly known as Occidental, and not to be mistaken for Interlingua</comment>
       <translation>Interlingue</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="898"/>
+      <location filename="../src/mudlet.cpp" line="918"/>
       <source>Icelandic</source>
       <translation>Isländisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="899"/>
+      <location filename="../src/mudlet.cpp" line="919"/>
       <source>Icelandic (Iceland)</source>
       <translation>Isländisch (Island)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="900"/>
+      <location filename="../src/mudlet.cpp" line="920"/>
       <source>Italian</source>
       <translation>Italienisch (Italian)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="901"/>
+      <location filename="../src/mudlet.cpp" line="921"/>
       <source>Italian (Switzerland)</source>
       <translation>Italienisch (Schweiz)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="902"/>
+      <location filename="../src/mudlet.cpp" line="922"/>
       <source>Italian (Italy)</source>
       <translation>Italienisch (Italien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="903"/>
+      <location filename="../src/mudlet.cpp" line="923"/>
       <source>Kazakh</source>
       <translation>Kasachisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="904"/>
+      <location filename="../src/mudlet.cpp" line="924"/>
       <source>Kazakh (Kazakhstan)</source>
       <translation>Kasachisch (Kasachstan)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="905"/>
+      <location filename="../src/mudlet.cpp" line="925"/>
       <source>Kurmanji</source>
       <translation>Kurmanji</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="906"/>
+      <location filename="../src/mudlet.cpp" line="926"/>
       <source>Kurmanji {Latin-alphabet Kurdish}</source>
       <translation>Kurmanji (Kurdisch mit lateinischem Alphabet)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="907"/>
+      <location filename="../src/mudlet.cpp" line="927"/>
       <source>Korean</source>
       <translation>Koreanisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="908"/>
+      <location filename="../src/mudlet.cpp" line="928"/>
       <source>Korean (South Korea)</source>
       <translation>Koreanisch (Südkorea)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="909"/>
+      <location filename="../src/mudlet.cpp" line="929"/>
       <source>Kurdish</source>
       <translation>Kurdisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="910"/>
+      <location filename="../src/mudlet.cpp" line="930"/>
       <source>Kurdish (Syria)</source>
       <translation>Kurdisch (Syrien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="911"/>
+      <location filename="../src/mudlet.cpp" line="931"/>
       <source>Kurdish (Turkey)</source>
       <translation>Kurdisch (Türkei)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="912"/>
+      <location filename="../src/mudlet.cpp" line="932"/>
       <source>Lao</source>
       <translation>Lao</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="913"/>
+      <location filename="../src/mudlet.cpp" line="933"/>
       <source>Lao (Laos)</source>
       <translation>Lao (Laos)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="914"/>
+      <location filename="../src/mudlet.cpp" line="934"/>
       <source>Lithuanian</source>
       <translation>Litauisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="915"/>
+      <location filename="../src/mudlet.cpp" line="935"/>
       <source>Lithuanian (Lithuania)</source>
       <translation>Litauisch (Litauen)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="916"/>
+      <location filename="../src/mudlet.cpp" line="936"/>
       <source>Latvian</source>
       <translation>Lettisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="917"/>
+      <location filename="../src/mudlet.cpp" line="937"/>
       <source>Latvian (Latvia)</source>
       <translation>Lettisch (Lettland)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="918"/>
+      <location filename="../src/mudlet.cpp" line="938"/>
       <source>Malayalam</source>
       <translation>Malayalam</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="919"/>
+      <location filename="../src/mudlet.cpp" line="939"/>
       <source>Malayalam (India)</source>
       <translation>Malayalam (Indien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="920"/>
+      <location filename="../src/mudlet.cpp" line="940"/>
       <source>Norwegian Bokmål</source>
       <translation>Norwegisch Bokmål</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="921"/>
+      <location filename="../src/mudlet.cpp" line="941"/>
       <source>Norwegian Bokmål (Norway)</source>
       <translation>Norwegisch Bokmål (Norwegen)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="922"/>
+      <location filename="../src/mudlet.cpp" line="942"/>
       <source>Nepali</source>
       <translation>Nepalisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="923"/>
+      <location filename="../src/mudlet.cpp" line="943"/>
       <source>Nepali (Nepal)</source>
       <translation>Nepalisch (Nepal)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="924"/>
+      <location filename="../src/mudlet.cpp" line="944"/>
       <source>Dutch</source>
       <translation>Niederländisch (Dutch)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="925"/>
+      <location filename="../src/mudlet.cpp" line="945"/>
       <source>Dutch (Netherlands Antilles)</source>
       <translation>Niederländisch (Niederländische Antillen)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="926"/>
+      <location filename="../src/mudlet.cpp" line="946"/>
       <source>Dutch (Aruba)</source>
       <translation>Niederländisch (Aruba)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="927"/>
+      <location filename="../src/mudlet.cpp" line="947"/>
       <source>Dutch (Belgium)</source>
       <translation>Niederländisch (Belgien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="928"/>
+      <location filename="../src/mudlet.cpp" line="948"/>
       <source>Dutch (Netherlands)</source>
       <translation>Niederländisch (Niederlande)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="929"/>
+      <location filename="../src/mudlet.cpp" line="949"/>
       <source>Dutch (Suriname)</source>
       <translation>Niederländisch (Surinam)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="930"/>
+      <location filename="../src/mudlet.cpp" line="950"/>
       <source>Norwegian Nynorsk</source>
       <translation>Norwegisch Nynorsk</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="931"/>
+      <location filename="../src/mudlet.cpp" line="951"/>
       <source>Norwegian Nynorsk (Norway)</source>
       <translation>Norwegisch Nynorsk (Norwegen)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="932"/>
+      <location filename="../src/mudlet.cpp" line="952"/>
       <source>Occitan</source>
       <translation>Okzitanisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="933"/>
+      <location filename="../src/mudlet.cpp" line="953"/>
       <source>Occitan (France)</source>
       <translation>Okzitanisch (Frankreich)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="934"/>
+      <location filename="../src/mudlet.cpp" line="954"/>
       <source>Polish</source>
       <translation>Polnisch (Polish)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="935"/>
+      <location filename="../src/mudlet.cpp" line="955"/>
       <source>Polish (Poland)</source>
       <translation>Polnisch (Polen)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="936"/>
+      <location filename="../src/mudlet.cpp" line="956"/>
       <source>Portuguese</source>
       <translation>Portugiesisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="937"/>
+      <location filename="../src/mudlet.cpp" line="957"/>
       <source>Portuguese (Brazil)</source>
       <translation>Portugiesisch (Brasilien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="938"/>
+      <location filename="../src/mudlet.cpp" line="958"/>
       <source>Portuguese (Portugal)</source>
       <translation>Portugiesisch (Portugal)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="939"/>
+      <location filename="../src/mudlet.cpp" line="959"/>
       <source>Romanian</source>
       <translation>Rumänisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="940"/>
+      <location filename="../src/mudlet.cpp" line="960"/>
       <source>Romanian (Romania)</source>
       <translation>Rumänisch (Rumänien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="941"/>
+      <location filename="../src/mudlet.cpp" line="961"/>
       <source>Russian</source>
       <translation>Russisch (Russian)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="942"/>
+      <location filename="../src/mudlet.cpp" line="962"/>
       <source>Russian (Russia)</source>
       <translation>Russisch (Russland)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="943"/>
+      <location filename="../src/mudlet.cpp" line="963"/>
       <source>Northern Sami</source>
       <translation>Nord-Sami</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="944"/>
+      <location filename="../src/mudlet.cpp" line="964"/>
       <source>Northern Sami (Finland)</source>
       <translation>Nord-Sami (Finnland)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="945"/>
+      <location filename="../src/mudlet.cpp" line="965"/>
       <source>Northern Sami (Norway)</source>
       <translation>Nord-Sami (Norwegen)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="946"/>
+      <location filename="../src/mudlet.cpp" line="966"/>
       <source>Northern Sami (Sweden)</source>
       <translation>Nord-Sami (Schweden)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="947"/>
+      <location filename="../src/mudlet.cpp" line="967"/>
       <source>Shtokavian</source>
       <comment>This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state without a state indication</comment>
       <translation>Shtokavian</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="948"/>
+      <location filename="../src/mudlet.cpp" line="968"/>
       <source>Shtokavian (former state of Yugoslavia)</source>
       <comment>This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state with a (withdrawn from ISO 3166) state indication</comment>
       <translation>Shtokavian (ehemaliger Staat Jugoslawiens)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="949"/>
+      <location filename="../src/mudlet.cpp" line="969"/>
       <source>Sinhala</source>
       <translation>Sinhala</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="950"/>
+      <location filename="../src/mudlet.cpp" line="970"/>
       <source>Sinhala (Sri Lanka)</source>
       <translation>Sinhala (Sri Lanka)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="951"/>
+      <location filename="../src/mudlet.cpp" line="971"/>
       <source>Slovak</source>
       <translation>Slovakisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="952"/>
+      <location filename="../src/mudlet.cpp" line="972"/>
       <source>Slovak (Slovakia)</source>
       <translation>Slowakisch (Slowakei)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="953"/>
+      <location filename="../src/mudlet.cpp" line="973"/>
       <source>Slovenian</source>
       <translation>Slowenisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="954"/>
+      <location filename="../src/mudlet.cpp" line="974"/>
       <source>Slovenian (Slovenia)</source>
       <translation>Slowenisch (Slowenien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="955"/>
+      <location filename="../src/mudlet.cpp" line="975"/>
       <source>Somali</source>
       <translation>Somali</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="956"/>
+      <location filename="../src/mudlet.cpp" line="976"/>
       <source>Somali (Somalia)</source>
       <translation>Somali (Somalia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="957"/>
+      <location filename="../src/mudlet.cpp" line="977"/>
       <source>Albanian</source>
       <translation>Albanisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="958"/>
+      <location filename="../src/mudlet.cpp" line="978"/>
       <source>Albanian (Albania)</source>
       <translation>Albanisch (Albanien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="959"/>
+      <location filename="../src/mudlet.cpp" line="979"/>
       <source>Serbian</source>
       <translation>Serbisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="960"/>
+      <location filename="../src/mudlet.cpp" line="980"/>
       <source>Serbian (Montenegro)</source>
       <translation>Serbisch (Montenegro)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="961"/>
+      <location filename="../src/mudlet.cpp" line="981"/>
       <source>Serbian (Serbia)</source>
       <translation>Serbisch (Serbien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="962"/>
+      <location filename="../src/mudlet.cpp" line="982"/>
       <source>Serbian (Serbia - Latin-alphabet)</source>
       <translation>Serbisch (Serbien - lateinisches Alphabet)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="963"/>
+      <location filename="../src/mudlet.cpp" line="983"/>
       <source>Serbian (former state of Yugoslavia)</source>
       <translation>Serbisch (ehemaliger Staat Jugoslawien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="964"/>
+      <location filename="../src/mudlet.cpp" line="984"/>
       <source>Swati</source>
       <translation>Swati</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="965"/>
+      <location filename="../src/mudlet.cpp" line="985"/>
       <source>Swati (Swaziland)</source>
       <translation>Swati (Swasiland)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="966"/>
+      <location filename="../src/mudlet.cpp" line="986"/>
       <source>Swati (South Africa)</source>
       <translation>Swati (Südafrika)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="967"/>
+      <location filename="../src/mudlet.cpp" line="987"/>
       <source>Swedish</source>
       <translation>Schwedisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="968"/>
+      <location filename="../src/mudlet.cpp" line="988"/>
       <source>Swedish (Sweden)</source>
       <translation>Schwedisch (Schweden)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="969"/>
+      <location filename="../src/mudlet.cpp" line="989"/>
       <source>Swedish (Finland)</source>
       <translation>Schwedisch (Finnland)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="970"/>
+      <location filename="../src/mudlet.cpp" line="990"/>
       <source>Swahili</source>
       <translation>Swahili</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="971"/>
+      <location filename="../src/mudlet.cpp" line="991"/>
       <source>Swahili (Kenya)</source>
       <translation>Swahili (Kenia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="972"/>
+      <location filename="../src/mudlet.cpp" line="992"/>
       <source>Swahili (Tanzania)</source>
       <translation>Swahili (Tansania)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="985"/>
+      <location filename="../src/mudlet.cpp" line="1005"/>
       <source>Turkish</source>
       <translation>Türkisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="973"/>
+      <location filename="../src/mudlet.cpp" line="993"/>
       <source>Telugu</source>
       <translation>Telugu</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="974"/>
+      <location filename="../src/mudlet.cpp" line="994"/>
       <source>Telugu (India)</source>
       <translation>Telugu (Indien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="975"/>
+      <location filename="../src/mudlet.cpp" line="995"/>
       <source>Thai</source>
       <translation>Thailändisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="976"/>
+      <location filename="../src/mudlet.cpp" line="996"/>
       <source>Thai (Thailand)</source>
       <translation>Thailändisch (Thailand)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="977"/>
+      <location filename="../src/mudlet.cpp" line="997"/>
       <source>Tigrinya</source>
       <translation>Tigrinya</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="978"/>
+      <location filename="../src/mudlet.cpp" line="998"/>
       <source>Tigrinya (Eritrea)</source>
       <translation>Tigrinya (Eritrea)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="979"/>
+      <location filename="../src/mudlet.cpp" line="999"/>
       <source>Tigrinya (Ethiopia)</source>
       <translation>Tigrinya (Äthiopien)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="980"/>
+      <location filename="../src/mudlet.cpp" line="1000"/>
       <source>Turkmen</source>
       <translation>Turkmenisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="981"/>
+      <location filename="../src/mudlet.cpp" line="1001"/>
       <source>Turkmen (Turkmenistan)</source>
       <translation>Turkmenisch (Turkmenistan)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="982"/>
+      <location filename="../src/mudlet.cpp" line="1002"/>
       <source>Tswana</source>
       <translation>Tswana</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="983"/>
+      <location filename="../src/mudlet.cpp" line="1003"/>
       <source>Tswana (Botswana)</source>
       <translation>Tswana (Botswana)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="984"/>
+      <location filename="../src/mudlet.cpp" line="1004"/>
       <source>Tswana (South Africa)</source>
       <translation>Tswana (Südafrika)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="987"/>
+      <location filename="../src/mudlet.cpp" line="1007"/>
       <source>Tsonga</source>
       <translation>Tsonga</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="988"/>
+      <location filename="../src/mudlet.cpp" line="1008"/>
       <source>Tsonga (South Africa)</source>
       <translation>Tsonga (Südafrika)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="989"/>
+      <location filename="../src/mudlet.cpp" line="1009"/>
       <source>Ukrainian</source>
       <translation>Ukrainisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="990"/>
+      <location filename="../src/mudlet.cpp" line="1010"/>
       <source>Ukrainian (Ukraine)</source>
       <translation>Ukrainisch (Ukraine)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="991"/>
+      <location filename="../src/mudlet.cpp" line="1011"/>
       <source>Uzbek</source>
       <translation>Usbekisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="992"/>
+      <location filename="../src/mudlet.cpp" line="1012"/>
       <source>Uzbek (Uzbekistan)</source>
       <translation>Usbekisch (Usbekistan)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="993"/>
+      <location filename="../src/mudlet.cpp" line="1013"/>
       <source>Venda</source>
       <translation>Venda</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="994"/>
+      <location filename="../src/mudlet.cpp" line="1014"/>
       <source>Vietnamese</source>
       <translation>Vietnamesich</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="995"/>
+      <location filename="../src/mudlet.cpp" line="1015"/>
       <source>Vietnamese (Vietnam)</source>
       <translation>Vietnamesisch (Vietnam)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="998"/>
+      <location filename="../src/mudlet.cpp" line="1018"/>
       <source>Walloon</source>
       <translation>Wallonisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="999"/>
+      <location filename="../src/mudlet.cpp" line="1019"/>
       <source>Xhosa</source>
       <translation>Xhosa</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1000"/>
+      <location filename="../src/mudlet.cpp" line="1020"/>
       <source>Yiddish</source>
       <translation>Jiddisch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1001"/>
+      <location filename="../src/mudlet.cpp" line="1021"/>
       <source>Chinese</source>
       <translation>Chinesisch (Chinese)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1002"/>
+      <location filename="../src/mudlet.cpp" line="1022"/>
       <source>Chinese (China - simplified)</source>
       <translation>Chinesisch (China - vereinfacht)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1003"/>
+      <location filename="../src/mudlet.cpp" line="1023"/>
       <source>Chinese (Taiwan - traditional)</source>
       <translation>Chinesisch (Taiwan - traditionell)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1004"/>
+      <location filename="../src/mudlet.cpp" line="1024"/>
       <source>Zulu</source>
       <translation>Zulu</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4494"/>
+      <location filename="../src/mudlet.cpp" line="4531"/>
       <source>Hide tray icon</source>
       <translation>Tray-Symbol ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4499"/>
+      <location filename="../src/mudlet.cpp" line="4536"/>
       <source>Quit Mudlet</source>
       <translation>Mudlet beenden</translation>
     </message>
@@ -10031,531 +10066,535 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <translation>hh:mm:ss</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="308"/>
+      <location filename="../src/mudlet.cpp" line="310"/>
       <source>Main Toolbar</source>
       <translation>Hauptsymbolleiste</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="347"/>
-      <location filename="../src/mudlet.cpp" line="354"/>
+      <location filename="../src/mudlet.cpp" line="349"/>
       <location filename="../src/mudlet.cpp" line="356"/>
+      <location filename="../src/mudlet.cpp" line="358"/>
       <source>Connect</source>
       <translation>Verbinden</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="359"/>
+      <location filename="../src/mudlet.cpp" line="361"/>
+      <location filename="../src/mudlet.cpp" line="680"/>
       <source>Disconnect</source>
       <translation>Trennen</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="418"/>
+      <location filename="../src/mudlet.cpp" line="420"/>
       <source>Open Discord</source>
       <translation>Discord öffnen</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="430"/>
+      <location filename="../src/mudlet.cpp" line="432"/>
       <source>Open IRC</source>
       <translation>IRC öffnen</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="366"/>
+      <location filename="../src/mudlet.cpp" line="368"/>
       <source>Triggers</source>
       <translation>Trigger</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="367"/>
+      <location filename="../src/mudlet.cpp" line="369"/>
       <source>Show and edit triggers</source>
       <translation>Trigger anzeigen und bearbeiten</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="374"/>
+      <location filename="../src/mudlet.cpp" line="376"/>
       <source>Aliases</source>
       <translation>Aliase</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="375"/>
+      <location filename="../src/mudlet.cpp" line="377"/>
       <source>Show and edit aliases</source>
       <translation>Aliase anzeigen und bearbeiten</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="380"/>
+      <location filename="../src/mudlet.cpp" line="382"/>
       <source>Timers</source>
       <translation>Timer</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="381"/>
+      <location filename="../src/mudlet.cpp" line="383"/>
       <source>Show and edit timers</source>
       <translation>Timer anzeigen und bearbeiten</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="386"/>
+      <location filename="../src/mudlet.cpp" line="388"/>
       <source>Buttons</source>
       <translation>Buttons</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="387"/>
+      <location filename="../src/mudlet.cpp" line="389"/>
       <source>Show and edit easy buttons</source>
       <translation>Einfache Buttons anzeigen und bearbeiten</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="392"/>
+      <location filename="../src/mudlet.cpp" line="394"/>
       <source>Scripts</source>
       <translation>Skripte</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="393"/>
+      <location filename="../src/mudlet.cpp" line="395"/>
       <source>Show and edit scripts</source>
       <translation>Skripte anzeigen und bearbeiten</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="398"/>
+      <location filename="../src/mudlet.cpp" line="400"/>
       <source>Keys</source>
       <translation>Tasten</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="399"/>
+      <location filename="../src/mudlet.cpp" line="401"/>
       <source>Show and edit keys</source>
       <translation>Tasten anzeigen und bearbeiten</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="404"/>
+      <location filename="../src/mudlet.cpp" line="406"/>
       <source>Variables</source>
       <translation>Variablen</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="405"/>
+      <location filename="../src/mudlet.cpp" line="407"/>
       <source>Show and edit Lua variables</source>
       <translation>Lua Variablen anzeigen und bearbeiten</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="438"/>
+      <location filename="../src/mudlet.cpp" line="440"/>
       <source>Map</source>
       <translation>Karte</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="439"/>
+      <location filename="../src/mudlet.cpp" line="441"/>
       <source>Show/hide the map</source>
       <translation>Zeige/Verberge die Karte</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="444"/>
+      <location filename="../src/mudlet.cpp" line="446"/>
       <source>Manual</source>
       <translation>Handbuch</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="445"/>
+      <location filename="../src/mudlet.cpp" line="447"/>
       <source>Browse reference material and documentation</source>
       <translation>Durchsuche Referenzmaterial und Dokumentation</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="450"/>
+      <location filename="../src/mudlet.cpp" line="452"/>
       <source>Settings</source>
       <translation>Einstellungen</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="451"/>
+      <location filename="../src/mudlet.cpp" line="453"/>
       <source>See and edit profile preferences</source>
       <translation>Zeige und bearbeite Profileinstellungen</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="459"/>
+      <location filename="../src/mudlet.cpp" line="461"/>
+      <location filename="../src/mudlet.cpp" line="675"/>
       <source>Notepad</source>
       <translation>Notiz</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="460"/>
+      <location filename="../src/mudlet.cpp" line="462"/>
       <source>Open a notepad that you can store your notes in</source>
       <translation>Öffne einen Texteditor, um deine Notizen zu speichern</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="478"/>
+      <location filename="../src/mudlet.cpp" line="480"/>
       <source>Module Manager</source>
       <translation>Module</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="482"/>
+      <location filename="../src/mudlet.cpp" line="484"/>
       <source>Package Exporter</source>
       <translation>Paket exportieren</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="492"/>
+      <location filename="../src/mudlet.cpp" line="494"/>
       <source>Replay</source>
       <translation>Wiederholung</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="497"/>
+      <location filename="../src/mudlet.cpp" line="499"/>
+      <location filename="../src/mudlet.cpp" line="681"/>
       <source>Reconnect</source>
       <translation>Neu verbinden</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="498"/>
+      <location filename="../src/mudlet.cpp" line="500"/>
       <source>Disconnects you from the game and connects once again</source>
       <translation>Trennt dich vom Spiel und verbindet wieder</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="503"/>
+      <location filename="../src/mudlet.cpp" line="505"/>
+      <location filename="../src/mudlet.cpp" line="678"/>
       <source>MultiView</source>
       <translation>Multi-Sicht</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="527"/>
-      <location filename="../src/mudlet.cpp" line="3588"/>
+      <location filename="../src/mudlet.cpp" line="529"/>
+      <location filename="../src/mudlet.cpp" line="3623"/>
       <source>About</source>
       <translation>Über</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="528"/>
-      <location filename="../src/mudlet.cpp" line="3571"/>
+      <location filename="../src/mudlet.cpp" line="530"/>
+      <location filename="../src/mudlet.cpp" line="3606"/>
       <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
       <translation>&lt;p&gt;Informiere dich über diese Version von Mudlet, die Menschen, die daran beteiligt waren, und die Lizenz, unter der du es teilen kannst.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="986"/>
+      <location filename="../src/mudlet.cpp" line="1006"/>
       <source>Turkish (Turkey)</source>
       <translation>Türkisch (Türkei)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="996"/>
+      <location filename="../src/mudlet.cpp" line="1016"/>
       <source>Vietnamese (DauCu variant - old-style diacritics)</source>
       <translation>Vietnamesisch (DauCu Variante - alte Diakritika)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="997"/>
+      <location filename="../src/mudlet.cpp" line="1017"/>
       <source>Vietnamese (DauMoi variant - new-style diacritics)</source>
       <translation>Vietnamesisch (DauMoi Variante - neue Diakritika)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1006"/>
+      <location filename="../src/mudlet.cpp" line="1026"/>
       <source>ASCII (Basic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>ASCII (Basis)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1007"/>
+      <location filename="../src/mudlet.cpp" line="1027"/>
       <source>UTF-8 (Recommended)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>UTF-8 (empfohlen)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1012"/>
+      <location filename="../src/mudlet.cpp" line="1032"/>
       <source>ISO 8859-1 (Western European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>ISO 8859-1 (Westeuropa/Western European)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1013"/>
+      <location filename="../src/mudlet.cpp" line="1033"/>
       <source>ISO 8859-2 (Central European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>ISO 8859-2 (Mitteleuropa/Central European)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1014"/>
+      <location filename="../src/mudlet.cpp" line="1034"/>
       <source>ISO 8859-3 (South European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>ISO 8859-3 (Südeuropa/South European)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1015"/>
+      <location filename="../src/mudlet.cpp" line="1035"/>
       <source>ISO 8859-4 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>ISO 8859-4 (Baltisch/Baltic)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1016"/>
+      <location filename="../src/mudlet.cpp" line="1036"/>
       <source>ISO 8859-5 (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>ISO 8859-5 (Kyrillisch/Cyrillic)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1017"/>
+      <location filename="../src/mudlet.cpp" line="1037"/>
       <source>ISO 8859-6 (Arabic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>ISO 8859-6 (Arabisch/Arabic)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1018"/>
+      <location filename="../src/mudlet.cpp" line="1038"/>
       <source>ISO 8859-7 (Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>ISO 8859-7 (Griechisch/Greek)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1019"/>
+      <location filename="../src/mudlet.cpp" line="1039"/>
       <source>ISO 8859-8 (Hebrew Visual)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>ISO 8859-8 (Hebräisch Visuell/Hebrew Visual)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1020"/>
+      <location filename="../src/mudlet.cpp" line="1040"/>
       <source>ISO 8859-9 (Turkish)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>ISO 8859-9 (Türkisch/Turkish)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1021"/>
+      <location filename="../src/mudlet.cpp" line="1041"/>
       <source>ISO 8859-10 (Nordic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>ISO 8859-10 (Nordisch/Nordic)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1022"/>
+      <location filename="../src/mudlet.cpp" line="1042"/>
       <source>ISO 8859-11 (Latin/Thai)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>ISO 8859-11 (Latin/Thai)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1023"/>
+      <location filename="../src/mudlet.cpp" line="1043"/>
       <source>ISO 8859-13 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>ISO 8859-13 (Baltisch/Baltic)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1024"/>
+      <location filename="../src/mudlet.cpp" line="1044"/>
       <source>ISO 8859-14 (Celtic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>ISO 8859-14 (Keltisch/Celtic)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1025"/>
+      <location filename="../src/mudlet.cpp" line="1045"/>
       <source>ISO 8859-15 (Western)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>ISO 8859-15 (Westlich/Western)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1026"/>
+      <location filename="../src/mudlet.cpp" line="1046"/>
       <source>ISO 8859-16 (Romanian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>ISO 8859-16 (Rumänisch/Romanian)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1027"/>
-      <location filename="../src/mudlet.cpp" line="1028"/>
+      <location filename="../src/mudlet.cpp" line="1047"/>
+      <location filename="../src/mudlet.cpp" line="1048"/>
       <source>CP437 (OEM Font)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>CP437 (OEM-Schriftart)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1029"/>
-      <location filename="../src/mudlet.cpp" line="1030"/>
+      <location filename="../src/mudlet.cpp" line="1049"/>
+      <location filename="../src/mudlet.cpp" line="1050"/>
       <source>CP667 (Mazovia)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>CP667 (Masowien/Mazovia)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1031"/>
-      <location filename="../src/mudlet.cpp" line="1032"/>
+      <location filename="../src/mudlet.cpp" line="1051"/>
+      <location filename="../src/mudlet.cpp" line="1052"/>
       <source>CP737 (DOS Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>CP737 (DOS-Griechisch)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1033"/>
+      <location filename="../src/mudlet.cpp" line="1053"/>
       <source>CP850 (Western Europe)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>CP850 (Westeuropa)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1034"/>
+      <location filename="../src/mudlet.cpp" line="1054"/>
       <source>CP866 (Cyrillic/Russian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>CP866 (Kyrillisch/Russisch / Cyrillic/Russian)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1035"/>
-      <location filename="../src/mudlet.cpp" line="1036"/>
+      <location filename="../src/mudlet.cpp" line="1055"/>
+      <location filename="../src/mudlet.cpp" line="1056"/>
       <source>CP869 (DOS Greek 2)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>CP869 (DOS-Griechisch 2)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1037"/>
+      <location filename="../src/mudlet.cpp" line="1057"/>
       <source>CP1161 (Latin/Thai)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>CP1161 (Lateinisch/Thailändisch)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1038"/>
+      <location filename="../src/mudlet.cpp" line="1058"/>
       <source>KOI8-R (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>KOI8-R (Kyrillisch/Cyrillic)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1039"/>
+      <location filename="../src/mudlet.cpp" line="1059"/>
       <source>KOI8-U (Cyrillic/Ukrainian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>KOI8-U (Kyrillisch/Ukrainisch / Cyrillic/Ukrainian)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1040"/>
+      <location filename="../src/mudlet.cpp" line="1060"/>
       <source>MACINTOSH</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>MACINTOSH</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1041"/>
+      <location filename="../src/mudlet.cpp" line="1061"/>
       <source>WINDOWS-1250 (Central European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>WINDOWS-1250 (Mitteleuropa/Central European)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1042"/>
+      <location filename="../src/mudlet.cpp" line="1062"/>
       <source>WINDOWS-1251 (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>WINDOWS-1251 (Kyrillisch/Cyrillic)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1043"/>
+      <location filename="../src/mudlet.cpp" line="1063"/>
       <source>WINDOWS-1252 (Western)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>WINDOWS-1252 (Westlich/Western)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1044"/>
+      <location filename="../src/mudlet.cpp" line="1064"/>
       <source>WINDOWS-1253 (Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>WINDOWS-1253 (Griechisch / Greek)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1045"/>
+      <location filename="../src/mudlet.cpp" line="1065"/>
       <source>WINDOWS-1254 (Turkish)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>WINDOWS-1254 (Türkisch/Turkish)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1046"/>
+      <location filename="../src/mudlet.cpp" line="1066"/>
       <source>WINDOWS-1255 (Hebrew)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>WINDOWS-1255 (Hebräisch/Hebrew)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1047"/>
+      <location filename="../src/mudlet.cpp" line="1067"/>
       <source>WINDOWS-1256 (Arabic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>WINDOWS-1256 (Arabisch/Arabic)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1048"/>
+      <location filename="../src/mudlet.cpp" line="1068"/>
       <source>WINDOWS-1257 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>WINDOWS-1257 (Baltisch/Baltic)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1049"/>
+      <location filename="../src/mudlet.cpp" line="1069"/>
       <source>WINDOWS-1258 (Vietnamese)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>WINDOWS-1258 (Vietnamesisch/Vietnamese)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2609"/>
+      <location filename="../src/mudlet.cpp" line="2644"/>
       <source>Central Debug Console</source>
       <translation>Zentrale Debug-Konsole</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="539"/>
-      <location filename="../src/mudlet.cpp" line="540"/>
+      <location filename="../src/mudlet.cpp" line="541"/>
+      <location filename="../src/mudlet.cpp" line="542"/>
       <source>Toggle Full Screen View</source>
       <translation>Vollbildanzeige umschalten</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="520"/>
+      <location filename="../src/mudlet.cpp" line="522"/>
       <source>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</source>
       <translation>Die öffentliche Testversion bringt Dir schneller neue Funktionen, und Du hilfst uns, Probleme darin schneller zu finden. Hast Du etwas Merkwürdiges entdeckt? Lass es uns so schnell wie möglich wissen!</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1008"/>
+      <location filename="../src/mudlet.cpp" line="1028"/>
       <source>GBK (Chinese)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>GBK (Chinesisch)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1009"/>
+      <location filename="../src/mudlet.cpp" line="1029"/>
       <source>GB18030 (Chinese)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>GB18030 (Chinesisch)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1010"/>
+      <location filename="../src/mudlet.cpp" line="1030"/>
       <source>Big5-ETen (Taiwan)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>Big5-ETen (Taiwan)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1011"/>
+      <location filename="../src/mudlet.cpp" line="1031"/>
       <source>Big5-HKSCS (Hong Kong)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation>Big5-HKSCS (Hongkong)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1609"/>
+      <location filename="../src/mudlet.cpp" line="1629"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Disabled until a profile is loaded.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;Lade eine Mudlet Wiederholung.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Deaktiviert, bis ein Profil geladen ist.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1644"/>
-      <location filename="../src/mudlet.cpp" line="2999"/>
+      <location filename="../src/mudlet.cpp" line="1664"/>
+      <location filename="../src/mudlet.cpp" line="3034"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Lade eine Mudlet Wiederholung.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2378"/>
+      <location filename="../src/mudlet.cpp" line="2413"/>
       <source>%1 - notes</source>
       <translation>%1 - Notizen</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2462"/>
+      <location filename="../src/mudlet.cpp" line="2497"/>
       <source>Select Replay</source>
       <translation>Wiederholung auswählen</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2464"/>
+      <location filename="../src/mudlet.cpp" line="2499"/>
       <source>*.dat</source>
       <translation>*.dat</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2766"/>
+      <location filename="../src/mudlet.cpp" line="2801"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
       <translation>[  OK  ]  - Profil &quot;%1&quot; im Offline-Modus geladen.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2901"/>
+      <location filename="../src/mudlet.cpp" line="2936"/>
       <source>&lt;p&gt;Cannot load a replay as one is already in progress in this or another profile.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Wiederholung kann nicht geladen werden, da schon eine in diesem oder einem anderen Profil läuft.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2918"/>
+      <location filename="../src/mudlet.cpp" line="2953"/>
       <source>Faster</source>
       <translation>Schneller</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2921"/>
+      <location filename="../src/mudlet.cpp" line="2956"/>
       <source>&lt;p&gt;Replay each step with a shorter time interval between steps.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Jeden Schritt mit kürzerem zeitlichen Abstand abspielen.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2925"/>
+      <location filename="../src/mudlet.cpp" line="2960"/>
       <source>Slower</source>
       <translation>Langsamer</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2928"/>
+      <location filename="../src/mudlet.cpp" line="2963"/>
       <source>&lt;p&gt;Replay each step with a longer time interval between steps.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Jeden Schritt mit längerem zeitlichen Abstand abspielen.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2938"/>
-      <location filename="../src/mudlet.cpp" line="3007"/>
-      <location filename="../src/mudlet.cpp" line="3020"/>
+      <location filename="../src/mudlet.cpp" line="2973"/>
+      <location filename="../src/mudlet.cpp" line="3042"/>
+      <location filename="../src/mudlet.cpp" line="3055"/>
       <source>Speed: X%1</source>
       <translation>Geschwindigkeit: X%1</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2945"/>
-      <location filename="../src/mudlet.cpp" line="2962"/>
+      <location filename="../src/mudlet.cpp" line="2980"/>
+      <location filename="../src/mudlet.cpp" line="2997"/>
       <source>Time: %1</source>
       <translation>Zeit: %1</translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3582"/>
+      <location filename="../src/mudlet.cpp" line="3617"/>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
       <translation>
@@ -10564,7 +10603,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       </translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3600"/>
+      <location filename="../src/mudlet.cpp" line="3635"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
       <translation>
@@ -10573,7 +10612,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       </translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3605"/>
+      <location filename="../src/mudlet.cpp" line="3640"/>
       <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
       <translation>
@@ -10582,12 +10621,12 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       </translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3630"/>
+      <location filename="../src/mudlet.cpp" line="3665"/>
       <source>Update installed - restart to apply</source>
       <translation>Update installiert - Neustart zum Übernehmen</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3666"/>
+      <location filename="../src/mudlet.cpp" line="3701"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
       <translation>[ WARNUNG ] - Kann Wiederholung nicht ausführen. Eine andere könnte bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
@@ -10686,7 +10725,7 @@ try again when it has finished.</source>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="364"/>
-      <location filename="../src/ui/profile_preferences.ui" line="3407"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3475"/>
       <source>Please reconnect to your game for the change to take effect</source>
       <translation>Bitte neu mit dem Spiel verbinden, damit die Änderungen aktiv werden.</translation>
     </message>
@@ -11181,7 +11220,27 @@ try again when it has finished.</source>
       <translation>Sichere Verbindung verwenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3577"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3345"/>
+      <source>Shortcuts</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="3360"/>
+      <source>Main window shortcuts</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="3372"/>
+      <source>To disable shortcut input &apos;Esc&apos; key.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="3389"/>
+      <source>Reset to defaults</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="3645"/>
       <source>h:mm:ss.zzz</source>
       <comment>Used to set a time interval only</comment>
       <translation>h:mm:ss.zzz</translation>
@@ -11663,42 +11722,42 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <translation>Passwort für die Anmeldung am Proxy, falls nötig</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3351"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3419"/>
       <source>Special options needed for some older game drivers (needs client restart to take effect)</source>
       <translation>Spezielle Optionen für einige ältere Spiel-Treiber (Aktivierung benötigt Neustart des Client)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3389"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3457"/>
       <source>Force CHARSET negotiation off</source>
       <translation>CHARSET Verhandlungen ausschalten</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3494"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3562"/>
       <source>the computer&apos;s password manager (secure)</source>
       <translation>im Kennwort-Manager des Computers (sicher)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3499"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3567"/>
       <source>plaintext with the profile (portable)</source>
       <translation>als Klartext mit dem Profil (protabel)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3587"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3655"/>
       <source>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summarized in as a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3473"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3541"/>
       <source>&lt;p&gt;Some MUDs use a flawed interpretation of the ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) code sequences for 16M color mode which only uses semi-colons and not colons to separate parameter elements i.e. instead of using a code in the form: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;where the &lt;i&gt;Color Space Id&lt;/i&gt; is expected to be an empty string to specify the usual (default) case and all of the &lt;i&gt;Parameter Elements&lt;/i&gt; (the &quot;2&quot; and the values in the &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) may, technically, be omitted; they use: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;or: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;/p&gt;&lt;p&gt;It is not possible to reliably detect the difference between these two so checking this option causes Mudlet to expect the last one with the additional (but empty!) parameter.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3476"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3544"/>
       <source>Expect Color Space Id in SGR...(3|4)8;2;...m codes</source>
       <translation>Erwarte Farbraum-ID in SGR... (3|4)8;2;... m-Codes</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3483"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3551"/>
       <source>Store character login passwords in:</source>
       <translation>Kennwörter für Charakteranmeldung speichern in:</translation>
     </message>
@@ -11865,34 +11924,34 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <translation>Hintergrundfarbe:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3345"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3413"/>
       <source>Special Options</source>
       <translation>Spezielle Optionen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3357"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3425"/>
       <source>Force compression off</source>
       <translation>Komprimierung zwingend abschalten</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3375"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3443"/>
       <source>Force telnet GA signal interpretation off</source>
       <translation>Telnet GA Signalinterpretation zwingend abschalten</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3364"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3432"/>
       <source>This option adds a line line break &lt;LF&gt; or &quot;
 &quot; to your command input on empty commands. This option will rarely be necessary.</source>
       <translation>Diese Option ergänzt einen Zeilenumbruch &lt;LF&gt; oder &quot;
 &quot; zu deiner Befehlszeile bei leeren Befehlen. Diese Option wird nur selten notwendig sein.</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3368"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3436"/>
       <source>Force new line on empty commands</source>
       <translation>Neue Zeile bei leeren Befehlen ergänzen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3382"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3450"/>
       <source>Force MXP negotiation off</source>
       <translation>MXP Verhandlungen ausschalten</translation>
     </message>
@@ -12025,27 +12084,27 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <translation>6667</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3439"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3507"/>
       <source>Search Engine</source>
       <translation>Suchmaschine</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3423"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3491"/>
       <source>Mudlet updates</source>
       <translation>Mudlet Aktualisierungen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3429"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3497"/>
       <source>Disable automatic updates</source>
       <translation>Deaktiviere automatische Aktualisierungen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3451"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3519"/>
       <source>Other Special options</source>
       <translation>Andere spezielle Optionen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3457"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3525"/>
       <source>Show icons on menus</source>
       <translation>Symbole in Menüs anzeigen</translation>
     </message>
@@ -12080,39 +12139,39 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <translation>Passwort (optional)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3543"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3611"/>
       <source>Show debug messages for timers not smaller than:</source>
       <translation>Debug-Meldungen für Timer anzeigen, die nicht kleiner sind als:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3540"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3608"/>
       <source>&lt;p&gt;Show &apos;LUA OK&apos; messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</source>
       <comment>The term in &apos;...&apos; refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.</comment>
       <translation>&lt;p&gt;Zeige &apos;LUA OK&apos;-Meldungen für Timer mit dem angegebenen Mindestintervall (h:mm:ss.zzz). Der Minimalwert (die Voreinstellung) zeigt alle derartigen Meldungen an, kann aber die &lt;i&gt;Zentrale Debug-Konsole&lt;/i&gt; nutzlos machen, wenn ein Timer mit sehr kleinem Intervall läuft.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3590"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3658"/>
       <source>Report all Codepoint problems immediately</source>
       <translation>Alle Codepoint-Probleme sofort melden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3597"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3665"/>
       <source>Additional text wait time:</source>
       <translation>Zusätzliche Wartezeit auf den Text:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3607"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3675"/>
       <source>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) and &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) signalling tells Mudlet when the game server is done sending text. On games that do not provide &lt;tt&gt;GA&lt;/tt&gt; or &lt;tt&gt;EOR&lt;/tt&gt;, this option controls how long Mudlet will wait for more text to arrive. Greater values will help reduce the risk that Mudlet will split a large piece of text (with unintended line-breaks in the middle) which can stop some triggers from working. Lesser values increases the risk of text getting broken up, but may make the game feel more responsive.&lt;/p&gt;&lt;p&gt;&lt;i&gt;The default value, which was what Mudlet used before this control was added, is 0.300 Seconds.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) und &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) signalisieren Mudlet, wann der Spielserver mit dem Senden von Text fertig ist. Bei Spielen, die weder &lt;tt&gt;GA&lt;/tt&gt; noch &lt;tt&gt;EOR&lt;/tt&gt;anbieten, steuert diese Option, wie lange Mudlet auf weiteren Text warten soll. Größere Werte verringern das Risiko, dass Mudlet einen großen Textabschnitt aufteilt (mit unbeabsichtigten Zeilenumbrüchen in der Mitte), was dazu führen kann, dass einige Trigger nicht funktionieren. Kleinere Werte erhöhen das Risiko, dass der Text unterbrochen wird, können aber dazu führen, dass das Spiel gefühlt schneller reagiert.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Der Standardwert, den Mudlet verwendet hat, bevor dieses Steuerelement hinzugefügt wurde, ist 0,3 Sekunden.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3610"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3678"/>
       <source> seconds</source>
       <extracomment>For most locales a space should be included so that the text is separated from the number!</extracomment>
       <translation> Sekunden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3680"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3748"/>
       <source>Save</source>
       <translation>Speichern</translation>
     </message>
