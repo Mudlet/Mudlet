@@ -9131,7 +9131,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/mudlet.cpp" line="672"/>
       <source>Show Map</source>
-      <translation type="unfinished"/>
+      <translation>Mostra Mappa</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="673"/>
@@ -11263,7 +11263,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3345"/>
       <source>Shortcuts</source>
-      <translation type="unfinished"/>
+      <translation>Tasti di scelta rapida</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3360"/>
