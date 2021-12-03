@@ -9126,7 +9126,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/mudlet.cpp" line="671"/>
       <source>Script editor</source>
-      <translation type="unfinished"/>
+      <translation>Editor di script</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="672"/>
@@ -9136,27 +9136,27 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/mudlet.cpp" line="673"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>Compatta linea dei comandi</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="674"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>Preferenze</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="676"/>
       <source>Package manager</source>
-      <translation type="unfinished"/>
+      <translation>Gestione pacchetti</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="677"/>
       <source>Module manager</source>
-      <translation type="unfinished"/>
+      <translation>Gestione moduli</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="679"/>
       <source>Play</source>
-      <translation type="unfinished"/>
+      <translation>Riproduci</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="826"/>
