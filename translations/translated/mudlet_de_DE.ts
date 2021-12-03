@@ -11237,7 +11237,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3389"/>
       <source>Reset to defaults</source>
-      <translation type="unfinished"/>
+      <translation>Auf den Standard zurücksetzen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3645"/>
