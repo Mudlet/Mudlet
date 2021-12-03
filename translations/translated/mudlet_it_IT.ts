@@ -11268,17 +11268,17 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3360"/>
       <source>Main window shortcuts</source>
-      <translation type="unfinished"/>
+      <translation>Tasti di scelta rapida della finestra principale</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3372"/>
       <source>To disable shortcut input &apos;Esc&apos; key.</source>
-      <translation type="unfinished"/>
+      <translation>Per disabilitare l'inserimento del tasto di escelta rapida premi &apos;Esc&apos;.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3389"/>
       <source>Reset to defaults</source>
-      <translation type="unfinished"/>
+      <translation>Ripristina impostazioni predefinite</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3645"/>
