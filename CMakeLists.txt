@@ -33,10 +33,10 @@
 ############################################################################
 
 # Should be called before PROJECT.
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.16)
 
 if(APPLE)
-  # needed for fetching Sparkle
+  # needed for fetching Spark
   cmake_minimum_required(VERSION 3.18)
   # minimum supported version by Apple
   set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "")

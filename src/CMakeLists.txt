@@ -369,7 +369,8 @@ target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.q
 set_target_properties(mudlet PROPERTIES
   AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
   AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
-  AUTOGEN_ORIGIN_DEPENDS OFF)
+  AUTOGEN_ORIGIN_DEPENDS OFF
+  UNITY_BUILD ON)
 
 if(USE_FONTS)
   target_compile_definitions(mudlet PRIVATE INCLUDE_FONTS)
