@@ -267,14 +267,16 @@ mudlet::mudlet()
     }
 
     qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
-    setAppearance(mAppearance, true);
+    // We need to record this before we clobber it with our own substitute...
     mDefaultStyle = qApp->style()->objectName();
+    // ... which is applied here:
+    setAppearance(mAppearance, true);
 
     scanForMudletTranslations(QStringLiteral(":/lang"));
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
 
-  if (QStringList{"windowsvista", "macintosh"}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
+    if (QStringList{"windowsvista", "macintosh"}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
         qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - QPushButton styling fix applied!";
         mBG_ONLY_STYLESHEET = QStringLiteral("QPushButton {background-color: %1; border: 1px solid #8f8f91;}");
         mTEXT_ON_BG_STYLESHEET = QStringLiteral("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}");
@@ -659,6 +661,24 @@ mudlet::mudlet()
     reconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_R);
 #endif
     connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_update_shortcuts);
+    connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assign_shortcuts_from_profile);
+    connect(this, &mudlet::signal_profileActivated, this, &mudlet::slot_assign_shortcuts_from_profile);
+    connect(this, &mudlet::signal_tabChanged, this, [=]() {
+        slot_assign_shortcuts_from_profile(getActiveHost());
+    });
+
+    mShortcutsManager = new ShortcutsManager();
+    mShortcutsManager->registerShortcut(tr("Script editor"), &triggersKeySequence);
+    mShortcutsManager->registerShortcut(tr("Show Map"), &showMapKeySequence);
+    mShortcutsManager->registerShortcut(tr("Compact input line"), &inputLineKeySequence);
+    mShortcutsManager->registerShortcut(tr("Preferences"), &optionsKeySequence);
+    mShortcutsManager->registerShortcut(tr("Notepad"), &notepadKeySequence);
+    mShortcutsManager->registerShortcut(tr("Package manager"), &packagesKeySequence);
+    mShortcutsManager->registerShortcut(tr("Module manager"), &modulesKeySequence);
+    mShortcutsManager->registerShortcut(tr("MultiView"), &multiViewKeySequence);
+    mShortcutsManager->registerShortcut(tr("Play"), &connectKeySequence);
+    mShortcutsManager->registerShortcut(tr("Disconnect"), &disconnectKeySequence);
+    mShortcutsManager->registerShortcut(tr("Reconnect"), &reconnectKeySequence);
 
     mpSettings = getQSettings();
     readLateSettings(*mpSettings);
@@ -2218,6 +2238,9 @@ void mudlet::show_options_dialog(const QString& tab)
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_data_protocol, &QWidget::hide);
         connect(mpActionReconnect.data(), &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
+        connect(pPrefs, &dlgProfilePreferences::signal_preferencesSaved, this, [=]() {
+            slot_assign_shortcuts_from_profile(getActiveHost());
+        });
         pPrefs->setAttribute(Qt::WA_DeleteOnClose);
     }
 
@@ -2227,6 +2250,18 @@ void mudlet::show_options_dialog(const QString& tab)
     pPrefs->setTab(tab);
     pPrefs->raise();
     pPrefs->show();
+}
+
+void mudlet::slot_assign_shortcuts_from_profile(Host* pHost)
+{
+    if (pHost) {
+        auto iterator = mShortcutsManager->iterator();
+        while (iterator.hasNext()) {
+            auto key = iterator.next();
+            mShortcutsManager->setShortcut(key, pHost->profileShortcuts.value(key));
+        }
+    }
+    slot_update_shortcuts();
 }
 
 void mudlet::slot_update_shortcuts()
@@ -3804,7 +3839,7 @@ void mudlet::slot_password_migrated_to_secure(QKeychain::Job* job)
 bool mudlet::migratePasswordsToProfileStorage()
 {
     if (!mProfilePasswordsToMigrate.isEmpty()) {
-        qWarning() << "mudlet::migratePasswordsToProfileStorage() warning: password migration is already in progress, won't start another.";
+        qWarning() << "mudlet::migratePasswordsToProfileStorage() WARNING - password migration is already in progress, so not starting a duplicate action.";
         return false;
     }
     mStorePasswordsSecurely = false;
@@ -3838,8 +3873,9 @@ void mudlet::slot_password_migrated_to_profile(QKeychain::Job* job)
     if (job->error()) {
         const auto error = job->errorString();
         if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
-            qWarning() << "mudlet::slot_password_migrated_to_profile ERROR: couldn't migrate for" << profileName << "; error was:" << error;
+            qWarning().nospace().noquote() << "mudlet::slot_password_migrated_to_profile(...) ERROR - could not migrate for \"" << profileName << "\"; error was: " << error << ".";
         }
+
     } else {
         auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
         writeProfileData(profileName, QStringLiteral("password"), readJob->textData());
@@ -4477,6 +4513,7 @@ void mudlet::activateProfile(Host* pHost)
         updateDiscordNamedIcon();
         dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
         pHost->updateDisplayDimensions();
+        emit signal_profileActivated(pHost, tabToBeActive);
     }
 }
 

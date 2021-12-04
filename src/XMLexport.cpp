@@ -119,7 +119,7 @@ XMLexport::XMLexport( TKey * pT )
 {
 }
 
-void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileName)
+void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileName, bool async)
 {
     auto pHost = mpHost;
     auto mudletPackage = writeXmlHeader();
@@ -191,9 +191,16 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
     } else {
         helpPackage.append_child("helpURL").text().set("");
     }
-
-    saveXml(fileName);
-    mpHost->xmlSaved(fileName);
+    if (async) {
+        auto future = QtConcurrent::run(this, &XMLexport::saveXml, fileName);
+        auto watcher = new QFutureWatcher<bool>;
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(fileName); });
+        watcher->setFuture(future);
+        saveFutures.append(future);
+    } else {
+        saveXml(fileName);
+        mpHost->xmlSaved(fileName);
+    }
 }
 
 void XMLexport::exportHost(const QString& filename_pugi_xml)
@@ -569,7 +576,16 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             mapInfoContributor.text().set(iterator.next().toUtf8().constData());
         }
     }
-
+    {
+        auto shortcuts = host.append_child("profileShortcuts");
+        auto iterator = mudlet::self()->mShortcutsManager->iterator();
+        while (iterator.hasNext()) {
+            auto key = iterator.next();
+            auto shortcut = shortcuts.append_child("profileShortcut");
+            shortcut.append_attribute("key") = key.toUtf8().constData();
+            shortcut.text().set(pHost->profileShortcuts.value(key)->toString().toUtf8().constData());
+        }
+    }
     {
         auto stopwatches = host.append_child("stopwatches");
         QListIterator<int> itStopWatchId(pHost->getStopWatchIds());

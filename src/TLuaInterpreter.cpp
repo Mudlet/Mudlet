@@ -8311,6 +8311,23 @@ int TLuaInterpreter::deleteMapLabel(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#windowType
+int TLuaInterpreter::windowType(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    QString windowName = getVerifiedString(L, __func__, 1, "window name");
+
+    if (auto kind = host.windowType(windowName)) {
+        lua_pushstring(L, kind->toUtf8().constData());
+        return 1;
+    }
+
+    lua_pushnil(L);
+    lua_pushfstring(L, "'%s' is not a known label, any type of console, nor command line", windowName.toUtf8().constData());
+    return 2;
+}
+
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapLabels
 int TLuaInterpreter::getMapLabels(lua_State* L)
 {
@@ -11191,7 +11208,7 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
     }
 
     std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
-    for (const QString dropThis : dontSpeak) {
+    for (const QString& dropThis : dontSpeak) {
         if (textToSay.contains(dropThis)) {
             textToSay.replace(dropThis, QString());
             if (mudlet::debugMode) {
@@ -11468,7 +11485,7 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
     }
 
     std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
-    for (const QString dropThis : dontSpeak) {
+    for (const QString& dropThis : dontSpeak) {
         if (inputText.contains(dropThis)) {
             inputText.replace(dropThis, QString());
             if (mudlet::debugMode) {
@@ -14167,6 +14184,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addCommandLineMenuEvent", TLuaInterpreter::addCommandLineMenuEvent);
     lua_register(pGlobalLua, "removeCommandLineMenuEvent", TLuaInterpreter::removeCommandLineMenuEvent);
     lua_register(pGlobalLua, "deleteMap", TLuaInterpreter::deleteMap);
+    lua_register(pGlobalLua, "windowType", TLuaInterpreter::windowType);
+    lua_register(pGlobalLua, "getProfileStats", TLuaInterpreter::getProfileStats);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -16076,5 +16095,91 @@ int TLuaInterpreter::deleteMap(lua_State* L)
     updateMap(L);
 
     lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::getProfileStats(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    auto [_1, triggersTotal, triggerPatterns, tempTriggers, activeTriggers] = host.getTriggerUnit()->assembleReport();
+    auto [_2, aliasesTotal, tempAliases, activeAliases] = host.getAliasUnit()->assembleReport();
+    auto [_3, timersTotal, tempTimers, activeTimers] = host.getTimerUnit()->assembleReport();
+    auto [_4, keysTotal, tempKeys, activeKeys] = host.getKeyUnit()->assembleReport();
+
+    lua_newtable(L);
+
+    // Triggers
+    lua_pushstring(L, "triggers");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, triggersTotal);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "patterns");
+    lua_pushnumber(L, triggerPatterns);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "temp");
+    lua_pushnumber(L, tempTriggers);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeTriggers);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
+
+    // Aliases
+    lua_pushstring(L, "aliases");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, aliasesTotal);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "temp");
+    lua_pushnumber(L, tempAliases);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeAliases);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
+
+    // Timers
+    lua_pushstring(L, "timers");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, timersTotal);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "temp");
+    lua_pushnumber(L, tempTimers);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeTimers);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
+
+    // Keys
+    lua_pushstring(L, "keys");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, keysTotal);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "temp");
+    lua_pushnumber(L, tempKeys);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeKeys);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
+
     return 1;
 }
