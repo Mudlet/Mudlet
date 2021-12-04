@@ -9835,6 +9835,21 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelStylesheet
+int TLuaInterpreter::getLabelStylesheet(lua_State* L)
+{
+    QString label = getVerifiedString(L, __func__, 1, "label");
+    Host& host = getHostFromLua(L);
+    if (auto stylesheet = host.mpConsole->getLabelStyleSheet(label)) {
+        lua_pushstring(L, stylesheet->toUtf8().constData());
+        return 1;
+    }
+
+    lua_pushnil(L);
+    lua_pushfstring(L, "label '%s' does not exist", label.toUtf8().constData());
+    return 2;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setUserWindowStyleSheet
 int TLuaInterpreter::setUserWindowStyleSheet(lua_State* L)
 {
@@ -14186,6 +14201,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "deleteMap", TLuaInterpreter::deleteMap);
     lua_register(pGlobalLua, "windowType", TLuaInterpreter::windowType);
     lua_register(pGlobalLua, "getProfileStats", TLuaInterpreter::getProfileStats);
+    lua_register(pGlobalLua, "getLabelStylesheet", TLuaInterpreter::getLabelStylesheet);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
