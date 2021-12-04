@@ -116,6 +116,7 @@ std::optional<QString> TMainConsole::getLabelStyleSheet(const QString& name)
     if (it != mLabelMap.cend() && it.key() == name) {
         return it.value()->styleSheet();
     }
+
     return {};
 }
 
