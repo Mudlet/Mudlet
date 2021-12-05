@@ -742,6 +742,11 @@ private:
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
     bool mDarkMode = false;
+
+    // Used to ensure that mudlet::slot_update_shortcuts() only runs once each
+    // time the main if () logic changes state - will be true if the menu is
+    // supposed to be visible, false if not and not have a value initially:
+    std::optional<bool> mMenuVisibleState;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
