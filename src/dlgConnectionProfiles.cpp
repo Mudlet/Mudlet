@@ -490,7 +490,9 @@ void dlgConnectionProfiles::slot_save_name()
         return;
     }
 
-    migrateSecuredPassword(currentProfileEditName, newProfileName);
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        migrateSecuredPassword(currentProfileEditName, newProfileName);
+    }
 
     setItemName(pItem, newProfileName);
 
@@ -908,13 +910,18 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     // by the copy method
     if (!mCopyingProfile) {
         character_password_entry->setText(QString());
-        loadSecuredPassword(profile_name, [this, profile_name](const QString& password) {
-            if (!password.isEmpty()) {
-                character_password_entry->setText(password);
-            } else {
-                character_password_entry->setText(readProfileData(profile_name, qsl("password")));
-            }
-        });
+        if (mudlet::self()->storingPasswordsSecurely()) {
+            loadSecuredPassword(profile_name, [this, profile_name](const QString& password) {
+                if (!password.isEmpty()) {
+                    character_password_entry->setText(password);
+                } else {
+                    character_password_entry->setText(readProfileData(profile_name, qsl("password")));
+                }
+            });
+
+        } else {
+            character_password_entry->setText(readProfileData(profile_name, qsl("password")));
+        }
     }
 
     val = readProfileData(profile_name, qsl("login"));
@@ -1253,8 +1260,9 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callba
         if (job->error()) {
             const auto error = job->errorString();
             if (error != qsl("Entry not found") && error != qsl("No match")) {
-                qDebug() << "dlgConnectionProfiles::loadSecuredPassword ERROR: couldn't retrieve secure password for" << profile << ", error is:" << error;
+                qDebug().nospace().noquote() << "dlgConnectionProfiles::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << profile << "\", error is: " << error << ".";
             }
+
         }
 
         auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);

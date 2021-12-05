@@ -91,6 +91,7 @@ private:
 
     void readHostPackage(Host*);
     void readMapInfoContributors();
+    void readProfileShortcuts();
     void readStopWatchMap();
     int readTriggerGroup(TTrigger*);
     int readTimerGroup(TTimer*);

@@ -24,7 +24,6 @@
 
 #include "dlgProfilePreferences.h"
 
-
 #include "Host.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
@@ -48,6 +47,8 @@
 #include <QTableWidget>
 #include <QToolBar>
 #include <QUiLoader>
+#include <QKeySequenceEdit>
+#include <QHBoxLayout>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 #include "post_guard.h"
 
@@ -272,6 +273,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
     connect(pMudlet, &mudlet::signal_appearanceChanged, this, &dlgProfilePreferences::slot_setAppearance);
     connect(comboBox_appearance, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) { dlgProfilePreferences::slot_setAppearance(mudlet::Appearance(index)); });
+    connect(pushButton_resetMainWindowShortctus, &QPushButton::released, this, [=]() {
+        emit signal_resetMainWindowShortcutsToDefaults();
+    });
 
     generateDiscordTooltips();
 
@@ -1153,8 +1157,36 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml);
     connect(doubleSpinBox_networkPacketTimeout, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPostingTimeout);
 
-    //Security tab
+    //Shortcuts tab
+    QMapIterator<QString, QKeySequence*> i(pHost->profileShortcuts);
+    int shortcutsRow = 0;
+    while (i.hasNext()) {
+        i.next();
+        QKeySequence* sequence = new QKeySequence(*i.value());
+        currentShortcuts.insert(i.key(), sequence);
+        auto sequenceEdit = new QKeySequenceEdit(*sequence);
 
+        gridLayout_groupBox_shortcuts->addWidget(new QLabel(i.key()), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
+        gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
+        shortcutsRow++;
+        connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
+            QKeySequence newSequence;
+            if (sequenceEdit->keySequence().isEmpty()) {
+                newSequence = *sequence;
+            } else if (sequenceEdit->keySequence().matches(QKeySequence(Qt::Key_Escape))) {
+                newSequence = QKeySequence();
+            } else {
+                newSequence = sequenceEdit->keySequence();
+            }
+            sequenceEdit->blockSignals(true);
+            sequenceEdit->setKeySequence(newSequence);
+            sequenceEdit->blockSignals(false);
+            sequence->swap(newSequence);
+        });
+        connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=]() {
+            sequenceEdit->setKeySequence(*mudlet::self()->mShortcutsManager->getDefault(i.key()));
+        });
+    }
 
 }
 
@@ -2748,6 +2780,13 @@ void dlgProfilePreferences::slot_save_and_exit()
                                              pHost->mpMap->mPlayerRoomOuterColor,
                                              pHost->mpMap->mPlayerRoomInnerColor);
         }
+
+        auto iterator = mudlet::self()->mShortcutsManager->iterator();
+        while (iterator.hasNext()) {
+            auto key = iterator.next();
+            QKeySequence sequence = QKeySequence(*currentShortcuts.value(key));
+            pHost->profileShortcuts.value(key)->swap(sequence);
+        }
     }
 
 #if defined(INCLUDE_UPDATER)
@@ -2786,6 +2825,8 @@ void dlgProfilePreferences::slot_save_and_exit()
     pMudlet->setAppearance(static_cast<mudlet::Appearance>(comboBox_appearance->currentIndex()));
 
     mudlet::self()->mDiscord.UpdatePresence();
+
+    emit signal_preferencesSaved();
 
     close();
 }

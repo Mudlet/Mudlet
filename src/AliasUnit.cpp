@@ -333,7 +333,7 @@ void AliasUnit::_assembleReport(TAlias* pChild)
     }
 }
 
-QString AliasUnit::assembleReport()
+std::tuple<QString, int, int, int> AliasUnit::assembleReport()
 {
     statsActiveAliases = 0;
     statsAliasTotal = 0;
@@ -371,7 +371,12 @@ QString AliasUnit::assembleReport()
         //<< "average line processing time: " << QString::number(statsAverageLineProcessingTime) << "\n"
         //<< "max line processing time: " << QString::number(statsMaxLineProcessingTime) << "\n"
         //<< "min line processing time: " << QString::number(statsMinLineProcessingTime) << "\n";
-    return msg.join(QString());
+    return {
+        msg.join(QString()),
+        statsAliasTotal,
+        statsTempAliases,
+        statsActiveAliases
+    };
 }
 
 void AliasUnit::doCleanup()

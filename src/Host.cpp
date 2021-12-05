@@ -459,7 +459,15 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         mDiscordDisableServerSide = optin.toInt() == Qt::Unchecked ? true : false;
     }
 
-    loadSecuredPassword();
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        loadSecuredPassword();
+    } else {
+        QString password{readProfileData(qsl("password"))};
+        if (!password.isEmpty()) {
+            setPass(password);
+            password.clear();
+        }
+    }
 
     if (mudlet::scmIsPublicTestVersion) {
         thankForUsingPTB();
@@ -477,6 +485,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     // enable by default in case of offline connection; if the profile connects - timer will be disabled
     purgeTimer.start(1min);
+
+    auto i = mudlet::self()->mShortcutsManager->iterator();
+    while (i.hasNext()) {
+        auto entry = i.next();
+        profileShortcuts.insert(entry, new QKeySequence(*mudlet::self()->mShortcutsManager->getSequence(entry)));
+    }
 }
 
 Host::~Host()
@@ -810,7 +824,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     mModuleFuture = QtConcurrent::run([=]() {
         //wait for the host xml to be ready before starting to sync modules
         waitForAsyncXmlSave();
-        saveModules(saveName != QStringLiteral("autosave"));
+        saveModules(saveName != qsl("autosave"));
     });
     QObject::connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
         // reload, or queue module reload for when xml is ready
@@ -2704,8 +2718,9 @@ void Host::loadSecuredPassword()
         if (job->error()) {
             const auto error = job->errorString();
             if (error != qsl("Entry not found") && error != qsl("No match")) {
-                qDebug() << "Host::loadSecuredPassword ERROR: couldn't retrieve secure password for" << getName() << ", error is:" << error;
+                qDebug().nospace().noquote() << "Host::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << getName() << "\", error is: " << error << ".";
             }
+
         } else {
             auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
             setPass(readJob->textData());
@@ -3801,4 +3816,44 @@ void Host::setupIreDriverBugfix()
     if (ireGameUrls.contains(getUrl(), Qt::CaseInsensitive)) {
         set_USE_IRE_DRIVER_BUGFIX(true);
     }
+}
+
+std::optional<QString> Host::windowType(const QString& name) const
+{
+    if (mpConsole->mLabelMap.contains(name)) {
+        return {qsl("label")};
+    }
+
+    if (name == QLatin1String("main")) {
+        return {QLatin1String("main")};
+    }
+
+    auto pWindow = mpConsole->mSubConsoleMap.value(name);
+    if (pWindow) {
+        switch (pWindow->getType()) {
+        case TConsole::UserWindow:
+            return {qsl("userwindow")};
+        case TConsole::Buffer:
+            return {qsl("buffer")};
+        case TConsole::SubConsole:
+            return {qsl("miniconsole")};
+        case TConsole::UnknownType:
+            [[fallthrough]];
+        case TConsole::CentralDebugConsole:
+            [[fallthrough]];
+        case TConsole::ErrorConsole:
+            [[fallthrough]];
+        case TConsole::MainConsole:
+            [[fallthrough]];
+        default:
+            Q_UNREACHABLE();
+            return {};
+        }
+    }
+
+    if (mpConsole->mSubCommandLineMap.contains(name)) {
+        return {qsl("commandline")};
+    }
+
+    return {};
 }
