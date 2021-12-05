@@ -20,7 +20,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// credit to https://github.com/telegramdesktop/tdesktop/blob/dev/Telegram/SourceFiles/core/utils.h#L24
 #define qsl(s) QStringLiteral(s)
 
 #endif // UPDATER_H
