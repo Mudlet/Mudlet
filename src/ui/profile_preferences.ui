@@ -3904,6 +3904,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>reset_colors_button_2</tabstop>
   <tabstop>ircHostName</tabstop>
   <tabstop>ircNick</tabstop>
+  <tabstop>ircPassword</tabstop>
   <tabstop>ircHostSecure</tabstop>
   <tabstop>ircHostPort</tabstop>
   <tabstop>ircChannels</tabstop>
