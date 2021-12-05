@@ -81,4 +81,61 @@ describe("Tests UI functions", function()
       assert.are.equal(outputhtml, copy2html("testconsole"))
     end)
   end)
+
+  describe("Test the operation of the windowType() function", function()
+    it("Should identify an existing label correctly", function()
+      createLabel("testlabel", 0,0,0,0, 1)
+
+      assert.are.equal(windowType("testlabel"), "label")
+    end)
+
+    it("Should not identify a non-existing label", function()
+      assert.are.equal(windowType("fake label"), nil)
+    end)
+
+    it("Should identify the main window as 'main'", function()
+      assert.are.equal(windowType("main"), "main")
+    end)
+
+    it("Should identify an existing userwindow correctly", function()
+      openUserWindow("testuserwindow")
+
+      assert.are.equal(windowType("testuserwindow"), "userwindow")
+    end)
+
+    it("Should not identify a non-existing userwindow", function()
+      assert.are.equal(windowType("fake userwindow"), nil)
+    end)
+
+    it("Should identify a buffer correctly", function()
+      createBuffer("testbuffer")
+
+      assert.are.equal(windowType("testbuffer"), "buffer")
+    end)
+
+    it("Should identify an existing miniconsole", function()
+      createMiniConsole("testminiconsole", 0,0,0,0)
+
+      assert.are.equal(windowType("testminiconsole"), "miniconsole")
+    end)
+
+    it("Should not identify a non-existing miniconsole", function()
+      assert.are.equal(windowType("fake miniconsole"), nil)
+    end)
+
+    it("Should identify a commandline", function()
+      createCommandLine("testcommandline", 0,0,0,0)
+
+      assert.are.equal(windowType("testcommandline"), "commandline")
+    end)
+
+    it("Should not identify a non-existing commandline", function()
+      assert.are.equal(windowType("fake commandline"), nil)
+    end)
+
+    teardown(function()
+      deleteLabel("testlabel")
+      hideWindow("testuserwindow")
+    end)
+  end)
 end)
