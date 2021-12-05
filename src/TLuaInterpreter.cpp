@@ -3905,13 +3905,15 @@ int TLuaInterpreter::getBackgroundColor(lua_State* L)
     QString windowName = QStringLiteral("main");
     int n = lua_gettop(L);
     if (n > 0) {
-        windowName = getVerifiedString(L, __func__, 1, "console name");
+        windowName = getVerifiedString(L, __func__, 1, "window name");
     }
 
     if (isMain(windowName)) {
         color = host.mpConsole->getConsoleBgColor();
+    } else if (auto optionalColor = host.getBackgroundColor(windowName)) {
+        color = optionalColor.value();
     } else {
-        color = host.getBackgroundColor(windowName);
+        return warnArgumentValue(L, __func__, QStringLiteral("window '%1' does not exist").arg(windowName));
     }
 
     lua_pushnumber(L, color.red());
