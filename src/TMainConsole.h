@@ -72,7 +72,7 @@ public:
     QSize getUserWindowSize(const QString& windowname) const;
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
     void setLabelStyleSheet(std::string& buf, std::string& sh);
-    std::optional<QString> getLabelStyleSheet(const QString& name);
+    std::optional<QString> getLabelStyleSheet(const QString& name) const;
     std::pair<bool, QString> deleteLabel(const QString&);
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape);

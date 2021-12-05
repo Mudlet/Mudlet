@@ -110,7 +110,7 @@ void TMainConsole::setLabelStyleSheet(std::string& buf, std::string& sh)
     }
 }
 
-std::optional<QString> TMainConsole::getLabelStyleSheet(const QString& name)
+std::optional<QString> TMainConsole::getLabelStyleSheet(const QString& name) const
 {
     QMap<QString, TLabel*>::const_iterator it = mLabelMap.constFind(name);
     if (it != mLabelMap.cend() && it.key() == name) {
@@ -120,6 +120,7 @@ std::optional<QString> TMainConsole::getLabelStyleSheet(const QString& name)
     return {};
 }
 
+// NOLINTNEXTLINE(readability-make-member-function-const)
 std::pair<bool, QString> TMainConsole::setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet)
 {
     if (name.isEmpty()) {
