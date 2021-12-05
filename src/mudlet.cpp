@@ -2266,7 +2266,46 @@ void mudlet::slot_assign_shortcuts_from_profile(Host* pHost)
 
 void mudlet::slot_update_shortcuts()
 {
-    if (mpMainToolBar->isVisible()) {
+    if (Q_LIKELY(mMenuVisibleState.has_value())) {
+        if ((mMenuBarVisibility == visibleNever
+            || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()))
+           && (!mMenuVisibleState.value()) ) {
+
+            /*
+             * IF   EITHER the menu is NOT to be shown
+             *      OR the menu is only to be show when there is no profiles AND there IS one
+             *      (so the menu should be hidden)
+             *    AND
+             *      the setting says it is hidden
+             * THEN
+             *    Skip doing anything
+             */
+            return;
+        }
+
+        if ((mMenuBarVisibility == visibleAlways
+            || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && !mHostManager.getHostCount()))
+           && (mMenuVisibleState.value()) ) {
+
+            /*
+             * IF   EITHER the menu IS to be shown
+             *      OR the menu is only to be show when there is no profiles AND there is NOT one
+             *      (so the menu should be shown)
+             *    AND
+             *      the setting says it is shown
+             * THEN
+             *    Skip doing anything
+             */
+            return;
+        }
+    }
+
+    // The double negatives (one in each of the next two lines) are so the
+    // remainder of this method is more similar to the code prior to the
+    // introduction of the mMenuVisibleState variable:
+    mMenuVisibleState = !(mMenuBarVisibility == visibleNever || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()));
+    if (!mMenuVisibleState.value()) {
+        // The menu is hidden so wire the QKeySequences directly to the slots:
         triggersShortcut = new QShortcut(triggersKeySequence, this);
         connect(triggersShortcut.data(), &QShortcut::activated, this, &mudlet::show_editor_dialog);
         dactionScriptEditor->setShortcut(QKeySequence());
@@ -2311,37 +2350,42 @@ void mudlet::slot_update_shortcuts()
         connect(reconnectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_reconnect);
         dactionReconnect->setShortcut(QKeySequence());
     } else {
-        triggersShortcut.clear();
+        // The menu is shown so tie the QKeySequences to the menu items and it
+        // is those that will call the slots:
+
+        // Because we are deleting the object that it points at
+        // this will also clear() the shortcut pointer:
+        delete triggersShortcut.data();
         dactionScriptEditor->setShortcut(triggersKeySequence);
 
-        showMapShortcut.clear();
+        delete showMapShortcut.data();
         dactionShowMap->setShortcut(showMapKeySequence);
 
-        inputLineShortcut.clear();
+        delete inputLineShortcut.data();
         dactionInputLine->setShortcut(inputLineKeySequence);
 
-        optionsShortcut.clear();
+        delete optionsShortcut.data();
         dactionOptions->setShortcut(optionsKeySequence);
 
-        notepadShortcut.clear();
+        delete notepadShortcut.data();
         dactionNotepad->setShortcut(notepadKeySequence);
 
-        packagesShortcut.clear();
+        delete packagesShortcut.data();
         dactionPackageManager->setShortcut(packagesKeySequence);
 
-        modulesShortcut.clear();
+        delete modulesShortcut.data();
         dactionModuleManager->setShortcut(modulesKeySequence);
 
-        multiViewShortcut.clear();
+        delete multiViewShortcut.data();
         dactionMultiView->setShortcut(multiViewKeySequence);
 
-        connectShortcut.clear();
+        delete connectShortcut.data();
         dactionConnect->setShortcut(connectKeySequence);
 
-        disconnectShortcut.clear();
+        delete disconnectShortcut.data();
         dactionDisconnect->setShortcut(disconnectKeySequence);
 
-        reconnectShortcut.clear();
+        delete reconnectShortcut.data();
         dactionReconnect->setShortcut(reconnectKeySequence);
     }
 }
