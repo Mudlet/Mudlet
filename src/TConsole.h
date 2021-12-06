@@ -161,7 +161,7 @@ public:
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int, int);
-    QColor getConsoleBgColor() const { return mBgColor; };
+    QColor getConsoleBgColor() const { return mBgColor; }
 
 // Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> getFgColor();
