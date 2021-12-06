@@ -575,9 +575,13 @@ public:
     bool mLogStatus;
     bool mEnableSpellCheck;
     QStringList mInstalledPackages;
+    // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> mInstalledModules;
+    // module name = priority
     QMap<QString, int> mModulePriorities;
+    // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> modulesToWrite;
+    // module name = {"helpURL" = custom link}
     QMap<QString, QMap<QString, QString>> moduleHelp;
 
     // Privacy option to allow the game to set Discord Rich Presence information
