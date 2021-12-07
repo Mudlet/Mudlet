@@ -25,7 +25,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
+#include "utils.h"
 #include "HostManager.h"
 #include "FontManager.h"
 
@@ -288,8 +288,8 @@ public:
 
     // This construct will be very useful for formatting tooltips and by
     // defining a static function/method here we can save using the same
-    // QStringLiteral all over the place:
-    static QString htmlWrapper(const QString& text) { return QStringLiteral("<html><head/><body>%1</body></html>").arg(text); }
+    // qsl all over the place:
+    static QString htmlWrapper(const QString& text) { return qsl("<html><head/><body>%1</body></html>").arg(text); }
 
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
     // "How to find and replace string?" by "Czarek Tomczak":
@@ -726,7 +726,7 @@ private:
     // The collection of words in the above:
     QSet<QString> mWordSet_shared;
 
-    QString mMudletDiscordInvite = QStringLiteral("https://www.mudlet.org/chat");
+    QString mMudletDiscordInvite = qsl("https://www.mudlet.org/chat");
 
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate {};

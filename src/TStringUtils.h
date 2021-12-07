@@ -25,6 +25,7 @@
 #include <QStringList>
 #include "post_guard.h"
 #include <functional>
+#include "utils.h"
 
 #define CHAR_NEW_LINE '\n'
 #define CHAR_CARRIAGE_RETURN '\r'
