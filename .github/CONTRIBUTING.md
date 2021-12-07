@@ -58,7 +58,7 @@ QIcon(QIconEngine *engine)
 No `QLatin1String` - mentioned - so use `qsl` instead, which creates us a `QString()` at compile-time so at least creating the object is faster.
 
 ([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/),
- [additional reading](https://woboq.com/blog/qsl.html))
+ [additional reading](https://woboq.com/blog/qstringliteral.html))
 
 ## Do not use ``qsl("")``
 
