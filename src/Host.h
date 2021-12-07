@@ -373,6 +373,7 @@ public:
     bool setLabelOnEnter(const QString&, const int);
     bool setLabelOnLeave(const QString&, const int);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    std::optional<QColor> getBackgroundColor(const QString& name) const;
     bool setBackgroundImage(const QString& name, QString& path, int mode);
     bool resetBackgroundImage(const QString& name);
     void showHideOrCreateMapper(const bool loadDefaultMap);

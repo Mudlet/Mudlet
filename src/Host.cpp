@@ -3612,6 +3612,25 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
     return false;
 }
 
+std::optional<QColor> Host::getBackgroundColor(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pC) {
+        return {pC->mBgColor};
+    }
+
+    if (pL) {
+        return {pL->palette().color(QPalette::Window)};
+    }
+
+    return {};
+}
+
 bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode)
 {
     if (!mpConsole) {
