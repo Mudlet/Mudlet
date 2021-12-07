@@ -103,7 +103,7 @@ void dlgModuleManager::layoutModules()
                 masterModule->setCheckState(Qt::Unchecked);
             }
             masterModule->setText(QString());
-            masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+            masterModule->setToolTip(qsl("<html><head/><body><p>%1</p></body></html>")
                                              .arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
                                                      "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
                                                      "is saved at the end of the session.")));
@@ -192,8 +192,8 @@ void dlgModuleManager::slot_module_clicked(QTableWidgetItem* pItem)
     }
 
     if (mpHost->moduleHelp.contains(entry->text())) {
-        mModuleHelpButton->setDisabled((!mpHost->moduleHelp.value(entry->text()).contains(QStringLiteral("helpURL"))
-                                       || mpHost->moduleHelp.value(entry->text()).value(QStringLiteral("helpURL")).isEmpty()));
+        mModuleHelpButton->setDisabled((!mpHost->moduleHelp.value(entry->text()).contains(qsl("helpURL"))
+                                       || mpHost->moduleHelp.value(entry->text()).value(qsl("helpURL")).isEmpty()));
     } else {
         mModuleHelpButton->setDisabled(true);
     }

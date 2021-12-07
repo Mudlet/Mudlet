@@ -47,11 +47,11 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 
     // handle print to prompt feature PROMPT
     // <SEND "tell Zugg " PROMPT>Zugg</SEND>
-    QString command = tag->hasAttribute(ATTR_PROMPT) ? QStringLiteral("printCmdLine") : QStringLiteral("send");
+    QString command = tag->hasAttribute(ATTR_PROMPT) ? qsl("printCmdLine") : qsl("send");
 
     for (int i = 0; i < hrefs.size(); i++) {
         hrefs[i] = ctx.getEntityResolver().interpolate(hrefs[i]);
-        hrefs[i] = QStringLiteral("%1([[%2]])").arg(command, hrefs[i]);
+        hrefs[i] = qsl("%1([[%2]])").arg(command, hrefs[i]);
 
         if (i < hints.size()) {
             hints[i] = ctx.getEntityResolver().interpolate(hints[i]);

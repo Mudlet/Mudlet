@@ -23,6 +23,7 @@
 
 #include "MxpTag.h"
 #include "TMxpTagHandlerResult.h"
+#include "utils.h"
 
 #include "pre_guard.h"
 #include <QString>

@@ -29,7 +29,7 @@ TMxpTagHandlerResult TMxpSupportTagHandler::handleStartTag(TMxpContext& ctx, TMx
 {
     const QString& supportOptions = processSupportsRequest(ctx, tag);
 
-    QString payload = QStringLiteral("\n\x1b[1z<SUPPORTS %1>\n").arg(supportOptions);
+    QString payload = qsl("\n\x1b[1z<SUPPORTS %1>\n").arg(supportOptions);
     client.sendToServer(payload);
 
     return MXP_TAG_HANDLED;
@@ -44,7 +44,7 @@ QString TMxpSupportTagHandler::processSupportsRequest(TMxpContext& ctx, MxpStart
         result.append("+" + element);
 
         for (const auto& attribute : mSupportedMxpElements.value(element)) {
-            result.append("+" + element + QStringLiteral(".") + attribute);
+            result.append("+" + element + qsl(".") + attribute);
         }
 
         return result;

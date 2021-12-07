@@ -58,7 +58,7 @@ public:
     std::pair<dlgTriggerEditor::EditorViewType, int> importFromClipboard();
 
 private:
-    const QString YES = QStringLiteral("yes");
+    const QString YES = qsl("yes");
 
     std::pair<dlgTriggerEditor::EditorViewType, int> readPackage();
     void readUnknownPackage();

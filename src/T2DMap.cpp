@@ -49,32 +49,32 @@
 // there are multiple places where they are used within this file:
 
 // replacement parameter supplied at point of use:
-const QString& key_plain = QStringLiteral("%1");
+const QString& key_plain = qsl("%1");
 
-const QString& key_n = QStringLiteral("n");
-const QString& key_ne = QStringLiteral("ne");
-const QString& key_e = QStringLiteral("e");
-const QString& key_se = QStringLiteral("se");
-const QString& key_s = QStringLiteral("s");
-const QString& key_sw = QStringLiteral("sw");
-const QString& key_w = QStringLiteral("w");
-const QString& key_nw = QStringLiteral("nw");
-const QString& key_up = QStringLiteral("up");
-const QString& key_down = QStringLiteral("down");
-const QString& key_in = QStringLiteral("in");
-const QString& key_out = QStringLiteral("out");
+const QString& key_n = qsl("n");
+const QString& key_ne = qsl("ne");
+const QString& key_e = qsl("e");
+const QString& key_se = qsl("se");
+const QString& key_s = qsl("s");
+const QString& key_sw = qsl("sw");
+const QString& key_w = qsl("w");
+const QString& key_nw = qsl("nw");
+const QString& key_up = qsl("up");
+const QString& key_down = qsl("down");
+const QString& key_in = qsl("in");
+const QString& key_out = qsl("out");
 
-const QString& key_icon_line_solid = QStringLiteral(":/icons/solid-line.png");
-const QString& key_icon_line_dot = QStringLiteral(":/icons/dot-line.png");
-const QString& key_icon_line_dash = QStringLiteral(":/icons/dash-line.png");
-const QString& key_icon_line_dashDot = QStringLiteral(":/icons/dash-dot-line.png");
-const QString& key_icon_line_dashDotDot = QStringLiteral(":/icons/dash-dot-dot-line.png");
+const QString& key_icon_line_solid = qsl(":/icons/solid-line.png");
+const QString& key_icon_line_dot = qsl(":/icons/dot-line.png");
+const QString& key_icon_line_dash = qsl(":/icons/dash-line.png");
+const QString& key_icon_line_dashDot = qsl(":/icons/dash-dot-line.png");
+const QString& key_icon_line_dashDotDot = qsl(":/icons/dash-dot-dot-line.png");
 
-const QString& key_dialog_ok_apply = QStringLiteral("dialog-ok-apply");
-const QString& key_dialog_cancel = QStringLiteral("dialog-cancel");
+const QString& key_dialog_ok_apply = qsl("dialog-ok-apply");
+const QString& key_dialog_cancel = qsl("dialog-cancel");
 
-const QString& key_icon_dialog_ok_apply = QStringLiteral(":/icons/dialog-ok-apply.png");
-const QString& key_icon_dialog_cancel = QStringLiteral(":/icons/dialog-cancel.png");
+const QString& key_icon_dialog_ok_apply = qsl(":/icons/dialog-ok-apply.png");
+const QString& key_icon_dialog_cancel = qsl(":/icons/dialog-cancel.png");
 
 
 T2DMap::T2DMap(QWidget* parent)
@@ -597,7 +597,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         } else if (mpMap->findPath(speedWalkStartRoomId, speedWalkTargetRoomId)) {
             mpHost->startSpeedWalk();
         } else {
-            mpHost->mpConsole->printSystemMessage(QStringLiteral("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.")
+            mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.")
                                                           .arg(QString::number(speedWalkStartRoomId),
                                                                QString::number(speedWalkTargetRoomId))));
         }
@@ -781,7 +781,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         } else {
             symbolColor = Qt::white;
         }
-        auto pixmapKey = QStringLiteral("%1_%2").arg(symbolColor.name(), pRoom->mSymbol);
+        auto pixmapKey = qsl("%1_%2").arg(symbolColor.name(), pRoom->mSymbol);
         if (!mSymbolPixmapCache.contains(pixmapKey)) {
             addSymbolToPixmapCache(pixmapKey, pRoom->mSymbol, symbolColor, isGridMode);
         }
@@ -1339,7 +1339,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         // sizes (but we prevent that by checking in the method call afterwards):
         roomVNumFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping|QFont::PreferAntialias|QFont::PreferOutline));
 
-        isFontBigEnoughToShowRoomVnum = sizeFontToFitTextInRect(roomVNumFont, roomTestRect, QStringLiteral("8").repeated(mMaxRoomIdDigits), roomVnumMargin);
+        isFontBigEnoughToShowRoomVnum = sizeFontToFitTextInRect(roomVNumFont, roomTestRect, qsl("8").repeated(mMaxRoomIdDigits), roomVnumMargin);
     }
 
     bool showRoomNames = mpMap->getRoomNamesShown() && !playerArea->gridMode;
@@ -2912,7 +2912,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             }
 
             popup->addSeparator();
-          
+
             if (selectionSize == 0) {
                 QString viewModeItem = mMapViewOnly
                 ? tr("Switch to editing mode", "2D Mapper context menu (room) item")
@@ -3161,7 +3161,7 @@ void T2DMap::slot_customLineProperties()
         if (room->customLines.contains(exit)) {
             QUiLoader loader;
 
-            QFile file(QStringLiteral(":/ui/custom_lines_properties.ui"));
+            QFile file(qsl(":/ui/custom_lines_properties.ui"));
             file.open(QFile::ReadOnly);
             auto* dialog = qobject_cast<QDialog*>(loader.load(&file, this));
             file.close();
@@ -3169,14 +3169,14 @@ void T2DMap::slot_customLineProperties()
                 qWarning("T2DMap::slot_customLineProperties() ERROR: failed to create the dialog!");
                 return;
             }
-            dialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_custom_exit_properties.png")));
-            auto* le_toId = dialog->findChild<QLineEdit*>(QStringLiteral("toId"));
-            auto* le_fromId = dialog->findChild<QLineEdit*>(QStringLiteral("fromId"));
-            auto* le_cmd = dialog->findChild<QLineEdit*>(QStringLiteral("cmd"));
+            dialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_custom_exit_properties.png")));
+            auto* le_toId = dialog->findChild<QLineEdit*>(qsl("toId"));
+            auto* le_fromId = dialog->findChild<QLineEdit*>(qsl("fromId"));
+            auto* le_cmd = dialog->findChild<QLineEdit*>(qsl("cmd"));
 
-            mpCurrentLineStyle = dialog->findChild<QComboBox*>(QStringLiteral("lineStyle"));
-            mpCurrentLineColor = dialog->findChild<QPushButton*>(QStringLiteral("lineColor"));
-            mpCurrentLineArrow = dialog->findChild<QCheckBox*>(QStringLiteral("arrow"));
+            mpCurrentLineStyle = dialog->findChild<QComboBox*>(qsl("lineStyle"));
+            mpCurrentLineColor = dialog->findChild<QPushButton*>(qsl("lineColor"));
+            mpCurrentLineArrow = dialog->findChild<QCheckBox*>(qsl("arrow"));
             if (!le_toId || !le_cmd || !le_fromId || !mpCurrentLineStyle || !mpCurrentLineColor || !mpCurrentLineArrow) {
                 qWarning("T2DMap::slot_customLineProperties() ERROR: failed to find an element in the dialog!");
                 return;
@@ -3444,7 +3444,7 @@ void T2DMap::slot_toggleMapViewOnly()
         TEvent mapModeEvent{};
         mapModeEvent.mArgumentList.append(QLatin1String("mapModeChangeEvent"));
         mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mapModeEvent.mArgumentList.append(mMapViewOnly ? QStringLiteral("viewing") : QStringLiteral("editing"));
+        mapModeEvent.mArgumentList.append(mMapViewOnly ? qsl("viewing") : qsl("editing"));
         mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapModeEvent);
 
@@ -4095,7 +4095,7 @@ void T2DMap::slot_loadMap() {
         return;
     }
 
-    if (fileName.endsWith(QStringLiteral(".xml"), Qt::CaseInsensitive)) {
+    if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
         mpHost->mpConsole->importMap(fileName);
     } else {
         mpHost->mpConsole->loadMap(fileName);
@@ -4163,7 +4163,7 @@ void T2DMap::slot_setArea()
     const QMap<int, QString>& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
     for (int i = 0, total = sortedAreaList.count(); i < total; ++i) {
         int areaId = areaNamesMap.key(sortedAreaList.at(i));
-        arealist_combobox->addItem(QStringLiteral("%1 (%2)").arg(sortedAreaList.at(i), QString::number(areaId)), QString::number(areaId));
+        arealist_combobox->addItem(qsl("%1 (%2)").arg(sortedAreaList.at(i), QString::number(areaId)), QString::number(areaId));
     }
 
 
@@ -4358,7 +4358,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 while (itRoom.hasNext()) {
                     auto item = new QTreeWidgetItem;
                     int multiSelectionRoomId = itRoom.next();
-                    item->setText(0, QStringLiteral("%1").arg(multiSelectionRoomId, mMaxRoomIdDigits));
+                    item->setText(0, qsl("%1").arg(multiSelectionRoomId, mMaxRoomIdDigits));
                     item->setTextAlignment(0, Qt::AlignRight);
                     TRoom* pR_multiSelection = mpMap->mpRoomDB->getRoom(multiSelectionRoomId);
                     if (pR_multiSelection) {
@@ -4628,7 +4628,7 @@ void T2DMap::slot_setCustomLine()
     if (!dialog) {
         return;
     }
-    dialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_custom_exit.png")));
+    dialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_custom_exit.png")));
     mCustomLinesRoomFrom = mMultiSelectionHighlightRoomId;
     mCustomLinesRoomTo = 0;
     mCustomLinesRoomExit.clear();

@@ -931,7 +931,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
 void TRoom::audit(const QHash<int, int> roomRemapping, const QHash<int, int> areaRemapping)
 {
     if (areaRemapping.contains(area)) {
-        userData.insert(QStringLiteral("audit.remapped_area"), QString::number(area));
+        userData.insert(qsl("audit.remapped_area"), QString::number(area));
         area = areaRemapping.value(area);
     }
 
@@ -1153,7 +1153,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
             }
 
             if (roomRemapping.contains(exitRoomId)) {
-                QString auditKey = QStringLiteral("audit.remapped_special_exit.%1").arg(exitName);
+                QString auditKey = qsl("audit.remapped_special_exit.%1").arg(exitName);
                 userData.insert(auditKey, QString::number(exitRoomId));
                 if (mudlet::self()->showMapAuditErrors()) {
                     QString infoMsg = tr("[ INFO ]  - In room with id: %1 correcting special exit \"%2\" that\n"
@@ -1189,7 +1189,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                 // A real exit - should have a real destination
                 if (Q_UNLIKELY(!mpRoomDB->getRoom(exitRoomId))) {
                     // But it doesn't exist
-                    QString auditKey = QStringLiteral("audit.removed_valid_but_missing_special_exit.%1").arg(exitName);
+                    QString auditKey = qsl("audit.removed_valid_but_missing_special_exit.%1").arg(exitName);
                     if (mudlet::self()->showMapAuditErrors()) {
                         QString warnMsg = tr("[ WARN ]  - Room with id: %1 has a special exit \"%2\" with an\n"
                                              "exit to: %3 but that room does not exist.  The exit will\n"
@@ -1240,7 +1240,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                 }
             } else {
                 // < 1 and not renumbered because the bad room Id DID NOT exist
-                QString auditKey = QStringLiteral("audit.removed_invalid_special_exit.%1").arg(exitName);
+                QString auditKey = qsl("audit.removed_invalid_special_exit.%1").arg(exitName);
                 userData.insert(auditKey, QString::number(exitRoomId));
                 if (mudlet::self()->showMapAuditErrors()) {
                     QString infoMsg = tr("[ INFO ]  - In room with id: %1 special exit \"%2\"\n"
@@ -1325,7 +1325,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
         while (itSpareExitWeight.hasNext()) {
             itSpareExitWeight.next();
             exitWeights.remove(itSpareExitWeight.key());
-            extras << QStringLiteral("\"%1\"(%2)").arg(itSpareExitWeight.key()).arg(itSpareExitWeight.value());
+            extras << qsl("\"%1\"(%2)").arg(itSpareExitWeight.key()).arg(itSpareExitWeight.value());
         }
         if (mudlet::self()->showMapAuditErrors()) {
             QString infoMsg = tr("[ INFO ]  - In room with id: %1 found one or more surplus weight items that were removed:\n"
@@ -1463,7 +1463,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                       const QHash<int, int> roomRemapping)
 {
     if (roomRemapping.contains(exitRoomId)) {
-        QString auditKey = QStringLiteral("audit.remapped_exit.%1").arg(dirCode);
+        QString auditKey = qsl("audit.remapped_exit.%1").arg(dirCode);
         userData.insert(auditKey, QString::number(exitRoomId));
         if (mudlet::self()->showMapAuditErrors()) {
             QString infoMsg = tr("[ INFO ]  - In room with id: %1 correcting exit \"%2\" that was to room with\n"
@@ -1484,7 +1484,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         // A real exit - should have a real destination, and NOT have a stub
         if (Q_UNLIKELY(!mpRoomDB->getRoom(exitRoomId))) {
             // But it doesn't exist
-            QString auditKey = QStringLiteral("audit.made_stub_of_valid_but_missing_exit.%1").arg(dirCode);
+            QString auditKey = qsl("audit.made_stub_of_valid_but_missing_exit.%1").arg(dirCode);
             if (mudlet::self()->showMapAuditErrors()) {
                 QString warnMsg = tr("[ WARN ]  - Room with id: %1 has an exit \"%2\" to: %3 but that room\n"
                                      "does not exist.  The exit will be removed (but the destination room\n"
@@ -1605,7 +1605,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         // either 0 or < -1 and not renumbered because the bad room Id DID NOT
         // exist, there could be a "double fault" in that there is also a stub
         // exit, but that will be masked as we turn the exit into a stub anyhow.
-        QString auditKey = QStringLiteral("audit.made_stub_of_invalid_exit.%1").arg(dirCode);
+        QString auditKey = qsl("audit.made_stub_of_invalid_exit.%1").arg(dirCode);
         userData.insert(auditKey, QString::number(exitRoomId));
         QString infoMsg;
         if (mudlet::self()->showMapAuditErrors()) {
@@ -1633,8 +1633,8 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         exitStubsPool.remove(dirCode); // Remove the stub in this direction from check pool as we have handled it
 
         if (exitLocks.contains(dirCode)) {
-            QString auditKeyLocked = QStringLiteral("audit.invalid_exit.%1.isLocked").arg(dirCode);
-            userData.insert(auditKeyLocked, QStringLiteral("true"));
+            QString auditKeyLocked = qsl("audit.invalid_exit.%1.isLocked").arg(dirCode);
+            userData.insert(auditKeyLocked, qsl("true"));
             if (mudlet::self()->showMapAuditErrors()) {
                 infoMsg.append(tr("\nIt was locked, this is recorded as user data with key:\n"
                                   "\"%1\".")
@@ -1645,7 +1645,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         }
 
         if (exitWeights.contains(exitKey)) {
-            QString auditKeyWeight = QStringLiteral("audit.invalid_exit.%1.weight").arg(dirCode);
+            QString auditKeyWeight = qsl("audit.invalid_exit.%1.weight").arg(dirCode);
             userData.insert(auditKeyWeight, QString::number(exitWeights.value(exitKey)));
             if (mudlet::self()->showMapAuditErrors()) {
                 infoMsg.append(tr("\nIt had a weight, this is recorded as user data with key:\n"

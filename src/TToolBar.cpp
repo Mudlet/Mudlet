@@ -68,7 +68,7 @@ void TToolBar::setName(const QString& name)
 {
     mName = name;
     QString hostName(mpTAction->mpHost->getName());
-    setObjectName(QStringLiteral("dockToolBar_%1_%2").arg(hostName, name));
+    setObjectName(qsl("dockToolBar_%1_%2").arg(hostName, name));
     // Actually put something in as the title so that the main window context
     // menu no longer has empty entries which are disabled:
     setWindowTitle(tr("Toolbar - %1 - %2").arg(hostName, name));

@@ -119,7 +119,7 @@ public:
     bool isUnderline;
 
 private:
-    inline static const QString scmVersion = QStringLiteral(APP_VERSION APP_BUILD);
+    inline static const QString scmVersion = qsl(APP_VERSION APP_BUILD);
 
     Host* mpHost;
     bool mLinkMode;

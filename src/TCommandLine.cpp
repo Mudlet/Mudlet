@@ -39,7 +39,7 @@
 
 TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
-, mCommandLineName(QStringLiteral("main"))
+, mCommandLineName(qsl("main"))
 , mpHost(pHost)
 , mType(type)
 , mpKeyUnit(pHost->getKeyUnit())
@@ -69,7 +69,7 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
     //style subCommandLines by stylesheet
     if (mType != MainCommandLine) {
         QColor c = mpHost->mCommandLineBgColor;
-        QString styleSheet{QStringLiteral("QPlainTextEdit{background-color: rgb(%1, %2, %3);}").arg(c.red()).arg(c.green()).arg(c.blue())};
+        QString styleSheet{qsl("QPlainTextEdit{background-color: rgb(%1, %2, %3);}").arg(c.red()).arg(c.green()).arg(c.blue())};
         setStyleSheet(styleSheet);
     }
 
@@ -672,8 +672,8 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             if (handle_profile) {
                 // TODO: Make icons for these?
 //                if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
-//                    action_addWord = new QAction(QIcon(QPixmap(QStringLiteral(":/icons/dictionary-add-word.png"))), tr("Add to user dictionary"));
-//                    action_removeWord = new QAction(QIcon(QPixmap(QStringLiteral(":/icons/dictionary-remove-word.png"))), tr("Remove from user dictionary"));
+//                    action_addWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-add-word.png"))), tr("Add to user dictionary"));
+//                    action_removeWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-remove-word.png"))), tr("Remove from user dictionary"));
 //                } else {
                 action_addWord = new QAction(tr("Add to user dictionary"));
                 action_addWord->setEnabled(false);
@@ -941,9 +941,9 @@ void TCommandLine::handleTabCompletion(bool direction)
     buffer.replace(QChar::LineFeed, QChar::Space);
 
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
-    QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
+    QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
 #else
-    QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), QString::SkipEmptyParts);
+    QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), QString::SkipEmptyParts);
 #endif
 
     wordList.append(commandLineSuggestions.values());
@@ -958,7 +958,7 @@ void TCommandLine::handleTabCompletion(bool direction)
             return;
         }
         QString lastWord;
-        QRegularExpression reg = QRegularExpression(QStringLiteral(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
+        QRegularExpression reg = QRegularExpression(qsl(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
         QRegularExpressionMatch match = reg.match(mTabCompletionTyped);
         int typePosition = match.capturedStart();
         if (reg.captureCount() >= 1) {
@@ -967,7 +967,7 @@ void TCommandLine::handleTabCompletion(bool direction)
             lastWord = QString();
         }
 
-        QStringList filterList = wordList.filter(QRegularExpression(QStringLiteral(R"(^%1\w+)").arg(lastWord), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
+        QStringList filterList = wordList.filter(QRegularExpression(qsl(R"(^%1\w+)").arg(lastWord), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
         if (filterList.empty()) {
             return;
         }

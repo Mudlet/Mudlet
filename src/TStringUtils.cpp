@@ -30,7 +30,7 @@ QStringView TStringUtils::strip(QStringView str, QChar start, QChar end)
 
 bool TStringUtils::isQuote(QChar ch)
 {
-    return isOneOf(ch, QStringLiteral("\'\""));
+    return isOneOf(ch, qsl("\'\""));
 }
 
 bool TStringUtils::isOneOf(QChar ch, const QString& chars)

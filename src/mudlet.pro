@@ -734,6 +734,7 @@ HEADERS += \
     TTrigger.h \
     TVar.h \
     VarUnit.h \
+    utils.h \
     XMLexport.h \
     XMLimport.h \
     widechar_width.h \

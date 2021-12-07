@@ -26,7 +26,7 @@ bool TMxpFormattingTagsHandler::supports(TMxpContext& ctx, TMxpClient& client, M
     Q_UNUSED(ctx)
     Q_UNUSED(client)
 
-    return tag->isNamed(QStringLiteral("B")) || tag->isNamed(QStringLiteral("I")) || tag->isNamed(QStringLiteral("U"));
+    return tag->isNamed(qsl("B")) || tag->isNamed(qsl("I")) || tag->isNamed(qsl("U"));
 }
 
 TMxpTagHandlerResult TMxpFormattingTagsHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)

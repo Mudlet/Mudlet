@@ -32,9 +32,9 @@
 using namespace std::chrono;
 
 // Used before we spotted a problem with not specifying an encoding:
-const QString local8BitEncodedNotesFileName{QStringLiteral("notes.txt")};
+const QString local8BitEncodedNotesFileName{qsl("notes.txt")};
 // Used afterwards:
-const QString utf8EncodedNotesFileName{QStringLiteral("notes_utf8.txt")};
+const QString utf8EncodedNotesFileName{qsl("notes_utf8.txt")};
 
 dlgNotepad::dlgNotepad(Host* pH)
 : mpHost(pH)
