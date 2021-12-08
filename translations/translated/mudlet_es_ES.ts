@@ -56,13 +56,13 @@
       <location filename="../src/Host.cpp" line="628"/>
       <source>Failed to open xml file &quot;%1&quot; inside module %2 to update it. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when the xml file inside the module zip cannot be updated for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>Error al abrir el archivo xml &quot;%1&quot; entra en el módulo %2 para actualizarlo. El mensaje del error fue: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="640"/>
       <source>Failed to save &quot;%1&quot; to module &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when a module is saved as package but cannot be done for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>Error al guardar &quot;%1&quot; en el módulo &quot;%2&quot;. El mensaje de error fue: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="931"/>
@@ -74,7 +74,7 @@
       <location filename="../src/Host.cpp" line="932"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - %1 Ayúdanos a mejorar Mudlet informándonos de cualquier problema.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1732"/>
@@ -120,12 +120,12 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/Host.cpp" line="3724"/>
       <source>Pre-Map loading(3) report</source>
-      <translation type="unfinished"/>
+      <translation>Cargar el mapa previo(3) informar del problema</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3734"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Cargando el mapa(3) en %1 informar</translation>
     </message>
   </context>
   <context>
@@ -479,7 +479,8 @@ Por favor, espere...</translation>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
       <source>Expected object in keymap
 </source>
-      <translation type="unfinished"/>
+      <translation>El objeto esperado se encuentra en el mapa de teclado
+</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="129"/>
