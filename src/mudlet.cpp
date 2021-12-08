@@ -2921,6 +2921,12 @@ void mudlet::slot_compact_input_line(const bool state)
     }
     if (mpCurrentActiveHost) {
         mpCurrentActiveHost->setCompactInputLine(state);
+        // Make sure players don't get confused when accidentally hiding buttons.
+        if (state) {
+            QKeySequence* shortcut = mShortcutsManager->getSequence(tr("Compact input line"));
+            QString infoMsg = tr("[  OK  ]  - Compact input line activated. Press %1 to deactivate.").arg(shortcut->toString());
+            mpCurrentActiveHost->postMessage(infoMsg);
+        }
     }
 }
 
