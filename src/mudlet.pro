@@ -574,6 +574,7 @@ SOURCES += \
     TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
+    TScrollBox.cpp \
     TLinkStore.cpp \
     TLuaInterpreter.cpp \
     TMainConsole.cpp \
@@ -687,6 +688,7 @@ HEADERS += \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
+    TScrollBox.h \
     TLinkStore.h \
     TLuaInterpreter.h \
     TMainConsole.h \

@@ -2957,6 +2957,26 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
     return {false, qsl("miniconsole/userwindow '%1' already exists").arg(name)};
 }
 
+std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pS = mpConsole->mScrollBoxMap.value(name);
+    if (!pS) {
+        pS = mpConsole->createScrollBox(windowname, name, x, y, width, height);
+        if (pS) {
+            return {true, QString()};
+        }
+    } else if (pS) {
+        pS->resize(width, height);
+        pS->move(x, y);
+        return {false, qsl("scrollBox '%1' already exists, moving/resizing '%1'").arg(name)};
+    }
+    return {false, qsl("scrollBox '%1' already exists").arg(name)};
+}
+
 std::pair<bool, QString> Host::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
 {
     if (!mpConsole) {

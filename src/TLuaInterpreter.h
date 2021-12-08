@@ -375,6 +375,7 @@ public:
     static int setStopWatchName(lua_State*);
     static int getStopWatchBrokenDownTime(lua_State*);
     static int createMiniConsole(lua_State*);
+    static int createScrollBox(lua_State*);
     static int createLabel(lua_State*);
     static int createLabelMainWindow(lua_State* L, const QString& labelName);
     static int createLabelUserWindow(lua_State* L, const QString& windowName, const QString& labelName);

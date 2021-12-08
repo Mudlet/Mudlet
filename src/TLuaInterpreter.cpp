@@ -3307,6 +3307,44 @@ int TLuaInterpreter::createLabel(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createScrollBox
+int TLuaInterpreter::createScrollBox(lua_State* L)
+{
+    QString name = "";
+    int counter = 3;
+    //make the windowname optional by using counter. If windowname "main" add to main console
+
+    QString windowName = getVerifiedString(L, __func__, 1, "scrollBox name");
+    if (isMain(windowName)) {
+        // createScrollBox only accepts the empty name as the main window
+        windowName.clear();
+    }
+
+    if (!lua_isnumber(L, 2) && lua_gettop(L) >= 2) {
+        name = getVerifiedString(L, __func__, 2, "scrollBox name");
+    } else {
+        name = windowName;
+        windowName.clear();
+        counter = 2;
+    }
+
+    int x = getVerifiedInt(L, __func__, counter, "scrollBox x-coordinate");
+    counter++;
+    int y = getVerifiedInt(L, __func__, counter, "scrollBox y-coordinate");
+    counter++;
+    int width = getVerifiedInt(L, __func__, counter, "scrollBox width");
+    counter++;
+    int height = getVerifiedInt(L, __func__, counter, "scrollBox height");
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.createScrollBox(windowName, name, x, y, width, height); !success) {
+        return warnArgumentValue(L, __func__, message, true);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Internal Function createLabel in an UserWindow
 int TLuaInterpreter::createLabelUserWindow(lua_State* L, const QString& windowName, const QString& labelName)
 {
@@ -13831,6 +13869,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getLastLineNumber", TLuaInterpreter::getLastLineNumber);
     lua_register(pGlobalLua, "getNetworkLatency", TLuaInterpreter::getNetworkLatency);
     lua_register(pGlobalLua, "createMiniConsole", TLuaInterpreter::createMiniConsole);
+    lua_register(pGlobalLua, "createScrollBox", TLuaInterpreter::createScrollBox);
     lua_register(pGlobalLua, "createLabel", TLuaInterpreter::createLabel);
     lua_register(pGlobalLua, "deleteLabel", TLuaInterpreter::deleteLabel);
     lua_register(pGlobalLua, "setLabelToolTip", TLuaInterpreter::setLabelToolTip);

@@ -111,6 +111,7 @@ class TConsole;
 class TDockWidget;
 class TEvent;
 class TLabel;
+class TScrollBox;
 class TTabBar;
 class TTimer;
 class TToolBar;

@@ -509,16 +509,48 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
     }
 }
 
+// This is a scrollBox overlaid on to the main console
+TScrollBox* TMainConsole::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
+{
+    //if pW then add ScrollBox as Overlay to the Userwindow
+    auto pW = mDockWidgetMap.value(windowname);
+    auto pS = mScrollBoxMap.value(name);
+    if (!pS) {
+        if (!pW) {
+            pS = new TScrollBox(mpHost, mpMainFrame);
+        } else {
+            pS = new TScrollBox(mpHost, pW->widget());
+        }
+        if (!pS) {
+            return nullptr;
+        }
+        mScrollBoxMap[name] = pS;
+        pS->setObjectName(name);
+        pS->setFocusPolicy(Qt::NoFocus);
+        pS->resize(width, height);
+        pS->setContentsMargins(0, 0, 0, 0);
+        pS->move(x, y);
+        pS->show();
+
+        return pS;
+    } else {
+        return nullptr;
+    }
+}
+
 TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
 {
     //if pW put Label in Userwindow
     auto pL = mLabelMap.value(name);
     auto pW = mDockWidgetMap.value(windowname);
+    auto pS = mScrollBoxMap.value(windowname);
     if (!pL) {
-        if (!pW) {
-            pL = new TLabel(mpHost, mpMainFrame);
-        } else {
+        if (pW) {
             pL = new TLabel(mpHost, pW->widget());
+        } else if (pS) {
+            pL = new TLabel(mpHost, pS->widget());
+        } else {
+            pL = new TLabel(mpHost, mpMainFrame);
         }
         mLabelMap[name] = pL;
         pL->setObjectName(name);
@@ -529,6 +561,9 @@ TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name
         pL->move(x, y);
         pL->show();
         mpHost->setBackgroundColor(name, 32, 32, 32, 255);
+        if (pS) {
+           pS->widget()->setFixedSize(pS->widget()->childrenRect().size());
+        }
         return pL;
     } else {
         return nullptr;
