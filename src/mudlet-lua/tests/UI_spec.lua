@@ -1,7 +1,7 @@
 -- https://wiki.mudlet.org/w/Manual:UI_Functions
 describe("Tests UI functions", function()
 
-  describe("Test the operation of the copy2decho function", function()
+  describe("Test the functionality of copy2decho", function()
     setup(function()
       -- create Mudlet miniconsole top-left
       createMiniConsole("testconsole", 0,0,800,100)
@@ -50,7 +50,7 @@ describe("Tests UI functions", function()
     -- end)
   end)
 
-  describe("Test the operation of the copy2html function", function()
+  describe("Test the functionality of copy2html", function()
     setup(function()
       -- create Mudlet miniconsole top-left
       createMiniConsole("testconsole", 0,0,800,100)

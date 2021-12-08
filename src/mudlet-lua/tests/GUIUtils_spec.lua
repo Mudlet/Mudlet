@@ -1,6 +1,6 @@
 describe("Tests the GUI utilities as far as possible without mudlet", function()
 
-  describe("Test the operation of the ansi2decho function", function()
+  describe("Tests the functionality of ansi2decho", function()
 
     it("Should have loaded the function successfully", function()
       assert.truthy(ansi2decho)
@@ -153,7 +153,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
   end)
 
-  describe("Tests the functionality of decho2ansi()", function()
+  describe("Tests the functionality of decho2ansi", function()
     local simple_original = "<128,0,0>This is in red<r> And then reset."
     local simple_expected = "\27[38:2::128:0:0mThis is in red\27[0m And then reset."
 
@@ -198,7 +198,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
-  describe("Tests the functionality of hecho2ansi()", function()
+  describe("Tests the functionality of hecho2ansi", function()
     local simple_original = "#800000This is in red#r And then reset."
     local simple_expected = "\27[38:2::128:0:0mThis is in red\27[0m And then reset."
 
@@ -238,7 +238,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
-  describe("Tests the functionality of cecho2ansi()", function()
+  describe("Tests the functionality of cecho2ansi", function()
     local simple_original = "<red>This is in red<r> And then reset."
     local simple_expected = "\27[38:5:1mThis is in red\27[0m And then reset."
 
@@ -283,7 +283,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
-  describe("Tests the functionality of ansi2string()", function()
+  describe("Tests the functionality of ansi2string", function()
     it("should return the string fed into it with ansi codes removed", function()
       local original = '\27[38;5;179;48;5;230mYou say in a baritone voice, "Test."\27[0;37;40m'
       local expected = 'You say in a baritone voice, "Test."'
@@ -292,7 +292,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
-  describe("Tests the functionality of setHexFgColor()", function()
+  describe("Tests the functionality of setHexFgColor", function()
 
     it("Should convert hex string correctly", function()
       local hexStrings = {
@@ -314,7 +314,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
   end)
 
-  describe("Tests the functionality of setHexBgColor()", function()
+  describe("Tests the functionality of setHexBgColor", function()
 
     it("Should convert hex string correctly", function()
       local hexStrings = {
@@ -423,7 +423,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
-  describe("Tests the functionality of _Echoes.Process()", function()
+  describe("Tests the functionality of _Echoes.Process", function()
     it("Should parse hex patterns correctly", function()
       assert.are.same(
         _Echos.Process('#ff0000Red', 'Hex'),

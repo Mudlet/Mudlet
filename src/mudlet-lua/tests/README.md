@@ -33,4 +33,18 @@ See [Busted manual](http://olivinelabs.com/busted/) and currently existing tests
 
 Each file in `tests/` should mimic its companion in `lua/` - i.e., ``tests/DB.lua`` tests all the functionality that is present in ``lua/DB.lua``.
 
-Tests should be logically grouped in `describe()` blocks, running one or more tests described by `it()` that are relevant to the block and tests all possible cases. Have a look at existing tests for inspiration.
+Tests for a specific function should be grouped within a describe block as follows:
+
+```lua
+describe("Tests the functionality of myFunctionName", function() 
+  it("should handle situation 1", function()
+	  -- test
+	end)
+
+	it ("should handle situation 2", function()
+	  -- another test
+	end)
+end)
+```
+
+If you have tests which it makes sense to have but would not logically fall into a describe block like this specific one, that is fine, but we use the format of the describe message as part of our method for gathering some code coverage metrics so we would like to try and include one describe for each function tested, in addition to any other logical groups of tests necessary. See existing test files for examples and ask on Discord is you still need help.

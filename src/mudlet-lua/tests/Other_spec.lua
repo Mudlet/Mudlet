@@ -1,6 +1,6 @@
 describe("Tests Other.lua functions", function()
 
-  describe("sendAll", function()
+  describe("Tests the functionality of sendAll", function()
     setup(function()
       _G.echo      = function() end
       _G.send      = function() end
@@ -55,7 +55,7 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
-  describe("permGroup", function()
+  describe("Tests the functionality of permGroup", function()
 
     describe("success", function()
       setup(function()
@@ -152,7 +152,7 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
-  describe("io.exists", function()
+  describe("Tests the functionality of io.exists", function()
     it("should return true if the item exists", function()
       local item = getMudletHomeDir()
       assert.is_true(io.exists(item))
@@ -164,7 +164,7 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
-  describe("xor(a,b)", function()
+  describe("Tests the functionality of xor", function()
     it("should return true if a is false and b is true", function()
       assert.is_true(xor(true, false))
     end)
@@ -182,7 +182,7 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
-  describe("Tests speedwalking() utility", function()
+  describe("Tests the functionality of speedwalking", function()
     -- Note that busted insulates changes in each test file, so
     -- these changes won't escape outside this file.
     setup(function()
@@ -249,7 +249,7 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
-  describe("Tests mudletOlderThan()", function()
+  describe("Tests the functionality of mudletOlderThan", function()
     it("tests the comparisons", function()
       local versionTable = getMudletVersion()
       local currentVersion = { versionTable.major, versionTable.minor, versionTable.revision }
@@ -261,7 +261,7 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
-  describe("shms(seconds, echoResults)", function()
+  describe("Tests the functionality of shms", function()
     it("should seconds as hh, mm, ss when called without a second parameter", function()
       local expected = { '00', '01', '00' }
       assert.are.same(expected, {shms(60)})
@@ -286,7 +286,7 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
-  describe("_comp(A,B)", function()
+  describe("Tests the functionality of _comp", function()
 
     it("compares two numbers the same as ==", function()
       assert.is_true(_comp(5,5))
