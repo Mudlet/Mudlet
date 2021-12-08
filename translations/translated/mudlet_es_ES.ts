@@ -120,7 +120,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/Host.cpp" line="3724"/>
       <source>Pre-Map loading(3) report</source>
-      <translation>Cargar el mapa previo(3) informar del problema</translation>
+      <translation>Cargar el mapa previo(3) informar</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3734"/>
