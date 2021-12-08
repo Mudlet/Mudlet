@@ -21,7 +21,7 @@
 #include "AltFocusMenuBarDisable.h"
 
 //DarkTheme only works with Fusion style
-DarkTheme::DarkTheme() : DarkTheme(new AltFocusMenuBarDisable(QStringLiteral("Fusion"))) {}
+DarkTheme::DarkTheme() : DarkTheme(new AltFocusMenuBarDisable(qsl("Fusion"))) {}
 
 DarkTheme::DarkTheme(QStyle* style) : QProxyStyle(style) {}
 

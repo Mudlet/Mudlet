@@ -87,11 +87,11 @@ void dlgPackageManager::resetPackageTable()
         shortDescription->setTextAlignment(Qt::AlignCenter);
         packageName->setText(mpHost->mInstalledPackages.at(i));
         auto packageInfo{mpHost->mPackageInfo.value(packageName->text())};
-        auto iconName = packageInfo.value(QStringLiteral("icon"));
-        auto iconDir = iconName.isEmpty() ? QStringLiteral(":/icons/mudlet.png")
-                                          : mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("%1/.mudlet/Icon/%2").arg(packageName->text(), iconName));
+        auto iconName = packageInfo.value(qsl("icon"));
+        auto iconDir = iconName.isEmpty() ? qsl(":/icons/mudlet.png")
+                                          : mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName->text(), iconName));
         packageName->setIcon(QIcon(iconDir));
-        auto title = packageInfo.value(QStringLiteral("title"));
+        auto title = packageInfo.value(qsl("title"));
         shortDescription->setText(title);
         mPackageTable->setItem(i, 0, packageName);
         mPackageTable->setItem(i, 1, shortDescription);
@@ -153,11 +153,11 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
         mDescription->hide();
         return;
     }
-    packageInfo.remove(QStringLiteral("mpackage"));
-    packageInfo.remove(QStringLiteral("icon"));
-    packageInfo.remove(QStringLiteral("title"));
+    packageInfo.remove(qsl("mpackage"));
+    packageInfo.remove(qsl("icon"));
+    packageInfo.remove(qsl("title"));
 
-    QString description = packageInfo.take(QStringLiteral("description"));
+    QString description = packageInfo.take(qsl("description"));
     if (description.isEmpty()) {
         mDescription->hide();
     } else {
@@ -173,7 +173,7 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
 
     QStringList labelText, details;
     labelText << tr("Author") << tr("Version") << tr("Created") << tr("Dependencies");
-    details << QStringLiteral("author") << QStringLiteral("version") << QStringLiteral("created") << QStringLiteral("dependencies");
+    details << qsl("author") << qsl("version") << qsl("created") << qsl("dependencies");
     int counter = 0;
     for (int i = 0; i < details.size(); i++) {
         QString valueText{packageInfo.take(details.at(i))};

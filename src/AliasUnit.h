@@ -57,7 +57,7 @@ public:
     bool processDataStream(const QString&);
     void stopAllTriggers();
     void reenableAllTriggers();
-    QString assembleReport();
+    std::tuple<QString, int, int, int> assembleReport();
     int getNewID();
     void markCleanup(TAlias* pT);
     void doCleanup();
