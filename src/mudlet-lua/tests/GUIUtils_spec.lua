@@ -535,6 +535,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       )
     end)
   end)
+
+  describe("Tests the functionality of replace", function()
+    it("Should raise an error if nothing is selected to replace", function()
+      local errorFunc = function()
+        deselect()
+        replace("]")
+      end
+      assert.error_matches(errorFunc, "replace: nothing is selected to be replaced. Did selectString return -1?")
+    end)
+  end)
 end)
 
 --[[
