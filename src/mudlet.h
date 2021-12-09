@@ -100,6 +100,7 @@ class QLabel;
 class QListWidget;
 class QPushButton;
 class QShortcut;
+class QSplitter;
 class QTableWidget;
 class QTableWidgetItem;
 class QTextEdit;
@@ -624,6 +625,7 @@ private:
 
     QWidget* mpWidget_profileContainer;
     QHBoxLayout* mpHBoxLayout_profileContainer;
+    QSplitter* mpSpltter_profileContainer;
 
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
