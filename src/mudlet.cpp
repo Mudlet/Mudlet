@@ -2921,6 +2921,13 @@ void mudlet::slot_compact_input_line(const bool state)
     }
     if (mpCurrentActiveHost) {
         mpCurrentActiveHost->setCompactInputLine(state);
+        // Make sure players don't get confused when accidentally hiding buttons.
+        if (state) {
+            QKeySequence* shortcut = mShortcutsManager->getSequence(tr("Compact input line"));
+            QString infoMsg = tr("[  OK  ]  - Compact input line set. Press %1 to show bottom-right buttons again.",
+                                 "Here %1 will be replaced with the keyboard shortcut, default is ALT+L.").arg(shortcut->toString());
+            mpCurrentActiveHost->postMessage(infoMsg);
+        }
     }
 }
 
