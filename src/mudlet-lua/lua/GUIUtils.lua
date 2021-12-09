@@ -1760,7 +1760,7 @@ do
 
     local selection = {getSelection()}
     if _comp(selection, {"", 0, 0}) then
-      printError("replace: nothing is selected to be replaced. Did selectString return -1?", true, true)
+      return nil, "replace: nothing is selected to be replaced. Did selectString return -1?"
     end
     text = text or ""
 
