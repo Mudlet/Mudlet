@@ -2927,7 +2927,7 @@ void mudlet::slot_compact_input_line(const bool state)
             QString infoMsg = tr("[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.",
                                  "Here %1 will be replaced with the keyboard shortcut, default is ALT+L.").arg(shortcut->toString());
             mpCurrentActiveHost->postMessage(infoMsg);
-            mTutorialForCompactLineAlreadyShown = true;
+            mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown = true;
         }
     }
 }
