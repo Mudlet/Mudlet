@@ -802,7 +802,7 @@ bool TMainConsole::raiseWindow(const QString& name)
     auto pL = mLabelMap.value(name);
     auto pM = mpMapper;
     auto pN = mSubCommandLineMap.value(name);
-    auto pS = mScrollBoxMap.value(windowname);
+    auto pS = mScrollBoxMap.value(name);
 
     if (pC) {
         pC->raise();
@@ -834,7 +834,7 @@ bool TMainConsole::lowerWindow(const QString& name)
     auto pL = mLabelMap.value(name);
     auto pM = mpMapper;
     auto pN = mSubCommandLineMap.value(name);
-    auto pS = mScrollBoxMap.value(windowname);
+    auto pS = mScrollBoxMap.value(name);
 
     if (pC) {
         pC->lower();
