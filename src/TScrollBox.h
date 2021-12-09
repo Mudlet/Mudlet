@@ -40,4 +40,20 @@ public:
 private:
 };
 
+
+class TScrollBoxWidget : public QWidget
+{
+    Q_OBJECT
+
+public:
+    Q_DISABLE_COPY(TScrollBoxWidget)
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 13, 0))
+    Q_DISABLE_MOVE(TScrollBoxWidget)
+#endif
+    explicit TScrollBoxWidget(QWidget* pW = nullptr);
+    ~TScrollBoxWidget();
+    void childEvent(QChildEvent* event);
+    bool eventFilter(QObject* object, QEvent* event);
+};
+
 #endif // MUDLET_TSCROLLBOX_H

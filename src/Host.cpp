@@ -3115,6 +3115,7 @@ bool Host::showWindow(const QString& name)
     auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pL = mpConsole->mLabelMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
+    auto pS = mpConsole->mScrollBoxMap.value(windowname);
     // check labels first as they are shown/hidden more often
     if (pL) {
         pL->show();
@@ -3129,6 +3130,11 @@ bool Host::showWindow(const QString& name)
         } else {
             return mpConsole->showWindow(name);
         }
+    }
+
+    if (pS) {
+        pS->show();
+        return true;
     }
 
     if (pN) {
@@ -3148,6 +3154,7 @@ bool Host::hideWindow(const QString& name)
     auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pL = mpConsole->mLabelMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
+    auto pS = mpConsole->mScrollBoxMap.value(windowname);
 
     // check labels first as they are shown/hidden more often
     if (pL) {
@@ -3160,6 +3167,11 @@ bool Host::hideWindow(const QString& name)
             pD->update();
         }
         return mpConsole->hideWindow(name);
+    }
+
+    if (pS) {
+        pS->hide();
+        return true;
     }
 
     if (pN) {
@@ -3180,6 +3192,7 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
     auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
+    auto pS = mpConsole->mScrollBoxMap.value(windowname);
 
     if (pL) {
         pL->resize(x1, y1);
@@ -3202,6 +3215,11 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
         return true;
     }
 
+    if (pS) {
+        pS->resize(x1, y1);
+        return true;
+    }
+
     if (pN) {
         pN->resize(x1, y1);
         return true;
@@ -3220,6 +3238,7 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
     auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
+    auto pS = mpConsole->mScrollBoxMap.value(windowname);
 
     if (pL) {
         pL->move(x1, y1);
@@ -3241,6 +3260,11 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
         }
 
         pD->move(x1, y1);
+        return true;
+    }
+
+    if (pS) {
+        pS->move(x1, y1);
         return true;
     }
 

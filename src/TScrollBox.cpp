@@ -30,6 +30,33 @@ TScrollBox::TScrollBox(Host* pH, QWidget* pW)
 : QScrollArea(pW)
 , mpHost(pH)
 {
-    setWidget(new QWidget());
+    setWidget(new TScrollBoxWidget());
     setWidgetResizable(true);
+}
+
+
+TScrollBoxWidget::TScrollBoxWidget(QWidget* pW) : QWidget(pW) {}
+TScrollBoxWidget::~TScrollBoxWidget() {}
+
+void TScrollBoxWidget::childEvent(QChildEvent* event)
+{
+    auto child = event->child();
+    if (event->added())
+    {
+        child->installEventFilter(this);
+    }
+    if (event->removed())
+    {
+        child->removeEventFilter(this);
+    }
+}
+
+bool TScrollBoxWidget::eventFilter(QObject* object, QEvent* event)
+{
+    Q_UNUSED(object);
+    if (event->type() == QMoveEvent::Move || event->type() == QResizeEvent::Resize || event->type() == QHideEvent::Hide || event->type() == QShowEvent::Show)
+    {
+      setFixedSize(childrenRect().bottomRight().x(), childrenRect().bottomRight().y());
+    }
+    return false;
 }

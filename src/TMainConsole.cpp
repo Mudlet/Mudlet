@@ -477,11 +477,14 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
     //if pW then add Console as Overlay to the Userwindow
     auto pW = mDockWidgetMap.value(windowname);
     auto pC = mSubConsoleMap.value(name);
+    auto pS = mScrollBoxMap.value(windowname);
     if (!pC) {
-        if (!pW) {
-            pC = new TConsole(mpHost, SubConsole, mpMainFrame);
-        } else {
+        if (pS) {
+            pC = new TConsole(mpHost, SubConsole, pS->widget());
+        } else if (pW) {
             pC = new TConsole(mpHost, SubConsole, pW->widget());
+        } else {
+            pC = new TConsole(mpHost, SubConsole, mpMainFrame);
         }
         if (!pC) {
             return nullptr;
@@ -561,9 +564,6 @@ TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name
         pL->move(x, y);
         pL->show();
         mpHost->setBackgroundColor(name, 32, 32, 32, 255);
-        if (pS) {
-           pS->widget()->setFixedSize(pS->widget()->childrenRect().size());
-        }
         return pL;
     } else {
         return nullptr;
@@ -733,12 +733,15 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
 
     auto pN = mSubCommandLineMap.value(name);
     auto pW = mDockWidgetMap.value(windowname);
+    auto pS = mScrollBoxMap.value(windowname);
 
     if (!pN) {
-        if (!pW) {
-            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, mpMainFrame);
-        } else {
+        if (pS) {
+            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, pS->widget());
+        } else if (pW) {
             pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, pW->widget());
+        } else {
+            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, mpMainFrame);
         }
         mSubCommandLineMap[name] = pN;
         pN->mCommandLineName = name;
@@ -799,6 +802,7 @@ bool TMainConsole::raiseWindow(const QString& name)
     auto pL = mLabelMap.value(name);
     auto pM = mpMapper;
     auto pN = mSubCommandLineMap.value(name);
+    auto pS = mScrollBoxMap.value(windowname);
 
     if (pC) {
         pC->raise();
@@ -810,6 +814,10 @@ bool TMainConsole::raiseWindow(const QString& name)
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->raise();
+        return true;
+    }
+    if (pS) {
+        pS->raise();
         return true;
     }
     if (pN) {
@@ -826,6 +834,7 @@ bool TMainConsole::lowerWindow(const QString& name)
     auto pL = mLabelMap.value(name);
     auto pM = mpMapper;
     auto pN = mSubCommandLineMap.value(name);
+    auto pS = mScrollBoxMap.value(windowname);
 
     if (pC) {
         pC->lower();
@@ -839,6 +848,11 @@ bool TMainConsole::lowerWindow(const QString& name)
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->lower();
+        mpMainDisplay->lower();
+        return true;
+    }
+    if (pS) {
+        pS->lower();
         mpMainDisplay->lower();
         return true;
     }
