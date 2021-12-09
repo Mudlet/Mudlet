@@ -975,7 +975,92 @@ function setGaugeStyleSheet(gaugeName, css, cssback, csstext)
   setLabelStyleSheet(gaugeName .. "_text", csstext or "")
 end
 
+--- undocumented, used by xEcho for creating formatting tags for labels
+local function getHTMLspan(fmt)
+  -- next two lines effectively invert the colors if fmt.reverse is true
+  local fore = fmt.reverse and fmt.background or fmt.foreground
+  local back = fmt.reverse and fmt.foreground or fmt.background
+  local color = string.format("color: rgb(%d,%d,%d);", unpack(fore))
+  local background = string.format("background: rgb(%d,%d,%d);", unpack(back))
+  local bold = fmt.bold and " font-weight: bold;" or " font-weight: normal;"
+  local italic = fmt.italic and " font-style: italic;" or " font-style: normal;"
+  local textDecoration
+  if not (fmt.underline or fmt.overline or fmt.strikeout) then
+    textDecoration = " text-decoration: none;"
+  else
+    textDecoration = string.format(" text-decoration: %s%s%s;", fmt.overline and "overline" or "", fmt.underline and " underline" or "", fmt.strikeout and " line-through" or "")
+  end
+  local result = string.format([[<span style="%s%s%s%s%s">]], color, background, bold, italic, textDecoration)
+  return result
+end
 
+-- undocumented, used by xEcho for getting the default format for a label, taking into account
+-- the background color setting and stylesheet settings
+local function getLabelDefaultFormat(win)
+  local r,g,b = 192, 192, 192
+  local br,bb,bg = getBackgroundColor(win)
+  local reset = {
+    foreground = { r, g, b },
+    background = { br, bb, bg },
+    bold = false,
+    italic = false,
+    overline = false,
+    reverse = false,
+    strikeout = false,
+    underline = false,
+  }
+  local stylesheet = getLabelStylesheet(win)
+  if stylesheet ~= "" then
+    if stylesheet:find(";") then
+      local styleTable = {}
+      stylesheet = stylesheet:gsub("[\r\n]", "")
+      for _,element in ipairs(stylesheet:split(";")) do
+        element = element:trim()
+        local attr, val = element:match("^(.+):(.+)$")
+        if attr and val then
+          styleTable[attr:trim()] = val:trim()
+        end
+      end
+      display(styleTable)
+      if styleTable.color then
+        local rgba = {styleTable.color:match("rgb%((%d+),(%d+),(%d+),?(%d*)%)")}
+        display(rgba)
+        if not table.is_empty(rgba) then
+          for index,value in ipairs(rgba) do
+            reset.foreground[index] = tonumber(value)
+          end
+        end
+      end
+      if styleTable["background-color"] then
+        local rgba = {styleTable["background-color"]:match("rgb%((%d+),(%d+),(%d+),?(%d*)%)")}
+        if not table.is_empty(rgba) then
+          for index,value in ipairs(rgba) do
+            reset.background[index] = tonumber(value)
+          end
+        end
+      end
+      if styleTable["text-decoration"] then
+        local td = styleTable["text-decoration"]
+        if td:match("underline") then
+          reset.underline = true
+        end
+        if td:match("overline") then
+          reset.overline = true
+        end
+        if td:match("line-through") then
+          reset.strikeout = true
+        end
+      end
+      if styleTable["font-weight"] and styleTable["font-weight"]:match("bold") then
+        reset.bold = true
+      end
+      if styleTable["font-style"] and styleTable["font-style"]:match("italic") then
+        reset.italic = true
+      end
+    end
+  end
+  return reset
+end
 
 if rex then
   _Echos = {
@@ -1132,7 +1217,7 @@ if rex then
   --- @see hinsertText
   function xEcho(style, func, ...)
     local win, str, cmd, hint, fmt
-    local out, reset
+    local out
     local args = { ... }
     local n = #args
 
@@ -1179,54 +1264,109 @@ if rex then
     end
 
     local t = _Echos.Process(str, style)
-    deselect(win)
-    resetFormat(win)
-    for _, v in ipairs(t) do
-      if type(v) == 'table' then
-        if v.fg then
-          local fr, fg, fb = unpack(v.fg)
-          setFgColor(win, fr, fg, fb)
-        end
-        if v.bg then
-          local br, bg, bb, ba = unpack(v.bg)
-          ba = ba or 255
-          setBgColor(win, br, bg, bb, ba)
-        end
-      elseif v == "\27bold" then
-        setBold(win, true)
-      elseif v == "\27boldoff" then
-        setBold(win, false)
-      elseif v == "\27italics" then
-        setItalics(win, true)
-      elseif v == "\27italicsoff" then
-        setItalics(win, false)
-      elseif v == "\27underline" then
-        setUnderline(win, true)
-      elseif v == "\27underlineoff" then
-        setUnderline(win, false)
-      elseif v == "\27strikethrough" then
-        setStrikeOut(win, true)
-      elseif v == "\27strikethroughoff" then
-        setStrikeOut(win, false)
-      elseif v == "\27overline" then
-        setOverline(win, true)
-      elseif v == "\27overlineoff" then
-        setOverline(win, false)
-      elseif v == "\27reset" then
-        resetFormat(win)
-      else
-        if func == 'echo' or func == 'insertText' then
-          out(win, v)
-          if func == 'insertText' then
-            moveCursor(win, getColumnNumber(win) + string.len(v), getLineNumber(win))
+    if windowType(win) == "label" then
+      local reset = getLabelDefaultFormat(win)
+      local format = table.deepcopy(reset)
+      local result = getHTMLspan(format)
+      for _,v in ipairs(t) do
+        local formatChanged = false
+        if type(v) == "table" then
+          if v.fg then
+            format.foreground = {v.fg[1], v.fg[2], v.fg[3]}
+            formatChanged = true
           end
+          if v.bg then
+            format.background = {v.bg[1], v.bg[2], v.bg[3]}
+            formatChanged = true
+          end
+        elseif v == "\27bold" then
+          format.bold = true
+          formatChanged = true
+        elseif v == "\27boldoff" then
+          format.bold = false
+          formatChanged = true
+        elseif v == "\27italics" then
+          format.italic = true
+          formatChanged = true
+        elseif v == "\27italicsoff" then
+          format.italic = false
+          formatChanged = true
+        elseif v == "\27underline" then
+          format.underline = true
+          formatChanged = true
+        elseif v == "\27underlineoff" then
+          format.underline = false
+          formatChanged = true
+        elseif v == "\27strikethrough" then
+          format.strikeout = true
+          formatChanged = true
+        elseif v == "\27strikethroughoff" then
+          format.strikeout = false
+          formatChanged = true
+        elseif v == "\27overline" then
+          format.overline = true
+          formatChanged = true
+        elseif v == "\27overlineoff" then
+          format.overline = false
+          formatChanged = true
+        elseif v == "\27reset" then
+          format = table.deepcopy(reset)
+          formatChanged = true
+        end
+        v = formatChanged and getHTMLspan(format) or v
+        result = result .. v
+      end
+      echo(win, result)
+    else
+      deselect(win)
+      resetFormat(win)
+      for _, v in ipairs(t) do
+        if type(v) == 'table' then
+          if v.fg then
+            local fr, fg, fb = unpack(v.fg)
+            setFgColor(win, fr, fg, fb)
+          end
+          if v.bg then
+            local br, bg, bb, ba = unpack(v.bg)
+            ba = ba or 255
+            setBgColor(win, br, bg, bb, ba)
+          end
+        elseif v == "\27bold" then
+          setBold(win, true)
+        elseif v == "\27boldoff" then
+          setBold(win, false)
+        elseif v == "\27italics" then
+          setItalics(win, true)
+        elseif v == "\27italicsoff" then
+          setItalics(win, false)
+        elseif v == "\27underline" then
+          setUnderline(win, true)
+        elseif v == "\27underlineoff" then
+          setUnderline(win, false)
+        elseif v == "\27strikethrough" then
+          setStrikeOut(win, true)
+        elseif v == "\27strikethroughoff" then
+          setStrikeOut(win, false)
+        elseif v == "\27overline" then
+          setOverline(win, true)
+        elseif v == "\27overlineoff" then
+          setOverline(win, false)
+        elseif v == "\27reset" then
+          resetFormat(win)
         else
-          -- if fmt then setUnderline(win, true) end -- not sure if underline is necessary unless asked for
-          out(win, v, cmd, hint, (fmt == true and true or false))
+          if func == 'echo' or func == 'insertText' then
+            out(win, v)
+            if func == 'insertText' then
+              moveCursor(win, getColumnNumber(win) + string.len(v), getLineNumber(win))
+            end
+          else
+            -- if fmt then setUnderline(win, true) end -- not sure if underline is necessary unless asked for
+            out(win, v, cmd, hint, (fmt == true and true or false))
+          end
         end
       end
+      resetFormat(win)
     end
-    resetFormat(win)
   end
 
 
