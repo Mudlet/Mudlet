@@ -402,6 +402,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerDiameterPercentage(70)
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
+, mTutorialForCompactLineAlreadyShown(false)
 {
     TDebug::addHost(this);
 

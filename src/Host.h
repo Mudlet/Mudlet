@@ -633,6 +633,8 @@ public:
 
     QMap<QString, QKeySequence*> profileShortcuts;
 
+    bool mTutorialForCompactLineAlreadyShown;
+
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
