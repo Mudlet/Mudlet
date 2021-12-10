@@ -1,6 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,24 +17,33 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_TMXPELEMENTDEFINITIONHANDLER_H
-#define MUDLET_TMXPELEMENTDEFINITIONHANDLER_H
-#include "TMxpElementRegistry.h"
-#include "TMxpTagHandler.h"
-#include "utils.h"
+#include "ShortcutsManager.h"
 
-// https://www.zuggsoft.com/zmud/mxp.htm#ELEMENT
-// <!ELEMENT element-name [definition] [ATT=attribute-list] [TAG=tag] [FLAG=flags] [OPEN] [DELETE] [EMPTY]>
-class TMxpElementDefinitionHandler : public TMxpTagHandler
+void ShortcutsManager::registerShortcut(const QString& key, QKeySequence* sequence)
 {
-public:
-    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override {
-        Q_UNUSED(ctx)
-        Q_UNUSED(client)
-        return tag->isNamed(qsl("!EL")) || tag->isNamed(qsl("!ELEMENT"));
-    }
+    shortcutKeys << key;
+    shortcuts.insert(key, sequence);
+    defaults.insert(key, new QKeySequence(*sequence));
+}
 
-    TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
-};
-#include "TMxpTagHandler.h"
-#endif //MUDLET_TMXPELEMENTDEFINITIONHANDLER_H
+void ShortcutsManager::setShortcut(const QString& key, QKeySequence* sequence)
+{
+    QKeySequence* newSequence = new QKeySequence(*sequence);
+    shortcuts.value(key)->swap(*newSequence);
+    delete newSequence;
+}
+
+QKeySequence* ShortcutsManager::getSequence(const QString& key)
+{
+    return shortcuts.value(key);
+}
+
+QKeySequence* ShortcutsManager::getDefault(const QString& key)
+{
+    return defaults.value(key);
+}
+
+QStringListIterator ShortcutsManager::iterator()
+{
+    return QStringListIterator(shortcutKeys);
+}

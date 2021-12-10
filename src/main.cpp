@@ -74,9 +74,9 @@ static void pcre_free_dbg(void* ptr)
 #if defined(INCLUDE_FONTS)
 void copyFont(const QString& externalPathName, const QString& resourcePathName, const QString& fileName)
 {
-    if (!QFile::exists(QStringLiteral("%1/%2").arg(externalPathName, fileName))) {
-        QFile fileToCopy(QStringLiteral(":/%1/%2").arg(resourcePathName, fileName));
-        fileToCopy.copy(QStringLiteral("%1/%2").arg(externalPathName, fileName));
+    if (!QFile::exists(qsl("%1/%2").arg(externalPathName, fileName))) {
+        QFile fileToCopy(qsl(":/%1/%2").arg(resourcePathName, fileName));
+        fileToCopy.copy(qsl("%1/%2").arg(externalPathName, fileName));
     }
 }
 
@@ -87,8 +87,8 @@ void removeOldNoteColorEmojiFonts()
     // to load the latest (otherwise, as they all have the same family name
     // only the first one found will be loaded by the FontManager class):
     QStringList oldNotoFontDirectories;
-    oldNotoFontDirectories << QStringLiteral("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
-    oldNotoFontDirectories << QStringLiteral("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
 
     QStringListIterator itOldNotoFontDirectory(oldNotoFontDirectories);
     while (itOldNotoFontDirectory.hasNext()) {
@@ -179,12 +179,12 @@ int main(int argc, char* argv[])
     // Turn the cursor into the waiting one during startup, so something shows
     // activity even if the quiet, no splashscreen startup has been used
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
-    app->setOrganizationName(QStringLiteral("Mudlet"));
+    app->setOrganizationName(qsl("Mudlet"));
 
     if (mudlet::scmIsPublicTestVersion) {
-        app->setApplicationName(QStringLiteral("Mudlet Public Test Build"));
+        app->setApplicationName(qsl("Mudlet Public Test Build"));
     } else {
-        app->setApplicationName(QStringLiteral("Mudlet"));
+        app->setApplicationName(qsl("Mudlet"));
     }
     if (mudlet::scmIsReleaseVersion) {
         app->setApplicationVersion(APP_VERSION);
@@ -193,7 +193,7 @@ int main(int argc, char* argv[])
     }
 
     QCommandLineParser parser;
-    QCommandLineOption profileToOpen(QStringLiteral("profile"), QCoreApplication::translate("main", "Profile to open automatically"), QCoreApplication::translate("main", "profile"));
+    QCommandLineOption profileToOpen(qsl("profile"), QCoreApplication::translate("main", "Profile to open automatically"), QCoreApplication::translate("main", "profile"));
     parser.addOption(profileToOpen);
 
     QCommandLineOption showHelp(QStringList() << "h" <<"help", QCoreApplication::translate("main", "Display help and exit"));
@@ -224,18 +224,18 @@ int main(int argc, char* argv[])
                                                      "less likely to be useful for normal use of this application:\n")
                  .arg(QLatin1String(APP_TARGET));
         // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
-        texts << QStringLiteral("       --dograb        ignore any implicit or explicit -nograb.\n"
+        texts << qsl("       --dograb        ignore any implicit or explicit -nograb.\n"
                                 "                       --dograb wins over --nograb even when --nograb is last on\n"
                                 "                       the command line.\n");
 #if defined(Q_OS_LINUX)
-        texts << QStringLiteral("       --nograb        the application should never grab the mouse or the\n"
+        texts << qsl("       --nograb        the application should never grab the mouse or the\n"
                                 "                       keyboard. This option is set by default when Mudlet is\n"
                                 "                       running in the gdb debugger under Linux.\n");
 #else // ! defined(Q_OS_LINUX)
-        texts << QStringLiteral("       --nograb        the application should never grab the mouse or the\n"
+        texts << qsl("       --nograb        the application should never grab the mouse or the\n"
                                 "                       keyboard.\n");
 #endif // ! defined(Q_OS_LINUX)
-        texts << QStringLiteral("       --reverse       sets the application's layout direction to right to left.\n"
+        texts << qsl("       --reverse       sets the application's layout direction to right to left.\n"
                                 "       --style= style  sets the application GUI style. Possible values depend on\n"
                                 "                       your system configuration. If Qt was compiled with\n"
                                 "                       additional styles or has additional styles as plugins\n"
@@ -251,12 +251,12 @@ int main(int argc, char* argv[])
                                 "       --stylesheet stylesheet  is the same as listed above.\n");
 // Not sure about MacOS case as that does not use X
 #if defined(Q_OS_UNIX) && (! defined(Q_OS_MACOS))
-        texts << QStringLiteral("       --sync          forces the X server to perform each X client request\n"
+        texts << qsl("       --sync          forces the X server to perform each X client request\n"
                                 "                       immediately and not use buffer optimization. It makes the\n"
                                 "                       program easier to debug and often much slower. The --sync\n"
                                 "                       option is only valid for the X11 version of Qt.\n");
 #endif // defined(Q_OS_UNIX) and not defined(Q_OS_MACOS)
-        texts << QStringLiteral("       --widgetcount   prints debug message at the end about number of widgets\n"
+        texts << qsl("       --widgetcount   prints debug message at the end about number of widgets\n"
                                 "                       left undestroyed and maximum number of widgets existing\n"
                                 "                       at the same time.\n"
                                 "       --qmljsdebugger=1234[,block]  activates the QML/JS debugger with a\n"
@@ -297,11 +297,11 @@ int main(int argc, char* argv[])
 
     bool show_splash = !(parser.isSet(beQuiet)); // Not --quiet.
 #if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
-    QImage splashImage(mudlet::scmIsReleaseVersion ? QStringLiteral(":/Mudlet_splashscreen_main.png")
-                                                   : mudlet::scmIsPublicTestVersion ? QStringLiteral(":/Mudlet_splashscreen_ptb.png")
-                                                                                    : QStringLiteral(":/Mudlet_splashscreen_development.png"));
+    QImage splashImage(mudlet::scmIsReleaseVersion ? qsl(":/Mudlet_splashscreen_main.png")
+                                                   : mudlet::scmIsPublicTestVersion ? qsl(":/Mudlet_splashscreen_ptb.png")
+                                                                                    : qsl(":/Mudlet_splashscreen_development.png"));
 #else
-    QImage splashImage(QStringLiteral(":/Mudlet_splashscreen_main.png"));
+    QImage splashImage(qsl(":/Mudlet_splashscreen_main.png"));
 #endif
 
     if (show_splash) {
@@ -345,8 +345,8 @@ int main(int argc, char* argv[])
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2021");
-        QFont font(QStringLiteral("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2021");
+        QFont font(qsl("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
@@ -382,18 +382,18 @@ int main(int argc, char* argv[])
     }
 
 #if defined(INCLUDE_FONTS)
-    QString bitstreamVeraFontDirectory(QStringLiteral("%1/ttf-bitstream-vera-1.10").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    QString bitstreamVeraFontDirectory(qsl("%1/ttf-bitstream-vera-1.10").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(bitstreamVeraFontDirectory)) {
         dir.mkpath(bitstreamVeraFontDirectory);
     }
-    QString ubuntuFontDirectory(QStringLiteral("%1/ubuntu-font-family-0.83").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    QString ubuntuFontDirectory(qsl("%1/ubuntu-font-family-0.83").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
 #if defined(Q_OS_LINUX)
     // Only needed/works on Linux to provide color emojis:
     removeOldNoteColorEmojiFonts();
-    QString notoFontDirectory{QStringLiteral("%1/noto-color-emoji-2021-07-15-v2.028").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
+    QString notoFontDirectory{qsl("%1/noto-color-emoji-2021-07-15-v2.028").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -448,15 +448,15 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
 #if defined(Q_OS_LINUX)
-    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2021-07-15-v2.028"), QStringLiteral("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2021-07-15-v2.028"), QStringLiteral("LICENSE"));
-    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2021-07-15-v2.028"), QStringLiteral("README"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2021-07-15-v2.028"), qsl("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2021-07-15-v2.028"), qsl("LICENSE"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2021-07-15-v2.028"), qsl("README"));
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
     mudlet::debugMode = false;
 
-    QString homeLink = QStringLiteral("%1/mudlet-data").arg(QDir::homePath());
+    QString homeLink = qsl("%1/mudlet-data").arg(QDir::homePath());
 #if defined(Q_OS_WIN32)
     /*
      * From Qt Documentation for:
@@ -470,7 +470,7 @@ int main(int argc, char* argv[])
      * does not mention this particular restriction it is not unreasonable to
      * assume the same condition applies...
      */
-    QString homeLinkWindows = QStringLiteral("%1/mudlet-data.lnk").arg(QDir::homePath());
+    QString homeLinkWindows = qsl("%1/mudlet-data.lnk").arg(QDir::homePath());
     QFile oldLinkFile(homeLink);
     if (oldLinkFile.exists()) {
         // A One-time fix up past error that did not include the ".lnk" extension
@@ -487,7 +487,7 @@ int main(int argc, char* argv[])
         QFile::link(homeDirectory, homeLink);
     }
 #endif
-    app->setStyle(new AltFocusMenuBarDisable);
+
     mudlet::start();
 
     if (first_launch) {
@@ -547,8 +547,8 @@ int main(int argc, char* argv[])
 // return true if we should abort the current launch since the updater got started
 bool runUpdate()
 {
-    QFileInfo updatedInstaller(QCoreApplication::applicationDirPath() + QStringLiteral("/new-mudlet-setup.exe"));
-    QFileInfo seenUpdatedInstaller(QCoreApplication::applicationDirPath() + QStringLiteral("/new-mudlet-setup-seen.exe"));
+    QFileInfo updatedInstaller(QCoreApplication::applicationDirPath() + qsl("/new-mudlet-setup.exe"));
+    QFileInfo seenUpdatedInstaller(QCoreApplication::applicationDirPath() + qsl("/new-mudlet-setup-seen.exe"));
     QDir updateDir;
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
         if (seenUpdatedInstaller.exists() && !updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {

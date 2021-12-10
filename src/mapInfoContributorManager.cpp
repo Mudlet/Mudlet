@@ -24,16 +24,16 @@
 
 MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH) : QObject(parent), mpHost(pH)
 {
-    registerContributor(QStringLiteral("Short"), [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+    registerContributor(qsl("Short"), [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
         return shortInfo(roomID, selectionSize, areaId, displayAreaId, infoColor);
     });
-    registerContributor(QStringLiteral("Full"), [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+    registerContributor(qsl("Full"), [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
         return fullInfo(roomID, selectionSize, areaId, displayAreaId, infoColor);
     });
 }
 
 void MapInfoContributorManager::registerContributor(const QString& name, MapInfoCallback callback)
-{   
+{
     if (contributors.contains(name)) {
         ordering.removeOne(name);
     }
@@ -89,14 +89,14 @@ MapInfoProperties MapInfoContributorManager::shortInfo(int roomID, int selection
     TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomID);
     if (room) {
         QString areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
-        static const QRegularExpression trailingPunctuation(QStringLiteral("[.,/]+$"));
+        static const QRegularExpression trailingPunctuation(qsl("[.,/]+$"));
         auto roomName = QString(room->name);
         if (mpHost->mMapViewOnly) {
             roomName = roomName.remove(trailingPunctuation).trimmed();
         }
         auto roomFragment = !roomName.isEmpty() && roomName != QString::number(room->getId()) ?
-            QStringLiteral("%1 / %2").arg(roomName, QString::number(room->getId())) : QString::number(room->getId());
-        infoText = QStringLiteral("%1 (%2)\n").arg(roomFragment, areaName);
+            qsl("%1 / %2").arg(roomName, QString::number(room->getId())) : QString::number(room->getId());
+        infoText = qsl("%1 (%2)\n").arg(roomFragment, areaName);
     }
     return MapInfoProperties{false, false, infoText, infoColor};
 }

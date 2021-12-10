@@ -981,11 +981,11 @@ if rex then
   _Echos = {
     Patterns = {
       Hex = {
-        [[(\x5c?(?:#|\|c)?(?:[0-9a-fA-F]{6}|(?:#,|\|c,)[0-9a-fA-F]{6,8})(?:,[0-9a-fA-F]{6,8})?)|(?:\||#)(\/?[biru])]],
+        [[(\x5c?(?:#|\|c)?(?:[0-9a-fA-F]{6}|(?:#,|\|c,)[0-9a-fA-F]{6,8})(?:,[0-9a-fA-F]{6,8})?)|(?:\||#)(\/?[biruso])]],
         rex.new [[(?:#|\|c)(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?)?]],
       },
       Decimal = {
-        [[(<[0-9,:]+>)|<(/?[biru])>]],
+        [[(<[0-9,:]+>)|<(/?[biruso])>]],
         rex.new [[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}),?([0-9]{1,3})?)?>]],
       },
       Color = {
@@ -1029,6 +1029,14 @@ if rex then
           t[#t + 1] = "\27underline"
         elseif r == "/u" then
           t[#t + 1] = "\27underlineoff"
+        elseif r == "s" then
+          t[#t + 1] = "\27strikethrough"
+        elseif r == "/s" then
+          t[#t + 1] = "\27strikethroughoff"
+        elseif r == "o" then
+          t[#t + 1] = "\27overline"
+        elseif r == "/o" then
+          t[#t + 1] = "\27overlineoff"
         end
         if c then
           if style == 'Hex' or style == 'Decimal' then
@@ -1078,6 +1086,14 @@ if rex then
               t[#t + 1] = "\27underline"
             elseif c == "</u>" then
               t[#t + 1] = "\27underlineoff"
+            elseif c == "<s>" then
+              t[#t + 1] = "\27strikethrough"
+            elseif c == "</s>" then
+              t[#t + 1] = "\27strikethroughoff"
+            elseif c == "<o>" then
+              t[#t + 1] = "\27overline"
+            elseif c == "</o>" then
+              t[#t + 1] = "\27overlineoff"
             else
               local fcolor, bcolor = _Echos.Patterns[style][2]:match(c)
               local color = {}
@@ -1188,6 +1204,14 @@ if rex then
         setUnderline(win, true)
       elseif v == "\27underlineoff" then
         setUnderline(win, false)
+      elseif v == "\27strikethrough" then
+        setStrikeOut(win, true)
+      elseif v == "\27strikethroughoff" then
+        setStrikeOut(win, false)
+      elseif v == "\27overline" then
+        setOverline(win, true)
+      elseif v == "\27overlineoff" then
+        setOverline(win, false)
       elseif v == "\27reset" then
         resetFormat(win)
       else
@@ -1445,6 +1469,22 @@ if rex then
     ctable["ansi_" .. key] = key
   end
 
+  -- local lookup table to find ansi escapes for to ansi conversions
+  local resets = {
+    ["r"]     = "\27[0m",
+    ["reset"] = "\27[0m",
+    ["i"]     = "\27[3m",
+    ["/i"]    = "\27[23m",
+    ["b"]     = "\27[1m",
+    ["/b"]    = "\27[22m",
+    ["u"]     = "\27[4m",
+    ["/u"]    = "\27[24m",
+    ["s"]     = "\27[9m",
+    ["/s"]    = "\27[29m",
+    ["o"]     = "\27[53m",
+    ["/o"]    = "\27[55m"
+  }
+
   -- take a color name and turn it into an ANSI escape string
   local function colorToAnsi(colorName)
     local result = ""
@@ -1452,18 +1492,27 @@ if rex then
     local fore = cols[1]
     local back = cols[2]
     if fore ~= "" then
-      if fore == "r" or fore == "reset" then
-        result = result .. "\27[0m"
+      local res = resets[fore]
+      if res then
+        result = result .. res
       else
         local colorNumber = ctable[fore]
         if colorNumber then
           result = string.format("%s\27[38:5:%sm", result, colorNumber)
+        elseif color_table[fore] then
+          local rgb = color_table[fore]
+          result = string.format("%s\27[38:2::%s:%s:%sm", result, rgb[1], rgb[2], rgb[3])
         end
       end
     end
     if back then
       local colorNumber = ctable[back]
-      result = string.format("%s\27[48:5:%sm", result, colorNumber)
+      if colorNumber then
+        result = string.format("%s\27[48:5:%sm", result, colorNumber)
+      elseif color_table[back] then
+        local rgb = color_table[back]
+        result = string.format("%s\27[48:2::%s:%s:%sm", result, rgb[1], rgb[2], rgb[3])
+      end
     end
     return result
   end
@@ -1510,6 +1559,18 @@ if rex then
     return result
   end
 
+  function cecho2ansi(text)
+    local colorPattern = _Echos.Patterns.Color[1]
+    local result = ""
+    for str, color in rex.split(text, colorPattern) do
+      result = result .. str
+      if color then
+        result = result .. colorToAnsi(color:match("<(.+)>"))
+      end
+    end
+    return result
+  end
+
   --- feedTriggers with cecho style color information.
   -- Valid colors are  black,red,green,yellow,blue,magenta,cyan,white and light_* versions of same
   -- Can also pass in a number between 0 and 255 to use the expanded ansi 255 colors. IE <124> will set foreground to the color ANSI124
@@ -1519,15 +1580,7 @@ if rex then
   --@see cecho
   --@see cinsertText
   function cfeedTriggers(text)
-    local colorPattern = _Echos.Patterns.Color[1]
-    local result = ""
-    for str, color in rex.split(text, colorPattern) do
-      result = result .. str
-      if color then
-        result = result .. colorToAnsi(color:match("<(.+)>"))
-      end
-    end
-    feedTriggers(result .. "\n")
+    feedTriggers(cecho2ansi(text) .. "\n")
     echo("")
   end
 
@@ -1546,7 +1599,7 @@ if rex then
         result = result .. rgbToAnsi(color:match("<(.+)>"))
       end
       if res then
-        result = result .. "\27[0m"
+        result = result .. resets[res]
       end
     end
     return result
@@ -1579,7 +1632,7 @@ if rex then
         result = result .. hexToAnsi(color:sub(2,-1))
       end
       if res then
-        result = result .. "\27[0m"
+        result = result .. resets[res]
       end
     end
     return result
@@ -1726,27 +1779,7 @@ do
 end
 
 
-local colours = {
-  [0] = { 0, 0, 0 }, -- black
-  [1] = { 128, 0, 0 }, -- red
-  [2] = { 0, 128, 0 }, -- green
-  [3] = { 128, 128, 0 }, -- yellow
-  [4] = { 0, 0, 128 }, --blue
-  [5] = { 128, 0, 128 }, -- magenta
-  [6] = { 0, 128, 128 }, -- cyan
-  [7] = { 192, 192, 192 }, -- white
-}
 
-local lightColours = {
-  [0] = { 128, 128, 128 }, -- black
-  [1] = { 255, 0, 0 }, -- red
-  [2] = { 0, 255, 0 }, -- green
-  [3] = { 255, 255, 0 }, -- yellow
-  [4] = { 0, 0, 255 }, --blue
-  [5] = { 255, 0, 255 }, -- magenta
-  [6] = { 0, 255, 255 }, -- cyan
-  [7] = { 255, 255, 255 }, -- white
-}
 
 local ansiPattern = rex.new("\\e\\[([0-9:;]+?)m")
 
@@ -1762,7 +1795,6 @@ end
 -- bold is emulated so it is supported, up to an extent
 function ansi2decho(text, ansi_default_color)
   assert(type(text) == 'string', 'ansi2decho: bad argument #1 type (expected string, got '..type(text)..'!)')
-  local coloursToUse = colours
   local lastColour = ansi_default_color
 
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
@@ -1776,31 +1808,18 @@ function ansi2decho(text, ansi_default_color)
 
     -- given an xterm256 index, returns an rgb string for decho use
     local function convertindex(tag)
-      local floor = math.floor
-      -- code from Mudlets own decoding in TBuffer::translateToPlainText
-
-      local rgb
-
-      if tag < 8 then
-        rgb = colours[tag]
-      elseif tag < 16 then
-        rgb = lightColours[tag - 8]
-      elseif tag < 232 then
-        tag = tag - 16 -- because color 1-15 behave like normal ANSI colors
-        local b = tag % 6
-        local g = (tag - b) / 6 % 6
-        local r = (tag - b - g * 6) / 36 % 6
-        b = b ~= 0 and b * 40 + 55 or 0
-        r = r ~= 0 and r * 40 + 55 or 0
-        g = g ~= 0 and g * 40 + 55 or 0
-        rgb = { r, g, b }
-      else
-        local component = (tag - 232) * 10 + 8
-        rgb = { component, component, component }
-      end
-
-      return rgb
+      local ansi = string.format("ansi_%03d", tag)
+      return color_table[ansi] or false
     end
+    local colours = {}
+    for i = 0, 7 do
+      colours[i] = convertindex(i)
+    end
+    local lightColours = {}
+    for i = 0, 7 do
+      lightColours[i] = convertindex(i+8)
+    end
+    local coloursToUse = colours
 
     -- since fg/bg can come in different order and we need them as fg:bg for decho, collect
     -- the data first, then assemble it in the order we need at the end
@@ -1810,7 +1829,7 @@ function ansi2decho(text, ansi_default_color)
 
     while i <= #t do
       local code = t[i]
-      local isColorCode = false
+      local formatCodeHandled = false
 
       if code == '0' or code == '00' then
         -- reset attributes
@@ -1824,8 +1843,39 @@ function ansi2decho(text, ansi_default_color)
       elseif code == "22" then
         -- not light or bold
         coloursToUse = colours
+      elseif code == "3" then
+        formatCodeHandled = true
+        output[#output+1] = "<i>"
+      elseif code == "23" then
+        -- turn off italics
+        formatCodeHandled = true
+        output[#output+1] = "</i>"
+      elseif code == "4" then
+        -- underline
+        formatCodeHandled = true
+        output[#output+1] = "<u>"
+      elseif code == "24" then
+        -- turn off underline
+        formatCodeHandled = true
+        output[#output+1] = "</u>"
+      elseif code == "9" then
+        -- strikethrough
+        formatCodeHandled = true
+        output[#output+1] = "<s>"
+      elseif code == "29" then
+        -- turn off strikethrough
+        formatCodeHandled = true
+        output[#output+1] = "</s>"
+      elseif code == "53" then
+        -- turn on overline
+        formatCodeHandled = true
+        output[#output+1] = "<o>"
+      elseif code == "55" then
+        -- turn off overline
+        formatCodeHandled = true
+        output[#output+1] = "</o>"
       else
-        isColorCode = true
+        formatCodeHandled = true
         local layerCode = floor(code / 10)  -- extract the "layer": 3 is fore
         --                      4 is back
         local cmd = code - (layerCode * 10) -- extract the actual "command"
@@ -1864,11 +1914,11 @@ function ansi2decho(text, ansi_default_color)
         end
       end
 
-      -- If isColorCode is false it means that we've encountered a SGBR
+      -- If formatCodeHandled is false it means that we've encountered a SGBR
       -- code such as 'bold' or 'dim'.
       -- In those cases, if there's a previous color, we are supposed to
       -- modify it
-      if not isColorCode and lastColour then
+      if not formatCodeHandled and lastColour then
         fg = coloursToUse[lastColour]
       end
 

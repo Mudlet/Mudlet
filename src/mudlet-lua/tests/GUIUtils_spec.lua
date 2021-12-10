@@ -1,6 +1,6 @@
 describe("Tests the GUI utilities as far as possible without mudlet", function()
 
-  describe("Test the operation of the ansi2decho function", function()
+  describe("Tests the functionality of ansi2decho", function()
 
     it("Should have loaded the function successfully", function()
       assert.truthy(ansi2decho)
@@ -49,6 +49,14 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end
     end)
 
+    it("Should match the user's custom colours if they've changed them", function()
+      color_table.ansi_000 = { 0, 0, 1 }
+      local expected = "<0,0,1>"
+      local actual = ansi2decho("\27[30m", "<0,0,0>")
+      color_table.ansi_000= { 0, 0, 0 }
+      assert.are.same(expected, actual)
+    end)
+
     it("Should combine tags correctly", function()
       local sequences = {
         {"\27[0;30m", "<r><0,0,0>"},
@@ -62,6 +70,34 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         local actualResult = ansi2decho(seq[1])
         assert.are.same(seq[2], actualResult)
       end
+    end)
+
+    it("Should handle italics", function()
+      local sample = "\27[3mitalics\27[23m"
+      local expected = "<i>italics</i>"
+      local actual = ansi2decho(sample)
+      assert.equals(expected, actual)
+    end)
+
+    it("Should handle underline", function()
+      local sample = "\27[4munderline\27[24m"
+      local expected = "<u>underline</u>"
+      local actual = ansi2decho(sample)
+      assert.equals(expected, actual)
+    end)
+
+    it("Should handle strikethrough", function()
+      local sample = "\27[9mstrikethrough\27[29m"
+      local expected = "<s>strikethrough</s>"
+      local actual = ansi2decho(sample)
+      assert.equals(expected, actual)
+    end)
+
+    it("Should handle overline", function()
+      local sample = "\27[53moverline\27[55m"
+      local expected = "<o>overline</o>"
+      local actual = ansi2decho(sample)
+      assert.equals(expected, actual)
     end)
 
     it("Should leave normal text and other escape sequences alone", function()
@@ -117,20 +153,137 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
   end)
 
-  describe("Tests the functionality of decho2ansi()", function()
+  describe("Tests the functionality of decho2ansi", function()
     local simple_original = "<128,0,0>This is in red<r> And then reset."
     local simple_expected = "\27[38:2::128:0:0mThis is in red\27[0m And then reset."
+
     it("should convert a simple decho string to an equivalent ansi string", function()
       local actual = decho2ansi(simple_original)
       assert.equals(simple_expected, actual)
     end)
+
     it("should create ansi which can be converted back to the same decho string", function()
       local actual = ansi2decho(decho2ansi(simple_original))
       assert.equals(simple_original, actual)
     end)
+
+    it("should handle bold", function()
+      local expected = "\27[1mbold\27[22m"
+      local actual = decho2ansi("<b>bold</b>")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle underline", function()
+      local expected = "\27[4munderline\27[24m"
+      local actual = decho2ansi("<u>underline</u>")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle italics", function()
+      local expected = "\27[3mitalics\27[23m"
+      local actual = decho2ansi("<i>italics</i>")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle strikeout", function()
+      local expected = "\27[9mstrikeout\27[29m"
+      local actual = decho2ansi("<s>strikeout</s>")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle overline", function()
+      local expected = "\27[53moverline\27[55m"
+      local actual = decho2ansi("<o>overline</o>")
+      assert.equals(expected, actual)
+    end)
   end)
 
-  describe("Tests the functionality of ansi2string()", function()
+  describe("Tests the functionality of hecho2ansi", function()
+    local simple_original = "#800000This is in red#r And then reset."
+    local simple_expected = "\27[38:2::128:0:0mThis is in red\27[0m And then reset."
+
+    it("should convert a simple hecho string to an equivalent ansi string", function()
+      local actual = hecho2ansi(simple_original)
+      assert.equals(simple_expected, actual)
+    end)
+
+    it("should handle bold", function()
+      local expected = "\27[1mbold\27[22m"
+      local actual = hecho2ansi("#bbold#/b")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle underline", function()
+      local expected = "\27[4munderline\27[24m"
+      local actual = hecho2ansi("#uunderline#/u")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle italics", function()
+      local expected = "\27[3mitalics\27[23m"
+      local actual = hecho2ansi("#iitalics#/i")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle strikeout", function()
+      local expected = "\27[9mstrikeout\27[29m"
+      local actual = hecho2ansi("#sstrikeout#/s")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle overline", function()
+      local expected = "\27[53moverline\27[55m"
+      local actual = hecho2ansi("#ooverline#/o")
+      assert.equals(expected, actual)
+    end)
+  end)
+
+  describe("Tests the functionality of cecho2ansi", function()
+    local simple_original = "<red>This is in red<r> And then reset."
+    local simple_expected = "\27[38:5:1mThis is in red\27[0m And then reset."
+
+    it("should convert a simple cecho string to an equivalent ansi string", function()
+      local actual = cecho2ansi(simple_original)
+      assert.equals(simple_expected, actual)
+    end)
+
+    it("should convert a color name which doesn't have a direct ansi named equivalent", function()
+      local actual = cecho2ansi("<DodgerBlue>")
+      assert.equals("\27[38:2::30:144:255m", actual)
+    end)
+
+    it("should handle bold", function()
+      local expected = "\27[1mbold\27[22m"
+      local actual = cecho2ansi("<b>bold</b>")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle underline", function()
+      local expected = "\27[4munderline\27[24m"
+      local actual = cecho2ansi("<u>underline</u>")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle italics", function()
+      local expected = "\27[3mitalics\27[23m"
+      local actual = cecho2ansi("<i>italics</i>")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle strikeout", function()
+      local expected = "\27[9mstrikeout\27[29m"
+      local actual = cecho2ansi("<s>strikeout</s>")
+      assert.equals(expected, actual)
+    end)
+
+    it("should handle overline", function()
+      local expected = "\27[53moverline\27[55m"
+      local actual = cecho2ansi("<o>overline</o>")
+      assert.equals(expected, actual)
+    end)
+  end)
+
+  describe("Tests the functionality of ansi2string", function()
     it("should return the string fed into it with ansi codes removed", function()
       local original = '\27[38;5;179;48;5;230mYou say in a baritone voice, "Test."\27[0;37;40m'
       local expected = 'You say in a baritone voice, "Test."'
@@ -139,7 +292,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
-  describe("Tests the functionality of setHexFgColor()", function()
+  describe("Tests the functionality of setHexFgColor", function()
 
     it("Should convert hex string correctly", function()
       local hexStrings = {
@@ -161,7 +314,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
   end)
 
-  describe("Tests the functionality of setHexBgColor()", function()
+  describe("Tests the functionality of setHexBgColor", function()
 
     it("Should convert hex string correctly", function()
       local hexStrings = {
@@ -270,7 +423,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
-  describe("Tests the functionality of _Echoes.Process()", function()
+  describe("Tests the functionality of _Echoes.Process", function()
     it("Should parse hex patterns correctly", function()
       assert.are.same(
         _Echos.Process('#ff0000Red', 'Hex'),
@@ -295,6 +448,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are.same(
         _Echos.Process('#uUnderline#/u', 'Hex'),
         { "", "\27underline", "Underline", "\27underlineoff", "" }
+      )
+
+      assert.are.same(
+        _Echos.Process('#sStrikethrough#/s', 'Hex'),
+        { "", "\27strikethrough", "Strikethrough", "\27strikethroughoff", "" }
+      )
+
+      assert.are.same(
+        _Echos.Process('#oOverline#/o', 'Hex'),
+        { "", "\27overline", "Overline", "\27overlineoff", "" }
       )
     end)
 
@@ -323,6 +486,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         _Echos.Process('<u>Underline</u>', 'Decimal'),
         { "", "\27underline", "Underline", "\27underlineoff", "" }
       )
+
+      assert.are.same(
+        _Echos.Process('<s>Strikethrough</s>', 'Decimal'),
+        { "", "\27strikethrough", "Strikethrough", "\27strikethroughoff", "" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<o>Overline</o>', 'Decimal'),
+        { "", "\27overline", "Overline", "\27overlineoff", "" }
+      )
     end)
 
     it("Should parse color patterns correctly", function()
@@ -349,6 +522,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are.same(
         _Echos.Process('<u>Underline</u>', 'Color'),
         { "", "\27underline", "Underline", "\27underlineoff", "" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<s>Strikethrough</s>', 'Color'),
+        { "", "\27strikethrough", "Strikethrough", "\27strikethroughoff", "" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<o>Overline</o>', 'Color'),
+        { "", "\27overline", "Overline", "\27overlineoff", "" }
       )
     end)
   end)
