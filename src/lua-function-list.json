@@ -416,7 +416,7 @@
     "setHexFgColor": "setHexFgColor([windowName], hexColorString)",
     "setIrcChannels": "setIrcChannels(channels)",
     "setIrcNick": "setIrcNick(nickname)",
-    "setIrcServer": "setIrcServer(hostname, port)",
+    "setIrcServer": "setIrcServer(hostname, port[, secure])",
     "setItalics": "setItalics(windowName, bool)",
     "setLabelClickCallback": "setLabelClickCallback(labelName, luaFunctionName, [any arguments])",
     "setLabelCursor": "setLabelCursor(labelName, cursorShape)",
