@@ -669,7 +669,10 @@ Por favor, espere...</translation>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="1252"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Tienes un mapa cargado (%n room(s)), pero Mudlet desconoce donde te encuentras en este momento.</numerusform>
+        <numerusform>Tienes un mapa cargado (%n room(s)), pero Mudlet desconoce donde te encuentras en este momento.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1250"/>
@@ -1554,12 +1557,12 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="654"/>
       <source>Pre-Map loading(2) report</source>
-      <translation type="unfinished"/>
+      <translation>Cargar el mapa previo(2) informar</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="665"/>
       <source>Loading map(2) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Cargando el mapa(2) en %1 informar</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1065"/>
@@ -1581,12 +1584,12 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1217"/>
       <source>Pre-Map loading(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Cargar el mapa previo(1) informar</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1235"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Cargando el mapa(1) en %1 informar</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1237"/>
