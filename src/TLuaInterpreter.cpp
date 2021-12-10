@@ -6659,7 +6659,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         lua_settable(L, LUA_REGISTRYINDEX);
     }
 
-    lua_pushstring(L, pattern.toUtf8().constData());
+    lua_pushnumber(L, pt->getID());
     return 1;
 }
 
