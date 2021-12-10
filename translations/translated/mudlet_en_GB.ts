@@ -8272,7 +8272,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="151"/>
       <source>Play</source>
-      <translation type="unfinished"/>
+      <translation>Play</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="154"/>
@@ -8403,12 +8403,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="175"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>Preferences</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="183"/>
       <source>Script editor</source>
-      <translation type="unfinished"/>
+      <translation>Script editor</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="199"/>
@@ -8480,12 +8480,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="276"/>
       <source>Package manager</source>
-      <translation type="unfinished"/>
+      <translation>Package manager</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="284"/>
       <source>Module manager</source>
-      <translation type="unfinished"/>
+      <translation>Module manager</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="309"/>
@@ -8501,7 +8501,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="323"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>Compact input line</translation>
     </message>
   </context>
   <context>
