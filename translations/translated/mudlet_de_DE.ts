@@ -10054,7 +10054,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <location filename="../src/mudlet.cpp" line="2927"/>
       <source>[  OK  ]  - Compact input line set. Press %1 to show bottom-right buttons again.</source>
       <comment>Here %1 will be replaced with the keyboard shortcut, default is ALT+L.</comment>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Kompakte Eingabezeile aktiviert. Drücke %1, um die Buttons unten rechts wieder anzuzeigen.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4582"/>
