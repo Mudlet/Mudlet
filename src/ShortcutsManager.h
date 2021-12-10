@@ -32,16 +32,18 @@ class ShortcutsManager : public QObject {
     Q_OBJECT
 
 public:
-    void registerShortcut(const QString&, QKeySequence*);
+    void registerShortcut(const QString&, const QString&, QKeySequence*);
     QStringListIterator iterator();
     void setShortcut(const QString&, QKeySequence*);
     QKeySequence* getSequence(const QString&);
     QKeySequence* getDefault(const QString&);
+    QString getLabel(const QString& key);
 
 private:
     QList<QString> shortcutKeys;
     QMap<QString, QKeySequence*> shortcuts;
     QMap<QString, QKeySequence*> defaults;
+    QMap<QString, QString> translations;
 
 };
 

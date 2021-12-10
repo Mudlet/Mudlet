@@ -668,17 +668,17 @@ mudlet::mudlet()
     });
 
     mShortcutsManager = new ShortcutsManager();
-    mShortcutsManager->registerShortcut(tr("Script editor"), &triggersKeySequence);
-    mShortcutsManager->registerShortcut(tr("Show Map"), &showMapKeySequence);
-    mShortcutsManager->registerShortcut(tr("Compact input line"), &inputLineKeySequence);
-    mShortcutsManager->registerShortcut(tr("Preferences"), &optionsKeySequence);
-    mShortcutsManager->registerShortcut(tr("Notepad"), &notepadKeySequence);
-    mShortcutsManager->registerShortcut(tr("Package manager"), &packagesKeySequence);
-    mShortcutsManager->registerShortcut(tr("Module manager"), &modulesKeySequence);
-    mShortcutsManager->registerShortcut(tr("MultiView"), &multiViewKeySequence);
-    mShortcutsManager->registerShortcut(tr("Play"), &connectKeySequence);
-    mShortcutsManager->registerShortcut(tr("Disconnect"), &disconnectKeySequence);
-    mShortcutsManager->registerShortcut(tr("Reconnect"), &reconnectKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Script editor"), tr("Script editor"), &triggersKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Show Map"), tr("Show Map"), &showMapKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Compact input line"), tr("Compact input line"), &inputLineKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Preferences"), tr("Preferences"), &optionsKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Notepad"), tr("Notepad"), &notepadKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Package manager"), tr("Package manager"), &packagesKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Module manager"), tr("Module manager"), &modulesKeySequence);
+    mShortcutsManager->registerShortcut(qsl("MultiView"), tr("MultiView"), &multiViewKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Play"), tr("Play"), &connectKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Disconnect"), tr("Disconnect"), &disconnectKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Reconnect"), tr("Reconnect"), &reconnectKeySequence);
 
     mpSettings = getQSettings();
     readLateSettings(*mpSettings);
