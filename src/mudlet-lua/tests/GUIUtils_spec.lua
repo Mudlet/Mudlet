@@ -535,6 +535,205 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       )
     end)
   end)
+
+  describe("Tests the functionality of getHTMLspan", function()
+    local fmt
+    before_each(function()
+      fmt = {
+        background = { 0, 0, 0 },
+        bold = false,
+        foreground = { 0, 160, 0 },
+        italic = false,
+        overline = false,
+        reverse = false,
+        strikeout = false,
+        underline = false
+      }
+    end)
+
+    it("Should return a style with no text modifiers but bg/fg colors if none are in the table", function()
+      local expected = '<span style="color: rgb(0,160,0);background-color: rgb(0,0,0); font-weight: normal; font-style: normal; text-decoration: none;">'
+      local actual = getHTMLspan(fmt)
+      assert.equals(expected, actual)
+    end)
+
+    it("Should return a style with 'font-weight: bold;' if bold is true", function()
+      local expected = '<span style="color: rgb(0,160,0);background-color: rgb(0,0,0); font-weight: bold; font-style: normal; text-decoration: none;">'
+      fmt.bold = true
+      local actual = getHTMLspan(fmt)
+      assert.equals(expected, actual)
+    end)
+
+    it("Should return a style with 'font-style: italic' if italic is true", function()
+      local expected = '<span style="color: rgb(0,160,0);background-color: rgb(0,0,0); font-weight: normal; font-style: italic; text-decoration: none;">'
+      fmt.italic = true
+      local actual = getHTMLspan(fmt)
+      assert.equals(expected, actual)
+    end)
+
+    it("Should return a style with 'text-decoration: underline' if underline is true", function()
+      local expected = '<span style="color: rgb(0,160,0);background-color: rgb(0,0,0); font-weight: normal; font-style: normal; text-decoration: underline;">'
+      fmt.underline = true
+      local actual = getHTMLspan(fmt)
+      assert.equals(expected, actual)
+    end)
+
+    it("Should return a style with 'text-decoration: overline' if overline is true", function()
+      local expected = '<span style="color: rgb(0,160,0);background-color: rgb(0,0,0); font-weight: normal; font-style: normal; text-decoration: overline;">'
+      fmt.overline = true
+      local actual = getHTMLspan(fmt)
+      assert.equals(expected, actual)
+    end)
+
+    it("Should return a style with 'text-decoration: line-through' if strikeout is true", function()
+      local expected = '<span style="color: rgb(0,160,0);background-color: rgb(0,0,0); font-weight: normal; font-style: normal; text-decoration: line-through;">'
+      fmt.strikeout = true
+      local actual = getHTMLspan(fmt)
+      assert.equals(expected, actual)
+    end)
+
+    it("Should return a style with no text modifiers and bg/fg colors inverted if reverse is true", function()
+      local expected = '<span style="color: rgb(0,0,0);background-color: rgb(0,160,0); font-weight: normal; font-style: normal; text-decoration: none;">'
+      fmt.reverse = true
+      local actual = getHTMLspan(fmt)
+      assert.equals(expected, actual)
+    end)
+
+    it("Should be able to handle all options at once", function()
+      local expected = '<span style="color: rgb(0,0,0);background-color: rgb(0,160,0); font-weight: bold; font-style: italic; text-decoration: overline underline line-through;">'
+      fmt = {
+        background = { 0, 0, 0 },
+        bold = true,
+        foreground = { 0, 160, 0 },
+        italic = true,
+        overline = true,
+        reverse = true,
+        strikeout = true,
+        underline = true
+      }
+      local actual = getHTMLspan(fmt)
+      assert.equals(expected, actual)
+    end)
+  end)
+
+  describe("Tests the functionality of getLabelDefaultFormat", function()
+    local expected
+    local labelName = "gldfTestLabel"
+    before_each(function()
+      expected = {
+        background = { 32, 32, 32 },
+        bold = false,
+        foreground = { 192, 192, 192 },
+        italic = false,
+        overline = false,
+        reverse = false,
+        strikeout = false,
+        underline = false
+      }
+      createLabel(labelName, 0,0,0,0,0)
+      hideWindow(labelName)
+    end)
+
+    after_each(function()
+      deleteLabel(labelName)
+    end)
+
+    it("Should return a default table if no background color or stylesheet is set", function()
+      local actual = getLabelDefaultFormat(labelName)
+      assert.are.same(expected, actual)
+    end)
+
+    it("Should return the background color from getBackgroundColor if one is set", function()
+      setBackgroundColor(labelName, 128, 0, 128)
+      local actual = getLabelDefaultFormat(labelName)
+      expected.background = { 128, 0, 128 }
+      assert.are.same(expected, actual)
+    end)
+
+    it("Should return the background color set by a stylesheet background-color or background directive", function()
+      setBackgroundColor(labelName, 128, 0, 128)
+      setLabelStyleSheet(labelName, "background-color: yellow;")
+      expected.background = "yellow"
+      local actual = getLabelDefaultFormat(labelName)
+      assert.are.same(expected, actual)
+      setLabelStyleSheet(labelName, "background: QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #98f041, stop: 0.1 #8cf029, stop: 0.49 #66cc00, stop: 0.5 #52a300, stop: 1 #66cc00);")
+      expected.background = "QLinearGradient( x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #98f041, stop: 0.1 #8cf029, stop: 0.49 #66cc00, stop: 0.5 #52a300, stop: 1 #66cc00)"
+      actual = getLabelDefaultFormat(labelName)
+      assert.are.same(expected, actual)
+    end)
+
+    it("Should ignore repeat options or img urls in background directives", function()
+      setLabelStyleSheet(labelName, "background: url(/some/path) repeat-x yellow;")
+      expected.background = "yellow"
+      local actual = getLabelDefaultFormat(labelName)
+      assert.are.same(expected, actual)
+    end)
+
+    it("Should detect foreground color from a color directive", function()
+      setLabelStyleSheet(labelName, "color: rgb(128, 0, 128);")
+      expected.foreground = "rgb(128, 0, 128)"
+      local actual = getLabelDefaultFormat(labelName)
+      assert.are.same(expected, actual)
+    end)
+
+    it("Should detect underline from text-decorations directive", function()
+      setLabelStyleSheet(labelName, "text-decoration: underline;")
+      expected.underline = true
+      local actual = getLabelDefaultFormat(labelName)
+      assert.are.same(expected, actual)
+    end)
+
+    it("Should detect overline from text-decorations directive", function()
+      setLabelStyleSheet(labelName, "text-decoration: overline;")
+      expected.overline = true
+      local actual = getLabelDefaultFormat(labelName)
+      assert.are.same(expected, actual)
+    end)
+
+    it("Should detect strikeout/line-through/strikethrough from text-decorations directive", function()
+      setLabelStyleSheet(labelName, "text-decoration: line-through;")
+      expected.strikeout = true
+      local actual = getLabelDefaultFormat(labelName)
+      assert.are.same(expected, actual)
+    end)
+
+    it("Should detect underline, overline, and strikeout if all are present", function()
+      setLabelStyleSheet(labelName, "text-decoration: underline overline line-through;")
+      expected.underline = true
+      expected.overline = true
+      expected.strikeout = true
+      local actual = getLabelDefaultFormat(labelName)
+      assert.are.same(expected, actual)
+    end)
+
+    it("Should detect italic from font or font-style tag", function()
+      setLabelStyleSheet(labelName, "font-style: italic;")
+      expected.italic = true
+      local actual = getLabelDefaultFormat(labelName)
+      assert.are.same(expected, actual)
+      setLabelStyleSheet(labelName, "font: italic;")
+      local actual = getLabelDefaultFormat(labelName)
+      assert.are.same(expected, actual)
+    end)
+
+    it("Should detect bold from font or font-weight tag", function()
+      setLabelStyleSheet(labelName, "font: bold;")
+      expected.bold = true
+      local actual = getLabelDefaultFormat(labelName)
+      assert.are.same(expected, actual)
+      setLabelStyleSheet(labelName, "font-weight: bold;")
+      local actual = getLabelDefaultFormat(labelName)
+      assert.are.same(expected, actual)
+    end)
+
+    it("Should detect bold and italic from the font tag at the same time", function()
+      setLabelStyleSheet(labelName, "font: bold italic;")
+      expected.bold = true
+      expected.italic = true
+      local actual = getLabelDefaultFormat(labelName)
+      assert.are.same(expected, actual)
+    end)
+  end)
 end)
 
 --[[

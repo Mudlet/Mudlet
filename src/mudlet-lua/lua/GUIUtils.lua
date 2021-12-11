@@ -975,28 +975,40 @@ function setGaugeStyleSheet(gaugeName, css, cssback, csstext)
   setLabelStyleSheet(gaugeName .. "_text", csstext or "")
 end
 
---- undocumented, used by xEcho for creating formatting tags for labels
-local function getHTMLspan(fmt)
+-- https://wiki.mudlet.org/w/Manual:Lua_Functions#getHTMLspan
+-- used by xEcho for creating formatting span tags for labels
+-- fmt is a table of format options as returned by getTextFormat
+function getHTMLspan(fmt)
   -- next two lines effectively invert the colors if fmt.reverse is true
   local fore = fmt.reverse and fmt.background or fmt.foreground
   local back = fmt.reverse and fmt.foreground or fmt.background
-  local color = string.format("color: rgb(%d,%d,%d);", unpack(fore))
-  local background = string.format("background: rgb(%d,%d,%d);", unpack(back))
+  local color,background
+  if type(fore) == "table" then
+    color = string.format("color: rgb(%d,%d,%d);", unpack(fore))
+  else
+    color = string.format("color: %s;", fore)
+  end
+  if type(back) == "table" then
+    background = string.format("background-color: rgb(%d,%d,%d);", unpack(back))
+  else
+    background = string.format("background-color: %s;", back)
+  end
   local bold = fmt.bold and " font-weight: bold;" or " font-weight: normal;"
   local italic = fmt.italic and " font-style: italic;" or " font-style: normal;"
   local textDecoration
   if not (fmt.underline or fmt.overline or fmt.strikeout) then
     textDecoration = " text-decoration: none;"
   else
-    textDecoration = string.format(" text-decoration: %s%s%s;", fmt.overline and "overline" or "", fmt.underline and " underline" or "", fmt.strikeout and " line-through" or "")
+    textDecoration = string.format(" text-decoration:%s%s%s;", fmt.overline and " overline" or "", fmt.underline and " underline" or "", fmt.strikeout and " line-through" or "")
   end
   local result = string.format([[<span style="%s%s%s%s%s">]], color, background, bold, italic, textDecoration)
   return result
 end
 
--- undocumented, used by xEcho for getting the default format for a label, taking into account
--- the background color setting and stylesheet settings
-local function getLabelDefaultFormat(win)
+-- https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelDefaultFormat
+-- used by xEcho for getting the default format for a label, taking into account
+-- the background color setting and stylesheet
+function getLabelDefaultFormat(win)
   local r,g,b = 192, 192, 192
   local br,bb,bg = getBackgroundColor(win)
   local reset = {
@@ -1016,28 +1028,24 @@ local function getLabelDefaultFormat(win)
       stylesheet = stylesheet:gsub("[\r\n]", "")
       for _,element in ipairs(stylesheet:split(";")) do
         element = element:trim()
-        local attr, val = element:match("^(.+):(.+)$")
+        local attr, val = element:match("^(.-):(.+)$")
         if attr and val then
           styleTable[attr:trim()] = val:trim()
         end
       end
-      display(styleTable)
       if styleTable.color then
-        local rgba = {styleTable.color:match("rgb%((%d+),(%d+),(%d+),?(%d*)%)")}
-        display(rgba)
-        if not table.is_empty(rgba) then
-          for index,value in ipairs(rgba) do
-            reset.foreground[index] = tonumber(value)
-          end
+        reset.foreground = styleTable.color
+      end
+      if styleTable.background then
+        local style = styleTable.background
+        -- strip out image related background settings, anything left we'll store as background color
+        style = style:gsub("%s*repeat%-x", ""):gsub("%s*repeat%-y", ""):gsub("%s*no%-repeat",""):gsub("%s*repeat", ""):gsub("%s*url%(.-%)", ""):trim()
+        if style ~= "" then
+          reset.background = style
         end
       end
       if styleTable["background-color"] then
-        local rgba = {styleTable["background-color"]:match("rgb%((%d+),(%d+),(%d+),?(%d*)%)")}
-        if not table.is_empty(rgba) then
-          for index,value in ipairs(rgba) do
-            reset.background[index] = tonumber(value)
-          end
-        end
+        reset.background = styleTable["background-color"]
       end
       if styleTable["text-decoration"] then
         local td = styleTable["text-decoration"]
@@ -1047,9 +1055,13 @@ local function getLabelDefaultFormat(win)
         if td:match("overline") then
           reset.overline = true
         end
-        if td:match("line-through") then
+        if td:match("line%-through") then
           reset.strikeout = true
         end
+      end
+      if styleTable.font then
+        reset.bold = styleTable.font:match("bold") and true or false
+        reset.italic = styleTable.font:match("italic") and true or false
       end
       if styleTable["font-weight"] and styleTable["font-weight"]:match("bold") then
         reset.bold = true
@@ -1263,11 +1275,18 @@ if rex then
       _G[func](...)
     end
 
-    local t = _Echos.Process(str, style)
     if windowType(win) == "label" then
+      str = str:gsub("\n", "<br>")
+      local t = _Echos.Process(str, style)
+      if func ~= "echo" then
+        return nil,"You cannot use echoLink, echoPopup, or insertText with Labels"
+      end
+      local result = ""
       local reset = getLabelDefaultFormat(win)
       local format = table.deepcopy(reset)
-      local result = getHTMLspan(format)
+      if format.bold or format.italic or format.overline or format.strikeout or format.underline then
+        result = getHTMLspan(format)
+      end
       for _,v in ipairs(t) do
         local formatChanged = false
         if type(v) == "table" then
@@ -1318,6 +1337,7 @@ if rex then
       end
       echo(win, result)
     else
+      local t = _Echos.Process(str, style)
       deselect(win)
       resetFormat(win)
       for _, v in ipairs(t) do
