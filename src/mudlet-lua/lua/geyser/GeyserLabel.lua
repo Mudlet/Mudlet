@@ -1247,3 +1247,10 @@ end
 -- @field angleDeltaX A number corresponding with the vertical wheel motion. For most devices, this number is in increments of 120
 -- @field angleDeltaY A number corresponding with the horizontal wheel motion. For most devices, this number is in increments of 120
 -- @table mouseWheelEvent
+
+--- Returns a table in the format of getTextFormat which describes the default formatting created by any stylesheets
+-- which are applied to the label.
+-- @see https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelDefaultFormat and https://wiki.mudlet.org/w/Manual:Lua_Functions#getTextFormat
+function Geyser.Label:getDefaultFormat()
+  return getLabelDefaultFormat(self.name)
+end
