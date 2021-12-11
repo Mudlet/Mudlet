@@ -2266,40 +2266,6 @@ void mudlet::slot_assign_shortcuts_from_profile(Host* pHost)
 
 void mudlet::slot_update_shortcuts()
 {
-    if (Q_LIKELY(mMenuVisibleState.has_value())) {
-        if ((mMenuBarVisibility == visibleNever
-            || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()))
-           && (!mMenuVisibleState.value()) ) {
-
-            /*
-             * IF   EITHER the menu is NOT to be shown
-             *      OR the menu is only to be show when there is no profiles AND there IS one
-             *      (so the menu should be hidden)
-             *    AND
-             *      the setting says it is hidden
-             * THEN
-             *    Skip doing anything
-             */
-            return;
-        }
-
-        if ((mMenuBarVisibility == visibleAlways
-            || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && !mHostManager.getHostCount()))
-           && (mMenuVisibleState.value()) ) {
-
-            /*
-             * IF   EITHER the menu IS to be shown
-             *      OR the menu is only to be show when there is no profiles AND there is NOT one
-             *      (so the menu should be shown)
-             *    AND
-             *      the setting says it is shown
-             * THEN
-             *    Skip doing anything
-             */
-            return;
-        }
-    }
-
     // The double negatives (one in each of the next two lines) are so the
     // remainder of this method is more similar to the code prior to the
     // introduction of the mMenuVisibleState variable:
