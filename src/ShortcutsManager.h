@@ -41,9 +41,9 @@ public:
 
 private:
     QList<QString> shortcutKeys;
-    QMap<QString, QKeySequence*> shortcuts;
-    QMap<QString, QKeySequence*> defaults;
-    QMap<QString, QString> translations;
+    QMap<QString, QKeySequence*> shortcuts; //shortcut key : sequence in use pointer
+    QMap<QString, QKeySequence*> defaults; //shortcut key : default sequence
+    QMap<QString, QString> translations; //shortcut key : translation for shortcut label
 
 };
 
