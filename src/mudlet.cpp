@@ -1798,7 +1798,7 @@ void mudlet::closeEvent(QCloseEvent* event)
         }
         if (!console->close()) {
             // close out any profiles that we have agreed to close so far
-            for (const auto hostName : qAsConst(closingHosts)) {
+            for (const auto& hostName : qAsConst(closingHosts)) {
                 closeHost(hostName);
             }
 
