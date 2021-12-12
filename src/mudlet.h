@@ -620,6 +620,7 @@ private:
     void installModulesList(Host*, QStringList);
     void setupTrayIcon();
     static bool desktopInDarkMode();
+    void assignKeySequences();
 
     QWidget* mpWidget_profileContainer;
     QHBoxLayout* mpHBoxLayout_profileContainer;
