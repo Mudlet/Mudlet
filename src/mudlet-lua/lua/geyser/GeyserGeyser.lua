@@ -146,7 +146,7 @@ end
 local function changeNestContainer(windowname, label)
   for k,v in ipairs(label.nestedLabels) do
     if windowname ~= "main" then
-      v:changeContainer(Geyser.windowList[windowname.."Container"].windowList[windowname])
+      v:changeContainer(Geyser.ParentWindows[windowname])
     else
       v:changeContainer(Geyser)
     end

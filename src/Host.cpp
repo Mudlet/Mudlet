@@ -2957,7 +2957,7 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
     return {false, qsl("miniconsole/userwindow '%1' already exists").arg(name)};
 }
 
-std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
+std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const
 {
     if (!mpConsole) {
         return {false, QString()};
@@ -3281,20 +3281,27 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     if (!mpConsole) {
         return {false, QString()};
     }
-
+    //children
     auto pL = mpConsole->mLabelMap.value(name);
     auto pC = mpConsole->mSubConsoleMap.value(name);
-    auto pD = mpConsole->mDockWidgetMap.value(windowname);
-    auto pW = mpConsole->mpMainFrame;
     auto pM = mpConsole->mpMapper;
     auto pN = mpConsole->mSubCommandLineMap.value(name);
+    auto pS = mpConsole->mScrollBoxMap.value(name);
+    //parents
+    auto pW = mpConsole->mpMainFrame;
+    auto pD = mpConsole->mDockWidgetMap.value(windowname);
+    auto pSW = mpConsole->mScrollBoxMap.value(windowname);
 
-    if (!pD && windowname.toLower() != QLatin1String("main")) {
+    if (!pSW && !pD && windowname.toLower() != QLatin1String("main")) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
     if (pD) {
         pW = pD->widget();
+    }
+
+    if (pSW) {
+        pW = pSW->widget();
     }
 
     if (pL) {
@@ -3311,6 +3318,13 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         pC->mOldY = y1;
         if (show) {
             pC->show();
+        }
+        return {true, QString()};
+    } else if (pS) {
+        pS->setParent(pW);
+        pS->move(x1, y1);
+        if (show) {
+            pS->show();
         }
         return {true, QString()};
     } else if (pN) {

@@ -177,6 +177,9 @@ function Geyser.UserWindow:new(cons)
   me:resetWindow()
   if me.stylesheet then me:setStyleSheet() end
 
+  Geyser.ParentWindows = Geyser.ParentWindows or {}
+  Geyser.ParentWindows[me.name] = me
+
   return me
 end
 

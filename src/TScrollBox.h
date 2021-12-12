@@ -33,7 +33,7 @@ class TScrollBox : public QScrollArea
 
 public:
     Q_DISABLE_COPY(TScrollBox)
-    TScrollBox(Host* pH, QWidget* pW = nullptr);
+    explicit TScrollBox(Host* pH, QWidget* pW = nullptr);
     QPointer<Host> mpHost;
 
 
@@ -52,8 +52,9 @@ public:
 #endif
     explicit TScrollBoxWidget(QWidget* pW = nullptr);
     ~TScrollBoxWidget();
-    void childEvent(QChildEvent* event);
-    bool eventFilter(QObject* object, QEvent* event);
+    void childEvent(QChildEvent* event) override;
+    bool eventFilter(QObject* object, QEvent* event) override;
+    void setMinSize();
 };
 
 #endif // MUDLET_TSCROLLBOX_H

@@ -867,7 +867,7 @@ function Geyser.Label:addChild(cons, container)
   cons = cons or {}
   cons.type = cons.type or "nestedLabel"
   if self.windowname ~= "main" and not container then
-    container = Geyser.windowList[self.windowname.."Container"].windowList[self.windowname]
+    container = Geyser.ParentWindows[self.windowname]
   end
   local flyOut = false
   local flyDir, layoutDir
@@ -966,7 +966,7 @@ if self.windowname ~= myMenu.MenuLabels[name].windowname then
   if self.windowname == "main" then
     myMenu.MenuLabels[name]:changeContainer(Geyser)
   else
-    myMenu.MenuLabels[name]:changeContainer(Geyser.windowList[self.windowname.."Container"].windowList[self.windowname])
+    myMenu.MenuLabels[name]:changeContainer(Geyser.ParentWindows[self.windowname])
   end
 end
 

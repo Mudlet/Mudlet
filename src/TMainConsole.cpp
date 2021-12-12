@@ -536,9 +536,8 @@ TScrollBox* TMainConsole::createScrollBox(const QString& windowname, const QStri
         pS->show();
 
         return pS;
-    } else {
-        return nullptr;
     }
+    return nullptr;
 }
 
 TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
