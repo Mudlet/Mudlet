@@ -2302,10 +2302,8 @@ void mudlet::slot_update_shortcuts()
     assignKeySequences();
 }
 
-void mudlet::assignKeySequences() {
-    // The double negatives (one in each of the next two lines) are so the
-    // remainder of this method is more similar to the code prior to the
-    // introduction of the mMenuVisibleState variable:
+void mudlet::assignKeySequences()
+{
     mMenuVisibleState = !(mMenuBarVisibility == visibleNever || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()));
     if (!mMenuVisibleState.value()) {
         // The menu is hidden so wire the QKeySequences directly to the slots:
