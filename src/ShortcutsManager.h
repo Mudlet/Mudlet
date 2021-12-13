@@ -37,9 +37,8 @@ public:
     ShortcutsManager() = default;
     ShortcutsManager(ShortcutsManager const&) = delete;
     ShortcutsManager& operator=(ShortcutsManager const&) = delete;
-    ShortcutsManager(ShortcutsManager&& other) noexcept : ShortcutsManager() {
-        swap(*this, other);
-    }
+    ShortcutsManager(ShortcutsManager&&) = delete;
+    ShortcutsManager& operator=(ShortcutsManager&&) = delete;
     ~ShortcutsManager();
 
     void registerShortcut(const QString&, const QString&, QKeySequence*);
@@ -48,13 +47,6 @@ public:
     QKeySequence* getSequence(const QString&);
     QKeySequence* getDefault(const QString&);
     QString getLabel(const QString& key);
-
-    friend void swap(ShortcutsManager& a, ShortcutsManager& b) noexcept {
-        std::swap(a.shortcutKeys, b.shortcutKeys);
-        std::swap(a.shortcuts, b.shortcuts);
-        std::swap(a.defaults, b.defaults);
-        std::swap(a.translations, b.translations);
-    }
 
 private:
     QList<QString> shortcutKeys;
