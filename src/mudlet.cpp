@@ -2307,46 +2307,62 @@ void mudlet::assignKeySequences()
     mMenuVisibleState = !(mMenuBarVisibility == visibleNever || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()));
     if (!mMenuVisibleState.value()) {
         // The menu is hidden so wire the QKeySequences directly to the slots:
+
+        // If there was a shortcut then get rid of it - no need for a
+        // call to "disconnect(...)" as that happens on deletion and since it
+        // is okay to delete a nullptr there is no need to include a non-null
+        // test first:
+        delete triggersShortcut.data();
         triggersShortcut = new QShortcut(triggersKeySequence, this);
         connect(triggersShortcut.data(), &QShortcut::activated, this, &mudlet::show_editor_dialog);
         dactionScriptEditor->setShortcut(QKeySequence());
 
+        delete showMapShortcut.data();
         showMapShortcut = new QShortcut(showMapKeySequence, this);
         connect(showMapShortcut.data(), &QShortcut::activated, this, &mudlet::slot_mapper);
         dactionShowMap->setShortcut(QKeySequence());
 
+        delete inputLineShortcut.data();
         inputLineShortcut = new QShortcut(inputLineKeySequence, this);
         connect(inputLineShortcut.data(), &QShortcut::activated, this, &mudlet::slot_toggle_compact_input_line);
         dactionInputLine->setShortcut(QKeySequence());
 
+        delete optionsShortcut.data();
         optionsShortcut = new QShortcut(optionsKeySequence, this);
         connect(optionsShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_options_dialog);
         dactionOptions->setShortcut(QKeySequence());
 
+        delete notepadShortcut.data();
         notepadShortcut = new QShortcut(notepadKeySequence, this);
         connect(notepadShortcut.data(), &QShortcut::activated, this, &mudlet::slot_notes);
         dactionNotepad->setShortcut(QKeySequence());
 
+        delete packagesShortcut.data();
         packagesShortcut = new QShortcut(packagesKeySequence, this);
         connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_package_manager);
         dactionPackageManager->setShortcut(QKeySequence());
 
+        delete modulesShortcut.data();
         modulesShortcut = new QShortcut(packagesKeySequence, this);
         connect(modulesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_module_manager);
         dactionModuleManager->setShortcut(QKeySequence());
 
+        delete multiViewShortcut.data();
         multiViewShortcut = new QShortcut(multiViewKeySequence, this);
         connect(multiViewShortcut.data(), &QShortcut::activated, this, &mudlet::slot_toggle_multi_view);
         dactionMultiView->setShortcut(QKeySequence());
 
+        delete connectShortcut.data();
         connectShortcut = new QShortcut(connectKeySequence, this);
         connect(connectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_connection_dialog);
         dactionConnect->setShortcut(QKeySequence());
 
+        delete disconnectShortcut.data();
         disconnectShortcut = new QShortcut(disconnectKeySequence, this);
         connect(disconnectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_disconnect);
         dactionDisconnect->setShortcut(QKeySequence());
 
+        delete reconnectShortcut.data();
         reconnectShortcut = new QShortcut(reconnectKeySequence, this);
         connect(reconnectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_reconnect);
         dactionReconnect->setShortcut(QKeySequence());
