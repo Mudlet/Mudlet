@@ -19,10 +19,11 @@
 
 #include "ShortcutsManager.h"
 
-void ShortcutsManager::registerShortcut(const QString& key, QKeySequence* sequence)
+void ShortcutsManager::registerShortcut(const QString& key, const QString& translation, QKeySequence* sequence)
 {
     shortcutKeys << key;
     shortcuts.insert(key, sequence);
+    translations.insert(key, translation);
     defaults.insert(key, new QKeySequence(*sequence));
 }
 
@@ -41,6 +42,11 @@ QKeySequence* ShortcutsManager::getSequence(const QString& key)
 QKeySequence* ShortcutsManager::getDefault(const QString& key)
 {
     return defaults.value(key);
+}
+
+QString ShortcutsManager::getLabel(const QString& key)
+{
+    return translations.value(key);
 }
 
 QStringListIterator ShortcutsManager::iterator()
