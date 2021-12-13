@@ -50,6 +50,7 @@ public:
     QString getLabel(const QString& key);
 
     friend void swap(ShortcutsManager& a, ShortcutsManager& b) noexcept {
+        std::swap(a.shortcutKeys, b.shortcutKeys);
         std::swap(a.shortcuts, b.shortcuts);
         std::swap(a.defaults, b.defaults);
         std::swap(a.translations, b.translations);
