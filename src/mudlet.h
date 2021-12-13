@@ -286,11 +286,6 @@ public:
     void setupPreInstallPackages(const QString& gameUrl);
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
 
-    // This construct will be very useful for formatting tooltips and by
-    // defining a static function/method here we can save using the same
-    // qsl all over the place:
-    static QString htmlWrapper(const QString& text) { return qsl("<p>%1</p>").arg(text); }
-
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
     // "How to find and replace string?" by "Czarek Tomczak":
     static std::string replaceString(std::string subject, const std::string& search, const std::string& replace);

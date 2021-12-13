@@ -316,10 +316,10 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
             }
             mLogStream << qsl("%1\n")
                          .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
-                                                  "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
+                                                      "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
 
         }
-        logButton->setToolTip(mudlet::htmlWrapper(tr("Stop logging game output to log file.")));
+        logButton->setToolTip(utils::richText(tr("Stop logging game output to log file.")));
     } else {
         // Logging is being turned off
         buffer.logRemainingOutput();
@@ -335,7 +335,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
         }
         mLogFile.flush();
         mLogFile.close();
-        logButton->setToolTip(mudlet::htmlWrapper(tr("Start logging game output to log file.")));
+        logButton->setToolTip(utils::richText(tr("Start logging game output to log file.")));
     }
 }
 

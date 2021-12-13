@@ -461,7 +461,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     QAction* showDebugAreaAction = new QAction(QIcon(qsl(":/icons/tools-report-bug.png")), tr("Debug"), this);
     showDebugAreaAction->setStatusTip(tr("Show/Hide the separate Central Debug Console - when being displayed the system will be slower."));
-    showDebugAreaAction->setToolTip(mudlet::htmlWrapper(tr("Show/Hide Debug Console (Ctrl+0) -> system will be <b><i>slower</i></b>.")));
+    showDebugAreaAction->setToolTip(utils::richText(tr("Show/Hide Debug Console (Ctrl+0) -> system will be <b><i>slower</i></b>.")));
     connect(showDebugAreaAction, &QAction::triggered, this, &dlgTriggerEditor::slot_debug_mode);
 
 
@@ -503,7 +503,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
     // only take effect if the treeview is selected, otherwise it hijacks the shortcut from edbee
     copyAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
-    copyAction->setToolTip(mudlet::htmlWrapper(tr("Copy the trigger/script/alias/etc")));
+    copyAction->setToolTip(utils::richText(tr("Copy the trigger/script/alias/etc")));
     copyAction->setStatusTip(tr("Copy the trigger/script/alias/etc"));
     treeWidget_triggers->addAction(copyAction);
     treeWidget_aliases->addAction(copyAction);
@@ -691,13 +691,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mpAction_searchCaseSensitive = new QAction(tr("Case sensitive"), this);
     mpAction_searchCaseSensitive->setObjectName(qsl("mpAction_searchCaseSensitive"));
-    mpAction_searchCaseSensitive->setToolTip(mudlet::htmlWrapper(tr("Match case precisely")));
+    mpAction_searchCaseSensitive->setToolTip(utils::richText(tr("Match case precisely")));
     mpAction_searchCaseSensitive->setCheckable(true);
     pMenu_searchOptions->insertAction(nullptr, mpAction_searchCaseSensitive);
 
     mpAction_searchIncludeVariables = new QAction(tr("Include variables"), this);
     mpAction_searchIncludeVariables->setObjectName(qsl("mpAction_searchIncludeVariables"));
-    mpAction_searchIncludeVariables->setToolTip(mudlet::htmlWrapper(tr("Search variables (slower)")));
+    mpAction_searchIncludeVariables->setToolTip(utils::richText(tr("Search variables (slower)")));
     mpAction_searchIncludeVariables->setCheckable(true);
     pMenu_searchOptions->insertAction(nullptr, mpAction_searchIncludeVariables);
 
@@ -4779,7 +4779,7 @@ void dlgTriggerEditor::saveVar()
     }
     //redo this here in case we changed type
     pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
-    pItem->setToolTip(0, mudlet::htmlWrapper(tr("Checked variables will be saved and loaded with your profile.")));
+    pItem->setToolTip(0, utils::richText(tr("Checked variables will be saved and loaded with your profile.")));
     if (!varUnit->shouldSave(variable)) {
         pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
         pItem->setForeground(0, QBrush(QColor("grey")));
@@ -4918,7 +4918,7 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
             pItem->pushButton_prompt->setToolTip(QString());
         } else {
             pItem->pushButton_prompt->setText(tr("match on the prompt line (disabled)"));
-            pItem->pushButton_prompt->setToolTip(mudlet::htmlWrapper(tr("A Go-Ahead (GA) signal from the game is required to make this feature work")));
+            pItem->pushButton_prompt->setToolTip(utils::richText(tr("A Go-Ahead (GA) signal from the game is required to make this feature work")));
         }
         pItem->pushButton_prompt->show();
         pItem->spinBox_lineSpacer->hide();
@@ -5561,7 +5561,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem* pItem)
     mpVarsMainArea->lineEdit_var_name->setText(var->getName());
     clearDocument(mpSourceEditorEdbee, lI->getValue(var));
     pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
-    pItem->setToolTip(0, mudlet::htmlWrapper(tr("Checked variables will be saved and loaded with your profile.")));
+    pItem->setToolTip(0, utils::richText(tr("Checked variables will be saved and loaded with your profile.")));
     pItem->setCheckState(0, Qt::Unchecked);
     if (!vu->shouldSave(var)) {
         pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
@@ -8997,7 +8997,7 @@ void dlgTriggerEditor::slot_clearSoundFile()
 {
     mpTriggersMainArea->lineEdit_soundFile->clear();
     mpTriggersMainArea->toolButton_clearSoundFile->setEnabled(false);
-    mpTriggersMainArea->lineEdit_soundFile->setToolTip(mudlet::htmlWrapper(tr("Sound file to play when the trigger fires.")));
+    mpTriggersMainArea->lineEdit_soundFile->setToolTip(utils::richText(tr("Sound file to play when the trigger fires.")));
 }
 
 void dlgTriggerEditor::slot_showAllTriggerControls(const bool isShown)

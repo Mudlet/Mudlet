@@ -104,9 +104,9 @@ void dlgModuleManager::layoutModules()
                 masterModule->setCheckState(Qt::Unchecked);
             }
             masterModule->setText(QString());
-            masterModule->setToolTip(mudlet::htmlWrapper(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
-                                                            "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
-                                                            "is saved at the end of the session.")));
+            masterModule->setToolTip(utils::richText(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
+                                                        "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
+                                                        "is saved at the end of the session.")));
 
             // Although there is now no text used here this may help to make the
             // checkbox more central in the column
@@ -116,7 +116,7 @@ void dlgModuleManager::layoutModules()
             itemEntry->setText(moduleName);
             itemEntry->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
             itemLocation->setText(moduleInfo[0]);
-            itemLocation->setToolTip(mudlet::htmlWrapper(moduleInfo[0]));     // show the full path in a tooltip, in case it doesn't fit in the table
+            itemLocation->setToolTip(utils::richText(moduleInfo[0]));     // show the full path in a tooltip, in case it doesn't fit in the table
             itemLocation->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled); // disallow editing of module path, because that is not saved
             itemPriority->setData(Qt::EditRole, mpHost->mModulePriorities[moduleName]);
             mModuleTable->setItem(row, 0, itemEntry);
