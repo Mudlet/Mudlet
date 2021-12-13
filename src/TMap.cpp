@@ -68,7 +68,7 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mMaxVersion(20)
 // minimum version this instance of Mudlet will allow the user to save maps in
 , mMinVersion(17)
-, mMapSymbolFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal))
+, mMapSymbolFont(QFont(qsl("Bitstream Vera Sans Mono"), 12, QFont::Normal))
 {
     mSaveVersion = mDefaultVersion; // Can not be set initialiser list because of ordering issues (?)
                                     // It needs to be set (for when writing new
@@ -274,7 +274,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
 
     TRoom* pFromR = mpRoomDB->getRoom(fromRoomId);
     if (!pFromR) {
-        return QStringLiteral("fromID (%1) does not exist").arg(fromRoomId);
+        return qsl("fromID (%1) does not exist").arg(fromRoomId);
     }
     int area = pFromR->getArea();
     // This will get converted to a positive value on first use:
@@ -283,7 +283,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
     int meanSquareDistance = 0;
 
     if (!pFromR->exitStubs.contains(dirType)) {
-        return QStringLiteral("fromID (%1) does not have an exit stub in the given direction '%2' (%3)")
+        return qsl("fromID (%1) does not have an exit stub in the given direction '%2' (%3)")
                 .arg(QString::number(fromRoomId), TRoom::dirCodeToString(dirType), QString::number(dirType));
     }
 
@@ -302,7 +302,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
     int dz = 0;
     TArea* pA = mpRoomDB->getArea(area);
     if (!pA) {
-        return QStringLiteral("fromID (%1) room does not have an area").arg(fromRoomId);
+        return qsl("fromID (%1) room does not have an area").arg(fromRoomId);
     }
 
     QSetIterator<int> itRoom(pA->getAreaRooms());
@@ -373,7 +373,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
         if (!pToR) {
             // Technically this should be redundant as we have already checked
             // that this room existed in the above while() loop!
-            return QStringLiteral("nearest room in the indicated direction (%1) does not exist").arg(minDistanceRoom);
+            return qsl("nearest room in the indicated direction (%1) does not exist").arg(minDistanceRoom);
         }
 
         setExit(fromRoomId, minDistanceRoom, dirType);
@@ -381,7 +381,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
         return {};
     }
 
-    return QStringLiteral("fromID (%1) does not have another room in the indicated direction '%2' (%3) with an exit stub in the reverse direction to connect to in its area").arg(QString::number(fromRoomId), TRoom::dirCodeToString(dirType), QString::number(dirType));
+    return qsl("fromID (%1) does not have another room in the indicated direction '%2' (%3) with an exit stub in the reverse direction to connect to in its area").arg(QString::number(fromRoomId), TRoom::dirCodeToString(dirType), QString::number(dirType));
 }
 
 // Will connect an exit stub from the fromRoomId numbered room to the toRoomId
@@ -400,24 +400,24 @@ QString TMap::connectExitStubByToId(const int fromRoomId, const int toRoomId)
 {
     auto pFromR = mpRoomDB->getRoom(fromRoomId);
     if (!pFromR) {
-        return QStringLiteral("fromID (%1) does not exist").arg(fromRoomId);
+        return qsl("fromID (%1) does not exist").arg(fromRoomId);
     }
 
     if (toRoomId == fromRoomId) {
-        return QStringLiteral("fromID and toID are the same (%1)").arg(fromRoomId);
+        return qsl("fromID and toID are the same (%1)").arg(fromRoomId);
     }
 
     auto pToR = mpRoomDB->getRoom(toRoomId);
     if (!pToR) {
-        return QStringLiteral("toID (%1) room does not exist").arg(toRoomId);
+        return qsl("toID (%1) room does not exist").arg(toRoomId);
     }
 
     if (pFromR->exitStubs.isEmpty()) {
-        return QStringLiteral("fromID (%1) does not have any stub exits").arg(fromRoomId);
+        return qsl("fromID (%1) does not have any stub exits").arg(fromRoomId);
     }
 
     if (pToR->exitStubs.isEmpty()) {
-        return QStringLiteral("toID (%1) does not have any stub exits").arg(toRoomId);
+        return qsl("toID (%1) does not have any stub exits").arg(toRoomId);
     }
 
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
@@ -438,16 +438,16 @@ QString TMap::connectExitStubByToId(const int fromRoomId, const int toRoomId)
     usableStubDirections = usableStubDirections.intersect(toReverseStubDirections);
     // Now we need to count how big this set is:
     if (usableStubDirections.isEmpty()) {
-        return QStringLiteral("no pairs of reverse stubs found between rooms %1 and %2").arg(QString::number(fromRoomId), QString::number(toRoomId));
+        return qsl("no pairs of reverse stubs found between rooms %1 and %2").arg(QString::number(fromRoomId), QString::number(toRoomId));
     }
     if (usableStubDirections.count() > 1) {
         QStringList useableStubDirectionTexts;
         QSetIterator<int> itUseableStub(usableStubDirections);
         while (itUseableStub.hasNext()) {
             auto direction = itUseableStub.next();
-            useableStubDirectionTexts << QStringLiteral("'%1' (%2)").arg(TRoom::dirCodeToString(direction), QString::number(direction));
+            useableStubDirectionTexts << qsl("'%1' (%2)").arg(TRoom::dirCodeToString(direction), QString::number(direction));
         }
-        return QStringLiteral("multiple pairs of reverse stubs found between rooms %1 and %2, please try again with the three argument function and one of the follow directions: %3")
+        return qsl("multiple pairs of reverse stubs found between rooms %1 and %2, please try again with the three argument function and one of the follow directions: %3")
                 .arg(QString::number(fromRoomId), QString::number(toRoomId), useableStubDirectionTexts.join(QLatin1String(", ")));
     }
 
@@ -472,25 +472,25 @@ QString TMap::connectExitStubByDirectionAndToId(const int fromRoomId, const int 
 
     auto pFromR = mpRoomDB->getRoom(fromRoomId);
     if (!pFromR) {
-        return QStringLiteral("fromID (%1) does not exist").arg(fromRoomId);
+        return qsl("fromID (%1) does not exist").arg(fromRoomId);
     }
 
     if (toRoomId == fromRoomId) {
-        return QStringLiteral("fromID and toID are the same (%1)").arg(fromRoomId);
+        return qsl("fromID and toID are the same (%1)").arg(fromRoomId);
     }
 
     if (!pFromR->exitStubs.contains(dirType)) {
-        return QStringLiteral("fromID (%1) does not have an exit stub in the given direction '%2' (%3)")
+        return qsl("fromID (%1) does not have an exit stub in the given direction '%2' (%3)")
                 .arg(QString::number(fromRoomId), TRoom::dirCodeToString(dirType), QString::number(dirType));
     }
 
     auto pToR = mpRoomDB->getRoom(toRoomId);
     if (!pToR) {
-        return QStringLiteral("toID (%1) room does not exist").arg(toRoomId);
+        return qsl("toID (%1) room does not exist").arg(toRoomId);
     }
 
     if (!pToR->exitStubs.contains(reverseDirections.value(dirType))) {
-        return QStringLiteral("toID (%1) does not have an exit stub in the reverse direction '%2' (%3) of that given '%4' (%5)")
+        return qsl("toID (%1) does not have an exit stub in the reverse direction '%2' (%3) of that given '%4' (%5)")
                 .arg(QString::number(toRoomId),
                      TRoom::dirCodeToString(reverseDirections.value(dirType)),
                      QString::number(reverseDirections.value(dirType)),
@@ -796,7 +796,7 @@ void TMap::initGraph()
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) { // OK got something that is valid
                 route r;
-                r.cost = exitWeights.value(QStringLiteral("n"), pTargetR->getWeight());
+                r.cost = exitWeights.value(qsl("n"), pTargetR->getWeight());
                 r.direction = direction;
                 bestRoutes.insert(target, r);
             }
@@ -808,7 +808,7 @@ void TMap::initGraph()
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
-                r.cost = exitWeights.value(QStringLiteral("e"), pTargetR->getWeight());
+                r.cost = exitWeights.value(qsl("e"), pTargetR->getWeight());
                 if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) { // Ah, this is a better route
                     r.direction = direction;
                     bestRoutes.insert(target, r); // If the second part of conditional is the truth this will replace previous best route to this target
@@ -822,7 +822,7 @@ void TMap::initGraph()
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
-                r.cost = exitWeights.value(QStringLiteral("s"), pTargetR->getWeight());
+                r.cost = exitWeights.value(qsl("s"), pTargetR->getWeight());
                 if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
                     r.direction = direction;
                     bestRoutes.insert(target, r);
@@ -836,7 +836,7 @@ void TMap::initGraph()
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
-                r.cost = exitWeights.value(QStringLiteral("w"), pTargetR->getWeight());
+                r.cost = exitWeights.value(qsl("w"), pTargetR->getWeight());
                 if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
                     r.direction = direction;
                     bestRoutes.insert(target, r);
@@ -850,7 +850,7 @@ void TMap::initGraph()
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
-                r.cost = exitWeights.value(QStringLiteral("up"), pTargetR->getWeight());
+                r.cost = exitWeights.value(qsl("up"), pTargetR->getWeight());
                 if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
                     r.direction = direction;
                     bestRoutes.insert(target, r);
@@ -864,7 +864,7 @@ void TMap::initGraph()
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
-                r.cost = exitWeights.value(QStringLiteral("down"), pTargetR->getWeight());
+                r.cost = exitWeights.value(qsl("down"), pTargetR->getWeight());
                 if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
                     r.direction = direction;
                     bestRoutes.insert(target, r);
@@ -878,7 +878,7 @@ void TMap::initGraph()
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
-                r.cost = exitWeights.value(QStringLiteral("ne"), pTargetR->getWeight());
+                r.cost = exitWeights.value(qsl("ne"), pTargetR->getWeight());
                 if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
                     r.direction = direction;
                     bestRoutes.insert(target, r);
@@ -892,7 +892,7 @@ void TMap::initGraph()
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
-                r.cost = exitWeights.value(QStringLiteral("se"), pTargetR->getWeight());
+                r.cost = exitWeights.value(qsl("se"), pTargetR->getWeight());
                 if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
                     r.direction = direction;
                     bestRoutes.insert(target, r);
@@ -906,7 +906,7 @@ void TMap::initGraph()
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
-                r.cost = exitWeights.value(QStringLiteral("sw"), pTargetR->getWeight());
+                r.cost = exitWeights.value(qsl("sw"), pTargetR->getWeight());
                 if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
                     r.direction = direction;
                     bestRoutes.insert(target, r);
@@ -920,7 +920,7 @@ void TMap::initGraph()
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
-                r.cost = exitWeights.value(QStringLiteral("nw"), pTargetR->getWeight());
+                r.cost = exitWeights.value(qsl("nw"), pTargetR->getWeight());
                 if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
                     r.direction = direction;
                     bestRoutes.insert(target, r);
@@ -934,7 +934,7 @@ void TMap::initGraph()
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
-                r.cost = exitWeights.value(QStringLiteral("in"), pTargetR->getWeight());
+                r.cost = exitWeights.value(qsl("in"), pTargetR->getWeight());
                 if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
                     r.direction = direction;
                     bestRoutes.insert(target, r);
@@ -948,7 +948,7 @@ void TMap::initGraph()
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
-                r.cost = exitWeights.value(QStringLiteral("out"), pTargetR->getWeight());
+                r.cost = exitWeights.value(qsl("out"), pTargetR->getWeight());
                 if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
                     r.direction = direction;
                     bestRoutes.insert(target, r);
@@ -1216,9 +1216,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     ofs << mpRoomDB->hashToRoomID;
     if (mSaveVersion < 19) {
         // Save the data in the map user data for older versions
-        mUserData.insert(QStringLiteral("system.fallback_mapSymbolFont"), mMapSymbolFont.toString());
-        mUserData.insert(QStringLiteral("system.fallback_mapSymbolFontFudgeFactor"), QString::number(mMapSymbolFontFudgeFactor));
-        mUserData.insert(QStringLiteral("system.fallback_onlyUseMapSymbolFont"), mIsOnlyMapSymbolFontToBeUsed ? QStringLiteral("true") : QStringLiteral("false"));
+        mUserData.insert(qsl("system.fallback_mapSymbolFont"), mMapSymbolFont.toString());
+        mUserData.insert(qsl("system.fallback_mapSymbolFontFudgeFactor"), QString::number(mMapSymbolFontFudgeFactor));
+        mUserData.insert(qsl("system.fallback_onlyUseMapSymbolFont"), mIsOnlyMapSymbolFontToBeUsed ? qsl("true") : qsl("false"));
     }
     ofs << mUserData;
     if (mSaveVersion >= 19) {
@@ -1631,8 +1631,8 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         folder = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
         QDir dir(folder);
         QStringList filters;
-        filters << QStringLiteral("*.[dD][aA][tT]");
-        filters << QStringLiteral("*.[jJ][sS][oO][nN]");
+        filters << qsl("*.[dD][aA][tT]");
+        filters << qsl("*.[jJ][sS][oO][nN]");
         entries = dir.entryList(filters, QDir::Files, QDir::Time);
     }
 
@@ -1652,8 +1652,8 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         if (location.isEmpty()) {
             // Look through the entries:
             QStringListIterator itFileName(entries);
-            auto fileName = QStringLiteral("%1/%2").arg(folder, itFileName.next());
-            if (!fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
+            auto fileName = qsl("%1/%2").arg(folder, itFileName.next());
+            if (!fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
                 file.setFileName(fileName);
                 if (validatePotentialMapFile(file, ifs)) {
                     foundValidFile = true;
@@ -1739,10 +1739,10 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 // this suggests that only one or ten elements are accepted so
                 // we CAN fix past mistakes by only considering the first ten
                 // elements:
-                QStringList fontStrings{mUserData.take(QStringLiteral("system.fallback_mapSymbolFont")).split(QLatin1Char(','))};
+                QStringList fontStrings{mUserData.take(qsl("system.fallback_mapSymbolFont")).split(QLatin1Char(','))};
                 QString fontString{fontStrings.mid(0, 10).join(QLatin1Char(','))};
-                QString fontFudgeFactorString = mUserData.take(QStringLiteral("system.fallback_mapSymbolFontFudgeFactor"));
-                QString onlyUseSymbolFontString = mUserData.take(QStringLiteral("system.fallback_onlyUseMapSymbolFont"));
+                QString fontFudgeFactorString = mUserData.take(qsl("system.fallback_mapSymbolFontFudgeFactor"));
+                QString onlyUseSymbolFontString = mUserData.take(qsl("system.fallback_onlyUseMapSymbolFont"));
                 if (!fontString.isEmpty()) {
                     mMapSymbolFont.fromString(fontString);
                 }
@@ -1987,7 +1987,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     // As the files are sorted by time this gets the latest one
-    QFile file(QStringLiteral("%1/%2").arg(folder, entries.at(0)));
+    QFile file(qsl("%1/%2").arg(folder, entries.at(0)));
 
     if (!file.open(QFile::ReadOnly)) {
         QString errMsg = tr(R"([ ERROR ] - Unable to open map file for reading: "%1"!)").arg(file.fileName());
@@ -2360,7 +2360,7 @@ const QString TMap::createFileHeaderLine(const QString title, const QChar fillCh
 {
     QString text;
     if (title.length() <= 76) {
-        text = QStringLiteral("%1 %2 %1\n").arg(QString(fillChar).repeated((78 - title.length()) / 2), title);
+        text = qsl("%1 %2 %1\n").arg(QString(fillChar).repeated((78 - title.length()) / 2), title);
     } else {
         text = title;
         text.append(QChar::LineFeed);
@@ -2471,7 +2471,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     // Incidentally this should address: https://bugs.launchpad.net/mudlet/+bug/852861
     if (mImportRunning) {
-        QString warnMsg = QStringLiteral("[ WARN ]  - Attempt made to download an XML map when one has already been\n"
+        QString warnMsg = qsl("[ WARN ]  - Attempt made to download an XML map when one has already been\n"
                                          "requested or is being imported from a local file - wait for that\n"
                                          "operation to complete (if it cannot be canceled) before retrying!");
         postMessage(warnMsg);
@@ -2485,14 +2485,14 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
         if (!getMmpMapLocation().isEmpty()) {
             url = QUrl::fromUserInput(getMmpMapLocation());
         } else {
-            url = QUrl::fromUserInput(QStringLiteral("https://www.%1/maps/map.xml").arg(pHost->mUrl));
+            url = QUrl::fromUserInput(qsl("https://www.%1/maps/map.xml").arg(pHost->mUrl));
         }
     } else {
         url = QUrl::fromUserInput(remoteUrl);
     }
 
     if (!url.isValid()) {
-        QString errMsg = QStringLiteral("[ WARN ]  - Attempt made to download an XML from an invalid URL.  The URL was:\n"
+        QString errMsg = qsl("[ WARN ]  - Attempt made to download an XML from an invalid URL.  The URL was:\n"
                                         "%1\n"
                                         "and the error message (may contain technical details) was:"
                                         "\"%2\".")
@@ -2520,7 +2520,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
         if (url.toString().endsWith(QLatin1String("xml"))) {
             mLocalMapFileName = mudlet::getMudletPath(mudlet::profileXmlMapPathFileName, mProfileName);
         } else {
-            mLocalMapFileName = mudlet::getMudletPath(mudlet::profileMapPathFileName, mProfileName, QStringLiteral("map.dat"));
+            mLocalMapFileName = mudlet::getMudletPath(mudlet::profileMapPathFileName, mProfileName, qsl("map.dat"));
         }
     } else {
         mLocalMapFileName = localFileName;
@@ -2544,7 +2544,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
                                               "%1 is the name of the current Mudlet profile")
                                               .arg(mProfileName), tr("Abort"), 0, 0);
     mpProgressDialog->setWindowTitle(tr("Map download", "This is a title of a progress window."));
-    mpProgressDialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_map_download.png")));
+    mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
     mpProgressDialog->setMinimumWidth(300);
     mpProgressDialog->setAutoClose(false);
     mpProgressDialog->setAutoReset(false);
@@ -2577,7 +2577,7 @@ bool TMap::importMap(QFile& file, QString* errMsg)
             *errMsg = tr("loadMap: unable to perform request, a map is already being downloaded or\n"
                          "imported at user request.");
         } else {
-            QString warnMsg = QStringLiteral("[ WARN ]  - Attempt made to import an XML map when one is already being\n"
+            QString warnMsg = qsl("[ WARN ]  - Attempt made to import an XML map when one is already being\n"
                                              "downloaded or is being imported from a local file - wait for that\n"
                                              "operation to complete (if it cannot be canceled) before retrying!");
             postMessage(warnMsg);
@@ -2607,7 +2607,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         isLocalImport = true;
         mpProgressDialog = new QProgressDialog(tr("Importing XML map file for use in %1...").arg(mProfileName), QString(), 0, 0);
         mpProgressDialog->setWindowTitle(tr("Map import", "This is a title of a progress dialog."));
-        mpProgressDialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_map_download.png")));
+        mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
         mpProgressDialog->setMinimumWidth(300);
         mpProgressDialog->setAutoClose(false);
         mpProgressDialog->setAutoReset(false);
@@ -2737,7 +2737,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
                 file.flush();
                 file.close();
 
-                if (!file.fileName().endsWith(QStringLiteral("xml"), Qt::CaseInsensitive)) {
+                if (!file.fileName().endsWith(qsl("xml"), Qt::CaseInsensitive)) {
                     auto pHost = mpHost;
                     if (!pHost) {
                         cleanup();
@@ -2748,7 +2748,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
                     postMessage(infoMsg);
                     if (pHost->mpConsole->loadMap(file.fileName())) {
                         TEvent mapDownloadEvent {};
-                        mapDownloadEvent.mArgumentList.append(QStringLiteral("sysMapDownloadEvent"));
+                        mapDownloadEvent.mArgumentList.append(qsl("sysMapDownloadEvent"));
                         mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
                         pHost->raiseEvent(mapDownloadEvent);
                     } else {
@@ -2782,7 +2782,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
 
                     if (readXmlMapFile(file)) {
                         TEvent mapDownloadEvent {};
-                        mapDownloadEvent.mArgumentList.append(QStringLiteral("sysMapDownloadEvent"));
+                        mapDownloadEvent.mArgumentList.append(qsl("sysMapDownloadEvent"));
                         mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
                         pHost->raiseEvent(mapDownloadEvent);
                     } else {
@@ -2891,7 +2891,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     QString destination{dest};
 
     if (destination.isEmpty()) {
-        destination = mudlet::getMudletPath(mudlet::profileDateTimeStampedJsonMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
+        destination = mudlet::getMudletPath(mudlet::profileDateTimeStampedJsonMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
     }
 
     if (!destination.endsWith(QLatin1String(".json"), Qt::CaseInsensitive)) {
@@ -2899,7 +2899,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     }
 
     if (mpProgressDialog) {
-        return {false, QStringLiteral("import or export already in progress")};
+        return {false, qsl("import or export already in progress")};
     }
 
     mProgressDialogRoomsTotal = mpRoomDB->getRoomMap().count();
@@ -2927,7 +2927,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     mpProgressDialog->setValue(0);
     mpProgressDialog->setWindowModality(Qt::NonModal);
     mpProgressDialog->setWindowTitle(tr("Map JSON export", "This is a title of a progress window."));
-    mpProgressDialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_map_download.png")));
+    mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
     mpProgressDialog->setMinimumWidth(500);
     mpProgressDialog->setAutoClose(false);
     mpProgressDialog->setAutoReset(false);
@@ -2939,7 +2939,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
         mpProgressDialog->close();
         mpProgressDialog = nullptr;
-        return {false, QStringLiteral("could not open save file \"%1\"").arg(destination)};
+        return {false, qsl("could not open save file \"%1\"").arg(destination)};
     }
 
     QJsonObject mapObj;
@@ -2983,7 +2983,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
         mpProgressDialog->close();
         mpProgressDialog = nullptr;
-        return {false, QStringLiteral("aborted by user")};
+        return {false, qsl("aborted by user")};
     }
 
     const QJsonValue areasValue{areasArray};
@@ -3074,7 +3074,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     mpProgressDialog = nullptr;
 
     return {file.error() == QFileDevice::NoError,
-                ((file.error() == QFileDevice::NoError) ? QString() : QStringLiteral("could not export file, reason: %1").arg(file.errorString()))};
+                ((file.error() == QFileDevice::NoError) ? QString() : qsl("could not export file, reason: %1").arg(file.errorString()))};
 }
 
 // The translatable messages are used within this file and do not need to
@@ -3088,7 +3088,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     if (mpProgressDialog) {
         return {false, (translatableTexts
                     ? tr("import or export already in progress")
-                    : QStringLiteral("import or export already in progress"))};
+                    : qsl("import or export already in progress"))};
     }
 
     QFile file(source);
@@ -3096,7 +3096,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         qWarning().noquote().nospace() << "TMap::readJsonMapFile(...) WARNING - Could not open JSON file \"" << source << "\".";
         return {false, (translatableTexts
                     ? tr("could not open file")
-                    : QStringLiteral("could not open file \"%1\"").arg(source))};
+                    : qsl("could not open file \"%1\"").arg(source))};
     }
 
     QByteArray mapData = file.readAll();
@@ -3107,7 +3107,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         return {false, (translatableTexts
                     ? tr("could not parse file, reason: \"%1\" at offset %2")
                       .arg(jsonErr.errorString(), QString::number(jsonErr.offset))
-                    : QStringLiteral("could not parse file \"%1\", reason: \"%2\" at offset %3")
+                    : qsl("could not parse file \"%1\", reason: \"%2\" at offset %3")
                       .arg(source, jsonErr.errorString(), QString::number(jsonErr.offset)))};
     }
 
@@ -3115,7 +3115,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - no Json file data detected, this is not a Mudlet JSON map file.";
         return {false, (translatableTexts
                     ? tr("empty Json file, no map data detected")
-                    : QStringLiteral("empty Json file, no map data detected"))};
+                    : qsl("empty Json file, no map data detected"))};
     }
 
     // Read all the base level stuff:
@@ -3130,19 +3130,19 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
             qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information \"" << formatVersion << "\" was found, and it is not okay.";
             return {false, (translatableTexts
                         ? tr("invalid format version \"%1\" detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0'))
-                        : QStringLiteral("invalid format version \"%1\" detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0')))};
+                        : qsl("invalid format version \"%1\" detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0')))};
         }
     } else {
         qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was not found. This is not likely to be a Mudlet JSON map file.";
         return {false, (translatableTexts
                     ? tr("no format version detected")
-                    : QStringLiteral("no format version detected"))};
+                    : qsl("no format version detected"))};
     }
 
     if (!mapObj.contains(QLatin1String("areas")) || !mapObj.value(QLatin1String("areas")).isArray()) {
         return {false, (translatableTexts
                     ? tr("no areas detected")
-                    : QStringLiteral("no areas detected"))};
+                    : qsl("no areas detected"))};
     }
 
     mProgressDialogAreasTotal = qRound(mapObj[QLatin1String("areaCount")].toDouble());
@@ -3167,7 +3167,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     mpProgressDialog->setValue(0);
     mpProgressDialog->setWindowModality(Qt::NonModal);
     mpProgressDialog->setWindowTitle(tr("Map JSON import", "This is a title of a progress window."));
-    mpProgressDialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_map_download.png")));
+    mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
     mpProgressDialog->setMinimumWidth(500);
     mpProgressDialog->setAutoClose(false);
     mpProgressDialog->setAutoReset(false);
@@ -3263,7 +3263,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         delete pNewRoomDB;
         return {false, (translatableTexts
                     ? tr("aborted by user")
-                    : QStringLiteral("aborted by user"))};
+                    : qsl("aborted by user"))};
     }
 
     mCustomEnvColors.swap(customEnvColors);

@@ -226,7 +226,7 @@ void dlgColorTrigger::slot_rgbColorChanged()
 {
     mRgbAnsiColorNumber = 16 + 36 * horizontalSlider_red->value() + 6 * horizontalSlider_green->value() + horizontalSlider_blue->value();
     mRgbAnsiColor = QColor(horizontalSlider_red->value() * 51, horizontalSlider_green->value() * 51, horizontalSlider_blue->value() * 51);
-    label_rgbValue->setText(QStringLiteral("[%1]").arg(QString::number(mRgbAnsiColorNumber)));
+    label_rgbValue->setText(qsl("[%1]").arg(QString::number(mRgbAnsiColorNumber)));
     // Use the same stylesheet code as in the main editor and for the basic 16
     // color buttons but because this is a QLabel we need to replace one word in
     // the generated stylesheet:
@@ -245,7 +245,7 @@ void dlgColorTrigger::slot_grayColorChanged(int sliderValue)
     int value = (sliderValue - 232) * 10 + 8;
 
     mGrayAnsiColor = QColor(value, value, value);
-    label_grayValue->setText(QStringLiteral("[%1]").arg(QString::number(mGrayAnsiColorNumber)));
+    label_grayValue->setText(qsl("[%1]").arg(QString::number(mGrayAnsiColorNumber)));
     // Use the same stylesheet code as in the main editor and for the basic 16
     // color buttons but because this is a QLabel we need to replace one word in
     // the generated stylesheet:

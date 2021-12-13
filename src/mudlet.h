@@ -25,7 +25,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
+#include "utils.h"
 #include "HostManager.h"
 #include "FontManager.h"
 
@@ -288,8 +288,8 @@ public:
 
     // This construct will be very useful for formatting tooltips and by
     // defining a static function/method here we can save using the same
-    // QStringLiteral all over the place:
-    static QString htmlWrapper(const QString& text) { return QStringLiteral("<html><head/><body>%1</body></html>").arg(text); }
+    // qsl all over the place:
+    static QString htmlWrapper(const QString& text) { return qsl("<html><head/><body>%1</body></html>").arg(text); }
 
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
     // "How to find and replace string?" by "Czarek Tomczak":
@@ -620,6 +620,7 @@ private:
     void installModulesList(Host*, QStringList);
     void setupTrayIcon();
     static bool desktopInDarkMode();
+    void assignKeySequences();
 
     QWidget* mpWidget_profileContainer;
     QHBoxLayout* mpHBoxLayout_profileContainer;
@@ -726,7 +727,7 @@ private:
     // The collection of words in the above:
     QSet<QString> mWordSet_shared;
 
-    QString mMudletDiscordInvite = QStringLiteral("https://www.mudlet.org/chat");
+    QString mMudletDiscordInvite = qsl("https://www.mudlet.org/chat");
 
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate {};
@@ -742,6 +743,11 @@ private:
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
     bool mDarkMode = false;
+
+    // Used to ensure that mudlet::slot_update_shortcuts() only runs once each
+    // time the main if () logic changes state - will be true if the menu is
+    // supposed to be visible, false if not and not have a value initially:
+    std::optional<bool> mMenuVisibleState;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

@@ -210,7 +210,7 @@ bool TMedia::purgeMediaCache()
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << QStringLiteral("TMedia::purgeMediaCache() WARNING - Not able to reference directory: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
+        qWarning() << qsl("TMedia::purgeMediaCache() WARNING - Not able to reference directory: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
         return false;
     }
 
@@ -248,7 +248,7 @@ QUrl TMedia::parseUrl(TMediaData& mediaData)
         } else if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->getMediaLocationGMCP().isEmpty()) {
             url = QUrl::fromUserInput(mpHost->getMediaLocationGMCP());
         } else {
-            url = QUrl::fromUserInput(QStringLiteral("https://www.%1/media/").arg(mpHost->mUrl));
+            url = QUrl::fromUserInput(qsl("https://www.%1/media/").arg(mpHost->mUrl));
         }
     } else {
         url = QUrl::fromUserInput(mediaData.getMediaUrl());
@@ -262,7 +262,7 @@ bool TMedia::isValidUrl(QUrl& url)
     bool isValid = false;
 
     if (!url.isValid()) {
-        qWarning() << QStringLiteral("TMedia::validUrl() WARNING - Attempt made to reference an invalid URL: %1 and the error message was:\"%2\".").arg(url.toString(), url.errorString());
+        qWarning() << qsl("TMedia::validUrl() WARNING - Attempt made to reference an invalid URL: %1 and the error message was:\"%2\".").arg(url.toString(), url.errorString());
     } else {
         isValid = true;
     }
@@ -275,7 +275,7 @@ bool TMedia::isFileRelative(TMediaData& mediaData)
     bool isFileRelative = false;
 
     if (!QFileInfo(mediaData.getMediaFileName()).isRelative()) {
-        qWarning() << QStringLiteral("TMedia::isFileRelative() WARNING - Attempt made to send an absolute path as a media file name: %1.  Only relative paths are permitted.")
+        qWarning() << qsl("TMedia::isFileRelative() WARNING - Attempt made to send an absolute path as a media file name: %1.  Only relative paths are permitted.")
                               .arg(mediaData.getMediaFileName());
     } else {
         isFileRelative = true;
@@ -294,7 +294,7 @@ QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir& dir)
         QStringList fileNames(dir.entryList(QDir::Files | QDir::Readable, QDir::Name));
 
         for (auto& fileName : qAsConst(fileNames)) {
-            fileNameList << QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), fileName);
+            fileNameList << qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), fileName);
         }
     } else {
         if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mediaData.getMediaFileName().contains('.')) {
@@ -308,7 +308,7 @@ QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir& dir)
             }
         }
 
-        fileNameList << QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName());
+        fileNameList << qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName());
     }
 
     return fileNameList;
@@ -322,16 +322,16 @@ QStringList TMedia::getFileNameList(TMediaData& mediaData)
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << QStringLiteral("TMedia::getFileNameList() WARNING - Attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
+        qWarning() << qsl("TMedia::getFileNameList() WARNING - Attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
         return fileNameList;
     }
 
     if (!mediaData.getMediaFileName().isEmpty() && mediaData.getMediaFileName().contains('/')) {
-        QString mediaSubPath = QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
+        QString mediaSubPath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
         QDir mediaSubDir(mediaSubPath);
 
         if (!mediaSubDir.mkpath(mediaSubPath)) {
-            qWarning() << QStringLiteral("TMedia::getFileNameList() WARNING - Attempt made to create a directory failed: %1")
+            qWarning() << qsl("TMedia::getFileNameList() WARNING - Attempt made to create a directory failed: %1")
                                   .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
             return fileNameList;
         }
@@ -367,9 +367,9 @@ QUrl TMedia::getFileUrl(TMediaData& mediaData)
         bool endsWithSlash = mediaLocation.endsWith('/');
 
         if (!endsWithSlash) {
-            fileUrl = QUrl::fromUserInput(QStringLiteral("%1/%2").arg(mediaLocation, mediaData.getMediaFileName()));
+            fileUrl = QUrl::fromUserInput(qsl("%1/%2").arg(mediaLocation, mediaData.getMediaFileName()));
         } else {
-            fileUrl = QUrl::fromUserInput(QStringLiteral("%1%2").arg(mediaLocation, mediaData.getMediaFileName()));
+            fileUrl = QUrl::fromUserInput(qsl("%1%2").arg(mediaLocation, mediaData.getMediaFileName()));
         }
     }
 
@@ -413,7 +413,7 @@ void TMedia::writeFile(QNetworkReply* reply)
     mMediaDownloads.remove(reply);
 
     if (reply->error() != QNetworkReply::NoError) {
-        event.mArgumentList << QStringLiteral("sysDownloadError");
+        event.mArgumentList << qsl("sysDownloadError");
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << reply->errorString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -493,16 +493,16 @@ void TMedia::downloadFile(TMediaData& mediaData)
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << QStringLiteral("TMedia::downloadFile() WARNING - Attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
+        qWarning() << qsl("TMedia::downloadFile() WARNING - Attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
         return;
     }
 
     if (!mediaData.getMediaFileName().isEmpty() && mediaData.getMediaFileName().contains('/')) {
-        QString mediaSubPath = QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
+        QString mediaSubPath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
         QDir mediaSubDir(mediaSubPath);
 
         if (!mediaSubDir.mkpath(mediaSubPath)) {
-            qWarning() << QStringLiteral("TMedia::downloadFile() WARNING - Attempt made to create a directory failed: %1")
+            qWarning() << qsl("TMedia::downloadFile() WARNING - Attempt made to create a directory failed: %1")
                                   .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
             return;
         }
@@ -526,11 +526,11 @@ void TMedia::downloadFile(TMediaData& mediaData)
         mpNetworkAccessManager->setCache(diskCache);
 
         QNetworkRequest request = QNetworkRequest(fileUrl);
-        request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
+        request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
         request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
         request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
 #if !defined(QT_NO_SSL)
-        if (fileUrl.scheme() == QStringLiteral("https")) {
+        if (fileUrl.scheme() == qsl("https")) {
             QSslConfiguration config(QSslConfiguration::defaultConfiguration());
             request.setSslConfiguration(config);
         }
@@ -553,7 +553,7 @@ QString TMedia::setupMediaAbsolutePathFileName(TMediaData& mediaData)
 {
     QString absolutePathFileName;
 
-    absolutePathFileName = QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName());
+    absolutePathFileName = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName());
 
     mediaData.setMediaAbsolutePathFileName(absolutePathFileName);
 
@@ -611,7 +611,7 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
         pPlayer = TMediaPlayer(mpHost, mediaData);
 
         if (!pPlayer.getMediaPlayer()) { // It should be impossible to ever reach this.
-            qWarning() << QStringLiteral("TMedia::getMediaPlayer() WARNING - Unable to create new QMediaPlayer object.");
+            qWarning() << qsl("TMedia::getMediaPlayer() WARNING - Unable to create new QMediaPlayer object.");
             return pPlayer;
         }
     }
@@ -753,7 +753,7 @@ void TMedia::play(TMediaData& mediaData)
     QStringList fileNameList = TMedia::getFileNameList(mediaData);
 
     if (fileNameList.isEmpty()) { // This should not happen.
-        qWarning() << QStringLiteral("TMedia::play() WARNING - Could not generate a list of media file names.");
+        qWarning() << qsl("TMedia::play() WARNING - Could not generate a list of media file names.");
         return;
     }
 
@@ -773,7 +773,7 @@ void TMedia::play(TMediaData& mediaData)
 
     // It should be impossible to ever reach this.
     if (!pPlayer.getMediaPlayer()) {
-        qWarning() << QStringLiteral("TMedia::play() WARNING - Unable to create new QMediaPlayer object.");
+        qWarning() << qsl("TMedia::play() WARNING - Unable to create new QMediaPlayer object.");
         return;
     }
 
@@ -879,7 +879,7 @@ TMediaData::MediaType TMedia::parseJSONByMediaType(QJsonObject& json)
 {
     TMediaData::MediaType mediaType = TMediaData::MediaTypeNotSet;
 
-    auto mediaTypeJSON = json.value(QStringLiteral("type"));
+    auto mediaTypeJSON = json.value(qsl("type"));
 
     if (mediaTypeJSON != QJsonValue::Undefined && !mediaTypeJSON.toString().isEmpty()) {
         if (mediaTypeJSON.toString().toLower() == "sound") {
@@ -897,7 +897,7 @@ QString TMedia::parseJSONByMediaFileName(QJsonObject& json)
 {
     QString mediaFileName = QString();
 
-    auto mediaFileNameJSON = json.value(QStringLiteral("name"));
+    auto mediaFileNameJSON = json.value(qsl("name"));
 
     if (mediaFileNameJSON != QJsonValue::Undefined && !mediaFileNameJSON.toString().isEmpty()) {
         mediaFileName = mediaFileNameJSON.toString();
@@ -911,7 +911,7 @@ int TMedia::parseJSONByMediaVolume(QJsonObject& json)
 {
     int mediaVolume = TMediaData::MediaVolumeDefault;
 
-    auto mediaVolumeJSON = json.value(QStringLiteral("volume"));
+    auto mediaVolumeJSON = json.value(qsl("volume"));
 
     if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.isString() && !mediaVolumeJSON.toString().isEmpty()) {
         mediaVolume = mediaVolumeJSON.toString().toInt();
@@ -945,7 +945,7 @@ int TMedia::parseJSONByMediaPriority(QJsonObject& json)
 {
     int mediaPriority = TMediaData::MediaPriorityNotSet;
 
-    auto mediaPriorityJSON = json.value(QStringLiteral("priority"));
+    auto mediaPriorityJSON = json.value(qsl("priority"));
 
     if (mediaPriorityJSON != QJsonValue::Undefined && mediaPriorityJSON.isString() && !mediaPriorityJSON.toString().isEmpty()) {
         mediaPriority = mediaPriorityJSON.toString().toInt();
@@ -973,7 +973,7 @@ int TMedia::parseJSONByMediaLoops(QJsonObject& json)
 {
     int mediaLoops = TMediaData::MediaLoopsDefault;
 
-    auto mediaLoopsJSON = json.value(QStringLiteral("loops"));
+    auto mediaLoopsJSON = json.value(qsl("loops"));
 
     if (mediaLoopsJSON != QJsonValue::Undefined && mediaLoopsJSON.isString() && !mediaLoopsJSON.toString().isEmpty()) {
         mediaLoops = mediaLoopsJSON.toString().toInt();
@@ -997,7 +997,7 @@ TMediaData::MediaContinue TMedia::parseJSONByMediaContinue(QJsonObject& json)
 {
     TMediaData::MediaContinue mediaContinue = TMediaData::MediaContinueDefault;
 
-    auto mediaContinueJSON = json.value(QStringLiteral("continue"));
+    auto mediaContinueJSON = json.value(qsl("continue"));
 
     if (mediaContinueJSON != QJsonValue::Undefined && mediaContinueJSON.isString() && !mediaContinueJSON.toString().isEmpty()) {
         if (mediaContinueJSON.toString() == "false") {
@@ -1017,7 +1017,7 @@ QString TMedia::parseJSONByMediaTag(QJsonObject& json)
 {
     QString mediaTag = QString();
 
-    auto mediaTagJSON = json.value(QStringLiteral("tag"));
+    auto mediaTagJSON = json.value(qsl("tag"));
 
     if (mediaTagJSON != QJsonValue::Undefined && !mediaTagJSON.toString().isEmpty()) {
         mediaTag = mediaTagJSON.toString().toLower(); // To provide case insensitivity of MSP specification
@@ -1031,7 +1031,7 @@ QString TMedia::parseJSONByMediaUrl(QJsonObject& json)
 {
     QString mediaUrl = QString();
 
-    auto mediaUrlJSON = json.value(QStringLiteral("url"));
+    auto mediaUrlJSON = json.value(qsl("url"));
 
     if (mediaUrlJSON != QJsonValue::Undefined && !mediaUrlJSON.toString().isEmpty()) {
         mediaUrl = mediaUrlJSON.toString();
@@ -1045,7 +1045,7 @@ QString TMedia::parseJSONByMediaKey(QJsonObject& json)
 {
     QString mediaKey = QString();
 
-    auto mediaKeyJSON = json.value(QStringLiteral("key"));
+    auto mediaKeyJSON = json.value(qsl("key"));
 
     if (mediaKeyJSON != QJsonValue::Undefined && !mediaKeyJSON.toString().isEmpty()) {
         mediaKey = mediaKeyJSON.toString();
