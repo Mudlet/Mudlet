@@ -980,16 +980,54 @@ end
 -- fmt is a table of format options as returned by getTextFormat
 function getHTMLspan(fmt)
   -- next two lines effectively invert the colors if fmt.reverse is true
-  local fore = fmt.reverse and fmt.background or fmt.foreground
-  local back = fmt.reverse and fmt.foreground or fmt.background
+  local fore = fmt.foreground
+  local back = fmt.background
+  if fmt.reverse then
+    if type(back) ~= "table" then
+      if back:find("Q.-Gradient") then
+        -- we can't gradient the foreground, so we'll make the background the foreground, and the foreground the inverse of that
+        if type(fore) == "table" then
+          back = table.deepcopy(fore)
+        else
+          local r,g,b = fore:match("rgb%((%d+),%s*(%d+),%s*(%d+))")
+          if b then
+            back = { r, g, b, 255 }
+          else
+            local hexstring = fore:match("(#......)")
+            if hexstring then
+              r,g,b = Geyser.Color.parse(hexstring)
+            else
+              back = { 255, 255, 255, 255 } -- can't parse the foreground, default to black on white
+            end
+          end
+        end
+        for index,value in ipairs(back) do
+          fore[index] = 255 - value
+        end
+      elseif back:find("rgba") then
+        local r,g,b = back:match("rgba%((%d+),%s*(%d+),%s*(%d+),%s*%d+%)")
+        fore = { r, g, b }
+        back = fmt.foreground
+      else
+        -- back should work as-is as a foreground
+        fore = fmt.background
+        back = fmt.foreground
+      end
+    else
+      fore = fmt.background
+      back = fmt.foreground
+    end
+  end
+
   local color,background
   if type(fore) == "table" then
-    color = string.format("color: rgb(%d,%d,%d);", unpack(fore))
+    color = string.format("color: rgb(%d, %d, %d);", unpack(fore))
   else
     color = string.format("color: %s;", fore)
   end
   if type(back) == "table" then
-    background = string.format("background-color: rgb(%d,%d,%d);", unpack(back))
+    back[4] = back[4] or 255 -- if alpha isn't specified, assume 255
+    background = string.format("background-color: rgba(%d, %d, %d, %d);", unpack(back))
   else
     background = string.format("background-color: %s;", back)
   end
@@ -1010,10 +1048,9 @@ end
 -- the background color setting and stylesheet
 function getLabelDefaultFormat(win)
   local r,g,b = 192, 192, 192
-  local br,bb,bg = getBackgroundColor(win)
   local reset = {
     foreground = { r, g, b },
-    background = { br, bb, bg },
+    background = "rgba(0, 0, 0, 0)",
     bold = false,
     italic = false,
     overline = false,
@@ -1033,20 +1070,11 @@ function getLabelDefaultFormat(win)
           styleTable[attr:trim()] = val:trim()
         end
       end
+
       if styleTable.color then
         reset.foreground = styleTable.color
       end
-      if styleTable.background then
-        local style = styleTable.background
-        -- strip out image related background settings, anything left we'll store as background color
-        style = style:gsub("%s*repeat%-x", ""):gsub("%s*repeat%-y", ""):gsub("%s*no%-repeat",""):gsub("%s*repeat", ""):gsub("%s*url%(.-%)", ""):trim()
-        if style ~= "" then
-          reset.background = style
-        end
-      end
-      if styleTable["background-color"] then
-        reset.background = styleTable["background-color"]
-      end
+
       if styleTable["text-decoration"] then
         local td = styleTable["text-decoration"]
         if td:match("underline") then
@@ -1059,13 +1087,16 @@ function getLabelDefaultFormat(win)
           reset.strikeout = true
         end
       end
+
       if styleTable.font then
         reset.bold = styleTable.font:match("bold") and true or false
         reset.italic = styleTable.font:match("italic") and true or false
       end
+
       if styleTable["font-weight"] and styleTable["font-weight"]:match("bold") then
         reset.bold = true
       end
+
       if styleTable["font-style"] and styleTable["font-style"]:match("italic") then
         reset.italic = true
       end
