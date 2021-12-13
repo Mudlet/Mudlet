@@ -668,17 +668,17 @@ mudlet::mudlet()
     });
 
     mShortcutsManager = new ShortcutsManager();
-    mShortcutsManager->registerShortcut(tr("Script editor"), &triggersKeySequence);
-    mShortcutsManager->registerShortcut(tr("Show Map"), &showMapKeySequence);
-    mShortcutsManager->registerShortcut(tr("Compact input line"), &inputLineKeySequence);
-    mShortcutsManager->registerShortcut(tr("Preferences"), &optionsKeySequence);
-    mShortcutsManager->registerShortcut(tr("Notepad"), &notepadKeySequence);
-    mShortcutsManager->registerShortcut(tr("Package manager"), &packagesKeySequence);
-    mShortcutsManager->registerShortcut(tr("Module manager"), &modulesKeySequence);
-    mShortcutsManager->registerShortcut(tr("MultiView"), &multiViewKeySequence);
-    mShortcutsManager->registerShortcut(tr("Play"), &connectKeySequence);
-    mShortcutsManager->registerShortcut(tr("Disconnect"), &disconnectKeySequence);
-    mShortcutsManager->registerShortcut(tr("Reconnect"), &reconnectKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Script editor"), tr("Script editor"), &triggersKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Show Map"), tr("Show Map"), &showMapKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Compact input line"), tr("Compact input line"), &inputLineKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Preferences"), tr("Preferences"), &optionsKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Notepad"), tr("Notepad"), &notepadKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Package manager"), tr("Package manager"), &packagesKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Module manager"), tr("Module manager"), &modulesKeySequence);
+    mShortcutsManager->registerShortcut(qsl("MultiView"), tr("MultiView"), &multiViewKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Play"), tr("Play"), &connectKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Disconnect"), tr("Disconnect"), &disconnectKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Reconnect"), tr("Reconnect"), &reconnectKeySequence);
 
     mpSettings = getQSettings();
     readLateSettings(*mpSettings);
@@ -2261,7 +2261,7 @@ void mudlet::slot_assign_shortcuts_from_profile(Host* pHost)
             mShortcutsManager->setShortcut(key, pHost->profileShortcuts.value(key));
         }
     }
-    slot_update_shortcuts();
+    assignKeySequences();
 }
 
 void mudlet::slot_update_shortcuts()
@@ -2299,10 +2299,11 @@ void mudlet::slot_update_shortcuts()
             return;
         }
     }
+    assignKeySequences();
+}
 
-    // The double negatives (one in each of the next two lines) are so the
-    // remainder of this method is more similar to the code prior to the
-    // introduction of the mMenuVisibleState variable:
+void mudlet::assignKeySequences()
+{
     mMenuVisibleState = !(mMenuBarVisibility == visibleNever || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()));
     if (!mMenuVisibleState.value()) {
         // The menu is hidden so wire the QKeySequences directly to the slots:
