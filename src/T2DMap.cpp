@@ -2972,7 +2972,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                         } else {
                             removePoint->setEnabled(false);
                             removePoint->setToolTip(utils::richText(tr(
-                                                                        R"(Use "delete line" to remove the only segment ending in an editable point.)",
+                                                                        R"(use "delete line" to remove the only segment ending in an editable point)",
                                                                         R"(2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action "delete line" should match the translation for that action))")));
                         }
                     } else {
