@@ -1630,8 +1630,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
 void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKey, const QLineF& exitLine)
 {
-    // A set of numbers that can be converted to statics and be frobbed during
-    // development:
+    // A set of numbers that can be converted to "static" type and be frobbed
+    // during development:
     const double shortPositionFactor = 0.225;
     const double middlePositionFactor = 0.95;
     const double longPositionFactor = 0.45;
@@ -2227,7 +2227,7 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 }
                 areaExitsMap[k] = clickPoint;
                 // line ENDS at the center of the room, and the START sticks out
-                // in the approprate direction
+                // in the appropriate direction
                 painter.drawLine(line);
                 QLineF l0 = QLineF(line);
                 l0.setLength((mRoomWidth + mRoomHeight) * 0.4);
