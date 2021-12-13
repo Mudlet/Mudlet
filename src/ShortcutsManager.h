@@ -34,6 +34,8 @@ class ShortcutsManager : public QObject
     Q_OBJECT
 
 public:
+    ShortcutsManager() = default;
+    ShortcutsManager(ShortcutsManager const&) = delete;
     ~ShortcutsManager();
 
     void registerShortcut(const QString&, const QString&, QKeySequence*);
