@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmdedia.com        *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,11 +28,14 @@
 #include <QShortcut>
 #include "post_guard.h"
 
-class ShortcutsManager : public QObject {
+class ShortcutsManager : public QObject
+{
 
     Q_OBJECT
 
 public:
+    ~ShortcutsManager();
+
     void registerShortcut(const QString&, const QString&, QKeySequence*);
     QStringListIterator iterator();
     void setShortcut(const QString&, QKeySequence*);
