@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmdedia.com        *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,6 +19,24 @@
  ***************************************************************************/
 
 #include "ShortcutsManager.h"
+
+ShortcutsManager::~ShortcutsManager()
+{
+    QMutableMapIterator<QString, QKeySequence*> itShortcut(shortcuts);
+    while (itShortcut.hasNext()) {
+        itShortcut.next();
+        auto pKeySequence = itShortcut.value();
+        delete pKeySequence;
+        itShortcut.remove();
+    }
+    QMutableMapIterator<QString, QKeySequence*> itDefault(defaults);
+    while (itDefault.hasNext()) {
+        itDefault.next();
+        auto pKeySequence = itDefault.value();
+        delete pKeySequence;
+        itDefault.remove();
+    }
+}
 
 void ShortcutsManager::registerShortcut(const QString& key, const QString& translation, QKeySequence* sequence)
 {
