@@ -30,6 +30,8 @@
 #include <QStringList>
 #include "post_guard.h"
 
+#include "utils.h"
+
 
 class TVar;
 

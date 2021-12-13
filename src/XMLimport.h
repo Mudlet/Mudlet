@@ -58,7 +58,7 @@ public:
     std::pair<dlgTriggerEditor::EditorViewType, int> importFromClipboard();
 
 private:
-    const QString YES = QStringLiteral("yes");
+    const QString YES = qsl("yes");
 
     std::pair<dlgTriggerEditor::EditorViewType, int> readPackage();
     void readUnknownPackage();
@@ -91,6 +91,7 @@ private:
 
     void readHostPackage(Host*);
     void readMapInfoContributors();
+    void readProfileShortcuts();
     void readStopWatchMap();
     int readTriggerGroup(TTrigger*);
     int readTimerGroup(TTimer*);

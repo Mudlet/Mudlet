@@ -192,8 +192,8 @@ void dlgModuleManager::slot_module_clicked(QTableWidgetItem* pItem)
     }
 
     if (mpHost->moduleHelp.contains(entry->text())) {
-        mModuleHelpButton->setDisabled((!mpHost->moduleHelp.value(entry->text()).contains(QStringLiteral("helpURL"))
-                                       || mpHost->moduleHelp.value(entry->text()).value(QStringLiteral("helpURL")).isEmpty()));
+        mModuleHelpButton->setDisabled((!mpHost->moduleHelp.value(entry->text()).contains(qsl("helpURL"))
+                                       || mpHost->moduleHelp.value(entry->text()).value(qsl("helpURL")).isEmpty()));
     } else {
         mModuleHelpButton->setDisabled(true);
     }

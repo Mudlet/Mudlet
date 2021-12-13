@@ -6,7 +6,7 @@ the free [Github for Desktop](https://desktop.github.com) app to contribute code
 
 If you're a first-timer, you're excluded, we'll go easy on you :wink:
 
-## Use QLatin1String over QStringLiteral if the function takes it
+## Use QLatin1String over qsl (a *shorter* preprocessor macro we define for Qt's own `QStringLiteral` macro) if the function takes it
 
 Some methods in the Qt API have overloads for either taking a QString, or a QLatin1String object.
 This is because Latin1 is simpler to parse than UTF-16, and therefore the QLatin1String version can
@@ -31,9 +31,9 @@ str += QLatin1String("World");
 Examples above are more efficient than:
 
 ```cpp
-bool same = (str == QStringLiteral("Hello"));
-str.startsWith(QStringLiteral("Hello"));
-str += QStringLiteral("World");
+bool same = (str == qsl("Hello"));
+str.startsWith(qsl("Hello"));
+str += qsl("World");
 ```
 
 And even more than:
@@ -55,14 +55,14 @@ QIcon(const QString &fileName)
 QIcon(QIconEngine *engine)
 ```
 
-No `QLatin1String` - mentioned - so use `QStringLiteral` instead, which creates us a `QString()` at compile-time so at least creating the object is faster.
+No `QLatin1String` - mentioned - so use `qsl` instead, which creates us a `QString()` at compile-time so at least creating the object is faster.
 
 ([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/),
  [additional reading](https://woboq.com/blog/qstringliteral.html))
 
-## Do not use ``QStringLiteral("")``
+## Do not use ``qsl("")``
 
-Prefer ``QString()`` over ``QStringLiteral("")`` for  for empty strings - the default constructor 
+Prefer ``QString()`` over ``qsl("")`` for  for empty strings - the default constructor
 for QString is cheaper in terms of both instructions and memory.
 
 ([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/))
@@ -70,7 +70,7 @@ for QString is cheaper in terms of both instructions and memory.
 ## Avoid duplicated QStringLiterals
 
 Avoid having multiple QStringLiterals with the same content. For plain literals and QLatin1String, compilers
-try to consolidate identical literals so that they are not duplicated. For QStringLiteral, identical strings
+try to consolidate identical literals so that they are not duplicated. For qsl, identical strings
 cannot be merged.
 
 ([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/))
@@ -143,7 +143,7 @@ Danger will also give a heads up if the PR title is long, or if more than 10 sou
 
 ## Mega PRs
 
-Pull Requests that overhaul large pieces of functionality at once will not be accepted: through experience, they bring more pain than they are worth. Being really difficult to discuss, test, and reason about, they are banned. 
+Pull Requests that overhaul large pieces of functionality at once will not be accepted: through experience, they bring more pain than they are worth. Being really difficult to discuss, test, and reason about, they are banned.
 
 That does not mean we don't welcome large overhauls: we do. Just make sure to send it in as separate, logically broken-down improvements that implement the functionality you'd like to have in a step process.
 
@@ -151,8 +151,8 @@ Of course, before embarking on such a journey, [discuss with the core team](http
 
 ## Merging Pull Requests (PRs)
 
-The preferred order of [merging PRs](https://help.github.com/articles/about-pull-request-merges/) is: 
-1. Prefer _squash and merge_ for a clean history and added PR numbers for details of discussion for future comparison. 
+The preferred order of [merging PRs](https://help.github.com/articles/about-pull-request-merges/) is:
+1. Prefer _squash and merge_ for a clean history and added PR numbers for details of discussion for future comparison.
 2. Else _rebase and merge_ if you'd like to keep the history, but know this will not link to the PR in public test builds' (PTB) changelogs, etc.
 3. Avoid creating a _merge commit_.
 

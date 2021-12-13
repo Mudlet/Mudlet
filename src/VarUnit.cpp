@@ -87,7 +87,7 @@ void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
             pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
             // This is one place we cannot use mudlet::htmlWrapper(...) as an
             // #include of "mudlet.h" completely messess up CMake builds...
-            pItem->setToolTip(0, QStringLiteral("<p>%1</p>").arg(tr("Checked variables will be saved and loaded with your profile.")));
+            pItem->setToolTip(0, qsl("<p>%1</p>").arg(tr("Checked variables will be saved and loaded with your profile.")));
             pItem->setCheckState(0, Qt::Unchecked);
             if (isSaved(child)) {
                 pItem->setCheckState(0, Qt::Checked);
@@ -101,13 +101,13 @@ void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
             QIcon icon;
             switch (child->getValueType()) {
             case 5:
-                icon.addPixmap(QPixmap(QStringLiteral(":/icons/table.png")), QIcon::Normal, QIcon::Off);
+                icon.addPixmap(QPixmap(qsl(":/icons/table.png")), QIcon::Normal, QIcon::Off);
                 break;
             case 6:
-                icon.addPixmap(QPixmap(QStringLiteral(":/icons/function.png")), QIcon::Normal, QIcon::Off);
+                icon.addPixmap(QPixmap(qsl(":/icons/function.png")), QIcon::Normal, QIcon::Off);
                 break;
             default:
-                icon.addPixmap(QPixmap(QStringLiteral(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
+                icon.addPixmap(QPixmap(qsl(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
                 break;
             }
             pItem->setIcon(0, icon);

@@ -266,7 +266,7 @@ void TAlias::compileRegex()
             TDebug(Qt::white, Qt::red) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
             TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in: ")" << mRegexCode << "\"\n" >> mpHost;
         }
-        setError(QStringLiteral("<b><font color='blue'>%1</font></b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)").arg(error)));
+        setError(qsl("<b><font color='blue'>%1</font></b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)").arg(error)));
     } else {
         mOK_init = true;
     }
@@ -323,9 +323,9 @@ bool TAlias::setScript(const QString& script)
 
 bool TAlias::compileScript()
 {
-    QString code = QStringLiteral("function Alias%1() %2\nend").arg(QString::number(mID), mScript);
-    QString aliasName = QStringLiteral("Alias: %1").arg(getName());
-    mFuncName = QStringLiteral("Alias%1").arg(QString::number(mID));
+    QString code = qsl("function Alias%1() %2\nend").arg(QString::number(mID), mScript);
+    QString aliasName = qsl("Alias: %1").arg(getName());
+    mFuncName = qsl("Alias%1").arg(QString::number(mID));
     QString error;
 
     if (mpHost->mLuaInterpreter.compile(code, error, aliasName)) {
