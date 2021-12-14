@@ -1994,7 +1994,7 @@ Weight</string>
 None</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit (only functional choice currently).&lt;/p&gt;</string>
+          <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2003,7 +2003,7 @@ None</string>
 Open</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</string>
+          <string>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2012,7 +2012,7 @@ Open</string>
 Closed</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</string>
+          <string>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2021,7 +2021,7 @@ Closed</string>
 Locked</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</string>
+          <string>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
