@@ -625,7 +625,7 @@ private:
 
     QWidget* mpWidget_profileContainer;
     QHBoxLayout* mpHBoxLayout_profileContainer;
-    QSplitter* mpSpltter_profileContainer;
+    QSplitter* mpSplitter_profileContainer;
 
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;

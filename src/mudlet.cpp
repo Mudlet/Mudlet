@@ -339,11 +339,11 @@ mudlet::mudlet()
     mpHBoxLayout_profileContainer = new QHBoxLayout(mpWidget_profileContainer);
     mpHBoxLayout_profileContainer->setContentsMargins(0, 0, 0, 0);
 
-    mpSpltter_profileContainer = new QSplitter(Qt::Horizontal, mpWidget_profileContainer);
-    mpSpltter_profileContainer->setContentsMargins(0, 0, 0, 0);
-    mpSpltter_profileContainer->setChildrenCollapsible(false);
+    mpSplitter_profileContainer = new QSplitter(Qt::Horizontal, mpWidget_profileContainer);
+    mpSplitter_profileContainer->setContentsMargins(0, 0, 0, 0);
+    mpSplitter_profileContainer->setChildrenCollapsible(false);
 
-    mpHBoxLayout_profileContainer->addWidget(mpSpltter_profileContainer);
+    mpHBoxLayout_profileContainer->addWidget(mpSplitter_profileContainer);
 
     QFile file_autolog(getMudletPath(mainDataItemPath, qsl("autolog")));
     if (file_autolog.exists()) {
@@ -1537,7 +1537,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     //update the main window title when we spawn a new tab
     setWindowTitle(pH->getName() + " - " + version);
 
-    mpSpltter_profileContainer->addWidget(pConsole);
+    mpSplitter_profileContainer->addWidget(pConsole);
     if (mpCurrentActiveHost) {
         mpCurrentActiveHost->mpConsole->hide();
     }
@@ -4601,16 +4601,14 @@ void mudlet::setupTrayIcon()
 
 void mudlet::slot_tabMoved(const int oldPos, const int newPos)
 {
-    Q_UNUSED(newPos)
-    Q_UNUSED(oldPos)
     const QStringList& tabNamesInOrder = mpTabBar->tabNames();
-    int itemsCount = mpSpltter_profileContainer->count();
+    int itemsCount = mpSplitter_profileContainer->count();
     Q_ASSERT_X(itemsCount == tabNamesInOrder.count(), "mudlet::slot_tabMoved(...)", "mismatch in count of tabs and TMainConsoles");
     QMap<QString, QWidget*> widgetMap;
     // Gather the QWidget pointers for each TMainConsole and store them
     // against their profile name:
     for (int profileIndex = 0; profileIndex < itemsCount; ++profileIndex) {
-        auto pWidget = mpSpltter_profileContainer->widget(profileIndex);
+        auto pWidget = mpSplitter_profileContainer->widget(profileIndex);
         if (pWidget) {
             auto name = pWidget->property("HostName").toString();
             widgetMap.insert(name, pWidget);
@@ -4624,7 +4622,7 @@ void mudlet::slot_tabMoved(const int oldPos, const int newPos)
     // tabs:
     for (int index = 0; index < itemsCount; ++index) {
         const auto& wantedTabName = tabNamesInOrder.at(index);
-        mpSpltter_profileContainer->addWidget(widgetMap.value(wantedTabName));
+        mpSplitter_profileContainer->addWidget(widgetMap.value(wantedTabName));
     }
 }
 
