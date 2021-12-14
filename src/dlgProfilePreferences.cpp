@@ -4062,8 +4062,8 @@ void dlgProfilePreferences::slot_setPostingTimeout(const double timeout)
 
 void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
 {
-    if (link == QStringLiteral("dark-code-editor")) {
-        const auto darkTheme = QStringLiteral("Monokai");
+    if (link == qsl("dark-code-editor")) {
+        const auto darkTheme = qsl("Monokai");
 
         label_darkEditorPrompt->hide();
 

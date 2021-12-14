@@ -45,7 +45,7 @@
 
 #include "mapInfoContributorManager.h"
 
-// QStringLiterals cannot be shared so define a common instance to use when
+// qsls cannot be shared so define a common instance to use when
 // there are multiple places where they are used within this file:
 
 // replacement parameter supplied at point of use:

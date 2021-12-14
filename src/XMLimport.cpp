@@ -1877,7 +1877,7 @@ void XMLimport::readProfileShortcuts() {
         }
         if (isStartElement()) {
             if (name() == "profileShortcut") {
-                auto key = attributes().value(QStringLiteral("key"));
+                auto key = attributes().value(qsl("key"));
                 auto sequenceString = readElementText();
                 if (mpHost->profileShortcuts.value(key.toString())) {
                     QKeySequence *sequence = !sequenceString.isEmpty() ? new QKeySequence(sequenceString)
