@@ -1685,6 +1685,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
     emit signal_load_profile(profile_name, alsoConnect);
+    mudlet::self()->updateMultiviewControlsEnabled();
 }
 
 bool dlgConnectionProfiles::validateProfile()

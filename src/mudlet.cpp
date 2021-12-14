@@ -1404,6 +1404,24 @@ void mudlet::slot_close_profile_requested(int tab)
     int hostCount = mHostManager.getHostCount();
     emit signal_hostDestroyed(pH, --hostCount);
     mHostManager.deleteHost(pH->getName());
+    updateMultiviewControlsEnabled();
+}
+
+void mudlet::updateMultiviewControlsEnabled()
+{
+    const bool isEnabled = (mHostManager.getHostCount() - 1);
+    if (!isEnabled) {
+        // Uncheck the setting as leaving it down does not reactive the setting
+        // should a second profile be reopened...
+        slot_multi_view(false);
+    }
+
+    if (mpActionMultiView->isEnabled() != isEnabled){
+        mpActionMultiView->setEnabled(isEnabled);
+    }
+    if (dactionMultiView->isEnabled() != isEnabled) {
+        dactionMultiView->setEnabled(isEnabled);
+    }
 }
 
 void mudlet::slot_tab_changed(int tabID)
@@ -1477,11 +1495,8 @@ void mudlet::slot_tab_changed(int tabID)
     updateDiscordNamedIcon();
 
     // Restore the multi-view mode if it was enabled:
+    updateMultiviewControlsEnabled();
     if (mpTabBar->count() > 1) {
-        if (!mpActionMultiView->isEnabled() || !dactionMultiView->isEnabled()) {
-            mpActionMultiView->setEnabled(true);
-            dactionMultiView->setEnabled(true);
-        }
         if (mMultiView) {
             for (auto pHost: mHostManager) {
                 if (pHost->mpConsole && (pHost != mpCurrentActiveHost.data())) {
@@ -1490,12 +1505,6 @@ void mudlet::slot_tab_changed(int tabID)
                     pHost->mpConsole->show();
                 }
             }
-        }
-
-    } else {
-        if (mpActionMultiView->isEnabled() || dactionMultiView->isEnabled()) {
-            mpActionMultiView->setEnabled(false);
-            dactionMultiView->setEnabled(false);
         }
     }
 
@@ -2789,6 +2798,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
     enableToolbarButtons();
+    updateMultiviewControlsEnabled();
 }
 
 void mudlet::processEventLoopHack()
@@ -4567,11 +4577,7 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
 
 void mudlet::activateProfile(Host* pHost)
 {
-    if (!mMultiView || !pHost) {
-        // We do not need to update the currently selected tab if we are not in
-        // multi-view mode as that will happen by the user selecting the tab
-        // themself - also, if the supplied argument is a nullptr we do not need
-        // to do anything:
+    if (!pHost) {
         return;
     }
 

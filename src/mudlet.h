@@ -331,6 +331,8 @@ public:
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     void refreshTabBar();
     void updateDiscordNamedIcon();
+    // Has to be public as it needs to be called from dlgConnectionProfiles class:
+    void updateMultiviewControlsEnabled();
 
     bool firstLaunch = false;
     // Needed to work around a (likely only Windows) issue:
