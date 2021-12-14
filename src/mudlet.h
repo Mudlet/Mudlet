@@ -655,6 +655,7 @@ private:
     QPointer<QShortcut> connectShortcut;
     QPointer<QShortcut> disconnectShortcut;
     QPointer<QShortcut> reconnectShortcut;
+    QPointer<QShortcut> closeProfileShortcut;
     QKeySequence triggersKeySequence;
     QKeySequence showMapKeySequence;
     QKeySequence inputLineKeySequence;
@@ -695,6 +696,7 @@ private:
     QPointer<QAction> mpActionModuleManager;
     QPointer<QAction> mpActionPackageExporter;
     QPointer<QAction> mpActionReconnect;
+    QPointer<QAction> mpActionCloseProfile;
     QPointer<QAction> mpActionScripts;
     QPointer<QAction> mpActionTimers;
     QPointer<QAction> mpActionTriggers;

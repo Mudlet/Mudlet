@@ -231,6 +231,7 @@ mudlet::mudlet()
 , mpButtonConnect(nullptr)
 , mpActionConnect(nullptr)
 , mpActionDisconnect(nullptr)
+, mpActionCloseProfile(nullptr)
 , mpActionFullScreenView(nullptr)
 , mpActionHelp(nullptr)
 , mpActionIRC(nullptr)
@@ -368,8 +369,14 @@ mudlet::mudlet()
     mpActionDisconnect = new QAction(tr("Disconnect"), this);
     mpActionDisconnect->setObjectName(qsl("disconnect"));
 
+    mpActionCloseProfile = new QAction(tr("Close profile"), this);
+    mpActionCloseProfile->setIcon(QIcon(qsl(":/icons/system-close.png")));
+    mpActionCloseProfile->setIconText(tr("Close profile"));
+    mpActionCloseProfile->setObjectName(qsl("close_profile"));
+
     mpButtonConnect->addAction(mpActionConnect);
     mpButtonConnect->addAction(mpActionDisconnect);
+    mpButtonConnect->addAction(mpActionCloseProfile);
     mpButtonConnect->setDefaultAction(mpActionConnect);
 
     mpActionTriggers = new QAction(QIcon(qsl(":/icons/tools-wizard.png")), tr("Triggers"), this);
@@ -570,6 +577,7 @@ mudlet::mudlet()
     connect(mpActionMultiView.data(), &QAction::triggered, this, &mudlet::slot_multi_view);
     connect(mpActionReconnect.data(), &QAction::triggered, this, &mudlet::slot_reconnect);
     connect(mpActionDisconnect.data(), &QAction::triggered, this, &mudlet::slot_disconnect);
+    connect(mpActionCloseProfile.data(), &QAction::triggered, this, &mudlet::slot_close_current_profile);
     connect(mpActionReplay.data(), &QAction::triggered, this, &mudlet::slot_replay);
     connect(mpActionNotes.data(), &QAction::triggered, this, &mudlet::slot_notes);
     connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_mapper);
@@ -1325,7 +1333,8 @@ void mudlet::slot_package_exporter()
     d->show();
 }
 
-void mudlet::slot_close_current_profile() {
+void mudlet::slot_close_current_profile()
+{
     Host* pH = getActiveHost();
     if (!pH) {
         return;
@@ -1333,6 +1342,7 @@ void mudlet::slot_close_current_profile() {
     slot_close_profile_requested(mpTabBar->currentIndex());
 
     if (!getActiveHost()) {
+        disableToolbarButtons();
         slot_show_connection_dialog();
     }
 }
@@ -1656,6 +1666,9 @@ void mudlet::disableToolbarButtons()
     dactionReplay->setEnabled(false);
     mpActionReconnect->setEnabled(false);
     mpActionDisconnect->setEnabled(false);
+
+    mpActionCloseProfile->setEnabled(false);
+    dactionCloseProfile->setEnabled(false);
 }
 
 void mudlet::enableToolbarButtons()
@@ -1690,6 +1703,9 @@ void mudlet::enableToolbarButtons()
 
     mpActionReconnect->setEnabled(true);
     mpActionDisconnect->setEnabled(true);
+
+    mpActionCloseProfile->setEnabled(true);
+    dactionCloseProfile->setEnabled(true);
 
     // As this is called when a profile is loaded it is time to check whether
     // we need to continue to show the main menu and/or the main toolbar
