@@ -2,6 +2,7 @@
 #include <QMap>
 #include <TEntityResolver.h>
 #include <QtTest/QtTest>
+#include "utils.h"
 
 class TEntityResolverTest : public QObject {
 Q_OBJECT
