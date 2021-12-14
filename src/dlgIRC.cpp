@@ -34,6 +34,7 @@
 #include <QScrollBar>
 #include <QShortcut>
 #include "post_guard.h"
+#include "utils.h"
 
 
 QString dlgIRC::HostNameCfgItem = qsl("irc_host");
