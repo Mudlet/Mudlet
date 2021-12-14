@@ -40,6 +40,7 @@ QString dlgIRC::HostNameCfgItem = qsl("irc_host");
 QString dlgIRC::HostPortCfgItem = qsl("irc_port");
 QString dlgIRC::HostSecureCfgItem = qsl("irc_secure");
 QString dlgIRC::NickNameCfgItem = qsl("irc_nick");
+QString dlgIRC::PasswordCfgItem = qsl("irc_password");
 QString dlgIRC::ChannelsCfgItem = qsl("irc_channels");
 QString dlgIRC::DefaultHostName = qsl("irc.libera.chat");
 int dlgIRC::DefaultHostPort = 6667;
