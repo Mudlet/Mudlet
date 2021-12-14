@@ -49,6 +49,43 @@
 const QString singleParagraph{qsl("<p>%1</p>")};
 const QString doubleParagraph{qsl("<p>%1</p><p>%2</p>")};
 
+WeightSpinBoxDelegate::WeightSpinBoxDelegate(QObject* parent)
+: QStyledItemDelegate(parent)
+{}
+
+QWidget* WeightSpinBoxDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& /* option */, const QModelIndex& /* index */) const
+{
+    auto* pEditor = new QSpinBox(parent);
+    pEditor->setFrame(false);
+    pEditor->setMinimum(0);
+    pEditor->setMaximum(9999);
+    // Need to use this to hide anything in the original QLineEdit that this
+    // sits on top of:
+    pEditor->setAutoFillBackground(true);
+
+    return pEditor;
+}
+
+void WeightSpinBoxDelegate::setEditorData(QWidget* pEditor, const QModelIndex& index) const
+{
+    auto value = index.model()->data(index, Qt::EditRole).toInt();
+    auto* pSpinBox = static_cast<QSpinBox*>(pEditor);
+    pSpinBox->setValue(value);
+}
+
+void WeightSpinBoxDelegate::setModelData(QWidget* pEditor, QAbstractItemModel* model, const QModelIndex& index) const
+{
+    auto* pSpinBox = static_cast<QSpinBox*>(pEditor);
+    pSpinBox->interpretText();
+    auto value = pSpinBox->value();
+    model->setData(index, value, Qt::EditRole);
+}
+
+void WeightSpinBoxDelegate::updateEditorGeometry(QWidget* pEditor, const QStyleOptionViewItem& option, const QModelIndex& /* index */) const
+{
+    pEditor->setGeometry(option.rect);
+}
+
 RoomIdLineEditDelegate::RoomIdLineEditDelegate(QObject* parent)
 : QStyledItemDelegate(parent)
 {}
@@ -235,6 +272,7 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
     init();
 
     specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitRoomId, new RoomIdLineEditDelegate);
+    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitWeight, new WeightSpinBoxDelegate);
 }
 
 dlgRoomExits::~dlgRoomExits()
@@ -1481,7 +1519,7 @@ void dlgRoomExits::init()
 
         //ExitsTreeWidget::colIndex_exitRoomId
         pI->setText(ExitsTreeWidget::colIndex_exitRoomId, QString::number(id_to));
-        pI->setTextAlignment(ExitsTreeWidget::colIndex_exitRoomId, Qt::AlignRight);
+        pI->setTextAlignment(ExitsTreeWidget::colIndex_exitRoomId, Qt::AlignLeft);
         //Tooltip generation for this column is done in
         //setIconAndToolTipsOnSpecialExit(...) at end of this while() loop
 
@@ -1504,7 +1542,7 @@ void dlgRoomExits::init()
 
         //ExitsTreeWidget::colIndex_exitWeight
         pI->setData(ExitsTreeWidget::colIndex_exitWeight, Qt::EditRole, pR->hasExitWeight(dir) ? pR->getExitWeight(dir) : 0);
-        pI->setTextAlignment(ExitsTreeWidget::colIndex_exitWeight, Qt::AlignRight);
+        pI->setTextAlignment(ExitsTreeWidget::colIndex_exitWeight, Qt::AlignLeft);
         pSpecialExit->weight = pI->data(ExitsTreeWidget::colIndex_exitWeight, Qt::EditRole).toInt();
         pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, singleParagraph.arg(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
 

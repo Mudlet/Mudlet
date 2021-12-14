@@ -40,6 +40,19 @@ class TRoom;
 // classes can refer to it:
 class dlgRoomExits;
 
+class WeightSpinBoxDelegate : public QStyledItemDelegate
+{
+    Q_OBJECT
+
+public:
+    explicit WeightSpinBoxDelegate(QObject* parent = nullptr);
+
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override;
+    void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override;
+    void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+};
+
 class RoomIdLineEditDelegate : public QStyledItemDelegate
 {
     Q_OBJECT
