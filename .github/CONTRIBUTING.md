@@ -67,9 +67,9 @@ for QString is cheaper in terms of both instructions and memory.
 
 ([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/))
 
-## Avoid duplicated QStringLiterals
+## Avoid duplicated qsls
 
-Avoid having multiple QStringLiterals with the same content. For plain literals and QLatin1String, compilers
+Avoid having multiple qsls with the same content. For plain literals and QLatin1String, compilers
 try to consolidate identical literals so that they are not duplicated. For qsl, identical strings
 cannot be merged.
 

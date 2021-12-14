@@ -2,6 +2,7 @@
 #include <QMap>
 #include <TEntityResolver.h>
 #include <QtTest/QtTest>
+#include "utils.h"
 
 class TEntityResolverTest : public QObject {
 Q_OBJECT
@@ -106,8 +107,8 @@ private slots:
     void testCustomInterpolation()
     {
         const QMap<QString, QString> attributes = {
-                {QStringLiteral("&name;"), QStringLiteral("drunk sailor")},
-                {QStringLiteral("&desc;"), QStringLiteral("A drunk sailor is lying here")}
+                {qsl("&name;"), qsl("drunk sailor")},
+                {qsl("&desc;"), qsl("A drunk sailor is lying here")}
         };
 
         auto mapping = [attributes](auto& attr) {
