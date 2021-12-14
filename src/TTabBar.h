@@ -29,6 +29,8 @@
 #include <QTabBar>
 #include "post_guard.h"
 
+#include "utils.h"
+
 class TTabBar : public QTabBar
 {
     Q_OBJECT

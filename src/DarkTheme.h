@@ -23,6 +23,8 @@
 #include <QProxyStyle>
 #include <QStyleFactory>
 
+#include "utils.h"
+
 class DarkTheme : public QProxyStyle
 {
     Q_OBJECT

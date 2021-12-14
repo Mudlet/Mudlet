@@ -122,7 +122,7 @@ inline QDebug& operator<<(QDebug& debug, const stopWatch& stopwatch)
 {
     QDebugStateSaver saver(debug);
     Q_UNUSED(saver);
-    debug.nospace() << QStringLiteral("stopwatch(mIsRunning: %1 mInitialised: %2 mIsPersistent: %3 mEffectiveStartDateTime: %4 mElapsedTime: %5)")
+    debug.nospace() << qsl("stopwatch(mIsRunning: %1 mInitialised: %2 mIsPersistent: %3 mEffectiveStartDateTime: %4 mElapsedTime: %5)")
                        .arg((stopwatch.running() ? QLatin1String("true") : QLatin1String("false")),
                             (stopwatch.initialised() ? QLatin1String("true") : QLatin1String("false")),
                             (stopwatch.persistent() ? QLatin1String("true") : QLatin1String("false")),
@@ -373,6 +373,7 @@ public:
     bool setLabelOnEnter(const QString&, const int);
     bool setLabelOnLeave(const QString&, const int);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    std::optional<QColor> getBackgroundColor(const QString& name) const;
     bool setBackgroundImage(const QString& name, QString& path, int mode);
     bool resetBackgroundImage(const QString& name);
     void showHideOrCreateMapper(const bool loadDefaultMap);
@@ -575,9 +576,13 @@ public:
     bool mLogStatus;
     bool mEnableSpellCheck;
     QStringList mInstalledPackages;
+    // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> mInstalledModules;
+    // module name = priority
     QMap<QString, int> mModulePriorities;
+    // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> modulesToWrite;
+    // module name = {"helpURL" = custom link}
     QMap<QString, QMap<QString, QString>> moduleHelp;
 
     // Privacy option to allow the game to set Discord Rich Presence information
@@ -627,6 +632,8 @@ public:
     QMap<QString, QStringList> mConsoleActions;
 
     QMap<QString, QKeySequence*> profileShortcuts;
+
+    bool mTutorialForCompactLineAlreadyShown;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
