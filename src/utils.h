@@ -20,6 +20,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#define qsl(s) qsl(s)
+#define qsl(s) QStringLiteral(s)
 
 #endif // UPDATER_H
