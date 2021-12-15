@@ -12,7 +12,7 @@ Geyser.ScrollBox = Geyser.Window:new({
     name = "ScrollBoxClass"
 })
 
--- Overriden reposition for special coordination handling
+-- Overridden reposition for special coordination handling
 function Geyser.ScrollBox:reposition()
     Geyser.Container.reposition(self)
     self.get_x = function() return 0 end
