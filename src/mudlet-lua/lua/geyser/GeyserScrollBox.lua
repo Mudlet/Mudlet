@@ -46,10 +46,9 @@ function Geyser.ScrollBox:new (cons, container)
     createScrollBox(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
 
     --ScrollBox needs a special windowname handling as it by itself is a "window"
-    --the given windowname will be saved to the userwindowName variable
-    me.userwindowName = me.windowname
+    --the given windowname will be saved to the parentWindowName variable
+    me.parentWindowName = me.windowname
     me.windowname = me.name
-
     Geyser.ParentWindows = Geyser.ParentWindows or {}
     Geyser.ParentWindows[me.name] = me
 

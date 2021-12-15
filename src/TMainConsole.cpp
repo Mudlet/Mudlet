@@ -524,15 +524,15 @@ TScrollBox* TMainConsole::createScrollBox(const QString& windowname, const QStri
 {
     //if pW then add ScrollBox as Overlay to the Userwindow
     auto pW = mDockWidgetMap.value(windowname);
+    auto pSW = mScrollBoxMap.value(windowname);
     auto pS = mScrollBoxMap.value(name);
     if (!pS) {
-        if (!pW) {
-            pS = new TScrollBox(mpHost, mpMainFrame);
+        if (pW) {
+            pS = new TLabel(mpHost, pW->widget());
+        } else if (pSW) {
+            pS = new TLabel(mpHost, pSW->widget());
         } else {
-            pS = new TScrollBox(mpHost, pW->widget());
-        }
-        if (!pS) {
-            return nullptr;
+            pS = new TLabel(mpHost, mpMainFrame);
         }
         mScrollBoxMap[name] = pS;
         pS->setObjectName(name);
