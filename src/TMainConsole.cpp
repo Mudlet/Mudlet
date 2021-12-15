@@ -469,6 +469,13 @@ void TMainConsole::resetMainConsole()
         itLabel.value()->close();
         itLabel.remove();
     }
+
+    QMutableMapIterator<QString, TScrollBox*> itScrollBox(mScrollBoxMap);
+    while (itScrollBox.hasNext()) {
+        itScrollBox.next();
+        itScrollBox.value()->close();
+        itScrollBox.remove();
+    }
 }
 
 // This is a sub-console overlaid on to the main console

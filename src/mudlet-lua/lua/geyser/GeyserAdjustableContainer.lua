@@ -172,11 +172,11 @@ function Adjustable.Container:onMove (label, event)
         end
         local dx, dy = adjustInfo.x - x, adjustInfo.y - y
         local max, min = math.max, math.min
+        local hasScrollBox = self.windowname and Geyser.ParentWindows and Geyser.ParentWindows[self.windowname] and Geyser.ParentWindows[self.windowname].type == "scrollBox"
         if adjustInfo.move and not self.connectedContainers then
             label:setCursor("ClosedHand")
             local tx, ty = max(0,x1-dx), max(0,y1-dy)
             -- get rid of move/size limits when in scrollbox (as it is scrollable)
-            local hasScrollBox = self.windowname and Geyser.ParentWindows and Geyser.ParentWindows[self.windowname] and Geyser.ParentWindows[self.windowname].type == "scrollBox"
             if not(hasScrollBox) then
                 tx, ty = min(tx, winw - w), min(ty, winh - h)
             end
@@ -203,7 +203,6 @@ function Adjustable.Container:onMove (label, event)
                 tw = w2
             end
             tx, ty, tw, th = max(0,tx), max(0,ty), max(10,tw), max(10,th)
-            local hasScrollBox = self.windowname and Geyser.ParentWindows and Geyser.ParentWindows[self.windowname] and Geyser.ParentWindows[self.windowname].type == "scrollBox"
             if not(hasScrollBox) then
                 tw, th = min(tw, winw), min(th, winh)
                 tx, ty = min(tx, winw-tw), min(ty, winh-th)
