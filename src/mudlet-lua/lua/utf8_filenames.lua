@@ -44,6 +44,9 @@
 -- The conversion from UTF-8 to "Windows ANSI codepage" is implemented according to mapping tables published at unicode.org.
 -- Mapping tables are stored in human-unreadable compressed form to significantly reduce module size.
 
+-- This version was forked from upstream by Vadim Peretokin and it has been modified to work with the
+-- Mudet MUD Client (https://www.mudlet.org) and uses a couple of Lua functions provided by that application
+-- that are NOT present in a normal Lua interpreter environment.
 
 local test_data_integrity = false  -- set to true if you are unsure about correctness of human-unreadable parts of this file
 
@@ -165,17 +168,15 @@ local function modify_lua_functions(all_compressed_mappings)
       print"-------------------------------------------------"
    end
 
-   if (os.getenv"os" or ""):match"^Windows" then
+   --[[
+   The next couple of lines diverge from upstream as they use functions
+   that we provide ourselves that avoid the need to:
+   * probe the environment for the OS
+   * spawn an external OS command to extract a value from the Windows Registry
+   --]]
+   if getOS() == "windows" then
 
-      local function get_windows_ansi_codepage()
-         -- returns string "1253" for Greek, "1251" for Russian, etc.
-         local pipe = assert(io.popen[[reg query HKLM\SYSTEM\CurrentControlSet\Control\Nls\CodePage /v ACP]])
-         local codepage = pipe:read"*a":match"%sACP%s+REG_SZ%s+(.-)%s*$"
-         pipe:close()
-         return assert(codepage, "Failed to determine Windows ANSI codepage from Windows registry")
-      end
-
-      local codepage = get_windows_ansi_codepage()
+      local codepage = getWindowsCodepage()
       -- print("Your codepage is "..codepage)
       local compressed_mapping = all_compressed_mappings[codepage]
       if compressed_mapping then
@@ -1311,6 +1312,8 @@ return modify_lua_functions{
 MIT License
 
 Copyright (c) 2019  Egor Skriptunoff
+Copyright (c) 2019  Vadim Peretokin <vperetokin@gmail.com>
+Copyright (c) 2021  Stephen Lyons <slysven@virginmedia.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
