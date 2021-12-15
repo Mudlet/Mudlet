@@ -370,7 +370,7 @@ mudlet::mudlet()
     mpActionDisconnect->setObjectName(qsl("disconnect"));
 
     mpActionCloseProfile = new QAction(tr("Close profile"), this);
-    mpActionCloseProfile->setIcon(QIcon(qsl(":/icons/system-close.png")));
+    mpActionCloseProfile->setIcon(QIcon(qsl(":/icons/profile-close.png")));
     mpActionCloseProfile->setIconText(tr("Close profile"));
     mpActionCloseProfile->setObjectName(qsl("close_profile"));
 
@@ -2402,6 +2402,9 @@ void mudlet::assignKeySequences()
         connect(reconnectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_reconnect);
         dactionReconnect->setShortcut(QKeySequence());
 
+        delete closeProfileShortcut.data();
+        closeProfileShortcut = new QShortcut(closeProfileKeySequence, this);
+        connect(closeProfileShortcut.data(), &QShortcut::activated, this, &mudlet::slot_close_current_profile);
         dactionCloseProfile->setShortcut(QKeySequence());
     } else {
         // The menu is shown so tie the QKeySequences to the menu items and it
@@ -2442,6 +2445,7 @@ void mudlet::assignKeySequences()
         delete reconnectShortcut.data();
         dactionReconnect->setShortcut(reconnectKeySequence);
 
+        delete closeProfileShortcut.data();
         dactionCloseProfile->setShortcut(closeProfileKeySequence);
     }
 }

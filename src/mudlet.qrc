@@ -157,6 +157,7 @@
         <file>icons/place_of_interest.png</file>
         <file>icons/preferences-desktop-keyboard.png</file>
         <file>icons/preferences-web-browser-cache.png</file>
+        <file>icons/profile-close.png</file>
         <file>icons/rating.png</file>
         <file>icons/red-bomb.png</file>
         <file>icons/reinosdeleyenda_mud.png</file>
@@ -169,7 +170,6 @@
         <file>icons/Slothmud.png</file>
         <file>icons/solid-line.png</file>
         <file>icons/stickmud_icon.jpg</file>
-        <file>icons/system-close.png</file>
         <file>icons/system-restart.png</file>
         <file>icons/system-users.png</file>
         <file>icons/table.png</file>
