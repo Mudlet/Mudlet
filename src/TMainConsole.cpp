@@ -528,11 +528,11 @@ TScrollBox* TMainConsole::createScrollBox(const QString& windowname, const QStri
     auto pS = mScrollBoxMap.value(name);
     if (!pS) {
         if (pW) {
-            pS = new TLabel(mpHost, pW->widget());
+            pS = new TScrollBox(mpHost, pW->widget());
         } else if (pSW) {
-            pS = new TLabel(mpHost, pSW->widget());
+            pS = new TScrollBox(mpHost, pSW->widget());
         } else {
-            pS = new TLabel(mpHost, mpMainFrame);
+            pS = new TScrollBox(mpHost, mpMainFrame);
         }
         mScrollBoxMap[name] = pS;
         pS->setObjectName(name);
