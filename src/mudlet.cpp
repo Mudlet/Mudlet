@@ -1410,17 +1410,22 @@ void mudlet::slot_close_profile_requested(int tab)
 void mudlet::updateMultiviewControlsEnabled()
 {
     const bool isEnabled = (mHostManager.getHostCount() - 1);
-    if (!isEnabled) {
-        // Uncheck the setting as leaving it down does not reactive the setting
-        // should a second profile be reopened...
-        slot_multi_view(false);
-    }
-
     if (mpActionMultiView->isEnabled() != isEnabled){
         mpActionMultiView->setEnabled(isEnabled);
     }
     if (dactionMultiView->isEnabled() != isEnabled) {
         dactionMultiView->setEnabled(isEnabled);
+    }
+}
+
+void mudlet::reshowAllMainConsolesIfRequired()
+{
+    if (mpTabBar->count() > 1 && mMultiView) {
+        for (auto pHost: mHostManager) {
+            if (pHost->mpConsole) {
+                pHost->mpConsole->show();
+            }
+        }
     }
 }
 
@@ -1494,19 +1499,9 @@ void mudlet::slot_tab_changed(int tabID)
 
     updateDiscordNamedIcon();
 
-    // Restore the multi-view mode if it was enabled:
     updateMultiviewControlsEnabled();
-    if (mpTabBar->count() > 1) {
-        if (mMultiView) {
-            for (auto pHost: mHostManager) {
-                if (pHost->mpConsole && (pHost != mpCurrentActiveHost.data())) {
-                    // We skip showing the current tab as we have already done
-                    // a more thorough refreshment of that one...
-                    pHost->mpConsole->show();
-                }
-            }
-        }
-    }
+    // Regenerate the multi-view mode if it is enabled:
+    reshowAllMainConsolesIfRequired();
 
     emit signal_tabChanged(mpCurrentActiveHost->getName());
 }
@@ -1547,7 +1542,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     setWindowTitle(pH->getName() + " - " + version);
 
     mpSplitter_profileContainer->addWidget(pConsole);
-    if (mpCurrentActiveHost) {
+    if (mpCurrentActiveHost && !mMultiView) {
         mpCurrentActiveHost->mpConsole->hide();
     }
     mpCurrentActiveHost = pH;

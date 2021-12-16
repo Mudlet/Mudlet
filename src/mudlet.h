@@ -624,6 +624,7 @@ private:
     void setupTrayIcon();
     static bool desktopInDarkMode();
     void assignKeySequences();
+    void reshowAllMainConsolesIfRequired();
 
     QWidget* mpWidget_profileContainer;
     QHBoxLayout* mpHBoxLayout_profileContainer;

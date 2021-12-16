@@ -1683,9 +1683,10 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         pHost->setupIreDriverBugfix();
     }
 
+    mudlet::self()->updateMultiviewControlsEnabled();
+
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
     emit signal_load_profile(profile_name, alsoConnect);
-    mudlet::self()->updateMultiviewControlsEnabled();
 }
 
 bool dlgConnectionProfiles::validateProfile()
