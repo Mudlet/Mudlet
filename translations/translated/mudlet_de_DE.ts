@@ -6776,22 +6776,22 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1579"/>
       <source>No door symbol is drawn on a custom exit line for this exit on 2D Map.</source>
-      <translation type="unfinished"/>
+      <translation>Kein Türsymbol wird auf der benutzerdefinierten Linie für diesen Ausgang auf der 2D Karte gezeichnet.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1580"/>
       <source>Green (Open) door symbol is drawn on a custom exit line for this exit on 2D Map.</source>
-      <translation type="unfinished"/>
+      <translation>Ein grünes Symbol für die (offene) Tür wird auf der benutzerdefinierten Linie für diesen Ausgang auf der 2D Karte gezeichnet.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1581"/>
       <source>Orange (Closed) door symbol is drawn on a custom exit line for this exit on 2D Map.</source>
-      <translation type="unfinished"/>
+      <translation>Ein oranges Symbol für die (geschlossene) Tür wird auf der benutzerdefinierten Linie für diesen Ausgang auf der 2D Karte gezeichnet.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1582"/>
       <source>Red (Locked) door symbol is drawn on a custom exit line for this exit on 2D Map.</source>
-      <translation type="unfinished"/>
+      <translation>Ein rotes Symbol für die (versperrte) Tür wird auf der benutzerdefinierten Linie für diesen Ausgang auf der 2D Karte gezeichnet.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1068"/>
@@ -12492,17 +12492,17 @@ Status</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2006"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ein grünes (offenes) Türsymbol wird auf der 2D Karte gezeichnet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2015"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ein oranges (geschlossenes) Türsymbol wird auf der 2D Karte gezeichnet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2024"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ein rotes (versperrtes) Türsymbol wird auf der 2D Karte gezeichnet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2033"/>
