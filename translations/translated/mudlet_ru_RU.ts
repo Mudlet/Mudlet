@@ -6405,26 +6405,26 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="2167"/>
       <source>Mudlet binary map (*.dat)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Бинарная карта Мадлета (*.dat)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2112"/>
       <location filename="../src/dlgProfilePreferences.cpp" line="2168"/>
       <source>Mudlet JSON map (*.json)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>JSON карта Мадлета (*.json)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2113"/>
       <source>Mudlet XML map (*.xml)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>XML карта Мадлета (*.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2114"/>
       <source>Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Любой файл (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3392"/>
@@ -6813,22 +6813,22 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1579"/>
       <source>No door symbol is drawn on a custom exit line for this exit on 2D Map.</source>
-      <translation type="unfinished"/>
+      <translation>Символ двери не отображается на пользовательской линии выхода для этого выхода на 2D карте.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1580"/>
       <source>Green (Open) door symbol is drawn on a custom exit line for this exit on 2D Map.</source>
-      <translation type="unfinished"/>
+      <translation>Зеленый символ (открытая) дверь рисуется на пользовательской линии выхода для этого выхода на 2D карте.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1581"/>
       <source>Orange (Closed) door symbol is drawn on a custom exit line for this exit on 2D Map.</source>
-      <translation type="unfinished"/>
+      <translation>Оранжевый (закрытый) символ двери нарисован на пользовательской линии выхода для этого выхода на 2D карте.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1582"/>
       <source>Red (Locked) door symbol is drawn on a custom exit line for this exit on 2D Map.</source>
-      <translation type="unfinished"/>
+      <translation>Символ красной (запертой) двери рисуется на пользовательской линии выхода для этого выхода на 2D карте.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1068"/>
@@ -10630,7 +10630,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="2951"/>
       <source>[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.</source>
       <comment>Here %1 will be replaced with the keyboard shortcut, default is ALT+L.</comment>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Компактный вид вводной линий включен. Нажмите %1, чтобы снова отобразить кнопки в правом нижнем углу.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3012"/>
@@ -12531,17 +12531,17 @@ Status</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2006"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Символ зеленой (открытой) двери нарисован на 2D карте.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2015"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Оранжевый (закрытый) символ двери нарисован на 2D карте.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2024"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Символ красной (запертой) двери отображается на 2D карте.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2033"/>
