@@ -860,6 +860,12 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                               "bustling commercial district and become wealthy as part of a powerful engineering conglomerate.\n\nLOTJ offers full PVP in both ground and space combat, governed by a "
                               "set of rules to minimize griefing and ensure that all kills have sufficient in-character cause.\n\nWhat role will you play? The legend awaits!");
 
+    } else if (hostUrl == QStringLiteral("mume.org")) {
+        return qsl("Multi-Users in Middle-earth (MUME) is a highly competitive world PvP DikuMUD, set in J. R. R. Tolkien’s fictional world of Middle-earth, as described in The Hobbit and "
+                              "The Lord of the Rings, where players may choose to join the epic war between the forces of Sauron and the armies of the Free peoples. In MUME players can explore, "
+                              "role-play, acquire achievements, and complete quests across many challenging locations across Middle-earth such as Lothlórien, the Shire, Bree, Rivendell, Goblin-town,"
+                              " Mirkwood, Dol Guldur, and the Mines of Moria. The game is completely at no cost to play and has been continually enhanced since its inception in the fall of 1991.");
+
     } else {
         return readProfileData(profile_name, qsl("description"));
     }
