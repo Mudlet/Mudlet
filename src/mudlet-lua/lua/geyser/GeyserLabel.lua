@@ -26,6 +26,7 @@ Geyser.Label.scrollH = {}
 function Geyser.Label:echo(message, color, format)
   message = message or self.message
   self.message = message
+  message = message:gsub("\n", "<br>")
   color = color or self.fgColor
   self.fgColor = color
   if format then self:processFormatString(format) end
