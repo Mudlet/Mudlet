@@ -733,6 +733,15 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are.same(expected, actual)
     end)
   end)
+
+  describe("Tests the functionality of replace", function()
+    it("Should return nil+msg if nothing is selected to replace", function()
+      deselect()
+      local ok,err = replace("]")
+      assert.is_nil(ok)
+      assert.equals("replace: nothing is selected to be replaced. Did selectString return -1?", err)
+    end)
+  end)
 end)
 
 --[[

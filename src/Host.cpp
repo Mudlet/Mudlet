@@ -402,6 +402,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerDiameterPercentage(70)
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
+, mTutorialForCompactLineAlreadyShown(false)
 {
     TDebug::addHost(this);
 
@@ -1135,18 +1136,17 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 #else
         commandList = cmd.split(QString(mCommandSeparator), QString::SkipEmptyParts);
 #endif
-    } else {
+    } else if (!cmd.isEmpty()) {
         // don't split command if the command separator is blank
         commandList << cmd;
     }
 
-    if (!dontExpandAliases) {
         // allow sending blank commands
-        if (commandList.empty()) {
-            QString payload(QChar::LineFeed);
-            mTelnet.sendData(payload);
-            return;
-        }
+
+    if (!dontExpandAliases && commandList.empty()) {
+        QString payload(QChar::LineFeed);
+        mTelnet.sendData(payload);
+        return;
     }
 
     for (int i = 0, total = commandList.size(); i < total; ++i) {

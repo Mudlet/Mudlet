@@ -100,6 +100,7 @@ class QLabel;
 class QListWidget;
 class QPushButton;
 class QShortcut;
+class QSplitter;
 class QTableWidget;
 class QTableWidgetItem;
 class QTextEdit;
@@ -620,9 +621,11 @@ private:
     void installModulesList(Host*, QStringList);
     void setupTrayIcon();
     static bool desktopInDarkMode();
+    void assignKeySequences();
 
     QWidget* mpWidget_profileContainer;
     QHBoxLayout* mpHBoxLayout_profileContainer;
+    QSplitter* mpSplitter_profileContainer;
 
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;

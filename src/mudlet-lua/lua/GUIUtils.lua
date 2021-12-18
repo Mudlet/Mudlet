@@ -1949,6 +1949,10 @@ do
       text = arg1
     end
 
+    local selection = {getSelection()}
+    if _comp(selection, {"", 0, 0}) then
+      return nil, "replace: nothing is selected to be replaced. Did selectString return -1?"
+    end
     text = text or ""
 
     if keepcolor then
