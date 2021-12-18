@@ -635,7 +635,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
-  describe("Tests the functionality of getLabelDefaultFormat", function()
+  describe("Tests the functionality of getLabelFormat", function()
     local expected
     local labelName = "gldfTestLabel"
     before_each(function()
@@ -658,41 +658,41 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should return a default table if no background color or stylesheet is set", function()
-      local actual = getLabelDefaultFormat(labelName)
+      local actual = getLabelFormat(labelName)
       assert.are.same(expected, actual)
     end)
 
     it("Should return the transparent background color for default so the background of the label is seen", function()
       setBackgroundColor(labelName, 128, 0, 128)
-      local actual = getLabelDefaultFormat(labelName)
+      local actual = getLabelFormat(labelName)
       assert.are.same(expected, actual)
     end)
 
     it("Should detect foreground color from a color directive", function()
       setLabelStyleSheet(labelName, "color: rgb(128, 0, 128);")
       expected.foreground = "rgb(128, 0, 128)"
-      local actual = getLabelDefaultFormat(labelName)
+      local actual = getLabelFormat(labelName)
       assert.are.same(expected, actual)
     end)
 
     it("Should detect underline from text-decorations directive", function()
       setLabelStyleSheet(labelName, "text-decoration: underline;")
       expected.underline = true
-      local actual = getLabelDefaultFormat(labelName)
+      local actual = getLabelFormat(labelName)
       assert.are.same(expected, actual)
     end)
 
     it("Should detect overline from text-decorations directive", function()
       setLabelStyleSheet(labelName, "text-decoration: overline;")
       expected.overline = true
-      local actual = getLabelDefaultFormat(labelName)
+      local actual = getLabelFormat(labelName)
       assert.are.same(expected, actual)
     end)
 
     it("Should detect strikeout/line-through/strikethrough from text-decorations directive", function()
       setLabelStyleSheet(labelName, "text-decoration: line-through;")
       expected.strikeout = true
-      local actual = getLabelDefaultFormat(labelName)
+      local actual = getLabelFormat(labelName)
       assert.are.same(expected, actual)
     end)
 
@@ -701,27 +701,27 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       expected.underline = true
       expected.overline = true
       expected.strikeout = true
-      local actual = getLabelDefaultFormat(labelName)
+      local actual = getLabelFormat(labelName)
       assert.are.same(expected, actual)
     end)
 
     it("Should detect italic from font or font-style tag", function()
       setLabelStyleSheet(labelName, "font-style: italic;")
       expected.italic = true
-      local actual = getLabelDefaultFormat(labelName)
+      local actual = getLabelFormat(labelName)
       assert.are.same(expected, actual)
       setLabelStyleSheet(labelName, "font: italic;")
-      local actual = getLabelDefaultFormat(labelName)
+      local actual = getLabelFormat(labelName)
       assert.are.same(expected, actual)
     end)
 
     it("Should detect bold from font or font-weight tag", function()
       setLabelStyleSheet(labelName, "font: bold;")
       expected.bold = true
-      local actual = getLabelDefaultFormat(labelName)
+      local actual = getLabelFormat(labelName)
       assert.are.same(expected, actual)
       setLabelStyleSheet(labelName, "font-weight: bold;")
-      local actual = getLabelDefaultFormat(labelName)
+      local actual = getLabelFormat(labelName)
       assert.are.same(expected, actual)
     end)
 
@@ -729,7 +729,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       setLabelStyleSheet(labelName, "font: bold italic;")
       expected.bold = true
       expected.italic = true
-      local actual = getLabelDefaultFormat(labelName)
+      local actual = getLabelFormat(labelName)
       assert.are.same(expected, actual)
     end)
   end)

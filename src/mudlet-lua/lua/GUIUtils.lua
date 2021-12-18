@@ -980,6 +980,8 @@ end
 -- fmt is a table of format options as returned by getTextFormat
 function getHTMLspan(fmt)
   -- next two lines effectively invert the colors if fmt.reverse is true
+  local type = type
+  local sfmt = string.format
   local fore = fmt.foreground
   local back = fmt.background
   if fmt.reverse then
@@ -1021,15 +1023,15 @@ function getHTMLspan(fmt)
 
   local color,background
   if type(fore) == "table" then
-    color = string.format("color: rgb(%d, %d, %d);", unpack(fore))
+    color = sfmt("color: rgb(%d, %d, %d);", unpack(fore))
   else
-    color = string.format("color: %s;", fore)
+    color = sfmt("color: %s;", fore)
   end
   if type(back) == "table" then
     back[4] = back[4] or 255 -- if alpha isn't specified, assume 255
-    background = string.format("background-color: rgba(%d, %d, %d, %d);", unpack(back))
+    background = sfmt("background-color: rgba(%d, %d, %d, %d);", unpack(back))
   else
-    background = string.format("background-color: %s;", back)
+    background = sfmt("background-color: %s;", back)
   end
   local bold = fmt.bold and " font-weight: bold;" or " font-weight: normal;"
   local italic = fmt.italic and " font-style: italic;" or " font-style: normal;"
@@ -1037,16 +1039,16 @@ function getHTMLspan(fmt)
   if not (fmt.underline or fmt.overline or fmt.strikeout) then
     textDecoration = " text-decoration: none;"
   else
-    textDecoration = string.format(" text-decoration:%s%s%s;", fmt.overline and " overline" or "", fmt.underline and " underline" or "", fmt.strikeout and " line-through" or "")
+    textDecoration = sfmt(" text-decoration:%s%s%s;", fmt.overline and " overline" or "", fmt.underline and " underline" or "", fmt.strikeout and " line-through" or "")
   end
-  local result = string.format([[<span style="%s%s%s%s%s">]], color, background, bold, italic, textDecoration)
+  local result = sfmt([[<span style="%s%s%s%s%s">]], color, background, bold, italic, textDecoration)
   return result
 end
 
--- https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelDefaultFormat
+-- https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat
 -- used by xEcho for getting the default format for a label, taking into account
 -- the background color setting and stylesheet
-function getLabelDefaultFormat(win)
+function getLabelFormat(win)
   local r,g,b = 192, 192, 192
   local reset = {
     foreground = { r, g, b },
@@ -1310,10 +1312,10 @@ if rex then
       str = str:gsub("\n", "<br>")
       local t = _Echos.Process(str, style)
       if func ~= "echo" then
-        return nil,"You cannot use echoLink, echoPopup, or insertText with Labels"
+        return nil, "you cannot use echoLink, echoPopup, or insertText with Labels"
       end
       local result = ""
-      local reset = getLabelDefaultFormat(win)
+      local reset = getLabelFormat(win)
       local format = table.deepcopy(reset)
       if format.bold or format.italic or format.overline or format.strikeout or format.underline then
         result = getHTMLspan(format)

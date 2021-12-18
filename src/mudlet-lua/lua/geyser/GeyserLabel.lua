@@ -1250,7 +1250,7 @@ end
 
 --- Returns a table in the format of getTextFormat which describes the default formatting created by any stylesheets
 -- which are applied to the label.
--- @see https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelDefaultFormat and https://wiki.mudlet.org/w/Manual:Lua_Functions#getTextFormat
-function Geyser.Label:getDefaultFormat()
-  return getLabelDefaultFormat(self.name)
+-- @see https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat and https://wiki.mudlet.org/w/Manual:Lua_Functions#getTextFormat
+function Geyser.Label:getFormat()
+  return getLabelFormat(self.name)
 end
