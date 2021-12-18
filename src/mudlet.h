@@ -622,6 +622,7 @@ private:
     void setupTrayIcon();
     static bool desktopInDarkMode();
     void assignKeySequences();
+    void closeHost(const QString& name);
 
     QWidget* mpWidget_profileContainer;
     QHBoxLayout* mpHBoxLayout_profileContainer;
