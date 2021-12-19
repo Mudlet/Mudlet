@@ -87,7 +87,7 @@ function script:exec {
 
 # Checks, whether sh.exe is found in the PATH. If so, these parts get filtered out and the remaining PATH gets returned.
 function filterPathForSh {
-    $noShPath = ($Env:PATH.Split(';') | Where-Object { -NOT (Test-Path (Join-Path $_ "sh.exe") -PathType Leaf) }) -join ';'
+    $noShPath = ($Env:PATH.Split(';') | Where-Object { -NOT (Test-Path ([System.IO.Path]::Combine($_, "sh.exe")) -PathType Leaf) }) -join ';'
     return $noShPath
 }
 
