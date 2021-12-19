@@ -23,7 +23,7 @@
 /*
  * Eventually these should be defined for whole application to force explicit
  * definition of all strings as:
- * EITHER: QStringLiteral("<string>") for internal non-user visible use not
+ * EITHER: qsl("<string>") for internal non-user visible use not
  * subject to translation
  * OR: tr("<string>") for GUI or other user visible strings that need to be
  * handled by the translation system {or qApp->translate("<classname>",
@@ -46,8 +46,45 @@
 
 // A couple of templates for tooltip HTML formatting so that we do not have
 // 65/30 copies of the same QString s in the read-only segment of the code:
-const QString singleParagraph{QStringLiteral("<p>%1</p>")};
-const QString doubleParagraph{QStringLiteral("<p>%1</p><p>%2</p>")};
+const QString singleParagraph{qsl("<p>%1</p>")};
+const QString doubleParagraph{qsl("<p>%1</p><p>%2</p>")};
+
+WeightSpinBoxDelegate::WeightSpinBoxDelegate(QObject* parent)
+: QStyledItemDelegate(parent)
+{}
+
+QWidget* WeightSpinBoxDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& /* option */, const QModelIndex& /* index */) const
+{
+    auto* pEditor = new QSpinBox(parent);
+    pEditor->setFrame(false);
+    pEditor->setMinimum(0);
+    pEditor->setMaximum(9999);
+    // Need to use this to hide anything in the original QLineEdit that this
+    // sits on top of:
+    pEditor->setAutoFillBackground(true);
+
+    return pEditor;
+}
+
+void WeightSpinBoxDelegate::setEditorData(QWidget* pEditor, const QModelIndex& index) const
+{
+    auto value = index.model()->data(index, Qt::EditRole).toInt();
+    auto* pSpinBox = static_cast<QSpinBox*>(pEditor);
+    pSpinBox->setValue(value);
+}
+
+void WeightSpinBoxDelegate::setModelData(QWidget* pEditor, QAbstractItemModel* model, const QModelIndex& index) const
+{
+    auto* pSpinBox = static_cast<QSpinBox*>(pEditor);
+    pSpinBox->interpretText();
+    auto value = pSpinBox->value();
+    model->setData(index, value, Qt::EditRole);
+}
+
+void WeightSpinBoxDelegate::updateEditorGeometry(QWidget* pEditor, const QStyleOptionViewItem& option, const QModelIndex& /* index */) const
+{
+    pEditor->setGeometry(option.rect);
+}
 
 RoomIdLineEditDelegate::RoomIdLineEditDelegate(QObject* parent)
 : QStyledItemDelegate(parent)
@@ -206,9 +243,9 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 {
     setupUi(this);
 
-    mIcon_invalidExit.addFile(QStringLiteral(":/icons/dialog-error.png"), QSize(24, 24));
-    mIcon_inAreaExit.addFile(QStringLiteral(":/icons/dialog-ok-apply.png"), QSize(24, 24));
-    mIcon_otherAreaExit.addFile(QStringLiteral(":/icons/arrow-right_cyan.png"), QSize(24, 24));
+    mIcon_invalidExit.addFile(qsl(":/icons/dialog-error.png"), QSize(24, 24));
+    mIcon_inAreaExit.addFile(qsl(":/icons/dialog-ok-apply.png"), QSize(24, 24));
+    mIcon_otherAreaExit.addFile(qsl(":/icons/arrow-right_cyan.png"), QSize(24, 24));
 
     mpAction_noExit = new QAction(this);
     mpAction_noExit->setText(QString());
@@ -235,6 +272,7 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
     init();
 
     specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitRoomId, new RoomIdLineEditDelegate);
+    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitWeight, new WeightSpinBoxDelegate);
 }
 
 dlgRoomExits::~dlgRoomExits()
@@ -393,6 +431,28 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
 void dlgRoomExits::slot_addSpecialExit()
 {
     auto pI = new QTreeWidgetItem(specialExits);
+// MINDE
+//    pI->setText(0, tr("(room ID)", "Placeholder, if no room ID is set for an exit, yet. This string is used in 2 places, ensure they match!")); //Exit RoomID
+//    pI->setForeground(0, QColor(Qt::red));
+//    pI->setToolTip(0, singleParagraph.arg(tr("Set the number of the room that this special exit leads to, will turn blue for a valid number; if left like "
+//                                             "this, this exit will be deleted when &lt;i&gt;save&lt;/i&gt; is clicked.")));
+//    pI->setTextAlignment(0, Qt::AlignRight);
+//    pI->setToolTip(1, singleParagraph.arg(tr("Prevent a route being created via this exit, equivalent to an infinite exit weight.")));
+//    pI->setCheckState(1, Qt::Unchecked); //Locked
+//    pI->setText(2, QStringLiteral("0")); //Exit Weight
+//    pI->setTextAlignment(2, Qt::AlignRight);
+//    pI->setToolTip(2, singleParagraph.arg(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
+//    pI->setCheckState(3, Qt::Checked); //Doortype: none
+//    pI->setToolTip(3, singleParagraph.arg(tr("No door symbol is drawn on a custom exit line for this exit on 2D Map.")));
+//    pI->setCheckState(4, Qt::Unchecked); //Doortype: open
+//    pI->setToolTip(4, singleParagraph.arg(tr("Green (Open) door symbol is drawn on a custom exit line for this exit on 2D Map.")));
+//    pI->setCheckState(5, Qt::Unchecked); //Doortype: closed
+//    pI->setToolTip(5, singleParagraph.arg(tr("Orange (Closed) door symbol is drawn on a custom exit line for this exit on 2D Map.")));
+//    pI->setCheckState(6, Qt::Unchecked); //Doortype: locked
+//    pI->setToolTip(6, singleParagraph.arg(tr("Red (Locked) door symbol is drawn on a custom exit line for this exit on 2D Map.")));
+//    pI->setText(7, tr("(command or Lua script)", "Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same")); //Exit command
+//    pI->setTextAlignment(7, Qt::AlignLeft);
+//=======
     pI->setText(ExitsTreeWidget::colIndex_exitRoomId, mSpecialExitRoomIdPlaceholder); //Exit RoomID
     pI->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, singleParagraph.arg(tr("Set the number of the room that this special exit goes to.")));
     pI->setTextAlignment(ExitsTreeWidget::colIndex_exitRoomId, Qt::AlignRight);
@@ -403,7 +463,7 @@ void dlgRoomExits::slot_addSpecialExit()
     pI->setToolTip(ExitsTreeWidget::colIndex_lockExit, singleParagraph.arg(tr("Prevent a route being created via this exit, equivalent to an infinite exit weight.")));
     pI->setCheckState(ExitsTreeWidget::colIndex_lockExit, Qt::Unchecked); //Locked
 
-    pI->setText(ExitsTreeWidget::colIndex_exitWeight, QStringLiteral("0")); //Exit Weight
+    pI->setText(ExitsTreeWidget::colIndex_exitWeight, qsl("0")); //Exit Weight
     pI->setTextAlignment(ExitsTreeWidget::colIndex_exitWeight, Qt::AlignRight);
     pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, singleParagraph.arg(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
 
@@ -419,6 +479,7 @@ void dlgRoomExits::slot_addSpecialExit()
     pI->setText(ExitsTreeWidget::colIndex_command, mSpecialExitCommandPlaceholder); //Exit command
     pI->setTextAlignment(ExitsTreeWidget::colIndex_command, Qt::AlignLeft);
 
+// >>>>>>> development
     specialExits->addTopLevelItem(pI);
 
     setIconAndToolTipsOnSpecialExit(pI, true);
@@ -480,7 +541,7 @@ void dlgRoomExits::save()
         pR->setSpecialExit(-1, value);
     }
 
-    QString exitKey = QStringLiteral("nw");
+    QString exitKey = qsl("nw");
     int dirCode = DIR_NORTHWEST;
     auto pExit = originalExits.value(dirCode);
     if (nw->isEnabled() && !nw->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(nw->text().toInt()) != nullptr) {
@@ -511,7 +572,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(exitKey); // And remove any custom line stuff, which uses opposite case keys - *sigh*
     }
 
-    exitKey = QStringLiteral("n");
+    exitKey = qsl("n");
     dirCode = DIR_NORTH;
     pExit = originalExits.value(dirCode);
     if (n->isEnabled() && !n->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(n->text().toInt()) != nullptr) {
@@ -540,7 +601,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(exitKey);
     }
 
-    exitKey = QStringLiteral("ne");
+    exitKey = qsl("ne");
     dirCode = DIR_NORTHEAST;
     pExit = originalExits.value(dirCode);
     if (ne->isEnabled() && !ne->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(ne->text().toInt()) != nullptr) {
@@ -569,7 +630,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(exitKey);
     }
 
-    exitKey = QStringLiteral("up");
+    exitKey = qsl("up");
     dirCode = DIR_UP;
     pExit = originalExits.value(dirCode);
     if (up->isEnabled() && !up->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(up->text().toInt()) != nullptr) {
@@ -598,7 +659,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(exitKey);
     }
 
-    exitKey = QStringLiteral("w");
+    exitKey = qsl("w");
     dirCode = DIR_WEST;
     pExit = originalExits.value(dirCode);
     if (w->isEnabled() && !w->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(w->text().toInt()) != nullptr) {
@@ -627,7 +688,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(exitKey);
     }
 
-    exitKey = QStringLiteral("e");
+    exitKey = qsl("e");
     dirCode = DIR_EAST;
     pExit = originalExits.value(dirCode);
     if (e->isEnabled() && !e->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(e->text().toInt()) != nullptr) {
@@ -656,7 +717,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(exitKey);
     }
 
-    exitKey = QStringLiteral("down");
+    exitKey = qsl("down");
     dirCode = DIR_DOWN;
     pExit = originalExits.value(dirCode);
     if (down->isEnabled() && !down->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(down->text().toInt()) != nullptr) {
@@ -685,7 +746,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(exitKey);
     }
 
-    exitKey = QStringLiteral("sw");
+    exitKey = qsl("sw");
     dirCode = DIR_SOUTHWEST;
     pExit = originalExits.value(dirCode);
     if (sw->isEnabled() && !sw->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(sw->text().toInt()) != nullptr) {
@@ -714,7 +775,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(exitKey);
     }
 
-    exitKey = QStringLiteral("s");
+    exitKey = qsl("s");
     dirCode = DIR_SOUTH;
     pExit = originalExits.value(dirCode);
     if (s->isEnabled() && !s->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != nullptr) {
@@ -743,7 +804,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(exitKey);
     }
 
-    exitKey = QStringLiteral("se");
+    exitKey = qsl("se");
     dirCode = DIR_SOUTHEAST;
     pExit = originalExits.value(dirCode);
     if (se->isEnabled() && !se->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(se->text().toInt()) != nullptr) {
@@ -772,7 +833,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(exitKey);
     }
 
-    exitKey = QStringLiteral("in");
+    exitKey = qsl("in");
     dirCode = DIR_IN;
     pExit = originalExits.value(dirCode);
     if (in->isEnabled() && !in->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(in->text().toInt()) != nullptr) {
@@ -801,7 +862,7 @@ void dlgRoomExits::save()
         pR->customLines.remove(exitKey);
     }
 
-    exitKey = QStringLiteral("out");
+    exitKey = qsl("out");
     dirCode = DIR_OUT;
     pExit = originalExits.value(dirCode);
     if (out->isEnabled() && !out->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(out->text().toInt()) != nullptr) {
@@ -848,51 +909,51 @@ void dlgRoomExits::save()
     //   created without an explicit Id, any attempt to set a different Id using
     //   setId() seems to fail for me :(
     if (doortype_nw->checkedId() < -1) {
-        pR->setDoor(QStringLiteral("nw"), -2 - doortype_nw->checkedId());
+        pR->setDoor(qsl("nw"), -2 - doortype_nw->checkedId());
     }
 
     if (doortype_n->checkedId() < -1) {
-        pR->setDoor(QStringLiteral("n"), -2 - doortype_n->checkedId());
+        pR->setDoor(qsl("n"), -2 - doortype_n->checkedId());
     }
 
     if (doortype_ne->checkedId() < -1) {
-        pR->setDoor(QStringLiteral("ne"), -2 - doortype_ne->checkedId());
+        pR->setDoor(qsl("ne"), -2 - doortype_ne->checkedId());
     }
 
     if (doortype_up->checkedId() < -1) {
-        pR->setDoor(QStringLiteral("up"), -2 - doortype_up->checkedId());
+        pR->setDoor(qsl("up"), -2 - doortype_up->checkedId());
     }
 
     if (doortype_w->checkedId() < -1) {
-        pR->setDoor(QStringLiteral("w"), -2 - doortype_w->checkedId());
+        pR->setDoor(qsl("w"), -2 - doortype_w->checkedId());
     }
 
     if (doortype_e->checkedId() < -1) {
-        pR->setDoor(QStringLiteral("e"), -2 - doortype_e->checkedId());
+        pR->setDoor(qsl("e"), -2 - doortype_e->checkedId());
     }
 
     if (doortype_down->checkedId() < -1) {
-        pR->setDoor(QStringLiteral("down"), -2 - doortype_down->checkedId());
+        pR->setDoor(qsl("down"), -2 - doortype_down->checkedId());
     }
 
     if (doortype_sw->checkedId() < -1) {
-        pR->setDoor(QStringLiteral("sw"), -2 - doortype_sw->checkedId());
+        pR->setDoor(qsl("sw"), -2 - doortype_sw->checkedId());
     }
 
     if (doortype_s->checkedId() < -1) {
-        pR->setDoor(QStringLiteral("s"), -2 - doortype_s->checkedId());
+        pR->setDoor(qsl("s"), -2 - doortype_s->checkedId());
     }
 
     if (doortype_se->checkedId() < -1) {
-        pR->setDoor(QStringLiteral("se"), -2 - doortype_se->checkedId());
+        pR->setDoor(qsl("se"), -2 - doortype_se->checkedId());
     }
 
     if (doortype_in->checkedId() < -1) {
-        pR->setDoor(QStringLiteral("in"), -2 - doortype_in->checkedId());
+        pR->setDoor(qsl("in"), -2 - doortype_in->checkedId());
     }
 
     if (doortype_out->checkedId() < -1) {
-        pR->setDoor(QStringLiteral("out"), -2 - doortype_out->checkedId());
+        pR->setDoor(qsl("out"), -2 - doortype_out->checkedId());
     }
 
     TArea* pA = mpHost->mpMap->mpRoomDB->getArea(pR->getArea());
@@ -1329,18 +1390,18 @@ void dlgRoomExits::initExit(int direction,
 {
     QString doorAndWeightText; // lowercase, initials for XY-plane, words for others
     switch (direction) {
-        case DIR_NORTHWEST: doorAndWeightText = QStringLiteral("nw");   break;
-        case DIR_NORTH    : doorAndWeightText = QStringLiteral("n");    break;
-        case DIR_NORTHEAST: doorAndWeightText = QStringLiteral("ne");   break;
-        case DIR_UP       : doorAndWeightText = QStringLiteral("up");   break;
-        case DIR_WEST     : doorAndWeightText = QStringLiteral("w");    break;
-        case DIR_EAST     : doorAndWeightText = QStringLiteral("e");    break;
-        case DIR_DOWN     : doorAndWeightText = QStringLiteral("down"); break;
-        case DIR_SOUTHWEST: doorAndWeightText = QStringLiteral("sw");   break;
-        case DIR_SOUTH    : doorAndWeightText = QStringLiteral("s");    break;
-        case DIR_SOUTHEAST: doorAndWeightText = QStringLiteral("se");   break;
-        case DIR_IN       : doorAndWeightText = QStringLiteral("in");   break;
-        case DIR_OUT      : doorAndWeightText = QStringLiteral("out");  break;
+        case DIR_NORTHWEST: doorAndWeightText = qsl("nw");   break;
+        case DIR_NORTH    : doorAndWeightText = qsl("n");    break;
+        case DIR_NORTHEAST: doorAndWeightText = qsl("ne");   break;
+        case DIR_UP       : doorAndWeightText = qsl("up");   break;
+        case DIR_WEST     : doorAndWeightText = qsl("w");    break;
+        case DIR_EAST     : doorAndWeightText = qsl("e");    break;
+        case DIR_DOWN     : doorAndWeightText = qsl("down"); break;
+        case DIR_SOUTHWEST: doorAndWeightText = qsl("sw");   break;
+        case DIR_SOUTH    : doorAndWeightText = qsl("s");    break;
+        case DIR_SOUTHEAST: doorAndWeightText = qsl("se");   break;
+        case DIR_IN       : doorAndWeightText = qsl("in");   break;
+        case DIR_OUT      : doorAndWeightText = qsl("out");  break;
     }
 
     weight->setValue(pR->hasExitWeight(doorAndWeightText) ? pR->getExitWeight(doorAndWeightText) : 0);
@@ -1481,7 +1542,7 @@ void dlgRoomExits::init()
 
         //ExitsTreeWidget::colIndex_exitRoomId
         pI->setText(ExitsTreeWidget::colIndex_exitRoomId, QString::number(id_to));
-        pI->setTextAlignment(ExitsTreeWidget::colIndex_exitRoomId, Qt::AlignRight);
+        pI->setTextAlignment(ExitsTreeWidget::colIndex_exitRoomId, Qt::AlignLeft);
         //Tooltip generation for this column is done in
         //setIconAndToolTipsOnSpecialExit(...) at end of this while() loop
 
@@ -1504,10 +1565,9 @@ void dlgRoomExits::init()
 
         //ExitsTreeWidget::colIndex_exitWeight
         pI->setData(ExitsTreeWidget::colIndex_exitWeight, Qt::EditRole, pR->hasExitWeight(dir) ? pR->getExitWeight(dir) : 0);
-        pI->setTextAlignment(ExitsTreeWidget::colIndex_exitWeight, Qt::AlignRight);
+        pI->setTextAlignment(ExitsTreeWidget::colIndex_exitWeight, Qt::AlignLeft);
         pSpecialExit->weight = pI->data(ExitsTreeWidget::colIndex_exitWeight, Qt::EditRole).toInt();
         pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, singleParagraph.arg(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
-
 
         //ExitsTreeWidget::colIndex_doorNone-ExitsTreeWidget::colIndex_doorLocked
         //hold a buttongroup of 4, ideally QRadioButtons, to select a door type
@@ -1516,10 +1576,10 @@ void dlgRoomExits::init()
         pI->setCheckState(ExitsTreeWidget::colIndex_doorOpen, Qt::Unchecked);
         pI->setCheckState(ExitsTreeWidget::colIndex_doorClosed, Qt::Unchecked);
         pI->setCheckState(ExitsTreeWidget::colIndex_doorLocked, Qt::Unchecked);
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, singleParagraph.arg(tr("No door symbol is drawn on 2D Map for this exit (only functional choice currently).")));
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorOpen, singleParagraph.arg(tr("Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, singleParagraph.arg(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
-        pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, singleParagraph.arg(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorNone, singleParagraph.arg(tr("No door symbol is drawn on a custom exit line for this exit on 2D Map.")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorOpen, singleParagraph.arg(tr("Green (Open) door symbol is drawn on a custom exit line for this exit on 2D Map.")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, singleParagraph.arg(tr("Orange (Closed) door symbol is drawn on a custom exit line for this exit on 2D Map.")));
+        pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, singleParagraph.arg(tr("Red (Locked) door symbol is drawn on a custom exit line for this exit on 2D Map.")));
         {
             int specialDoor = pR->getDoor(dir);
             switch (specialDoor) {

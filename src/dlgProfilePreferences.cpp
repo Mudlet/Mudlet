@@ -320,7 +320,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         comboBox_guiLanguage->setCurrentIndex(currentIndex);
         connect(comboBox_guiLanguage, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
     } else {
-        currentIndex = comboBox_guiLanguage->findData(QStringLiteral("en_US"));
+        currentIndex = comboBox_guiLanguage->findData(qsl("en_US"));
         if (Q_LIKELY(currentIndex != -1)) {
            // The default code has been found in the UserData role for one of
            // the entries - so select it as a fallback
@@ -337,7 +337,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
             comboBox_guiLanguage->setEnabled(false);
             // And insert an Engineering English warning text - this is probably
             // a sign of significant borkage in the translation system!
-            comboBox_guiLanguage->addItem(QStringLiteral("No translations available!"));
+            comboBox_guiLanguage->addItem(qsl("No translations available!"));
         }
     }
 
@@ -643,9 +643,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     QDir dir(path);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    // QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
+    // QRegularExpression rex(qsl(R"(\.dic$)"));
     // Use the affix file as that may eliminate supplimental dictionaries:
-    QRegularExpression rex(QStringLiteral(R"(\.aff$)"));
+    QRegularExpression rex(qsl(R"(\.aff$)"));
     entries = entries.filter(rex);
     // Don't emit signals - like (void) QListWidget::currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
     // while populating the widget, it reduces noise about:
@@ -657,7 +657,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             // This is a file name and to support macOs platforms should not be case sensitive:
             entries[i].remove(QLatin1String(".aff"), Qt::CaseInsensitive);
 
-            if (entries.at(i).endsWith(QStringLiteral("med"), Qt::CaseInsensitive)) {
+            if (entries.at(i).endsWith(qsl("med"), Qt::CaseInsensitive)) {
                 // Skip medical dictionaries - there may be others  we also want to hide:
                 continue;
             }
@@ -803,13 +803,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     label_logFileNameExtension->setText(logExtension);
 
     // This is the previous standard:
-    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)").arg(logExtension), QStringLiteral("yyyy-MM-dd#HH-mm-ss"));
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)").arg(logExtension), qsl("yyyy-MM-dd#HH-mm-ss"));
     // The ISO standard for this uses T as the date/time separator
-    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)").arg(logExtension), QStringLiteral("yyyy-MM-ddTHH-mm-ss"));
-    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)").arg(logExtension), QStringLiteral("yyyy-MM-dd"));
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)").arg(logExtension), qsl("yyyy-MM-ddTHH-mm-ss"));
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)").arg(logExtension), qsl("yyyy-MM-dd"));
     // It might be possible to use QDateTime::weekNumber but that number is not
     // available from the QDateTime::toString(...) method
-    comboBox_logFileNameFormat->addItem(tr("yyyy-MM (concatenate month logs in, e.g. 1970-01%1)").arg(logExtension), QStringLiteral("yyyy-MM"));
+    comboBox_logFileNameFormat->addItem(tr("yyyy-MM (concatenate month logs in, e.g. 1970-01%1)").arg(logExtension), qsl("yyyy-MM"));
     comboBox_logFileNameFormat->addItem(tr("Named file (concatenate logs in one file)"), QString());
     comboBox_logFileNameFormat->setCurrentIndex(comboBox_logFileNameFormat->findData(pHost->mLogFileNameFormat));
 
@@ -908,7 +908,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         QLabel* pLabel_mapSymbolFontFudge = new QLabel(tr("2D Map Room Symbol scaling factor:"), groupBox_debug);
         mpDoubleSpinBox_mapSymbolFontFudge = new QDoubleSpinBox(groupBox_debug);
         mpDoubleSpinBox_mapSymbolFontFudge->setValue(pHost->mpMap->mMapSymbolFontFudgeFactor);
-        mpDoubleSpinBox_mapSymbolFontFudge->setPrefix(QStringLiteral("×"));
+        mpDoubleSpinBox_mapSymbolFontFudge->setPrefix(qsl("×"));
         mpDoubleSpinBox_mapSymbolFontFudge->setRange(0.50, 2.00);
         mpDoubleSpinBox_mapSymbolFontFudge->setSingleStep(0.01);
         auto * pdebugLayout = qobject_cast<QGridLayout*>(groupBox_debug->layout());
@@ -1019,16 +1019,16 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 QList<QSslError> sslErrors = pHost->mTelnet.getSslErrors();
 
                 for (int a = 0; a < sslErrors.count(); a++) {
-                    QString thisError = QStringLiteral("<li>%1</li>").arg(sslErrors.at(a).errorString());
-                    notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), thisError));
+                    QString thisError = qsl("<li>%1</li>").arg(sslErrors.at(a).errorString());
+                    notificationAreaMessageBox->setText(qsl("%1\n%2").arg(notificationAreaMessageBox->text(), thisError));
 
                     if (sslErrors.at(a).error() == QSslError::SelfSignedCertificate) {
-                        checkBox_self_signed->setStyleSheet(QStringLiteral("font-weight: bold; background: yellow"));
-                        ssl_issuer_label->setStyleSheet(QStringLiteral("font-weight: bold; color: red; background: yellow"));
+                        checkBox_self_signed->setStyleSheet(qsl("font-weight: bold; background: yellow"));
+                        ssl_issuer_label->setStyleSheet(qsl("font-weight: bold; color: red; background: yellow"));
                     }
                     if (sslErrors.at(a).error() == QSslError::CertificateExpired) {
-                        checkBox_expired->setStyleSheet(QStringLiteral("font-weight: bold; background: yellow"));
-                        ssl_expires_label->setStyleSheet(QStringLiteral("font-weight: bold; color: red; background: yellow"));
+                        checkBox_expired->setStyleSheet(qsl("font-weight: bold; background: yellow"));
+                        ssl_expires_label->setStyleSheet(qsl("font-weight: bold; color: red; background: yellow"));
                     }
                 }
 
@@ -1158,33 +1158,35 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(doubleSpinBox_networkPacketTimeout, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPostingTimeout);
 
     //Shortcuts tab
-    QMapIterator<QString, QKeySequence*> i(pHost->profileShortcuts);
+    auto shortcutKeys = mudlet::self()->mShortcutsManager->iterator();
     int shortcutsRow = 0;
-    while (i.hasNext()) {
-        i.next();
-        QKeySequence* sequence = new QKeySequence(*i.value());
-        currentShortcuts.insert(i.key(), sequence);
+    while (shortcutKeys.hasNext()) {
+        auto key = shortcutKeys.next();
+        QKeySequence* sequence = new QKeySequence(*pHost->profileShortcuts.value(key));
+        currentShortcuts.insert(key, sequence);
         auto sequenceEdit = new QKeySequenceEdit(*sequence);
 
-        gridLayout_groupBox_shortcuts->addWidget(new QLabel(i.key()), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
+        gridLayout_groupBox_shortcuts->addWidget(new QLabel(mudlet::self()->mShortcutsManager->getLabel(key)), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
-            QKeySequence newSequence;
+            QKeySequence* newSequence = nullptr;
             if (sequenceEdit->keySequence().isEmpty()) {
-                newSequence = *sequence;
+                newSequence = sequence;
             } else if (sequenceEdit->keySequence().matches(QKeySequence(Qt::Key_Escape))) {
-                newSequence = QKeySequence();
+                newSequence = new QKeySequence();
             } else {
-                newSequence = sequenceEdit->keySequence();
+                newSequence = new QKeySequence(sequenceEdit->keySequence());
             }
-            sequenceEdit->blockSignals(true);
-            sequenceEdit->setKeySequence(newSequence);
-            sequenceEdit->blockSignals(false);
-            sequence->swap(newSequence);
+            sequenceEdit->setKeySequence(*newSequence);
+            sequence->swap(*newSequence);
+            delete newSequence;
         });
         connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=]() {
-            sequenceEdit->setKeySequence(*mudlet::self()->mShortcutsManager->getDefault(i.key()));
+            sequenceEdit->setKeySequence(*mudlet::self()->mShortcutsManager->getDefault(key));
+            QKeySequence* newSequence = new QKeySequence(*mudlet::self()->mShortcutsManager->getDefault(key));
+            sequence->swap(*newSequence);
+            delete newSequence;
         });
     }
 
@@ -1415,7 +1417,7 @@ void dlgProfilePreferences::loadEditorTab()
     config->setRenderBidiContolCharacters(pHost->mEditorShowBidi);
     config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
-    edbeePreviewWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QStringLiteral("Buck.lua")));
+    edbeePreviewWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(qsl("Buck.lua")));
     // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
     edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
 
@@ -1424,7 +1426,7 @@ void dlgProfilePreferences::loadEditorTab()
     populateScriptsList();
 
     // pre-select the current theme
-    code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select theme"));
+    code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(qsl("Select theme"));
     auto themeIndex = code_editor_theme_selection_combobox->findText(pHost->mEditorTheme);
     code_editor_theme_selection_combobox->setCurrentIndex(themeIndex);
     slot_theme_selected(themeIndex);
@@ -1433,7 +1435,7 @@ void dlgProfilePreferences::loadEditorTab()
     code_editor_theme_selection_combobox->setMaxVisibleItems(20);
 
     // pre-select the last shown script to preview
-    script_preview_combobox->lineEdit()->setPlaceholderText(QStringLiteral("Select script to preview"));
+    script_preview_combobox->lineEdit()->setPlaceholderText(qsl("Select script to preview"));
     auto scriptIndex = script_preview_combobox->findData(QVariant::fromValue(QPair<QString, int>(pHost->mThemePreviewType, pHost->mThemePreviewItemID)));
     script_preview_combobox->setCurrentIndex(scriptIndex == -1 ? 1 : scriptIndex);
     slot_script_selected(scriptIndex == -1 ? 1 : scriptIndex);
@@ -1763,7 +1765,7 @@ void dlgProfilePreferences::setDisplayFont()
 #if defined(Q_OS_LINUX)
     // On Linux ensure that emojis are displayed in colour even if this font
     // doesn't support it:
-    QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
+    QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Noto Color Emoji"));
 #endif
 
     auto mainConsole = pHost->mpConsole;
@@ -2104,44 +2106,55 @@ void dlgProfilePreferences::loadMap()
         return;
     }
 
-    QString fileName = QFileDialog::getOpenFileName(
-                           this,
-                           tr("Load Mudlet map"),
-                           mapSaveLoadDirectory(pHost),
-                           tr("Mudlet map (*.dat *.json);;Xml map data (*.xml);;Any file (*)",
-                              "Do not change extensions (in braces) as they are used programmatically"));
-    if (fileName.isEmpty()) {
-        return;
-    }
+    auto loadExtensions(QStringList()
+        <<   tr("Any map file (*.dat *.json *.xml)", "Do not change extensions (in braces) as they are used programmatically")
+        <<   tr("Mudlet binary map (*.dat)", "Do not change extensions (in braces) as they are used programmatically")
+        <<   tr("Mudlet JSON map (*.json)", "Do not change extensions (in braces) as they are used programmatically")
+        <<   tr("Mudlet XML map (*.xml)", "Do not change extensions (in braces) as they are used programmatically")
+        <<   tr("Any file (*)", "Do not change extensions (in braces) as they are used programmatically"));
 
-    label_mapFileActionResult->show();
 
-    // Ensure the setting is already made as the loadMap(...) uses the set value
-    bool showAuditErrors = mudlet::self()->showMapAuditErrors();
-    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+    QFileDialog* dialog = new QFileDialog(this);
+    dialog->setWindowTitle(tr("Load Mudlet map"));
+    dialog->setDirectory(mapSaveLoadDirectory(pHost));
+    dialog->setNameFilter(loadExtensions.join(qsl(";;")));
+    connect(dialog, &QDialog::finished, this, [=](int result) {
+        if (result == QDialog::Rejected) {
+            return;
+        }
 
-    bool success = false;
-    label_mapFileActionResult->setText(tr("Loading map - please wait..."));
-    qApp->processEvents(); // Needed to make the above message show up when loading big maps
-    if (fileName.endsWith(QStringLiteral(".xml"), Qt::CaseInsensitive)) {
+        auto fileName = dialog->selectedFiles().first();
+
+        label_mapFileActionResult->show();
+
+        // Ensure the setting is already made as the loadMap(...) uses the set value
+        bool showAuditErrors = mudlet::self()->showMapAuditErrors();
+        mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+
+        bool success = false;
+        label_mapFileActionResult->setText(tr("Loading map - please wait..."));
         qApp->processEvents(); // Needed to make the above message show up when loading big maps
-        success = pHost->mpConsole->importMap(fileName);
-    } else if (fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
-        success = pHost->mpMap->readJsonMapFile(fileName).first;
-    } else {
-       success = pHost->mpConsole->loadMap(fileName);
-    }
+        if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
+            qApp->processEvents(); // Needed to make the above message show up when loading big maps
+            success = pHost->mpConsole->importMap(fileName);
+        } else if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
+            success = pHost->mpMap->readJsonMapFile(fileName).first;
+        } else {
+            success = pHost->mpConsole->loadMap(fileName);
+        }
 
-    if (success) {
-        label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
-    } else {
-        label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
-    }
+        if (success) {
+            label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
+        } else {
+            label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
+        }
 
-    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+        QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 
-    // Restore setting immediately before we used it
-    mudlet::self()->setShowMapAuditErrors(showAuditErrors);
+        // Restore setting immediately before we used it
+        mudlet::self()->setShowMapAuditErrors(showAuditErrors);
+    });
+    dialog->open();
 }
 
 void dlgProfilePreferences::saveMap()
@@ -2151,41 +2164,59 @@ void dlgProfilePreferences::saveMap()
         return;
     }
 
-    QString fileName =
-            QFileDialog::getSaveFileName(this, tr("Save Mudlet map"), mapSaveLoadDirectory(pHost), tr("Mudlet map (*.dat *.json);;", "Do not change the extension text (in braces) - it is needed programmatically!"));
-    if (fileName.isEmpty()) {
-        return;
-    }
+    auto datFilter = tr("Mudlet binary map (*.dat)", "Do not change extensions (in braces) as they are used programmatically");
+    auto jsonFilter = tr("Mudlet JSON map (*.json)", "Do not change extensions (in braces) as they are used programmatically");
+    auto saveExtensions(QStringList() << datFilter << jsonFilter);
 
-    if (!fileName.endsWith(QStringLiteral(".dat"), Qt::CaseInsensitive) && !fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
-        fileName.append(QStringLiteral(".dat"));
-    }
+    QFileDialog* dialog = new QFileDialog(this);
+    dialog->setWindowTitle(tr("Save Mudlet map"));
+    dialog->setDirectory(mapSaveLoadDirectory(pHost));
+    dialog->setNameFilter(saveExtensions.join(qsl(";;")));
+    dialog->setAcceptMode(QFileDialog::AcceptSave);
+    dialog->setDefaultSuffix(qsl("dat"));
+    connect(dialog,  &QFileDialog::filterSelected, this, [=](const QString& filter) {
+        if (filter == datFilter) {
+            dialog->setDefaultSuffix(qsl("dat"));
+        }
+        if (filter == jsonFilter) {
+            dialog->setDefaultSuffix(qsl("json"));
+        }
+    });
 
-    label_mapFileActionResult->show();
-    label_mapFileActionResult->setText(tr("Saving map - please wait..."));
-    qApp->processEvents(); // Copied from "Loading map - please wait..." case
-                           // Just in case is needed to make the above message
-                           // show up when saving big maps
+    connect(dialog, &QFileDialog::finished, this, [=](int result) {
+        if (result == QDialog::Rejected) {
+            return;
+        }
 
-    // Ensure the setting is already made as the saveMap(...) uses the set value
-    bool showAuditErrors = mudlet::self()->showMapAuditErrors();
-    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+        auto fileName = dialog->selectedFiles().first();
 
-    bool success = false;
-    if (!fileName.endsWith(QStringLiteral(".json"), Qt::CaseInsensitive)) {
-        success = pHost->mpConsole->saveMap(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt());
-    } else {
-        success = pHost->mpMap->writeJsonMapFile(fileName).first;
-    }
+        label_mapFileActionResult->show();
+        label_mapFileActionResult->setText(tr("Saving map - please wait..."));
+        qApp->processEvents(); // Copied from "Loading map - please wait..." case
+        // Just in case is needed to make the above message
+        // show up when saving big maps
 
-    if (success) {
-        label_mapFileActionResult->setText(tr("Saved map to %1.").arg(fileName));
-    } else {
-        label_mapFileActionResult->setText(tr("Could not save map to %1.").arg(fileName));
-    }
-    mudlet::self()->setShowMapAuditErrors(showAuditErrors);
+        // Ensure the setting is already made as the saveMap(...) uses the set value
+        bool showAuditErrors = mudlet::self()->showMapAuditErrors();
+        mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
-    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+        bool success = false;
+        if (!fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
+            success = pHost->mpConsole->saveMap(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt());
+        } else {
+            success = pHost->mpMap->writeJsonMapFile(fileName).first;
+        }
+
+        if (success) {
+            label_mapFileActionResult->setText(tr("Saved map to %1.").arg(fileName));
+        } else {
+            label_mapFileActionResult->setText(tr("Could not save map to %1.").arg(fileName));
+        }
+        mudlet::self()->setShowMapAuditErrors(showAuditErrors);
+
+        QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+    });
+    dialog->open();
 }
 
 QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost) {
@@ -2369,7 +2400,7 @@ void dlgProfilePreferences::copyMap()
             continue;
         }
 
-        thisProfileLatestMapFile.setFileName(QStringLiteral("%1/%2").arg(sourceMapFolder, thisProfileLatestMapPathFileName));
+        thisProfileLatestMapFile.setFileName(qsl("%1/%2").arg(sourceMapFolder, thisProfileLatestMapPathFileName));
         break;
     }
 
@@ -2885,7 +2916,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TTrigger*> triggers = pHost->getTriggerUnit()->getTriggerRootNodeList();
     for (auto trigger : triggers) {
         if (!trigger->getScript().isEmpty() && !trigger->isTemporary()) {
-            items.push_back(std::make_tuple(trigger->getName(), QStringLiteral("trigger"), trigger->getID()));
+            items.push_back(std::make_tuple(trigger->getName(), qsl("trigger"), trigger->getID()));
         }
         addTriggersToPreview(trigger, items);
     }
@@ -2893,7 +2924,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TAlias*> aliases = pHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : aliases) {
         if (!alias->getScript().isEmpty() && !alias->isTemporary()) {
-            items.push_back(std::make_tuple(alias->getName(), QStringLiteral("alias"), alias->getID()));
+            items.push_back(std::make_tuple(alias->getName(), qsl("alias"), alias->getID()));
         }
         addAliasesToPreview(alias, items);
     }
@@ -2901,7 +2932,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TScript*> scripts = pHost->getScriptUnit()->getScriptRootNodeList();
     for (auto script : scripts) {
         if (!script->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(script->getName(), QStringLiteral("script"), script->getID()));
+            items.push_back(std::make_tuple(script->getName(), qsl("script"), script->getID()));
         }
         addScriptsToPreview(script, items);
     }
@@ -2909,7 +2940,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TTimer*> timers = pHost->getTimerUnit()->getTimerRootNodeList();
     for (auto timer : timers) {
         if (!timer->getScript().isEmpty() && !timer->isTemporary()) {
-            items.push_back(std::make_tuple(timer->getName(), QStringLiteral("timer"), timer->getID()));
+            items.push_back(std::make_tuple(timer->getName(), qsl("timer"), timer->getID()));
         }
         addTimersToPreview(timer, items);
     }
@@ -2917,7 +2948,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TKey*> keys = pHost->getKeyUnit()->getKeyRootNodeList();
     for (auto key : keys) {
         if (!key->getScript().isEmpty() && !key->isTemporary()) {
-            items.push_back(std::make_tuple(key->getName(), QStringLiteral("key"), key->getID()));
+            items.push_back(std::make_tuple(key->getName(), qsl("key"), key->getID()));
         }
         addKeysToPreview(key, items);
     }
@@ -2925,7 +2956,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TAction*> actions = pHost->getActionUnit()->getActionRootNodeList();
     for (auto action : actions) {
         if (!action->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(action->getName(), QStringLiteral("button"), action->getID()));
+            items.push_back(std::make_tuple(action->getName(), qsl("button"), action->getID()));
         }
         addActionsToPreview(action, items);
     }
@@ -2935,7 +2966,7 @@ void dlgProfilePreferences::populateScriptsList()
     combobox->clear();
 
     for (auto item : items) {
-        combobox->addItem(QStringLiteral("%1 (%2)").arg(std::get<0>(item), std::get<1>(item)),
+        combobox->addItem(qsl("%1 (%2)").arg(std::get<0>(item), std::get<1>(item)),
                           // store the item type and ID in data so we can pull up the script for it later
                           QVariant::fromValue(QPair<QString, int>(std::get<1>(item), std::get<2>(item))));
     }
@@ -2948,7 +2979,7 @@ void dlgProfilePreferences::addTriggersToPreview(TTrigger* pTriggerParent, std::
     std::list<TTrigger*>* childTriggers = pTriggerParent->getChildrenList();
     for (auto trigger : *childTriggers) {
         if (!trigger->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(trigger->getName(), QStringLiteral("trigger"), trigger->getID()));
+            items.push_back(std::make_tuple(trigger->getName(), qsl("trigger"), trigger->getID()));
         }
 
         if (trigger->hasChildren()) {
@@ -2963,7 +2994,7 @@ void dlgProfilePreferences::addAliasesToPreview(TAlias* pAliasParent, std::vecto
     std::list<TAlias*>* childrenList = pAliasParent->getChildrenList();
     for (auto alias : *childrenList) {
         if (!alias->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(alias->getName(), QStringLiteral("alias"), alias->getID()));
+            items.push_back(std::make_tuple(alias->getName(), qsl("alias"), alias->getID()));
         }
 
         if (alias->hasChildren()) {
@@ -2978,7 +3009,7 @@ void dlgProfilePreferences::addTimersToPreview(TTimer* pTimerParent, std::vector
     std::list<TTimer*>* childrenList = pTimerParent->getChildrenList();
     for (auto timer : *childrenList) {
         if (!timer->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(timer->getName(), QStringLiteral("timer"), timer->getID()));
+            items.push_back(std::make_tuple(timer->getName(), qsl("timer"), timer->getID()));
         }
 
         if (timer->hasChildren()) {
@@ -2993,7 +3024,7 @@ void dlgProfilePreferences::addKeysToPreview(TKey* pKeyParent, std::vector<std::
     std::list<TKey*>* childrenList = pKeyParent->getChildrenList();
     for (auto key : *childrenList) {
         if (!key->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(key->getName(), QStringLiteral("key"), key->getID()));
+            items.push_back(std::make_tuple(key->getName(), qsl("key"), key->getID()));
         }
 
         if (key->hasChildren()) {
@@ -3008,7 +3039,7 @@ void dlgProfilePreferences::addScriptsToPreview(TScript* pScriptParent, std::vec
     std::list<TScript*>* childrenList = pScriptParent->getChildrenList();
     for (auto script : *childrenList) {
         if (!script->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(script->getName(), QStringLiteral("script"), script->getID()));
+            items.push_back(std::make_tuple(script->getName(), qsl("script"), script->getID()));
         }
 
         if (script->hasChildren()) {
@@ -3023,7 +3054,7 @@ void dlgProfilePreferences::addActionsToPreview(TAction* pActionParent, std::vec
     std::list<TAction*>* childrenList = pActionParent->getChildrenList();
     for (auto action : *childrenList) {
         if (!action->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(action->getName(), QStringLiteral("button"), action->getID()));
+            items.push_back(std::make_tuple(action->getName(), qsl("button"), action->getID()));
         }
 
         if (action->hasChildren()) {
@@ -3049,7 +3080,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     }
 
     QSettings settings("mudlet", "Mudlet");
-    QString themesURL = settings.value("colorSublimeThemesURL", QStringLiteral("https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip")).toString();
+    QString themesURL = settings.value("colorSublimeThemesURL", qsl("https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip")).toString();
     // a default update period is 24h
     // it would be nice to use C++14's numeric separator but Qt Creator still
     // does not like them for its Clang code model analyser (and the built in
@@ -3077,7 +3108,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 
     QUrl url(themesURL);
     QNetworkRequest request(url);
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
     // github uses redirects
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     // load from cache if possible
@@ -3123,7 +3154,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                         }
 
                         // perform unzipping in a worker thread so as not to freeze the UI
-                        auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("edbee/")), temporaryDir.path());
+                        auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
                         auto watcher = new QFutureWatcher<bool>;
                         QObject::connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
                             if (future.result()) {
@@ -3160,7 +3191,7 @@ void dlgProfilePreferences::populateThemesList()
             }
         }
     }
-    sortedThemes << std::make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
+    sortedThemes << std::make_pair(qsl("Mudlet"), qsl("Mudlet.tmTheme"));
 
     std::sort(sortedThemes.begin(), sortedThemes.end(), [](const auto& a, const auto& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
 
@@ -3210,22 +3241,22 @@ void dlgProfilePreferences::slot_script_selected(int index)
     auto itemId = data.second;
 
     auto preview = edbeePreviewWidget->textDocument();
-    if (itemType == QStringLiteral("trigger")) {
+    if (itemType == qsl("trigger")) {
         auto pT = pHost->getTriggerUnit()->getTrigger(itemId);
         preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted trigger item}"));
-    } else if (itemType == QStringLiteral("alias")) {
+    } else if (itemType == qsl("alias")) {
         auto pT = pHost->getAliasUnit()->getAlias(itemId);
         preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted alias item}"));
-    } else if (itemType == QStringLiteral("script")) {
+    } else if (itemType == qsl("script")) {
         auto pT = pHost->getScriptUnit()->getScript(itemId);
         preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted script item}"));
-    } else if (itemType == QStringLiteral("timer")) {
+    } else if (itemType == qsl("timer")) {
         auto pT = pHost->getTimerUnit()->getTimer(itemId);
         preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted timer item}"));
-    } else if (itemType == QStringLiteral("key")) {
+    } else if (itemType == qsl("key")) {
         auto pT = pHost->getKeyUnit()->getKey(itemId);
         preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted key item}"));
-    } else if (itemType == QStringLiteral("button")) {
+    } else if (itemType == qsl("button")) {
         auto pT = pHost->getActionUnit()->getAction(itemId);
         preview->setText(pT ? pT->getScript() : tr("{missing, possibly recently deleted button item}"));
     }
@@ -3351,13 +3382,13 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         }
         auto * pSymbolInFont = new QTableWidgetItem();
         pSymbolInFont->setTextAlignment(Qt::AlignCenter);
-        pSymbolInFont->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+        pSymbolInFont->setToolTip(qsl("<html><head/><body>%1</body></html>")
                                   .arg(tr("<p>The room symbol will appear like this if only symbols (glyphs) from the specific font are used.</p>")));
         pSymbolInFont->setFont(selectedFont);
 
         auto * pSymbolAnyFont = new QTableWidgetItem();
         pSymbolAnyFont->setTextAlignment(Qt::AlignCenter);
-        pSymbolAnyFont->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+        pSymbolAnyFont->setToolTip(qsl("<html><head/><body>%1</body></html>")
                                    .arg(tr("<p>The room symbol will appear like this if symbols (glyphs) from any font can be used.</p>")));
         pSymbolAnyFont->setFont(anyFont);
 
@@ -3373,7 +3404,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         bool isAllFontUsable = true;
         QStringList codePointsString;
         for (uint i = 0, total = pCodePoints.size(); i < total; ++i) {
-            codePointsString << QStringLiteral("U+%1").arg(pCodePoints.at(i), 4, 16, QChar('0')).toUpper();
+            codePointsString << qsl("U+%1").arg(pCodePoints.at(i), 4, 16, QChar('0')).toUpper();
             if (!SymbolAnyFontMetrics.inFontUcs4(pCodePoints.at(i))) {
                 isAllFontUsable = false;
                 // By definition if all the fonts together cannot render the
@@ -3384,9 +3415,9 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
             }
         }
 
-        QTableWidgetItem* pCodePointDisplay = new QTableWidgetItem(codePointsString.join(QStringLiteral(", ")));
+        QTableWidgetItem* pCodePointDisplay = new QTableWidgetItem(codePointsString.join(qsl(", ")));
         pCodePointDisplay->setTextAlignment(Qt::AlignCenter);
-        pCodePointDisplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+        pCodePointDisplay->setToolTip(qsl("<html><head/><body>%1</body></html>")
                                       .arg(tr("<p>These are the sequence of hexadecimal numbers that are used by the Unicode consortium "
                                               "to identify the graphemes needed to create the symbol.  These numbers can be utilised "
                                               "to determine precisely what is to be drawn even if some fonts have glyphs that are the "
@@ -3397,9 +3428,9 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
                                               "Plane 16</i> via most of the written marks that humanity has ever made.</p>")));
 
         // Need to pad the numbers with spaces so that sorting works correctly:
-        QTableWidgetItem* pUsageCount = new QTableWidgetItem(QStringLiteral("%1").arg(roomsWithSymbol.count(), 5, 10, QChar(' ')));
+        QTableWidgetItem* pUsageCount = new QTableWidgetItem(qsl("%1").arg(roomsWithSymbol.count(), 5, 10, QChar(' ')));
         pUsageCount->setTextAlignment(Qt::AlignCenter);
-        pUsageCount->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+        pUsageCount->setToolTip(qsl("<html><head/><body>%1</body></html>")
                                 .arg(tr("<p>How many rooms in the whole map have this symbol.")));
 
         QStringList roomNumberStringList;
@@ -3417,8 +3448,8 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
                 break;
             }
         }
-        QTableWidgetItem* pRoomNumbers = new QTableWidgetItem(roomNumberStringList.join(QStringLiteral(", ")));
-        pRoomNumbers->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+        QTableWidgetItem* pRoomNumbers = new QTableWidgetItem(roomNumberStringList.join(qsl(", ")));
+        pRoomNumbers->setToolTip(qsl("<html><head/><body>%1</body></html>")
                                  .arg(tr("<p>The rooms with this symbol, up to a maximum of thirty-two, if there are more "
                                          "than this, it is indicated but they are not shown.</p>")));
 
@@ -3426,8 +3457,8 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         if (isSingleFontUsable) {
             pSymbolInFont->setText(symbol);
             pSymbolAnyFont->setText(symbol);
-            pDummyButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-ok-apply.png")));
-            pDummyButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+            pDummyButton->setIcon(QIcon(qsl(":/icons/dialog-ok-apply.png")));
+            pDummyButton->setToolTip(qsl("<html><head/><body>%1</body></html>")
                                      .arg(tr("<p>The symbol can be made entirely from glyphs in the specified font.</p>")));
         } else {
             // Need to switch to a different font as it is possible that the
@@ -3436,8 +3467,8 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
             pSymbolInFont->setText(QString(QChar::ReplacementCharacter));
             if (isAllFontUsable) {
                 pSymbolAnyFont->setText(symbol);
-                pDummyButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-warning.png")));
-                pDummyButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                pDummyButton->setIcon(QIcon(qsl(":/icons/dialog-warning.png")));
+                pDummyButton->setToolTip(qsl("<html><head/><body>%1</body></html>")
                                          .arg(tr("<p>The symbol cannot be made entirely from glyphs in the specified font, but, "
                                                  "using other fonts in the system, it can. Either un-check the <i>Only use symbols "
                                                  "(glyphs) from chosen font</i> option or try and choose another font that does "
@@ -3446,8 +3477,8 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
                                                  "delay.</i></p>")));
             } else {
                 pSymbolAnyFont->setText(QString(QChar::ReplacementCharacter));
-                pDummyButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-error.png")));
-                pDummyButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
+                pDummyButton->setIcon(QIcon(qsl(":/icons/dialog-error.png")));
+                pDummyButton->setToolTip(qsl("<html><head/><body>%1</body></html>")
                                          .arg(tr("<p>The symbol cannot be drawn using any of the fonts in the system, either an "
                                                  "invalid string was entered as the symbol for the indicated rooms or the map was "
                                                  "created on a different systems with a different set of fonts available to use. "
@@ -3484,16 +3515,16 @@ void dlgProfilePreferences::generateDiscordTooltips()
 
     auto detail = mudlet->mDiscord.getDetailText(mpHost);
     if (!detail.isEmpty()) {
-        detail = QStringLiteral("<br/>(\"%1\")").arg(detail);
+        detail = qsl("<br/>(\"%1\")").arg(detail);
     }
 
     auto state = mudlet->mDiscord.getStateText(mpHost);
     if (!state.isEmpty()) {
-        state = QStringLiteral("<br/>(\"%1\")").arg(state);
+        state = qsl("<br/>(\"%1\")").arg(state);
     }
 
     auto setToolTip = [=](QWidget* widget, const QString& highlight) {
-        QString tooltip = QStringLiteral(R"(
+        QString tooltip = qsl(R"(
   <style type="text/css">
     .tg  {border-collapse:collapse;border-spacing:0;}
     .tg td{font-size:12px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:black;}
@@ -3549,12 +3580,12 @@ void dlgProfilePreferences::generateDiscordTooltips()
         widget->setToolTip(tooltip);
     };
 
-    setToolTip(checkBox_discordServerAccessToDetail, QStringLiteral("detail"));
-    setToolTip(checkBox_discordServerAccessToState, QStringLiteral("state"));
-    setToolTip(checkBox_discordServerAccessToPartyInfo, QStringLiteral("party"));
-    setToolTip(checkBox_discordServerAccessToTimerInfo, QStringLiteral("time"));
-    setToolTip(comboBox_discordLargeIconPrivacy, QStringLiteral("large-icon"));
-    setToolTip(comboBox_discordSmallIconPrivacy, QStringLiteral("small-icon"));
+    setToolTip(checkBox_discordServerAccessToDetail, qsl("detail"));
+    setToolTip(checkBox_discordServerAccessToState, qsl("state"));
+    setToolTip(checkBox_discordServerAccessToPartyInfo, qsl("party"));
+    setToolTip(checkBox_discordServerAccessToTimerInfo, qsl("time"));
+    setToolTip(comboBox_discordLargeIconPrivacy, qsl("large-icon"));
+    setToolTip(comboBox_discordSmallIconPrivacy, qsl("small-icon"));
 }
 
 void dlgProfilePreferences::slot_showMapGlyphUsage()
@@ -3570,7 +3601,7 @@ void dlgProfilePreferences::slot_showMapGlyphUsage()
     }
 
     QUiLoader loader;
-    QFile file(QStringLiteral(":/ui/glyph_usage.ui"));
+    QFile file(qsl(":/ui/glyph_usage.ui"));
     file.open(QFile::ReadOnly);
     mpDialogMapGlyphUsage = qobject_cast<QDialog*>(loader.load(&file, this));
     file.close();
@@ -3579,7 +3610,7 @@ void dlgProfilePreferences::slot_showMapGlyphUsage()
         return;
     }
 
-    mpDialogMapGlyphUsage->setWindowIcon(QIcon(QStringLiteral(":/icons/place_of_interest.png")));
+    mpDialogMapGlyphUsage->setWindowIcon(QIcon(qsl(":/icons/place_of_interest.png")));
     mpDialogMapGlyphUsage->setWindowTitle(tr("Map symbol usage - %1").arg(mpHost->getName()));
     mpDialogMapGlyphUsage->setAttribute(Qt::WA_DeleteOnClose);
     generateMapGlyphDisplay();
@@ -3657,17 +3688,17 @@ void dlgProfilePreferences::slot_changeShowToolBar(int newIndex)
 void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
 {
     if (isHtml) {
-        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-dd#HH-mm-ss")), tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)"));
-        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-ddTHH-mm-ss")), tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)"));
-        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-dd")), tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)"));
-        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM")), tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.html)"));
-        label_logFileNameExtension->setText(QStringLiteral(".html"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(qsl("yyyy-MM-dd#HH-mm-ss")), tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(qsl("yyyy-MM-ddTHH-mm-ss")), tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(qsl("yyyy-MM-dd")), tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(qsl("yyyy-MM")), tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.html)"));
+        label_logFileNameExtension->setText(qsl(".html"));
     } else {
-        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-dd#HH-mm-ss")), tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)"));
-        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-ddTHH-mm-ss")), tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)"));
-        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM-dd")), tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)"));
-        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(QStringLiteral("yyyy-MM")), tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)"));
-        label_logFileNameExtension->setText(QStringLiteral(".txt"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(qsl("yyyy-MM-dd#HH-mm-ss")), tr("yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(qsl("yyyy-MM-ddTHH-mm-ss")), tr("yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(qsl("yyyy-MM-dd")), tr("yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)"));
+        comboBox_logFileNameFormat->setItemText(comboBox_logFileNameFormat->findData(qsl("yyyy-MM")), tr("yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)"));
+        label_logFileNameExtension->setText(qsl(".txt"));
     }
 }
 
@@ -3693,7 +3724,7 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
                 labelBackground.fill(Qt::black);
                 QPainter painter(&labelBackground);
                 painter.drawImage(QRect(0, 0, labelBackground.width(), labelBackground.height()),
-                                  QImage(QStringLiteral(":/icons/black_white_transparent_check_1x3_ratio.png"))
+                                  QImage(qsl(":/icons/black_white_transparent_check_1x3_ratio.png"))
                                           .scaled(labelBackground.width(), labelBackground.height(), Qt::KeepAspectRatioByExpanding));
                 painter.fillRect(0, 0, labelBackground.width(), labelBackground.height(), color);
                 painter.end();
@@ -3724,7 +3755,7 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
             iconBackground.fill(Qt::black);
             QPainter painter(&iconBackground);
             painter.drawImage(QRect(0, 0, iconBackground.width(), iconBackground.height()),
-                              QImage(QStringLiteral(":/icons/black_white_transparent_check_1x3_ratio.png"))
+                              QImage(qsl(":/icons/black_white_transparent_check_1x3_ratio.png"))
                                       .scaled(iconBackground.width(), iconBackground.height(), Qt::KeepAspectRatioByExpanding));
             painter.fillRect(0, 0, iconBackground.width(), iconBackground.height(), disabledColor);
             painter.end();
@@ -4060,8 +4091,8 @@ void dlgProfilePreferences::slot_setPostingTimeout(const double timeout)
 
 void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
 {
-    if (link == QStringLiteral("dark-code-editor")) {
-        const auto darkTheme = QStringLiteral("Monokai");
+    if (link == qsl("dark-code-editor")) {
+        const auto darkTheme = qsl("Monokai");
 
         label_darkEditorPrompt->hide();
 

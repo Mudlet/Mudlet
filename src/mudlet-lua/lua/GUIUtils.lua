@@ -981,11 +981,11 @@ if rex then
   _Echos = {
     Patterns = {
       Hex = {
-        [[(\x5c?(?:#|\|c)?(?:[0-9a-fA-F]{6}|(?:#,|\|c,)[0-9a-fA-F]{6,8})(?:,[0-9a-fA-F]{6,8})?)|(?:\||#)(\/?[birus])]],
+        [[(\x5c?(?:#|\|c)?(?:[0-9a-fA-F]{6}|(?:#,|\|c,)[0-9a-fA-F]{6,8})(?:,[0-9a-fA-F]{6,8})?)|(?:\||#)(\/?[biruso])]],
         rex.new [[(?:#|\|c)(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?)?]],
       },
       Decimal = {
-        [[(<[0-9,:]+>)|<(/?[birus])>]],
+        [[(<[0-9,:]+>)|<(/?[biruso])>]],
         rex.new [[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}),?([0-9]{1,3})?)?>]],
       },
       Color = {
@@ -1033,6 +1033,10 @@ if rex then
           t[#t + 1] = "\27strikethrough"
         elseif r == "/s" then
           t[#t + 1] = "\27strikethroughoff"
+        elseif r == "o" then
+          t[#t + 1] = "\27overline"
+        elseif r == "/o" then
+          t[#t + 1] = "\27overlineoff"
         end
         if c then
           if style == 'Hex' or style == 'Decimal' then
@@ -1086,6 +1090,10 @@ if rex then
               t[#t + 1] = "\27strikethrough"
             elseif c == "</s>" then
               t[#t + 1] = "\27strikethroughoff"
+            elseif c == "<o>" then
+              t[#t + 1] = "\27overline"
+            elseif c == "</o>" then
+              t[#t + 1] = "\27overlineoff"
             else
               local fcolor, bcolor = _Echos.Patterns[style][2]:match(c)
               local color = {}
@@ -1200,6 +1208,10 @@ if rex then
         setStrikeOut(win, true)
       elseif v == "\27strikethroughoff" then
         setStrikeOut(win, false)
+      elseif v == "\27overline" then
+        setOverline(win, true)
+      elseif v == "\27overlineoff" then
+        setOverline(win, false)
       elseif v == "\27reset" then
         resetFormat(win)
       else
@@ -1459,16 +1471,18 @@ if rex then
 
   -- local lookup table to find ansi escapes for to ansi conversions
   local resets = {
-    r = "\27[0m",
-    reset = "\27[0m",
-    i = "\27[3m",
-    ["/i"] = "\27[23m",
-    b = "\27[1m",
-    ["/b"] = "\27[22m",
-    u = "\27[4m",
-    ["/u"] = "\27[24m",
-    s = "\27[9m",
-    ["/s"] = "\27[29m"
+    ["r"]     = "\27[0m",
+    ["reset"] = "\27[0m",
+    ["i"]     = "\27[3m",
+    ["/i"]    = "\27[23m",
+    ["b"]     = "\27[1m",
+    ["/b"]    = "\27[22m",
+    ["u"]     = "\27[4m",
+    ["/u"]    = "\27[24m",
+    ["s"]     = "\27[9m",
+    ["/s"]    = "\27[29m",
+    ["o"]     = "\27[53m",
+    ["/o"]    = "\27[55m"
   }
 
   -- take a color name and turn it into an ANSI escape string
@@ -1744,6 +1758,10 @@ do
       text = arg1
     end
 
+    local selection = {getSelection()}
+    if _comp(selection, {"", 0, 0}) then
+      return nil, "replace: nothing is selected to be replaced. Did selectString return -1?"
+    end
     text = text or ""
 
     if keepcolor then
@@ -1815,7 +1833,7 @@ function ansi2decho(text, ansi_default_color)
 
     while i <= #t do
       local code = t[i]
-      local isColorCode = false
+      local formatCodeHandled = false
 
       if code == '0' or code == '00' then
         -- reset attributes
@@ -1830,31 +1848,38 @@ function ansi2decho(text, ansi_default_color)
         -- not light or bold
         coloursToUse = colours
       elseif code == "3" then
-        -- italics, but we set isColorCode to true to avoid repeating the fg color below
-        isColorCode = true
+        formatCodeHandled = true
         output[#output+1] = "<i>"
       elseif code == "23" then
         -- turn off italics
-        isColorCode = true
+        formatCodeHandled = true
         output[#output+1] = "</i>"
       elseif code == "4" then
         -- underline
-        isColorCode = true
+        formatCodeHandled = true
         output[#output+1] = "<u>"
       elseif code == "24" then
         -- turn off underline
-        isColorCode = true
+        formatCodeHandled = true
         output[#output+1] = "</u>"
       elseif code == "9" then
         -- strikethrough
-        isColorCode = true
+        formatCodeHandled = true
         output[#output+1] = "<s>"
       elseif code == "29" then
         -- turn off strikethrough
-        isColorCode = true
+        formatCodeHandled = true
         output[#output+1] = "</s>"
+      elseif code == "53" then
+        -- turn on overline
+        formatCodeHandled = true
+        output[#output+1] = "<o>"
+      elseif code == "55" then
+        -- turn off overline
+        formatCodeHandled = true
+        output[#output+1] = "</o>"
       else
-        isColorCode = true
+        formatCodeHandled = true
         local layerCode = floor(code / 10)  -- extract the "layer": 3 is fore
         --                      4 is back
         local cmd = code - (layerCode * 10) -- extract the actual "command"
@@ -1893,11 +1918,11 @@ function ansi2decho(text, ansi_default_color)
         end
       end
 
-      -- If isColorCode is false it means that we've encountered a SGBR
+      -- If formatCodeHandled is false it means that we've encountered a SGBR
       -- code such as 'bold' or 'dim'.
       -- In those cases, if there's a previous color, we are supposed to
       -- modify it
-      if not isColorCode and lastColour then
+      if not formatCodeHandled and lastColour then
         fg = coloursToUse[lastColour]
       end
 

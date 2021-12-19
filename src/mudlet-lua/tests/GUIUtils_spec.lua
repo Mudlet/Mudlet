@@ -1,6 +1,6 @@
 describe("Tests the GUI utilities as far as possible without mudlet", function()
 
-  describe("Test the operation of the ansi2decho function", function()
+  describe("Tests the functionality of ansi2decho", function()
 
     it("Should have loaded the function successfully", function()
       assert.truthy(ansi2decho)
@@ -93,6 +93,13 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals(expected, actual)
     end)
 
+    it("Should handle overline", function()
+      local sample = "\27[53moverline\27[55m"
+      local expected = "<o>overline</o>"
+      local actual = ansi2decho(sample)
+      assert.equals(expected, actual)
+    end)
+
     it("Should leave normal text and other escape sequences alone", function()
       local sequences = {
         {"Hello World", "Hello World"},
@@ -146,7 +153,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
   end)
 
-  describe("Tests the functionality of decho2ansi()", function()
+  describe("Tests the functionality of decho2ansi", function()
     local simple_original = "<128,0,0>This is in red<r> And then reset."
     local simple_expected = "\27[38:2::128:0:0mThis is in red\27[0m And then reset."
 
@@ -183,9 +190,15 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local actual = decho2ansi("<s>strikeout</s>")
       assert.equals(expected, actual)
     end)
+
+    it("should handle overline", function()
+      local expected = "\27[53moverline\27[55m"
+      local actual = decho2ansi("<o>overline</o>")
+      assert.equals(expected, actual)
+    end)
   end)
 
-  describe("Tests the functionality of hecho2ansi()", function()
+  describe("Tests the functionality of hecho2ansi", function()
     local simple_original = "#800000This is in red#r And then reset."
     local simple_expected = "\27[38:2::128:0:0mThis is in red\27[0m And then reset."
 
@@ -217,9 +230,15 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local actual = hecho2ansi("#sstrikeout#/s")
       assert.equals(expected, actual)
     end)
+
+    it("should handle overline", function()
+      local expected = "\27[53moverline\27[55m"
+      local actual = hecho2ansi("#ooverline#/o")
+      assert.equals(expected, actual)
+    end)
   end)
 
-  describe("Tests the functionality of cecho2ansi()", function()
+  describe("Tests the functionality of cecho2ansi", function()
     local simple_original = "<red>This is in red<r> And then reset."
     local simple_expected = "\27[38:5:1mThis is in red\27[0m And then reset."
 
@@ -256,9 +275,15 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local actual = cecho2ansi("<s>strikeout</s>")
       assert.equals(expected, actual)
     end)
+
+    it("should handle overline", function()
+      local expected = "\27[53moverline\27[55m"
+      local actual = cecho2ansi("<o>overline</o>")
+      assert.equals(expected, actual)
+    end)
   end)
 
-  describe("Tests the functionality of ansi2string()", function()
+  describe("Tests the functionality of ansi2string", function()
     it("should return the string fed into it with ansi codes removed", function()
       local original = '\27[38;5;179;48;5;230mYou say in a baritone voice, "Test."\27[0;37;40m'
       local expected = 'You say in a baritone voice, "Test."'
@@ -267,7 +292,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
-  describe("Tests the functionality of setHexFgColor()", function()
+  describe("Tests the functionality of setHexFgColor", function()
 
     it("Should convert hex string correctly", function()
       local hexStrings = {
@@ -289,7 +314,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
   end)
 
-  describe("Tests the functionality of setHexBgColor()", function()
+  describe("Tests the functionality of setHexBgColor", function()
 
     it("Should convert hex string correctly", function()
       local hexStrings = {
@@ -398,7 +423,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
-  describe("Tests the functionality of _Echoes.Process()", function()
+  describe("Tests the functionality of _Echoes.Process", function()
     it("Should parse hex patterns correctly", function()
       assert.are.same(
         _Echos.Process('#ff0000Red', 'Hex'),
@@ -428,6 +453,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are.same(
         _Echos.Process('#sStrikethrough#/s', 'Hex'),
         { "", "\27strikethrough", "Strikethrough", "\27strikethroughoff", "" }
+      )
+
+      assert.are.same(
+        _Echos.Process('#oOverline#/o', 'Hex'),
+        { "", "\27overline", "Overline", "\27overlineoff", "" }
       )
     end)
 
@@ -461,6 +491,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         _Echos.Process('<s>Strikethrough</s>', 'Decimal'),
         { "", "\27strikethrough", "Strikethrough", "\27strikethroughoff", "" }
       )
+
+      assert.are.same(
+        _Echos.Process('<o>Overline</o>', 'Decimal'),
+        { "", "\27overline", "Overline", "\27overlineoff", "" }
+      )
     end)
 
     it("Should parse color patterns correctly", function()
@@ -493,6 +528,20 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         _Echos.Process('<s>Strikethrough</s>', 'Color'),
         { "", "\27strikethrough", "Strikethrough", "\27strikethroughoff", "" }
       )
+
+      assert.are.same(
+        _Echos.Process('<o>Overline</o>', 'Color'),
+        { "", "\27overline", "Overline", "\27overlineoff", "" }
+      )
+    end)
+  end)
+
+  describe("Tests the functionality of replace", function()
+    it("Should return nil+msg if nothing is selected to replace", function()
+      deselect()
+      local ok,err = replace("]")
+      assert.is_nil(ok)
+      assert.equals("replace: nothing is selected to be replaced. Did selectString return -1?", err)
     end)
   end)
 end)
