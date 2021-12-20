@@ -1328,6 +1328,11 @@ void mudlet::slot_package_exporter()
 void mudlet::slot_close_profile_requested(int tab)
 {
     QString name = mpTabBar->tabData(tab).toString();
+    closeHost(name);
+}
+
+void mudlet::closeHost(const QString& name)
+{
     Host* pH = mHostManager.getHost(name);
     if (!pH) {
         return;
@@ -1392,7 +1397,7 @@ void mudlet::slot_close_profile_requested(int tab)
 
     pH->mpConsole->close();
 
-    mpTabBar->removeTab(tab);
+    mpTabBar->removeTab(name);
     // PLACEMARKER: Host destruction (1) - from close button on tab bar
     // Unfortunately the spaghetti nature of the code means that the profile
     // is also (maybe) saved (or not) in the TConsole::close() call prior to
@@ -1791,16 +1796,24 @@ Host* mudlet::getActiveHost()
 
 void mudlet::closeEvent(QCloseEvent* event)
 {
+    QVector<QString> closingHosts;
+
     for (auto pHost : mHostManager) {
-        auto pC = pHost->mpConsole;
-        if (!pC) {
+        const auto console = pHost->mpConsole;
+        if (!console) {
             continue;
         }
-        if (!pC->close()) {
+        if (!console->close()) {
+            // close out any profiles that we have agreed to close so far
+            for (const auto& hostName : qAsConst(closingHosts)) {
+                closeHost(hostName);
+            }
+
             event->ignore();
             return;
         } else {
-            pC->mUserAgreedToCloseConsole = true;
+            console->mUserAgreedToCloseConsole = true;
+            closingHosts.append(pHost->getName());
         }
     }
 
