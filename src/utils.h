@@ -1,6 +1,8 @@
+#ifndef MUDLET_UTILS_H
+#define MUDLET_UTILS_H
+
 /***************************************************************************
- *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2021 by Vadim Peretokin - vperetokin@hey.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,24 +20,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_TMXPELEMENTDEFINITIONHANDLER_H
-#define MUDLET_TMXPELEMENTDEFINITIONHANDLER_H
-#include "TMxpElementRegistry.h"
-#include "TMxpTagHandler.h"
-#include "utils.h"
+#define qsl(s) QStringLiteral(s)
 
-// https://www.zuggsoft.com/zmud/mxp.htm#ELEMENT
-// <!ELEMENT element-name [definition] [ATT=attribute-list] [TAG=tag] [FLAG=flags] [OPEN] [DELETE] [EMPTY]>
-class TMxpElementDefinitionHandler : public TMxpTagHandler
-{
-public:
-    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override {
-        Q_UNUSED(ctx)
-        Q_UNUSED(client)
-        return tag->isNamed(qsl("!EL")) || tag->isNamed(qsl("!ELEMENT"));
-    }
-
-    TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
-};
-#include "TMxpTagHandler.h"
-#endif //MUDLET_TMXPELEMENTDEFINITIONHANDLER_H
+#endif // UPDATER_H

@@ -1,5 +1,9 @@
+#ifndef MUDLET_SHORTCUTSMANAGER_H
+#define MUDLET_SHORTCUTSMANAGER_H
+
 /***************************************************************************
- *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmdedia.com        *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,43 +21,39 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_TSTRINGUTILS_H
-#define MUDLET_TSTRINGUTILS_H
-
 #include "pre_guard.h"
+#include <QMap>
+#include <QObject>
 #include <QString>
-#include <QStringList>
+#include <QShortcut>
 #include "post_guard.h"
-#include <functional>
-#include "utils.h"
 
-#define CHAR_NEW_LINE '\n'
-#define CHAR_CARRIAGE_RETURN '\r'
-#define CHAR_END_OF_FILE '\xff'
-#define CHAR_END_OF_TEXT '\004'
-#define CHAR_ESC '\033'
-
-#define CHAR_IS_COMMIT_CHAR(ch) ((ch) == CHAR_NEW_LINE || (ch) == CHAR_CARRIAGE_RETURN || (ch) == CHAR_END_OF_FILE || (ch) == CHAR_END_OF_TEXT)
-
-
-class TStringUtils
+class ShortcutsManager : public QObject
 {
+
+    Q_OBJECT
+
 public:
-    static bool isQuote(QChar ch);
-    static bool isOneOf(QChar ch, const QString &chars);
+    ShortcutsManager() = default;
+    ShortcutsManager(ShortcutsManager const&) = delete;
+    ShortcutsManager& operator=(ShortcutsManager const&) = delete;
+    ShortcutsManager(ShortcutsManager&&) = delete;
+    ShortcutsManager& operator=(ShortcutsManager&&) = delete;
+    ~ShortcutsManager();
 
-    static QStringView strip(QStringView str, QChar start, QChar end);
-    static QStringView unquote(QStringView ref);
+    void registerShortcut(const QString&, const QString&, QKeySequence*);
+    QStringListIterator iterator();
+    void setShortcut(const QString&, QKeySequence*);
+    QKeySequence* getSequence(const QString&);
+    QKeySequence* getDefault(const QString&);
+    QString getLabel(const QString& key);
 
-    static bool isBetween(QStringView str, char first, char last);
-    static bool isQuoted(QStringView ref);
+private:
+    QList<QString> shortcutKeys;
+    QMap<QString, QKeySequence*> shortcuts; //shortcut key : sequence in use pointer
+    QMap<QString, QKeySequence*> defaults; //shortcut key : default sequence
+    QMap<QString, QString> translations; //shortcut key : translation for shortcut label
 
-    static void apply(QStringList& strList, const std::function<void(QString&)>& func)
-    {
-        for (auto& ptr : strList) {
-            func(ptr);
-        }
-    }
 };
 
-#endif //MUDLET_TSTRINGUTILS_H
+#endif //MUDLET_SHORTCUTSMANAGER_H

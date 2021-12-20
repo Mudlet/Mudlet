@@ -174,7 +174,7 @@ void dlgMapper::updateAreaComboBox()
         uint deduplicate = 0;
         QString name;
         do {
-            name = QStringLiteral("%1+%2").arg(itAreaNamesA.value().toLower(), QString::number(++deduplicate));
+            name = qsl("%1+%2").arg(itAreaNamesA.value().toLower(), QString::number(++deduplicate));
             // Use a different suffix separator to one that area names
             // deduplication uses ('_') - makes debugging easier?
         } while (areaNames.contains(name));

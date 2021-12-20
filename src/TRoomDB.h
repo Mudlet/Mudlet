@@ -30,6 +30,8 @@
 #include <QString>
 #include "post_guard.h"
 
+#include "utils.h"
+
 class TArea;
 class TMap;
 class TRoom;
@@ -122,9 +124,9 @@ bool getUserDataBool(const QMap<QString, QString>& userData, const QString& key,
 static inline void setUserDataBool(QMap<QString, QString>& userData, const QString& key, bool value)
 {
     if (value) {
-        userData[key] = QStringLiteral("1");
+        userData[key] = qsl("1");
     } else {
-        userData[key] = QStringLiteral("0");
+        userData[key] = qsl("0");
     }
 }
 

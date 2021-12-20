@@ -85,6 +85,7 @@ set(mudlet_SRCS
     main.cpp
     mapInfoContributorManager.cpp
     mudlet.cpp
+    ShortcutsManager.cpp
     ScriptUnit.cpp
     T2DMap.cpp
     TAction.cpp
@@ -224,6 +225,7 @@ set(mudlet_HDRS
     mudlet.h
     post_guard.h
     pre_guard.h
+    ShortcutsManager.h
     ScriptUnit.h
     T2DMap.h
     TAction.h
@@ -294,6 +296,7 @@ set(mudlet_HDRS
     TTrigger.h
     TVar.h
     VarUnit.h
+    utils.h
     widechar_width.h
     XMLexport.h
     XMLimport.h)

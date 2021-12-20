@@ -25,7 +25,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
+#include "utils.h"
 #include "HostManager.h"
 #include "FontManager.h"
 
@@ -36,6 +36,7 @@
 #endif
 
 #include "discord.h"
+#include "ShortcutsManager.h"
 
 #include "pre_guard.h"
 #include <QDir>
@@ -99,6 +100,7 @@ class QLabel;
 class QListWidget;
 class QPushButton;
 class QShortcut;
+class QSplitter;
 class QTableWidget;
 class QTableWidgetItem;
 class QTextEdit;
@@ -117,6 +119,7 @@ class dlgIRC;
 class dlgAboutDialog;
 class dlgConnectionProfiles;
 class dlgProfilePreferences;
+class ShortcutManager;
 
 class translation;
 
@@ -286,8 +289,8 @@ public:
 
     // This construct will be very useful for formatting tooltips and by
     // defining a static function/method here we can save using the same
-    // QStringLiteral all over the place:
-    static QString htmlWrapper(const QString& text) { return QStringLiteral("<html><head/><body>%1</body></html>").arg(text); }
+    // qsl all over the place:
+    static QString htmlWrapper(const QString& text) { return qsl("<html><head/><body>%1</body></html>").arg(text); }
 
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
     // "How to find and replace string?" by "Czarek Tomczak":
@@ -344,6 +347,8 @@ public:
     int mToolbarIconSize;
     int mEditorTreeWidgetIconSize;
     bool mWindowMinimized;
+
+    QPointer<ShortcutsManager> mShortcutsManager;
 
     // used by developers in everyday coding
     static const bool scmIsDevelopmentVersion;
@@ -441,7 +446,7 @@ public:
     };
     Appearance mAppearance = Appearance::system;
     void setAppearance(Appearance, const bool& loading = false);
-    const bool inDarkMode() { return mDarkMode; };
+    bool inDarkMode() const { return mDarkMode; }
 
     // mirror everything shown in any console to stdout. Helpful for CI environments
     inline static bool mMirrorToStdOut;
@@ -455,6 +460,7 @@ public:
     };
 
     // clang-format off
+    // games are to be added here in alphabetical order
     inline static const OrderedMap<QString, GameDetails> scmDefaultGames = {
         {"Avalon.de", {"avalon.mud.de", 23, false,
                         "<center><a href='http://avalon.mud.de'>http://avalon.mud.de</a></center>",
@@ -551,6 +557,7 @@ signals:
     void signal_setTreeIconSize(int);
     void signal_hostCreated(Host*, quint8);
     void signal_hostDestroyed(Host*, quint8);
+    void signal_profileActivated(Host *, quint8);
     void signal_appearanceChanged(Appearance);
     void signal_enableFulScreenModeChanged(bool);
     void signal_showMapAuditErrorsChanged(bool);
@@ -561,6 +568,7 @@ signals:
     void signal_passwordsMigratedToSecure();
     void signal_passwordMigratedToSecure(const QString&);
     void signal_passwordsMigratedToProfiles();
+    void signal_shortcutsChanged();
 
 
 private slots:
@@ -577,6 +585,7 @@ private slots:
     void show_variable_dialog();
     void slot_update_shortcuts();
     void slot_show_options_dialog();
+    void slot_assign_shortcuts_from_profile(Host* pHost = nullptr);
 #ifdef QT_GAMEPAD_LIB
     void slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value);
     void slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button);
@@ -612,9 +621,12 @@ private:
     void installModulesList(Host*, QStringList);
     void setupTrayIcon();
     static bool desktopInDarkMode();
+    void assignKeySequences();
+    void closeHost(const QString& name);
 
     QWidget* mpWidget_profileContainer;
     QHBoxLayout* mpHBoxLayout_profileContainer;
+    QSplitter* mpSplitter_profileContainer;
 
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
@@ -718,7 +730,7 @@ private:
     // The collection of words in the above:
     QSet<QString> mWordSet_shared;
 
-    QString mMudletDiscordInvite = QStringLiteral("https://www.mudlet.org/chat");
+    QString mMudletDiscordInvite = qsl("https://www.mudlet.org/chat");
 
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate {};
@@ -734,6 +746,11 @@ private:
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
     bool mDarkMode = false;
+
+    // Used to ensure that mudlet::slot_update_shortcuts() only runs once each
+    // time the main if () logic changes state - will be true if the menu is
+    // supposed to be visible, false if not and not have a value initially:
+    std::optional<bool> mMenuVisibleState;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
