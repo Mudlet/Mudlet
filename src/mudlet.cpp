@@ -4719,7 +4719,7 @@ bool mudlet::desktopInDarkMode()
         coreMacOS::CFRelease(uiStyle);
     }
     return isDark;
-#elif defined(Q_OS_LINUX)
+#elif defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
     QProcess process;
     process.start(qsl("gsettings"), QStringList() << qsl("get") << qsl("org.gnome.desktop.interface") << qsl("gtk-theme"));
     process.waitForFinished();
