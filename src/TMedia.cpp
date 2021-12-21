@@ -648,7 +648,7 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
 
         if (fadeInPosition != TMediaData::MediaFadeNotSet) {
             if (progress < fadeInPosition) {
-                double fadeInVolume = volume * progress / fadeInPosition * 1.0;
+                double fadeInVolume = (volume * progress) / (fadeInPosition * 1.0);
 
                 pPlayer.getMediaPlayer()->setVolume(qRound(fadeInVolume));
             } else if (progress == fadeInPosition) {
@@ -660,7 +660,7 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
             int duration = pPlayer.getMediaPlayer()->duration();
 
             if (progress > duration - fadeOutPosition) {
-                double fadeOutVolume = volume * (duration - progress) / fadeOutPosition * 1.0;
+                double fadeOutVolume = (volume * (duration - progress)) / (fadeOutPosition * 1.0);
 
                 pPlayer.getMediaPlayer()->setVolume(qRound(fadeOutVolume));
             }

@@ -47,6 +47,8 @@ public:
         mMediaProtocol = MediaProtocolNotSet;
         mMediaType = MediaTypeNotSet;
         mMediaVolume = MediaVolumeDefault;
+        mMediaFadeIn = MediaFadeNotSet;
+        mMediaFadeOut = MediaFadeNotSet;
         mMediaLoops = MediaLoopsDefault;
         mMediaPriority = MediaPriorityNotSet;
         mMediaContinue = MediaContinueDefault;
