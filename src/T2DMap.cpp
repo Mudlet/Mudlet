@@ -1628,6 +1628,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
 }
 
+// This draws two lines at angles to the "exitLine" so as to form what would be
+// an "arrow head" if they were to be extended so as to meet (at the "end" of
+// the "exitLine". Various features of the QPen that is used are redefined
+// as appropriate - but they are restored afterwards so there should be
+// no change to the QPainter as a result of calling this method.
 void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKey, const QLineF& exitLine)
 {
     // A set of numbers that can be converted to "static" type and be frobbed
@@ -2081,24 +2086,31 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
 
         // draw exit stubs
         QMap<int, QVector3D> unitVectors = mpMap->unitVectors;
-        painter.save();
         for (int direction : qAsConst(room->exitStubs)) {
             if (direction >= DIR_NORTH && direction <= DIR_SOUTHWEST) {
                 // Stubs on non-XY plane exits are handled differently and we
                 // do not support special exit stubs (yet?)
                 QVector3D uDirection = unitVectors[direction];
                 QLineF stubLine(rx, ry, rx + uDirection.x() * 0.5 * mRoomWidth, ry + uDirection.y() * 0.5 * mRoomHeight);
-                QPen doorPen = painter.pen();
-                doorPen.setCapStyle(Qt::RoundCap);
-                painter.setPen(doorPen);
+                painter.save();
+                QPen stubPen = painter.pen();
+                // We are going to draw the stub (but not the door) at 50%
+                // transparency:
+                QColor stubColor = stubPen.color();
+                stubColor.setAlphaF(0.5);
+                stubPen.setColor(stubColor);
+                painter.setPen(stubPen);
                 painter.drawLine(stubLine);
+                // Restore to the state prior to drawing the stub:
+                painter.restore();
                 const QString doorKey{TRoom::dirCodeToShortString(direction)};
                 if (room->doors.value(doorKey)) {
+                    // This method also saves and restores painter so there is
+                    // NO net changes within the for loop code.
                     drawDoor(painter, *room, doorKey, stubLine);
                 }
             }
         }
-        painter.restore();
 
         for (int& k : exitList) {
             int rID = k;
