@@ -71,6 +71,7 @@
 #include <QNetworkDiskCache>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QSplitter>
 #include <QStyleFactory>
 #include <QTableWidget>
 #include <QTextStream>
@@ -245,6 +246,7 @@ mudlet::mudlet()
 , mpActionModuleManager(nullptr)
 , mpActionPackageExporter(nullptr)
 , mpActionReconnect(nullptr)
+, mpActionCloseProfile(nullptr)
 , mpActionScripts(nullptr)
 , mpActionTimers(nullptr)
 , mpActionTriggers(nullptr)
@@ -333,10 +335,16 @@ mudlet::mudlet()
     mpWidget_profileContainer->setSizePolicy(sizePolicy);
     mpWidget_profileContainer->setFocusPolicy(Qt::NoFocus);
     mpWidget_profileContainer->setAutoFillBackground(true);
+
     layoutTopLevel->addWidget(mpWidget_profileContainer);
     mpHBoxLayout_profileContainer = new QHBoxLayout(mpWidget_profileContainer);
     mpHBoxLayout_profileContainer->setContentsMargins(0, 0, 0, 0);
 
+    mpSplitter_profileContainer = new QSplitter(Qt::Horizontal, mpWidget_profileContainer);
+    mpSplitter_profileContainer->setContentsMargins(0, 0, 0, 0);
+    mpSplitter_profileContainer->setChildrenCollapsible(false);
+
+    mpHBoxLayout_profileContainer->addWidget(mpSplitter_profileContainer);
 
     QFile file_autolog(getMudletPath(mainDataItemPath, qsl("autolog")));
     if (file_autolog.exists()) {
@@ -361,8 +369,14 @@ mudlet::mudlet()
     mpActionDisconnect = new QAction(tr("Disconnect"), this);
     mpActionDisconnect->setObjectName(qsl("disconnect"));
 
+    mpActionCloseProfile = new QAction(tr("Close profile"), this);
+    mpActionCloseProfile->setIcon(QIcon(qsl(":/icons/profile-close.png")));
+    mpActionCloseProfile->setIconText(tr("Close profile"));
+    mpActionCloseProfile->setObjectName(qsl("close_profile"));
+
     mpButtonConnect->addAction(mpActionConnect);
     mpButtonConnect->addAction(mpActionDisconnect);
+    mpButtonConnect->addAction(mpActionCloseProfile);
     mpButtonConnect->setDefaultAction(mpActionConnect);
 
     mpActionTriggers = new QAction(QIcon(qsl(":/icons/tools-wizard.png")), tr("Triggers"), this);
@@ -563,6 +577,7 @@ mudlet::mudlet()
     connect(mpActionMultiView.data(), &QAction::triggered, this, &mudlet::slot_multi_view);
     connect(mpActionReconnect.data(), &QAction::triggered, this, &mudlet::slot_reconnect);
     connect(mpActionDisconnect.data(), &QAction::triggered, this, &mudlet::slot_disconnect);
+    connect(mpActionCloseProfile.data(), &QAction::triggered, this, &mudlet::slot_close_current_profile);
     connect(mpActionReplay.data(), &QAction::triggered, this, &mudlet::slot_replay);
     connect(mpActionNotes.data(), &QAction::triggered, this, &mudlet::slot_notes);
     connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_mapper);
@@ -573,12 +588,10 @@ mudlet::mudlet()
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_package_exporter);
 
-    // PLACEMARKER: Save for later restoration (1 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
-    // QAction* mactionCloseProfile = new QAction(tr("Close"), this);
-
     connect(dactionConnect, &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
     connect(dactionReconnect, &QAction::triggered, this, &mudlet::slot_reconnect);
     connect(dactionDisconnect, &QAction::triggered, this, &mudlet::slot_disconnect);
+    connect(dactionCloseProfile, &QAction::triggered, this, &mudlet::slot_close_current_profile);
     connect(dactionNotepad, &QAction::triggered, this, &mudlet::slot_notes);
     connect(dactionReplay, &QAction::triggered, this, &mudlet::slot_replay);
 
@@ -647,6 +660,7 @@ mudlet::mudlet()
     connectKeySequence = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_C);
     disconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_D);
     reconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_R);
+    closeProfileKeySequence = QKeySequence(Qt::CTRL | Qt::Key_W);
 #else
     triggersKeySequence = QKeySequence(Qt::ALT | Qt::Key_E);
     showMapKeySequence = QKeySequence(Qt::ALT | Qt::Key_M);
@@ -659,6 +673,7 @@ mudlet::mudlet()
     connectKeySequence = QKeySequence(Qt::ALT | Qt::Key_C);
     disconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_D);
     reconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_R);
+    closeProfileKeySequence = QKeySequence(Qt::ALT | Qt::Key_W);
 #endif
     connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_update_shortcuts);
     connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assign_shortcuts_from_profile);
@@ -668,17 +683,18 @@ mudlet::mudlet()
     });
 
     mShortcutsManager = new ShortcutsManager();
-    mShortcutsManager->registerShortcut(tr("Script editor"), &triggersKeySequence);
-    mShortcutsManager->registerShortcut(tr("Show Map"), &showMapKeySequence);
-    mShortcutsManager->registerShortcut(tr("Compact input line"), &inputLineKeySequence);
-    mShortcutsManager->registerShortcut(tr("Preferences"), &optionsKeySequence);
-    mShortcutsManager->registerShortcut(tr("Notepad"), &notepadKeySequence);
-    mShortcutsManager->registerShortcut(tr("Package manager"), &packagesKeySequence);
-    mShortcutsManager->registerShortcut(tr("Module manager"), &modulesKeySequence);
-    mShortcutsManager->registerShortcut(tr("MultiView"), &multiViewKeySequence);
-    mShortcutsManager->registerShortcut(tr("Play"), &connectKeySequence);
-    mShortcutsManager->registerShortcut(tr("Disconnect"), &disconnectKeySequence);
-    mShortcutsManager->registerShortcut(tr("Reconnect"), &reconnectKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Script editor"), tr("Script editor"), &triggersKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Show Map"), tr("Show Map"), &showMapKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Compact input line"), tr("Compact input line"), &inputLineKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Preferences"), tr("Preferences"), &optionsKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Notepad"), tr("Notepad"), &notepadKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Package manager"), tr("Package manager"), &packagesKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Module manager"), tr("Module manager"), &modulesKeySequence);
+    mShortcutsManager->registerShortcut(qsl("MultiView"), tr("MultiView"), &multiViewKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Play"), tr("Play"), &connectKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Disconnect"), tr("Disconnect"), &disconnectKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Reconnect"), tr("Reconnect"), &reconnectKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Close profile"), tr("Close profile"), &closeProfileKeySequence);
 
     mpSettings = getQSettings();
     readLateSettings(*mpSettings);
@@ -1317,10 +1333,28 @@ void mudlet::slot_package_exporter()
     d->show();
 }
 
+void mudlet::slot_close_current_profile()
+{
+    Host* pH = getActiveHost();
+    if (!pH) {
+        return;
+    }
+    slot_close_profile_requested(mpTabBar->currentIndex());
+
+    if (!getActiveHost()) {
+        disableToolbarButtons();
+        slot_show_connection_dialog();
+    }
+}
 
 void mudlet::slot_close_profile_requested(int tab)
 {
     QString name = mpTabBar->tabData(tab).toString();
+    closeHost(name);
+}
+
+void mudlet::closeHost(const QString& name)
+{
     Host* pH = mHostManager.getHost(name);
     if (!pH) {
         return;
@@ -1385,7 +1419,7 @@ void mudlet::slot_close_profile_requested(int tab)
 
     pH->mpConsole->close();
 
-    mpTabBar->removeTab(tab);
+    mpTabBar->removeTab(name);
     // PLACEMARKER: Host destruction (1) - from close button on tab bar
     // Unfortunately the spaghetti nature of the code means that the profile
     // is also (maybe) saved (or not) in the TConsole::close() call prior to
@@ -1530,7 +1564,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     //update the main window title when we spawn a new tab
     setWindowTitle(pH->getName() + " - " + version);
 
-    mpHBoxLayout_profileContainer->addWidget(pConsole);
+    mpSplitter_profileContainer->addWidget(pConsole);
     if (mpCurrentActiveHost) {
         mpCurrentActiveHost->mpConsole->hide();
     }
@@ -1637,6 +1671,9 @@ void mudlet::disableToolbarButtons()
     dactionReplay->setEnabled(false);
     mpActionReconnect->setEnabled(false);
     mpActionDisconnect->setEnabled(false);
+
+    mpActionCloseProfile->setEnabled(false);
+    dactionCloseProfile->setEnabled(false);
 }
 
 void mudlet::enableToolbarButtons()
@@ -1671,6 +1708,9 @@ void mudlet::enableToolbarButtons()
 
     mpActionReconnect->setEnabled(true);
     mpActionDisconnect->setEnabled(true);
+
+    mpActionCloseProfile->setEnabled(true);
+    dactionCloseProfile->setEnabled(true);
 
     // As this is called when a profile is loaded it is time to check whether
     // we need to continue to show the main menu and/or the main toolbar
@@ -1784,16 +1824,24 @@ Host* mudlet::getActiveHost()
 
 void mudlet::closeEvent(QCloseEvent* event)
 {
+    QVector<QString> closingHosts;
+
     for (auto pHost : mHostManager) {
-        auto pC = pHost->mpConsole;
-        if (!pC) {
+        const auto console = pHost->mpConsole;
+        if (!console) {
             continue;
         }
-        if (!pC->close()) {
+        if (!console->close()) {
+            // close out any profiles that we have agreed to close so far
+            for (const auto& hostName : qAsConst(closingHosts)) {
+                closeHost(hostName);
+            }
+
             event->ignore();
             return;
         } else {
-            pC->mUserAgreedToCloseConsole = true;
+            console->mUserAgreedToCloseConsole = true;
+            closingHosts.append(pHost->getName());
         }
     }
 
@@ -2261,7 +2309,7 @@ void mudlet::slot_assign_shortcuts_from_profile(Host* pHost)
             mShortcutsManager->setShortcut(key, pHost->profileShortcuts.value(key));
         }
     }
-    slot_update_shortcuts();
+    assignKeySequences();
 }
 
 void mudlet::slot_update_shortcuts()
@@ -2299,56 +2347,78 @@ void mudlet::slot_update_shortcuts()
             return;
         }
     }
+    assignKeySequences();
+}
 
-    // The double negatives (one in each of the next two lines) are so the
-    // remainder of this method is more similar to the code prior to the
-    // introduction of the mMenuVisibleState variable:
+void mudlet::assignKeySequences()
+{
     mMenuVisibleState = !(mMenuBarVisibility == visibleNever || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()));
     if (!mMenuVisibleState.value()) {
         // The menu is hidden so wire the QKeySequences directly to the slots:
+
+        // If there was a shortcut then get rid of it - no need for a
+        // call to "disconnect(...)" as that happens on deletion and since it
+        // is okay to delete a nullptr there is no need to include a non-null
+        // test first:
+        delete triggersShortcut.data();
         triggersShortcut = new QShortcut(triggersKeySequence, this);
         connect(triggersShortcut.data(), &QShortcut::activated, this, &mudlet::show_editor_dialog);
         dactionScriptEditor->setShortcut(QKeySequence());
 
+        delete showMapShortcut.data();
         showMapShortcut = new QShortcut(showMapKeySequence, this);
         connect(showMapShortcut.data(), &QShortcut::activated, this, &mudlet::slot_mapper);
         dactionShowMap->setShortcut(QKeySequence());
 
+        delete inputLineShortcut.data();
         inputLineShortcut = new QShortcut(inputLineKeySequence, this);
         connect(inputLineShortcut.data(), &QShortcut::activated, this, &mudlet::slot_toggle_compact_input_line);
         dactionInputLine->setShortcut(QKeySequence());
 
+        delete optionsShortcut.data();
         optionsShortcut = new QShortcut(optionsKeySequence, this);
         connect(optionsShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_options_dialog);
         dactionOptions->setShortcut(QKeySequence());
 
+        delete notepadShortcut.data();
         notepadShortcut = new QShortcut(notepadKeySequence, this);
         connect(notepadShortcut.data(), &QShortcut::activated, this, &mudlet::slot_notes);
         dactionNotepad->setShortcut(QKeySequence());
 
+        delete packagesShortcut.data();
         packagesShortcut = new QShortcut(packagesKeySequence, this);
         connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_package_manager);
         dactionPackageManager->setShortcut(QKeySequence());
 
+        delete modulesShortcut.data();
         modulesShortcut = new QShortcut(packagesKeySequence, this);
         connect(modulesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_module_manager);
         dactionModuleManager->setShortcut(QKeySequence());
 
+        delete multiViewShortcut.data();
         multiViewShortcut = new QShortcut(multiViewKeySequence, this);
         connect(multiViewShortcut.data(), &QShortcut::activated, this, &mudlet::slot_toggle_multi_view);
         dactionMultiView->setShortcut(QKeySequence());
 
+        delete connectShortcut.data();
         connectShortcut = new QShortcut(connectKeySequence, this);
         connect(connectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_connection_dialog);
         dactionConnect->setShortcut(QKeySequence());
 
+        delete disconnectShortcut.data();
         disconnectShortcut = new QShortcut(disconnectKeySequence, this);
         connect(disconnectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_disconnect);
         dactionDisconnect->setShortcut(QKeySequence());
 
+        delete reconnectShortcut.data();
         reconnectShortcut = new QShortcut(reconnectKeySequence, this);
         connect(reconnectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_reconnect);
         dactionReconnect->setShortcut(QKeySequence());
+
+        delete closeProfileShortcut.data();
+        closeProfileShortcut = new QShortcut(closeProfileKeySequence, this);
+        connect(closeProfileShortcut.data(), &QShortcut::activated, this, &mudlet::slot_close_current_profile);
+        dactionCloseProfile->setShortcut(QKeySequence());
     } else {
         // The menu is shown so tie the QKeySequences to the menu items and it
         // is those that will call the slots:
@@ -2387,6 +2457,9 @@ void mudlet::slot_update_shortcuts()
 
         delete reconnectShortcut.data();
         dactionReconnect->setShortcut(reconnectKeySequence);
+
+        delete closeProfileShortcut.data();
+        dactionCloseProfile->setShortcut(closeProfileKeySequence);
     }
 }
 
@@ -2921,6 +2994,14 @@ void mudlet::slot_compact_input_line(const bool state)
     }
     if (mpCurrentActiveHost) {
         mpCurrentActiveHost->setCompactInputLine(state);
+        // Make sure players don't get confused when accidentally hiding buttons.
+        if (state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown) {
+            QKeySequence* shortcut = mShortcutsManager->getSequence(tr("Compact input line"));
+            QString infoMsg = tr("[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.",
+                                 "Here %1 will be replaced with the keyboard shortcut, default is ALT+L.").arg(shortcut->toString());
+            mpCurrentActiveHost->postMessage(infoMsg);
+            mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown = true;
+        }
     }
 }
 
@@ -4585,33 +4666,28 @@ void mudlet::setupTrayIcon()
 
 void mudlet::slot_tabMoved(const int oldPos, const int newPos)
 {
-    Q_UNUSED(newPos)
-    Q_UNUSED(oldPos)
     const QStringList& tabNamesInOrder = mpTabBar->tabNames();
-    int itemsCount = mpHBoxLayout_profileContainer->count();
+    int itemsCount = mpSplitter_profileContainer->count();
     Q_ASSERT_X(itemsCount == tabNamesInOrder.count(), "mudlet::slot_tabMoved(...)", "mismatch in count of tabs and TMainConsoles");
-    QMap<QString, QLayoutItem*> layoutItemMap;
-    // Gather the QLayoutItem pointers for each TMainConsole and store them
+    QMap<QString, QWidget*> widgetMap;
+    // Gather the QWidget pointers for each TMainConsole and store them
     // against their profile name:
-    for (int profileIndex = 0, total = mpHBoxLayout_profileContainer->count(); profileIndex < total; ++profileIndex) {
-        auto pLayoutItem = mpHBoxLayout_profileContainer->itemAt(profileIndex);
-        auto pWidget = pLayoutItem->widget();
+    for (int profileIndex = 0; profileIndex < itemsCount; ++profileIndex) {
+        auto pWidget = mpSplitter_profileContainer->widget(profileIndex);
         if (pWidget) {
             auto name = pWidget->property("HostName").toString();
-            layoutItemMap.insert(name, pLayoutItem);
+            widgetMap.insert(name, pWidget);
+        } else {
+            qWarning().nospace().noquote() << "mudlet::slot_tabMoved(" << oldPos<< ", " << newPos << ") WARNING - nullptr for pointer to TMainConsole at 'profileIndex': " << profileIndex << ".";
         }
     }
-    // Now go through all the names, pull the associated QLayoutItem from the
-    // layout and then re-add each of them at the end in turn - once we have
+    // Now go through all the names, pull the associated TMainConsoles from the
+    // splitter and then re-add each of them at the end in turn - once we have
     // gone through them all it will mean that they are in the same order as the
     // tabs:
     for (int index = 0; index < itemsCount; ++index) {
         const auto& wantedTabName = tabNamesInOrder.at(index);
-        auto pLayoutItem = layoutItemMap.value(wantedTabName);
-        // This will remove the item from wherever it is in the layout:
-        mpHBoxLayout_profileContainer->removeItem(pLayoutItem);
-        // This will re-add the item to the end of the layout:
-        mpHBoxLayout_profileContainer->addItem(pLayoutItem);
+        mpSplitter_profileContainer->addWidget(widgetMap.value(wantedTabName));
     }
 }
 
@@ -4679,7 +4755,7 @@ bool mudlet::desktopInDarkMode()
         coreMacOS::CFRelease(uiStyle);
     }
     return isDark;
-#elif defined(Q_OS_LINUX)
+#elif defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
     QProcess process;
     process.start(qsl("gsettings"), QStringList() << qsl("get") << qsl("org.gnome.desktop.interface") << qsl("gtk-theme"));
     process.waitForFinished();

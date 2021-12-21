@@ -94,16 +94,16 @@ TMap::TMap(Host* pH, const QString& profileName)
     mCustomEnvColors[270] = mpHost->mLightCyan_2;
     mCustomEnvColors[271] = mpHost->mLightWhite_2;
     mCustomEnvColors[272] = mpHost->mLightBlack_2;
-    unitVectors[1] = QVector3D(0, -1, 0);
-    unitVectors[2] = QVector3D(1, -1, 0);
-    unitVectors[3] = QVector3D(-1, -1, 0);
-    unitVectors[4] = QVector3D(1, 0, 0);
-    unitVectors[5] = QVector3D(-1, 0, 0);
-    unitVectors[6] = QVector3D(0, 1, 0);
-    unitVectors[7] = QVector3D(1, 1, 0);
-    unitVectors[8] = QVector3D(-1, 1, 0);
-    unitVectors[9] = QVector3D(0, 0, 1);
-    unitVectors[10] = QVector3D(0, 0, -1);
+    unitVectors[DIR_NORTH] = QVector3D(0, -1, 0);
+    unitVectors[DIR_NORTHEAST] = QVector3D(1, -1, 0);
+    unitVectors[DIR_NORTHWEST] = QVector3D(-1, -1, 0);
+    unitVectors[DIR_EAST] = QVector3D(1, 0, 0);
+    unitVectors[DIR_WEST] = QVector3D(-1, 0, 0);
+    unitVectors[DIR_SOUTH] = QVector3D(0, 1, 0);
+    unitVectors[DIR_SOUTHEAST] = QVector3D(1, 1, 0);
+    unitVectors[DIR_SOUTHWEST] = QVector3D(-1, 1, 0);
+    unitVectors[DIR_UP] = QVector3D(0, 0, 1);
+    unitVectors[DIR_DOWN] = QVector3D(0, 0, -1);
     reverseDirections[1] = 6; //contains complementary directions
     reverseDirections[2] = 8;
     reverseDirections[3] = 7;
@@ -177,6 +177,12 @@ void TMap::mapClear()
     mUserData.clear();
     // mSaveVersion is not reset - so that any new Mudlet map file saves are to
     // whatever version was previously set/deduced
+
+    // Must also reset the mapper area selection control to reflect that it now
+    // only has the "Default Area" after TRoomDB::clearMapDB() has been run.
+    if (mpMapper) {
+        mpMapper->updateAreaComboBox();
+    }
 }
 
 void TMap::logError(QString& msg)

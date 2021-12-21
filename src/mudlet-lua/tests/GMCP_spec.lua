@@ -1,5 +1,5 @@
 describe("tests the functionality of the gmod module", function()
-  describe("gmod.registerUser(user)", function()
+  describe("Tests the functionality of gmod.registerUser", function()
     it("Should return 'user registered' upon successfully registering a user", function()
       local expected = "user registered"
       local actual = gmod.registerUser("testUser" .. math.random(10000))
@@ -15,7 +15,7 @@ describe("tests the functionality of the gmod module", function()
     end)
   end)
 
-  describe("gmod.enableModule(user, module)", function()
+  describe("Tests the functionality of gmod.enableModule", function()
     local module = "OogaBoogaFakeModule"
     local user = "testUser"
     after_each(function()
@@ -52,7 +52,7 @@ describe("tests the functionality of the gmod module", function()
     end)
   end)
 
-  describe("gmod.disableModule(user, module)", function()
+  describe("Tests the functionality of gmod.disableModule", function()
     local module = "OogaBoogaFakeModule"
     local user = "testUser"
     local sg
@@ -86,7 +86,7 @@ describe("tests the functionality of the gmod module", function()
     end)
   end)
 
-  describe("gmod.isRegisteredModule(module)", function()
+  describe("Tests the functionality of gmod.isRegisteredModule", function()
     it("should return false if a module is not registered", function()
       local actual = gmod.isRegisteredModule("ThisModuleIsDefinitelyNotRegistered1281728923489348912")
       assert.is_false(actual)
@@ -106,7 +106,7 @@ describe("tests the functionality of the gmod module", function()
     end)
   end)
 
-  describe("gmod.printModules([user])", function()
+  describe("Tests the functionality of gmod.printModules", function()
     local user = "testUser"
     local module = "OogaBoogaFakeModule"
     local gp

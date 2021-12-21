@@ -1877,11 +1877,14 @@ void XMLimport::readProfileShortcuts() {
         }
         if (isStartElement()) {
             if (name() == "profileShortcut") {
-                auto key = attributes().value(QStringLiteral("key"));
+                auto key = attributes().value(qsl("key"));
                 auto sequenceString = readElementText();
-                QKeySequence* sequence = !sequenceString.isEmpty() ? new QKeySequence(sequenceString) : new QKeySequence();
-                mpHost->profileShortcuts.value(key.toString())->swap(*sequence);
-                delete sequence;
+                if (mpHost->profileShortcuts.value(key.toString())) {
+                    QKeySequence *sequence = !sequenceString.isEmpty() ? new QKeySequence(sequenceString)
+                                                                       : new QKeySequence();
+                    mpHost->profileShortcuts.value(key.toString())->swap(*sequence);
+                    delete sequence;
+                }
             }
         }
     }

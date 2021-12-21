@@ -3940,7 +3940,7 @@ int TLuaInterpreter::getBackgroundColor(lua_State* L)
     Host& host = getHostFromLua(L);
     QColor color;
 
-    QString windowName = QStringLiteral("main");
+    QString windowName = qsl("main");
     int n = lua_gettop(L);
     if (n > 0) {
         windowName = getVerifiedString(L, __func__, 1, "window name");
@@ -3951,7 +3951,7 @@ int TLuaInterpreter::getBackgroundColor(lua_State* L)
     } else if (auto optionalColor = host.getBackgroundColor(windowName)) {
         color = optionalColor.value();
     } else {
-        return warnArgumentValue(L, __func__, QStringLiteral("window '%1' does not exist").arg(windowName));
+        return warnArgumentValue(L, __func__, qsl("window '%1' does not exist").arg(windowName));
     }
 
     lua_pushnumber(L, color.red());
@@ -7917,7 +7917,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
         && exitCmd.compare(qsl("down"))
         && exitCmd.compare(qsl("in"))
         && exitCmd.compare(qsl("out"))) {
-        // One of the above WILL BE ZERO if the exitCmd is ONE of the above QStringLiterals
+        // One of the above WILL BE ZERO if the exitCmd is ONE of the above qsls
         // So the above will be TRUE if NONE of above strings match - which
         // means we must treat the exitCmd as a SPECIAL exit
         if (!(pR->getSpecialExits().contains(exitCmd))) {
