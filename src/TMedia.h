@@ -51,10 +51,10 @@ public:
         , initialized(true)
         {}
 
-    TMediaData getMediaData() { return mMediaData; }
+    TMediaData getMediaData() const { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
     QMediaPlayer* getMediaPlayer() const { return mMediaPlayer; }
-    bool isInitialized() { return initialized; }
+    bool isInitialized() const { return initialized; }
 
 private:
     QPointer<Host> mpHost;
@@ -106,6 +106,8 @@ private:
     static QString parseJSONByMediaTag(QJsonObject& json);
     static QString parseJSONByMediaUrl(QJsonObject& json);
     static QString parseJSONByMediaKey(QJsonObject& json);
+    static int parseJSONByMediaFadeIn(QJsonObject& json);
+    static int parseJSONByMediaFadeOut(QJsonObject& json);
 
     void parseJSONForMediaDefault(QJsonObject& json);
     void parseJSONForMediaLoad(QJsonObject& json);
