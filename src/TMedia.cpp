@@ -643,12 +643,12 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
 
     connect(pPlayer.getMediaPlayer(), &QMediaPlayer::positionChanged, [=](qint64 progress) {
         int volume = pPlayer.getMediaData().getMediaVolume();
-        int fadeInPosition = pPlayer.getMediaData().getMediaFadeIn();
-        int fadeOutPosition = pPlayer.getMediaData().getMediaFadeOut();
+        auto fadeInPosition = pPlayer.getMediaData().getMediaFadeIn();
+        auto fadeOutPosition = pPlayer.getMediaData().getMediaFadeOut();
 
         if (fadeInPosition != TMediaData::MediaFadeNotSet) {
             if (progress < fadeInPosition) {
-                double fadeInVolume = static_cast<double>(volume * progress / fadeInPosition * 1.0);
+                auto fadeInVolume = volume * progress / fadeInPosition * 1.0;
 
                 pPlayer.getMediaPlayer()->setVolume(qRound(fadeInVolume));
             } else if (progress == fadeInPosition) {
@@ -660,7 +660,7 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
             int duration = pPlayer.getMediaPlayer()->duration();
 
             if (progress > duration - fadeOutPosition) {
-                double fadeOutVolume = static_cast<double>(volume * (duration - progress) / fadeOutPosition * 1.0);
+                auto fadeOutVolume = volume * (duration - progress) / fadeOutPosition * 1.0;
 
                 pPlayer.getMediaPlayer()->setVolume(qRound(fadeOutVolume));
             }
