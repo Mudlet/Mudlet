@@ -642,22 +642,27 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
     });
 
     connect(pPlayer.getMediaPlayer(), &QMediaPlayer::positionChanged, [=](qint64 progress) {
-        int fadeIn = pPlayer.getMediaData().getMediaFadeIn();
-        int fadeOut = pPlayer.getMediaData().getMediaFadeOut();
         int volume = pPlayer.getMediaData().getMediaVolume();
-        int duration = pPlayer.getMediaPlayer()->duration();
+        int fadeInPosition = pPlayer.getMediaData().getMediaFadeIn();
+        int fadeOutPosition = pPlayer.getMediaData().getMediaFadeOut();
 
-        if (fadeIn != TMediaData::MediaFadeNotSet) {
+        if (fadeInPosition != TMediaData::MediaFadeNotSet) {
             if (progress < fadeIn) {
-                pPlayer.getMediaPlayer()->setVolume(qRound(volume * progress / fadeIn * 1.0));
-            } else {
+                double fadeInVolume = volume * progress / fadeIn * 1.0;
+
+                pPlayer.getMediaPlayer()->setVolume(qRound(fadeInVolume));
+            } else if (progress == fadeIn) {
                 pPlayer.getMediaPlayer()->setVolume(volume);
             }
         }
 
-        if (progress > 0 && fadeOut != TMediaData::MediaFadeNotSet) {
+        if (fadeOutPosition != TMediaData::MediaFadeNotSet && progress > 0) {
+            int duration = pPlayer.getMediaPlayer()->duration();
+
             if (progress > duration - fadeOut) {
-                pPlayer.getMediaPlayer()->setVolume(qRound(volume * (duration - progress) / fadeOut * 1.0));
+                double fadeOutVolume = volume * (duration - progress) / fadeOut * 1.0;
+
+                pPlayer.getMediaPlayer()->setVolume(qRound(fadeOutVolume));
             }
         }
     });
