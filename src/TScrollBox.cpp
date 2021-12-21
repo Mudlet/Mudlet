@@ -31,7 +31,8 @@ TScrollBox::TScrollBox(Host* pH, QWidget* pW)
 , mpHost(pH)
 {
     setWidget(new TScrollBoxWidget());
-    setWidgetResizable(true);
+    setWidgetResizable(false);
+    widget()->resize(parentWidget()->size());
 }
 
 
@@ -54,11 +55,18 @@ void TScrollBoxWidget::childEvent(QChildEvent* event)
 void TScrollBoxWidget::setMinSize()
 {
     QSize childrenSize(childrenRect().bottomRight().x(), childrenRect().bottomRight().y());
-
-    if (childrenRect().bottomRight().x() >= parentWidget()->rect().bottomRight().x() || childrenRect().bottomRight().y() >= parentWidget()->rect().bottomRight().y()) {
-        setFixedSize(childrenSize);
-    } else {
-        setFixedSize(parentWidget()->size());
+    int widthMargin = -2;
+    int heightMargin = -2;
+    bool changeWidth = childrenRect().bottomRight().x() >= parentWidget()->rect().bottomRight().x();
+    bool changeHeight = childrenRect().bottomRight().y() >= parentWidget()->rect().bottomRight().y();
+    if (changeWidth) {
+        resize(childrenSize.width() + widthMargin, height());
+    }
+    if (changeHeight) {
+        resize(width(), childrenSize.height() + heightMargin);
+    }
+    if (!changeWidth && !changeHeight) {
+        resize(parentWidget()->size());
     }
 }
 

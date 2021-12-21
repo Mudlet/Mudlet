@@ -176,6 +176,18 @@ static const char *bad_cmdline_value = "command line \"%s\" not found";
         cmdLine_;                                                                              \
     })
 
+#define SCROLLBOX(_L, _name)                                                                     \
+    ({                                                                                         \
+        auto name_ = (_name);                                                                  \
+        auto scrollBox_ = getHostFromLua(_L).findScrollBox(name_);                                 \
+        if (!scrollBox_) {                                                                       \
+            lua_pushnil(L);                                                                    \
+            lua_pushfstring(L, bad_window_value, name_.toUtf8().constData());                  \
+            return 2;                                                                          \
+        }                                                                                      \
+        console_;                                                                              \
+    })
+
 // variable names within these macros have trailing underscores because in
 // at least one case, masking an existing variable with the new one confused
 // GCC, leading to a crash.

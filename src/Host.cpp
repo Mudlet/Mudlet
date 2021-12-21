@@ -2814,6 +2814,15 @@ QPointer<TConsole> Host::findConsole(QString name)
     }
 }
 
+TScrollBox* Host::findScrollBox(QString name)
+{
+    if (name.isEmpty() or name == qsl("main")) {
+        return nullptr;
+    } else {
+        return mpConsole->mScrollBoxMap.value(name);
+    }
+}
+
 QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lineFrom, const int lineTo)
 {
     if (!mpConsole) {
