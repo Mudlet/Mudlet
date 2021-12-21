@@ -139,6 +139,8 @@
     <addaction name="separator"/>
     <addaction name="dactionDisconnect"/>
     <addaction name="dactionReconnect"/>
+    <addaction name="separator"/>
+    <addaction name="dactionCloseProfile"/>
    </widget>
    <addaction name="menuGames"/>
    <addaction name="menuEditor"/>
@@ -354,6 +356,11 @@
    </property>
    <property name="toolTip">
     <string>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</string>
+   </property>
+  </action>
+  <action name="dactionCloseProfile">
+   <property name="text">
+    <string>Close profile</string>
    </property>
   </action>
  </widget>

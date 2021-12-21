@@ -246,6 +246,7 @@ mudlet::mudlet()
 , mpActionModuleManager(nullptr)
 , mpActionPackageExporter(nullptr)
 , mpActionReconnect(nullptr)
+, mpActionCloseProfile(nullptr)
 , mpActionScripts(nullptr)
 , mpActionTimers(nullptr)
 , mpActionTriggers(nullptr)
@@ -368,8 +369,14 @@ mudlet::mudlet()
     mpActionDisconnect = new QAction(tr("Disconnect"), this);
     mpActionDisconnect->setObjectName(qsl("disconnect"));
 
+    mpActionCloseProfile = new QAction(tr("Close profile"), this);
+    mpActionCloseProfile->setIcon(QIcon(qsl(":/icons/profile-close.png")));
+    mpActionCloseProfile->setIconText(tr("Close profile"));
+    mpActionCloseProfile->setObjectName(qsl("close_profile"));
+
     mpButtonConnect->addAction(mpActionConnect);
     mpButtonConnect->addAction(mpActionDisconnect);
+    mpButtonConnect->addAction(mpActionCloseProfile);
     mpButtonConnect->setDefaultAction(mpActionConnect);
 
     mpActionTriggers = new QAction(QIcon(qsl(":/icons/tools-wizard.png")), tr("Triggers"), this);
@@ -570,6 +577,7 @@ mudlet::mudlet()
     connect(mpActionMultiView.data(), &QAction::triggered, this, &mudlet::slot_multi_view);
     connect(mpActionReconnect.data(), &QAction::triggered, this, &mudlet::slot_reconnect);
     connect(mpActionDisconnect.data(), &QAction::triggered, this, &mudlet::slot_disconnect);
+    connect(mpActionCloseProfile.data(), &QAction::triggered, this, &mudlet::slot_close_current_profile);
     connect(mpActionReplay.data(), &QAction::triggered, this, &mudlet::slot_replay);
     connect(mpActionNotes.data(), &QAction::triggered, this, &mudlet::slot_notes);
     connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_mapper);
@@ -580,12 +588,10 @@ mudlet::mudlet()
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_package_exporter);
 
-    // PLACEMARKER: Save for later restoration (1 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
-    // QAction* mactionCloseProfile = new QAction(tr("Close"), this);
-
     connect(dactionConnect, &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
     connect(dactionReconnect, &QAction::triggered, this, &mudlet::slot_reconnect);
     connect(dactionDisconnect, &QAction::triggered, this, &mudlet::slot_disconnect);
+    connect(dactionCloseProfile, &QAction::triggered, this, &mudlet::slot_close_current_profile);
     connect(dactionNotepad, &QAction::triggered, this, &mudlet::slot_notes);
     connect(dactionReplay, &QAction::triggered, this, &mudlet::slot_replay);
 
@@ -654,6 +660,7 @@ mudlet::mudlet()
     connectKeySequence = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_C);
     disconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_D);
     reconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_R);
+    closeProfileKeySequence = QKeySequence(Qt::CTRL | Qt::Key_W);
 #else
     triggersKeySequence = QKeySequence(Qt::ALT | Qt::Key_E);
     showMapKeySequence = QKeySequence(Qt::ALT | Qt::Key_M);
@@ -666,6 +673,7 @@ mudlet::mudlet()
     connectKeySequence = QKeySequence(Qt::ALT | Qt::Key_C);
     disconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_D);
     reconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_R);
+    closeProfileKeySequence = QKeySequence(Qt::ALT | Qt::Key_W);
 #endif
     connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_update_shortcuts);
     connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assign_shortcuts_from_profile);
@@ -686,6 +694,7 @@ mudlet::mudlet()
     mShortcutsManager->registerShortcut(qsl("Play"), tr("Play"), &connectKeySequence);
     mShortcutsManager->registerShortcut(qsl("Disconnect"), tr("Disconnect"), &disconnectKeySequence);
     mShortcutsManager->registerShortcut(qsl("Reconnect"), tr("Reconnect"), &reconnectKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Close profile"), tr("Close profile"), &closeProfileKeySequence);
 
     mpSettings = getQSettings();
     readLateSettings(*mpSettings);
@@ -1324,6 +1333,19 @@ void mudlet::slot_package_exporter()
     d->show();
 }
 
+void mudlet::slot_close_current_profile()
+{
+    Host* pH = getActiveHost();
+    if (!pH) {
+        return;
+    }
+    slot_close_profile_requested(mpTabBar->currentIndex());
+
+    if (!getActiveHost()) {
+        disableToolbarButtons();
+        slot_show_connection_dialog();
+    }
+}
 
 void mudlet::slot_close_profile_requested(int tab)
 {
@@ -1649,6 +1671,9 @@ void mudlet::disableToolbarButtons()
     dactionReplay->setEnabled(false);
     mpActionReconnect->setEnabled(false);
     mpActionDisconnect->setEnabled(false);
+
+    mpActionCloseProfile->setEnabled(false);
+    dactionCloseProfile->setEnabled(false);
 }
 
 void mudlet::enableToolbarButtons()
@@ -1683,6 +1708,9 @@ void mudlet::enableToolbarButtons()
 
     mpActionReconnect->setEnabled(true);
     mpActionDisconnect->setEnabled(true);
+
+    mpActionCloseProfile->setEnabled(true);
+    dactionCloseProfile->setEnabled(true);
 
     // As this is called when a profile is loaded it is time to check whether
     // we need to continue to show the main menu and/or the main toolbar
@@ -2386,6 +2414,11 @@ void mudlet::assignKeySequences()
         reconnectShortcut = new QShortcut(reconnectKeySequence, this);
         connect(reconnectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_reconnect);
         dactionReconnect->setShortcut(QKeySequence());
+
+        delete closeProfileShortcut.data();
+        closeProfileShortcut = new QShortcut(closeProfileKeySequence, this);
+        connect(closeProfileShortcut.data(), &QShortcut::activated, this, &mudlet::slot_close_current_profile);
+        dactionCloseProfile->setShortcut(QKeySequence());
     } else {
         // The menu is shown so tie the QKeySequences to the menu items and it
         // is those that will call the slots:
@@ -2424,6 +2457,9 @@ void mudlet::assignKeySequences()
 
         delete reconnectShortcut.data();
         dactionReconnect->setShortcut(reconnectKeySequence);
+
+        delete closeProfileShortcut.data();
+        dactionCloseProfile->setShortcut(closeProfileKeySequence);
     }
 }
 
