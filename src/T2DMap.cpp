@@ -2402,12 +2402,12 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
 
 int T2DMap::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties)
 {
-    painter.save();
 
     if (properties.text.isEmpty()) {
         return 0;
     }
 
+    painter.save();
     auto infoText = properties.text.trimmed();
 
     auto font = painter.font();
