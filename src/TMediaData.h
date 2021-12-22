@@ -40,7 +40,7 @@ public:
 
     enum MediaContinue { MediaContinueDefault = true, MediaContinueRestart = false };
 
-    enum MediaFade { MediaFadeNotSet = 0 };
+    static const int MediaFadeNotSet = 0;
 
     TMediaData()
     {}
