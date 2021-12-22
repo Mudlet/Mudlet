@@ -40,19 +40,10 @@ public:
 
     enum MediaContinue { MediaContinueDefault = true, MediaContinueRestart = false };
 
-    enum MediaFade { MediaFadeMin = 0, MediaFadeNotSet = 0 };
+    enum MediaFade { MediaFadeNotSet = 0 };
 
     TMediaData()
-    {
-        mMediaProtocol = MediaProtocolNotSet;
-        mMediaType = MediaTypeNotSet;
-        mMediaVolume = MediaVolumeDefault;
-        mMediaFadeIn = MediaFadeNotSet;
-        mMediaFadeOut = MediaFadeNotSet;
-        mMediaLoops = MediaLoopsDefault;
-        mMediaPriority = MediaPriorityNotSet;
-        mMediaContinue = MediaContinueDefault;
-    }
+    {}
 
     int getMediaProtocol() const { return mMediaProtocol; }
     void setMediaProtocol(int mediaProtocol) { mMediaProtocol = mediaProtocol; }
@@ -82,18 +73,18 @@ public:
     void setMediaAbsolutePathFileName(QString mediaAbsolutePathFileName) { mMediaAbsolutePathFileName = mediaAbsolutePathFileName; }
 
 private:
-    int mMediaProtocol;
-    int mMediaType;
+    int mMediaProtocol = MediaProtocolNotSet;
+    int mMediaType = MediaTypeNotSet;
     QString mMediaFileName;
-    int mMediaVolume;
-    int mMediaLoops;
-    int mMediaPriority;
-    bool mMediaContinue;
+    int mMediaVolume = MediaVolumeDefault;
+    int mMediaLoops = MediaLoopsDefault;
+    int mMediaPriority = MediaPriorityNotSet;
+    bool mMediaContinue = MediaContinueDefault;
     QString mMediaTag;
     QString mMediaUrl;
     QString mMediaKey;
-    int mMediaFadeIn;
-    int mMediaFadeOut;
+    int mMediaFadeIn = MediaFadeNotSet;
+    int mMediaFadeOut = MediaFadeNotSet;
     QString mMediaAbsolutePathFileName;
 };
 

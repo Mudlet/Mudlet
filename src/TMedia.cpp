@@ -1090,11 +1090,15 @@ int TMedia::parseJSONByMediaFadeIn(QJsonObject& json)
     if (mediaFadeInJSON != QJsonValue::Undefined && mediaFadeInJSON.isString() && !mediaFadeInJSON.toString().isEmpty()) {
         mediaFadeIn = mediaFadeInJSON.toString().toInt();
 
-        if (mediaFadeIn < TMediaData::MediaFadeMin) {
-            mediaFadeIn = TMediaData::MediaFadeMin;
+        if (mediaFadeIn < TMediaData::MediaFadeNotSet) {
+            mediaFadeIn = TMediaData::MediaFadeNotSet;
         }
     } else if (mediaFadeInJSON != QJsonValue::Undefined && mediaFadeInJSON.toInt()) {
         mediaFadeIn = mediaFadeInJSON.toInt();
+
+        if (mediaFadeIn < TMediaData::MediaFadeNotSet) {
+            mediaFadeIn = TMediaData::MediaFadeNotSet;
+        }
     }
 
     return mediaFadeIn;
@@ -1109,8 +1113,16 @@ int TMedia::parseJSONByMediaFadeOut(QJsonObject& json)
 
     if (mediaFadeOutJSON != QJsonValue::Undefined && mediaFadeOutJSON.isString() && !mediaFadeOutJSON.toString().isEmpty()) {
         mediaFadeOut = mediaFadeOutJSON.toString().toInt();
+
+        if (mediaFadeOut < TMediaData::MediaFadeNotSet) {
+            mediaFadeOut = TMediaData::MediaFadeNotSet;
+        }
     } else if (mediaFadeOutJSON != QJsonValue::Undefined && mediaFadeOutJSON.toInt()) {
         mediaFadeOut = mediaFadeOutJSON.toInt();
+
+        if (mediaFadeOut < TMediaData::MediaFadeNotSet) {
+            mediaFadeOut = TMediaData::MediaFadeNotSet;
+        }
     }
 
     return mediaFadeOut;
