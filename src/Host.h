@@ -341,7 +341,6 @@ public:
     void setCompactInputLine(const bool state);
     bool getCompactInputLine() const { return mCompactInputLine; }
     QPointer<TConsole> findConsole(QString name);
-    TScrollBox* findScrollBox(QString name);
     void close();
 
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);

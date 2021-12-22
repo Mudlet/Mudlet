@@ -54,7 +54,6 @@ public:
     ~TScrollBoxWidget();
     void childEvent(QChildEvent* event) override;
     bool eventFilter(QObject* object, QEvent* event) override;
-    void setMinSize();
 };
 
 #endif // MUDLET_TSCROLLBOX_H
