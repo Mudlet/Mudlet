@@ -66,8 +66,9 @@ using namespace std::chrono_literals;
 // Uncomment this to report details about the replay data as it is replayed:
 // #define DEBUG_PLAYBACK 1
 
-#define BUFFER_SIZE 100000
-char loadBuffer[(BUFFER_SIZE + 1)];
+constexpr size_t BUFFER_SIZE = 100000L;
+// TODO: https://github.com/Mudlet/Mudlet/issues/5780 (1 of 7) - investigate switching from using `char[]` to `std::array<char>`
+char loadBuffer[BUFFER_SIZE + 1];
 int loadedBytes;
 QDataStream replayStream;
 QFile replayFile;
@@ -974,7 +975,7 @@ std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
     }
 }
 
-QString cTelnet::dumpHexDecodedText(const QByteArray& msg) const
+/*static*/ QString cTelnet::dumpHexDecodedText(const QByteArray& msg)
 {
     QString output;
     for (int i = 0, total = msg.length(); i < total; ++i) {
@@ -2693,11 +2694,11 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         }
         loadingReplay = true;
         if (mudlet::self()->replayStart()) {
-            // TODO: consider moving to a QTimeLine based system...?
-            // This initiates the replay chunk reading/processing cycle:
+            // TODO: https://github.com/Mudlet/Mudlet/issues/5779 - consider enhancing replay system, possibly using the QTimeLine class
             std::pair results = preparseReplayFile();
             if (Q_LIKELY(std::get<0>(results))) {
                 mReplayHasFaultyFormat = std::get<1>(results);
+                // This initiates the replay chunk reading/processing cycle:
                 loadReplayChunk();
             } else {
                 // Amelioration code should now prevent this from happening
@@ -2879,7 +2880,8 @@ void cTelnet::handle_socket_signal_readyRead()
         mWaitingForResponse = false;
     }
 
-    char in_buffer[(BUFFER_SIZE + 10)];
+    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (2 of 7) - investigate switching from using `char[]` to `std::array<char>`
+    char in_buffer[BUFFER_SIZE + 10];
 
     int amount = socket.read(in_buffer, BUFFER_SIZE);
     processSocketData(in_buffer, amount);
@@ -2887,7 +2889,8 @@ void cTelnet::handle_socket_signal_readyRead()
 
 void cTelnet::processSocketData(char* in_buffer, int amount)
 {
-    char out_buffer[(BUFFER_SIZE + 10)];
+    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (3 of 7) - investigate switching from using `char[]` to `std::array<char>`
+    char out_buffer[BUFFER_SIZE + 10];
 
     in_buffer[amount + 1] = '\0';
     if (amount == -1) {
@@ -2906,6 +2909,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
             datalen = decompressBuffer(in_buffer, amount, out_buffer);
             buffer = out_buffer;
         }
+        // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
         buffer[static_cast<size_t>(datalen)] = '\0';
         if (mpHost->mpConsole->mRecordReplay) {
             ++mRecordingChunkCount;
@@ -3225,6 +3229,7 @@ void cTelnet::setPostingTimeout(const int timeout)
 // second true if it is in the modified format:
 std::pair<bool, bool> cTelnet::preparseReplayFile()
 {
+    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (5 of 7) - investigate switching from using `char[]` to `std::array<char>`
     char replayBuffer[BUFFER_SIZE];
     if (!mReplayChunks.isEmpty()) {
         mReplayChunks.clear();
@@ -3242,11 +3247,12 @@ std::pair<bool, bool> cTelnet::preparseReplayFile()
         while (readableAsOriginalFormat && !replayStream.atEnd()) {
             replayStream >> offset;
             replayStream >> amount;
-            if (amount >= BUFFER_SIZE || offset < 0 || amount < 1) {
+            if (amount < 1 || offset < 0 || amount >= static_cast<qint32>(BUFFER_SIZE)) {
                 readableAsOriginalFormat = false;
             } else {
                 int replayloadedBytes = replayStream.readRawData(replayBuffer, amount);
                 if (replayloadedBytes > -1) {
+                    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (6 of 7) - investigate switching from using `char[]` to `std::array<char>`
                     replayBuffer[replayloadedBytes] = '\0';
                     QByteArray chunkData(replayBuffer, replayloadedBytes);
                     mReplayChunks.insert(totalElapsed, chunkData);
@@ -3266,18 +3272,19 @@ std::pair<bool, bool> cTelnet::preparseReplayFile()
         }
 
         totalElapsed = 0;
-        // Try with first number being 8 byte signed integer
-        // (as it was during period after that PR and before fix):
+        // Try with first number being an 8 byte signed integer
+        // (was int type prior to that PR):
         qint64 offset = 0;
         qint32 amount = 0;
         while (readableAsModifiedFormat && !replayStream.atEnd()) {
             replayStream >> offset;
             replayStream >> amount;
-            if (amount >= BUFFER_SIZE || offset < 0 || amount < 1) {
+            if (amount < 1 || offset < 0 || amount >= static_cast<qint32>(BUFFER_SIZE) || offset > INT32_MAX) {
                 readableAsModifiedFormat = false;
             } else {
                 int replayloadedBytes = replayStream.readRawData(replayBuffer, amount);
                 if (replayloadedBytes > -1) {
+                    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (7 of 7) - investigate switching from using `char[]` to `std::array<char>`
                     replayBuffer[replayloadedBytes] = '\0';
                     QByteArray chunkData(replayBuffer, replayloadedBytes);
                     mReplayChunks.insert(totalElapsed, chunkData);
@@ -3291,7 +3298,7 @@ std::pair<bool, bool> cTelnet::preparseReplayFile()
 
     if (readableAsOriginalFormat | readableAsModifiedFormat) {
         qDebug().nospace().noquote() << "cTelnet::preparseReplayFile() INFO - The " << (readableAsOriginalFormat ? "original" : "modified") << " format replay has: " << mReplayChunks.count()
-                                     << " chunks and covers a period of: " << QTime(0, 0).addMSecs(static_cast<int>(totalElapsed)).toString(QStringLiteral("hh:mm:ss.zzz"));
+                                     << " chunks and covers a period of: " << QTime(0, 0).addMSecs(static_cast<int>(totalElapsed)).toString(QStringLiteral("hh:mm:ss.zzz")) << " (h:m:s).";
 
         if (mDumpReplayChunkContents) {
             QMapIterator<quint64, QByteArray> itChunk(mReplayChunks);

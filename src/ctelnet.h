@@ -243,7 +243,7 @@ private:
     void processChunks();
     void sendNAWS(int x, int y);
     std::pair<bool, bool> preparseReplayFile();
-    QString dumpHexDecodedText(const QByteArray&) const;
+    static QString dumpHexDecodedText(const QByteArray&);
 
 
     QPointer<Host> mpHost;
