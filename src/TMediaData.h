@@ -77,14 +77,14 @@ private:
     int mMediaType = MediaTypeNotSet;
     QString mMediaFileName;
     int mMediaVolume = MediaVolumeDefault;
+    int mMediaFadeIn = MediaFadeNotSet;
+    int mMediaFadeOut = MediaFadeNotSet;
     int mMediaLoops = MediaLoopsDefault;
     int mMediaPriority = MediaPriorityNotSet;
     bool mMediaContinue = MediaContinueDefault;
     QString mMediaTag;
     QString mMediaUrl;
     QString mMediaKey;
-    int mMediaFadeIn = MediaFadeNotSet;
-    int mMediaFadeOut = MediaFadeNotSet;
     QString mMediaAbsolutePathFileName;
 };
 
