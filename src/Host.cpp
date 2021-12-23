@@ -1695,7 +1695,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
         if ((module == 2) && (mActiveModules.contains(packageName))) {
             uninstallPackage(packageName, 2);
         } else if ((module == 3) && (mActiveModules.contains(packageName))) {
-            return {false, qsl("module %1 is already installed").arg(packageName))}; //we're already installed
+            return {false, qsl("module %1 is already installed").arg(packageName)}; //we're already installed
         }
     } else {
         if (mInstalledPackages.contains(packageName)) {
