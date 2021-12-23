@@ -2694,7 +2694,6 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         }
         loadingReplay = true;
         if (mudlet::self()->replayStart()) {
-            // TODO: https://github.com/Mudlet/Mudlet/issues/5779 - consider enhancing replay system, possibly using the QTimeLine class
             std::pair results = preparseReplayFile();
             if (Q_LIKELY(std::get<0>(results))) {
                 mReplayHasFaultyFormat = std::get<1>(results);
@@ -2740,8 +2739,7 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
     return true;
 }
 
-// TODO: Revise replay process to use the already read and stored
-// QMap<quint64, QByteArray> mReplayChunks;
+// TODO: https://github.com/Mudlet/Mudlet/issues/5779 - consider enhancing replay system, possibly using the QTimeLine class, to use the already read and stored QMap<quint64, QByteArray> mReplayChunks
 void cTelnet::loadReplayChunk()
 {
     if (!replayStream.atEnd()) {
