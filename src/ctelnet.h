@@ -242,6 +242,8 @@ private:
     void setKeepAlive(int socketHandle);
     void processChunks();
     void sendNAWS(int x, int y);
+    std::pair<bool, bool> preparseReplayFile();
+    QString dumpHexDecodedText(const QByteArray&) const;
 
 
     QPointer<Host> mpHost;
@@ -304,7 +306,9 @@ private:
     QTimer* mTimerPass;
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
-    int mRecordLastChunkMSecTimeOffset;
+    qint32 mRecordLastChunkMSecTimeOffset = 0;
+    int mRecordingChunkCount = 0;
+    bool mReplayHasFaultyFormat = false;
     bool enableCHARSET;
     bool enableATCP;
     bool enableGMCP;
@@ -337,6 +341,16 @@ private:
     // we can send NAWS data when it changes:
     int mNaws_x = 0;
     int mNaws_y = 0;
+
+    // Holds the replay data, Key: elapsed time in milliseconds, Value: raw data
+    QMap<quint64, QByteArray> mReplayChunks;
+
+    // Can be used (set in debugging environment) during debugging of replay files
+    // Include a fully visual display of ALL bytes in replay data in debug output:
+    bool mDumpReplayChunkContents = false;
+    // Ignore the delays when replaying replay - process the whole lot at maximum
+    // speed:
+    bool mZeroReplayChunkDelays = false;
 
 private slots:
 #if !defined(QT_NO_SSL)

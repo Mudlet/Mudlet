@@ -60,7 +60,14 @@ using namespace std::chrono_literals;
 // of the messages
 #define DEBUG_TELNET 1
 
-char loadBuffer[100001];
+// Uncomment this to report details about each replay chunk as it is recorded:
+// #define DEBUG_RECORDING 1
+
+// Uncomment this to report details about the replay data as it is replayed:
+// #define DEBUG_PLAYBACK 1
+
+#define BUFFER_SIZE 100000
+char loadBuffer[(BUFFER_SIZE + 1)];
 int loadedBytes;
 QDataStream replayStream;
 QFile replayFile;
@@ -95,7 +102,6 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mMCCP_version_1(false)
 , mMCCP_version_2(false)
 , mIsTimerPosting()
-, mRecordLastChunkMSecTimeOffset()
 , enableCHARSET(false)
 , enableATCP(false)
 , enableGMCP(false)
@@ -165,6 +171,11 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 
     mpDownloader = new QNetworkAccessManager(this);
     connect(mpDownloader, &QNetworkAccessManager::finished, this, &cTelnet::slot_replyFinished);
+
+#if defined(DEBUG_PLAYBACK)
+    mDumpReplayChunkContents = true;
+    mZeroReplayChunkDelays = true;
+#endif
 }
 
 void cTelnet::reset()
@@ -961,6 +972,81 @@ std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
     } else {
         return {hostName, hostPort, connected};
     }
+}
+
+QString cTelnet::dumpHexDecodedText(const QByteArray& msg) const
+{
+    QString output;
+    for (int i = 0, total = msg.length(); i < total; ++i) {
+        if (static_cast<unsigned char>(msg.at(i)) >= 0x20 && static_cast<unsigned char>(msg.at(i)) < 0x7f) {
+            output.append(msg.at(i));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0x00) {
+            output.append(QLatin1String("<NUL/O_BIN/SEND>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0x01) {
+            output.append(QLatin1String("<O_ECHO/IS/M[SD]VAR>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0x02) {
+            output.append(QLatin1String("<M[SD]VAL>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0x03) {
+            output.append(QLatin1String("<O_SGA/MSDP_T_O>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0x04) {
+            output.append(QLatin1String("<MSDP_T_C>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0x05) {
+            output.append(QLatin1String("<O_STAT/MSDP_A_O>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0x06) {
+            output.append(QLatin1String("<O_TM/MSDP_A_C>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0x09) {
+            output.append(QLatin1String("<TAB>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0x0A) {
+            output.append(QLatin1String("<CR>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0x0C) {
+            output.append(QLatin1String("<FF>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0x0D) {
+            output.append(QChar::LineFeed);
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0x18) {
+            output.append(QLatin1String("<O_TTYPE>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0x19) {
+            output.append(QLatin1String("<O_EOR>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0x1b) {
+            output.append(QLatin1String("<ESC>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xff) {
+            output.append(QLatin1String("<IAC>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xfe) {
+            output.append(QLatin1String("<DONT>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xfd) {
+            output.append(QLatin1String("<DO>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xfc) {
+            output.append(QLatin1String("<WONT>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xfb) {
+            output.append(QLatin1String("<WILL>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xfa) {
+            output.append(QLatin1String("<SB>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xf9) {
+            output.append(QLatin1String("<GA>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xf8) {
+            output.append(QLatin1String("<EL>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xf7) {
+            output.append(QLatin1String("<EC>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xf6) {
+            output.append(QLatin1String("<AYT>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xf5) {
+            output.append(QLatin1String("<AO>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xf4) {
+            output.append(QLatin1String("<IP>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xf3) {
+            output.append(QLatin1String("<BRK>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xf2) {
+            output.append(QLatin1String("<DM>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xf1) {
+            output.append(QLatin1String("<NOP>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xf0) {
+            output.append(QLatin1String("<SE>"));
+        } else if (static_cast<unsigned char>(msg.at(i)) == 0xef) {
+            output.append(QLatin1String("<EOR>"));
+        } else {
+            output.append(QString("<%1>").arg(static_cast<unsigned char>(msg.at(i)), 3, 10, QChar('0')).toUpper());
+        }
+    }
+    return output;
 }
 
 void cTelnet::processTelnetCommand(const std::string& command)
@@ -2555,11 +2641,11 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     mZstream.avail_in = length;
     mZstream.next_in = (Bytef*)in_buffer;
 
-    mZstream.avail_out = 100000;
+    mZstream.avail_out = BUFFER_SIZE;
     mZstream.next_out = (Bytef*)out_buffer;
 
     int zval = inflate(&mZstream, Z_SYNC_FLUSH);
-    int outSize = 100000 - mZstream.avail_out;
+    int outSize = BUFFER_SIZE - mZstream.avail_out;
 
     length = mZstream.avail_in;
     in_buffer = (char*)mZstream.next_in;
@@ -2585,6 +2671,7 @@ void cTelnet::recordReplay()
 {
     mRecordLastChunkMSecTimeOffset = 0;
     mRecordingChunkTimer.start();
+    mRecordingChunkCount = 0;
 }
 
 bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
@@ -2608,7 +2695,24 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         if (mudlet::self()->replayStart()) {
             // TODO: consider moving to a QTimeLine based system...?
             // This initiates the replay chunk reading/processing cycle:
-            loadReplayChunk();
+            std::pair results = preparseReplayFile();
+            if (Q_LIKELY(std::get<0>(results))) {
+                mReplayHasFaultyFormat = std::get<1>(results);
+                loadReplayChunk();
+            } else {
+                // Amelioration code should now prevent this from happening
+                loadingReplay = false;
+                replayFile.close();
+                if (!mIsReplayRunFromLua) {
+                    postMessage(tr("[ WARN ]  - The replay has been aborted as the file seems to be corrupt."));
+                } else {
+                    // Called from lua case:
+                    *pErrMsg = tr("Cannot replay file \"%1\", error message was: \"replay file seems to be corrupt\".").arg(name);
+                }
+                mudlet::self()->replayOver();
+                return false;
+            }
+
         } else {
             loadingReplay = false;
             if (pErrMsg) {
@@ -2635,12 +2739,24 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
     return true;
 }
 
+// TODO: Revise replay process to use the already read and stored
+// QMap<quint64, QByteArray> mReplayChunks;
 void cTelnet::loadReplayChunk()
 {
     if (!replayStream.atEnd()) {
-        int offset;
-        int amount;
-        replayStream >> offset;
+        qint32 amount = 0;
+        qint32 offset = 0;
+        if (mReplayHasFaultyFormat) {
+            qint64 temp = 0;
+            replayStream >> temp;
+            // 2^30 millseconds is over 12 days so that sort of delay between
+            // steps is not likely - and only using a 32 bit integer type is
+            // going to be okay:
+            offset = static_cast<qint32>(temp);
+        } else {
+            replayStream >> offset;
+        }
+
         replayStream >> amount;
 
         loadedBytes = replayStream.readRawData(loadBuffer, amount);
@@ -2648,7 +2764,11 @@ void cTelnet::loadReplayChunk()
         // string display by a qDebug of the loadBuffer contents
         loadBuffer[loadedBytes] = '\0';
         mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
-        QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, &cTelnet::slot_processReplayChunk);
+        if (Q_UNLIKELY(mZeroReplayChunkDelays)) {
+            QTimer::singleShot(0, this, &cTelnet::slot_processReplayChunk);
+        } else {
+            QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, &cTelnet::slot_processReplayChunk);
+        }
     } else {
         loadingReplay = false;
         replayFile.close();
@@ -2759,15 +2879,15 @@ void cTelnet::handle_socket_signal_readyRead()
         mWaitingForResponse = false;
     }
 
-    char in_buffer[100010];
+    char in_buffer[(BUFFER_SIZE + 10)];
 
-    int amount = socket.read(in_buffer, 100000);
+    int amount = socket.read(in_buffer, BUFFER_SIZE);
     processSocketData(in_buffer, amount);
 }
 
 void cTelnet::processSocketData(char* in_buffer, int amount)
 {
-    char out_buffer[100010];
+    char out_buffer[(BUFFER_SIZE + 10)];
 
     in_buffer[amount + 1] = '\0';
     if (amount == -1) {
@@ -2778,7 +2898,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
     }
 
     std::string cleandata = "";
-    int datalen;
+    qint32 datalen = 0;
     do {
         datalen = amount;
         char* buffer = in_buffer;
@@ -2786,11 +2906,20 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
             datalen = decompressBuffer(in_buffer, amount, out_buffer);
             buffer = out_buffer;
         }
-        buffer[datalen] = '\0';
+        buffer[static_cast<size_t>(datalen)] = '\0';
         if (mpHost->mpConsole->mRecordReplay) {
-            mpHost->mpConsole->mReplayStream << mRecordingChunkTimer.elapsed() - mRecordLastChunkMSecTimeOffset;
-            mpHost->mpConsole->mReplayStream << datalen;
+            ++mRecordingChunkCount;
+            // QElapsedTimer::elapsed() returns a qint64, it replaces a
+            // previous QTime::elapsed() which returns a int (effectively a
+            // qint32):
+            qint32 recordingChunkInterval = static_cast<qint32>(mRecordingChunkTimer.elapsed()) - mRecordLastChunkMSecTimeOffset;
+            mpHost->mpConsole->mReplayStream << recordingChunkInterval; // 4 bytes
+            mpHost->mpConsole->mReplayStream << datalen;                // 4 bytes
             mpHost->mpConsole->mReplayStream.writeRawData(buffer, datalen);
+#if defined(DEBUG_RECORDING)
+            qDebug().noquote().nospace() << "cTelnet::processSocketData(...) INFO - recording chunk: " << mRecordingChunkCount << " is " << datalen
+                                         << " bytes and has an interval of: " << recordingChunkInterval << " mSecond since the previous chunk.";
+#endif
         }
 
         recvdGA = false;
@@ -2941,7 +3070,7 @@ Some data loss is likely - please mention this problem to the game admins.)", co
                 }
             }
         } //for
-    } while (datalen == 100000);
+    } while (datalen == BUFFER_SIZE);
 
     if (!cleandata.empty()) {
         gotRest(cleandata);
@@ -3087,4 +3216,103 @@ void cTelnet::setPostingTimeout(const int timeout)
     if (mTimeOut != timeout) {
         mTimeOut = timeout;
     }
+}
+
+// Tries reading the replay in two different manners depending on whether the
+// the first integer value in the chunk data uses 4 (original) or 8 (modified)
+// bytes - as an unintended side effect of https://github.com/Mudlet/Mudlet/pull/4400
+// - returns two booleans, the first is true if the file can be read and the
+// second true if it is in the modified format:
+std::pair<bool, bool> cTelnet::preparseReplayFile()
+{
+    char replayBuffer[BUFFER_SIZE];
+    if (!mReplayChunks.isEmpty()) {
+        mReplayChunks.clear();
+    }
+
+    quint64 totalElapsed = 0;
+    bool readableAsOriginalFormat = true;
+    // Don't set this until we try it:
+    bool readableAsModifiedFormat = false;
+    {
+        // Try with both numbers being 4 byte signed integers
+        // (first was int type prior to that PR):
+        qint32 offset = 0;
+        qint32 amount = 0;
+        while (readableAsOriginalFormat && !replayStream.atEnd()) {
+            replayStream >> offset;
+            replayStream >> amount;
+            if (amount >= BUFFER_SIZE || offset < 0 || amount < 1) {
+                readableAsOriginalFormat = false;
+            } else {
+                int replayloadedBytes = replayStream.readRawData(replayBuffer, amount);
+                if (replayloadedBytes > -1) {
+                    replayBuffer[replayloadedBytes] = '\0';
+                    QByteArray chunkData(replayBuffer, replayloadedBytes);
+                    mReplayChunks.insert(totalElapsed, chunkData);
+                    totalElapsed += static_cast<quint64>(offset);
+                }
+            }
+        }
+    }
+
+    // rewind the data to the start as if we haven't just read some/all of it
+    replayStream.device()->seek(0);
+
+    if (!readableAsOriginalFormat) {
+        readableAsModifiedFormat = true;
+        if (!mReplayChunks.isEmpty()) {
+            mReplayChunks.clear();
+        }
+
+        totalElapsed = 0;
+        // Try with first number being 8 byte signed integer
+        // (as it was during period after that PR and before fix):
+        qint64 offset = 0;
+        qint32 amount = 0;
+        while (readableAsModifiedFormat && !replayStream.atEnd()) {
+            replayStream >> offset;
+            replayStream >> amount;
+            if (amount >= BUFFER_SIZE || offset < 0 || amount < 1) {
+                readableAsModifiedFormat = false;
+            } else {
+                int replayloadedBytes = replayStream.readRawData(replayBuffer, amount);
+                if (replayloadedBytes > -1) {
+                    replayBuffer[replayloadedBytes] = '\0';
+                    QByteArray chunkData(replayBuffer, replayloadedBytes);
+                    mReplayChunks.insert(totalElapsed, chunkData);
+                    totalElapsed += static_cast<quint64>(offset);
+                }
+            }
+        }
+
+        replayStream.device()->seek(0);
+    }
+
+    if (readableAsOriginalFormat | readableAsModifiedFormat) {
+        qDebug().nospace().noquote() << "cTelnet::preparseReplayFile() INFO - The " << (readableAsOriginalFormat ? "original" : "modified") << " format replay has: " << mReplayChunks.count()
+                                     << " chunks and covers a period of: " << QTime(0, 0).addMSecs(static_cast<int>(totalElapsed)).toString(QStringLiteral("hh:mm:ss.zzz"));
+
+        if (mDumpReplayChunkContents) {
+            QMapIterator<quint64, QByteArray> itChunk(mReplayChunks);
+            unsigned int index = 0;
+            while (itChunk.hasNext()) {
+                itChunk.next();
+                QTime offsetTime = QTime::fromMSecsSinceStartOfDay(static_cast<int>(itChunk.key()));
+                auto chunkData{itChunk.value()};
+                QString displayData;
+                for (int i = 0, total = chunkData.size(); i < total; ++i) {
+                    if (static_cast<unsigned char>(chunkData.at(i)) >= 0x20 && static_cast<unsigned char>(chunkData.at(i)) <= 0x7F) {
+                        displayData.append(chunkData.at(i));
+                    } else {
+                        displayData.append(QStringLiteral("<%1>").arg(static_cast<quint8>(chunkData.at(i)), 2, 16, QLatin1Char('0')).toUpper());
+                    }
+                }
+                qDebug().nospace().noquote() << "Chunk " << ++index << " (offset: " << offsetTime.toString("hh:mm:ss.zzz") << "):\n\"" << displayData << "\"";
+            }
+        }
+        return {true, readableAsModifiedFormat};
+    }
+
+    return {false, false};
 }
