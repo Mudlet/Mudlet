@@ -2749,7 +2749,7 @@ void cTelnet::loadReplayChunk()
         if (mReplayHasFaultyFormat) {
             qint64 temp = 0;
             replayStream >> temp;
-            // 2^30 millseconds is over 12 days so that sort of delay between
+            // 2^30 milliseconds is over 12 days so that sort of delay between
             // steps is not likely - and only using a 32 bit integer type is
             // going to be okay:
             offset = static_cast<qint32>(temp);
