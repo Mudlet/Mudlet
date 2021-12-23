@@ -108,7 +108,7 @@ private:
     static QString parseJSONByMediaTag(QJsonObject& json);
     static QString parseJSONByMediaUrl(QJsonObject& json);
     static QString parseJSONByMediaKey(QJsonObject& json);
-    
+
     void parseJSONForMediaDefault(QJsonObject& json);
     void parseJSONForMediaLoad(QJsonObject& json);
     void parseJSONForMediaPlay(QJsonObject& json);
