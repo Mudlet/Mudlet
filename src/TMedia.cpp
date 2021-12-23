@@ -966,6 +966,54 @@ int TMedia::parseJSONByMediaVolume(QJsonObject& json)
     return mediaVolume;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#fadein
+int TMedia::parseJSONByMediaFadeIn(QJsonObject& json)
+{
+    int mediaFadeIn = TMediaData::MediaFadeNotSet;
+
+    auto mediaFadeInJSON = json.value(qsl("fadein"));
+
+    if (mediaFadeInJSON != QJsonValue::Undefined && mediaFadeInJSON.isString() && !mediaFadeInJSON.toString().isEmpty()) {
+        mediaFadeIn = mediaFadeInJSON.toString().toInt();
+
+        if (mediaFadeIn < TMediaData::MediaFadeNotSet) {
+            mediaFadeIn = TMediaData::MediaFadeNotSet;
+        }
+    } else if (mediaFadeInJSON != QJsonValue::Undefined && mediaFadeInJSON.toInt()) {
+        mediaFadeIn = mediaFadeInJSON.toInt();
+
+        if (mediaFadeIn < TMediaData::MediaFadeNotSet) {
+            mediaFadeIn = TMediaData::MediaFadeNotSet;
+        }
+    }
+
+    return mediaFadeIn;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#fadeout
+int TMedia::parseJSONByMediaFadeOut(QJsonObject& json)
+{
+    int mediaFadeOut = TMediaData::MediaFadeNotSet;
+
+    auto mediaFadeOutJSON = json.value(qsl("fadeout"));
+
+    if (mediaFadeOutJSON != QJsonValue::Undefined && mediaFadeOutJSON.isString() && !mediaFadeOutJSON.toString().isEmpty()) {
+        mediaFadeOut = mediaFadeOutJSON.toString().toInt();
+
+        if (mediaFadeOut < TMediaData::MediaFadeNotSet) {
+            mediaFadeOut = TMediaData::MediaFadeNotSet;
+        }
+    } else if (mediaFadeOutJSON != QJsonValue::Undefined && mediaFadeOutJSON.toInt()) {
+        mediaFadeOut = mediaFadeOutJSON.toInt();
+
+        if (mediaFadeOut < TMediaData::MediaFadeNotSet) {
+            mediaFadeOut = TMediaData::MediaFadeNotSet;
+        }
+    }
+
+    return mediaFadeOut;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#priority:_1_to_100
 int TMedia::parseJSONByMediaPriority(QJsonObject& json)
 {
@@ -1078,54 +1126,6 @@ QString TMedia::parseJSONByMediaKey(QJsonObject& json)
     }
 
     return mediaKey;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#fadein
-int TMedia::parseJSONByMediaFadeIn(QJsonObject& json)
-{
-    int mediaFadeIn = TMediaData::MediaFadeNotSet;
-
-    auto mediaFadeInJSON = json.value(qsl("fadein"));
-
-    if (mediaFadeInJSON != QJsonValue::Undefined && mediaFadeInJSON.isString() && !mediaFadeInJSON.toString().isEmpty()) {
-        mediaFadeIn = mediaFadeInJSON.toString().toInt();
-
-        if (mediaFadeIn < TMediaData::MediaFadeNotSet) {
-            mediaFadeIn = TMediaData::MediaFadeNotSet;
-        }
-    } else if (mediaFadeInJSON != QJsonValue::Undefined && mediaFadeInJSON.toInt()) {
-        mediaFadeIn = mediaFadeInJSON.toInt();
-
-        if (mediaFadeIn < TMediaData::MediaFadeNotSet) {
-            mediaFadeIn = TMediaData::MediaFadeNotSet;
-        }
-    }
-
-    return mediaFadeIn;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#fadeout
-int TMedia::parseJSONByMediaFadeOut(QJsonObject& json)
-{
-    int mediaFadeOut = TMediaData::MediaFadeNotSet;
-
-    auto mediaFadeOutJSON = json.value(qsl("fadeout"));
-
-    if (mediaFadeOutJSON != QJsonValue::Undefined && mediaFadeOutJSON.isString() && !mediaFadeOutJSON.toString().isEmpty()) {
-        mediaFadeOut = mediaFadeOutJSON.toString().toInt();
-
-        if (mediaFadeOut < TMediaData::MediaFadeNotSet) {
-            mediaFadeOut = TMediaData::MediaFadeNotSet;
-        }
-    } else if (mediaFadeOutJSON != QJsonValue::Undefined && mediaFadeOutJSON.toInt()) {
-        mediaFadeOut = mediaFadeOutJSON.toInt();
-
-        if (mediaFadeOut < TMediaData::MediaFadeNotSet) {
-            mediaFadeOut = TMediaData::MediaFadeNotSet;
-        }
-    }
-
-    return mediaFadeOut;
 }
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Loading_Media
 void TMedia::parseJSONForMediaDefault(QJsonObject& json)

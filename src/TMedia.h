@@ -100,15 +100,15 @@ private:
     static TMediaData::MediaType parseJSONByMediaType(QJsonObject& json);
     static QString parseJSONByMediaFileName(QJsonObject& json);
     static int parseJSONByMediaVolume(QJsonObject& json);
+    static int parseJSONByMediaFadeIn(QJsonObject& json);
+    static int parseJSONByMediaFadeOut(QJsonObject& json);
     static int parseJSONByMediaPriority(QJsonObject& json);
     static int parseJSONByMediaLoops(QJsonObject& json);
     static TMediaData::MediaContinue parseJSONByMediaContinue(QJsonObject& json);
     static QString parseJSONByMediaTag(QJsonObject& json);
     static QString parseJSONByMediaUrl(QJsonObject& json);
     static QString parseJSONByMediaKey(QJsonObject& json);
-    static int parseJSONByMediaFadeIn(QJsonObject& json);
-    static int parseJSONByMediaFadeOut(QJsonObject& json);
-
+    
     void parseJSONForMediaDefault(QJsonObject& json);
     void parseJSONForMediaLoad(QJsonObject& json);
     void parseJSONForMediaPlay(QJsonObject& json);
