@@ -34,12 +34,14 @@
 #include <QScrollBar>
 #include <QShortcut>
 #include "post_guard.h"
+#include "utils.h"
 
 
 QString dlgIRC::HostNameCfgItem = qsl("irc_host");
 QString dlgIRC::HostPortCfgItem = qsl("irc_port");
 QString dlgIRC::HostSecureCfgItem = qsl("irc_secure");
 QString dlgIRC::NickNameCfgItem = qsl("irc_nick");
+QString dlgIRC::PasswordCfgItem = qsl("irc_password");
 QString dlgIRC::ChannelsCfgItem = qsl("irc_channels");
 QString dlgIRC::DefaultHostName = qsl("irc.libera.chat");
 int dlgIRC::DefaultHostPort = 6667;
@@ -96,6 +98,7 @@ dlgIRC::dlgIRC(Host* pHost)
     connect(connection, &IrcConnection::partMessageReceived, this, &dlgIRC::slot_partedChannel);
     connect(connection, &IrcConnection::numericMessageReceived, this, &dlgIRC::slot_receiveNumericMessage);
 
+    mPassword = readIrcPassword(mpHost);
     mUserName = qsl("mudlet");
     mRealName = mudlet::self()->version;
     mHostName = readIrcHostName(mpHost);
@@ -106,6 +109,7 @@ dlgIRC::dlgIRC(Host* pHost)
 
     connection->setNickName(mNickName);
     connection->setUserName(mUserName);
+    connection->setPassword(mPassword);
     connection->setRealName(mRealName);
     connection->setHost(mHostName);
     connection->setPort(mHostPort);
@@ -234,11 +238,13 @@ void dlgIRC::ircRestart(bool reloadConfigs)
         mHostSecure = readIrcHostSecure(mpHost);
         mNickName = readIrcNickName(mpHost);
         mChannels = readIrcChannels(mpHost);
+        mPassword = readIrcPassword(mpHost);
 
         connection->setNickName(mNickName);
         connection->setHost(mHostName);
         connection->setPort(mHostPort);
         connection->setSecure(mHostSecure);
+        connection->setPassword(mPassword);
     }
 
     // queue auto-joined channels and reopen the connection.
@@ -779,6 +785,12 @@ QString dlgIRC::readIrcNickName(Host* pH)
     return nick;
 }
 
+QString dlgIRC::readIrcPassword(Host* pH)
+{
+    QString pass = pH->readProfileData(dlgIRC::PasswordCfgItem);
+    return pass;
+}
+
 QString dlgIRC::readAppDefaultIrcNick()
 {
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("irc_nick")));
@@ -846,6 +858,11 @@ QPair<bool, QString> dlgIRC::writeIrcNickName(Host* pH, const QString& nickname)
     writeAppDefaultIrcNick(nickname);
 
     return pH->writeProfileData(dlgIRC::NickNameCfgItem, nickname);
+}
+
+QPair<bool, QString> dlgIRC::writeIrcPassword(Host* pH, const QString& password)
+{
+    return pH->writeProfileData(dlgIRC::PasswordCfgItem, password);
 }
 
 QPair<bool, QString> dlgIRC::writeIrcChannels(Host* pH, const QStringList& channels)
