@@ -275,8 +275,7 @@ bool TMedia::isFileRelative(TMediaData& mediaData)
     bool isFileRelative = false;
 
     if (!QFileInfo(mediaData.getMediaFileName()).isRelative()) {
-        qWarning() << qsl("TMedia::isFileRelative() WARNING - Attempt made to send an absolute path as a media file name: %1.  Only relative paths are permitted.")
-                              .arg(mediaData.getMediaFileName());
+        qWarning() << qsl("TMedia::isFileRelative() WARNING - Attempt made to send an absolute path as a media file name: %1.  Only relative paths are permitted.").arg(mediaData.getMediaFileName());
     } else {
         isFileRelative = true;
     }
@@ -617,6 +616,7 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
     }
 
     disconnect(pPlayer.getMediaPlayer(), &QMediaPlayer::stateChanged, nullptr, nullptr);
+    disconnect(pPlayer.getMediaPlayer(), &QMediaPlayer::positionChanged, nullptr, nullptr);
 
     connect(pPlayer.getMediaPlayer(), &QMediaPlayer::stateChanged, [=](QMediaPlayer::State state) {
         if (state == QMediaPlayer::StoppedState) {
@@ -641,6 +641,32 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
         }
     });
 
+    connect(pPlayer.getMediaPlayer(), &QMediaPlayer::positionChanged, [=](qint64 progress) {
+        int volume = pPlayer.getMediaData().getMediaVolume();
+        int fadeInPosition = pPlayer.getMediaData().getMediaFadeIn();
+        int fadeOutPosition = pPlayer.getMediaData().getMediaFadeOut();
+
+        if (fadeInPosition != TMediaData::MediaFadeNotSet) {
+            if (progress < fadeInPosition) {
+                double fadeInVolume = static_cast<double>(volume * progress) / static_cast<double>(fadeInPosition * 1.0);
+
+                pPlayer.getMediaPlayer()->setVolume(qRound(fadeInVolume));
+            } else if (progress == fadeInPosition) {
+                pPlayer.getMediaPlayer()->setVolume(volume);
+            }
+        }
+
+        if (fadeOutPosition != TMediaData::MediaFadeNotSet && progress > 0) {
+            int duration = pPlayer.getMediaPlayer()->duration();
+
+            if (progress > duration - fadeOutPosition) {
+                double fadeOutVolume = static_cast<double>(volume * (duration - progress)) / static_cast<double>(fadeOutPosition * 1.0);
+
+                pPlayer.getMediaPlayer()->setVolume(qRound(fadeOutVolume));
+            }
+        }
+    });
+
     return pPlayer;
 }
 
@@ -657,7 +683,7 @@ TMediaPlayer TMedia::matchMediaPlayer(TMediaData& mediaData, const QString& abso
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
             if (pTestPlayer.getMediaPlayer()->media().request().url().toString().endsWith(absolutePathFileName)) { // Is the same sound or music playing?
 #else
-            if (pTestPlayer.getMediaPlayer()->media().canonicalUrl().toString().endsWith(absolutePathFileName)) { // Is the same sound or music playing?
+            if (pTestPlayer.getMediaPlayer()->media().canonicalUrl().toString().endsWith(absolutePathFileName)) {  // Is the same sound or music playing?
 #endif
                 pPlayer = pTestPlayer;
                 pPlayer.setMediaData(mediaData);
@@ -940,6 +966,54 @@ int TMedia::parseJSONByMediaVolume(QJsonObject& json)
     return mediaVolume;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#fadein
+int TMedia::parseJSONByMediaFadeIn(QJsonObject& json)
+{
+    int mediaFadeIn = TMediaData::MediaFadeNotSet;
+
+    auto mediaFadeInJSON = json.value(qsl("fadein"));
+
+    if (mediaFadeInJSON != QJsonValue::Undefined && mediaFadeInJSON.isString() && !mediaFadeInJSON.toString().isEmpty()) {
+        mediaFadeIn = mediaFadeInJSON.toString().toInt();
+
+        if (mediaFadeIn < TMediaData::MediaFadeNotSet) {
+            mediaFadeIn = TMediaData::MediaFadeNotSet;
+        }
+    } else if (mediaFadeInJSON != QJsonValue::Undefined && mediaFadeInJSON.toInt()) {
+        mediaFadeIn = mediaFadeInJSON.toInt();
+
+        if (mediaFadeIn < TMediaData::MediaFadeNotSet) {
+            mediaFadeIn = TMediaData::MediaFadeNotSet;
+        }
+    }
+
+    return mediaFadeIn;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#fadeout
+int TMedia::parseJSONByMediaFadeOut(QJsonObject& json)
+{
+    int mediaFadeOut = TMediaData::MediaFadeNotSet;
+
+    auto mediaFadeOutJSON = json.value(qsl("fadeout"));
+
+    if (mediaFadeOutJSON != QJsonValue::Undefined && mediaFadeOutJSON.isString() && !mediaFadeOutJSON.toString().isEmpty()) {
+        mediaFadeOut = mediaFadeOutJSON.toString().toInt();
+
+        if (mediaFadeOut < TMediaData::MediaFadeNotSet) {
+            mediaFadeOut = TMediaData::MediaFadeNotSet;
+        }
+    } else if (mediaFadeOutJSON != QJsonValue::Undefined && mediaFadeOutJSON.toInt()) {
+        mediaFadeOut = mediaFadeOutJSON.toInt();
+
+        if (mediaFadeOut < TMediaData::MediaFadeNotSet) {
+            mediaFadeOut = TMediaData::MediaFadeNotSet;
+        }
+    }
+
+    return mediaFadeOut;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#priority:_1_to_100
 int TMedia::parseJSONByMediaPriority(QJsonObject& json)
 {
@@ -1053,7 +1127,6 @@ QString TMedia::parseJSONByMediaKey(QJsonObject& json)
 
     return mediaKey;
 }
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Loading_Media
 void TMedia::parseJSONForMediaDefault(QJsonObject& json)
 {
@@ -1112,6 +1185,8 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaKey(TMedia::parseJSONByMediaKey(json));
     mediaData.setMediaTag(TMedia::parseJSONByMediaTag(json));
     mediaData.setMediaVolume(TMedia::parseJSONByMediaVolume(json));
+    mediaData.setMediaFadeIn(TMedia::parseJSONByMediaFadeIn(json));
+    mediaData.setMediaFadeOut(TMedia::parseJSONByMediaFadeOut(json));
     mediaData.setMediaLoops(TMedia::parseJSONByMediaLoops(json));
     mediaData.setMediaPriority(TMedia::parseJSONByMediaPriority(json));
     mediaData.setMediaContinue(TMedia::parseJSONByMediaContinue(json));
