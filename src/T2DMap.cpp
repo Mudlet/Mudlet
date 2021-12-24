@@ -1628,6 +1628,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
 }
 
+// This draws two lines at angles to the "exitLine" so as to form what would be
+// an "arrow head" if they were to be extended so as to meet (at the "end" of
+// the "exitLine". Various features of the QPen that is used are redefined
+// as appropriate - but they are restored afterwards so there should be
+// no change to the QPainter as a result of calling this method.
 void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKey, const QLineF& exitLine)
 {
     // A set of numbers that can be converted to "static" type and be frobbed
@@ -2081,24 +2086,34 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
 
         // draw exit stubs
         QMap<int, QVector3D> unitVectors = mpMap->unitVectors;
-        painter.save();
         for (int direction : qAsConst(room->exitStubs)) {
             if (direction >= DIR_NORTH && direction <= DIR_SOUTHWEST) {
                 // Stubs on non-XY plane exits are handled differently and we
                 // do not support special exit stubs (yet?)
                 QVector3D uDirection = unitVectors[direction];
                 QLineF stubLine(rx, ry, rx + uDirection.x() * 0.5 * mRoomWidth, ry + uDirection.y() * 0.5 * mRoomHeight);
-                QPen doorPen = painter.pen();
-                doorPen.setCapStyle(Qt::RoundCap);
-                painter.setPen(doorPen);
-                painter.drawLine(stubLine);
                 const QString doorKey{TRoom::dirCodeToShortString(direction)};
+                // Draw the door lines before we draw the stub or the filled
+                // circle on the end - so that the latter overlays the doors
+                // if they get a bit large (at low exit size numbers)
                 if (room->doors.value(doorKey)) {
                     drawDoor(painter, *room, doorKey, stubLine);
                 }
+                painter.save();
+                painter.drawLine(stubLine);
+                // Set the fill colour to be what is used for exit lines
+                painter.setBrush(painter.pen().color());
+                // And turn off drawing the border (outline):
+                painter.setPen(Qt::NoPen);
+                QPainterPath stubMarkingCirclePath;
+                QRectF surroundingRectF(stubLine.p2().x() - 0.1 * mRoomWidth, stubLine.p2().y() - 0.1 * mRoomHeight, 0.2 * mRoomWidth, 0.2 * mRoomHeight);
+                stubMarkingCirclePath.arcTo(surroundingRectF, 0.0, 360.0);
+                // So this should draw a solid filled circle whose diameter
+                // is fixed and not dependent on the exit line thickness:
+                painter.drawPath(stubMarkingCirclePath);
+                painter.restore();
             }
         }
-        painter.restore();
 
         for (int& k : exitList) {
             int rID = k;
@@ -2402,12 +2417,12 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
 
 int T2DMap::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties)
 {
-    painter.save();
 
     if (properties.text.isEmpty()) {
         return 0;
     }
 
+    painter.save();
     auto infoText = properties.text.trimmed();
 
     auto font = painter.font();
