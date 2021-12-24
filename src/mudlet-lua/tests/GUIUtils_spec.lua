@@ -536,7 +536,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
-  describe("Tests the functionality of getHTMLspan", function()
+  describe("Tests the functionality of getHTMLformat", function()
     local fmt
     before_each(function()
       fmt = {
@@ -553,49 +553,49 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
     it("Should return a style with no text modifiers but bg/fg colors if none are in the table", function()
       local expected = '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: normal; font-style: normal; text-decoration: none;">'
-      local actual = getHTMLspan(fmt)
+      local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
     it("Should return a style with 'font-weight: bold;' if bold is true", function()
       local expected = '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: bold; font-style: normal; text-decoration: none;">'
       fmt.bold = true
-      local actual = getHTMLspan(fmt)
+      local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
     it("Should return a style with 'font-style: italic' if italic is true", function()
       local expected = '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: normal; font-style: italic; text-decoration: none;">'
       fmt.italic = true
-      local actual = getHTMLspan(fmt)
+      local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
     it("Should return a style with 'text-decoration: underline' if underline is true", function()
       local expected = '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: normal; font-style: normal; text-decoration: underline;">'
       fmt.underline = true
-      local actual = getHTMLspan(fmt)
+      local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
     it("Should return a style with 'text-decoration: overline' if overline is true", function()
       local expected = '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: normal; font-style: normal; text-decoration: overline;">'
       fmt.overline = true
-      local actual = getHTMLspan(fmt)
+      local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
     it("Should return a style with 'text-decoration: line-through' if strikeout is true", function()
       local expected = '<span style="color: rgb(0, 160, 0);background-color: rgba(0, 0, 0, 0); font-weight: normal; font-style: normal; text-decoration: line-through;">'
       fmt.strikeout = true
-      local actual = getHTMLspan(fmt)
+      local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
     it("Should return a style with no text modifiers and bg/fg colors inverted if reverse is true", function()
       local expected = '<span style="color: rgb(0, 0, 0);background-color: rgba(0, 160, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;">'
       fmt.reverse = true
-      local actual = getHTMLspan(fmt)
+      local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
@@ -611,7 +611,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         strikeout = true,
         underline = true
       }
-      local actual = getHTMLspan(fmt)
+      local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
@@ -619,7 +619,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local expected = '<span style="color: rgb(255, 95, 255);background-color: rgba(0, 160, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;">'
       fmt.background = "QLinearGradient(doesn't matter will be ignored)"
       fmt.reverse = true
-      local actual = getHTMLspan(fmt)
+      local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
 
@@ -627,10 +627,10 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local expected = '<span style="color: rgb(128, 0, 128);background-color: rgba(0, 160, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;">'
       fmt.background = "rgba(128, 0, 128, 255)"
       fmt.reverse = true
-      local actual = getHTMLspan(fmt)
+      local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
       fmt.background = "rgba(128, 0, 128, 128)"
-      local actual = getHTMLspan(fmt)
+      local actual = getHTMLformat(fmt)
       assert.equals(expected, actual)
     end)
   end)

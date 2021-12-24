@@ -975,10 +975,10 @@ function setGaugeStyleSheet(gaugeName, css, cssback, csstext)
   setLabelStyleSheet(gaugeName .. "_text", csstext or "")
 end
 
--- https://wiki.mudlet.org/w/Manual:Lua_Functions#getHTMLspan
+-- https://wiki.mudlet.org/w/Manual:Lua_Functions#getHTMLformat
 -- used by xEcho for creating formatting span tags for labels
 -- fmt is a table of format options as returned by getTextFormat
-function getHTMLspan(fmt)
+function getHTMLformat(fmt)
   -- next two lines effectively invert the colors if fmt.reverse is true
   local type = type
   local sfmt = string.format
@@ -1318,7 +1318,7 @@ if rex then
       local reset = getLabelFormat(win)
       local format = table.deepcopy(reset)
       if format.bold or format.italic or format.overline or format.strikeout or format.underline then
-        result = getHTMLspan(format)
+        result = getHTMLformat(format)
       end
       for _,v in ipairs(t) do
         local formatChanged = false
@@ -1365,7 +1365,7 @@ if rex then
           format = table.deepcopy(reset)
           formatChanged = true
         end
-        v = formatChanged and getHTMLspan(format) or v
+        v = formatChanged and getHTMLformat(format) or v
         result = result .. v
       end
       echo(win, result)
