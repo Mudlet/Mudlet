@@ -8255,10 +8255,10 @@ void dlgTriggerEditor::runScheduledCleanReset()
 
 void dlgTriggerEditor::slot_profileSaveAction()
 {
-    std::tuple<bool, QString, QString> result = mpHost->saveProfile(nullptr, nullptr, true);
+    auto [ok, filename, error] = mpHost->saveProfile(nullptr, nullptr, true);
 
-    if (!std::get<0>(result)) {
-        QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(std::get<2>(result)));
+    if (!ok) {
+        QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(error));
     }
 }
 
