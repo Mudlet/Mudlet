@@ -8429,7 +8429,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="363"/>
       <source>Close profile</source>
-      <translation type="unfinished"/>
+      <translation>Close profile</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="161"/>
@@ -9009,7 +9009,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="374"/>
       <location filename="../src/mudlet.cpp" line="697"/>
       <source>Close profile</source>
-      <translation type="unfinished"/>
+      <translation>Close profile</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="439"/>
