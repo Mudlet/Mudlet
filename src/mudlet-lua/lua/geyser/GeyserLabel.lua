@@ -26,6 +26,7 @@ Geyser.Label.scrollH = {}
 function Geyser.Label:echo(message, color, format)
   message = message or self.message
   self.message = message
+  message = message:gsub("\n", "<br>")
   color = color or self.fgColor
   self.fgColor = color
   if format then self:processFormatString(format) end
@@ -1247,3 +1248,10 @@ end
 -- @field angleDeltaX A number corresponding with the vertical wheel motion. For most devices, this number is in increments of 120
 -- @field angleDeltaY A number corresponding with the horizontal wheel motion. For most devices, this number is in increments of 120
 -- @table mouseWheelEvent
+
+--- Returns a table in the format of getTextFormat which describes the default formatting created by any stylesheets
+-- which are applied to the label.
+-- @see https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat and https://wiki.mudlet.org/w/Manual:Lua_Functions#getTextFormat
+function Geyser.Label:getFormat()
+  return getLabelFormat(self.name)
+end
