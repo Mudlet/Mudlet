@@ -1,14 +1,8 @@
-# See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.134.0/containers/cpp/.devcontainer/base.Dockerfile
-ARG VARIANT="buster"
-FROM mcr.microsoft.com/vscode/devcontainers/cpp:0-${VARIANT}
+# See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.208.0/containers/cpp/.devcontainer/base.Dockerfile
 
-# Desktop Debian (https://github.com/microsoft/vscode-dev-containers/blob/master/script-library/docs/desktop-lite.md#usage)
-COPY library-scripts/desktop-lite-debian.sh /tmp/library-scripts/
-RUN apt-get update && bash /tmp/library-scripts/desktop-lite-debian.sh automatic mudlet && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-ENV DBUS_SESSION_BUS_ADDRESS="autolaunch:" DISPLAY=":1" LANG="en_US.UTF-8" LANGUAGE="en_US.UTF-8"
-ENTRYPOINT ["/usr/local/share/desktop-init.sh"]
-CMD ["sleep", "infinity"]
+# [Choice] Debian / Ubuntu version (use Debian 11/9, Ubuntu 18.04/21.04 on local arm64/Apple Silicon): debian-11, debian-10, debian-9, ubuntu-21.04, ubuntu-20.04, ubuntu-18.04
+ARG VARIANT="bullseye"
+FROM mcr.microsoft.com/vscode/devcontainers/cpp:0-${VARIANT}
 
 # Install C++ dependencies
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
