@@ -1234,9 +1234,9 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
             // - may be the same items
             alertText = tr("[ ALERT ] - Empty and duplicate area names detected in Map file!");
             informativeText = tr("[ INFO ]  - Mudlet had previously allowed the map to have more than one area\n"
-                                  "with the same or no name. To resolve these cases, an area without a name\n
+                                  "with the same or no name. To resolve these cases, an area without a name\n"
                                   "here (or created in the future) will automatically be assigned the name \"%1\".\n"
-                                  "Duplicated area names will cause all but the first encountered one to gain a\n
+                                  "Duplicated area names will cause all but the first encountered one to gain a\n"
                                   "\"_###\" style suffix.\n"
                                  "%2").arg(mpMap->getUnnamedAreaName(), extraTextForMatchingSuffixAlreadyUsed);
         } else if (!renamedMap.empty()) {
