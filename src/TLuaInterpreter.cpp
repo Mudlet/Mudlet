@@ -3020,14 +3020,14 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         saveToDir = lua_tostring(L, 1);
     }
 
-    std::tuple<bool, QString, QString> result = host.saveProfile(saveToDir);
+    auto [ok, filename, error] = host.saveProfile(saveToDir);
 
-    if (std::get<0>(result)) {
+    if (ok) {
         lua_pushboolean(L, true);
-        lua_pushstring(L, (std::get<1>(result).toUtf8().constData()));
+        lua_pushstring(L, (filename.toUtf8().constData()));
         return 2;
     } else {
-        auto message = QString("Couldn't save '%1' to '%2' because: %3").arg(host.getName(), std::get<1>(result), std::get<2>(result));
+        auto message = QString("Couldn't save '%1' to '%2' because: %3").arg(host.getName(), filename, error);
         return warnArgumentValue(L, __func__, message);
     }
 }
