@@ -3330,7 +3330,7 @@ bool cTelnet::parseReplayFile()
                 qDebug().nospace().noquote() << "Chunk " << ++index << " (offset: " << offsetTime.toString("hh:mm:ss.zzz") << "):\n\"" << displayData << "\"";
             }
         }
-        return true
+        return true;
     }
 
     return false;
