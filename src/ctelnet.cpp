@@ -2694,9 +2694,9 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         }
         loadingReplay = true;
         if (mudlet::self()->replayStart()) {
-            std::pair results = preparseReplayFile();
-            if (Q_LIKELY(std::get<0>(results))) {
-                mReplayHasFaultyFormat = std::get<1>(results);
+            auto[ok, modifiedFormat] = preparseReplayFile();
+            if (ok) {
+                mReplayHasFaultyFormat = modifiedFormat;
                 // This initiates the replay chunk reading/processing cycle:
                 loadReplayChunk();
             } else {
