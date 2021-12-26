@@ -2692,7 +2692,7 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         loadingReplay = true;
         if (mudlet::self()->replayStart()) {
             if (parseReplayFile()) {
-                // This wiil point at the first chunk (if there is one):
+                // This will point at the first chunk (if there is one):
                 mpItReplayChunk = mReplayChunks.constBegin();
                 // These test avoids problems in the event of an empty replay
                 // file:
