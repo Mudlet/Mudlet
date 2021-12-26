@@ -50,8 +50,6 @@ using namespace std::chrono_literals;
 
 TConsole* spDebugConsole = nullptr;
 
-// test - delete me
-
 #if defined(Q_OS_WIN32)
 bool runUpdate();
 #endif
