@@ -242,7 +242,7 @@ private:
     void setKeepAlive(int socketHandle);
     void processChunks();
     void sendNAWS(int x, int y);
-    std::pair<bool, bool> preparseReplayFile();
+    bool parseReplayFile();
     static QString dumpHexDecodedText(const QByteArray&);
 
 
@@ -308,7 +308,6 @@ private:
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;
     int mRecordingChunkCount = 0;
-    bool mReplayHasFaultyFormat = false;
     bool enableCHARSET;
     bool enableATCP;
     bool enableGMCP;
@@ -344,6 +343,12 @@ private:
 
     // Holds the replay data, Key: elapsed time in milliseconds, Value: raw data
     QMap<quint64, QByteArray> mReplayChunks;
+
+    // Used to iterate over the above - only points to an iterator during a
+    // replay - however due to the way a QMap works we can't declare a Java
+    // style QMapIterator without constructing it - and that would break the ODR
+    // requirement by doing it here - so we have to use the STL type:
+    QMap<quint64, QByteArray>::const_iterator mpItReplayChunk = nullptr;
 
     // Can be used (set in debugging environment) during debugging of replay files
     // Include a fully visual display of ALL bytes in replay data in debug output:

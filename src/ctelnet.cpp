@@ -67,9 +67,6 @@ using namespace std::chrono_literals;
 // #define DEBUG_PLAYBACK 1
 
 constexpr size_t BUFFER_SIZE = 100000L;
-// TODO: https://github.com/Mudlet/Mudlet/issues/5780 (1 of 7) - investigate switching from using `char[]` to `std::array<char>`
-char loadBuffer[BUFFER_SIZE + 1];
-int loadedBytes;
 QDataStream replayStream;
 QFile replayFile;
 
@@ -2694,11 +2691,26 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         }
         loadingReplay = true;
         if (mudlet::self()->replayStart()) {
-            auto [ok, modifiedFormat] = preparseReplayFile();
-            if (ok) {
-                mReplayHasFaultyFormat = modifiedFormat;
-                // This initiates the replay chunk reading/processing cycle:
-                loadReplayChunk();
+            if(parseReplayFile()) {
+                // This wiil point at the first chunk (if there is one):
+                mpItReplayChunk = mReplayChunks.constBegin();
+                // These test avoids problems in the event of an empty replay
+                // file:
+                if ((mpItReplayChunk != nullptr) && (mpItReplayChunk != mReplayChunks.constEnd())) {
+                    // This initiates the replay chunk reading/processing cycle:
+                    loadReplayChunk();
+                } else {
+                    loadingReplay = false;
+                    replayFile.close();
+                    if (!mIsReplayRunFromLua) {
+                        postMessage(tr("[ WARN ]  - The replay has been aborted as the file seems to be empty."));
+                    } else {
+                        // Called from lua case:
+                        *pErrMsg = tr("Cannot replay file \"%1\", error message was: \"replay file seems to be empty\".").arg(name);
+                    }
+                    mudlet::self()->replayOver();
+                    return false;
+                }
             } else {
                 // Amelioration code should now prevent this from happening
                 loadingReplay = false;
@@ -2742,133 +2754,136 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
 // TODO: https://github.com/Mudlet/Mudlet/issues/5779 - consider enhancing replay system, possibly using the QTimeLine class, to use the already read and stored QMap<quint64, QByteArray> mReplayChunks
 void cTelnet::loadReplayChunk()
 {
-    if (!replayStream.atEnd()) {
-        qint32 amount = 0;
-        qint32 offset = 0;
-        if (mReplayHasFaultyFormat) {
-            qint64 temp = 0;
-            replayStream >> temp;
-            // 2^30 milliseconds is over 12 days so that sort of delay between
-            // steps is not likely - and only using a 32 bit integer type is
-            // going to be okay:
-            offset = static_cast<qint32>(temp);
-        } else {
-            replayStream >> offset;
+    // Check that the iterator is assigned and valid - it gets advanced elsewhere:
+    if ((mpItReplayChunk != nullptr) && (mpItReplayChunk != mReplayChunks.constEnd())) {
+        qint64 offset = mpItReplayChunk.key();
+        mudlet::self()->mReplayTime = QTime::fromMSecsSinceStartOfDay(offset);
+        if (mpItReplayChunk != mReplayChunks.constBegin()) {
+            // This is NOT the first chunk, so the offset is the increment from
+            // the last key():
+            offset -= (mpItReplayChunk-1).key();
         }
+        // Otherwise the offset is just the key():
 
-        replayStream >> amount;
-
-        loadedBytes = replayStream.readRawData(loadBuffer, amount);
-        // Previous use of loadedBytes + 1 caused a spurious character at end of
-        // string display by a qDebug of the loadBuffer contents
-        loadBuffer[loadedBytes] = '\0';
-        mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
         if (Q_UNLIKELY(mZeroReplayChunkDelays)) {
             QTimer::singleShot(0, this, &cTelnet::slot_processReplayChunk);
         } else {
             QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, &cTelnet::slot_processReplayChunk);
         }
-    } else {
-        loadingReplay = false;
-        replayFile.close();
-        if (!mIsReplayRunFromLua) {
-            postMessage(tr("[  OK  ]  - The replay has ended."));
-        }
-        mudlet::self()->replayOver();
+        // Replay is still running - the timer above will handle the chunk we
+        // have just loaded into the buffer at the right time in the future:
+        return;
     }
-}
 
+    if (mpItReplayChunk != nullptr) {
+        // This will still point to something at the end of replay, so clean it up:
+        mpItReplayChunk = nullptr;
+    }
+    loadingReplay = false;
+    if (!mIsReplayRunFromLua) {
+        postMessage(tr("[  OK  ]  - The replay has ended."));
+    }
+    mudlet::self()->replayOver();
+}
 
 void cTelnet::slot_processReplayChunk()
 {
-    int datalen = loadedBytes;
-    std::string cleandata = "";
-    recvdGA = false;
-    for (int i = 0; i < datalen; ++i) {
-        char ch = loadBuffer[i];
-        if (iac || iac2 || insb || (ch == TN_IAC)) {
-            if (!(iac || iac2 || insb) && (ch == TN_IAC)) {
-                iac = true;
-                command += ch;
-            } else if (iac && (ch == TN_IAC) && (!insb)) {
-                //2. seq. of two IACs
-                iac = false;
-                cleandata += ch;
-                command = "";
-            } else if (iac && (!insb) && ((ch == TN_WILL) || (ch == TN_WONT) || (ch == TN_DO) || (ch == TN_DONT))) {
-                //3. IAC DO/DONT/WILL/WONT
-                iac = false;
-                iac2 = true;
-                command += ch;
-            } else if (iac2) {
-                //4. IAC DO/DONT/WILL/WONT <command code>
-                iac2 = false;
-                command += ch;
-                processTelnetCommand(command);
-                command = "";
-            } else if (iac && (!insb) && (ch == TN_SB)) {
-                //5. IAC SB
-                iac = false;
-                insb = true;
-                command += ch;
-            } else if (iac && (!insb) && (ch == TN_SE)) {
-                //6. IAC SE without IAC SB - error - ignored
-                command = "";
-                iac = false;
-            } else if (insb) {
-                //7. inside IAC SB
-                command += ch;
-                if (iac && (ch == TN_SE)) //IAC SE - end of subcommand
-                {
+    // Check that the iterator is assigned and valid:
+    if ((mpItReplayChunk != nullptr) && (mpItReplayChunk != mReplayChunks.constEnd())) {
+        const QByteArray& replayChunkBuffer = mpItReplayChunk.value();
+        std::string cleandata = "";
+        recvdGA = false;
+        for (const char& ch : replayChunkBuffer) {
+            if (iac || iac2 || insb || (ch == TN_IAC)) {
+                if (!(iac || iac2 || insb) && (ch == TN_IAC)) {
+                    iac = true;
+                    command += ch;
+                } else if (iac && (ch == TN_IAC) && (!insb)) {
+                    //2. seq. of two IACs
+                    iac = false;
+                    cleandata += ch;
+                    command = "";
+                } else if (iac && (!insb) && ((ch == TN_WILL) || (ch == TN_WONT) || (ch == TN_DO) || (ch == TN_DONT))) {
+                    //3. IAC DO/DONT/WILL/WONT
+                    iac = false;
+                    iac2 = true;
+                    command += ch;
+                } else if (iac2) {
+                    //4. IAC DO/DONT/WILL/WONT <command code>
+                    iac2 = false;
+                    command += ch;
                     processTelnetCommand(command);
                     command = "";
+                } else if (iac && (!insb) && (ch == TN_SB)) {
+                    //5. IAC SB
                     iac = false;
-                    insb = false;
-                }
-                if (iac) {
+                    insb = true;
+                    command += ch;
+                } else if (iac && (!insb) && (ch == TN_SE)) {
+                    //6. IAC SE without IAC SB - error - ignored
+                    command = "";
                     iac = false;
-                } else if (ch == TN_IAC) {
-                    iac = true;
+                } else if (insb) {
+                    //7. inside IAC SB
+                    command += ch;
+                    if (iac && (ch == TN_SE)) //IAC SE - end of subcommand
+                    {
+                        processTelnetCommand(command);
+                        command = "";
+                        iac = false;
+                        insb = false;
+                    }
+                    if (iac) {
+                        iac = false;
+                    } else if (ch == TN_IAC) {
+                        iac = true;
+                    }
+                } else
+                //8. IAC fol. by something else than IAC, SB, SE, DO, DONT, WILL, WONT
+                {
+                    iac = false;
+                    command += ch;
+                    processTelnetCommand(command);
+                    //this could have set receivedGA to true; we'll handle that later
+                    command = "";
                 }
-            } else
-            //8. IAC fol. by something else than IAC, SB, SE, DO, DONT, WILL, WONT
-            {
-                iac = false;
-                command += ch;
-                processTelnetCommand(command);
-                //this could have set receivedGA to true; we'll handle that later
-                command = "";
+            } else {
+                if (ch != '\r' && ch != '\0') {
+                    cleandata += ch;
+                }
             }
-        } else {
-            if (ch != '\r' && ch != '\0') {
-                cleandata += ch;
+
+            if (recvdGA) {
+                mGA_Driver = true;
+                if (mCommands > 0) {
+                    mCommands--;
+                    if (networkLatencyTimer.elapsed() > 2000) {
+                        mCommands = 0;
+                    }
+                }
+
+                cleandata.push_back('\n');
+                recvdGA = false;
+                gotPrompt(cleandata);
+                cleandata = "";
             }
+        } //for
+
+        if (!cleandata.empty()) {
+            gotRest(cleandata);
         }
 
-        if (recvdGA) {
-            mGA_Driver = true;
-            if (mCommands > 0) {
-                mCommands--;
-                if (networkLatencyTimer.elapsed() > 2000) {
-                    mCommands = 0;
-                }
-            }
+        mpHost->mpConsole->finalize();
 
-            cleandata.push_back('\n');
-            recvdGA = false;
-            gotPrompt(cleandata);
-            cleandata = "";
+        // We must advance the iterator to the next chunk, if there isn't one it'll
+        // be handled in loadReplayChunk(); however in some cases we might not want
+        // the advance (if the flag has been reset):
+        if (loadingReplay) {
+            ++mpItReplayChunk;
         }
-    } //for
-
-    if (!cleandata.empty()) {
-        gotRest(cleandata);
     }
 
-    mpHost->mpConsole->finalize();
-    if (loadingReplay) {
-        loadReplayChunk();
-    }
+    loadReplayChunk();
 }
 
 void cTelnet::handle_socket_signal_readyRead()
@@ -2878,7 +2893,7 @@ void cTelnet::handle_socket_signal_readyRead()
         mWaitingForResponse = false;
     }
 
-    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (2 of 7) - investigate switching from using `char[]` to `std::array<char>`
+    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (1 of 6) - investigate switching from using `char[]` to `std::array<char>`
     char in_buffer[BUFFER_SIZE + 10];
 
     int amount = socket.read(in_buffer, BUFFER_SIZE);
@@ -2887,7 +2902,7 @@ void cTelnet::handle_socket_signal_readyRead()
 
 void cTelnet::processSocketData(char* in_buffer, int amount)
 {
-    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (3 of 7) - investigate switching from using `char[]` to `std::array<char>`
+    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (2 of 6) - investigate switching from using `char[]` to `std::array<char>`
     char out_buffer[BUFFER_SIZE + 10];
 
     in_buffer[amount + 1] = '\0';
@@ -2907,7 +2922,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
             datalen = decompressBuffer(in_buffer, amount, out_buffer);
             buffer = out_buffer;
         }
-        // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
+        // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (3 of 6) - investigate switching from using `char[]` to `std::array<char>`
         buffer[static_cast<size_t>(datalen)] = '\0';
         if (mpHost->mpConsole->mRecordReplay) {
             ++mRecordingChunkCount;
@@ -3223,11 +3238,10 @@ void cTelnet::setPostingTimeout(const int timeout)
 // Tries reading the replay in two different manners depending on whether the
 // the first integer value in the chunk data uses 4 (original) or 8 (modified)
 // bytes - as an unintended side effect of https://github.com/Mudlet/Mudlet/pull/4400
-// - returns two booleans, the first is true if the file can be read and the
-// second true if it is in the modified format:
-std::pair<bool, bool> cTelnet::preparseReplayFile()
+// - returns true if the file can be read:
+bool cTelnet::parseReplayFile()
 {
-    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (5 of 7) - investigate switching from using `char[]` to `std::array<char>`
+    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 6) - investigate switching from using `char[]` to `std::array<char>`
     char replayBuffer[BUFFER_SIZE];
     if (!mReplayChunks.isEmpty()) {
         mReplayChunks.clear();
@@ -3250,7 +3264,7 @@ std::pair<bool, bool> cTelnet::preparseReplayFile()
             } else {
                 int replayloadedBytes = replayStream.readRawData(replayBuffer, amount);
                 if (replayloadedBytes > -1) {
-                    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (6 of 7) - investigate switching from using `char[]` to `std::array<char>`
+                    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (5 of 6) - investigate switching from using `char[]` to `std::array<char>`
                     replayBuffer[replayloadedBytes] = '\0';
                     QByteArray chunkData(replayBuffer, replayloadedBytes);
                     mReplayChunks.insert(totalElapsed, chunkData);
@@ -3277,12 +3291,12 @@ std::pair<bool, bool> cTelnet::preparseReplayFile()
         while (readableAsModifiedFormat && !replayStream.atEnd()) {
             replayStream >> offset;
             replayStream >> amount;
-            if (amount < 1 || offset < 0 || amount >= static_cast<qint32>(BUFFER_SIZE) || offset > INT32_MAX) {
+            if ((amount < 1) || (offset < 0) || (amount >= static_cast<qint32>(BUFFER_SIZE)) || (offset > INT32_MAX)) {
                 readableAsModifiedFormat = false;
             } else {
                 int replayloadedBytes = replayStream.readRawData(replayBuffer, amount);
                 if (replayloadedBytes > -1) {
-                    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (7 of 7) - investigate switching from using `char[]` to `std::array<char>`
+                    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (6 of 6) - investigate switching from using `char[]` to `std::array<char>`
                     replayBuffer[replayloadedBytes] = '\0';
                     QByteArray chunkData(replayBuffer, replayloadedBytes);
                     mReplayChunks.insert(totalElapsed, chunkData);
@@ -3295,7 +3309,7 @@ std::pair<bool, bool> cTelnet::preparseReplayFile()
     }
 
     if (readableAsOriginalFormat | readableAsModifiedFormat) {
-        qDebug().nospace().noquote() << "cTelnet::preparseReplayFile() INFO - The " << (readableAsOriginalFormat ? "original" : "modified") << " format replay has: " << mReplayChunks.count()
+        qDebug().nospace().noquote() << "cTelnet::parseReplayFile() INFO - The " << (readableAsOriginalFormat ? "original" : "modified") << " format replay has: " << mReplayChunks.count()
                                      << " chunks and covers a period of: " << QTime(0, 0).addMSecs(static_cast<int>(totalElapsed)).toString(QStringLiteral("hh:mm:ss.zzz")) << " (h:m:s).";
 
         if (mDumpReplayChunkContents) {
@@ -3316,8 +3330,8 @@ std::pair<bool, bool> cTelnet::preparseReplayFile()
                 qDebug().nospace().noquote() << "Chunk " << ++index << " (offset: " << offsetTime.toString("hh:mm:ss.zzz") << "):\n\"" << displayData << "\"";
             }
         }
-        return {true, readableAsModifiedFormat};
+        return true
     }
 
-    return {false, false};
+    return false;
 }
