@@ -138,7 +138,7 @@ git_submodule_init(
   READABLE_NAME "lua code formatter source code")
 
 git_submodule_init(
-  CHECK_FILE "3rdparty/qt-orordered-map/src/orderedmap.h" SUBMODULE_PATH "3rdparty/qt-ordered-map"
+  CHECK_FILE "3rdparty/qt-ordered-map/src/orderedmap.h" SUBMODULE_PATH "3rdparty/qt-ordered-map"
   READABLE_NAME "Qt ordered map source code")
 
 if(USE_UPDATER)
