@@ -607,6 +607,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     ircHostSecure->setChecked(dlgIRC::readIrcHostSecure(pHost));
     ircChannels->setText(dlgIRC::readIrcChannels(pHost).join(" "));
     ircNick->setText(dlgIRC::readIrcNickName(pHost));
+    ircPassword->setText(dlgIRC::readIrcPassword(pHost));
 
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
     dictList->clear();
@@ -1297,6 +1298,7 @@ void dlgProfilePreferences::clearHostDetails()
     ircHostPort->clear();
     ircChannels->clear();
     ircNick->clear();
+    ircPassword->clear();
 
     dictList->clear();
     checkBox_spellCheck->setChecked(false);
@@ -2106,44 +2108,55 @@ void dlgProfilePreferences::loadMap()
         return;
     }
 
-    QString fileName = QFileDialog::getOpenFileName(
-                           this,
-                           tr("Load Mudlet map"),
-                           mapSaveLoadDirectory(pHost),
-                           tr("Mudlet map (*.dat *.json);;Xml map data (*.xml);;Any file (*)",
-                              "Do not change extensions (in braces) as they are used programmatically"));
-    if (fileName.isEmpty()) {
-        return;
-    }
+    auto loadExtensions(QStringList()
+        <<   tr("Any map file (*.dat *.json *.xml)", "Do not change extensions (in braces) as they are used programmatically")
+        <<   tr("Mudlet binary map (*.dat)", "Do not change extensions (in braces) as they are used programmatically")
+        <<   tr("Mudlet JSON map (*.json)", "Do not change extensions (in braces) as they are used programmatically")
+        <<   tr("Mudlet XML map (*.xml)", "Do not change extensions (in braces) as they are used programmatically")
+        <<   tr("Any file (*)", "Do not change extensions (in braces) as they are used programmatically"));
 
-    label_mapFileActionResult->show();
 
-    // Ensure the setting is already made as the loadMap(...) uses the set value
-    bool showAuditErrors = mudlet::self()->showMapAuditErrors();
-    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+    QFileDialog* dialog = new QFileDialog(this);
+    dialog->setWindowTitle(tr("Load Mudlet map"));
+    dialog->setDirectory(mapSaveLoadDirectory(pHost));
+    dialog->setNameFilter(loadExtensions.join(qsl(";;")));
+    connect(dialog, &QDialog::finished, this, [=](int result) {
+        if (result == QDialog::Rejected) {
+            return;
+        }
 
-    bool success = false;
-    label_mapFileActionResult->setText(tr("Loading map - please wait..."));
-    qApp->processEvents(); // Needed to make the above message show up when loading big maps
-    if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
+        auto fileName = dialog->selectedFiles().first();
+
+        label_mapFileActionResult->show();
+
+        // Ensure the setting is already made as the loadMap(...) uses the set value
+        bool showAuditErrors = mudlet::self()->showMapAuditErrors();
+        mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+
+        bool success = false;
+        label_mapFileActionResult->setText(tr("Loading map - please wait..."));
         qApp->processEvents(); // Needed to make the above message show up when loading big maps
-        success = pHost->mpConsole->importMap(fileName);
-    } else if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
-        success = pHost->mpMap->readJsonMapFile(fileName).first;
-    } else {
-       success = pHost->mpConsole->loadMap(fileName);
-    }
+        if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
+            qApp->processEvents(); // Needed to make the above message show up when loading big maps
+            success = pHost->mpConsole->importMap(fileName);
+        } else if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
+            success = pHost->mpMap->readJsonMapFile(fileName).first;
+        } else {
+            success = pHost->mpConsole->loadMap(fileName);
+        }
 
-    if (success) {
-        label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
-    } else {
-        label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
-    }
+        if (success) {
+            label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
+        } else {
+            label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
+        }
 
-    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+        QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 
-    // Restore setting immediately before we used it
-    mudlet::self()->setShowMapAuditErrors(showAuditErrors);
+        // Restore setting immediately before we used it
+        mudlet::self()->setShowMapAuditErrors(showAuditErrors);
+    });
+    dialog->open();
 }
 
 void dlgProfilePreferences::saveMap()
@@ -2153,41 +2166,59 @@ void dlgProfilePreferences::saveMap()
         return;
     }
 
-    QString fileName =
-            QFileDialog::getSaveFileName(this, tr("Save Mudlet map"), mapSaveLoadDirectory(pHost), tr("Mudlet map (*.dat *.json);;", "Do not change the extension text (in braces) - it is needed programmatically!"));
-    if (fileName.isEmpty()) {
-        return;
-    }
+    auto datFilter = tr("Mudlet binary map (*.dat)", "Do not change extensions (in braces) as they are used programmatically");
+    auto jsonFilter = tr("Mudlet JSON map (*.json)", "Do not change extensions (in braces) as they are used programmatically");
+    auto saveExtensions(QStringList() << datFilter << jsonFilter);
 
-    if (!fileName.endsWith(qsl(".dat"), Qt::CaseInsensitive) && !fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
-        fileName.append(qsl(".dat"));
-    }
+    QFileDialog* dialog = new QFileDialog(this);
+    dialog->setWindowTitle(tr("Save Mudlet map"));
+    dialog->setDirectory(mapSaveLoadDirectory(pHost));
+    dialog->setNameFilter(saveExtensions.join(qsl(";;")));
+    dialog->setAcceptMode(QFileDialog::AcceptSave);
+    dialog->setDefaultSuffix(qsl("dat"));
+    connect(dialog,  &QFileDialog::filterSelected, this, [=](const QString& filter) {
+        if (filter == datFilter) {
+            dialog->setDefaultSuffix(qsl("dat"));
+        }
+        if (filter == jsonFilter) {
+            dialog->setDefaultSuffix(qsl("json"));
+        }
+    });
 
-    label_mapFileActionResult->show();
-    label_mapFileActionResult->setText(tr("Saving map - please wait..."));
-    qApp->processEvents(); // Copied from "Loading map - please wait..." case
-                           // Just in case is needed to make the above message
-                           // show up when saving big maps
+    connect(dialog, &QFileDialog::finished, this, [=](int result) {
+        if (result == QDialog::Rejected) {
+            return;
+        }
 
-    // Ensure the setting is already made as the saveMap(...) uses the set value
-    bool showAuditErrors = mudlet::self()->showMapAuditErrors();
-    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+        auto fileName = dialog->selectedFiles().first();
 
-    bool success = false;
-    if (!fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
-        success = pHost->mpConsole->saveMap(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt());
-    } else {
-        success = pHost->mpMap->writeJsonMapFile(fileName).first;
-    }
+        label_mapFileActionResult->show();
+        label_mapFileActionResult->setText(tr("Saving map - please wait..."));
+        qApp->processEvents(); // Copied from "Loading map - please wait..." case
+        // Just in case is needed to make the above message
+        // show up when saving big maps
 
-    if (success) {
-        label_mapFileActionResult->setText(tr("Saved map to %1.").arg(fileName));
-    } else {
-        label_mapFileActionResult->setText(tr("Could not save map to %1.").arg(fileName));
-    }
-    mudlet::self()->setShowMapAuditErrors(showAuditErrors);
+        // Ensure the setting is already made as the saveMap(...) uses the set value
+        bool showAuditErrors = mudlet::self()->showMapAuditErrors();
+        mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
-    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+        bool success = false;
+        if (!fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
+            success = pHost->mpConsole->saveMap(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt());
+        } else {
+            success = pHost->mpMap->writeJsonMapFile(fileName).first;
+        }
+
+        if (success) {
+            label_mapFileActionResult->setText(tr("Saved map to %1.").arg(fileName));
+        } else {
+            label_mapFileActionResult->setText(tr("Could not save map to %1.").arg(fileName));
+        }
+        mudlet::self()->setShowMapAuditErrors(showAuditErrors);
+
+        QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+    });
+    dialog->open();
 }
 
 QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost) {
@@ -2609,12 +2640,14 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
         QString oldIrcNick = dlgIRC::readIrcNickName(pHost);
+        QString oldIrcPass = dlgIRC::readIrcPassword(pHost);
         QString oldIrcHost = dlgIRC::readIrcHostName(pHost);
         QString oldIrcPort = QString::number(dlgIRC::readIrcHostPort(pHost));
         bool oldIrcSecure = dlgIRC::readIrcHostSecure(pHost);
         QString oldIrcChannels = dlgIRC::readIrcChannels(pHost).join(" ");
 
         QString newIrcNick = ircNick->text();
+        QString newIrcPass = ircPassword->text();
         QString newIrcHost = ircHostName->text();
         QString newIrcPort = ircHostPort->text();
         bool newIrcSecure = ircHostSecure->isChecked();
@@ -2665,6 +2698,11 @@ void dlgProfilePreferences::slot_save_and_exit()
             if (pHost->mpDlgIRC) {
                 pHost->mpDlgIRC->connection->setNickName(newIrcNick);
             }
+        }
+
+        if (oldIrcPass != newIrcPass) {
+            dlgIRC::writeIrcPassword(pHost, newIrcPass);
+            restartIrcClient = true;
         }
 
         if (oldIrcChannels != newIrcChannels) {
@@ -4057,8 +4095,8 @@ void dlgProfilePreferences::slot_setPostingTimeout(const double timeout)
 
 void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
 {
-    if (link == QStringLiteral("dark-code-editor")) {
-        const auto darkTheme = QStringLiteral("Monokai");
+    if (link == qsl("dark-code-editor")) {
+        const auto darkTheme = qsl("Monokai");
 
         label_darkEditorPrompt->hide();
 

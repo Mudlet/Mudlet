@@ -3902,7 +3902,7 @@ int TLuaInterpreter::getBackgroundColor(lua_State* L)
     Host& host = getHostFromLua(L);
     QColor color;
 
-    QString windowName = QStringLiteral("main");
+    QString windowName = qsl("main");
     int n = lua_gettop(L);
     if (n > 0) {
         windowName = getVerifiedString(L, __func__, 1, "window name");
@@ -3913,7 +3913,7 @@ int TLuaInterpreter::getBackgroundColor(lua_State* L)
     } else if (auto optionalColor = host.getBackgroundColor(windowName)) {
         color = optionalColor.value();
     } else {
-        return warnArgumentValue(L, __func__, QStringLiteral("window '%1' does not exist").arg(windowName));
+        return warnArgumentValue(L, __func__, qsl("window '%1' does not exist").arg(windowName));
     }
 
     lua_pushnumber(L, color.red());
@@ -7879,7 +7879,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
         && exitCmd.compare(qsl("down"))
         && exitCmd.compare(qsl("in"))
         && exitCmd.compare(qsl("out"))) {
-        // One of the above WILL BE ZERO if the exitCmd is ONE of the above QStringLiterals
+        // One of the above WILL BE ZERO if the exitCmd is ONE of the above qsls
         // So the above will be TRUE if NONE of above strings match - which
         // means we must treat the exitCmd as a SPECIAL exit
         if (!(pR->getSpecialExits().contains(exitCmd))) {
@@ -11156,6 +11156,7 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     int args = lua_gettop(L);
     int secure = false;
     int port = 6667;
+    QString password;
     std::string addr = getVerifiedString(L, __func__, 1, "hostname").toStdString();
     if (addr.empty()) {
         return warnArgumentValue(L, __func__, "hostname must not be empty");
@@ -11168,6 +11169,9 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     }
     if (args > 2) {
         secure = getVerifiedBool(L, __func__, 3, "secure {default = false}", true);
+    }
+    if (args > 3) {
+            password = getVerifiedString(L, __func__, 4, "server password", true);
     }
 
     Host* pHost = &getHostFromLua(L);
@@ -11184,6 +11188,11 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     result = dlgIRC::writeIrcHostSecure(pHost, secure);
     if (!result.first) {
         return warnArgumentValue(L, __func__, qsl("unable to save secure, reason: %1").arg(result.second));
+    }
+
+    result = dlgIRC::writeIrcPassword(pHost, password);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, QStringLiteral("unable to save password, reason: %1").arg(result.second));
     }
 
     lua_pushboolean(L, true);

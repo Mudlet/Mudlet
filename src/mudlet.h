@@ -100,6 +100,7 @@ class QLabel;
 class QListWidget;
 class QPushButton;
 class QShortcut;
+class QSplitter;
 class QTableWidget;
 class QTableWidgetItem;
 class QTextEdit;
@@ -524,6 +525,7 @@ public slots:
     void slot_disconnect();
     void slot_notes();
     void slot_reconnect();
+    void slot_close_current_profile();
     void slot_close_profile_requested(int);
     void slot_irc();
     void slot_discord();
@@ -616,9 +618,11 @@ private:
     void setupTrayIcon();
     static bool desktopInDarkMode();
     void assignKeySequences();
+    void closeHost(const QString& name);
 
     QWidget* mpWidget_profileContainer;
     QHBoxLayout* mpHBoxLayout_profileContainer;
+    QSplitter* mpSplitter_profileContainer;
 
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
@@ -647,6 +651,7 @@ private:
     QPointer<QShortcut> connectShortcut;
     QPointer<QShortcut> disconnectShortcut;
     QPointer<QShortcut> reconnectShortcut;
+    QPointer<QShortcut> closeProfileShortcut;
     QKeySequence triggersKeySequence;
     QKeySequence showMapKeySequence;
     QKeySequence inputLineKeySequence;
@@ -658,6 +663,7 @@ private:
     QKeySequence connectKeySequence;
     QKeySequence disconnectKeySequence;
     QKeySequence reconnectKeySequence;
+    QKeySequence closeProfileKeySequence;
 
     QPointer<QAction> mpActionReplay;
 
@@ -686,6 +692,7 @@ private:
     QPointer<QAction> mpActionModuleManager;
     QPointer<QAction> mpActionPackageExporter;
     QPointer<QAction> mpActionReconnect;
+    QPointer<QAction> mpActionCloseProfile;
     QPointer<QAction> mpActionScripts;
     QPointer<QAction> mpActionTimers;
     QPointer<QAction> mpActionTriggers;

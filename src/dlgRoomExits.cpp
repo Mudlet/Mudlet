@@ -39,6 +39,43 @@
 // 30 copies of the same QString in the read-only segment of the code:
 const QString doubleParagraph{qsl("<p>%1</p><p>%2</p>")};
 
+WeightSpinBoxDelegate::WeightSpinBoxDelegate(QObject* parent)
+: QStyledItemDelegate(parent)
+{}
+
+QWidget* WeightSpinBoxDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& /* option */, const QModelIndex& /* index */) const
+{
+    auto* pEditor = new QSpinBox(parent);
+    pEditor->setFrame(false);
+    pEditor->setMinimum(0);
+    pEditor->setMaximum(9999);
+    // Need to use this to hide anything in the original QLineEdit that this
+    // sits on top of:
+    pEditor->setAutoFillBackground(true);
+
+    return pEditor;
+}
+
+void WeightSpinBoxDelegate::setEditorData(QWidget* pEditor, const QModelIndex& index) const
+{
+    auto value = index.model()->data(index, Qt::EditRole).toInt();
+    auto* pSpinBox = static_cast<QSpinBox*>(pEditor);
+    pSpinBox->setValue(value);
+}
+
+void WeightSpinBoxDelegate::setModelData(QWidget* pEditor, QAbstractItemModel* model, const QModelIndex& index) const
+{
+    auto* pSpinBox = static_cast<QSpinBox*>(pEditor);
+    pSpinBox->interpretText();
+    auto value = pSpinBox->value();
+    model->setData(index, value, Qt::EditRole);
+}
+
+void WeightSpinBoxDelegate::updateEditorGeometry(QWidget* pEditor, const QStyleOptionViewItem& option, const QModelIndex& /* index */) const
+{
+    pEditor->setGeometry(option.rect);
+}
+
 RoomIdLineEditDelegate::RoomIdLineEditDelegate(QObject* parent)
 : QStyledItemDelegate(parent)
 {}
@@ -225,6 +262,7 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
     init();
 
     specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitRoomId, new RoomIdLineEditDelegate);
+    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitWeight, new WeightSpinBoxDelegate);
 }
 
 dlgRoomExits::~dlgRoomExits()
@@ -383,6 +421,28 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
 void dlgRoomExits::slot_addSpecialExit()
 {
     auto pI = new QTreeWidgetItem(specialExits);
+// MINDE
+//    pI->setText(0, tr("(room ID)", "Placeholder, if no room ID is set for an exit, yet. This string is used in 2 places, ensure they match!")); //Exit RoomID
+//    pI->setForeground(0, QColor(Qt::red));
+//    pI->setToolTip(0, singleParagraph.arg(tr("Set the number of the room that this special exit leads to, will turn blue for a valid number; if left like "
+//                                             "this, this exit will be deleted when &lt;i&gt;save&lt;/i&gt; is clicked.")));
+//    pI->setTextAlignment(0, Qt::AlignRight);
+//    pI->setToolTip(1, singleParagraph.arg(tr("Prevent a route being created via this exit, equivalent to an infinite exit weight.")));
+//    pI->setCheckState(1, Qt::Unchecked); //Locked
+//    pI->setText(2, QStringLiteral("0")); //Exit Weight
+//    pI->setTextAlignment(2, Qt::AlignRight);
+//    pI->setToolTip(2, singleParagraph.arg(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
+//    pI->setCheckState(3, Qt::Checked); //Doortype: none
+//    pI->setToolTip(3, singleParagraph.arg(tr("No door symbol is drawn on a custom exit line for this exit on 2D Map.")));
+//    pI->setCheckState(4, Qt::Unchecked); //Doortype: open
+//    pI->setToolTip(4, singleParagraph.arg(tr("Green (Open) door symbol is drawn on a custom exit line for this exit on 2D Map.")));
+//    pI->setCheckState(5, Qt::Unchecked); //Doortype: closed
+//    pI->setToolTip(5, singleParagraph.arg(tr("Orange (Closed) door symbol is drawn on a custom exit line for this exit on 2D Map.")));
+//    pI->setCheckState(6, Qt::Unchecked); //Doortype: locked
+//    pI->setToolTip(6, singleParagraph.arg(tr("Red (Locked) door symbol is drawn on a custom exit line for this exit on 2D Map.")));
+//    pI->setText(7, tr("(command or Lua script)", "Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same")); //Exit command
+//    pI->setTextAlignment(7, Qt::AlignLeft);
+//=======
     pI->setText(ExitsTreeWidget::colIndex_exitRoomId, mSpecialExitRoomIdPlaceholder); //Exit RoomID
     pI->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, utils::richText(tr("Set the number of the room that this special exit goes to.")));
     pI->setTextAlignment(ExitsTreeWidget::colIndex_exitRoomId, Qt::AlignRight);
@@ -409,6 +469,7 @@ void dlgRoomExits::slot_addSpecialExit()
     pI->setText(ExitsTreeWidget::colIndex_command, mSpecialExitCommandPlaceholder); //Exit command
     pI->setTextAlignment(ExitsTreeWidget::colIndex_command, Qt::AlignLeft);
 
+// >>>>>>> development
     specialExits->addTopLevelItem(pI);
 
     setIconAndToolTipsOnSpecialExit(pI, true);
@@ -1471,7 +1532,7 @@ void dlgRoomExits::init()
 
         //ExitsTreeWidget::colIndex_exitRoomId
         pI->setText(ExitsTreeWidget::colIndex_exitRoomId, QString::number(id_to));
-        pI->setTextAlignment(ExitsTreeWidget::colIndex_exitRoomId, Qt::AlignRight);
+        pI->setTextAlignment(ExitsTreeWidget::colIndex_exitRoomId, Qt::AlignLeft);
         //Tooltip generation for this column is done in
         //setIconAndToolTipsOnSpecialExit(...) at end of this while() loop
 
@@ -1494,10 +1555,9 @@ void dlgRoomExits::init()
 
         //ExitsTreeWidget::colIndex_exitWeight
         pI->setData(ExitsTreeWidget::colIndex_exitWeight, Qt::EditRole, pR->hasExitWeight(dir) ? pR->getExitWeight(dir) : 0);
-        pI->setTextAlignment(ExitsTreeWidget::colIndex_exitWeight, Qt::AlignRight);
+        pI->setTextAlignment(ExitsTreeWidget::colIndex_exitWeight, Qt::AlignLeft);
         pSpecialExit->weight = pI->data(ExitsTreeWidget::colIndex_exitWeight, Qt::EditRole).toInt();
         pI->setToolTip(ExitsTreeWidget::colIndex_exitWeight, utils::richText(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
-
 
         //ExitsTreeWidget::colIndex_doorNone-ExitsTreeWidget::colIndex_doorLocked
         //hold a buttongroup of 4, ideally QRadioButtons, to select a door type
