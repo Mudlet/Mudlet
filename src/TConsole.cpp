@@ -771,10 +771,10 @@ void TConsole::closeEvent(QCloseEvent* event)
             mudlet::self()->saveWindowLayout();
 
             mpHost->modulesToWrite.clear();
-            std::tuple<bool, QString, QString> result = mpHost->saveProfile();
+            auto [ok, filename, error] = mpHost->saveProfile();
 
-            if (!std::get<0>(result)) {
-                QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(std::get<2>(result)));
+            if (!ok) {
+                QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(error));
                 goto ASK;
             } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
                 // There is a map loaded - but it *could* have no rooms at all!

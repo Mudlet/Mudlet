@@ -2925,7 +2925,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TTrigger*> triggers = pHost->getTriggerUnit()->getTriggerRootNodeList();
     for (auto trigger : triggers) {
         if (!trigger->getScript().isEmpty() && !trigger->isTemporary()) {
-            items.push_back(std::make_tuple(trigger->getName(), qsl("trigger"), trigger->getID()));
+            items.push_back({trigger->getName(), qsl("trigger"), trigger->getID()});
         }
         addTriggersToPreview(trigger, items);
     }
@@ -2933,7 +2933,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TAlias*> aliases = pHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : aliases) {
         if (!alias->getScript().isEmpty() && !alias->isTemporary()) {
-            items.push_back(std::make_tuple(alias->getName(), qsl("alias"), alias->getID()));
+            items.push_back({alias->getName(), qsl("alias"), alias->getID()});
         }
         addAliasesToPreview(alias, items);
     }
@@ -2941,7 +2941,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TScript*> scripts = pHost->getScriptUnit()->getScriptRootNodeList();
     for (auto script : scripts) {
         if (!script->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(script->getName(), qsl("script"), script->getID()));
+            items.push_back({script->getName(), qsl("script"), script->getID()});
         }
         addScriptsToPreview(script, items);
     }
@@ -2949,7 +2949,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TTimer*> timers = pHost->getTimerUnit()->getTimerRootNodeList();
     for (auto timer : timers) {
         if (!timer->getScript().isEmpty() && !timer->isTemporary()) {
-            items.push_back(std::make_tuple(timer->getName(), qsl("timer"), timer->getID()));
+            items.push_back({timer->getName(), qsl("timer"), timer->getID()});
         }
         addTimersToPreview(timer, items);
     }
@@ -2957,7 +2957,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TKey*> keys = pHost->getKeyUnit()->getKeyRootNodeList();
     for (auto key : keys) {
         if (!key->getScript().isEmpty() && !key->isTemporary()) {
-            items.push_back(std::make_tuple(key->getName(), qsl("key"), key->getID()));
+            items.push_back({key->getName(), qsl("key"), key->getID()});
         }
         addKeysToPreview(key, items);
     }
@@ -2965,7 +2965,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TAction*> actions = pHost->getActionUnit()->getActionRootNodeList();
     for (auto action : actions) {
         if (!action->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(action->getName(), qsl("button"), action->getID()));
+            items.push_back({action->getName(), qsl("button"), action->getID()});
         }
         addActionsToPreview(action, items);
     }
@@ -2974,10 +2974,10 @@ void dlgProfilePreferences::populateScriptsList()
     combobox->setUpdatesEnabled(false);
     combobox->clear();
 
-    for (auto item : items) {
-        combobox->addItem(qsl("%1 (%2)").arg(std::get<0>(item), std::get<1>(item)),
+    for (auto [name, type, id] : items) {
+        combobox->addItem(qsl("%1 (%2)").arg(name, type),
                           // store the item type and ID in data so we can pull up the script for it later
-                          QVariant::fromValue(QPair<QString, int>(std::get<1>(item), std::get<2>(item))));
+                          QVariant::fromValue(QPair<QString, int>(type, id)));
     }
     combobox->setUpdatesEnabled(true);
 }
@@ -2988,7 +2988,7 @@ void dlgProfilePreferences::addTriggersToPreview(TTrigger* pTriggerParent, std::
     std::list<TTrigger*>* childTriggers = pTriggerParent->getChildrenList();
     for (auto trigger : *childTriggers) {
         if (!trigger->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(trigger->getName(), qsl("trigger"), trigger->getID()));
+            items.push_back({trigger->getName(), qsl("trigger"), trigger->getID()});
         }
 
         if (trigger->hasChildren()) {
@@ -3003,7 +3003,7 @@ void dlgProfilePreferences::addAliasesToPreview(TAlias* pAliasParent, std::vecto
     std::list<TAlias*>* childrenList = pAliasParent->getChildrenList();
     for (auto alias : *childrenList) {
         if (!alias->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(alias->getName(), qsl("alias"), alias->getID()));
+            items.push_back({alias->getName(), qsl("alias"), alias->getID()});
         }
 
         if (alias->hasChildren()) {
@@ -3018,7 +3018,7 @@ void dlgProfilePreferences::addTimersToPreview(TTimer* pTimerParent, std::vector
     std::list<TTimer*>* childrenList = pTimerParent->getChildrenList();
     for (auto timer : *childrenList) {
         if (!timer->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(timer->getName(), qsl("timer"), timer->getID()));
+            items.push_back({timer->getName(), qsl("timer"), timer->getID()});
         }
 
         if (timer->hasChildren()) {
@@ -3033,7 +3033,7 @@ void dlgProfilePreferences::addKeysToPreview(TKey* pKeyParent, std::vector<std::
     std::list<TKey*>* childrenList = pKeyParent->getChildrenList();
     for (auto key : *childrenList) {
         if (!key->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(key->getName(), qsl("key"), key->getID()));
+            items.push_back({key->getName(), qsl("key"), key->getID()});
         }
 
         if (key->hasChildren()) {
@@ -3048,7 +3048,7 @@ void dlgProfilePreferences::addScriptsToPreview(TScript* pScriptParent, std::vec
     std::list<TScript*>* childrenList = pScriptParent->getChildrenList();
     for (auto script : *childrenList) {
         if (!script->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(script->getName(), qsl("script"), script->getID()));
+            items.push_back({script->getName(), qsl("script"), script->getID()});
         }
 
         if (script->hasChildren()) {
@@ -3063,7 +3063,7 @@ void dlgProfilePreferences::addActionsToPreview(TAction* pActionParent, std::vec
     std::list<TAction*>* childrenList = pActionParent->getChildrenList();
     for (auto action : *childrenList) {
         if (!action->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(action->getName(), qsl("button"), action->getID()));
+            items.push_back({action->getName(), qsl("button"), action->getID()});
         }
 
         if (action->hasChildren()) {
