@@ -5,6 +5,7 @@ on:
     paths:
     - '**.cpp'
     - '**.h'
+    - '.github/workflows/clangtidy-diff-analysis.yml'
 
 jobs:
   compile-mudlet:
