@@ -166,7 +166,7 @@ jobs:
         # If not available, use other methods
         # imagemagick is for the desktop screenshot
         sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 \
-          libxkbcommon-x11-0 imagemagick	gettext -y
+          libxkbcommon-x11-0 imagemagick gettext -y
 
         # switch to GCC that supports C++17 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 7
