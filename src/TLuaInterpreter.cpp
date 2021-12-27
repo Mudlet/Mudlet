@@ -5787,7 +5787,7 @@ int TLuaInterpreter::purgeMediaCache(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#receiveMSP
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sourceMedia
 int TLuaInterpreter::sourceMedia(lua_State* L)
 {
     Host& host = getHostFromLua(L);
