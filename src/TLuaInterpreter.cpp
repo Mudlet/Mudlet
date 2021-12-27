@@ -5789,7 +5789,7 @@ int TLuaInterpreter::loadMedia(lua_State* L)
         QString key = lua_tostring(L, -2);
         key = key.toLower();
 
-        if (key == qsl("filename") || key == qsl("key") || key == qsl("tag")) {
+        if (key == QLatin1String("filename") || key == QLatin1String("key") || key == QLatin1String("tag")) {
             if (!lua_isstring(L, -1)) {
                 lua_pushfstring(L, "loadMedia: bad argument #1 type (for index %s, table values must be strings, got value: %s (must be string))", luaL_typename(L, -2), luaL_typename(L, -1));
                 return lua_error(L);
@@ -5797,11 +5797,11 @@ int TLuaInterpreter::loadMedia(lua_State* L)
 
             QString value = lua_tostring(L, -1);
 
-            if (key == qsl("filename") && !value.isEmpty()) {
+            if (key == QLatin1String("filename") && !value.isEmpty()) {
                 mediaData.setMediaFileName(value);
-            } else if (key == qsl("key") && !value.isEmpty()) {
+            } else if (key == QLatin1String("key") && !value.isEmpty()) {
                 mediaData.setMediaKey(value);
-            } else if (key == qsl("tag") && !value.isEmpty()) {
+            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
         }
@@ -5846,7 +5846,7 @@ int TLuaInterpreter::playMedia(lua_State* L)
         QString key = lua_tostring(L, -2);
         key = key.toLower();
 
-        if (key == qsl("type") || key == qsl("filename") || key == qsl("url") || key == qsl("key") || key == qsl("tag")) {
+        if (key == QLatin1String("type") || key == QLatin1String("filename") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag")) {
             if (!lua_isstring(L, -1)) {
                 lua_pushfstring(L, "playMedia: bad argument #1 type (for index %s, table values must be strings, got value: %s (must be string))", luaL_typename(L, -2), luaL_typename(L, -1));
                 return lua_error(L);
@@ -5854,7 +5854,7 @@ int TLuaInterpreter::playMedia(lua_State* L)
 
             QString value = lua_tostring(L, -1);
 
-            if (key == qsl("type") && !value.isEmpty()) {
+            if (key == QLatin1String("type") && !value.isEmpty()) {
                 if (value.toLower() == "sound") {
                     mediaData.setMediaType(TMediaData::MediaTypeSound);
                 } else if (value.toLower() == "music") {
@@ -5866,16 +5866,16 @@ int TLuaInterpreter::playMedia(lua_State* L)
                                     luaL_typename(L, -1));
                     return lua_error(L);
                 }
-            } else if (key == qsl("filename") && !value.isEmpty()) {
+            } else if (key == QLatin1String("filename") && !value.isEmpty()) {
                 mediaData.setMediaFileName(value);
-            } else if (key == qsl("url") && !value.isEmpty()) {
+            } else if (key == QLatin1String("url") && !value.isEmpty()) {
                 mediaData.setMediaUrl(value);
-            } else if (key == qsl("key") && !value.isEmpty()) {
+            } else if (key == QLatin1String("key") && !value.isEmpty()) {
                 mediaData.setMediaKey(value);
-            } else if (key == qsl("tag") && !value.isEmpty()) {
+            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
-        } else if (key == qsl("volume") || key == qsl("fadein") || key == qsl("fadeout") || key == qsl("loops") || key == qsl("priority")) {
+        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("loops") || key == QLatin1String("priority")) {
             if (!lua_isnumber(L, -1)) {
                 lua_pushfstring(L, "playMedia: bad argument #1 type (for index %s, table values must be integers, got value: %s (must be integer))", luaL_typename(L, -2), luaL_typename(L, -1));
                 return lua_error(L);
@@ -5883,7 +5883,7 @@ int TLuaInterpreter::playMedia(lua_State* L)
 
             int value = lua_tointeger(L, -1);
 
-            if (key == qsl("volume")) {
+            if (key == QLatin1String("volume")) {
                 if (value == TMediaData::MediaVolumePreload) {
                     {
                     } // Volume of 0 supports preloading
@@ -5894,7 +5894,7 @@ int TLuaInterpreter::playMedia(lua_State* L)
                 }
 
                 mediaData.setMediaVolume(value);
-            } else if (key == qsl("fadein")) {
+            } else if (key == QLatin1String("fadein")) {
                 if (value < 0) {
                     lua_pushfstring(L,
                                     "playMedia: bad argument #1 type (for index %s, table values must be greater than or equal to 0, got value: %s (must be >= 0))",
@@ -5904,7 +5904,7 @@ int TLuaInterpreter::playMedia(lua_State* L)
                 }
 
                 mediaData.setMediaFadeIn(value);
-            } else if (key == qsl("fadeout")) {
+            } else if (key == QLatin1String("fadeout")) {
                 if (value < 0) {
                     lua_pushfstring(L,
                                     "playMedia: bad argument #1 type (for index %s, table values must be greater than or equal to 0, got value: %s (must be >= 0))",
@@ -5914,13 +5914,13 @@ int TLuaInterpreter::playMedia(lua_State* L)
                 }
 
                 mediaData.setMediaFadeOut(value);
-            } else if (key == qsl("loops")) {
+            } else if (key == QLatin1String("loops")) {
                 if (value < TMediaData::MediaLoopsRepeat || value == 0) {
                     value = TMediaData::MediaLoopsDefault;
                 }
 
                 mediaData.setMediaLoops(value);
-            } else if (key == qsl("priority")) {
+            } else if (key == QLatin1String("priority")) {
                 if (value > TMediaData::MediaPriorityMax) {
                     value = TMediaData::MediaPriorityMax;
                 } else if (value < TMediaData::MediaPriorityMin) {
@@ -5929,7 +5929,7 @@ int TLuaInterpreter::playMedia(lua_State* L)
 
                 mediaData.setMediaPriority(value);
             }
-        } else if (key == qsl("continue")) {
+        } else if (key == QLatin1String("continue")) {
             if (!lua_isboolean(L, -1)) {
                 lua_pushfstring(L, "playMedia: bad argument #1 type (for index %s, table values must be booleans, got value: %s (must be boolean))", luaL_typename(L, -2), luaL_typename(L, -1));
                 return lua_error(L);
@@ -5978,7 +5978,7 @@ int TLuaInterpreter::stopMedia(lua_State* L)
             QString key = lua_tostring(L, -2);
             key = key.toLower();
 
-            if (key == qsl("type") || key == qsl("filename") || key == qsl("key") || key == qsl("tag")) {
+            if (key == QLatin1String("type") || key == QLatin1String("filename") || key == QLatin1String("key") || key == QLatin1String("tag")) {
                 if (!lua_isstring(L, -1)) {
                     lua_pushfstring(L, "stopMedia: bad argument #1 type (for index %s, table values must be strings, got value: %s (must be string))", luaL_typename(L, -2), luaL_typename(L, -1));
                     return lua_error(L);
@@ -5986,7 +5986,7 @@ int TLuaInterpreter::stopMedia(lua_State* L)
 
                 QString value = lua_tostring(L, -1);
 
-                if (key == qsl("type") && !value.isEmpty()) {
+                if (key == QLatin1String("type") && !value.isEmpty()) {
                     if (value.toLower() == "sound") {
                         mediaData.setMediaType(TMediaData::MediaTypeSound);
                     } else if (value.toLower() == "music") {
@@ -5998,14 +5998,14 @@ int TLuaInterpreter::stopMedia(lua_State* L)
                                         luaL_typename(L, -1));
                         return lua_error(L);
                     }
-                } else if (key == qsl("filename") && !value.isEmpty()) {
+                } else if (key == QLatin1String("filename") && !value.isEmpty()) {
                     mediaData.setMediaFileName(value);
-                } else if (key == qsl("key") && !value.isEmpty()) {
+                } else if (key == QLatin1String("key") && !value.isEmpty()) {
                     mediaData.setMediaKey(value);
-                } else if (key == qsl("tag") && !value.isEmpty()) {
+                } else if (key == QLatin1String("tag") && !value.isEmpty()) {
                     mediaData.setMediaTag(value);
                 }
-            } else if (key == qsl("priority")) {
+            } else if (key == QLatin1String("priority")) {
                 if (!lua_isnumber(L, -1)) {
                     lua_pushfstring(L, "stopMedia: bad argument #1 type (for index %s, table values must be integers, got value: %s (must be integer))", luaL_typename(L, -2), luaL_typename(L, -1));
                     return lua_error(L);
@@ -6013,7 +6013,7 @@ int TLuaInterpreter::stopMedia(lua_State* L)
 
                 int value = lua_tointeger(L, -1);
 
-                if (key == qsl("priority")) {
+                if (key == QLatin1String("priority")) {
                     if (value > TMediaData::MediaPriorityMax) {
                         value = TMediaData::MediaPriorityMax;
                     } else if (value < TMediaData::MediaPriorityMin) {
