@@ -5809,7 +5809,7 @@ int TLuaInterpreter::loadMedia(lua_State* L)
         QString key = lua_tostring(L, -2);
         key = key.toLower();
 
-        if (key == QLatin1String("filename") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
             if (!lua_isstring(L, -1)) {
                 lua_pushfstring(L, "loadMedia: bad argument #1 type (for index %s, table values must be strings, got value: %s (must be string))", luaL_typename(L, -2), luaL_typename(L, -1));
                 return lua_error(L);
@@ -5817,7 +5817,7 @@ int TLuaInterpreter::loadMedia(lua_State* L)
 
             QString value = lua_tostring(L, -1);
 
-            if (key == QLatin1String("filename") && !value.isEmpty()) {
+            if (key == QLatin1String("name") && !value.isEmpty()) {
                 mediaData.setMediaFileName(value);
             } else if (key == QLatin1String("key") && !value.isEmpty()) {
                 mediaData.setMediaKey(value);
@@ -5831,7 +5831,7 @@ int TLuaInterpreter::loadMedia(lua_State* L)
     }
 
     if (mediaData.getMediaFileName().isEmpty()) {
-        return warnArgumentValue(L, __func__, "loadMedia: missing required information for \"filename\" (add index \"filename\" and value of file to play)");
+        return warnArgumentValue(L, __func__, "loadMedia: missing required information for \"name\" (add index \"name\" and value of file to play)");
     }
 
     if (mediaData.getMediaUrl().isEmpty() && host.getMediaLocationAPI().isEmpty()) {
@@ -5866,7 +5866,7 @@ int TLuaInterpreter::playMedia(lua_State* L)
         QString key = lua_tostring(L, -2);
         key = key.toLower();
 
-        if (key == QLatin1String("type") || key == QLatin1String("filename") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+        if (key == QLatin1String("type") || key == QLatin1String("name") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag")) {
             if (!lua_isstring(L, -1)) {
                 lua_pushfstring(L, "playMedia: bad argument #1 type (for index %s, table values must be strings, got value: %s (must be string))", luaL_typename(L, -2), luaL_typename(L, -1));
                 return lua_error(L);
@@ -5886,7 +5886,7 @@ int TLuaInterpreter::playMedia(lua_State* L)
                                     luaL_typename(L, -1));
                     return lua_error(L);
                 }
-            } else if (key == QLatin1String("filename") && !value.isEmpty()) {
+            } else if (key == QLatin1String("name") && !value.isEmpty()) {
                 mediaData.setMediaFileName(value);
             } else if (key == QLatin1String("url") && !value.isEmpty()) {
                 mediaData.setMediaUrl(value);
@@ -5963,7 +5963,7 @@ int TLuaInterpreter::playMedia(lua_State* L)
     }
 
     if (mediaData.getMediaFileName().isEmpty()) {
-        return warnArgumentValue(L, __func__, "playMedia: missing required information for \"filename\" (add index \"filename\" and value of file to play)");
+        return warnArgumentValue(L, __func__, "playMedia: missing required information for \"name\" (add index \"name\" and value of file to play)");
     }
 
     if (mediaData.getMediaType() == TMediaData::MediaTypeNotSet) {
@@ -6018,7 +6018,7 @@ int TLuaInterpreter::stopMedia(lua_State* L)
                                         luaL_typename(L, -1));
                         return lua_error(L);
                     }
-                } else if (key == QLatin1String("filename") && !value.isEmpty()) {
+                } else if (key == QLatin1String("name") && !value.isEmpty()) {
                     mediaData.setMediaFileName(value);
                 } else if (key == QLatin1String("key") && !value.isEmpty()) {
                     mediaData.setMediaKey(value);
