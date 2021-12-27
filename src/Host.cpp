@@ -933,6 +933,22 @@ void Host::thankForUsingPTB()
     postMessage(tr(R"([  OK  ]  - %1 Help us make Mudlet better by reporting any problems.)", "%1 will be a random happy emoji").arg(randomIcon));
 }
 
+void Host::setMediaLocationAPI(const QString& mediaUrl)
+{
+    QUrl url = QUrl(mediaUrl);
+
+    if (!url.isValid()) {
+        return;
+    }
+
+    mMediaLocationAPI = mediaUrl;
+}
+
+QString Host::getMediaLocationAPI() const
+{
+    return mMediaLocationAPI;
+}
+
 void Host::setMediaLocationGMCP(const QString& mediaUrl)
 {
     QUrl url = QUrl(mediaUrl);
