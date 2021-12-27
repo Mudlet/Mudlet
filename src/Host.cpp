@@ -26,14 +26,13 @@
 
 
 #include "LuaInterface.h"
-#include "TConsole.h"
-#include "TDebug.h"
-#include "TMainConsole.h"
 #include "TCommandLine.h"
+#include "TConsole.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
@@ -42,32 +41,27 @@
 #include "TToolBar.h"
 #include "VarUnit.h"
 #include "XMLimport.h"
+#include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
 #include "dlgNotepad.h"
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
-#include "dlgIRC.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <chrono>
 #include <QtConcurrent>
-#include <QDialog>
 #include <QtUiTools>
+#include <QDialog>
 #include <QNetworkProxy>
-#include <zip.h>
-#include <memory>
 #include "post_guard.h"
+#include <chrono>
+#include <memory>
+#include <zip.h>
 
 using namespace std::chrono;
 
-stopWatch::stopWatch()
-: mIsInitialised(false)
-, mIsRunning(false)
-, mIsPersistent(false)
-, mEffectiveStartDateTime()
-, mElapsedTime()
+stopWatch::stopWatch() : mIsInitialised(false), mIsRunning(false), mIsPersistent(false), mEffectiveStartDateTime(), mElapsedTime()
 {
     mEffectiveStartDateTime.setTimeSpec(Qt::UTC);
 }
@@ -196,7 +190,13 @@ QString stopWatch::getElapsedDayTimeString() const
     remainder = remainder - (minutes * std::chrono::milliseconds(1min).count());
     quint8 seconds = static_cast<quint8>(remainder / std::chrono::milliseconds(1s).count());
     quint16 milliSeconds = static_cast<quint16>(remainder - (seconds * std::chrono::milliseconds(1s).count()));
-    return qsl("%1:%2:%3:%4:%5:%6").arg((isNegative ? QLatin1String("-") : QLatin1String("+")), QString::number(days), QString::number(hours), QString::number(minutes), QString::number(seconds), QString::number(milliSeconds));
+    return qsl("%1:%2:%3:%4:%5:%6")
+            .arg((isNegative ? QLatin1String("-") : QLatin1String("+")),
+                 QString::number(days),
+                 QString::number(hours),
+                 QString::number(minutes),
+                 QString::number(seconds),
+                 QString::number(milliSeconds));
 }
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
@@ -421,7 +421,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
     mErrorLogFile.setFileName(logFileName);
     mErrorLogFile.open(QIODevice::Append);
-     /*
+    /*
      * Mudlet will log messages in ASCII, but force a universal (UTF-8) encoding
      * since user-content can contain anything and someone else reviewing
      * such logs need not have the same default encoding which would be used
@@ -448,12 +448,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mDoubleClickIgnore.insert('\'');
 
     // search engine load entries
-    mSearchEngineData = QMap<QString, QString>(
-    {
-                    {"Bing",       "https://www.bing.com/search?q="},
-                    {"DuckDuckGo", "https://duckduckgo.com/?q="},
-                    {"Google",     "https://www.google.com/search?q="}
-    });
+    mSearchEngineData = QMap<QString, QString>({{"Bing", "https://www.bing.com/search?q="}, {"DuckDuckGo", "https://duckduckgo.com/?q="}, {"Google", "https://www.google.com/search?q="}});
 
     auto optin = readProfileData(qsl("discordserveroptin"));
     if (!optin.isEmpty()) {
@@ -475,13 +470,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
 
     if (mudlet::self()->firstLaunch) {
-        QTimer::singleShot(0, this, [this]() {
-            mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game"));
-        });
+        QTimer::singleShot(0, this, [this]() { mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game")); });
     }
 
-    connect(&mTelnet, &cTelnet::signal_disconnected, this, [this](){ purgeTimer.start(1min); });
-    connect(&mTelnet, &cTelnet::signal_connected, this, [this](){ purgeTimer.stop(); });
+    connect(&mTelnet, &cTelnet::signal_disconnected, this, [this]() { purgeTimer.start(1min); });
+    connect(&mTelnet, &cTelnet::signal_connected, this, [this]() { purgeTimer.stop(); });
     connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTemps);
 
     // enable by default in case of offline connection; if the profile connects - timer will be disabled
@@ -518,13 +511,13 @@ void Host::loadPackageInfo()
     }
 }
 
-void Host::createModuleBackup(const QString &filename, const QString &saveName)
+void Host::createModuleBackup(const QString& filename, const QString& saveName)
 {
     QString time = QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss");
     QFile::copy(filename, saveName + time);
 }
 
-void Host::writeModule(const QString &moduleName, const QString &filename)
+void Host::writeModule(const QString& moduleName, const QString& filename)
 {
     QString xml_filename = filename;
     if (filename.endsWith(qsl("mpackage"), Qt::CaseInsensitive) || filename.endsWith(qsl("zip"), Qt::CaseInsensitive)) {
@@ -730,9 +723,7 @@ void Host::resetProfile_phase1()
     mKeyUnit.stopAllTriggers();
     mResetProfile = true;
 
-    QTimer::singleShot(0, this, [this]() {
-        resetProfile_phase2();
-    });
+    QTimer::singleShot(0, this, [this]() { resetProfile_phase2(); });
 }
 
 void Host::resetProfile_phase2()
@@ -772,7 +763,7 @@ void Host::resetProfile_phase2()
     mLuaInterpreter.updateAnsi16ColorsInTable();
     mLuaInterpreter.updateExtendedAnsiColorsInTable();
 
-    TEvent event {};
+    TEvent event{};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(event);
@@ -927,10 +918,26 @@ void Host::updateConsolesFont()
 // a little message to make the player feel special for helping us find bugs
 void Host::thankForUsingPTB()
 {
-    const QStringList happyIcons {"😀", "😃", "😄", "😁", "🙂", "🙃", "🤩", "🎉", "🚀", "🤟", "✌️", "👊"};
+    const QStringList happyIcons{"😀", "😃", "😄", "😁", "🙂", "🙃", "🤩", "🎉", "🚀", "🤟", "✌️", "👊"};
     const auto randomIcon = happyIcons.at(QRandomGenerator::global()->bounded(happyIcons.size()));
     postMessage(tr(R"([  OK  ]  - %1 Thanks a lot for using the Public Test Build!)", "%1 will be a random happy emoji").arg(randomIcon));
     postMessage(tr(R"([  OK  ]  - %1 Help us make Mudlet better by reporting any problems.)", "%1 will be a random happy emoji").arg(randomIcon));
+}
+
+void Host::setMediaLocationAPI(const QString& mediaUrl)
+{
+    QUrl url = QUrl(mediaUrl);
+
+    if (!url.isValid()) {
+        return;
+    }
+
+    mMediaLocationAPI = mediaUrl;
+}
+
+QString Host::getMediaLocationAPI() const
+{
+    return mMediaLocationAPI;
 }
 
 void Host::setMediaLocationGMCP(const QString& mediaUrl)
@@ -1141,7 +1148,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         commandList << cmd;
     }
 
-        // allow sending blank commands
+    // allow sending blank commands
 
     if (!dontExpandAliases && commandList.empty()) {
         QString payload(QChar::LineFeed);
@@ -1598,7 +1605,7 @@ void Host::raiseEvent(const TEvent& pE)
 
 void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
 {
-    TEvent event {};
+    TEvent event{};
     event.mArgumentList << QLatin1String("sysIrcMessage");
     event.mArgumentList << a << b << c;
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
@@ -1726,7 +1733,7 @@ bool Host::installPackage(const QString& fileName, int module)
             return false;
         }
 
-        auto * pLabel = pUnzipDialog->findChild<QLabel*>(qsl("label"));
+        auto* pLabel = pUnzipDialog->findChild<QLabel*>(qsl("label"));
         if (pLabel) {
             if (module) {
                 pLabel->setText(tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName));
@@ -1844,14 +1851,14 @@ bool Host::installPackage(const QString& fileName, int module)
     // raise 2 events - a generic one and a more detailed one to serve both
     // a simple need ("I just want the install event") and a more specific need
     // ("I specifically need to know when the module was synced")
-    TEvent genericInstallEvent {};
+    TEvent genericInstallEvent{};
     genericInstallEvent.mArgumentList.append(QLatin1String("sysInstall"));
     genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     genericInstallEvent.mArgumentList.append(packageName);
     genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(genericInstallEvent);
 
-    TEvent detailedInstallEvent {};
+    TEvent detailedInstallEvent{};
     switch (module) {
     case 0:
         detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallPackage"));
@@ -1889,7 +1896,7 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     bool result = true;
     QDir dir(dirName);
     if (dir.exists(dirName)) {
-        for (QFileInfo &info : dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
+        for (QFileInfo& info : dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
             // prevent recursion outside of the original branch
             if (info.isDir() && info.absoluteFilePath().startsWith(originalPath)) {
                 result = removeDir(info.absoluteFilePath(), originalPath);
@@ -1907,7 +1914,8 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     return result;
 }
 
-void Host::removePackageInfo(const QString &packageName, const bool isModule) {
+void Host::removePackageInfo(const QString& packageName, const bool isModule)
+{
     if (isModule) {
         mModuleInfo.remove(packageName);
     } else {
@@ -1941,14 +1949,14 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     // raise 2 events - a generic one and a more detailed one to serve both
     // a simple need ("I just want the uninstall event") and a more specific need
     // ("I specifically need to know when the module was uninstalled via Lua")
-    TEvent genericUninstallEvent {};
+    TEvent genericUninstallEvent{};
     genericUninstallEvent.mArgumentList.append(QLatin1String("sysUninstall"));
     genericUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     genericUninstallEvent.mArgumentList.append(packageName);
     genericUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(genericUninstallEvent);
 
-    TEvent detailedUninstallEvent {};
+    TEvent detailedUninstallEvent{};
     switch (module) {
     case 0:
         detailedUninstallEvent.mArgumentList.append(QLatin1String("sysUninstallPackage"));
@@ -2034,7 +2042,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
 void Host::readPackageConfig(const QString& luaConfig, QString& packageName, bool isModule)
 {
     QString newName = getPackageConfig(luaConfig, isModule);
-    if (!newName.isEmpty()){
+    if (!newName.isEmpty()) {
         packageName = newName;
     }
 }
@@ -2174,7 +2182,7 @@ QString Host::readProfileData(const QString& item)
 
 // makes fonts in a given package/module be available for Mudlet scripting
 // does not install font system-wide
-void Host::installPackageFonts(const QString &packageName)
+void Host::installPackageFonts(const QString& packageName)
 {
     auto packagePath = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
 
@@ -2182,9 +2190,8 @@ void Host::installPackageFonts(const QString &packageName)
     while (it.hasNext()) {
         auto filePath = it.next();
 
-        if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive) ||
-            filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
-
+        if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive)
+            || filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
             mudlet::self()->mFontManager.loadFont(filePath, packageName);
         }
     }
@@ -2208,11 +2215,7 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
         // Set things automatically
         mAutoAmbigousWidthGlyphsSetting = true;
 
-        if (encoding == "GBK"
-            || encoding == "GB18030"
-            || encoding == "BIG5"
-            || encoding == "BIG5-HKSCS") {
-
+        if (encoding == "GBK" || encoding == "GB18030" || encoding == "BIG5" || encoding == "BIG5-HKSCS") {
             // Need to use wide width for ambiguous characters
             if (!mWideAmbigousWidthGlyphs) {
                 // But the last setting was narrow - so we need to change
@@ -2229,7 +2232,6 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
                 localState = false;
                 needToEmit = true;
             }
-
         }
 
     } else {
@@ -2242,7 +2244,6 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
             localState = (state == Qt::Checked);
             needToEmit = true;
         }
-
     }
 
     if (needToEmit) {
@@ -2380,13 +2381,15 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         if (richPresenceSupported.first && pMudlet->mDiscord.usingMudletsDiscordID(this)) {
             pMudlet->mDiscord.setDetailText(this, tr("Playing %1").arg(richPresenceSupported.second));
             pMudlet->mDiscord.setLargeImage(this, richPresenceSupported.second);
-            pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3", "%1 is the game name and %2:%3 is game server address like: mudlet.org:23").arg(gameName.toString(), getUrl(), QString::number(getPort())));
+            pMudlet->mDiscord.setLargeImageText(
+                    this, tr("%1 at %2:%3", "%1 is the game name and %2:%3 is game server address like: mudlet.org:23").arg(gameName.toString(), getUrl(), QString::number(getPort())));
         } else {
             // We are using a custom application id, so the top line is
             // likely to be saying "Playing MudName"
             if (richPresenceSupported.first) {
                 pMudlet->mDiscord.setDetailText(this, QString());
-                pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3", "%1 is the game name and %2:%3 is game server address like: mudlet.org:23").arg(gameName.toString(), getUrl(), QString::number(getPort())));
+                pMudlet->mDiscord.setLargeImageText(
+                        this, tr("%1 at %2:%3", "%1 is the game name and %2:%3 is game server address like: mudlet.org:23").arg(gameName.toString(), getUrl(), QString::number(getPort())));
                 pMudlet->mDiscord.setLargeImage(this, qsl("server-icon"));
             }
         }
@@ -2503,26 +2506,26 @@ void Host::processDiscordMSDP(const QString& variable, QString value)
 
     Q_UNUSED(variable)
     Q_UNUSED(value)
-// TODO:
-//    if (!(variable == QLatin1String("SERVER_ID") || variable == QLatin1String("AREA_NAME"))) {
-//        return;
-//    }
+    // TODO:
+    //    if (!(variable == QLatin1String("SERVER_ID") || variable == QLatin1String("AREA_NAME"))) {
+    //        return;
+    //    }
 
-//    // MSDP value comes padded with quotes - strip them (from the local copy of
-//    // the supplied argument):
-//    if (value.startsWith(QLatin1String("\""))) {
-//        value = value.mid(1);
-//    }
+    //    // MSDP value comes padded with quotes - strip them (from the local copy of
+    //    // the supplied argument):
+    //    if (value.startsWith(QLatin1String("\""))) {
+    //        value = value.mid(1);
+    //    }
 
-//    if (value.endsWith(QLatin1String("\""))) {
-//        value.chop(1);
-//    }
+    //    if (value.endsWith(QLatin1String("\""))) {
+    //        value.chop(1);
+    //    }
 
-//    if (variable == QLatin1String("SERVER_ID")) {
-//        mudlet::self()->mDiscord.setGame(this, value);
-//    } else if (variable == QLatin1String("AREA_NAME")) {
-//        mudlet::self()->mDiscord.setArea(this, value);
-//    }
+    //    if (variable == QLatin1String("SERVER_ID")) {
+    //        mudlet::self()->mDiscord.setGame(this, value);
+    //    } else if (variable == QLatin1String("AREA_NAME")) {
+    //        mudlet::self()->mDiscord.setArea(this, value);
+    //    }
 }
 
 void Host::setDiscordApplicationID(const QString& s)
@@ -2576,7 +2579,7 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
 {
     Q_UNUSED(_useDictionary);
     bool useDictionary = true;
-    bool dictionaryChanged {};
+    bool dictionaryChanged{};
     // Copy the value while we have the lock:
     bool isSpellCheckingEnabled = mEnableSpellCheck;
     if (mEnableUserDictionary != useDictionary) {
@@ -2708,7 +2711,7 @@ void Host::setDisplayFontFixedPitch(bool enable)
 
 void Host::loadSecuredPassword()
 {
-    auto *job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile"));
+    auto* job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile"));
     job->setAutoDelete(false);
     job->setInsecureFallback(false);
 
@@ -2861,7 +2864,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         dockwidget = new TDockWidget(this, name);
         dockwidget->setObjectName(qsl("dockWindow_%1_%2").arg(hostName, name));
         dockwidget->setContentsMargins(0, 0, 0, 0);
-        dockwidget->setFeatures(QDockWidget::DockWidgetClosable|QDockWidget::DockWidgetMovable|QDockWidget::DockWidgetFloatable);
+        dockwidget->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
         dockwidget->setWindowTitle(name);
         mpConsole->mDockWidgetMap.insert(name, dockwidget);
         // It wasn't obvious but the parent passed to the TConsole constructor
@@ -2976,7 +2979,6 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
         return {false, qsl("a miniconsole/userwindow with the name '%1' already exists").arg(name)};
     }
     return {false, QString()};
-
 }
 
 bool Host::setClickthrough(const QString& name, bool clickthrough)
@@ -3663,7 +3665,7 @@ bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode)
     return false;
 }
 
-bool Host::resetBackgroundImage(const QString &name)
+bool Host::resetBackgroundImage(const QString& name)
 {
     if (!mpConsole) {
         return false;
@@ -3728,11 +3730,7 @@ void Host::createMapper(const bool loadDefaultMap)
     mpDockableMapWidget->setObjectName(qsl("dockMap_%1").arg(hostName));
     // Arrange for TMap member values to be copied from the Host masters so they
     // are in place when the 2D mapper is created:
-    getPlayerRoomStyleDetails(pMap->mPlayerRoomStyle,
-                                     pMap->mPlayerRoomOuterDiameterPercentage,
-                                     pMap->mPlayerRoomInnerDiameterPercentage,
-                                     pMap->mPlayerRoomOuterColor,
-                                     pMap->mPlayerRoomInnerColor);
+    getPlayerRoomStyleDetails(pMap->mPlayerRoomStyle, pMap->mPlayerRoomOuterDiameterPercentage, pMap->mPlayerRoomInnerDiameterPercentage, pMap->mPlayerRoomOuterColor, pMap->mPlayerRoomInnerColor);
 
     pMap->mpMapper = new dlgMapper(mpDockableMapWidget, this, pMap); //FIXME: mpHost definieren
     pMap->mpMapper->setStyleSheet(mProfileStyleSheet);
@@ -3763,7 +3761,7 @@ void Host::createMapper(const bool loadDefaultMap)
     mudlet::self()->loadWindowLayout();
 
     check_for_mappingscript();
-    TEvent mapOpenEvent {};
+    TEvent mapOpenEvent{};
     mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
     mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(mapOpenEvent);

@@ -79,6 +79,7 @@ public:
 
 private:
     void stopAllMediaPlayers();
+    void transitionNonRelativeFile(TMediaData& mediaData);
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);
     static bool isFileRelative(TMediaData& mediaData);
@@ -121,6 +122,8 @@ private:
     QList<TMediaPlayer> mMSPMusicList;
     QList<TMediaPlayer> mGMCPSoundList;
     QList<TMediaPlayer> mGMCPMusicList;
+    QList<TMediaPlayer> mAPISoundList;
+    QList<TMediaPlayer> mAPIMusicList;
 
     QNetworkAccessManager* mpNetworkAccessManager;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;

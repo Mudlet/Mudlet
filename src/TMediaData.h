@@ -28,7 +28,7 @@
 class TMediaData
 {
 public:
-    enum MediaProtocol { MediaProtocolMSP = 90, MediaProtocolGMCP = 201, MediaProtocolNotSet = 0 };
+    enum MediaProtocol { MediaProtocolAPI = -1, MediaProtocolMSP = 90, MediaProtocolGMCP = 201, MediaProtocolNotSet = 0 };
 
     enum MediaType { MediaTypeSound = 1, MediaTypeMusic = 2, MediaTypeNotSet = 0 };
 
