@@ -5787,6 +5787,23 @@ int TLuaInterpreter::purgeMediaCache(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#receiveMSP
+int TLuaInterpreter::sourceMedia(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "sourceMedia: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaUrl(lua_tostring(L, -1));
+    host.mpMedia->sourceMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadMedia
 int TLuaInterpreter::loadMedia(lua_State* L)
@@ -14265,6 +14282,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "tempExactMatchTrigger", TLuaInterpreter::tempExactMatchTrigger);
     lua_register(pGlobalLua, "receiveMSP", TLuaInterpreter::receiveMSP);
     lua_register(pGlobalLua, "purgeMediaCache", TLuaInterpreter::purgeMediaCache);
+    lua_register(pGlobalLua, "sourceMedia", TLuaInterpreter::sourceMedia);
     lua_register(pGlobalLua, "loadMedia", TLuaInterpreter::loadMedia);
     lua_register(pGlobalLua, "playMedia", TLuaInterpreter::playMedia);
     lua_register(pGlobalLua, "stopMedia", TLuaInterpreter::stopMedia);

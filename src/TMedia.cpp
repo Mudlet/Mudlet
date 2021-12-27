@@ -45,6 +45,11 @@ TMedia::TMedia(Host* pHost, const QString& profileName)
 
 TMedia::~TMedia() = default;
 
+void TMedia::sourceMedia(TMediaData& mediaData)
+{
+    TMedia::processUrl(mediaData);
+}
+
 void TMedia::playMedia(TMediaData& mediaData)
 {
     if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {

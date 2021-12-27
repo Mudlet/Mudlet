@@ -490,6 +490,7 @@ public:
     static int sendGMCP(lua_State*);
     static int receiveMSP(lua_State*);
     static int purgeMediaCache(lua_State*);
+    static int sourceMedia(lua_State*);
     static int loadMedia(lua_State*);
     static int playMedia(lua_State*);
     static int stopMedia(lua_State*);

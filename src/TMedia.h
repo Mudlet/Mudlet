@@ -72,6 +72,7 @@ public:
     TMedia(Host* pHost, const QString& profileName);
     ~TMedia();
 
+    void sourceMedia(TMediaData& mediaData);
     void playMedia(TMediaData& mediaData);
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
