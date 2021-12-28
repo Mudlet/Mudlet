@@ -889,7 +889,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2970"/>
       <source>Set exits...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>設定出口...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2976"/>
@@ -901,19 +901,19 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2989"/>
       <source>Set color...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>設定色彩...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2995"/>
       <source>Set symbol...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>設定符號...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3002"/>
       <source>Spread...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>展開...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3009"/>
@@ -925,7 +925,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3030"/>
       <source>Set weight...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>設定權重...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3042"/>
@@ -949,7 +949,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3054"/>
       <source>Create label...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>建立標籤...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3055"/>
@@ -5342,7 +5342,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1076"/>
       <source>Discord integration not supported by game</source>
-      <translation type="unfinished"/>
+      <translation>遊戲不支持 Discord 集成</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1079"/>
@@ -5706,7 +5706,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>套件匯出工具</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="512"/>
@@ -8400,7 +8400,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="363"/>
       <source>Close profile</source>
-      <translation type="unfinished"/>
+      <translation>關閉設定檔</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="161"/>
@@ -8975,7 +8975,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="374"/>
       <location filename="../src/mudlet.cpp" line="697"/>
       <source>Close profile</source>
-      <translation type="unfinished"/>
+      <translation>關閉設定檔</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="439"/>
