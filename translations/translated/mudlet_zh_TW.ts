@@ -6269,7 +6269,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="641"/>
       <source>System dictionaries:</source>
       <comment>On *nix systems where we find the system ones we use them.</comment>
-      <translation type="unfinished"/>
+      <translation>系統字典：</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="672"/>
@@ -8369,7 +8369,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="333"/>
       <source>Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="336"/>
@@ -9053,12 +9053,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="842"/>
       <source>Dzongkha</source>
-      <translation type="unfinished"/>
+      <translation>Dzongkha</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="843"/>
       <source>Dzongkha (Bhutan)</source>
-      <translation type="unfinished"/>
+      <translation>Dzongkha (Bhutan)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="849"/>
@@ -9375,13 +9375,13 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="914"/>
       <location filename="../src/mudlet.cpp" line="919"/>
       <source>Guarani</source>
-      <translation type="unfinished"/>
+      <translation>Guarani</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="915"/>
       <location filename="../src/mudlet.cpp" line="920"/>
       <source>Guarani (Paraguay)</source>
-      <translation type="unfinished"/>
+      <translation>Guarani (Paraguay)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="916"/>
@@ -9446,12 +9446,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="931"/>
       <source>Indonesian</source>
-      <translation type="unfinished"/>
+      <translation>Indonesian</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="932"/>
       <source>Indonesian (Indonesia)</source>
-      <translation type="unfinished"/>
+      <translation>Indonesian (Indonesia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="933"/>
@@ -9552,12 +9552,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="952"/>
       <source>Latvian</source>
-      <translation type="unfinished"/>
+      <translation>Latvian</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="953"/>
       <source>Latvian (Latvia)</source>
-      <translation type="unfinished"/>
+      <translation>Latvian (Latvia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="954"/>
@@ -10144,7 +10144,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="498"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>套件匯出工具</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="508"/>
@@ -10184,17 +10184,17 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="1022"/>
       <source>Turkish (Turkey)</source>
-      <translation type="unfinished"/>
+      <translation>Turkish (Turkey)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1032"/>
       <source>Vietnamese (DauCu variant - old-style diacritics)</source>
-      <translation type="unfinished"/>
+      <translation>Vietnamese (DauCu variant - old-style diacritics)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1033"/>
       <source>Vietnamese (DauMoi variant - new-style diacritics)</source>
-      <translation type="unfinished"/>
+      <translation>Vietnamese (DauMoi variant - new-style diacritics)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1042"/>
