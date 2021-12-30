@@ -354,7 +354,12 @@ QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir& dir)
 
     // No more than one '*' wildcard per the specification
     if ((mediaData.getMediaFileName().contains('*') || mediaData.getMediaFileName().contains('?')) && mediaData.getMediaFileName().count('*') < 2) {
-        dir.setNameFilters(QStringList() << mediaData.getMediaFileName());
+        if (!mediaData.getMediaFileName().contains('/')) {
+            dir.setNameFilters(QStringList() << mediaData.getMediaFileName());
+        } else { // Directory information needs filtered from the filter
+            dir.setNameFilters(QStringList() << mediaData.getMediaFileName().section('/', -1));
+        }
+
         QStringList fileNames(dir.entryList(QDir::Files | QDir::Readable, QDir::Name));
 
         for (auto& fileName : qAsConst(fileNames)) {
