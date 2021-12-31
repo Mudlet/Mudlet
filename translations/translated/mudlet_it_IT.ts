@@ -1585,7 +1585,7 @@ Percorsi analizzati:
     <message>
       <location filename="../src/TMainConsole.cpp" line="338"/>
       <source>Start logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Avvia il salvataggio dei messaggi inviati dal gioco nel file di log.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="652"/>
@@ -3654,7 +3654,7 @@ Desideri aggiornare ora?</translation>
     <message>
       <location filename="../src/VarUnit.cpp" line="88"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation type="unfinished"/>
+      <translation>Le variabili selezionate saranno salvate e caricate con il profilo.</translation>
     </message>
   </context>
   <context>
@@ -5506,7 +5506,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1837"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Inserire il nome del profilo, l'indirizzo del server e la porta di connessione prima di collegarti.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1890"/>
