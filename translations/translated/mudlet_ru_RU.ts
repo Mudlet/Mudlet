@@ -895,7 +895,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="143"/>
       <source>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</source>
-      <translation type="unfinished"/>
+      <translation>Нажмите на строку, чтобы выбрать или отменить выбор номера комнаты (или названия комнаты, если оно было задано), чтобы добавить или удалить комнату из выборки. Для сортировки нажмите на соответствующий заголовок. Обратите внимание, что имя столбца будет отображаться только, если хотя бы одна из комнат имеет  название.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2970"/>
@@ -1316,7 +1316,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="354"/>
       <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i&gt;N:&lt;/i&gt; — это задержка игрового сервера и сети (например, пинг, в секундах),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; — время обработки системы — сколько времени заняли ваши триггеры обработать последнюю строку (строки).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="764"/>
@@ -1579,7 +1579,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="322"/>
       <source>Stop logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Остановить ведение журнала в лог-файл.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="338"/>
@@ -2845,7 +2845,11 @@ here (or created in the future) will automatically be assigned the name &quot;%1
 Duplicated area names will cause all but the first encountered one to gain a
 &quot;_###&quot; style suffix.
 %2</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Mudlet ранее позволял карте иметь более одной области
+с одинаковым названием или без него. Чтобы разрешить эти случаи, области без имени,
+здесь (или созданные в будущем), будут автоматически присвоены имя &quot;%1&quot;.
+Повторяющиеся имена областей приведут к тому, что все, кроме первого, получат суффикс стиля &quot;_####&quot;.
+%2</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1244"/>
@@ -2941,7 +2945,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1333"/>
       <source>Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Наведи курсор на этот элемент, чтобы отобразить кодовые точки Юникода в выборе &lt;i&gt;(только первая строка!)&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1342"/>
@@ -5186,12 +5190,12 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>Click to make the color trigger ignore the text&apos;s background color - however choosing this for both foreground and background is an error.</source>
-      <translation type="unfinished"/>
+      <translation>Нажмите, чтобы заставить цветовой триггер игнорировать текст цвета фона - однако выбор этого параметра как для переднего плана, так и для фона является ошибкой.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
       <source>Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both foreground and background is an error.</source>
-      <translation type="unfinished"/>
+      <translation>Нажмите, чтобы заставить цветовой триггер игнорировать текст цвета переднего плана - однако выбор этого цвета как для переднего плана, так и для фона является ошибкой.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
