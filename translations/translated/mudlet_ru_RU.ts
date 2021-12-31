@@ -560,22 +560,22 @@ please wait...</source>
   <context>
     <name>RoomIdLineEditDelegate</name>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="147"/>
-      <location filename="../src/dlgRoomExits.cpp" line="222"/>
+      <location filename="../src/dlgRoomExits.cpp" line="137"/>
+      <location filename="../src/dlgRoomExits.cpp" line="212"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
       <translation>Введенный номер недействителен. Если оставить как это, этот выход будет удален при нажатии на &lt;tt&gt;сохранить&lt;/tt&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="148"/>
-      <location filename="../src/dlgRoomExits.cpp" line="152"/>
-      <location filename="../src/dlgRoomExits.cpp" line="223"/>
-      <location filename="../src/dlgRoomExits.cpp" line="227"/>
+      <location filename="../src/dlgRoomExits.cpp" line="138"/>
+      <location filename="../src/dlgRoomExits.cpp" line="142"/>
+      <location filename="../src/dlgRoomExits.cpp" line="213"/>
+      <location filename="../src/dlgRoomExits.cpp" line="217"/>
       <source>Set the number of the room that this special exit goes to.</source>
       <translation>Задать номер комнаты, к которой приходит этот специальный выход.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="156"/>
-      <location filename="../src/dlgRoomExits.cpp" line="231"/>
+      <location filename="../src/dlgRoomExits.cpp" line="146"/>
+      <location filename="../src/dlgRoomExits.cpp" line="221"/>
       <source>A positive roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
       <translation>Здесь ожидается положительный номер комнаты, в которую ведет этот специальный выход. Если оставить это так, этот выход будет удален при нажатии &lt;tt&gt;сохранить&lt;/tt&gt;.</translation>
     </message>
@@ -668,11 +668,6 @@ please wait...</source>
       <source>Name</source>
       <comment>Room name in the mapper widget</comment>
       <translation>Имя</translation>
-    </message>
-    <message>
-      <location filename="../src/T2DMap.cpp" line="143"/>
-      <source>&lt;p&gt;Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.&lt;/p&gt;</source>
-      <translation>&lt;/p&gt;Нажмите на строку, чтобы выбрать или отменить выбор номера комнаты (или названия комнаты, если оно было задано), чтобы добавить или удалить комнату из выбора. Для сортировки нажмите на соответствующий заголовок. Обратите внимание, что имя столбца будет отображаться только, если хотя бы одна из комнат имеет  название.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="601"/>
@@ -896,6 +891,11 @@ please wait...</source>
       <source>Create new room here</source>
       <comment>Menu option to create a new room in the mapper</comment>
       <translation>Создать новую комнату</translation>
+    </message>
+    <message>
+      <location filename="../src/T2DMap.cpp" line="143"/>
+      <source>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2970"/>
@@ -1314,83 +1314,83 @@ rooms:</source>
       <translation>Консоль отладки</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="772"/>
+      <location filename="../src/TConsole.cpp" line="354"/>
+      <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/TConsole.cpp" line="764"/>
       <source>Save profile?</source>
       <translation>Сохранить профиль?</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="772"/>
+      <location filename="../src/TConsole.cpp" line="764"/>
       <source>Do you want to save the profile %1?</source>
       <translation>Вы хотите сохранить профиль %1?</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="785"/>
+      <location filename="../src/TConsole.cpp" line="777"/>
       <source>Couldn&apos;t save profile</source>
       <translation>Не удалось сохранить профиль</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="785"/>
+      <location filename="../src/TConsole.cpp" line="777"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
       <translation>К сожалению, невозможно сохранить профиль - есть ошибка: %1</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="1702"/>
+      <location filename="../src/TConsole.cpp" line="1694"/>
       <source>System Message: %1</source>
       <translation>Системное сообщение: %1</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="324"/>
+      <location filename="../src/TConsole.cpp" line="323"/>
       <source>Show Time Stamps.</source>
       <translation>Показывать марки времени</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="336"/>
+      <location filename="../src/TConsole.cpp" line="334"/>
       <source>Record a replay.</source>
       <translation>Записать повтор.</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="347"/>
+      <location filename="../src/TConsole.cpp" line="344"/>
       <source>Start logging game output to log file.</source>
       <translation>Начать ведение журнала в лог-файл.</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="358"/>
-      <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation>&lt;i&gt;N:&lt;/i&gt; -задержка сервера игры и сети (aka ping, в секундах), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; -время обработки системы-сколько времени потребовалось для обработки последней строки.</translation>
-    </message>
-    <message>
-      <location filename="../src/TConsole.cpp" line="391"/>
+      <location filename="../src/TConsole.cpp" line="386"/>
       <source>Emergency Stop. Stops all timers and triggers.</source>
       <translation>Аварийная остановка. Останавливает все таймеры и триггеры.</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="407"/>
+      <location filename="../src/TConsole.cpp" line="401"/>
       <source>Search buffer.</source>
       <translation>Поиск буфера.</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="415"/>
+      <location filename="../src/TConsole.cpp" line="408"/>
       <source>Earlier search result.</source>
       <translation>Прошлый результат поиска.</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="426"/>
+      <location filename="../src/TConsole.cpp" line="418"/>
       <source>Later search result.</source>
       <translation>Позжий результат поиска.</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="870"/>
+      <location filename="../src/TConsole.cpp" line="862"/>
       <source>Replay recording has started. File: %1</source>
       <translation>Началась запись воспроизведения. Файл: %1</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="873"/>
+      <location filename="../src/TConsole.cpp" line="865"/>
       <source>Replay recording has been stopped. File: %1</source>
       <translation>Запись преобразования остановлена. Файл: %1</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="1810"/>
-      <location filename="../src/TConsole.cpp" line="1849"/>
+      <location filename="../src/TConsole.cpp" line="1802"/>
+      <location filename="../src/TConsole.cpp" line="1841"/>
       <source>No search results, sorry!</source>
       <translation>Нет результатов поиска, к сожалению!</translation>
     </message>
@@ -1411,118 +1411,118 @@ rooms:</source>
       <translation>Играет в %1</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="12798"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="12819"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12807"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12828"/>
       <source>ERROR</source>
       <translation>ОШИБКА</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="12799"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="12810"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12808"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12819"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
       <translation>объект</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="12799"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="12810"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12808"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12819"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
       <translation>функция</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14304"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14313"/>
       <source>Some functions may not be available.</source>
       <translation>Некоторые функции могут быть недоступны.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13707"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13716"/>
       <source>No error message available from Lua</source>
       <translation>Нет сообщения об ошибке от Lua</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13709"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13718"/>
       <source>Lua error: %1</source>
       <translation>Ошибка Lua: %1</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13711"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13720"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
       <translation>[ ОШИБКА ] - Не удается найти модуль Lua %1.%2%3%4</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13725"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13734"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name (may specify which variant) of the module.</comment>
       <translation>[  OK  ] - модуль Lua %1 загружен.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14291"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14300"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
       <translation>Вероятно, не сможет получить доступ к коду Mudlet Lua.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14309"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14318"/>
       <source>Database support will not be available.</source>
       <translation>Поддержка базы данных будет недоступна.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14316"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14325"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
       <translation>utf8.* Lua функции не будут доступны.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14322"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14331"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
       <translation>yajl.* Lua функции не будут доступны.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14507"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14516"/>
       <source>No error message available from Lua.</source>
       <translation>Нет сообщения об ошибке от Lua.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14509"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14518"/>
       <source>Lua error: %1.</source>
       <translation>Ошибка Lua: %1.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14511"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14520"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
       <translation>[ ОШИБКА ] - Не удается загрузить программу форматирования кода, функция индентирования недоступна.
 </translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14588"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14597"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
       <translation>%1 (не существует)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14593"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14602"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
       <translation>%1 (это не файл или симлинк на файл)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14602"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14611"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
       <translation>%1 (это не читаемый файл или симлинк на читаемый файл)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14620"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14629"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
       <translation>%1 (не удалось прочитать файл)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14626"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14635"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
       <translation>[  OK  ] - Загружен Mudlet-lua API и Geyser Layout менеджер.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14633"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14642"/>
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
@@ -1571,116 +1571,116 @@ Tried these locations:
       <translation>&apos;Протоколирование начинается с &apos;чч: мм: сс&apos; на &apos;дддддд&apos;, &apos;d&apos; &apos;ММММ&apos; &apos;гггг&apos;.</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="323"/>
-      <source>&lt;p&gt;Stop logging game output to log file.&lt;/p&gt;</source>
-      <translation>&lt;bp&gt;Остановить ведение журнала в лог-файл.&lt;b/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/TMainConsole.cpp" line="327"/>
+      <location filename="../src/TMainConsole.cpp" line="326"/>
       <source>&apos;Log session ending at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
       <translation>&apos;Сеанс журнала, заканчивающийся на &amp;aposhh:mm:ss&apos; на &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="340"/>
-      <source>&lt;p&gt;Start logging game output to log file.&lt;/p&gt;</source>
-      <translation>&lt;bp&gt;Начать ведение журнала в лог-файл.&lt;b/p&gt;</translation>
+      <location filename="../src/TMainConsole.cpp" line="322"/>
+      <source>Stop logging game output to log file.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="654"/>
+      <location filename="../src/TMainConsole.cpp" line="338"/>
+      <source>Start logging game output to log file.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/TMainConsole.cpp" line="652"/>
       <source>Pre-Map loading(2) report</source>
       <translation>Предварительная загрузка карты(2) отчет</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="665"/>
+      <location filename="../src/TMainConsole.cpp" line="663"/>
       <source>Loading map(2) at %1 report</source>
       <translation>Загрузка карты(2) в %1 отчет</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1065"/>
+      <location filename="../src/TMainConsole.cpp" line="1063"/>
       <source>User window - %1 - %2</source>
       <translation>Пользовательское окно - %1 - %2</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1113"/>
+      <location filename="../src/TMainConsole.cpp" line="1111"/>
       <source>N:%1 S:%2</source>
       <comment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</comment>
       <translation>N:%1 S:%2</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1120"/>
+      <location filename="../src/TMainConsole.cpp" line="1118"/>
       <source>&lt;no GA&gt; S:%1</source>
       <comment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</comment>
       <translation>&lt;no GA&gt; S:%1</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1217"/>
+      <location filename="../src/TMainConsole.cpp" line="1215"/>
       <source>Pre-Map loading(1) report</source>
       <translation>Предварительная загрузка карты(1) отчет</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1235"/>
+      <location filename="../src/TMainConsole.cpp" line="1233"/>
       <source>Loading map(1) at %1 report</source>
       <translation>Загрузка карты(1) в %1 отчет</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1237"/>
+      <location filename="../src/TMainConsole.cpp" line="1235"/>
       <source>Loading map(1) &quot;%1&quot; at %2 report</source>
       <translation>Загрузка карты(1) &quot;%1&quot; в %2 отчет</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1281"/>
+      <location filename="../src/TMainConsole.cpp" line="1279"/>
       <source>Pre-Map importing(1) report</source>
       <translation>Предварительный отчет об импорте карты (1)</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1304"/>
+      <location filename="../src/TMainConsole.cpp" line="1302"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
       <translation>[ Ошибка ] - Файл карты не найден, путь и имя было:
 %1.</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1310"/>
+      <location filename="../src/TMainConsole.cpp" line="1308"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
       <translation>loadMap: неверное значение аргумента #1 (используемое имя файла: 
 &quot;%1&quot; не найдено).</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1319"/>
+      <location filename="../src/TMainConsole.cpp" line="1317"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
       <translation>[ ИНФО ]  - Файл карты расположен и открыт, теперь его анализ...</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1326"/>
+      <location filename="../src/TMainConsole.cpp" line="1324"/>
       <source>Importing map(1) &quot;%1&quot; at %2 report</source>
       <translation>Импорт карты (1) &quot;%1&quot; в отчете %2</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1329"/>
+      <location filename="../src/TMainConsole.cpp" line="1327"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
       <translation>[ ИНФОРМАЦИЯ]-Файл карты обнаружен, но не удалось открыть, проверьте разрешения на:&quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1332"/>
+      <location filename="../src/TMainConsole.cpp" line="1330"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
       <translation>loadMap: неверный аргумент #1 (используемое имя файла: 
 &quot;%1&quot; невозможно открыть для чтения).</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1356"/>
+      <location filename="../src/TMainConsole.cpp" line="1354"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
       <translation>[ ИНФО ] - Запрос на перезагрузку карты получен от системы...</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1361"/>
+      <location filename="../src/TMainConsole.cpp" line="1359"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
       <translation>[ OK ] -... Запрос на перезагрузку системной карты завершен.</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1363"/>
+      <location filename="../src/TMainConsole.cpp" line="1361"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
       <translation>[ ВНИМ ] - ... Сбой запроса на перезагрузку системной карты.</translation>
     </message>
@@ -2839,29 +2839,21 @@ they have been removed.</source>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1236"/>
-      <source>[ INFO ]  - Due to some situations not being checked in the past,  Mudlet had
-allowed the map to have more than one area with the same or no name.
-These make some things confusing and are now disallowed.
-  To resolve these cases, an area without a name here (or created in
-the future) will automatically be assigned the name &quot;%1&quot;.
-  Duplicated area names will cause all but the first encountered one
-to gain a &quot;_###&quot; style suffix where each &quot;###&quot; is an increasing
-number; you may wish to change these, perhaps by replacing them with
-a &quot;(sub-area name)&quot; but it is entirely up to you how you do this,
-other than you will not be able to set one area&apos;s name to that of
-another that exists at the time.
-  If there were more than one area without a name then all but the
-first will also gain a suffix in this manner.
+      <source>[ INFO ]  - Mudlet had previously allowed the map to have more than one area
+with the same or no name. To resolve these cases, an area without a name
+here (or created in the future) will automatically be assigned the name &quot;%1&quot;.
+Duplicated area names will cause all but the first encountered one to gain a
+&quot;_###&quot; style suffix.
 %2</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TRoomDB.cpp" line="1252"/>
+      <location filename="../src/TRoomDB.cpp" line="1244"/>
       <source>[ ALERT ] - Duplicate area names detected in the Map file!</source>
       <translation>[ ВНИМ ] - В файле карты обнаружены повторяющиеся имена областей!</translation>
     </message>
     <message>
-      <location filename="../src/TRoomDB.cpp" line="1253"/>
+      <location filename="../src/TRoomDB.cpp" line="1245"/>
       <source>[ INFO ]  - Due to some situations not being checked in the past, Mudlet had
 allowed the user to have more than one area with the same name.
 These make some things confusing and are now disallowed.
@@ -2887,12 +2879,12 @@ first will also gain a suffix in this manner.
 %1</translation>
     </message>
     <message>
-      <location filename="../src/TRoomDB.cpp" line="1268"/>
+      <location filename="../src/TRoomDB.cpp" line="1260"/>
       <source>[ ALERT ] - An empty area name was detected in the Map file!</source>
       <translation>[ ВНИМ ] - В файле карты обнаружено пустое имя Зоны!</translation>
     </message>
     <message>
-      <location filename="../src/TRoomDB.cpp" line="1271"/>
+      <location filename="../src/TRoomDB.cpp" line="1263"/>
       <source>[  OK  ]  - Due to some situations not being checked in the past, Mudlet had
 allowed the map to have an area with no name. This can make some
 things confusing and is now disallowed.
@@ -2907,7 +2899,7 @@ set one area&apos;s name to that of another that exists at the time.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TRoomDB.cpp" line="1295"/>
+      <location filename="../src/TRoomDB.cpp" line="1287"/>
       <source>[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an
 area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <translation>[ ИНФО ]  - Не найдена область по умолчанию (для комнат, не назначенных к
@@ -2948,8 +2940,8 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1333"/>
-      <source>&lt;p&gt;Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Наведите на этот элемент, чтобы отобразить кодировку Unicode в выделении &lt;i&gt;(только для первой строки!)&lt;/i&gt;&lt;/p&gt;</translation>
+      <source>Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1342"/>
@@ -3668,6 +3660,14 @@ Would you like to update now?</source>
       <location filename="../src/updater.cpp" line="359"/>
       <source>Restart to apply update</source>
       <translation>Перезагрузить для обновления</translation>
+    </message>
+  </context>
+  <context>
+    <name>VarUnit</name>
+    <message>
+      <location filename="../src/VarUnit.cpp" line="88"/>
+      <source>Checked variables will be saved and loaded with your profile.</source>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -4724,145 +4724,145 @@ Count</source>
   <context>
     <name>directions</name>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14357"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14366"/>
       <source>north</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>север</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14359"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14368"/>
       <source>n</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>с</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14361"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14370"/>
       <source>east</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>восток</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14363"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14372"/>
       <source>e</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>вo</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14365"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14374"/>
       <source>south</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>юг</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14367"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14376"/>
       <source>s</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>ю</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14369"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14378"/>
       <source>west</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>запад</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14371"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14380"/>
       <source>w</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>з</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14373"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14382"/>
       <source>northeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>северо-восток</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14375"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14384"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>св</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14377"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14386"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>юго-восток</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14379"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14388"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>юв</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14381"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14390"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>юго-запад</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14383"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14392"/>
       <source>sw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>юз</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14385"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14394"/>
       <source>northwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>северо-запад</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14387"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14396"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>сз</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14389"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14398"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>войти</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14391"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14400"/>
       <source>i</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>вт</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14393"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14402"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>выйти</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14395"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14404"/>
       <source>o</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>вй</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14397"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14406"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>вверх</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14399"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14408"/>
       <source>u</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>вв</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14401"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14410"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>вниз</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14403"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14412"/>
       <source>d</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>вн</translation>
@@ -5179,39 +5179,39 @@ Count</source>
       <translation>Нажмите, чтобы получить доступ ко всем 256 ANSI цветов.</translation>
     </message>
     <message>
-      <location filename="../src/dlgColorTrigger.cpp" line="59"/>
-      <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s background color - however choosing this for both foreground and background is an error.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Нажмите, чтобы заставить цветовой триггер игнорировать текст цвета фона - однако выбор этого параметра как для переднего плана, так и для фона является ошибкой.&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgColorTrigger.cpp" line="60"/>
-      <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both foreground and background is an error.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Нажмите, чтобы заставить цветовой триггер игнорировать текст цвета переднего плана - однако выбор этого цвета как для переднего плана, так и для фона является ошибкой.&lt;/p&gt;</translation>
-    </message>
-    <message>
       <location filename="../src/dlgColorTrigger.cpp" line="64"/>
       <source>Default</source>
       <translation>По умолчанию</translation>
     </message>
     <message>
+      <location filename="../src/dlgColorTrigger.cpp" line="59"/>
+      <source>Click to make the color trigger ignore the text&apos;s background color - however choosing this for both foreground and background is an error.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgColorTrigger.cpp" line="60"/>
+      <source>Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both foreground and background is an error.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
-      <source>&lt;p&gt;Click to make the color trigger when the text&apos;s background color has not been modified from its normal value.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Нажмите, чтобы сделать триггер цвета, если цвет фона текста не был изменен по сравнению с нормальным значением.&lt;/p&gt;</translation>
+      <source>Click to make the color trigger when the text&apos;s background color has not been modified from its normal value.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="67"/>
-      <source>&lt;p&gt;Click to make the color trigger when the text&apos;s foreground color has not been modified from its normal value.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Нажмите, чтобы сделать триггер цвета, если цвет переднего плана текста не был изменен по сравнению с нормальным значением.&lt;/p&gt;</translation>
+      <source>Click to make the color trigger when the text&apos;s foreground color has not been modified from its normal value.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="71"/>
-      <source>&lt;p&gt;Click a color to make the trigger fire only when the text&apos;s background color matches the color number indicated.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Выберите цвет, чтобы активировать триггер, только когда цвет фона совпадает с указанным цветом.&lt;/p&gt;</translation>
+      <source>Click a color to make the trigger fire only when the text&apos;s background color matches the color number indicated.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="72"/>
-      <source>&lt;p&gt;Click a color to make the trigger fire only when the text&apos;s foreground color matches the color number indicated.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Выберите цвет, чтобы активировать триггер, только когда цвет текста совпадает с указанным цветом.&lt;/p&gt;</translation>
+      <source>Click a color to make the trigger fire only when the text&apos;s foreground color matches the color number indicated.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
@@ -5313,6 +5313,11 @@ Count</source>
       <translation>Подключиться</translation>
     </message>
     <message>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="203"/>
+      <source>Characters password. Note that the password is not encrypted in storage</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="253"/>
       <source>Game name: %1</source>
       <translation>Название игры: %1</translation>
@@ -5387,11 +5392,6 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="201"/>
       <source>Characters password, stored securely in the computer&apos;s credential manager</source>
       <translation>Пароль персонажа, сохранен в компьютере с учетным менеджером</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="203"/>
-      <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation>Пароль персонажа. Обратите внимание, что этот пароль не зашифрован в хранении</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="250"/>
@@ -5494,28 +5494,28 @@ Count</source>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1816"/>
-      <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Загрузить профиль без подключения.&lt;/p&gt;</translation>
+      <source>Load profile without connecting.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1832"/>
-      <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Пожалуйста, установите правильное имя профиля, адрес игрового сервера и игровой порт перед загрузкой.&lt;/p&gt;</translation>
+      <source>Please set a valid profile name, game server address and the game port before loading.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1837"/>
-      <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Пожалуйста, установите правильное имя профиля, адрес игрового сервера и игровой порт перед подключением.&lt;/p&gt;</translation>
+      <source>Please set a valid profile name, game server address and the game port before connecting.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1890"/>
-      <source>&lt;p&gt;Click to hide the password; it will also hide if another profile is selected.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Нажмите, чтобы скрыть пароль; он также будет скрыт, если выбран другой профиль.&lt;/p&gt;</translation>
+      <source>Click to hide the password; it will also hide if another profile is selected.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1894"/>
-      <source>&lt;p&gt;Click to reveal the password for this profile.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Нажмите, чтобы открыть пароль для этого профиля.&lt;/p&gt;</translation>
+      <source>Click to reveal the password for this profile.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1755"/>
@@ -5527,102 +5527,102 @@ Count</source>
   <context>
     <name>dlgIRC</name>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="123"/>
+      <location filename="../src/dlgIRC.cpp" line="127"/>
       <source>%1 closed their client.</source>
       <translation>%1 закрыл их клиент.</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="135"/>
+      <location filename="../src/dlgIRC.cpp" line="139"/>
       <source>Mudlet IRC Client - %1 - %2 on %3</source>
       <translation>Mudlet IRC-клиент - %1 - %2 на %3</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="149"/>
+      <location filename="../src/dlgIRC.cpp" line="153"/>
       <source>$ Starting Mudlet IRC Client...</source>
       <translation>$ Загружается Mudlet IRC-клиент...</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="150"/>
+      <location filename="../src/dlgIRC.cpp" line="154"/>
       <source>$ Host: %1:%2</source>
       <translation>$ Хост: %1:%2</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="151"/>
+      <location filename="../src/dlgIRC.cpp" line="155"/>
       <source>$ Nick: %1</source>
       <translation>$ Ник: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="152"/>
+      <location filename="../src/dlgIRC.cpp" line="156"/>
       <source>$ Auto-Join Channels: %1</source>
       <translation>$ Авто-присоединяться к каналам: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="153"/>
+      <location filename="../src/dlgIRC.cpp" line="157"/>
       <source>$ This client supports Auto-Completion using the Tab key.</source>
       <translation>$ Этот клиент поддерживает автозавершения при помощи клавиши Tab.</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="154"/>
+      <location filename="../src/dlgIRC.cpp" line="158"/>
       <source>$ Type &lt;b&gt;/help&lt;/b&gt; for commands or &lt;b&gt;/help [command]&lt;/b&gt; for command syntax.</source>
       <translation>$ Введите &lt;b&gt;/help&lt;/b&gt; для команд или &lt;b&gt;/help [command]&lt;/b&gt; для синтаксиса команд.</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="213"/>
+      <location filename="../src/dlgIRC.cpp" line="217"/>
       <source>Restarting IRC Client</source>
       <translation>Перезапуск клиента IRC</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="388"/>
+      <location filename="../src/dlgIRC.cpp" line="394"/>
       <source>[Error] MSGLIMIT requires &lt;limit&gt; to be a whole number greater than zero!</source>
       <translation>[Error] MSGLIMIT требует &lt;limit&gt;, чтобы быть целым числом больше нуля!</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="418"/>
+      <location filename="../src/dlgIRC.cpp" line="424"/>
       <source>[HELP] Available Commands: %1</source>
       <translation>[HELP] Доступные команды: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="420"/>
+      <location filename="../src/dlgIRC.cpp" line="426"/>
       <source>[HELP] Syntax: %1</source>
       <translation>Синтаксис [HELP]: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="428"/>
+      <location filename="../src/dlgIRC.cpp" line="434"/>
       <source>! Connected to %1.</source>
       <translation>! Связь с %1 установлена.</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="429"/>
+      <location filename="../src/dlgIRC.cpp" line="435"/>
       <source>! Joining %1...</source>
       <translation>! Вступление %1...</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="434"/>
+      <location filename="../src/dlgIRC.cpp" line="440"/>
       <source>! Connecting %1...</source>
       <translation>! Установка связи с %1...</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="439"/>
+      <location filename="../src/dlgIRC.cpp" line="445"/>
       <source>! Disconnected from %1.</source>
       <translation>! Отключен от %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="505"/>
+      <location filename="../src/dlgIRC.cpp" line="511"/>
       <source>[ERROR] Syntax: %1</source>
       <translation>[ОШИБКА] %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="507"/>
+      <location filename="../src/dlgIRC.cpp" line="513"/>
       <source>[ERROR] Unknown command: %1</source>
       <translation>[OШИБКА] Неизвестная команда: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="653"/>
+      <location filename="../src/dlgIRC.cpp" line="659"/>
       <source>! The Nickname %1 is reserved. Automatically changing Nickname to: %2</source>
       <translation>! Прозвище %1 зарезервирован. Автоматически меняется ник на: %2</translation>
     </message>
     <message>
-      <location filename="../src/dlgIRC.cpp" line="664"/>
+      <location filename="../src/dlgIRC.cpp" line="670"/>
       <source>Your nick has changed.</source>
       <translation>Ваш ник был изменён.</translation>
     </message>
@@ -5639,27 +5639,27 @@ Count</source>
   <context>
     <name>dlgModuleManager</name>
     <message>
-      <location filename="../src/dlgModuleManager.cpp" line="48"/>
+      <location filename="../src/dlgModuleManager.cpp" line="49"/>
       <source>Module Manager - %1</source>
       <translation>Менеджер модулей - %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgModuleManager.cpp" line="66"/>
+      <location filename="../src/dlgModuleManager.cpp" line="67"/>
       <source>Module Name</source>
       <translation>Имя модуля</translation>
     </message>
     <message>
-      <location filename="../src/dlgModuleManager.cpp" line="66"/>
+      <location filename="../src/dlgModuleManager.cpp" line="67"/>
       <source>Priority</source>
       <translation>Приоритет</translation>
     </message>
     <message>
-      <location filename="../src/dlgModuleManager.cpp" line="66"/>
+      <location filename="../src/dlgModuleManager.cpp" line="67"/>
       <source>Sync</source>
       <translation>Синхр.</translation>
     </message>
     <message>
-      <location filename="../src/dlgModuleManager.cpp" line="66"/>
+      <location filename="../src/dlgModuleManager.cpp" line="67"/>
       <source>Module Location</source>
       <translation>Расположение модуля</translation>
     </message>
@@ -6022,24 +6022,49 @@ Count</source>
   <context>
     <name>dlgProfilePreferences</name>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="144"/>
-      <source>&lt;p&gt;Location which will be used to store log files - matching logs will be appended to.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Местоположение, которое будет использоваться для хранения лог-файлов - соответствующие логи будут присоедины.&lt;/p&gt;</translation>
-    </message>
-    <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="152"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2}).</comment>
       <translation>журнал</translation>
     </message>
     <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="144"/>
+      <source>Location which will be used to store log files - matching logs will be appended to.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="145"/>
+      <source>Select a directory where logs will be saved.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="146"/>
+      <source>Reset the directory so that logs are saved to the profile&apos;s &lt;i&gt;log&lt;/i&gt; directory.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="150"/>
+      <source>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="171"/>
+      <source>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="198"/>
-      <source>&lt;p&gt;This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specified font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Это выведет на экран все символы, используемые в текущей карте, и покажет, можно ли их рисовать только указанным шрифтом, любым другим шрифтом или вообще не рисовать. Он также показывает последовательность кодовых точек Unicode &lt;i&gt;&lt;/i&gt;, которые составляют этот символ, чтобы их можно было идентифицировать, даже если они не могут быть отображены; также перечисляются до первых тридцати двух номеров, которые используют этот символ, что может помочь определить любые неожиданные или странные случаи.&lt;/p&gt;</translation>
+      <source>This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specified font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="204"/>
-      <source>&lt;p&gt;Select the only or the primary font used (depending on &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; setting) to produce the 2D mapper room symbols.&lt;/p&gt;</source>
+      <source>Select the only or the primary font used (depending on &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; setting) to produce the 2D mapper room symbols.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="206"/>
+      <source>Using a single font is likely to produce a more consistent style but may cause the &lt;i&gt;font replacement character&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; to show if the font does not have a needed glyph (a font&apos;s individual character/symbol) to represent the grapheme (what is to be represented).  Clearing this checkbox will allow the best alternative glyph from another font to be used to draw that grapheme.</source>
       <translation type="unfinished"/>
     </message>
     <message>
@@ -6070,129 +6095,134 @@ Count</source>
       <translation>Все пароли были перенесены в безопасное хранение.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="806"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="673"/>
+      <source>From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="807"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</source>
       <translation>yyyy-MM-dd#HH-mm-ss (например, 1970-01-01#00-00-00%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="808"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="809"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</source>
       <translation>yyyy-MM-ddTHH-mm-ss (например, 1970-01-01T00-00-00%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="809"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="810"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)</source>
       <translation>yyyy-MM-dd (объединять ежедневные журналы, например 1970-01-01%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="812"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="813"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01%1)</source>
       <translation>yyyy-MM (объединять ежемесячные журналы, например 1970-01%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="813"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="814"/>
       <source>Named file (concatenate logs in one file)</source>
       <translation>Именованный файл (объединение журналов в один файл)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="846"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="847"/>
       <source>Other profiles to Map to:</source>
       <translation>Другие профили куда карту скопировать:</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="886"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="887"/>
       <source>%1 {Default, recommended}</source>
       <translation>%1 {Default, recommended}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="897"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="898"/>
       <source>%1 {Upgraded, experimental/testing, NOT recommended}</source>
       <translation>%1 {модернизированный, экспериментальный, не рекомендуется}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="899"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="900"/>
       <source>%1 {Downgraded, for sharing with older version users, NOT recommended}</source>
       <translation>%1 {Старее, для предоставления доступа пользователям более старых версий, НЕ рекомендуется}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="908"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="909"/>
       <source>2D Map Room Symbol scaling factor:</source>
       <translation>Коэффициент масштабирования обозначений комнат на 2D карте:</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="928"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="929"/>
       <source>Show &quot;%1&quot; in the map area selection</source>
       <translation>Показать &quot;%1&quot; в выборе области карты</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="969"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="970"/>
       <source>%1 (*Error, report to Mudlet Makers*)</source>
       <comment>The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!</comment>
       <translation>%1 (*Ошибка, сообщите Mudlet Makers*)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1084"/>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3938"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1085"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3942"/>
       <source>Profile preferences - %1</source>
       <translation>Настройки профиля - %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1391"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1393"/>
       <source>Profile preferences</source>
       <translation>Настройки профиля</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2118"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2120"/>
       <source>Load Mudlet map</source>
       <translation>Загрузить Mudlet карту</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2135"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2137"/>
       <source>Loading map - please wait...</source>
       <translation>Загрузка карты - пожалуйста, подождите...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2147"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2149"/>
       <source>Loaded map from %1.</source>
       <translation>Карта загруженна из %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2149"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2151"/>
       <source>Could not load map from %1.</source>
       <translation>Не удалось загрузить карту с %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2172"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2174"/>
       <source>Save Mudlet map</source>
       <translation>Сохранить Mudlet карту</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2194"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2196"/>
       <source>Saving map - please wait...</source>
       <translation>Карта сохраняется, ждите...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2211"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2213"/>
       <source>Saved map to %1.</source>
       <translation>Карта сохраненна в %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2213"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2215"/>
       <source>Could not save map to %1.</source>
       <translation>Невозможно сохранить карту в %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2243"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2245"/>
       <source>Migrating passwords to secure storage...</source>
       <translation>Перенос паролей в безопасное хранилище...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2250"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2252"/>
       <source>Migrating passwords to profiles...</source>
       <translation>Перенос паролей в профили...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2282"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2284"/>
       <source>[ ERROR ] - Unable to use or create directory to store map for other profile &quot;%1&quot;.
 Please check that you have permissions/access to:
 &quot;%2&quot;
@@ -6203,144 +6233,144 @@ and there is enough space. The copying operation has failed.</source>
 и есть достаточно места. Операция копирования не удалась.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2289"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2291"/>
       <source>Creating a destination directory failed...</source>
       <translation>Создание директории завершено неудачно...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2373"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2375"/>
       <source>Backing up current map - please wait...</source>
       <translation>Резервное копирование текущей карты - пожалуйста, подождите...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2383"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2385"/>
       <source>Could not backup the map - saving it failed.</source>
       <translation>Не удалось создать резервную копию карты - сохранение не выполнено.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2408"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2410"/>
       <source>Could not copy the map - failed to work out which map file we just saved the map as!</source>
       <translation>Не удалось скопировать карту - не удалось выяснить, в файл мы только что сохранили карту!</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2420"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2422"/>
       <source>Copying over map to %1 - please wait...</source>
       <translation>Карта копируется в %1 - пожалуйста, подождите...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2426"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2428"/>
       <source>Could not copy the map to %1 - unable to copy the new map file over.</source>
       <translation>Не удалось скопировать карту в %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2430"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2432"/>
       <source>Map copied successfully to other profile %1.</source>
       <translation>Карта успешно скопирована в другой профиль %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2442"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2444"/>
       <source>Map copied, now signalling other profiles to reload it.</source>
       <translation>Карта скопирована, теперь сигнализироваем другим профилям, чтобы перезагрузить ее.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2478"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2480"/>
       <source>Where should Mudlet save log files?</source>
       <translation>Где Mudlet сохранять лог-файлы?</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2880"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2889"/>
       <source>%1 selected - press to change</source>
       <translation>%1 выбран - нажмите для изменения</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2883"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2892"/>
       <source>Press to pick destination(s)</source>
       <translation>Выбрать пункт назначения(с)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3124"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3133"/>
       <source>Could not update themes: %1</source>
       <translation>Не удалось обновить темы: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3127"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3136"/>
       <source>Updating themes from colorsublime.github.io...</source>
       <translation>Обновление тем от colorsublime.github.io...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3246"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3255"/>
       <source>{missing, possibly recently deleted trigger item}</source>
       <translation>{не существует, триггер может быть был удалён}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3249"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3258"/>
       <source>{missing, possibly recently deleted alias item}</source>
       <translation>{не существует, алиас может быть был удалён}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3252"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3261"/>
       <source>{missing, possibly recently deleted script item}</source>
       <translation>{не существует, скрипт может быть был удалён}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3255"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3264"/>
       <source>{missing, possibly recently deleted timer item}</source>
       <translation>{не существует, таймер может быть был удалён}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3258"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3267"/>
       <source>{missing, possibly recently deleted key item}</source>
       <translation>{не существует, ключ может быть был удалён}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3261"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3270"/>
       <source>{missing, possibly recently deleted button item}</source>
       <translation>{не существует, кнопка может быть была удалена}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3386"/>
-      <source>&lt;p&gt;The room symbol will appear like this if only symbols (glyphs) from the specific font are used.&lt;/p&gt;</source>
-      <translation>&lt;bp&gt;Символ комнаты будет выглядеть так, если используются только символы (глифы) из шрифта.&lt;b/p&gt;</translation>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3394"/>
+      <source>The room symbol will appear like this if only symbols (glyphs) from the specific font are used.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="4070"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3399"/>
+      <source>The room symbol will appear like this if symbols (glyphs) from any font can be used.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3439"/>
+      <source>How many rooms in the whole map have this symbol.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3457"/>
+      <source>The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3465"/>
+      <source>The symbol can be made entirely from glyphs in the specified font.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3483"/>
+      <source>The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different systems with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="4074"/>
       <source>Set outer color of player room mark.</source>
       <translation>Задать внешний цвет метки комнаты игрока.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="4071"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="4075"/>
       <source>Set inner color of player room mark.</source>
       <translation>Задать внутренний цвет метки комнаты игрока.</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="206"/>
-      <source>&lt;p&gt;Using a single font is likely to produce a more consistent style but may cause the &lt;i&gt;font replacement character&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; to show if the font does not have a needed glyph (a font&apos;s individual character/symbol) to represent the grapheme (what is to be represented).  Clearing this checkbox will allow the best alternative glyph from another font to be used to draw that grapheme.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="145"/>
-      <source>&lt;p&gt;Select a directory where logs will be saved.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Выберите папку, в которую будут сохранены журналы.&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="146"/>
-      <source>&lt;p&gt;Reset the directory so that logs are saved to the profile&apos;s &lt;i&gt;log&lt;/i&gt; directory.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Сбросить опцию, чтобы журналы сохранялись в папке профиля &lt;i&gt;log&lt;/i&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="147"/>
       <source>&lt;p&gt;This option sets the format of the log name.&lt;/p&gt;&lt;p&gt;If &lt;i&gt;Named file&lt;/i&gt; is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)&lt;/p&gt;</source>
       <translation>&lt;p&gt;Этот параметр задает формат имени журнала.&lt;/p&gt;&lt;p&gt;Если выбран &lt;i&gt;Именованный файл&lt;/i&gt;, вы можете установить произвольное имя файла. (Логи прилагаются, если файл журнала с таким же именем уже существует.)&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="150"/>
-      <source>&lt;p&gt;Set a custom name for your log. (New logs are appended if a log file of the same name already exists).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Установите имя для вашего журнала. (Новые журналы добавляются, если файл журнала уже существует).&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="171"/>
-      <source>&lt;p&gt;Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Автоматическое обновление отключено в сборках разработки, чтобы предотвратить обновления от перезаписовать ваш Mudlet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="192"/>
@@ -6363,203 +6393,173 @@ and there is enough space. The copying operation has failed.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="639"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="640"/>
       <source>Mudlet dictionaries:</source>
       <comment>On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones.</comment>
       <translation>Словари Mudlet:</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="641"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="642"/>
       <source>System dictionaries:</source>
       <comment>On *nix systems where we find the system ones we use them.</comment>
       <translation>Системные словари:</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="672"/>
-      <source>&lt;p&gt;From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Из файла словаря &lt;tt&gt;%1.dic&lt;/tt&gt; (и его сопутствующий файл &lt;tt&gt;.aff&lt;/tt&gt;).&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="674"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="675"/>
       <source>%1 - not recognised</source>
       <translation>%1 - не распознан</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="675"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="676"/>
       <source>&lt;p&gt;Mudlet does not recognise the code &quot;%1&quot;, please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!&lt;/p&gt;&lt;p&gt;The file &lt;tt&gt;%2.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file) is still usable.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Mudlet не распознает код &quot;%1&quot;, сообщите об этом разработчикам Mudlet, чтобы мы могли правильно описать его в будущих версиях Mudlet!&lt;/p&gt;&lt;p&gt;Файл &lt;tt&gt;%2.dic&lt;/tt&gt; (и сопровождающий его файл &lt;tt&gt;.aff&lt;/tt&gt;) по-прежнему используем.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="700"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="701"/>
       <source>No Hunspell dictionary files found, spell-checking will not be available.</source>
       <translation>Файлы словаря Hunspell не найдены, проверка орфографии будет недоступна.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2110"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2112"/>
       <source>Any map file (*.dat *.json *.xml)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
       <translation>Любой файл с картой (*.dat *.json *.xml)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2111"/>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2167"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2113"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2169"/>
       <source>Mudlet binary map (*.dat)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
       <translation>Бинарная карта Мадлета (*.dat)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2112"/>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2168"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2114"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2170"/>
       <source>Mudlet JSON map (*.json)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
       <translation>JSON карта Мадлета (*.json)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2113"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2115"/>
       <source>Mudlet XML map (*.xml)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
       <translation>XML карта Мадлета (*.xml)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2114"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2116"/>
       <source>Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
       <translation>Любой файл (*)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3392"/>
-      <source>&lt;p&gt;The room symbol will appear like this if symbols (glyphs) from any font can be used.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Символ комнаты будет выглядеть так, если можно использовать символы (глифы) любого шрифта.&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3421"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3427"/>
       <source>&lt;p&gt;These are the sequence of hexadecimal numbers that are used by the Unicode consortium to identify the graphemes needed to create the symbol.  These numbers can be utilised to determine precisely what is to be drawn even if some fonts have glyphs that are the same for different codepoints or combination of codepoints.&lt;/p&gt;&lt;p&gt;Character entry utilities such as &lt;i&gt;charmap.exe&lt;/i&gt; on &lt;i&gt;Windows&lt;/i&gt; or &lt;i&gt;gucharmap&lt;/i&gt; on many Unix type operating systems will also use these numbers which cover everything from U+0020 {Space} to U+10FFFD the last usable number in the &lt;i&gt;Private Use Plane 16&lt;/i&gt; via most of the written marks that humanity has ever made.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3434"/>
-      <source>&lt;p&gt;How many rooms in the whole map have this symbol.</source>
-      <translation>&lt;p&gt;Сколько комнат на всей карте имеют этот символ.</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3446"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3451"/>
       <source>more - not shown...</source>
       <translation>больше - не показали...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3453"/>
-      <source>&lt;p&gt;The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.&lt;/p&gt;</source>
-      <translation>&lt;p&gt; Комнаты с этим символом, максимум до тридцати двух, если их больше, они указаны, но не показаны.&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3462"/>
-      <source>&lt;p&gt;The symbol can be made entirely from glyphs in the specified font.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Символ может быть выполнен полностью из глифов указанного шрифта.&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3472"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3474"/>
       <source>&lt;p&gt;The symbol cannot be made entirely from glyphs in the specified font, but, using other fonts in the system, it can. Either un-check the &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; option or try and choose another font that does have the needed glyphs.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You need not close this table to try another font, changing it on the main preferences dialogue will update this table after a slight delay.&lt;/i&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3482"/>
-      <source>&lt;p&gt;The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different systems with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3571"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3575"/>
       <source>Large icon</source>
       <comment>Discord Rich Presence large icon</comment>
       <translation>Большой значок</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3572"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3576"/>
       <source>Detail</source>
       <comment>Discord Rich Presence detail</comment>
       <translation>Деталь</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3574"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3578"/>
       <source>Small icon</source>
       <comment>Discord Rich Presence small icon</comment>
       <translation>Маленький значок</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3575"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3579"/>
       <source>State</source>
       <comment>Discord Rich Presence state</comment>
       <translation>Состояние</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3577"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3581"/>
       <source>Party size</source>
       <comment>Discord Rich Presence party size</comment>
       <translation>Размер группы</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3578"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3582"/>
       <source>Party max</source>
       <comment>Discord Rich Presence maximum party size</comment>
       <translation>Макс. размер группы</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3579"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3583"/>
       <source>Time</source>
       <comment>Discord Rich Presence time until or time elapsed</comment>
       <translation>Время</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3614"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3618"/>
       <source>Map symbol usage - %1</source>
       <translation>Символы использованные в карте - %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3691"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3695"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)</source>
       <translation>yyyy-MM-dd#HH-mm-ss (например, 1970-01-01#00-00-00.html)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3692"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3696"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)</source>
       <translation>yyyy-MM-ddTHH-mm-ss (например, 1970-01-01T00-00-00.html)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3693"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3697"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)</source>
       <translation>гггг-ММ-дд (объединять ежедневные журналы, например, 1970-01-01.html)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3694"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3698"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.html)</source>
       <translation>yyyy-MM (объединять ежемесячные журналы, например 1970-01.html)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3697"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3701"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)</source>
       <translation>yyyy-MM-dd#HH-mm-ss (например, 1970-01-01#00-00-00.txt)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3698"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3702"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)</source>
       <translation>yyyy-MM-ddTHH-mm-ss (например, 1970-01-01T00-00-00.txt)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3699"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3703"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)</source>
       <translation>yyyy-MM-dd (объединять ежедневные журналы, например 1970-01-01.txt)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3700"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3704"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)</source>
       <translation>yyyy-MM (объединять ежемесячные журналы, например 1970-01.txt)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="4146"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="4150"/>
       <source>Deleting map - please wait...</source>
       <translation>Удаление карты - подождите...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="4158"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="4162"/>
       <source>Deleted map.</source>
       <translation>Карта удалена.</translation>
     </message>
@@ -6567,287 +6567,271 @@ and there is enough space. The copying operation has failed.</source>
   <context>
     <name>dlgRoomExits</name>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1063"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1070"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1079"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1086"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1053"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1060"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1069"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1076"/>
       <source>&lt;b&gt;Room&lt;/b&gt; Weight of destination: %1.</source>
       <comment>Bold HTML tags are used to emphasis that the value is destination room&apos;s weight whether overridden by a non-zero exit weight here or not.</comment>
       <translation>&lt;b&gt;Room&lt;/b&gt; Вес назначения: %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="268"/>
+      <location filename="../src/dlgRoomExits.cpp" line="258"/>
       <source>(roomID)</source>
       <comment>Placeholder, if no roomID is set for an exit.</comment>
       <translation>(номер комнаты)</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="269"/>
+      <location filename="../src/dlgRoomExits.cpp" line="259"/>
       <source>(command or Lua script)</source>
       <comment>Placeholder, if a special exit has no name/script set.</comment>
       <translation>(команда или скрипт Луа)</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="457"/>
-      <location filename="../src/dlgRoomExits.cpp" line="461"/>
-      <location filename="../src/dlgRoomExits.cpp" line="998"/>
+      <location filename="../src/dlgRoomExits.cpp" line="447"/>
+      <location filename="../src/dlgRoomExits.cpp" line="451"/>
+      <location filename="../src/dlgRoomExits.cpp" line="988"/>
       <source>Set the number of the room that this special exit goes to.</source>
       <translation>Задать номер комнаты, к которой приходит этот специальный выход.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="463"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1564"/>
+      <location filename="../src/dlgRoomExits.cpp" line="453"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1554"/>
       <source>Prevent a route being created via this exit, equivalent to an infinite exit weight.</source>
       <translation>Предотвратить создание маршрута через этот выход, эквивалентный бесконечному весу выхода.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="468"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1570"/>
+      <location filename="../src/dlgRoomExits.cpp" line="458"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1560"/>
       <source>Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.</source>
       <translation>Задайте положительное значение, чтобы переопределить значение по умолчанию (Room) для использования этого маршрута выхода, нулевое значение назначает значение по умолчанию.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="471"/>
+      <location filename="../src/dlgRoomExits.cpp" line="461"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1569"/>
       <source>No door symbol is drawn on 2D Map for this exit (only functional choice currently).</source>
       <translation>В двухмерной карте для данного выхода не отображается символ дверцы (в настоящее время доступен только функциональный выбор).</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="473"/>
+      <location filename="../src/dlgRoomExits.cpp" line="463"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1570"/>
       <source>Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
       <translation>Зеленая (открытая) дверь будет нарисована на пользовательской линии выхода для этого выхода на 2D карте (но не в данный момент).</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="475"/>
+      <location filename="../src/dlgRoomExits.cpp" line="465"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1571"/>
       <source>Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
       <translation>Оранжевый (закрытый) символ двери будет нарисан на пользовательской линии выхода для данного выхода на двухмерной карте (но не в данный момент).</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="477"/>
+      <location filename="../src/dlgRoomExits.cpp" line="467"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1572"/>
       <source>Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
       <translation>Красный (заблокированный) символ двери будет нарисован на пользовательской линии выхода для данного выхода на двухмерной карте (но не в данный момент).</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="993"/>
+      <location filename="../src/dlgRoomExits.cpp" line="983"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
       <translation>Введенный номер недействителен. Если оставить как это, этот выход будет удален при нажатии на &lt;tt&gt;сохранить&lt;/tt&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="994"/>
+      <location filename="../src/dlgRoomExits.cpp" line="984"/>
       <source>Set the number of the room that this special exit leads to.</source>
       <translation>Задать номер комнаты, к которой приходит этот специальный выход.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1002"/>
+      <location filename="../src/dlgRoomExits.cpp" line="992"/>
       <source>A positive roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
       <translation>Здесь ожидается положительный номер комнаты, в которую ведет этот специальный выход. Если оставить это так, этот выход будет удален при нажатии &lt;tt&gt;сохранить&lt;/tt&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1007"/>
+      <location filename="../src/dlgRoomExits.cpp" line="997"/>
       <source>No command or Lua script entered, if left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
       <translation>Не введена команда или Lua-скрипт, если оставить так, то этот выход будет удален при нажатии &lt;tt&gt;сохранить&lt;/tt&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1009"/>
+      <location filename="../src/dlgRoomExits.cpp" line="999"/>
       <source>(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).</source>
       <translation>(Lua-скрипты для тех профилей, которые используют пакет &lt;tt&gt;mudlet-mapper&lt;/tt&gt; нужно снабдить префиксом &quot;script:&quot;).</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1061"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1051"/>
       <source>Exit to &quot;%1&quot; in area: &quot;%2&quot;.</source>
       <translation>Выход в &quot;%1&quot; в зоне: &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1077"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1067"/>
       <source>Exit to unnamed room in area: &quot;%1&quot;, is valid.</source>
       <translation>Выход в безымянную комнату на территории: &quot;%1&quot;, является действительным.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1085"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1075"/>
       <source>Exit to unnamed room is valid.</source>
       <translation>Выход в безымянную комнату действителен.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1178"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1168"/>
       <source>Entered number is invalid, set the number of the room northwest of this one.</source>
       <translation>Введенный номер недействителен, задайте номер комнаты к северо-западу от этого номера.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1179"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1287"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1508"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1169"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1277"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1498"/>
       <source>Set the number of the room northwest of this one.</source>
       <translation>Установите номер комнаты к северо-западу от этой комнаты.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1187"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1177"/>
       <source>Entered number is invalid, set the number of the room north of this one.</source>
       <translation>Введенный номер недействителен, задайте номер комнаты к северу от этогой комнаты.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1188"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1295"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1510"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1178"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1285"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1500"/>
       <source>Set the number of the room north of this one.</source>
       <translation>Установите номер комнаты к северу от этой комнаты.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1196"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1186"/>
       <source>Entered number is invalid, set the number of the room northeast of this one.</source>
       <translation>Введенный номер недействителен, задайте номер комнаты к северо-востоку от этого номера.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1197"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1303"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1512"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1187"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1293"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1502"/>
       <source>Set the number of the room northeast of this one.</source>
       <translation>Установите номер комнаты к северо-востоку от этой комнаты.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1205"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1195"/>
       <source>Entered number is invalid, set the number of the room up from this one.</source>
       <translation>Введенный номер недействителен, задайте номер комнаты выше этой.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1206"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1311"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1514"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1196"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1301"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1504"/>
       <source>Set the number of the room up from this one.</source>
       <translation>Установите номер комнаты к вверху от этой комнаты.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1214"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1204"/>
       <source>Entered number is invalid, set the number of the room west of this one.</source>
       <translation>Введенный номер недействителен, задайте номер комнаты к западу от этой комнаты.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1215"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1319"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1516"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1205"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1309"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1506"/>
       <source>Set the number of the room west of this one.</source>
       <translation>Установите номер комнаты к западу от этой комнаты.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1223"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1213"/>
       <source>Entered number is invalid, set the number of the room east of this one.</source>
       <translation>Введенный номер недействителен, задайте номер комнаты к востоку от этой.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1224"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1327"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1518"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1214"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1317"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1508"/>
       <source>Set the number of the room east of this one.</source>
       <translation>Установите номер комнаты к востоку от этой комнаты.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1232"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1222"/>
       <source>Entered number is invalid, set the number of the room down from this one.</source>
       <translation>Введенный номер недействителен, установите номер комнаты ниже этой.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1233"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1335"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1520"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1223"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1325"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1510"/>
       <source>Set the number of the room down from this one.</source>
       <translation>Установите номер комнаты ниже этой.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1241"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1231"/>
       <source>Entered number is invalid, set the number of the room southwest of this one.</source>
       <translation>Введенный номер недействителен, задайте номер комнаты к юго-западу от этой комнаты.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1242"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1343"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1522"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1232"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1333"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1512"/>
       <source>Set the number of the room southwest of this one.</source>
       <translation>Установите номер комнаты к юго-западу от этой комнаты.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1250"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1240"/>
       <source>Entered number is invalid, set the number of the room south of this one.</source>
       <translation>Введенный номер недействителен, задайте номер комнаты к югу от этой комнаты.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1251"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1351"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1524"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1241"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1341"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1514"/>
       <source>Set the number of the room south of this one.</source>
       <translation>Установите номер комнаты к югу от этой комнаты.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1259"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1249"/>
       <source>Entered number is invalid, set the number of the room southeast of this one.</source>
       <translation>Введенный номер недействителен, задайте номер комнаты к юго-востоку от этой комнаты.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1260"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1359"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1526"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1250"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1349"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1516"/>
       <source>Set the number of the room southeast of this one.</source>
       <translation>Установите номер комнаты к юго-востоку от этой комнаты.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1268"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1258"/>
       <source>Entered number is invalid, set the number of the room in from this one.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1269"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1367"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1528"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1259"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1357"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1518"/>
       <source>Set the number of the room in from this one.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1277"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1267"/>
       <source>Entered number is invalid, set the number of the room out from this one.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1278"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1375"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1530"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1268"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1365"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1520"/>
       <source>Set the number of the room out from this one.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1579"/>
-      <source>No door symbol is drawn on a custom exit line for this exit on 2D Map.</source>
-      <translation>Символ двери не отображается на пользовательской линии выхода для этого выхода на 2D карте.</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1580"/>
-      <source>Green (Open) door symbol is drawn on a custom exit line for this exit on 2D Map.</source>
-      <translation>Зеленый символ (открытая) дверь рисуется на пользовательской линии выхода для этого выхода на 2D карте.</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1581"/>
-      <source>Orange (Closed) door symbol is drawn on a custom exit line for this exit on 2D Map.</source>
-      <translation>Оранжевый (закрытый) символ двери нарисован на пользовательской линии выхода для этого выхода на 2D карте.</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1582"/>
-      <source>Red (Locked) door symbol is drawn on a custom exit line for this exit on 2D Map.</source>
-      <translation>Символ красной (запертой) двери рисуется на пользовательской линии выхода для этого выхода на 2D карте.</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1068"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1058"/>
       <source>Exit to &quot;%1&quot;.</source>
       <translation>Выход в &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1150"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1466"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1140"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1456"/>
       <source>Clear the stub exit for this exit to enter an exit roomID.</source>
       <translation>Удалите незавершённый выход сначала перед тем как ввести номер выхода.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1498"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1488"/>
       <source>Exits for room: &quot;%1&quot; [*]</source>
       <translation>Выходы для комнаты: &quot;%1&quot; [*]</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1500"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1490"/>
       <source>Exits for room Id: %1 [*]</source>
       <translation>Выходы для комнаты номер: %1[*]</translation>
     </message>
@@ -6947,8 +6931,8 @@ for all of the %n selected room(s):</source>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="416"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5838"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8374"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5842"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8378"/>
       <source>Triggers</source>
       <translation>Триггеры</translation>
     </message>
@@ -6960,8 +6944,8 @@ for all of the %n selected room(s):</source>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="446"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5862"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8386"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5866"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8390"/>
       <source>Buttons</source>
       <translation>Кнопки</translation>
     </message>
@@ -6973,7 +6957,7 @@ for all of the %n selected room(s):</source>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="421"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8376"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8380"/>
       <source>Aliases</source>
       <translation>Алиасы</translation>
     </message>
@@ -6985,8 +6969,8 @@ for all of the %n selected room(s):</source>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="431"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5844"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8380"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5848"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8384"/>
       <source>Timers</source>
       <translation>Таймеры</translation>
     </message>
@@ -6998,8 +6982,8 @@ for all of the %n selected room(s):</source>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="426"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5850"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8378"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5854"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8382"/>
       <source>Scripts</source>
       <translation>Скрипты</translation>
     </message>
@@ -7011,7 +6995,7 @@ for all of the %n selected room(s):</source>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="436"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8382"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8386"/>
       <source>Keys</source>
       <translation>Ключи</translation>
     </message>
@@ -7023,8 +7007,8 @@ for all of the %n selected room(s):</source>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="441"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6250"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8384"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6254"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8388"/>
       <source>Variables</source>
       <translation>Переменные</translation>
     </message>
@@ -7077,21 +7061,14 @@ for all of the %n selected room(s):</source>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="495"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8364"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8368"/>
       <source>Save Item</source>
       <translation>Сохранить</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8365"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8369"/>
       <source>Ctrl+S</source>
       <translation>Ctrl+S</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="497"/>
-      <source>Saves the selected item. (Ctrl+S)&lt;/p&gt;Saving causes any changes to the item to take effect.
-It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</source>
-      <translation>Сохранить выбранный элемент. (Ctrl+S)&lt;/p&gt;Сохранение приводит к тому, что любые изменения в элементе вступают в силу.
-Он не будет сохранен на диске, поэтому изменения будут потеряны в случае сбоя компьютера/программы (но "Сохранить Профиль" справа будет безопасным).</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="499"/>
@@ -7100,8 +7077,8 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="502"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8831"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8837"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8835"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8841"/>
       <source>Copy</source>
       <translation>Скопировать</translation>
     </message>
@@ -7113,8 +7090,8 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="516"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8832"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8838"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8836"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8842"/>
       <source>Paste</source>
       <translation>Вставить</translation>
     </message>
@@ -7136,34 +7113,29 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="543"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8366"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8671"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8370"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8675"/>
       <source>Save Profile</source>
       <translation>Сохранить профиль</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8367"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8371"/>
       <source>Ctrl+Shift+S</source>
       <translation>Ctrl+Shift+S</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="547"/>
-      <source>Saves your profile. (Ctrl+Shift+S)&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.</source>
-      <translation>Сохраняет профиль. (Ctrl + Shift + S)&lt;p&gt;Сохраняет весь профиль (триггеры, алиасы, скрипты, таймеры, кнопки и ключи, но не карту) на вашем компьютере, поэтому в случае сбоя компьютера или программы будут сохранены все сделанные вами изменения.&lt;/p&gt;&lt;p&gt;Также создает резервную копию вашего профиля; вы можете загрузить более старую версию при соединении.&lt;/p&gt;&lt;p&gt;Если есть модули, помеченные как &quot;&lt;i&gt;,синхронизированы&lt;/i&gt;&quot;, это также приведет к их сохранению и перезагрузке в другие профилях где они установлены.</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="549"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="555"/>
       <source>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also &quot;synchronizes&quot; modules that are so marked.</source>
       <translation>Сохраняет весь профиль (триггеры, алиасы, скрипты, таймеры, кнопки и ключи, но не карту) на вашем компьютере; ещё синхронизирует помеченные модули.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="552"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="558"/>
       <source>Save Profile As</source>
       <translation>Cохранить профиль в</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="457"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8390"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8394"/>
       <source>Statistics</source>
       <translation>Статистика</translation>
     </message>
@@ -7184,556 +7156,567 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="462"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8392"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8396"/>
       <source>Debug</source>
       <translation>Отладчик</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="679"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="682"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="496"/>
+      <source>&lt;p&gt;Saves the selected item. (Ctrl+S)&lt;/p&gt;&lt;p&gt;Saving causes any changes to the item to take effect. It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="545"/>
+      <source>&lt;p&gt;Saves your profile. (Ctrl+Shift+S)&lt;/p&gt;&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="685"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="688"/>
       <source>Search Options</source>
       <translation>Параметры запроса</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="686"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="692"/>
       <source>Case sensitive</source>
       <translation>С учетом регистра</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="739"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="743"/>
       <source>Type</source>
       <comment>Heading for the first column of the search results</comment>
       <translation>Тип</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="740"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="744"/>
       <source>Name</source>
       <comment>Heading for the second column of the search results</comment>
       <translation>Имя</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="741"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="745"/>
       <source>Where</source>
       <comment>Heading for the third column of the search results</comment>
       <translation>Где</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="742"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="746"/>
       <source>What</source>
       <comment>Heading for the fourth column of the search results</comment>
       <translation>Что</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="789"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="793"/>
       <source>start of line</source>
       <translation>начало строки</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="822"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="826"/>
       <source>Text to find (trigger pattern)</source>
       <translation>Текст для поиска (шаблон триггера)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2799"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2803"/>
       <source>Trying to activate a trigger group, filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Попытка активировать группу триггера, фильтр, триггер или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащую их &lt;em&gt;, удалось&lt;/em&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2801"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2805"/>
       <source>Trying to deactivate a trigger group, filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Попытка деактивировать группу триггера, фильтр, триггер или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащую их &lt;em&gt;, удалось&lt;/em&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2805"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2809"/>
       <source>&lt;b&gt;Unable to activate a filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;b&gt;Не удается активировать группу триггеров, триггер или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащий их; причина: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;После исправления этой проблемы триггер необходимо будет активировать повторно.&lt;/i&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2942"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2946"/>
       <source>Trying to activate a timer group, offset timer, timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Попытка активировать группу таймера, таймер смещения, таймер или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащую их &lt;em&gt;, удалось&lt;/em&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2944"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2948"/>
       <source>Trying to deactivate a timer group, offset timer, timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Попытка деактивировать группу таймера, таймер смещения, таймер или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащую их &lt;em&gt;, удалось&lt;/em&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2948"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2952"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate an offset timer or timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;&lt;b&gt;не удается активировать смещение таймер или таймер или части модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, что их содержит; причина: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;вы должны активировать это после того, как проблема была устранена.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2986"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2990"/>
       <source>Trying to activate an alias group, alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Попытка активировать группу алиасов, алиас или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащую их &lt;em&gt;, успешно&lt;/em&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2988"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2992"/>
       <source>Trying to deactivate an alias group, alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Попытка деактивировать группу алиасов, алиас или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, которая содержит их &lt;em&gt;, успешна&lt;/em&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2992"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2996"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate an alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;&lt;b&gt;не удается активировать алиас или части модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, которая содержит их; причина: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;Вы должны активировать это после того, как проблема была устранена.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3090"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3094"/>
       <source>Trying to activate a script group, script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Попытка активировать группу скриптов, скрипт или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащую их &lt;em&gt;, удалась&lt;/em&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3092"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3096"/>
       <source>Trying to deactivate a script group, script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Попытка деактивировать группу скриптов, скрипт или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащей их &lt;em&gt;, удалась&lt;/em&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3096"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3100"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate a script group or script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;&lt;b&gt;Не удается активировать группу скриптов, скрипт или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащий их; причина: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;123_321 123_321_321_12_321 После исправления этой проблемы ее необходимо будет активировать повторно активировать повторно.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3161"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3165"/>
       <source>Trying to activate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Попытка активировать кнопку/меню/панель инструментов или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащую их &lt;em&gt;, удалась&lt;/em&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3163"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3167"/>
       <source>Trying to deactivate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Попытка деактивировать кнопку/меню/панель инструментов или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; &quot;, содержащую их &lt;em&gt;, удалась&lt;/em&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3167"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3171"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;&lt;b&gt;не удается активировать кнопку или части модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, которая содержит их; причина: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;Вы должны активировать это после того, как проблема была устранена.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3281"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4113"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3285"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4117"/>
       <source>New trigger group</source>
       <translation>Новая группа триггеров</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3283"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4113"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3287"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4117"/>
       <source>New trigger</source>
       <translation>Новый триггер</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3382"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3386"/>
       <source>New timer group</source>
       <translation>Новая группа таймеров</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3384"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3388"/>
       <source>New timer</source>
       <translation>Новый таймер</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3472"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3476"/>
       <source>Table name...</source>
       <translation>Имя таблицы...</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3479"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3483"/>
       <source>Variable name...</source>
       <translation>Имя переменной...</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3488"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3492"/>
       <source>New table name</source>
       <translation>Имя новой таблицы</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3488"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3492"/>
       <source>New variable name</source>
       <translation>Имя новой переменной</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3538"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3542"/>
       <source>New key group</source>
       <translation>Новая группа клавишей</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3540"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4813"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3544"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4817"/>
       <source>New key</source>
       <translation>Новая клавиша</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3622"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3626"/>
       <source>New alias group</source>
       <translation>Новая группа алиасов</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3624"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4221"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4291"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3628"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4225"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4295"/>
       <source>New alias</source>
       <translation>Новый алиас</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3713"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3717"/>
       <source>New menu</source>
       <translation>Новое меню</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3715"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3719"/>
       <source>New button</source>
       <translation>Новая кнопка</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3746"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3750"/>
       <source>New toolbar</source>
       <translation>Новая панель инструментов</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3799"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4540"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3803"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4544"/>
       <source>New script group</source>
       <translation>Новая группа скриптов</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3801"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4540"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3805"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4544"/>
       <source>New script</source>
       <translation>Новый скрипт</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4235"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4239"/>
       <source>Alias &lt;em&gt;%1&lt;/em&gt; has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn&apos;t good as it&apos;ll call itself forever.</source>
       <translation>Алиас &lt;em&gt;%1&lt;/em&gt; имеет бесконечный цикл - подстановка соответствует своему шаблону. Пожалуйста, исправьте это - этот псевдоним не хорош, так как он будет себя вызывать безконечно.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4778"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4782"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5564"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
       <translation>Выбранные переменные будут сохранены и загружены вместе с вашим профилем.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4913"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4917"/>
       <source>match on the prompt line</source>
       <translation>матч на оперативную линию</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4916"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4920"/>
       <source>match on the prompt line (disabled)</source>
       <translation>матч на строку состояния (отключено)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4917"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4921"/>
       <source>A Go-Ahead (GA) signal from the game is required to make this feature work</source>
       <translation>Для работы этой функции требуется сигнал Go-Ahead (GA) от игры</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4967"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5077"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8570"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4971"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5081"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8574"/>
       <source>Foreground color ignored</source>
       <comment>Color trigger ignored foreground color button, ensure all three instances have the same text</comment>
       <translation>Цвет переднего плана игнорируется</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4971"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5081"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8573"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4975"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5085"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8577"/>
       <source>Default foreground color</source>
       <comment>Color trigger default foreground color button, ensure all three instances have the same text</comment>
       <translation>Цвет переднего плана по умолчанию</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4975"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5085"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8576"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4979"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5089"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8580"/>
       <source>Foreground color [ANSI %1]</source>
       <comment>Color trigger ANSI foreground color button, ensure all three instances have the same text</comment>
       <translation>Цвет переднего плана [ANSI %1]</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4982"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5092"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8633"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4986"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5096"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8637"/>
       <source>Background color ignored</source>
       <comment>Color trigger ignored background color button, ensure all three instances have the same text</comment>
       <translation>Цвет заднего плана игнорируется</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4986"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5096"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8636"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4990"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5100"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8640"/>
       <source>Default background color</source>
       <comment>Color trigger default background color button, ensure all three instances have the same text</comment>
       <translation>Цвет фона по умолчанию</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4990"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5100"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8639"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4994"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5104"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8643"/>
       <source>Background color [ANSI %1]</source>
       <comment>Color trigger ANSI background color button, ensure all three instances have the same text</comment>
       <translation>Цвет фона [ANSI %1]</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5111"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5113"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5115"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5117"/>
       <source>fault</source>
       <translation>сбой</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5166"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5170"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8459"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8485"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8981"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8982"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5174"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8463"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8489"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8985"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8986"/>
       <source>keep</source>
       <comment>Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button</comment>
       <translation>хранить</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5619"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8433"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5623"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8437"/>
       <source>Command:</source>
       <translation>Команда:</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5658"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5662"/>
       <source>Menu properties</source>
       <translation>Свойства</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5668"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5672"/>
       <source>Button properties</source>
       <translation>Свойства кнопки</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5676"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5680"/>
       <source>Command (down);</source>
       <translation>Команда (вниз);</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5856"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5860"/>
       <source>Aliases - Input Triggers</source>
       <translation>Алиасы</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5868"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5872"/>
       <source>Key Bindings</source>
       <translation>Привязки клавиш</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7604"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7608"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7628"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7612"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7632"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7652"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7636"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7656"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7676"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7660"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7680"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7700"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7684"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7704"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7724"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7729"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7749"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7708"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7728"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7733"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7753"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7772"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7757"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7776"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7795"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7780"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7799"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7818"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7803"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7822"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7841"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7826"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7845"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7864"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7869"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7849"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7868"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7873"/>
       <source>Export Package:</source>
       <translation>Экспортировать пакет:</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7604"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7608"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7628"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7612"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7632"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7652"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7636"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7656"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7676"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7660"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7680"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7700"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7684"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7704"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7724"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7729"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7749"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7708"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7728"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7733"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7753"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7772"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7757"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7776"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7795"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7780"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7799"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7818"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7803"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7822"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7841"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7826"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7845"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7864"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7869"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7849"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7868"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7873"/>
       <source>You have to choose an item for export first. Please select a tree item and then click on export again.</source>
       <translation>Сначала необходимо выбрать элемент для экспорта. Выберите элемент и снова нажмите на экспорт.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7613"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7637"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7661"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7685"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7709"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7734"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7617"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7641"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7665"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7689"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7713"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7738"/>
       <source>Package %1 saved</source>
       <translation>Пакет %1 сохранён</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7758"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7781"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7804"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7827"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7850"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7874"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7762"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7785"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7808"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7831"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7854"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7878"/>
       <source>Copied %1 to clipboard</source>
       <translation>%1 скопирован в буфер обмена</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7884"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7888"/>
       <source>Mudlet packages (*.xml)</source>
       <translation>Пакеты Mudlet (*.xml)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7884"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7888"/>
       <source>Export Item</source>
       <translation>Экспорт элемента</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7898"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7902"/>
       <source>export package:</source>
       <translation>экспортировать пакет:</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7898"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7902"/>
       <source>Cannot write file %1:
 %2.</source>
       <translation>Не удается записать файл %1:
 %2.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8167"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8171"/>
       <source>Import Mudlet Package</source>
       <translation>Импортировать пакет</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8261"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8265"/>
       <source>Couldn&apos;t save profile</source>
       <translation>Не удалось сохранить профиль</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8261"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8265"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
       <translation>К сожалению, невозможно сохранить профиль - есть ошибка: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8268"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8272"/>
       <source>Backup Profile</source>
       <translation>Сохранить копию профиля</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8268"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8272"/>
       <source>trigger files (*.trigger *.xml)</source>
       <translation>триггер-файлы (*.trigger *.xml)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8393"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8397"/>
       <source>Ctrl+0</source>
       <translation>Ctrl+0</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8420"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8424"/>
       <source>Images (*.png *.xpm *.jpg)</source>
       <translation>Изображения (*.png *.xpm *.jpg)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8420"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8424"/>
       <source>Select Icon</source>
       <translation>Выбрать значок</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8429"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8433"/>
       <source>Command (down):</source>
       <translation>Команда (вниз):</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8450"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8454"/>
       <source>Select foreground color to apply to matches</source>
       <translation>Выберите цвет переднего плана для применения к совпадением</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8476"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8480"/>
       <source>Select background color to apply to matches</source>
       <translation>Выберите цвет фона для применения к совпадениям</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8494"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8498"/>
       <source>Choose sound file</source>
       <translation>Выбрать звук</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8498"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8502"/>
       <source>Audio files(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;All files(*.*)</source>
       <comment>This the list of file extensions that are considered for sounds from triggers, the terms inside of the &apos;(&apos;...&apos;)&apos; and the &quot;;;&quot; are used programmatically and should not be changed.</comment>
       <translation>Аудиофайлы(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;Все файлы(*.*)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8551"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8555"/>
       <source>Select foreground trigger color for item %1</source>
       <translation>Выберите цвет переднего плана для шаблона %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8615"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8619"/>
       <source>Select background trigger color for item %1</source>
       <translation>Выберите цвет заднего плана для шаблона %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8664"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8668"/>
       <source>Saving…</source>
       <translation>Сохранение…</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8827"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8831"/>
       <source>Format All</source>
       <translation>Форматировать все</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8830"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8836"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8834"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8840"/>
       <source>Cut</source>
       <translation>Вырезать</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8834"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8840"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8838"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8844"/>
       <source>Select All</source>
       <translation>Выбрать все</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8996"/>
-      <source>&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Звуковой файл, который будет играть при срабатывании.&lt;/p&gt;</translation>
+      <location filename="../src/dlgTriggerEditor.cpp" line="9000"/>
+      <source>Sound file to play when the trigger fires.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="787"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="791"/>
       <source>substring</source>
       <translation>подстрока</translation>
     </message>
@@ -7770,49 +7753,49 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="418"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8375"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8379"/>
       <source>Ctrl+1</source>
       <translation>Ctrl+1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="423"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8377"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8381"/>
       <source>Ctrl+2</source>
       <translation>Ctrl+2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="428"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8379"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8383"/>
       <source>Ctrl+3</source>
       <translation>Ctrl+3</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="433"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8381"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8385"/>
       <source>Ctrl+4</source>
       <translation>Ctrl+4</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="438"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8383"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8387"/>
       <source>Ctrl+5</source>
       <translation>Ctrl+5</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="443"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8385"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8389"/>
       <source>Ctrl+6</source>
       <translation>Ctrl+6</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="448"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8387"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8391"/>
       <source>Ctrl+7</source>
       <translation>Ctrl+7</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="452"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8388"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8392"/>
       <source>Errors</source>
       <translation>Ошибки</translation>
     </message>
@@ -7828,7 +7811,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="454"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8389"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8393"/>
       <source>Ctrl+8</source>
       <translation>Ctrl+8</translation>
     </message>
@@ -7844,7 +7827,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="459"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8391"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8395"/>
       <source>Ctrl+9</source>
       <translation>Ctrl+9</translation>
     </message>
@@ -7859,260 +7842,260 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <translation>Показать/скрыть консоль отладки (Ctrl+0) -&gt; система будет &lt;b&gt;&lt;i&gt;медленнее&lt;/i&gt;&lt;/b&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="576"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="582"/>
       <source>Editor Toolbar - %1 - Actions</source>
       <comment>This is the toolbar that is initially placed at the top of the editor.</comment>
       <translation>Панель инструментов редактора - %1 - Кнопки</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="612"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="618"/>
       <source>Editor Toolbar - %1 - Items</source>
       <comment>This is the toolbar that is initially placed at the left side of the editor.</comment>
       <translation>Панель инструментов редактора - %1 - Элементы</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="689"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="694"/>
       <source>Match case precisely</source>
       <translation>Учитывать регистр</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="693"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="698"/>
       <source>Include variables</source>
       <translation>Включать переменные</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="696"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="700"/>
       <source>Search variables (slower)</source>
       <translation>Искать переменные (медленнее)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="788"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="792"/>
       <source>perl regex</source>
       <translation>регулярное выражение</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="790"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="794"/>
       <source>exact match</source>
       <translation>точное совпадение</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="791"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="795"/>
       <source>lua function</source>
       <translation>lua функция</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="792"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="796"/>
       <source>line spacer</source>
       <translation>линия прокладки</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="793"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="797"/>
       <source>color trigger</source>
       <translation>цветной триггер</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="794"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="798"/>
       <source>prompt</source>
       <translation>строка состояния</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1921"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1933"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1961"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1993"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2023"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2035"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2062"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2097"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1925"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1937"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1965"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1997"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2027"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2039"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2066"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2101"/>
       <source>Trigger</source>
       <translation>Триггер</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1441"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1484"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1556"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1628"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1750"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1834"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1921"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2023"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2129"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2218"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2304"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2428"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2502"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1445"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1488"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1560"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1632"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1754"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1838"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1925"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2027"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2133"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2222"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2308"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2432"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2506"/>
       <source>Name</source>
       <translation>Имя</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1496"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1501"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1568"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1573"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1640"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1645"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1844"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1849"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1933"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1938"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2035"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2040"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2139"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2144"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2316"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2321"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2440"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2445"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2514"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2519"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1500"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1505"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1572"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1577"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1644"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1649"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1848"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1853"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1937"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1942"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2039"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2044"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2143"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2148"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2320"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2325"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2444"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2449"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2518"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2523"/>
       <source>Command</source>
       <translation>Команда</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1961"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1966"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2062"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2067"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1965"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1970"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2066"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2071"/>
       <source>Pattern {%1}</source>
       <translation>Шаблон {%1}</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1526"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1531"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1598"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1603"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1720"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1725"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1804"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1809"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1891"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1896"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1993"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1998"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2097"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2102"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2186"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2191"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2272"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2277"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2396"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2401"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2470"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2475"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2544"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2549"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1530"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1535"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1602"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1607"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1724"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1729"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1808"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1813"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1895"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1900"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1997"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2002"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2101"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2106"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2190"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2195"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2276"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2281"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2400"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2405"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2474"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2479"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2548"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2553"/>
       <source>Lua code (%1:%2)</source>
       <translation>Код Lua (%1:%2)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1834"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1844"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1861"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1891"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2129"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2139"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2156"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2186"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1838"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1848"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1865"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1895"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2133"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2143"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2160"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2190"/>
       <source>Alias</source>
       <translation>Алиас</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1861"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1866"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2156"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2161"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1865"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1870"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2160"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2165"/>
       <source>Pattern</source>
       <translation>Шаблон</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1750"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1772"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1804"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2218"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2240"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2272"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1754"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1776"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1808"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2222"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2244"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2276"/>
       <source>Script</source>
       <translation>Скрипт</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1772"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1777"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2240"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2245"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1776"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1781"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2244"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2249"/>
       <source>Event Handler</source>
       <translation>Обработчик событий</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1628"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1640"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1659"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1720"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2304"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2316"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2335"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2396"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1632"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1644"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1663"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1724"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2308"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2320"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2339"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2400"/>
       <source>Button</source>
       <translation>Кнопка</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1640"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1645"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2316"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2321"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1644"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1649"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2320"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2325"/>
       <source>Command {Down}</source>
       <translation>Команда (вниз)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1659"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1664"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2335"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2340"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1663"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1668"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2339"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2344"/>
       <source>Command {Up}</source>
       <translation>Команда (вверх)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1688"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2364"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1692"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2368"/>
       <source>Action</source>
       <translation>Кнопка</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1688"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1693"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2364"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2369"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1692"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1697"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2368"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2373"/>
       <source>Stylesheet {L: %1 C: %2}</source>
       <translation>Таблица стилей {Л: %1 С: %2}</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1556"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1568"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1598"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2428"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2440"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2470"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1560"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1572"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1602"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2432"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2444"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2474"/>
       <source>Timer</source>
       <translation>Таймер</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1484"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1496"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1526"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2502"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2514"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2544"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1488"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1500"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1530"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2506"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2518"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2548"/>
       <source>Key</source>
       <translation>Ключ</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1441"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1455"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1445"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1459"/>
       <source>Variable</source>
       <translation>Переменые</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1455"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1461"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1459"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1465"/>
       <source>Value</source>
       <translation>Значение</translation>
     </message>
@@ -9155,15 +9138,16 @@ There is NO WARRANTY, to the extent permitted by law.
       <translation>Пакеты (экс.)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="520"/>
-      <source>&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</source>
-      <comment>Same text is used in 2 places.</comment>
-      <translation>&lt;p&gt;Разделяет экран Mudlet для показа нескольких профилей за один раз; отключено, когда загружено менее двух профилей.&lt;/p&gt;</translation>
-    </message>
-    <message>
       <location filename="../src/mudlet.cpp" line="532"/>
       <source>Report issue</source>
       <translation>Сообщить о проблеме</translation>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="544"/>
+      <location filename="../src/mudlet.cpp" line="3726"/>
+      <source>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</source>
+      <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="686"/>
@@ -9177,7 +9161,7 @@ There is NO WARRANTY, to the extent permitted by law.
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="688"/>
-      <location filename="../src/mudlet.cpp" line="2999"/>
+      <location filename="../src/mudlet.cpp" line="2997"/>
       <source>Compact input line</source>
       <translation>Компактная строка ввода</translation>
     </message>
@@ -9998,6 +9982,12 @@ There is NO WARRANTY, to the extent permitted by law.
       <translation>Телугу</translation>
     </message>
     <message>
+      <location filename="../src/mudlet.cpp" line="520"/>
+      <source>Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.</source>
+      <comment>Same text is used in 2 places.</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/mudlet.cpp" line="1010"/>
       <source>Telugu (India)</source>
       <translation>Телугу (Индия)</translation>
@@ -10133,12 +10123,33 @@ There is NO WARRANTY, to the extent permitted by law.
       <translation>Зулу</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4656"/>
+      <location filename="../src/mudlet.cpp" line="3058"/>
+      <source>Cannot load a replay as one is already in progress in this or another profile.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="3077"/>
+      <source>Replay each step with a shorter time interval between steps.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="3083"/>
+      <source>Replay each step with a longer time interval between steps.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message numerus="yes">
+      <location filename="../src/mudlet.cpp" line="3760"/>
+      <source>Review the update(s) available...</source>
+      <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="4651"/>
       <source>Hide tray icon</source>
       <translation>Скрыть значок в трее</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4661"/>
+      <location filename="../src/mudlet.cpp" line="4656"/>
       <source>Quit Mudlet</source>
       <translation>Выйти из Mudlet</translation>
     </message>
@@ -10321,16 +10332,9 @@ There is NO WARRANTY, to the extent permitted by law.
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="543"/>
-      <location filename="../src/mudlet.cpp" line="3748"/>
+      <location filename="../src/mudlet.cpp" line="3743"/>
       <source>About</source>
       <translation>О программе</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="544"/>
-      <location filename="../src/mudlet.cpp" line="3731"/>
-      <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
-      <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation>&lt;p&gt;Информируйте себя об этой версии Mudlet, людей, которые сделали его и лицензии, под которой вы можете поделиться им.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1022"/>
@@ -10568,7 +10572,13 @@ There is NO WARRANTY, to the extent permitted by law.
       <translation>WINDOWS-1258 (Вьетнамский / Vietnamese)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2761"/>
+      <location filename="../src/mudlet.cpp" line="1699"/>
+      <location filename="../src/mudlet.cpp" line="3154"/>
+      <source>Load a Mudlet replay.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="2759"/>
       <source>Central Debug Console</source>
       <translation>Консоль отладки</translation>
     </message>
@@ -10608,82 +10618,61 @@ There is NO WARRANTY, to the extent permitted by law.
       <translation>Big5-HKSCS (Гонконг)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1663"/>
+      <location filename="../src/mudlet.cpp" line="1662"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Disabled until a profile is loaded.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;Загрузить просмотр Mudlet.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Отключено до загрузки профиля.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1701"/>
-      <location filename="../src/mudlet.cpp" line="3159"/>
-      <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Загрузить повтор лога&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="2530"/>
+      <location filename="../src/mudlet.cpp" line="2528"/>
       <source>%1 - notes</source>
       <translation>%1 - блокнот</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2614"/>
+      <location filename="../src/mudlet.cpp" line="2612"/>
       <source>Select Replay</source>
       <translation>Выбрать повтор</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2616"/>
+      <location filename="../src/mudlet.cpp" line="2614"/>
       <source>*.dat</source>
       <translation>*.dat</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2918"/>
+      <location filename="../src/mudlet.cpp" line="2916"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
       <translation>[  OK  ]  - Профиль &quot;%1&quot; загружен в оффлайн режиме.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3000"/>
+      <location filename="../src/mudlet.cpp" line="2998"/>
       <source>[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.</source>
       <comment>Here %1 will be replaced with the keyboard shortcut, default is ALT+L.</comment>
       <translation>[ ИНФО ] - Компактный вид вводной линий включен. Нажмите %1, чтобы снова отобразить кнопки в правом нижнем углу.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3061"/>
-      <source>&lt;p&gt;Cannot load a replay as one is already in progress in this or another profile.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Не удается загрузить повтор, поскольку оно уже выполняется в этом или ином профиле.&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="3078"/>
+      <location filename="../src/mudlet.cpp" line="3075"/>
       <source>Faster</source>
       <translation>Быстрее</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3081"/>
-      <source>&lt;p&gt;Replay each step with a shorter time interval between steps.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Воспроизвести каждый шаг с менее длинным интервалом между шагами.&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="3085"/>
       <source>Slower</source>
       <translation>Медленнее</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3088"/>
-      <source>&lt;p&gt;Replay each step with a longer time interval between steps.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Воспроизвести каждый шаг с более длинным интервалом между шагами.&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="3098"/>
-      <location filename="../src/mudlet.cpp" line="3167"/>
-      <location filename="../src/mudlet.cpp" line="3180"/>
+      <location filename="../src/mudlet.cpp" line="3093"/>
+      <location filename="../src/mudlet.cpp" line="3162"/>
+      <location filename="../src/mudlet.cpp" line="3175"/>
       <source>Speed: X%1</source>
       <translation>Скорость: Х%1</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3105"/>
-      <location filename="../src/mudlet.cpp" line="3122"/>
+      <location filename="../src/mudlet.cpp" line="3100"/>
+      <location filename="../src/mudlet.cpp" line="3117"/>
       <source>Time: %1</source>
       <translation>Время: %1</translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3742"/>
+      <location filename="../src/mudlet.cpp" line="3737"/>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
       <translation>
@@ -10694,7 +10683,7 @@ There is NO WARRANTY, to the extent permitted by law.
       </translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3760"/>
+      <location filename="../src/mudlet.cpp" line="3755"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
       <translation>
@@ -10704,24 +10693,13 @@ There is NO WARRANTY, to the extent permitted by law.
         <numerusform>Проверить %n обновление/й...</numerusform>
       </translation>
     </message>
-    <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3765"/>
-      <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
-      <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
-      <translation>
-        <numerusform>&lt;p&gt;Проверить доступные обновления...&lt;/p&gt;</numerusform>
-        <numerusform>&lt;p&gt;Проверить доступные обновления...&lt;/p&gt;</numerusform>
-        <numerusform>&lt;p&gt;Проверить доступные обновления...&lt;/p&gt;</numerusform>
-        <numerusform>&lt;p&gt;Проверить доступные обновления...&lt;/p&gt;</numerusform>
-      </translation>
-    </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3790"/>
+      <location filename="../src/mudlet.cpp" line="3785"/>
       <source>Update installed - restart to apply</source>
       <translation>Обновление установлено - перезапустите приложение</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3826"/>
+      <location filename="../src/mudlet.cpp" line="3821"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
       <translation>[ ВНИМ ] - Невозможно выполнить повтор, возможно, уже выполняется другой.
@@ -10821,7 +10799,7 @@ try again when it has finished.</source>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="364"/>
-      <location filename="../src/ui/profile_preferences.ui" line="3475"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3492"/>
       <source>Please reconnect to your game for the change to take effect</source>
       <translation>Пожалуйста, переподключитесь к вашей игре, чтобы изменения вступили в силу</translation>
     </message>
@@ -11307,36 +11285,41 @@ try again when it has finished.</source>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2722"/>
+      <source>Server password: </source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="2739"/>
       <source>&lt;p&gt;TLS/SSL is usually on port 6697. IRC networks often use a &lt;b&gt;+&lt;/b&gt; when listing secure ports offered.&lt;/p&gt;</source>
       <translation>&lt;p&gt;TLS/SSL обычно находится на порту 6697. IRC-сети часто используют &lt;b&gt;+&lt;/b&gt; при перечислении предлагаемых безопасных портов.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2725"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2742"/>
       <source>Use a secure connection</source>
       <translation>Использовать защищенное соединение</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3345"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3362"/>
       <source>Shortcuts</source>
       <translation>Ярлыки</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3360"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3377"/>
       <source>Main window shortcuts</source>
       <translation>Ярлыки главного окна</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3372"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3389"/>
       <source>To disable shortcut input &apos;Esc&apos; key.</source>
       <translation>Чтобы отключить ввод сочетаний клавиш &apos;Esc&apos;.</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3389"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3406"/>
       <source>Reset to defaults</source>
       <translation>Настройки по умолчанию</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3645"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3662"/>
       <source>h:mm:ss.zzz</source>
       <comment>Used to set a time interval only</comment>
       <translation>h:mm:ss.zzz</translation>
@@ -11807,97 +11790,97 @@ you can use it but there could be issues with aligning columns of text</source>
       <translation>Чат</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3296"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3313"/>
       <source>Username for logging into the proxy if required</source>
       <translation>Имя пользователя для входа в прокси, если требуется</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3312"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3329"/>
       <source>Password for logging into the proxy if required</source>
       <translation>Пароль для входа в прокси, если требуется</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3419"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3436"/>
       <source>Special options needed for some older game drivers (needs client restart to take effect)</source>
       <translation>Особые опции, необходимые для некоторых старых драйверов игр (требует перезапуск клиента)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3457"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3474"/>
       <source>Force CHARSET negotiation off</source>
       <translation>Выключить согласование CHARSET</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3562"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3579"/>
       <source>the computer&apos;s password manager (secure)</source>
       <translation>компьютерном менеджером паролей (безопасно)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3567"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3584"/>
       <source>plaintext with the profile (portable)</source>
       <translation>открытом текстом с профилем (портативно)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3655"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3672"/>
       <source>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summarized in as a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</source>
       <translation>&lt;p&gt;Если отмечено то это приведет к тому, что все проблемы с кодовыми точками Unicode будут сообщаться в отладочном выводе по мере их возникновения; если они будут удалены, то о каждой различной кодовой точке будет сообщаться только один раз, и она будет обобщена в виде таблицы, когда консоль, в которой они возникли, будет окончательно уничтожена (когда профиль будет закрыт).&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3541"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3558"/>
       <source>&lt;p&gt;Some MUDs use a flawed interpretation of the ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) code sequences for 16M color mode which only uses semi-colons and not colons to separate parameter elements i.e. instead of using a code in the form: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;where the &lt;i&gt;Color Space Id&lt;/i&gt; is expected to be an empty string to specify the usual (default) case and all of the &lt;i&gt;Parameter Elements&lt;/i&gt; (the &quot;2&quot; and the values in the &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) may, technically, be omitted; they use: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;or: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;/p&gt;&lt;p&gt;It is not possible to reliably detect the difference between these two so checking this option causes Mudlet to expect the last one with the additional (but empty!) parameter.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3544"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3561"/>
       <source>Expect Color Space Id in SGR...(3|4)8;2;...m codes</source>
       <translation>Expect Color Space Id in SGR...(3|4)8;2;...m codes</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3551"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3568"/>
       <source>Store character login passwords in:</source>
       <translation>Хранить пароли входа в персонаж в:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2916"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2933"/>
       <source>TLS/SSL secure connection</source>
       <translation>Защищенное соединение</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3017"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3034"/>
       <source>Accept self-signed certificates</source>
       <translation>Принимать самоподписанные сертификаты</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3027"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3044"/>
       <source>Accept expired certificates</source>
       <translation>Принимать просроченные сертификаты</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2934"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2951"/>
       <source>Certificate</source>
       <translation>Сертификат</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2994"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3011"/>
       <source>Serial:</source>
       <translation>Серия:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2943"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2960"/>
       <source>Issuer:</source>
       <translation>Издатель:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2960"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2977"/>
       <source>Issued to:</source>
       <translation>Кому выдано:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2977"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2994"/>
       <source>Expires:</source>
       <translation>Истекает:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3037"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3054"/>
       <source>Accept all certificate errors       (unsecure)</source>
       <translation>Принимать все ошибки сертификата (небезопасно)</translation>
     </message>
@@ -12019,116 +12002,116 @@ you can use it but there could be issues with aligning columns of text</source>
       <translation>Цвет заднего плана:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3413"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3430"/>
       <source>Special Options</source>
       <translation>Специальные параметры</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3425"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3442"/>
       <source>Force compression off</source>
       <translation>Принудительно отключить компрессию</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3443"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3460"/>
       <source>Force telnet GA signal interpretation off</source>
       <translation>Принудительно отключить интерпретацию сигналов GA telnet</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3432"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3449"/>
       <source>This option adds a line line break &lt;LF&gt; or &quot;
 &quot; to your command input on empty commands. This option will rarely be necessary.</source>
       <translation>Этот параметр добавляет разрыв строки &lt;LF&gt; или &quot;\n&quot; когда вы отправляете пустые команды. Этот вариант редко будет необходим.</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3436"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3453"/>
       <source>Force new line on empty commands</source>
       <translation>Добавлять новые линии на пустые команды</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3450"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3467"/>
       <source>Force MXP negotiation off</source>
       <translation>Отключить MXP</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2735"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2752"/>
       <source>Discord privacy</source>
       <translation>Конфиденциальность Discord</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2768"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2785"/>
       <source>Don&apos;t hide small icon or tooltip</source>
       <translation>Не скрывать маленький значок и подсказку к нему</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2773"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2790"/>
       <source>Hide small icon tooltip</source>
       <translation>Скрыть подсказку к маленькому значку</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2778"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2795"/>
       <source>Hide small icon and tooltip</source>
       <translation>Скрыть маленький значок и подсказку к нему</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2800"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2817"/>
       <source>Hide timer</source>
       <translation>Скрыть таймер</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2823"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2836"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2852"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2868"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2840"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2853"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2869"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2885"/>
       <source>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Mudlet будет только показать информацию в Discord если вы подключены с этим именем (полезно, если у вас несколько аккаунтов). Оставьте поле пустым, чтобы показывать для любого аккаунта.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2829"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2846"/>
       <source>Restrict to:</source>
       <translation>Ограничить к:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2742"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2759"/>
       <source>Don&apos;t hide large icon or tooltip</source>
       <translation>Не скрывать большой значок и подсказку к нему</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2747"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2764"/>
       <source>Hide large icon tooltip</source>
       <translation>Скрыть подсказку к большому значку</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2752"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2769"/>
       <source>Hide large icon and tooltip</source>
       <translation>Скрыть большой значок и подсказку к нему</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2807"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2824"/>
       <source>&lt;p&gt;Allow Lua to set Discord status&lt;/p&gt;</source>
       <translation>&lt;p&gt;Позволять Lua постановлять состояние Discord&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2810"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2827"/>
       <source>Enable Lua API</source>
       <translation>Включить API Lua</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2842"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2859"/>
       <source>specific Discord username</source>
       <translation>конкретное имя в Discord</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2786"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2803"/>
       <source>Hide state</source>
       <translation>Скрыть состояние</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2793"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2810"/>
       <source>Hide party details</source>
       <translation>Скрыть детали группы</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2760"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2777"/>
       <source>Hide detail</source>
       <translation>Скрыть деталь</translation>
     </message>
@@ -12178,94 +12161,95 @@ you can use it but there could be issues with aligning columns of text</source>
       <translation>6667</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3507"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3524"/>
       <source>Search Engine</source>
       <translation>Поисковые системы</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3491"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3508"/>
       <source>Mudlet updates</source>
       <translation>Обновление Mudlet</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3497"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3514"/>
       <source>Disable automatic updates</source>
       <translation>Отключить автоматическое обновление</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3519"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3536"/>
       <source>Other Special options</source>
       <translation>Другие специальные параметры</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3525"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3542"/>
       <source>Show icons on menus</source>
       <translation>Отображать значки в меню</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2910"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2927"/>
       <source>Connection</source>
       <translation>Подключение</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3251"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3268"/>
       <source>Connect to the game via proxy</source>
       <translation>Подключаться к игре через прокси</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3266"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3283"/>
       <source>Address</source>
       <translation>Адрес</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3286"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3303"/>
       <source>port</source>
       <translation>порт</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3302"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3319"/>
       <source>username (optional)</source>
       <translation>имя пользователя (необязательно)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3318"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2732"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3335"/>
       <source>password (optional)</source>
       <translation>пароль (необязательно)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3611"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3628"/>
       <source>Show debug messages for timers not smaller than:</source>
       <translation>Показывать отладочные сообщения для таймеров не меньше:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3608"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3625"/>
       <source>&lt;p&gt;Show &apos;LUA OK&apos; messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</source>
       <comment>The term in &apos;...&apos; refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3658"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3675"/>
       <source>Report all Codepoint problems immediately</source>
       <translation>Немедленно сообщайть обо всех проблемах с кодовыми точками</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3665"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3682"/>
       <source>Additional text wait time:</source>
       <translation>Время ожидания дополнительного текста:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3675"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3692"/>
       <source>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) and &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) signalling tells Mudlet when the game server is done sending text. On games that do not provide &lt;tt&gt;GA&lt;/tt&gt; or &lt;tt&gt;EOR&lt;/tt&gt;, this option controls how long Mudlet will wait for more text to arrive. Greater values will help reduce the risk that Mudlet will split a large piece of text (with unintended line-breaks in the middle) which can stop some triggers from working. Lesser values increases the risk of text getting broken up, but may make the game feel more responsive.&lt;/p&gt;&lt;p&gt;&lt;i&gt;The default value, which was what Mudlet used before this control was added, is 0.300 Seconds.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) и &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) сигнализация сообщает Mudlet, когда сервер игры закончил отправку текста. В играх, которые не предоставляют &lt;tt&gt;GA&lt;/tt&gt; или &lt;tt&gt;EOR&lt;/tt&gt;, этот параметр контролирует, как долго Mudlet будет ждать, пока придет еще текст. Большие значения помогут снизить риск того, что Mudlet разделит большой кусок текста (с непреднамеренными разрывами строк в середине), что может остановить работу некоторых триггеров. Меньшие значения увеличивают риск разрыва текста, но могут сделать игру более отзывчивой.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Значение по умолчанию, которое использовалось Mudlet до добавления этого элемента управления, равно 0,300 секунды.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3678"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3695"/>
       <source> seconds</source>
       <extracomment>For most locales a space should be included so that the text is separated from the number!</extracomment>
       <translation> сек.</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3748"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3765"/>
       <source>Save</source>
       <translation>Сохранить</translation>
     </message>
