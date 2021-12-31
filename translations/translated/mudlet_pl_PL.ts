@@ -1570,7 +1570,7 @@ próbowałem te miejsca:
     <message>
       <location filename="../src/TMainConsole.cpp" line="338"/>
       <source>Start logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Rozpocznij logowanie wyjścia gry do pliku.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="652"/>
@@ -3582,7 +3582,7 @@ Czy chciałbyś teraz zaktualizować?</translation>
     <message>
       <location filename="../src/VarUnit.cpp" line="88"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation type="unfinished"/>
+      <translation>Sprawdzone zmienne zostaną zapisane i załadowane wraz z Twoim profilem.</translation>
     </message>
   </context>
   <context>
@@ -5428,7 +5428,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1837"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw poprawną nazwę profilu, adres serwera gry oraz numer portu zanim się połączysz.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1890"/>
