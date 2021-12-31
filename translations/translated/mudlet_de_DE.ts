@@ -1584,7 +1584,7 @@ Diese Orte wurden ausprobiert:
     <message>
       <location filename="../src/TMainConsole.cpp" line="338"/>
       <source>Start logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Protokollierung der Ausgabe des Spiels als Log-Datei beginnen.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="652"/>
@@ -3630,7 +3630,7 @@ Möchtest Du jetzt aktualisieren?</translation>
     <message>
       <location filename="../src/VarUnit.cpp" line="88"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation type="unfinished"/>
+      <translation>Markierte Variablen werden mit deinem Profil gespeichert und geladen.</translation>
     </message>
   </context>
   <context>
@@ -5471,7 +5471,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1837"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Bitte setze einen gültigen Profilnamen sowie Adresse und Port des Spielservers vor dem Verbinden.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1890"/>
