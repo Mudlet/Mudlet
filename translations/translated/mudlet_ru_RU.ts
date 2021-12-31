@@ -1584,7 +1584,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="338"/>
       <source>Start logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Начать ведение журнала в лог-файл.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="652"/>
@@ -3667,7 +3667,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../src/VarUnit.cpp" line="88"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation type="unfinished"/>
+      <translation>Выбранные переменные будут сохранены и загружены вместе с вашим профилем.</translation>
     </message>
   </context>
   <context>
@@ -5505,7 +5505,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1837"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Укажите имя профиля, адреса игровых серверов и игровой порт перед подключением.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1890"/>
