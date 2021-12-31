@@ -10129,23 +10129,28 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="3058"/>
       <source>Cannot load a replay as one is already in progress in this or another profile.</source>
-      <translation type="unfinished"/>
+      <translation>Невозможно загрузить повтор, как он уже находится в процессе в этом или другом профиле.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3077"/>
       <source>Replay each step with a shorter time interval between steps.</source>
-      <translation type="unfinished"/>
+      <translation>Повторите каждый шаг с более коротким интервалом времени между шагами.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3083"/>
       <source>Replay each step with a longer time interval between steps.</source>
-      <translation type="unfinished"/>
+      <translation>Повторять каждый шаг с более длительным интервалом времени между шагами.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="3760"/>
       <source>Review the update(s) available...</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Просмотрите доступное обновление...</numerusform>
+        <numerusform>Просмотрите доступные обновления...</numerusform>
+        <numerusform>Просмотрите доступные обновления...</numerusform>
+        <numerusform>Просмотрите доступные обновления...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4651"/>
@@ -10579,7 +10584,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="1699"/>
       <location filename="../src/mudlet.cpp" line="3154"/>
       <source>Load a Mudlet replay.</source>
-      <translation type="unfinished"/>
+      <translation>Загрузить повтор Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2759"/>
@@ -11290,7 +11295,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2722"/>
       <source>Server password: </source>
-      <translation type="unfinished"/>
+      <translation>Пароль сервера: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2739"/>
