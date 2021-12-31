@@ -1588,7 +1588,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="338"/>
       <source>Start logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Start logging game output to log file.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="652"/>
