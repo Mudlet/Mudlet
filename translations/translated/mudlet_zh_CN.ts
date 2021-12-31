@@ -1561,7 +1561,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="338"/>
       <source>Start logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>开始向日志文件写入游戏输出.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="652"/>
@@ -3583,7 +3583,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../src/VarUnit.cpp" line="88"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation type="unfinished"/>
+      <translation>选中的变量将被保存并会和您的配置文件一起加载。</translation>
     </message>
   </context>
   <context>
