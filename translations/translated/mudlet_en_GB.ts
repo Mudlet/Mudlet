@@ -887,7 +887,7 @@ please wait...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="143"/>
       <source>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</source>
-      <translation type="unfinished"/>
+      <translation>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2970"/>
@@ -1320,7 +1320,7 @@ rooms:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="354"/>
       <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="764"/>
@@ -1583,7 +1583,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="322"/>
       <source>Stop logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Stop logging game output to log file.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="338"/>
@@ -2767,7 +2767,12 @@ here (or created in the future) will automatically be assigned the name &quot;%1
 Duplicated area names will cause all but the first encountered one to gain a
 &quot;_###&quot; style suffix.
 %2</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Mudlet had previously allowed the map to have more than one area
+with the same or no name. To resolve these cases, an area without a name
+here (or created in the future) will automatically be assigned the name &quot;%1&quot;.
+Duplicated area names will cause all but the first encountered one to gain a
+&quot;_###&quot; style suffix.
+%2</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1244"/>
@@ -2852,7 +2857,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1333"/>
       <source>Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1342"/>
@@ -3573,7 +3578,7 @@ Would you like to update now?</translation>
     <message>
       <location filename="../src/VarUnit.cpp" line="88"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation type="unfinished"/>
+      <translation>Checked variables will be saved and loaded with your profile.</translation>
     </message>
   </context>
   <context>
@@ -5104,32 +5109,32 @@ Count</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>Click to make the color trigger ignore the text&apos;s background color - however choosing this for both foreground and background is an error.</source>
-      <translation type="unfinished"/>
+      <translation>Click to make the colour trigger ignore the text&apos;s background colour - however, choosing this for both foreground and background is an error.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
       <source>Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both foreground and background is an error.</source>
-      <translation type="unfinished"/>
+      <translation>Click to make the colour trigger ignore the text&apos;s foreground colour - however, choosing this for both foreground and background is an error.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
       <source>Click to make the color trigger when the text&apos;s background color has not been modified from its normal value.</source>
-      <translation type="unfinished"/>
+      <translation>Click to make the colour trigger when the text&apos;s background colour has not been modified from its normal value.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="67"/>
       <source>Click to make the color trigger when the text&apos;s foreground color has not been modified from its normal value.</source>
-      <translation type="unfinished"/>
+      <translation>Click to make the colour trigger when the text&apos;s foreground colour has not been modified from its normal value.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="71"/>
       <source>Click a color to make the trigger fire only when the text&apos;s background color matches the color number indicated.</source>
-      <translation type="unfinished"/>
+      <translation>Click a colour to make the trigger fire only when the text&apos;s background colour matches the colour number indicated.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="72"/>
       <source>Click a color to make the trigger fire only when the text&apos;s foreground color matches the color number indicated.</source>
-      <translation type="unfinished"/>
+      <translation>Click a colour to make the trigger fire only when the text&apos;s foreground colour matches the colour number indicated.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
@@ -5233,7 +5238,7 @@ Count</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="203"/>
       <source>Characters password. Note that the password is not encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Character's password. Note that the password is not encrypted in storage</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="253"/>
@@ -5413,27 +5418,27 @@ Count</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1816"/>
       <source>Load profile without connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Load profile without connecting.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1832"/>
       <source>Please set a valid profile name, game server address and the game port before loading.</source>
-      <translation type="unfinished"/>
+      <translation>Please set a valid profile name, game server address and the game port before loading.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1837"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Please set a valid profile name, game server address and the game port before connecting.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1890"/>
       <source>Click to hide the password; it will also hide if another profile is selected.</source>
-      <translation type="unfinished"/>
+      <translation>Click to hide the password; it will also hide if another profile is selected.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1894"/>
       <source>Click to reveal the password for this profile.</source>
-      <translation type="unfinished"/>
+      <translation>Click to reveal the password for this profile.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1755"/>
@@ -5944,42 +5949,42 @@ Count</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="144"/>
       <source>Location which will be used to store log files - matching logs will be appended to.</source>
-      <translation type="unfinished"/>
+      <translation>Location which will be used to store log files - matching logs will be appended to.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="145"/>
       <source>Select a directory where logs will be saved.</source>
-      <translation type="unfinished"/>
+      <translation>Select a directory where logs will be saved.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="146"/>
       <source>Reset the directory so that logs are saved to the profile&apos;s &lt;i&gt;log&lt;/i&gt; directory.</source>
-      <translation type="unfinished"/>
+      <translation>Reset the directory so that logs are saved to the profile&apos;s &lt;i&gt;log&lt;/i&gt; directory.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="150"/>
       <source>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</source>
-      <translation type="unfinished"/>
+      <translation>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="171"/>
       <source>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="198"/>
       <source>This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specified font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.</source>
-      <translation type="unfinished"/>
+      <translation>This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specified font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="204"/>
       <source>Select the only or the primary font used (depending on &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; setting) to produce the 2D mapper room symbols.</source>
-      <translation type="unfinished"/>
+      <translation>Select the only or the primary font used (depending on &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; setting) to produce the 2D mapper room symbols.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="206"/>
       <source>Using a single font is likely to produce a more consistent style but may cause the &lt;i&gt;font replacement character&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; to show if the font does not have a needed glyph (a font&apos;s individual character/symbol) to represent the grapheme (what is to be represented).  Clearing this checkbox will allow the best alternative glyph from another font to be used to draw that grapheme.</source>
-      <translation type="unfinished"/>
+      <translation>Using a single font is likely to produce a more consistent style but may cause the &lt;i&gt;font replacement character&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; to show if the font does not have a needed glyph (a font&apos;s individual character/symbol) to represent the grapheme (what is to be represented).  Clearing this checkbox will allow the best alternative glyph from another font to be used to draw that grapheme.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="219"/>
@@ -6011,7 +6016,7 @@ Count</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="673"/>
       <source>From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).</source>
-      <translation type="unfinished"/>
+      <translation>From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="807"/>
@@ -6241,17 +6246,17 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3394"/>
       <source>The room symbol will appear like this if only symbols (glyphs) from the specific font are used.</source>
-      <translation type="unfinished"/>
+      <translation>The room symbol will appear like this if only symbols (glyphs) from the specific font are used.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3399"/>
       <source>The room symbol will appear like this if symbols (glyphs) from any font can be used.</source>
-      <translation type="unfinished"/>
+      <translation>The room symbol will appear like this if symbols (glyphs) from any font can be used.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3439"/>
       <source>How many rooms in the whole map have this symbol.</source>
-      <translation type="unfinished"/>
+      <translation>How many rooms in the whole map have this symbol.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3457"/>
@@ -6261,7 +6266,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3465"/>
       <source>The symbol can be made entirely from glyphs in the specified font.</source>
-      <translation type="unfinished"/>
+      <translation>The symbol can be made entirely from glyphs in the specified font.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3483"/>
