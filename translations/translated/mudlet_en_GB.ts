@@ -6271,7 +6271,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3483"/>
       <source>The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different systems with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.</source>
-      <translation type="unfinished"/>
+      <translation>The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different system with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4074"/>
@@ -7064,12 +7064,12 @@ for the selected room:</numerusform>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="496"/>
       <source>&lt;p&gt;Saves the selected item. (Ctrl+S)&lt;/p&gt;&lt;p&gt;Saving causes any changes to the item to take effect. It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Saves the selected item. (Ctrl+S)&lt;/p&gt;&lt;p&gt;Saving causes any changes to the item to take effect. It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="545"/>
       <source>&lt;p&gt;Saves your profile. (Ctrl+Shift+S)&lt;/p&gt;&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Saves your profile. (Ctrl+Shift+S)&lt;/p&gt;&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="685"/>
@@ -7608,7 +7608,7 @@ for the selected room:</numerusform>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9000"/>
       <source>Sound file to play when the trigger fires.</source>
-      <translation type="unfinished"/>
+      <translation>Sound file to play when the trigger fires.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="791"/>
@@ -9035,7 +9035,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="3726"/>
       <source>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation type="unfinished"/>
+      <translation>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="686"/>
@@ -9873,7 +9873,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="520"/>
       <source>Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.</source>
       <comment>Same text is used in 2 places.</comment>
-      <translation type="unfinished"/>
+      <translation>Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1010"/>
@@ -10013,23 +10013,26 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="3058"/>
       <source>Cannot load a replay as one is already in progress in this or another profile.</source>
-      <translation type="unfinished"/>
+      <translation>Cannot load a replay as one is already in progress in this or another profile.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3077"/>
       <source>Replay each step with a shorter time interval between steps.</source>
-      <translation type="unfinished"/>
+      <translation>Replay each step with a shorter time interval between steps.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3083"/>
       <source>Replay each step with a longer time interval between steps.</source>
-      <translation type="unfinished"/>
+      <translation>Replay each step with a longer time interval between steps.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="3760"/>
       <source>Review the update(s) available...</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Review the update(s) available...</numerusform>
+        <numerusform>Review the update(s) available...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4651"/>
@@ -10463,7 +10466,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="1699"/>
       <location filename="../src/mudlet.cpp" line="3154"/>
       <source>Load a Mudlet replay.</source>
-      <translation type="unfinished"/>
+      <translation>Load a Mudlet replay.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2759"/>
@@ -11169,7 +11172,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2722"/>
       <source>Server password: </source>
-      <translation type="unfinished"/>
+      <translation>Server password: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2739"/>
