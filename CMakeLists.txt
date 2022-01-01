@@ -83,7 +83,7 @@ endif()
 # IMPORTANT: To insure consistency please ensure the SAME of the first two
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 4.13.1)
+set(APP_VERSION 4.14.1)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
                                          STREQUAL "")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
@@ -138,7 +138,7 @@ git_submodule_init(
   READABLE_NAME "lua code formatter source code")
 
 git_submodule_init(
-  CHECK_FILE "3rdparty/qt-orordered-map/src/orderedmap.h" SUBMODULE_PATH "3rdparty/qt-ordered-map"
+  CHECK_FILE "3rdparty/qt-ordered-map/src/orderedmap.h" SUBMODULE_PATH "3rdparty/qt-ordered-map"
   READABLE_NAME "Qt ordered map source code")
 
 if(USE_UPDATER)

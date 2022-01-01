@@ -171,14 +171,14 @@ void TTabBar::applyPrefixToDisplayedText(const QString& tabName, const QString& 
 {
     int index = tabIndex(tabName);
     if (index > -1) {
-        QTabBar::setTabText(index, QStringLiteral("%1%2").arg(prefix, tabData(index).toString()));
+        QTabBar::setTabText(index, qsl("%1%2").arg(prefix, tabData(index).toString()));
     }
 }
 
 void TTabBar::applyPrefixToDisplayedText(int index, const QString& prefix)
 {
     if (index > -1) {
-        QTabBar::setTabText(index, QStringLiteral("%1%2").arg(prefix, tabData(index).toString()));
+        QTabBar::setTabText(index, qsl("%1%2").arg(prefix, tabData(index).toString()));
     }
 }
 

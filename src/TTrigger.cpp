@@ -188,7 +188,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
     }
 
     if ((propertyList.empty()) && (!isFolder()) && (!mColorTrigger)) {
-        setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
+        setError(qsl("<b><font color='blue'>%1</font></b>")
                 .arg(tr("Error: This trigger has no patterns defined, yet. Add some to activate it.")));
         mOK_init = false;
         return false;
@@ -219,7 +219,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
                     TDebug(Qt::white, Qt::red) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
                     TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in: ")" << regexp.constData() << "\"\n" >> mpHost;
                 }
-                setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
+                setError(qsl("<b><font color='blue'>%1</font></b>")
                          .arg(tr(R"(Error: in item %1, perl regex "%2" failed to compile, reason: "%3".)")
                          .arg(QString::number(i + 1), regexp.constData(), error)));
                 state = false;
@@ -237,10 +237,10 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
             std::stringstream func;
             func << "trigger" << mID << "condition" << i;
             funcName = func.str();
-            QString code = QStringLiteral("function %1()\n%2\nend\n").arg(funcName.c_str(), regexList[i]);
+            QString code = qsl("function %1()\n%2\nend\n").arg(funcName.c_str(), regexList[i]);
             QString error;
             if (!mpLua->compile(code, error, QString::fromStdString(funcName))) {
-                setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
+                setError(qsl("<b><font color='blue'>%1</font></b>")
                          .arg(tr(R"(Error: in item %1, lua function "%2" failed to compile, reason: "%3".)")
                          .arg(QString::number(i + 1), regexList.at(i), error)));
                 state = false;
@@ -260,7 +260,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
             TTrigger::decodeColorPatternText(regexList.at(i), textAnsiFg, textAnsiBg);
 
             if (textAnsiBg == scmIgnored && textAnsiFg == scmIgnored) {
-                setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
+                setError(qsl("<b><font color='blue'>%1</font></b>")
                                  .arg(tr("Error: in item %1, no colors to match were set - at least <i>one</i> of the foreground or background must not be <i>ignored</i>.")
                                       .arg(QString::number(i+1))));
                 state = false;
@@ -1315,10 +1315,10 @@ bool TTrigger::setScript(const QString& script)
 
 bool TTrigger::compileScript()
 {
-    mFuncName = QStringLiteral("Trigger%1").arg(QString::number(mID));
-    QString code = QStringLiteral("function %1()\n%2\nend\n").arg(mFuncName, mScript);
+    mFuncName = qsl("Trigger%1").arg(QString::number(mID));
+    QString code = qsl("function %1()\n%2\nend\n").arg(mFuncName, mScript);
     QString error;
-    if (mpLua->compile(code, error, QStringLiteral("Trigger: %1").arg(getName()))) {
+    if (mpLua->compile(code, error, qsl("Trigger: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
@@ -1429,7 +1429,7 @@ QString TTrigger::createColorPatternText(const int fgColorCode, const int bgColo
     } else if (fgColorCode == scmDefault) {
         fgText = QLatin1String("DEFAULT");
     } else {
-        fgText = QStringLiteral("%1").arg(fgColorCode, 3, 10, QLatin1Char('0'));
+        fgText = qsl("%1").arg(fgColorCode, 3, 10, QLatin1Char('0'));
     }
 
     if (bgColorCode == scmIgnored) {
@@ -1437,18 +1437,18 @@ QString TTrigger::createColorPatternText(const int fgColorCode, const int bgColo
     } else if (bgColorCode == scmDefault) {
         bgText = QLatin1String("DEFAULT");
     } else {
-        bgText = QStringLiteral("%1").arg(bgColorCode, 3, 10, QLatin1Char('0'));
+        bgText = qsl("%1").arg(bgColorCode, 3, 10, QLatin1Char('0'));
     }
 
-    return QStringLiteral("ANSI_COLORS_F{%1}_B{%2}").arg(fgText, bgText);
+    return qsl("ANSI_COLORS_F{%1}_B{%2}").arg(fgText, bgText);
 }
 
 void TTrigger::decodeColorPatternText(const QString& patternText, int& fgColorCode, int& bgColorCode)
 {
     // The numbers used for the text have changed - see table in:
     // TColorTable* TTrigger::createColorPattern(int ansiFg, int ansiBg)
-    QRegularExpression regex = QRegularExpression(QStringLiteral("^ANSI_COLORS_F{(\\d+|DEFAULT|IGNORE)}_B{(\\d+|DEFAULT|IGNORE)}$"));
-    // Was QRegularExpression regex = QRegularExpression(QStringLiteral(R"(FG(\d+)BG(\d+))"));
+    QRegularExpression regex = QRegularExpression(qsl("^ANSI_COLORS_F{(\\d+|DEFAULT|IGNORE)}_B{(\\d+|DEFAULT|IGNORE)}$"));
+    // Was QRegularExpression regex = QRegularExpression(qsl(R"(FG(\d+)BG(\d+))"));
     QRegularExpressionMatch match = regex.match(patternText);
     // scmDefault is the new code for "default" colour (as 0 is a valid ANSI color number!)
     // scmIgnored is the new code for "reset" i.e. NOT set color trigger (i.e. don't

@@ -806,6 +806,17 @@ function Adjustable.Container:load(slot, dir)
         if self.minimized == true then self.Inside:hide() self:resize(nil, self.buttonsize + 10) else self.Inside:show() end
         self.origh = mytable.origh
     end
+
+    if mytable.auto_hidden or mytable.hidden then
+        self:hide()
+        if not mytable.hidden then
+            self.hidden = false
+            self.auto_hidden = true
+        end
+    else
+        self:show()
+    end
+
     self:detach()
     if mytable.attached then
         self:attachToBorder(mytable.attached) 
@@ -819,12 +830,6 @@ function Adjustable.Container:load(slot, dir)
         for k in pairs(self.connectedToBorder) do
             self:connectToBorder(k)
         end
-    end
-    if mytable.auto_hidden or mytable.hidden then
-        self:hide()
-        if not mytable.hidden then self.hidden = false self.auto_hidden = true end
-    else
-        self:show()
     end
     self:adjustConnectedContainers()
     return true

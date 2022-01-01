@@ -153,10 +153,18 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
 void dlgMapper::updateAreaComboBox()
 {
+    if (!mpMap) {
+        // We do not have a valid TMap instance pointer so doing anything now
+        // is pointless - just leave the widget empty and disabled
+        comboBox_showArea->clear();
+        comboBox_showArea->setEnabled(false);
+        return;
+    }
+
     QString oldValue = comboBox_showArea->currentText(); // Remember where we were
     QMapIterator<int, QString> itAreaNamesA(mpMap->mpRoomDB->getAreaNamesMap());
     //insert sort them alphabetically (case INsensitive)
-    QMap<QString, QString> _areaNames;
+    QMap<QString, QString> areaNames;
     while (itAreaNamesA.hasNext()) {
         itAreaNamesA.next();
         if (itAreaNamesA.key() == -1 && !mShowDefaultArea) {
@@ -164,17 +172,41 @@ void dlgMapper::updateAreaComboBox()
         }
 
         uint deduplicate = 0;
-        QString _name;
+        QString name;
         do {
-            _name = QStringLiteral("%1+%2").arg(itAreaNamesA.value().toLower(), QString::number(++deduplicate));
+            name = qsl("%1+%2").arg(itAreaNamesA.value().toLower(), QString::number(++deduplicate));
             // Use a different suffix separator to one that area names
             // deduplication uses ('_') - makes debugging easier?
-        } while (_areaNames.contains(_name));
-        _areaNames.insert(_name, itAreaNamesA.value());
+        } while (areaNames.contains(name));
+        areaNames.insert(name, itAreaNamesA.value());
     }
 
     comboBox_showArea->clear();
-    QMapIterator<QString, QString> itAreaNamesB(_areaNames);
+
+    if (areaNames.isEmpty() || (mpMap && areaNames.count() == 1 && (*areaNames.constBegin() == mpMap->getDefaultAreaName()) && !mShowDefaultArea)) {
+        // IF there are no area names to show - should be impossible as there
+        // should always be the "Default Area" one
+        // OR there is only one sorted name
+        //    AND it is the "Default Area"
+        //    AND we are not supposed to show it
+        // THEN
+        //    We do not have ANYTHING to go in the QComboBox - so leave the
+        // control empty and disabled:
+        comboBox_showArea->setEnabled(false);
+        return;
+    }
+
+    if (areaNames.count() == ((areaNames.contains(mpMap->getDefaultAreaName()) && !mShowDefaultArea) ? 2 : 1)) {
+        // IF we have exactly 2 (if we are NOT showing the default area AND the names include it)
+        //         OR exactly 1 otherwise
+        // THEN
+        //    We only have one item to show - so show it but disable the control
+        comboBox_showArea->setEnabled(false);
+    } else {
+        comboBox_showArea->setEnabled(true);
+    }
+
+    QMapIterator<QString, QString> itAreaNamesB(areaNames);
     while (itAreaNamesB.hasNext()) {
         itAreaNamesB.next();
         comboBox_showArea->addItem(itAreaNamesB.value());
