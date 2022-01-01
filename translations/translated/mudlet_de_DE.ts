@@ -1579,7 +1579,7 @@ Diese Orte wurden ausprobiert:
     <message>
       <location filename="../src/TMainConsole.cpp" line="322"/>
       <source>Stop logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Protokollierung der Ausgabe des Spiels als Log-Datei beenden.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="338"/>
@@ -2908,7 +2908,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1333"/>
       <source>Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Auf dieses Element zeigen, um die Unicode Codepoints der Auswahl anzuzeigen &lt;i&gt;(nur die erste Zeile!)&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1342"/>
@@ -5152,32 +5152,32 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>Click to make the color trigger ignore the text&apos;s background color - however choosing this for both foreground and background is an error.</source>
-      <translation type="unfinished"/>
+      <translation>Klicke, damit der Farbtrigger die Hintergrundfarbe des Textes ignoriert - allerdings wäre es ein Fehler, dies sowohl für Vordergrund- und Hintergrundfarbe auszuwählen.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
       <source>Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both foreground and background is an error.</source>
-      <translation type="unfinished"/>
+      <translation>Klicke, damit der Farbtrigger die Vordergrundfarbe des Textes ignoriert - allerdings wäre es ein Fehler, dies sowohl für Vordergrund- und Hintergrundfarbe auszuwählen.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
       <source>Click to make the color trigger when the text&apos;s background color has not been modified from its normal value.</source>
-      <translation type="unfinished"/>
+      <translation>Klicke hier, um den Trigger auszulösen, wenn die Hintergrundfarbe des Textes nicht vom Normalwert geändert wurde.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="67"/>
       <source>Click to make the color trigger when the text&apos;s foreground color has not been modified from its normal value.</source>
-      <translation type="unfinished"/>
+      <translation>Klicke hier, um den Trigger auszulösen, wenn die Vordergrundfarbe des Textes nicht vom Normalwert geändert wurde.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="71"/>
       <source>Click a color to make the trigger fire only when the text&apos;s background color matches the color number indicated.</source>
-      <translation type="unfinished"/>
+      <translation>Wähle eine Farbe, um den Trigger nur dann auszulösen, wenn die Hintergrundfarbe des Textes mit der angegebenen Farbnummer übereinstimmt.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="72"/>
       <source>Click a color to make the trigger fire only when the text&apos;s foreground color matches the color number indicated.</source>
-      <translation type="unfinished"/>
+      <translation>Wähle eine Farbe, um den Trigger nur dann auszulösen, wenn die Vordergrundfarbe des Textes mit der angegebenen Farbnummer übereinstimmt.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
@@ -5281,7 +5281,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="203"/>
       <source>Characters password. Note that the password is not encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Das Passwort des Charakters. Beachte, dass das Kennwort nicht verschlüsselt gespeichert wird</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="253"/>
@@ -5461,12 +5461,12 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1816"/>
       <source>Load profile without connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Profil laden ohne zu verbinden.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1832"/>
       <source>Please set a valid profile name, game server address and the game port before loading.</source>
-      <translation type="unfinished"/>
+      <translation>Bitte stelle vor dem Laden einen gültigen Profilnamen ein, sowie Adresse und Port des Spielservers.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1837"/>
@@ -5476,12 +5476,12 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1890"/>
       <source>Click to hide the password; it will also hide if another profile is selected.</source>
-      <translation type="unfinished"/>
+      <translation>Klicke hier, um das Kennwort auszublenden. Es wird auch ausgeblendet, wenn ein anderes Profil ausgewählt wird.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1894"/>
       <source>Click to reveal the password for this profile.</source>
-      <translation type="unfinished"/>
+      <translation>Klicke hier, um das Kennwort für dieses Profil einzublenden.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1755"/>
@@ -5992,12 +5992,12 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="144"/>
       <source>Location which will be used to store log files - matching logs will be appended to.</source>
-      <translation type="unfinished"/>
+      <translation>Standort, der zum Speichern von Log-Dateien verwendet wird - übereinstimmende Logs werden angehängt.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="145"/>
       <source>Select a directory where logs will be saved.</source>
-      <translation type="unfinished"/>
+      <translation>Wähle ein Verzeichnis, in dem Protokolle gespeichert werden.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="146"/>
@@ -10541,7 +10541,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <location filename="../src/mudlet.cpp" line="1699"/>
       <location filename="../src/mudlet.cpp" line="3154"/>
       <source>Load a Mudlet replay.</source>
-      <translation type="unfinished"/>
+      <translation>Lade eine Mudlet-Wiederholung.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2759"/>
@@ -11247,7 +11247,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2722"/>
       <source>Server password: </source>
-      <translation type="unfinished"/>
+      <translation>Server-Passwort: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2739"/>
