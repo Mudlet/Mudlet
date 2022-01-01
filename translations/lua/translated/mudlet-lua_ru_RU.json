@@ -71,10 +71,6 @@
     "message": "Пакет '%s' успешно установлен.",
     "description": "Success message after drag&drop of package file onto Mudlet - %s is the file name"
   },
-  "Mudlet.packageInstallFail": {
-    "message": "Не удалось установить пакет '%s'.",
-    "description": "Failure message after drag&drop of package file onto Mudlet - %s is the file name"
-  },
   "Mudlet.packageDownloading": {
     "message": "Скачивание пакета с %s.",
     "description": "Download package from Url for installation - %s is source url"
