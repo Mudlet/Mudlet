@@ -197,6 +197,39 @@ describe("Tests StringUtils.lua functions", function()
     end)
   end)
 
+  describe("Tests the functionality of string.escape", function()
+    it("Should escape special characters in simple cases", function()
+      local replacements = {
+        ["%"] = "%%",
+        ["^"] = "%^",
+        ["$"] = "%$",
+        ["("] = "%(",
+        [")"] = "%)",
+        ["["] = "%[",
+        ["]"] = "%]",
+        ["."] = "%.",
+        ["*"] = "%*",
+        ["+"] = "%+",
+        ["-"] = "%-",
+        ["?"] = "%?",
+      }
+      for original, replacement in pairs(replacements) do
+        assert.equals(replacement, string.escape(original))
+      end
+    end)
+
+    it("Should escape special characters in some more complicated cases too", function()
+      local replacements = {
+        ["https://fern-ahead-jelly.glitch.me/time/"] = "https://fern%-ahead%-jelly%.glitch%.me/time/",
+        ["75% of things to-be have been"] = "75%% of things to%-be have been",
+        ["^%d%a$"] = "%^%%d%%a%$",
+      }
+      for original, replacement in pairs(replacements) do
+        assert.equals(replacement, string.escape(original))
+      end
+    end)
+  end)
+
   describe("Tests the functionality of f", function()
     it("should return a string with no interpolation as itself", function()
       local str = "This is a test"

@@ -113,6 +113,30 @@ function string:trim()
   end
 end
 
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.escape
+function string:escape()
+  local selfType = type(self)
+  if selfType ~= "string" then
+    printError(f"string.escape: bad argument #1 type (string to escape as string expected, got {selfType})", true, true)
+  end
+  local replacements = {
+    ["%"] = "%%",
+    ["^"] = "%^",
+    ["$"] = "%$",
+    ["("] = "%(",
+    [")"] = "%)",
+    ["["] = "%[",
+    ["]"] = "%]",
+    ["."] = "%.",
+    ["*"] = "%*",
+    ["+"] = "%+",
+    ["-"] = "%-",
+    ["?"] = "%?",
+  }
+  local escaped = self:gsub(".", replacements)
+  return escaped
+end
+
 -- following functions fiddled with from https://github.com/hishamhm/f-strings/blob/master/F.lua and https://hisham.hm/2016/01/04/string-interpolation-in-lua/
 -- first bit patches load for lua 5.1.
 local load = load
