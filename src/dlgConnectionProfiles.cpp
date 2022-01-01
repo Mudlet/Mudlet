@@ -1753,9 +1753,7 @@ bool dlgConnectionProfiles::validateProfile()
             notificationAreaMessageBox->setText(qsl("%1\n%2").arg(notificationAreaMessageBox->text(), tr("This profile name is already in use.")));
             validName = false;
             valid = false;
-            break;
         }
-    }
 
         QString port = port_entry->text().trimmed();
         if (!port.isEmpty() && (port.indexOf(QRegularExpression(qsl("^\\d+$")), 0) == -1)) {
@@ -1802,34 +1800,35 @@ bool dlgConnectionProfiles::validateProfile()
             port_ssl_tsl->setToolTip(QString());
         }
 #endif
-    QUrl check;
-    QString url = host_name_entry->text().trimmed();
-    check.setHost(url);
 
-    if (url.isEmpty()) {
-        host_name_entry->setPalette(mErrorPalette);
-        validUrl = false;
-        valid = false;
-    }
+        QUrl check;
+        QString url = host_name_entry->text().trimmed();
+        check.setHost(url);
 
-    if (!check.isValid()) {
-        notificationAreaIconLabelError->show();
-        notificationAreaMessageBox->setText(QStringLiteral("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server."), check.errorString()));
-        host_name_entry->setPalette(mErrorPalette);
-        validUrl = false;
-        valid = false;
-    }
-
-    if (url.indexOf(QRegularExpression(QStringLiteral("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
-        if (port_ssl_tsl->isChecked()) {
-            notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(
-                    qsl("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server."), check.errorString()));
+        if (url.isEmpty()) {
             host_name_entry->setPalette(mErrorPalette);
             validUrl = false;
             valid = false;
         }
-    }
+
+        if (!check.isValid()) {
+            notificationAreaIconLabelError->show();
+            notificationAreaMessageBox->setText(QStringLiteral("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server."), check.errorString()));
+            host_name_entry->setPalette(mErrorPalette);
+            validUrl = false;
+            valid = false;
+        }
+
+        if (url.indexOf(QRegularExpression(QStringLiteral("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
+            if (port_ssl_tsl->isChecked()) {
+                notificationAreaIconLabelError->show();
+                notificationAreaMessageBox->setText(
+                        qsl("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server."), check.errorString()));
+                host_name_entry->setPalette(mErrorPalette);
+                validUrl = false;
+                valid = false;
+            }
+        }
 
         if (url.indexOf(QRegularExpression(qsl("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
             if (port_ssl_tsl->isChecked()) {
