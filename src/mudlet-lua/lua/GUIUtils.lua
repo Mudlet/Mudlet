@@ -698,6 +698,9 @@ end
 --- @see showColors
 function bg(console, colorName)
   local colorName = colorName or console
+  if colorName == nil then
+    error("bg: bad argument #1 type (color name as string expected, got nil)!")
+  end
   if not color_table[colorName] then
     error(string.format("bg: '%s' color doesn't exist - see showColors()", colorName))
   end
@@ -723,6 +726,9 @@ end
 --- @see showColors
 function fg(console, colorName)
   local colorName = colorName or console
+  if colorName == nil then
+    error("fg: bad argument #1 type (color name as string expected, got nil)!")
+  end
   if not color_table[colorName] then
     error(string.format("fg: '%s' color doesn't exist - see showColors()", colorName))
   end
