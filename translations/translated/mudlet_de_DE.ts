@@ -885,7 +885,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="143"/>
       <source>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</source>
-      <translation type="unfinished"/>
+      <translation>Klick auf eine Zeile, um diese Raumnummer an- oder abzuwählen. Wenn der Raum einen Namen hat, wird dieser auch ausgewählt. Durch einen Klick auf die entsprechende Kopfzelle wird nach der Spalte sortiert. Hinweis: Die Spalte "Name" erscheint nur, wenn mindestens ein Raum einen Namen hat.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2970"/>
@@ -1315,7 +1315,7 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="354"/>
       <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i&gt;N:&lt;/i&gt; ist die Latenz von Spielserver und Netzwerk (aka Ping in Sekunden), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; ist die System-Verarbeitungszeit - wie lange die Trigger zum verarbeiten der letzten Zeile(n) brauchten.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="764"/>
