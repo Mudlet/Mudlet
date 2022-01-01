@@ -1878,6 +1878,7 @@ bool dlgConnectionProfiles::validateProfile()
             return false;
         }
     }
+    return false;
 }
 
 // credit: http://www.qtcentre.org/archive/index.php/t-23469.html

@@ -159,8 +159,6 @@ private slots:
     void slot_password_saved(QKeychain::Job* job);
     void slot_password_deleted(QKeychain::Job* job);
     void slot_reenableAllProfileItems();
-    void enableConnectionButtons();
-    void disableConnectionButtons();
 };
 
 
