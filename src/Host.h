@@ -298,7 +298,7 @@ public:
 
     void updateDisplayDimensions();
 
-    bool installPackage(const QString&, int);
+    std::pair<bool, QString> installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&, bool);

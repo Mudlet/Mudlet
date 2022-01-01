@@ -10665,7 +10665,9 @@ int TLuaInterpreter::installPackage(lua_State* L)
 {
     QString location = getVerifiedString(L, __func__, 1, "package location path and file name");
     Host& host = getHostFromLua(L);
-    lua_pushboolean(L, host.installPackage(location, 0));
+    if (auto [success, message] = host.installPackage(location, 0); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
     return 1;
 }
 
@@ -10685,9 +10687,8 @@ int TLuaInterpreter::installModule(lua_State* L)
     Host& host = getHostFromLua(L);
     QString module = QDir::fromNativeSeparators(modName);
 
-    if (!host.installPackage(module, 3)) {
-        lua_pushboolean(L, false);
-        return 1;
+    if (auto [success, message] = host.installPackage(module, 3); !success) {
+        return warnArgumentValue(L, __func__, message);
     }
     auto moduleManager = host.mpModuleManager;
     if (moduleManager && moduleManager->mModuleTable->isVisible()) {
