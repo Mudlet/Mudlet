@@ -121,16 +121,16 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     auto pWelcome_document = new QTextDocument(this);
 
-    copyProfile = new QAction(tr("Copy"), this);
-    copyProfile->setObjectName(qsl("copyProfile"));
+    mpCopyProfile = new QAction(tr("Copy"), this);
+    mpCopyProfile->setObjectName(qsl("mpCopyProfile"));
     auto copyProfileSettings = new QAction(tr("Copy settings only"), this);
     copyProfileSettings->setObjectName(qsl("copyProfileSettingsOnly"));
 
-    copy_profile_toolbutton->addAction(copyProfile);
+    copy_profile_toolbutton->addAction(mpCopyProfile);
     copy_profile_toolbutton->addAction(copyProfileSettings);
-    copy_profile_toolbutton->setDefaultAction(copyProfile);
-    auto widgetList = copyProfile->associatedWidgets();
-    Q_ASSERT_X(widgetList.count(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for copyProfile QAction not found.");
+    copy_profile_toolbutton->setDefaultAction(mpCopyProfile);
+    auto widgetList = mpCopyProfile->associatedWidgets();
+    Q_ASSERT_X(widgetList.count(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for mpCopyProfile QAction not found.");
     widgetList.first()->setAccessibleName(tr("copy profile"));
     widgetList.first()->setAccessibleDescription(tr("copy the entire profile to new one that will require a different new name."));
 
@@ -165,7 +165,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
         copy_profile_toolbutton->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
         copy_profile_toolbutton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-        copyProfile->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
+        mpCopyProfile->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
 
         QTextCursor cursor = pWelcome_document->find(qsl("NEW_PROFILE_ICON"), 0, QTextDocument::FindWholeWords);
         // The indicated piece of marker text should be selected by the cursor
@@ -209,7 +209,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(connect_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::accept);
     connect(abort, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_cancel);
     connect(new_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_addProfile);
-    connect(copyProfile, &QAction::triggered, this, &dlgConnectionProfiles::slot_copy_profile);
+    connect(mpCopyProfile, &QAction::triggered, this, &dlgConnectionProfiles::slot_copy_profile);
     connect(copyProfileSettings, &QAction::triggered, this, &dlgConnectionProfiles::slot_copy_profilesettings_only);
     connect(remove_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_deleteProfile);
     connect(profile_name_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_name);
@@ -1431,8 +1431,8 @@ void dlgConnectionProfiles::slot_copy_profile()
     discord_optin_checkBox->setChecked(false);
 
     QApplication::setOverrideCursor(Qt::BusyCursor);
-    copyProfile->setText(tr("Copying..."));
-    copyProfile->setEnabled(false);
+    mpCopyProfile->setText(tr("Copying..."));
+    mpCopyProfile->setEnabled(false);
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(mudlet::profileHomePath, oldname), mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
     auto watcher = new QFutureWatcher<bool>;
     QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
@@ -1449,8 +1449,8 @@ void dlgConnectionProfiles::slot_copy_profile()
             writeSecurePassword(profile_name, oldPassword);
         }
         mCopyingProfile = false;
-        copyProfile->setText(tr("Copy"));
-        copyProfile->setEnabled(true);
+        mpCopyProfile->setText(tr("Copy"));
+        mpCopyProfile->setEnabled(true);
         QApplication::restoreOverrideCursor();
         validateProfile();
     });

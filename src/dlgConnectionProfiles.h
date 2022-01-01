@@ -138,7 +138,7 @@ private:
     QPushButton* connect_button;
     QLineEdit* delete_profile_lineedit;
     QPushButton* delete_button;
-    QAction* copyProfile;
+    QAction* mpCopyProfile;
     QString mDiscordApplicationId;
     QString mDiscordInviteURL;
     QAction* mpAction_revealPassword;
