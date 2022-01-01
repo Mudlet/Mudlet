@@ -195,10 +195,6 @@ bool TMxpNodeBuilder::acceptSequence(char ch, std::string& buffer)
         }
     }
 
-    if (mIsQuotedSequence && !mSequenceHasSpaces && !mReadingAttrValue && ch == '=') {
-        return true;
-    }
-
     if (!mIsInsideSequence) {
         mIsInsideSequence = true;
     }

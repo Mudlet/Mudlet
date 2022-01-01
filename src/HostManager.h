@@ -45,7 +45,7 @@ class HostManager
         bool operator== (const Iter& other);
         Iter& operator++();
         QSharedPointer<Host> operator*();
-        
+
     private:
         HostMap::iterator it;
     };
@@ -60,6 +60,7 @@ public:
     bool deleteHost(const QString&);
     void postIrcMessage(const QString&, const QString&, const QString&);
     void postInterHostEvent(const Host*, const TEvent&, const bool = false);
+    void changeAllHostColour(const Host*);
     Iter begin() { return Iter(this, true); }
     Iter end() { return Iter(this, false); }
 

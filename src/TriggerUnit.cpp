@@ -242,7 +242,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     if (!data.isEmpty()) {
 #if defined(Q_OS_WIN32)
         // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
-        char* subject = (char*)malloc(strlen(data.toUtf8().data()) + 1);
+        char* subject = static_cast<char*>(malloc(strlen(data.toUtf8().data()) + 1));
         strcpy(subject, data.toUtf8().data());
 #else
         char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
@@ -360,7 +360,7 @@ void TriggerUnit::_assembleReport(TTrigger* pChild)
     }
 }
 
-QString TriggerUnit::assembleReport()
+std::tuple<QString, int, int, int, int> TriggerUnit::assembleReport()
 {
     statsActiveTriggers = 0;
     statsTriggerTotal = 0;
@@ -393,7 +393,13 @@ QString TriggerUnit::assembleReport()
         << "trigger patterns total: " << QString::number(statsPatterns) << "\n"
         << "tempTriggers current total: " << QString::number(statsTempTriggers) << "\n"
         << "active triggers: " << QString::number(statsActiveTriggers) << "\n";
-    return msg.join("");
+    return {
+        msg.join(QString()),
+        statsTriggerTotal,
+        statsPatterns,
+        statsTempTriggers,
+        statsActiveTriggers
+    };
 }
 
 void TriggerUnit::doCleanup()

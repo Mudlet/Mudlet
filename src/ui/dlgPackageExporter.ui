@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>566</width>
-    <height>743</height>
+    <height>825</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -21,261 +21,385 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_5">
-     <item>
-      <widget class="QLineEdit" name="lineEdit_packageName">
-       <property name="placeholderText">
-        <string>Package name here</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>or</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="packageList">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="editable">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="groupBox_exportSelection">
-     <property name="title">
-      <string>Select what to export</string>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout">
+    <widget class="QWidget" name="widget_newOrExistingPackageName" native="true">
+     <layout class="QHBoxLayout" name="horizontalLayout_packageName">
       <item>
-       <widget class="QTreeWidget" name="treeWidget_exportSelection">
-        <attribute name="headerVisible">
+       <widget class="QLineEdit" name="lineEdit_packageName">
+        <property name="placeholderText">
+         <string>Package name here</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_or">
+        <property name="text">
+         <string>or</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="packageList">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="editable">
          <bool>false</bool>
-        </attribute>
-        <column>
-         <property name="text">
-          <string>Check items to export</string>
-         </property>
-        </column>
+        </property>
        </widget>
       </item>
      </layout>
     </widget>
    </item>
    <item>
-    <widget class="QFrame" name="frame_2">
+    <widget class="QSplitter" name="splitter_metadata">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
      </property>
-     <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <item>
-       <widget class="QPushButton" name="pushBotton_openInfos">
-        <property name="focusPolicy">
-         <enum>Qt::TabFocus</enum>
-        </property>
-        <property name="text">
-         <string>(optional) add icon, description, and more</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-        <property name="autoDefault">
-         <bool>false</bool>
-        </property>
-        <property name="flat">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QWidget" name="input" native="true">
-        <layout class="QFormLayout" name="formLayout">
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_4">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
+     <widget class="QGroupBox" name="groupBox_exportSelection">
+      <property name="title">
+       <string>Select what to export</string>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QTreeWidget" name="treeWidget_exportSelection">
+         <attribute name="headerVisible">
+          <bool>false</bool>
+         </attribute>
+         <column>
+          <property name="text">
+           <string>Check items to export</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QFrame" name="frame_metadata">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QPushButton" name="pushButton_openInfos">
+         <property name="focusPolicy">
+          <enum>Qt::TabFocus</enum>
+         </property>
+         <property name="text">
+          <string>(optional) add icon, description, and more</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="autoDefault">
+          <bool>false</bool>
+         </property>
+         <property name="flat">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSplitter" name="splitter_metadataAssets">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <widget class="QWidget" name="widget_optionalsForm" native="true">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_metadata">
+           <property name="leftMargin">
+            <number>0</number>
            </property>
-           <property name="text">
-            <string>Author</string>
+           <property name="topMargin">
+            <number>0</number>
            </property>
-           <property name="buddy">
-            <cstring>lineEdit_author</cstring>
+           <property name="rightMargin">
+            <number>0</number>
            </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QLineEdit" name="lineEdit_author">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
+           <property name="bottomMargin">
+            <number>0</number>
            </property>
-           <property name="focusPolicy">
-            <enum>Qt::StrongFocus</enum>
-           </property>
-           <property name="placeholderText">
-            <string>optional</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="label_6">
-           <property name="text">
-            <string>Icon</string>
-           </property>
-           <property name="buddy">
-            <cstring>pushButton_addIcon</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <layout class="QHBoxLayout" name="horizontalLayout_2">
-           <item>
-            <widget class="QPushButton" name="pushButton_addIcon">
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_author">
+             <property name="text">
+              <string>Author</string>
+             </property>
+             <property name="buddy">
+              <cstring>lineEdit_author</cstring>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="lineEdit_author">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
-             <property name="text">
-              <string>Add icon</string>
+             <property name="focusPolicy">
+              <enum>Qt::StrongFocus</enum>
+             </property>
+             <property name="placeholderText">
+              <string>optional</string>
              </property>
             </widget>
            </item>
-           <item>
-            <widget class="QLabel" name="Icon">
-             <property name="minimumSize">
-              <size>
-               <width>48</width>
-               <height>48</height>
-              </size>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_icon">
+             <property name="text">
+              <string>Icon</string>
              </property>
-             <property name="maximumSize">
-              <size>
-               <width>48</width>
-               <height>48</height>
-              </size>
+             <property name="buddy">
+              <cstring>pushButton_addIcon</cstring>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QWidget" name="widget_icon" native="true">
+             <layout class="QHBoxLayout" name="horizontalLayout_2">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QPushButton" name="pushButton_addIcon">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>Icon size of 512x512 recommended</string>
+                </property>
+                <property name="text">
+                 <string>Add icon</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="Icon">
+                <property name="minimumSize">
+                 <size>
+                  <width>48</width>
+                  <height>48</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>48</width>
+                  <height>48</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>Icon size of 512x512 recommended</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>512x512 recommended</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_shortDescription">
+             <property name="text">
+              <string>Short description</string>
+             </property>
+             <property name="buddy">
+              <cstring>lineEdit_title</cstring>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLineEdit" name="lineEdit_title">
+             <property name="maxLength">
+              <number>140</number>
+             </property>
+             <property name="placeholderText">
+              <string>optional</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="label_detailedDescription">
+             <property name="text">
+              <string>Description</string>
+             </property>
+             <property name="buddy">
+              <cstring>textEdit_description</cstring>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="dlgPackageExporterDescription" name="textEdit_description">
+             <property name="tabChangesFocus">
+              <bool>true</bool>
+             </property>
+             <property name="placeholderText">
+              <string>optional. Markdown supported, and you can add images with drag and drop</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="label_version">
+             <property name="text">
+              <string>Version</string>
+             </property>
+             <property name="buddy">
+              <cstring>lineEdit_version</cstring>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QLineEdit" name="lineEdit_version">
+             <property name="placeholderText">
+              <string>optional</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QLabel" name="label_requiredPackages">
+             <property name="toolTip">
+              <string>Does this package make use of other packages? List them here as requirements</string>
              </property>
              <property name="text">
-              <string/>
+              <string>Required packages</string>
              </property>
+             <property name="buddy">
+              <cstring>DependencyList</cstring>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="1">
+            <widget class="QWidget" name="widget_requiredPackages" native="true">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <layout class="QHBoxLayout" name="horizontalLayout_dependencies" stretch="1,0,1">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QComboBox" name="DependencyList">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+               </widget>
+              </item>
+              <item alignment="Qt::AlignHCenter">
+               <widget class="QPushButton" name="addDependency">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="text">
+                 <string notr="true">+</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="comboBox_dependencies">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>Does this package make use of other packages? List them here as requirements. Press 'Delete' to remove a package</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </widget>
            </item>
           </layout>
-         </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="label_7">
-           <property name="text">
-            <string>Short description</string>
-           </property>
-           <property name="buddy">
-            <cstring>lineEdit_title</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QLineEdit" name="lineEdit_title">
-           <property name="maxLength">
-            <number>140</number>
-           </property>
-           <property name="placeholderText">
-            <string>optional</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="0">
-          <widget class="QLabel" name="label_5">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Description</string>
-           </property>
-           <property name="buddy">
-            <cstring>textEdit_description</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="1">
-          <widget class="QTextEdit" name="textEdit_description">
-           <property name="tabChangesFocus">
-            <bool>true</bool>
-           </property>
-           <property name="placeholderText">
-            <string>optional</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="0">
-          <widget class="QLabel" name="label_8">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Version</string>
-           </property>
-           <property name="buddy">
-            <cstring>lineEdit_version</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="1">
-          <widget class="QLineEdit" name="lineEdit_version">
-           <property name="placeholderText">
-            <string>optional</string>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="0">
-          <widget class="QLabel" name="label_9">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="toolTip">
-            <string>Does this package make use of other packages? List them here as requirements</string>
-           </property>
-           <property name="text">
-            <string>Required packages</string>
-           </property>
-           <property name="buddy">
-            <cstring>DependencyList</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="0" colspan="2">
+         </widget>
+         <widget class="QWidget" name="widget_assets" native="true">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <layout class="QVBoxLayout" name="verticalLayout_4">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
            <item>
             <widget class="QLabel" name="label_assets">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="text">
               <string>Include assets (images, sounds, fonts)</string>
              </property>
@@ -283,12 +407,6 @@
            </item>
            <item>
             <widget class="QListWidget" name="listWidget_addedFiles">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Maximum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
              <property name="acceptDrops">
               <bool>true</bool>
              </property>
@@ -305,118 +423,80 @@
             </widget>
            </item>
            <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_3">
-             <item>
-              <spacer name="horizontalSpacer_2">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-             <item>
-              <widget class="QPushButton" name="addFiles">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="layoutDirection">
-                <enum>Qt::LeftToRight</enum>
-               </property>
-               <property name="text">
-                <string>Select files to include in package</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <spacer name="horizontalSpacer">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-            </layout>
-           </item>
-          </layout>
-         </item>
-         <item row="5" column="1">
-          <layout class="QHBoxLayout" name="horizontalLayout_dependencies">
-           <item>
-            <widget class="QComboBox" name="DependencyList">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>150</width>
-               <height>16777215</height>
-              </size>
-             </property>
-            </widget>
-           </item>
-           <item alignment="Qt::AlignHCenter">
-            <widget class="QPushButton" name="addDependency">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>25</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string notr="true">+</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QComboBox" name="comboBox_dependencies">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="toolTip">
-              <string>Does this package make use of other packages? List them here as requirements. Press 'Delete' to remove a package</string>
-             </property>
+            <widget class="QWidget" name="widget_addFilesButton" native="true">
+             <layout class="QHBoxLayout" name="horizontalLayout_3">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <spacer name="horizontalSpacer_2">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QPushButton" name="addFiles">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <property name="text">
+                 <string>Select files to include in package</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
             </widget>
            </item>
           </layout>
-         </item>
-        </layout>
-       </widget>
-      </item>
-     </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
    <item>
-    <widget class="QWidget" name="widget" native="true">
-     <layout class="QGridLayout" name="gridLayout">
-      <item row="1" column="1">
+    <widget class="QWidget" name="widget_exportLocation" native="true">
+     <layout class="QHBoxLayout" name="horizontalLayout_4">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <item>
        <widget class="QLineEdit" name="lineEdit_filePath">
         <property name="frame">
          <bool>false</bool>
@@ -426,8 +506,8 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="2">
-       <widget class="QPushButton" name="pushBotton_packageLocation">
+      <item>
+       <widget class="QPushButton" name="pushButton_packageLocation">
         <property name="text">
          <string>Select export location</string>
         </property>
@@ -457,17 +537,21 @@
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
-      <set>QDialogButtonBox::Apply|QDialogButtonBox::Close</set>
+      <set>QDialogButtonBox::Apply|QDialogButtonBox::Cancel|QDialogButtonBox::Close</set>
      </property>
     </widget>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>dlgPackageExporterDescription</class>
+   <extends>QTextEdit</extends>
+   <header>dlgPackageExporter.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
-  <tabstop>pushBotton_openInfos</tabstop>
-  <tabstop>lineEdit_author</tabstop>
-  <tabstop>lineEdit_title</tabstop>
-  <tabstop>textEdit_description</tabstop>
+  <tabstop>pushButton_openInfos</tabstop>
   <tabstop>lineEdit_filePath</tabstop>
  </tabstops>
  <resources/>
@@ -479,8 +563,8 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>325</x>
-     <y>733</y>
+     <x>334</x>
+     <y>814</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>
@@ -495,8 +579,8 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>257</x>
-     <y>733</y>
+     <x>266</x>
+     <y>814</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
@@ -505,34 +589,34 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushBotton_openInfos</sender>
+   <sender>pushButton_openInfos</sender>
    <signal>toggled(bool)</signal>
-   <receiver>input</receiver>
-   <slot>setVisible(bool)</slot>
+   <receiver>pushButton_openInfos</receiver>
+   <slot>showMenu()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>111</x>
-     <y>187</y>
+     <x>330</x>
+     <y>216</y>
     </hint>
     <hint type="destinationlabel">
-     <x>23</x>
-     <y>197</y>
+     <x>330</x>
+     <y>216</y>
     </hint>
    </hints>
   </connection>
   <connection>
-   <sender>pushBotton_openInfos</sender>
+   <sender>pushButton_openInfos</sender>
    <signal>toggled(bool)</signal>
-   <receiver>pushBotton_openInfos</receiver>
-   <slot>showMenu()</slot>
+   <receiver>splitter_metadataAssets</receiver>
+   <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>292</x>
-     <y>187</y>
+     <x>301</x>
+     <y>216</y>
     </hint>
     <hint type="destinationlabel">
-     <x>292</x>
-     <y>187</y>
+     <x>282</x>
+     <y>480</y>
     </hint>
    </hints>
   </connection>

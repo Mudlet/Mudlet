@@ -88,16 +88,16 @@ public:
 #endif
 
 
-    TMap* mpMap;
+    TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
     qreal xyzoom;
     int mRX;
     int mRY;
     QPoint mPHighlight;
-    bool mPick;
+    bool mPick = false;
     int mTarget;
     bool mStartSpeedWalk;
-    QMap<int, QPoint> mAreaExitsList;
+
 
     // string list: 0 is event name, 1 is menu it is under if it is
     QMap<QString, QStringList> mUserActions;
@@ -108,7 +108,7 @@ public:
     bool mRoomBeingMoved;
     // These are the on-screen width and height pixel numbers of the area for a
     // room symbol, (for the non-grid map mode case what gets filled in is
-    // multipled by rsize which is 1.0 to exactly fill space between adjacent
+    // multiplied by rsize which is 1.0 to exactly fill space between adjacent
     // coordinates):
     float mRoomWidth;
     float mRoomHeight;
@@ -138,7 +138,6 @@ public:
     qreal mOy;
     int mOz;
     bool mShiftMode;
-    QComboBox* mapInfo_combobox;
     QComboBox* arealist_combobox;
     QPointer<QDialog> mpCustomLinesDialog;
     int mCustomLinesRoomFrom;
@@ -170,6 +169,9 @@ public:
     bool mSizeLabel;
     bool isCenterViewCall;
     QString mHelpMsg;
+    QColor mOpenDoorColor = QColor(10, 155, 10);
+    QColor mClosedDoorColor = QColor(155, 155, 10);
+    QColor mLockedDoorColor = QColor(155, 10, 10);
 
 public slots:
     void slot_roomSelectionChanged();
@@ -228,13 +230,19 @@ private:
     std::pair<int, int> getMousePosition();
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
-    void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, bool showRoomNames, const int, const float, const float, const bool);
+    void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const QMap<int, QPointF>&);
     void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const int displayAreaId, QColor& infoColor);
-    int paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties);
-    void paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth);
+    int paintMapInfoContributor(QPainter&, int xOffset, int yOffset, const MapInfoProperties& properties);
+    void paintAreaExits(QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int, float, QMap<int, QPointF>&);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
+    inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
+
 
     bool mDialogLock;
+    struct ClickPosition {
+        int x;
+        int y;
+    } mContextMenuClickPosition;
 
     // When more than zero rooms are selected this
     // is either the first (only) room in the set

@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,8 +31,8 @@ TScript::TScript( TScript * parent, Host * pHost )
 : Tree<TScript>( parent )
 , exportItem(true)
 , mModuleMasterFolder(false)
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
+, mpHost(pHost)
+, mNeedsToBeCompiled(true)
 , mModuleMember(false)
 {
 }
@@ -40,9 +41,9 @@ TScript::TScript(const QString& name, Host * pHost )
 : Tree<TScript>(nullptr)
 , exportItem(true)
 , mModuleMasterFolder(false)
-, mName( name )
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
+, mName(name)
+, mpHost(pHost)
+, mNeedsToBeCompiled(true)
 , mModuleMember(false)
 {
 }
@@ -107,7 +108,7 @@ void TScript::compile()
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
             if (mudlet::debugMode) {
-                TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> 0;
+                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }

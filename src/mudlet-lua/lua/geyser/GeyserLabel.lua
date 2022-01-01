@@ -21,11 +21,12 @@ Geyser.Label.scrollH = {}
 --- Prints a message to the window.  All parameters are optional and if not
 -- specified will use the last set value.
 -- @param message The message to print. Can contain html formatting.
--- @param color The color to use. If no color formatting is needed it is possible to use 'nocolor' which allows color formatting by using :setStyleSheet
+-- @param color The color to use. Accepts color names like "red", decho codes like "<255,0,0>", and hex codes like "#ff0000". If no color formatting is needed it is possible to use 'nocolor' which allows color formatting by using :setStyleSheet
 -- @param format A format list to use. 'c' - center, 'l' - left, 'r' - right,  'b' - bold, 'i' - italics, 'u' - underline, 's' - strikethrough,  '##' - font size.  For example, "cb18" specifies center bold 18pt font be used.  Order doesn't matter.
 function Geyser.Label:echo(message, color, format)
   message = message or self.message
   self.message = message
+  message = message:gsub("\n", "<br>")
   color = color or self.fgColor
   self.fgColor = color
   if format then self:processFormatString(format) end
@@ -71,6 +72,8 @@ function Geyser.Label:rawEcho(message)
   echo(self.name, message)
 end
 
+--- sets the color of the text on the label
+-- @param color the color you want the text to be. Can use color names such as "red", decho codes such as "<255,0,0>" and hex codes such as "#ff0000"
 function Geyser.Label:setFgColor(color)
   self:echo(nil, color, nil)
 end
@@ -440,7 +443,7 @@ function doNestScroll(label)
 end
 
 --- Displays the nested elements within label, and orients them
---- appropiately
+--- appropriately
 -- @param label The name of the label to use
 function Geyser.Label:displayNest()
   local maxDim = {}
@@ -1198,7 +1201,7 @@ end
 ---@param cons different parameters controlling the size and style of the right click menu elements
 --@param[opt="140" ] cons.MenuWidth  default menu width of your right click menu. to give levels different width add a number at the end per level usage MenuWidth1
 --@param[opt="25" ] cons.MenuWidth default menu height of your right click menu. to give levels different height add a number at the end per level usage MenuHeight1
---@param[opt="c10"] cons.MenuFormat default font/echo format of your right click menu. different levels can use different formating. usage MenuFormat1 MenuFormat2
+--@param[opt="c10"] cons.MenuFormat default font/echo format of your right click menu. different levels can use different formatting. usage MenuFormat1 MenuFormat2
 --@param[opt="light"] cons.Style default styling mode of your right click menu. 2 possible modes "light" and "dark". different levels can also have different styling modes
 --@param cons.MenuStyle default style of your menu. if this is given cons.Style will be ignored. different levels can also have different MenuStyles
 --@param cons.MenuItems list of right click menu items/elements. usage example: MenuItems = {"First", "Second", {"First"},"Third"} 
@@ -1232,7 +1235,7 @@ end
 -- @field globalX The global x coordinate of the click
 -- @field globalY The global y coordinate of the click
 -- @field button A string corresponding to the button clicked
--- @field buttons A table of strings correspinding to additional buttons held down during the click event
+-- @field buttons A table of strings corresponding to additional buttons held down during the click event
 -- @table mouseClickEvent
 
 ---
@@ -1241,7 +1244,14 @@ end
 -- @field y The y coordinate of the click local to the label
 -- @field globalX The global x coordinate of the click
 -- @field globalY The global y coordinate of the click
--- @field buttons A table of strings correspinding to additional buttons held down during the click event
+-- @field buttons A table of strings corresponding to additional buttons held down during the click event
 -- @field angleDeltaX A number corresponding with the vertical wheel motion. For most devices, this number is in increments of 120
 -- @field angleDeltaY A number corresponding with the horizontal wheel motion. For most devices, this number is in increments of 120
 -- @table mouseWheelEvent
+
+--- Returns a table in the format of getTextFormat which describes the default formatting created by any stylesheets
+-- which are applied to the label.
+-- @see https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat and https://wiki.mudlet.org/w/Manual:Lua_Functions#getTextFormat
+function Geyser.Label:getFormat()
+  return getLabelFormat(self.name)
+end

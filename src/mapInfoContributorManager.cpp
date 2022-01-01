@@ -24,16 +24,16 @@
 
 MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH) : QObject(parent), mpHost(pH)
 {
-    registerContributor(QStringLiteral("Short"), [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+    registerContributor(qsl("Short"), [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
         return shortInfo(roomID, selectionSize, areaId, displayAreaId, infoColor);
     });
-    registerContributor(QStringLiteral("Full"), [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+    registerContributor(qsl("Full"), [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
         return fullInfo(roomID, selectionSize, areaId, displayAreaId, infoColor);
     });
 }
 
 void MapInfoContributorManager::registerContributor(const QString& name, MapInfoCallback callback)
-{   
+{
     if (contributors.contains(name)) {
         ordering.removeOne(name);
     }
@@ -89,14 +89,14 @@ MapInfoProperties MapInfoContributorManager::shortInfo(int roomID, int selection
     TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomID);
     if (room) {
         QString areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
-        static const QRegularExpression trailingPunctuation(QStringLiteral("[.,/]+$"));
+        static const QRegularExpression trailingPunctuation(qsl("[.,/]+$"));
         auto roomName = QString(room->name);
         if (mpHost->mMapViewOnly) {
             roomName = roomName.remove(trailingPunctuation).trimmed();
         }
         auto roomFragment = !roomName.isEmpty() && roomName != QString::number(room->getId()) ?
-            QStringLiteral("%1 / %2").arg(roomName, QString::number(room->getId())) : QString::number(room->getId());
-        infoText = QStringLiteral("%1 (%2)\n").arg(roomFragment, areaName);
+            qsl("%1 / %2").arg(roomName, QString::number(room->getId())) : QString::number(room->getId());
+        infoText = qsl("%1 (%2)\n").arg(roomFragment, areaName);
     }
     return MapInfoProperties{false, false, infoText, infoColor};
 }
@@ -115,7 +115,7 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
         if (area) {
             infoText = tr("Area:%1%2 ID:%1%3 x:%1%4%1<‑>%1%5 y:%1%6%1<‑>%1%7 z:%1%8%1<‑>%1%9\n",
                           // Intentional separator
-                          "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
+                          "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle "
                           "them literally in raw strings) and non-breaking hyphens which are used to "
                           "prevent the line being split at some places it might otherwise be; when "
                           "translating please consider at which points the text may be divided to fit onto "
@@ -152,7 +152,7 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
         case 0:
             infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location\n",
                                // Intentional comment to separate arguments
-                               "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
+                               "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle "
                                "them literally in raw strings) and a non-breaking hyphen which are used to "
                                "prevent the line being split at some places it might otherwise be; when "
                                "translating please consider at which points the text may be divided to fit onto "
@@ -169,7 +169,7 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
         case 1:
             infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room\n",
                                // Intentional comment to separate arguments
-                               "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
+                               "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle "
                                "them literally in raw strings) and a non-breaking hyphen which are used to "
                                "prevent the line being split at some places it might otherwise be; when "
                                "translating please consider at which points the text may be divided to fit onto "
@@ -187,7 +187,7 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
         default:
             infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms\n",
                                // Intentional comment to separate arguments
-                               "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
+                               "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle "
                                "them literally in raw strings) and a non-breaking hyphen which are used to "
                                "prevent the line being split at some places it might otherwise be; when "
                                "translating please consider at which points the text may be divided to fit onto "
