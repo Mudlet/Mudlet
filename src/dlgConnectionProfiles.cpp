@@ -1425,9 +1425,7 @@ void dlgConnectionProfiles::slot_copy_profile()
     QApplication::setOverrideCursor(Qt::BusyCursor);
     mpCopyProfile->setText(tr("Copying..."));
     mpCopyProfile->setEnabled(false);
-    qDebug() << "before QtConcurrent::run";
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(mudlet::profileHomePath, oldname), mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
-    qDebug() << "after QtConcurrent::run";
     auto watcher = new QFutureWatcher<bool>;
     QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
         mProfileList << profile_name;
