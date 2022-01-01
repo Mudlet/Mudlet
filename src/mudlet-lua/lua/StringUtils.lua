@@ -113,11 +113,12 @@ function string:trim()
   end
 end
 
---- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.escape
-function string:escape()
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.patternEscape
+function string.patternEscape(self)
+  local gsub = string.gsub
   local selfType = type(self)
   if selfType ~= "string" then
-    printError(f"string.escape: bad argument #1 type (string to escape as string expected, got {selfType})", true, true)
+    printError(f"string.patternEscape: bad argument #1 type (string to escape as string expected, got {selfType})", true, true)
   end
   local replacements = {
     ["%"] = "%%",
@@ -133,7 +134,32 @@ function string:escape()
     ["-"] = "%-",
     ["?"] = "%?",
   }
-  local escaped = self:gsub(".", replacements)
+  local escaped = gsub(self, ".", replacements)
+  return escaped
+end
+
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.patternEscape
+function utf8.patternEscape(self)
+  local gsub = utf8.gsub
+  local selfType = type(self)
+  if selfType ~= "string" then
+    printError(f"utf8.patternEscape: bad argument #1 type (string to escape as string expected, got {selfType})", true, true)
+  end
+  local replacements = {
+    ["%"] = "%%",
+    ["^"] = "%^",
+    ["$"] = "%$",
+    ["("] = "%(",
+    [")"] = "%)",
+    ["["] = "%[",
+    ["]"] = "%]",
+    ["."] = "%.",
+    ["*"] = "%*",
+    ["+"] = "%+",
+    ["-"] = "%-",
+    ["?"] = "%?",
+  }
+  local escaped = gsub(self, ".", replacements)
   return escaped
 end
 

@@ -197,7 +197,7 @@ describe("Tests StringUtils.lua functions", function()
     end)
   end)
 
-  describe("Tests the functionality of string.escape", function()
+  describe("Tests the functionality of string.patternEscape", function()
     it("Should escape special characters in simple cases", function()
       local replacements = {
         ["%"] = "%%",
@@ -214,7 +214,7 @@ describe("Tests StringUtils.lua functions", function()
         ["?"] = "%?",
       }
       for original, replacement in pairs(replacements) do
-        assert.equals(replacement, string.escape(original))
+        assert.equals(replacement, string.patternEscape(original))
       end
     end)
 
@@ -225,7 +225,40 @@ describe("Tests StringUtils.lua functions", function()
         ["^%d%a$"] = "%^%%d%%a%$",
       }
       for original, replacement in pairs(replacements) do
-        assert.equals(replacement, string.escape(original))
+        assert.equals(replacement, string.patternEscape(original))
+      end
+    end)
+  end)
+
+  describe("Tests the functionality of utf8.patternEscape", function()
+    it("Should escape special characters in simple cases", function()
+      local replacements = {
+        ["%"] = "%%",
+        ["^"] = "%^",
+        ["$"] = "%$",
+        ["("] = "%(",
+        [")"] = "%)",
+        ["["] = "%[",
+        ["]"] = "%]",
+        ["."] = "%.",
+        ["*"] = "%*",
+        ["+"] = "%+",
+        ["-"] = "%-",
+        ["?"] = "%?",
+      }
+      for original, replacement in pairs(replacements) do
+        assert.equals(replacement, utf8.patternEscape(original))
+      end
+    end)
+
+    it("Should escape special characters in some more complicated cases too", function()
+      local replacements = {
+        ["https://fern-ahead-jelly.glitch.me/time/"] = "https://fern%-ahead%-jelly%.glitch%.me/time/",
+        ["75% of things to-be have been 👊"] = "75%% of things to%-be have been 👊",
+        ["^%d%a$"] = "%^%%d%%a%$",
+      }
+      for original, replacement in pairs(replacements) do
+        assert.equals(replacement, utf8.patternEscape(original))
       end
     end)
   end)
