@@ -112,6 +112,12 @@ jobs:
         # dependencies needed for vcpkg specifically
         brew install automake autoconf
 
+    - name: (Linux) Install non-vcpkg dependencies (1/2)
+      if: runner.os == 'Linux'
+      run: |
+        # dependencies needed for vcpkg specifically
+        sudo apt-get install gettext -y
+
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v7
       env:
@@ -157,7 +163,7 @@ jobs:
         # Use latest available XCode
         echo "DEVELOPER_DIR=/Applications/Xcode_12.4.app/Contents/Developer" >> $GITHUB_ENV
 
-    - name: (Linux) Install non-vcpkg dependencies
+    - name: (Linux) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
