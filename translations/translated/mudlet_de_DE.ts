@@ -6002,27 +6002,27 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="146"/>
       <source>Reset the directory so that logs are saved to the profile&apos;s &lt;i&gt;log&lt;/i&gt; directory.</source>
-      <translation type="unfinished"/>
+      <translation>Setze das Verzeichnis zurück, damit Protokolle in den &lt;i&gt;log&lt;/i&gt;-Ordner des Profils gespeichert werden.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="150"/>
       <source>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</source>
-      <translation type="unfinished"/>
+      <translation>Bestimme einen eigenen Namens für deine Protokolldatei. (Neue Protokolle werden angehängt, wenn bereits eine Datei mit dem gleichen Namen existiert.)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="171"/>
       <source>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>Automatische Updates sind in Entwicklungsversionen deaktiviert, um zu verhindern, dass ein Update dein Mudlet überschreibt.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="198"/>
       <source>This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specified font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.</source>
-      <translation type="unfinished"/>
+      <translation>Hiermit werden alle Symbole angezeigt, die in der aktuellen Karte genutzt werden, und ob sie nur mit der angegebenen Schriftart dargestellt werden können, mit einer anderen Schriftart, oder überhaupt nicht. Es wird auch eine Sequenz von Unicode-&lt;i&gt;Code-Punkten&lt;/i&gt; angezeigt, aus denen das Symbol zusammengesetzt wird, damit es auch identifiziert werden kann, falls es nicht dargestellt werden kann. Außerdem werden bis zu 32 Räume aufgelistet, die dieses Symbol benutzen, wodurch man unerwartete oder seltsame Fälle aufdecken kann.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="204"/>
       <source>Select the only or the primary font used (depending on &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; setting) to produce the 2D mapper room symbols.</source>
-      <translation type="unfinished"/>
+      <translation>Wähle die einzige oder hauptsächlich benutzte Schriftart (je nach der Einstellung &lt;i&gt;Verwende nur Symbole (Glyphen) aus der gewählten Schriftart&lt;/i&gt;), um die Symbole der Räume auf der 2D-Karte erstellen.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="206"/>
@@ -7670,7 +7670,7 @@ für alle %n ausgewählten Räume:</numerusform>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9000"/>
       <source>Sound file to play when the trigger fires.</source>
-      <translation type="unfinished"/>
+      <translation>Audiodatei, die wiedergegeben werden soll, wenn der Trigger ausgelöst wird.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="791"/>
@@ -9113,7 +9113,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <location filename="../src/mudlet.cpp" line="3726"/>
       <source>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation type="unfinished"/>
+      <translation>Informiere dich über diese Version von Mudlet, die Menschen, die daran beteiligt waren, und die Lizenz, unter der du es teilen kannst.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="686"/>
@@ -9951,7 +9951,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <location filename="../src/mudlet.cpp" line="520"/>
       <source>Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.</source>
       <comment>Same text is used in 2 places.</comment>
-      <translation type="unfinished"/>
+      <translation>Teilt den Mudlet-Bildschirm auf, um mehrere Profile gleichzeitig anzuzeigen. Deaktiviert, wenn weniger als zwei geladen sind.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1010"/>
@@ -10091,23 +10091,26 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/mudlet.cpp" line="3058"/>
       <source>Cannot load a replay as one is already in progress in this or another profile.</source>
-      <translation type="unfinished"/>
+      <translation>Wiederholung kann nicht geladen werden, da schon eine in diesem oder einem anderen Profil läuft.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3077"/>
       <source>Replay each step with a shorter time interval between steps.</source>
-      <translation type="unfinished"/>
+      <translation>Jeden Schritt mit kürzerem zeitlichen Abstand abspielen.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3083"/>
       <source>Replay each step with a longer time interval between steps.</source>
-      <translation type="unfinished"/>
+      <translation>Jeden Schritt mit längerem zeitlichen Abstand abspielen.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="3760"/>
       <source>Review the update(s) available...</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Prüfe die neue Version...</numerusform>
+        <numerusform>Prüfe die neuen Versionen...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4651"/>
