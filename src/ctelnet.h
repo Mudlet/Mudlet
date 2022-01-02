@@ -242,7 +242,7 @@ private:
     void setKeepAlive(int socketHandle);
     void processChunks();
     void sendNAWS(int x, int y);
-    std::pair<bool, bool> testReadReplayFile();
+    static std::pair<bool, bool> testReadReplayFile();
 
 
     QPointer<Host> mpHost;

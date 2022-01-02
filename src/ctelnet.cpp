@@ -2618,11 +2618,11 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
                 // Amelioration code should now prevent this from happening
                 loadingReplay = false;
                 replayFile.close();
-                if (!mIsReplayRunFromLua) {
-                    postMessage(tr("[ WARN ]  - The replay has been aborted as the file seems to be corrupt."));
-                } else {
+                if (pErrMsg) {
                     // Called from lua case:
                     *pErrMsg = tr("Cannot replay file \"%1\", error message was: \"replay file seems to be corrupt\".").arg(name);
+                } else {
+                    postMessage(tr("[ WARN ]  - The replay has been aborted as the file seems to be corrupt."));
                 }
                 mudlet::self()->replayOver();
                 return false;
@@ -3135,7 +3135,7 @@ void cTelnet::setPostingTimeout(const int timeout)
 // bytes - as an unintended side effect of https://github.com/Mudlet/Mudlet/pull/4400
 // - returns two booleans, the first is true if the file can be read and the
 // second true if it is in the modified format:
-std::pair<bool, bool> cTelnet::testReadReplayFile()
+/*static*/ std::pair<bool, bool> cTelnet::testReadReplayFile()
 {
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (5 of 7) - investigate switching from using `char[]` to `std::array<char>`
     char replayBuffer[BUFFER_SIZE+1];
