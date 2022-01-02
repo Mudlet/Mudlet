@@ -4,6 +4,9 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install --no-install-recommends -y \
     build-essential \
     ccache \
+    clang-format \
+    clang-tidy \
+    clazy \
     cmake \
     gdb \
     git \
@@ -33,6 +36,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     qttools5-dev \
     qt5keychain-dev \
     qtcreator \
+    valgrind \
     zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -40,10 +44,13 @@ RUN luarocks install lcf && \
     luarocks install luautf8 && \
     luarocks install lua-yajl
 
+# Without this, clang-tidy/format doesn't find the correct c++ headers
+ENV CPLUS_INCLUDE_PATH="${CPLUS_INCLUDE_PATH:+${CPLUS_INCLUDE_PATH}:}/usr/lib/gcc/x86_64-linux-gnu/9/include"
+
 RUN useradd -ms /bin/bash mudlet
 WORKDIR /home/mudlet
 
-COPY --chown=mudlet:mudlet CMakeLists.txt CPPLINT.cfg mudlet.desktop mudlet.png mudlet.svg ./
+COPY --chown=mudlet:mudlet .clang-tidy CMakeLists.txt CPPLINT.cfg mudlet.desktop mudlet.png mudlet.svg ./
 COPY --chown=mudlet:mudlet 3rdparty 3rdparty
 COPY --chown=mudlet:mudlet templates templates
 COPY --chown=mudlet:mudlet translations translations
@@ -55,8 +62,6 @@ USER mudlet
 
 ARG BUILD_CORES=4
 RUN mkdir build && cd build && cmake .. && cmake --build . --parallel ${BUILD_CORES}
-RUN mkdir /home/mudlet/settings
-
-VOLUME /home/mudlet/settings
+RUN mkdir settings
 
 CMD ["build/src/mudlet"]
