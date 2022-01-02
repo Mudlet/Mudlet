@@ -5496,12 +5496,12 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1816"/>
       <source>Load profile without connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Carica il profilo senza collegarti al server.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1832"/>
       <source>Please set a valid profile name, game server address and the game port before loading.</source>
-      <translation type="unfinished"/>
+      <translation>Inserisci il nome del profilo, l'indirizzo del server e la porta di connessione prima di collegarti.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1837"/>
@@ -11276,7 +11276,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2722"/>
       <source>Server password: </source>
-      <translation type="unfinished"/>
+      <translation>Password server: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2739"/>
