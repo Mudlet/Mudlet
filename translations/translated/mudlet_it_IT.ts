@@ -5511,12 +5511,12 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1890"/>
       <source>Click to hide the password; it will also hide if another profile is selected.</source>
-      <translation type="unfinished"/>
+      <translation>Premi per nascondere la password; sarà oscurata anche se è selezionato un altro profilo.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1894"/>
       <source>Click to reveal the password for this profile.</source>
-      <translation type="unfinished"/>
+      <translation>Premi per mostrare la password di questo profilo.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1755"/>
@@ -7697,7 +7697,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9000"/>
       <source>Sound file to play when the trigger fires.</source>
-      <translation type="unfinished"/>
+      <translation>File audio da riprodurre quando si attiva il trigger.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="791"/>
@@ -8523,7 +8523,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/ui/main_window.ui" line="363"/>
       <source>Close profile</source>
-      <translation type="unfinished"/>
+      <translation>Chiudi profilo</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="161"/>
@@ -9103,7 +9103,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <location filename="../src/mudlet.cpp" line="374"/>
       <location filename="../src/mudlet.cpp" line="697"/>
       <source>Close profile</source>
-      <translation type="unfinished"/>
+      <translation>Chiudi profilo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="439"/>
@@ -9141,7 +9141,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <location filename="../src/mudlet.cpp" line="3726"/>
       <source>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation type="unfinished"/>
+      <translation>Informazioni su Mudlet, le persone che l'hanno creato e la licenza con la quale è creato.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="686"/>
@@ -9979,7 +9979,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <location filename="../src/mudlet.cpp" line="520"/>
       <source>Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.</source>
       <comment>Same text is used in 2 places.</comment>
-      <translation type="unfinished"/>
+      <translation>Dividi la finestra di Mudlet per mostrare più profili contemporaneamente; si disabilita automaticamente quando c'è solo un profilo caricato.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1010"/>
@@ -10119,7 +10119,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/mudlet.cpp" line="3058"/>
       <source>Cannot load a replay as one is already in progress in this or another profile.</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile caricare una replay perchè è già in corso una riproduzione in questo o un altro profilo.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3077"/>
@@ -10135,7 +10135,10 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <location filename="../src/mudlet.cpp" line="3760"/>
       <source>Review the update(s) available...</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Controlla gli aggiornamenti disponibili...</numerusform>
+        <numerusform>Controlla gli aggiornamenti disponibili...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4651"/>
@@ -10569,7 +10572,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <location filename="../src/mudlet.cpp" line="1699"/>
       <location filename="../src/mudlet.cpp" line="3154"/>
       <source>Load a Mudlet replay.</source>
-      <translation type="unfinished"/>
+      <translation>Carica un replay di Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2759"/>
