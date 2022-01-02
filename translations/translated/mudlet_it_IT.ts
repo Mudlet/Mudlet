@@ -1580,7 +1580,7 @@ Percorsi analizzati:
     <message>
       <location filename="../src/TMainConsole.cpp" line="322"/>
       <source>Stop logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Interrompi il salvataggio dei messaggi inviati dal gioco nel file di log.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="338"/>
@@ -6057,7 +6057,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="204"/>
       <source>Select the only or the primary font used (depending on &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; setting) to produce the 2D mapper room symbols.</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona l'unico o il font primario utilizzato (a seconda dell'opzione &lt;i&gt;Utilizzare solo simboli (glifi) dal carattere selezionato&lt;/i&gt;) per produrre i simboli delle stanze della mappa 2D.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="206"/>
