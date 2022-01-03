@@ -315,14 +315,13 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
         return false;
     }
 
-    return processRegexMatch(subject, toMatch, regexNumber, posOffset, re, numberOfCaptureGroups, subject_length, rc, i,
-                             captureList,
-                             posList, namePositions, nameGroups, ovector);
+    processRegexMatch(subject, toMatch, regexNumber, posOffset, re, numberOfCaptureGroups, subject_length, rc, i,
+                      captureList, posList, namePositions, nameGroups, ovector);
 
     return true;
 }
 
-bool TTrigger::processRegexMatch(const char *subject, const QString &toMatch, int regexNumber, int posOffset,
+void TTrigger::processRegexMatch(const char *subject, const QString &toMatch, int regexNumber, int posOffset,
                                  const QSharedPointer<pcre> &re, int numberOfCaptureGroups, int subject_length, int rc,
                                  int i, std::list<std::string> &captureList, std::list<int> &posList,
                                  QMap<QString, QPair<int, int>> &namePositions, NameGroupMatches &nameGroups,
@@ -444,7 +443,7 @@ bool TTrigger::processRegexMatch(const char *subject, const QString &toMatch, in
             int total = captureList.size();
             TConsole* pC = mpHost->mpConsole;
             if (Q_UNLIKELY(!pC)) {
-                return true;
+                return;
             }
             pC->deselect();
             auto its = captureList.begin();
@@ -484,7 +483,7 @@ bool TTrigger::processRegexMatch(const char *subject, const QString &toMatch, in
         }
         if (mIsMultiline) {
             updateMultistates(regexNumber, captureList, posList, &nameGroups);
-            return true;
+            return;
         } else {
             TLuaInterpreter* pL = mpHost->getLuaInterpreter();
             pL->setCaptureGroups(captureList, posList);
@@ -512,7 +511,7 @@ bool TTrigger::processRegexMatch(const char *subject, const QString &toMatch, in
                     }
                 }
             }
-            return true;
+            return;
         }
     }
 }
@@ -520,12 +519,13 @@ bool TTrigger::processRegexMatch(const char *subject, const QString &toMatch, in
 bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QString& regex, int regexNumber, int posOffset)
 {
     if (toMatch.startsWith(regex)) {
-        return processBeginOfLine(regex, regexNumber, posOffset);
+        processBeginOfLine(regex, regexNumber, posOffset);
+        return true;
     }
     return false;
 }
 
-bool TTrigger::processBeginOfLine(const QString &regex, int regexNumber, int posOffset) {
+void TTrigger::processBeginOfLine(const QString &regex, int regexNumber, int posOffset) {
     std::list<std::string> captureList;
     std::list<int> posList;
     captureList.emplace_back(regex.toUtf8().constData());
@@ -542,7 +542,7 @@ bool TTrigger::processBeginOfLine(const QString &regex, int regexNumber, int pos
         int b2 = mFgColor.blue();
         TConsole* pC = mpHost->mpConsole;
         if (Q_UNLIKELY(!pC)) {
-            return true;
+            return;
         }
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
@@ -569,7 +569,7 @@ bool TTrigger::processBeginOfLine(const QString &regex, int regexNumber, int pos
     }
     if (mIsMultiline) {
         updateMultistates(regexNumber, captureList, posList);
-        return true;
+        return;
     } else {
         TLuaInterpreter* pL = mpHost->getLuaInterpreter();
         pL->setCaptureGroups(captureList, posList);
@@ -582,7 +582,6 @@ bool TTrigger::processBeginOfLine(const QString &regex, int regexNumber, int pos
                 filter(captureList.front(), posList.front());
             }
         }
-        return true;
     }
 }
 
@@ -655,12 +654,13 @@ bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int
 {
     int where = toMatch.indexOf(regex);
     if (where != -1) {
-        return processSubstringMatch(toMatch, regex, regexNumber, posOffset, where);
+        processSubstringMatch(toMatch, regex, regexNumber, posOffset, where);
+        return true;
     }
     return false;
 }
 
-bool TTrigger::processSubstringMatch(const QString &toMatch, const QString &regex, int regexNumber, int posOffset,
+void TTrigger::processSubstringMatch(const QString &toMatch, const QString &regex, int regexNumber, int posOffset,
                                      int where) {
     std::list<std::string> captureList;
     std::list<int> posList;
@@ -684,7 +684,7 @@ bool TTrigger::processSubstringMatch(const QString &toMatch, const QString &rege
         int b2 = mFgColor.blue();
         TConsole* pC = mpHost->mpConsole;
         if (Q_UNLIKELY(!pC)) {
-            return true;
+            return;
         }
         pC->deselect();
         auto its = captureList.begin();
@@ -712,7 +712,7 @@ bool TTrigger::processSubstringMatch(const QString &toMatch, const QString &rege
     }
     if (mIsMultiline) {
         updateMultistates(regexNumber, captureList, posList);
-        return true;
+        return;
     } else {
         TLuaInterpreter* pL = mpHost->getLuaInterpreter();
         pL->setCaptureGroups(captureList, posList);
@@ -725,7 +725,6 @@ bool TTrigger::processSubstringMatch(const QString &toMatch, const QString &rege
                 filter(captureList.front(), posList.front());
             }
         }
-        return true;
     }
 }
 
@@ -795,12 +794,13 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
     }
 
     if (canExecute) {
-        return processColorPattern(regexNumber, captureList, posList);
+        processColorPattern(regexNumber, captureList, posList);
+        return true;
     }
     return false;
 }
 
-bool TTrigger::processColorPattern(int regexNumber, std::list<std::string> &captureList, std::list<int> &posList) {
+void TTrigger::processColorPattern(int regexNumber, std::list<std::string> &captureList, std::list<int> &posList) {
     if (mIsColorizerTrigger) {
         int r1 = mBgColor.red();
         int g1 = mBgColor.green();
@@ -810,7 +810,7 @@ bool TTrigger::processColorPattern(int regexNumber, std::list<std::string> &capt
         int b2 = mFgColor.blue();
         TConsole* pC = mpHost->mpConsole;
         if (Q_UNLIKELY(!pC)) {
-            return true;
+            return;
         }
         pC->deselect();
         auto its = captureList.begin();
@@ -839,7 +839,7 @@ bool TTrigger::processColorPattern(int regexNumber, std::list<std::string> &capt
     }
     if (mIsMultiline) {
         updateMultistates(regexNumber, captureList, posList);
-        return true;
+        return;
     } else {
         TLuaInterpreter* pL = mpHost->getLuaInterpreter();
         pL->setCaptureGroups(captureList, posList);
@@ -855,7 +855,6 @@ bool TTrigger::processColorPattern(int regexNumber, std::list<std::string> &capt
                 }
             }
         }
-        return true;
     }
 }
 
@@ -912,12 +911,13 @@ bool TTrigger::match_lua_code(int regexNumber)
 bool TTrigger::match_prompt(int patternNumber)
 {
     if (mpHost->mpConsole->mIsPromptLine) {
-        return processPromptMatch(patternNumber);
+        processPromptMatch(patternNumber);
+        return true;
     }
     return false;
 }
 
-bool TTrigger::processPromptMatch(int patternNumber) {
+void TTrigger::processPromptMatch(int patternNumber) {
     if (mudlet::debugMode) {
         TDebug(Qt::yellow, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(patternNumber) << ") matched.\n" >> mpHost;
     }
@@ -925,10 +925,9 @@ bool TTrigger::processPromptMatch(int patternNumber) {
         std::list<std::string> captureList;
         std::list<int> posList;
         updateMultistates(patternNumber, captureList, posList);
-        return true;
+        return;
     }
     execute();
-    return true;
 }
 
 bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, int regexNumber, int posOffset)
@@ -939,12 +938,13 @@ bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, in
     }
 
     if (text == line) {
-        return processExactMatch(line, regexNumber, posOffset);
+        processExactMatch(line, regexNumber, posOffset);
+        return true;
     }
     return false;
 }
 
-bool TTrigger::processExactMatch(const QString &line, int regexNumber, int posOffset) {
+void TTrigger::processExactMatch(const QString &line, int regexNumber, int posOffset) {
     std::list<std::string> captureList;
     std::list<int> posList;
     captureList.emplace_back(line.toUtf8().constData());
@@ -961,7 +961,7 @@ bool TTrigger::processExactMatch(const QString &line, int regexNumber, int posOf
         int b2 = mFgColor.blue();
         TConsole* pC = mpHost->mpConsole;
         if (Q_UNLIKELY(!pC)) {
-            return true;
+            return;
         }
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
@@ -988,7 +988,7 @@ bool TTrigger::processExactMatch(const QString &line, int regexNumber, int posOf
     }
     if (mIsMultiline) {
         updateMultistates(regexNumber, captureList, posList);
-        return true;
+        return;
     } else {
         TLuaInterpreter* pL = mpHost->getLuaInterpreter();
         pL->setCaptureGroups(captureList, posList);
@@ -1000,7 +1000,6 @@ bool TTrigger::processExactMatch(const QString &line, int regexNumber, int posOf
                 filter(captureList.front(), posList.front());
             }
         }
-        return true;
     }
 }
 
