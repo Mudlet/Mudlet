@@ -313,19 +313,33 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
 
     if (rc < 0) {
         return false;
-    } else if (rc == 0) {
+    }
+
+    return processRegexMatch(subject, toMatch, regexNumber, posOffset, re, numberOfCaptureGroups, subject_length, rc, i,
+                             captureList,
+                             posList, namePositions, nameGroups, ovector);
+
+    return true;
+}
+
+bool TTrigger::processRegexMatch(const char *subject, const QString &toMatch, int regexNumber, int posOffset,
+                                 const QSharedPointer<pcre> &re, int numberOfCaptureGroups, int subject_length, int rc,
+                                 int i, std::list<std::string> &captureList, std::list<int> &posList,
+                                 QMap<QString, QPair<int, int>> &namePositions, NameGroupMatches &nameGroups,
+                                 int *ovector) {
+    if (rc == 0) {
         if (mpHost->mpEditorDialog) {
             mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
         }
         qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
-    } else {
-        if (mudlet::debugMode) {
-            TDebug(Qt::blue, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> mpHost;
-        }
+    }
+
+    if (mudlet::debugMode) {
+        TDebug(Qt::blue, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> mpHost;
     }
 
     for (i = 0; i < rc; i++) {
-        char* substring_start = subject + ovector[2 * i];
+        const char *substring_start = subject + ovector[2 * i];
         int substring_length = ovector[2 * i + 1] - ovector[2 * i];
         int utf16_pos = toMatch.indexOf(QString(substring_start));
         std::string match;
@@ -399,7 +413,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
         }
 
         for (i = 0; i < rc; i++) {
-            char* substring_start = subject + ovector[2 * i];
+            const char *substring_start = subject + ovector[2 * i];
             int substring_length = ovector[2 * i + 1] - ovector[2 * i];
             int utf16_pos = toMatch.indexOf(QString(substring_start));
 
@@ -419,101 +433,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
         }
     }
 
-END : {
-    if (mIsColorizerTrigger) {
-        int r1 = mBgColor.red();
-        int g1 = mBgColor.green();
-        int b1 = mBgColor.blue();
-        int r2 = mFgColor.red();
-        int g2 = mFgColor.green();
-        int b2 = mFgColor.blue();
-        int total = captureList.size();
-        TConsole* pC = mpHost->mpConsole;
-        if (Q_UNLIKELY(!pC)) {
-            return true;
-        }
-        pC->deselect();
-        auto its = captureList.begin();
-        auto iti = posList.begin();
-        for (int i = 1; iti != posList.end(); ++iti, ++its, i++) {
-            int begin = *iti;
-            std::string& s = *its;
-            int length = QString::fromStdString(s).size();
-            if (total > 1) {
-                // skip complete match in Perl /g option type of triggers
-                // to enable people to highlight capture groups if there are any
-                // otherwise highlight complete expression match
-                if (i % numberOfCaptureGroups != 1) {
-                    pC->selectSection(begin, length);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-                    if (mBgColor != QColorConstants::Transparent) {
-#else
-                    if (mBgColor != QColor("transparent")) {
-#endif
-                        pC->setBgColor(r1, g1, b1, 255);
-                    }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-                    if (mFgColor != QColorConstants::Transparent) {
-#else
-                    if (mFgColor != QColor("transparent")) {
-#endif
-                        pC->setFgColor(r2, g2, b2);
-                    }
-                }
-            } else {
-                pC->selectSection(begin, length);
-                pC->setBgColor(r1, g1, b1, 255);
-                pC->setFgColor(r2, g2, b2);
-            }
-        }
-        pC->reset();
-    }
-    if (mIsMultiline) {
-        updateMultistates(regexNumber, captureList, posList, &nameGroups);
-        return true;
-    } else {
-        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups(captureList, posList);
-        pL->setCaptureNameGroups(nameGroups, namePositions);
-        execute();
-        pL->clearCaptureGroups();
-        if (mFilterTrigger) {
-            if (captureList.size() > 1) {
-                int total = captureList.size();
-                auto its = captureList.begin();
-                auto iti = posList.begin();
-                for (int i = 1; iti != posList.end(); ++iti, ++its, i++) {
-                    int begin = *iti;
-                    std::string& s = *its;
-                    if (total > 1) {
-                        // skip complete match in Perl /g option type of triggers
-                        // to enable people to highlight capture groups if there are any
-                        // otherwise highlight complete expression match
-                        if (i % numberOfCaptureGroups != 1) {
-                            filter(s, begin);
-                        }
-                    } else {
-                        filter(s, begin);
-                    }
-                }
-            }
-        }
-        return true;
-    }
-}
-    return true;
-}
-
-bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QString& regex, int regexNumber, int posOffset)
-{
-    if (toMatch.startsWith(regex)) {
-        std::list<std::string> captureList;
-        std::list<int> posList;
-        captureList.emplace_back(regex.toUtf8().constData());
-        posList.push_back(0 + posOffset);
-        if (mudlet::debugMode) {
-            TDebug(Qt::darkCyan, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> mpHost;
-        }
+    END : {
         if (mIsColorizerTrigger) {
             int r1 = mBgColor.red();
             int g1 = mBgColor.green();
@@ -521,52 +441,149 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
             int r2 = mFgColor.red();
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
+            int total = captureList.size();
             TConsole* pC = mpHost->mpConsole;
             if (Q_UNLIKELY(!pC)) {
                 return true;
             }
+            pC->deselect();
             auto its = captureList.begin();
-            for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
+            auto iti = posList.begin();
+            for (int i = 1; iti != posList.end(); ++iti, ++its, i++) {
                 int begin = *iti;
                 std::string& s = *its;
                 int length = QString::fromStdString(s).size();
-                pC->selectSection(begin, length);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-                if (mBgColor != QColorConstants::Transparent) {
-#else
-                if (mBgColor != QColor("transparent")) {
-#endif
+                if (total > 1) {
+                    // skip complete match in Perl /g option type of triggers
+                    // to enable people to highlight capture groups if there are any
+                    // otherwise highlight complete expression match
+                    if (i % numberOfCaptureGroups != 1) {
+                        pC->selectSection(begin, length);
+    #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                        if (mBgColor != QColorConstants::Transparent) {
+    #else
+                        if (mBgColor != QColor("transparent")) {
+    #endif
+                            pC->setBgColor(r1, g1, b1, 255);
+                        }
+    #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                        if (mFgColor != QColorConstants::Transparent) {
+    #else
+                        if (mFgColor != QColor("transparent")) {
+    #endif
+                            pC->setFgColor(r2, g2, b2);
+                        }
+                    }
+                } else {
+                    pC->selectSection(begin, length);
                     pC->setBgColor(r1, g1, b1, 255);
-                }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-                if (mFgColor != QColorConstants::Transparent) {
-#else
-                if (mFgColor != QColor("transparent")) {
-#endif
                     pC->setFgColor(r2, g2, b2);
                 }
             }
             pC->reset();
         }
         if (mIsMultiline) {
-            updateMultistates(regexNumber, captureList, posList);
+            updateMultistates(regexNumber, captureList, posList, &nameGroups);
             return true;
         } else {
             TLuaInterpreter* pL = mpHost->getLuaInterpreter();
             pL->setCaptureGroups(captureList, posList);
-
-            // call lua trigger function with number of matches and matches itselves as arguments
+            pL->setCaptureNameGroups(nameGroups, namePositions);
             execute();
             pL->clearCaptureGroups();
             if (mFilterTrigger) {
-                if (!captureList.empty()) {
-                    filter(captureList.front(), posList.front());
+                if (captureList.size() > 1) {
+                    int total = captureList.size();
+                    auto its = captureList.begin();
+                    auto iti = posList.begin();
+                    for (int i = 1; iti != posList.end(); ++iti, ++its, i++) {
+                        int begin = *iti;
+                        std::string& s = *its;
+                        if (total > 1) {
+                            // skip complete match in Perl /g option type of triggers
+                            // to enable people to highlight capture groups if there are any
+                            // otherwise highlight complete expression match
+                            if (i % numberOfCaptureGroups != 1) {
+                                filter(s, begin);
+                            }
+                        } else {
+                            filter(s, begin);
+                        }
+                    }
                 }
             }
             return true;
         }
     }
+}
+
+bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QString& regex, int regexNumber, int posOffset)
+{
+    if (toMatch.startsWith(regex)) {
+        return processBeginOfLine(regex, regexNumber, posOffset);
+    }
     return false;
+}
+
+bool TTrigger::processBeginOfLine(const QString &regex, int regexNumber, int posOffset) {
+    std::list<std::string> captureList;
+    std::list<int> posList;
+    captureList.emplace_back(regex.toUtf8().constData());
+    posList.push_back(0 + posOffset);
+    if (mudlet::debugMode) {
+        TDebug(Qt::darkCyan, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> mpHost;
+    }
+    if (mIsColorizerTrigger) {
+        int r1 = mBgColor.red();
+        int g1 = mBgColor.green();
+        int b1 = mBgColor.blue();
+        int r2 = mFgColor.red();
+        int g2 = mFgColor.green();
+        int b2 = mFgColor.blue();
+        TConsole* pC = mpHost->mpConsole;
+        if (Q_UNLIKELY(!pC)) {
+            return true;
+        }
+        auto its = captureList.begin();
+        for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
+            int begin = *iti;
+            std::string& s = *its;
+            int length = QString::fromStdString(s).size();
+            pC->selectSection(begin, length);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            if (mBgColor != QColorConstants::Transparent) {
+#else
+            if (mBgColor != QColor("transparent")) {
+#endif
+                pC->setBgColor(r1, g1, b1, 255);
+            }
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            if (mFgColor != QColorConstants::Transparent) {
+#else
+            if (mFgColor != QColor("transparent")) {
+#endif
+                pC->setFgColor(r2, g2, b2);
+            }
+        }
+        pC->reset();
+    }
+    if (mIsMultiline) {
+        updateMultistates(regexNumber, captureList, posList);
+        return true;
+    } else {
+        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+        pL->setCaptureGroups(captureList, posList);
+
+        // call lua trigger function with number of matches and matches itselves as arguments
+        execute();
+        pL->clearCaptureGroups();
+        if (mFilterTrigger) {
+            if (!captureList.empty()) {
+                filter(captureList.front(), posList.front());
+            }
+        }
+        return true;
+    }
 }
 
 inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches)
@@ -638,73 +655,78 @@ bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int
 {
     int where = toMatch.indexOf(regex);
     if (where != -1) {
-        std::list<std::string> captureList;
-        std::list<int> posList;
-        captureList.emplace_back(regex.toUtf8().constData());
-        posList.push_back(where + posOffset);
-        if (mPerlSlashGOption) {
-            while ((where = toMatch.indexOf(regex, where + 1)) != -1) {
-                captureList.emplace_back(regex.toUtf8().constData());
-                posList.push_back(where + posOffset);
-            }
-        }
-        if (mudlet::debugMode) {
-            TDebug(Qt::cyan, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> mpHost;
-        }
-        if (mIsColorizerTrigger) {
-            int r1 = mBgColor.red();
-            int g1 = mBgColor.green();
-            int b1 = mBgColor.blue();
-            int r2 = mFgColor.red();
-            int g2 = mFgColor.green();
-            int b2 = mFgColor.blue();
-            TConsole* pC = mpHost->mpConsole;
-            if (Q_UNLIKELY(!pC)) {
-                return true;
-            }
-            pC->deselect();
-            auto its = captureList.begin();
-            for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
-                int begin = *iti;
-                std::string& s = *its;
-                int length = QString::fromStdString(s).size();
-                pC->selectSection(begin, length);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-                if (mBgColor != QColorConstants::Transparent) {
-#else
-                if (mBgColor != QColor("transparent")) {
-#endif
-                    pC->setBgColor(r1, g1, b1, 255);
-                }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-                if (mFgColor != QColorConstants::Transparent) {
-#else
-                if (mFgColor != QColor("transparent")) {
-#endif
-                    pC->setFgColor(r2, g2, b2);
-                }
-            }
-            pC->reset();
-        }
-        if (mIsMultiline) {
-            updateMultistates(regexNumber, captureList, posList);
-            return true;
-        } else {
-            TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-            pL->setCaptureGroups(captureList, posList);
-
-            // call lua trigger function with number of matches and matches itselves as arguments
-            execute();
-            pL->clearCaptureGroups();
-            if (mFilterTrigger) {
-                if (!captureList.empty()) {
-                    filter(captureList.front(), posList.front());
-                }
-            }
-            return true;
-        }
+        return processSubstringMatch(toMatch, regex, regexNumber, posOffset, where);
     }
     return false;
+}
+
+bool TTrigger::processSubstringMatch(const QString &toMatch, const QString &regex, int regexNumber, int posOffset,
+                                     int where) {
+    std::list<std::string> captureList;
+    std::list<int> posList;
+    captureList.emplace_back(regex.toUtf8().constData());
+    posList.push_back(where + posOffset);
+    if (mPerlSlashGOption) {
+        while ((where = toMatch.indexOf(regex, where + 1)) != -1) {
+            captureList.emplace_back(regex.toUtf8().constData());
+            posList.push_back(where + posOffset);
+        }
+    }
+    if (mudlet::debugMode) {
+        TDebug(Qt::cyan, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> mpHost;
+    }
+    if (mIsColorizerTrigger) {
+        int r1 = mBgColor.red();
+        int g1 = mBgColor.green();
+        int b1 = mBgColor.blue();
+        int r2 = mFgColor.red();
+        int g2 = mFgColor.green();
+        int b2 = mFgColor.blue();
+        TConsole* pC = mpHost->mpConsole;
+        if (Q_UNLIKELY(!pC)) {
+            return true;
+        }
+        pC->deselect();
+        auto its = captureList.begin();
+        for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
+            int begin = *iti;
+            std::string& s = *its;
+            int length = QString::fromStdString(s).size();
+            pC->selectSection(begin, length);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            if (mBgColor != QColorConstants::Transparent) {
+#else
+            if (mBgColor != QColor("transparent")) {
+#endif
+                pC->setBgColor(r1, g1, b1, 255);
+            }
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            if (mFgColor != QColorConstants::Transparent) {
+#else
+            if (mFgColor != QColor("transparent")) {
+#endif
+                pC->setFgColor(r2, g2, b2);
+            }
+        }
+        pC->reset();
+    }
+    if (mIsMultiline) {
+        updateMultistates(regexNumber, captureList, posList);
+        return true;
+    } else {
+        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+        pL->setCaptureGroups(captureList, posList);
+
+        // call lua trigger function with number of matches and matches itselves as arguments
+        execute();
+        pL->clearCaptureGroups();
+        if (mFilterTrigger) {
+            if (!captureList.empty()) {
+                filter(captureList.front(), posList.front());
+            }
+        }
+        return true;
+    }
 }
 
 bool TTrigger::match_color_pattern(int line, int regexNumber)
@@ -773,64 +795,68 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
     }
 
     if (canExecute) {
-        if (mIsColorizerTrigger) {
-            int r1 = mBgColor.red();
-            int g1 = mBgColor.green();
-            int b1 = mBgColor.blue();
-            int r2 = mFgColor.red();
-            int g2 = mFgColor.green();
-            int b2 = mFgColor.blue();
-            TConsole* pC = mpHost->mpConsole;
-            if (Q_UNLIKELY(!pC)) {
-                return true;
-            }
-            pC->deselect();
-            auto its = captureList.begin();
-            for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
-                int begin = *iti;
-//                qDebug() << "TTrigger::match_color_pattern(" << line << "," << regexNumber << ") INFO - match found: " << (*its).c_str() << " size is:" << (*its).size();
-                std::string& s = *its;
-                int length = QString::fromStdString(s).size();
-                pC->selectSection(begin, length);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-                if (mBgColor != QColorConstants::Transparent) {
-#else
-                if (mBgColor != QColor("transparent")) {
-#endif
-                    pC->setBgColor(r1, g1, b1, 255);
-                }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-                if (mFgColor != QColorConstants::Transparent) {
-#else
-                if (mFgColor != QColor("transparent")) {
-#endif
-                    pC->setFgColor(r2, g2, b2);
-                }
-            }
-            pC->reset();
-        }
-        if (mIsMultiline) {
-            updateMultistates(regexNumber, captureList, posList);
-            return true;
-        } else {
-            TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-            pL->setCaptureGroups(captureList, posList);
-            // call lua trigger function with number of matches and matches itselves as arguments
-            execute();
-            pL->clearCaptureGroups();
-            if (mFilterTrigger) {
-                if (!captureList.empty()) {
-                    auto it1 = captureList.begin();
-                    auto it2 = posList.begin();
-                    for (; it1 != captureList.end(); it1++, it2++) {
-                        filter(*it1, *it2);
-                    }
-                }
-            }
-            return true;
-        }
+        return processColorPattern(regexNumber, captureList, posList);
     }
     return false;
+}
+
+bool TTrigger::processColorPattern(int regexNumber, std::list<std::string> &captureList, std::list<int> &posList) {
+    if (mIsColorizerTrigger) {
+        int r1 = mBgColor.red();
+        int g1 = mBgColor.green();
+        int b1 = mBgColor.blue();
+        int r2 = mFgColor.red();
+        int g2 = mFgColor.green();
+        int b2 = mFgColor.blue();
+        TConsole* pC = mpHost->mpConsole;
+        if (Q_UNLIKELY(!pC)) {
+            return true;
+        }
+        pC->deselect();
+        auto its = captureList.begin();
+        for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
+            int begin = *iti;
+//                qDebug() << "TTrigger::match_color_pattern(" << line << "," << regexNumber << ") INFO - match found: " << (*its).c_str() << " size is:" << (*its).size();
+            std::string& s = *its;
+            int length = QString::fromStdString(s).size();
+            pC->selectSection(begin, length);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            if (mBgColor != QColorConstants::Transparent) {
+#else
+            if (mBgColor != QColor("transparent")) {
+#endif
+                pC->setBgColor(r1, g1, b1, 255);
+            }
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            if (mFgColor != QColorConstants::Transparent) {
+#else
+            if (mFgColor != QColor("transparent")) {
+#endif
+                pC->setFgColor(r2, g2, b2);
+            }
+        }
+        pC->reset();
+    }
+    if (mIsMultiline) {
+        updateMultistates(regexNumber, captureList, posList);
+        return true;
+    } else {
+        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+        pL->setCaptureGroups(captureList, posList);
+        // call lua trigger function with number of matches and matches itselves as arguments
+        execute();
+        pL->clearCaptureGroups();
+        if (mFilterTrigger) {
+            if (!captureList.empty()) {
+                auto it1 = captureList.begin();
+                auto it2 = posList.begin();
+                for (; it1 != captureList.end(); it1++, it2++) {
+                    filter(*it1, *it2);
+                }
+            }
+        }
+        return true;
+    }
 }
 
 bool TTrigger::match_line_spacer(int regexNumber)
@@ -886,19 +912,23 @@ bool TTrigger::match_lua_code(int regexNumber)
 bool TTrigger::match_prompt(int patternNumber)
 {
     if (mpHost->mpConsole->mIsPromptLine) {
-        if (mudlet::debugMode) {
-            TDebug(Qt::yellow, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(patternNumber) << ") matched.\n" >> mpHost;
-        }
-        if (mIsMultiline) {
-            std::list<std::string> captureList;
-            std::list<int> posList;
-            updateMultistates(patternNumber, captureList, posList);
-            return true;
-        }
-        execute();
-        return true;
+        return processPromptMatch(patternNumber);
     }
     return false;
+}
+
+bool TTrigger::processPromptMatch(int patternNumber) {
+    if (mudlet::debugMode) {
+        TDebug(Qt::yellow, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(patternNumber) << ") matched.\n" >> mpHost;
+    }
+    if (mIsMultiline) {
+        std::list<std::string> captureList;
+        std::list<int> posList;
+        updateMultistates(patternNumber, captureList, posList);
+        return true;
+    }
+    execute();
+    return true;
 }
 
 bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, int regexNumber, int posOffset)
@@ -907,66 +937,71 @@ bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, in
     if (text.endsWith(QChar('\n'))) {
         text.chop(1); //TODO: speed optimization
     }
+
     if (text == line) {
-        std::list<std::string> captureList;
-        std::list<int> posList;
-        captureList.emplace_back(line.toUtf8().constData());
-        posList.push_back(0 + posOffset);
-        if (mudlet::debugMode) {
-            TDebug(Qt::yellow, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> mpHost;
-        }
-        if (mIsColorizerTrigger) {
-            int r1 = mBgColor.red();
-            int g1 = mBgColor.green();
-            int b1 = mBgColor.blue();
-            int r2 = mFgColor.red();
-            int g2 = mFgColor.green();
-            int b2 = mFgColor.blue();
-            TConsole* pC = mpHost->mpConsole;
-            if (Q_UNLIKELY(!pC)) {
-                return true;
-            }
-            auto its = captureList.begin();
-            for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
-                int begin = *iti;
-                std::string& s = *its;
-                int length = QString::fromStdString(s).size();
-                pC->selectSection(begin, length);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-                if (mBgColor != QColorConstants::Transparent) {
-#else
-                if (mBgColor != QColor("transparent")) {
-#endif
-                    pC->setBgColor(r1, g1, b1, 255);
-                }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-                if (mFgColor != QColorConstants::Transparent) {
-#else
-                if (mFgColor != QColor("transparent")) {
-#endif
-                    pC->setFgColor(r2, g2, b2);
-                }
-            }
-            pC->reset();
-        }
-        if (mIsMultiline) {
-            updateMultistates(regexNumber, captureList, posList);
-            return true;
-        } else {
-            TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-            pL->setCaptureGroups(captureList, posList);
-            // call lua trigger function with number of matches and matches itselves as arguments
-            execute();
-            pL->clearCaptureGroups();
-            if (mFilterTrigger) {
-                if (!captureList.empty()) {
-                    filter(captureList.front(), posList.front());
-                }
-            }
-            return true;
-        }
+        return processExactMatch(line, regexNumber, posOffset);
     }
     return false;
+}
+
+bool TTrigger::processExactMatch(const QString &line, int regexNumber, int posOffset) {
+    std::list<std::string> captureList;
+    std::list<int> posList;
+    captureList.emplace_back(line.toUtf8().constData());
+    posList.push_back(0 + posOffset);
+    if (mudlet::debugMode) {
+        TDebug(Qt::yellow, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> mpHost;
+    }
+    if (mIsColorizerTrigger) {
+        int r1 = mBgColor.red();
+        int g1 = mBgColor.green();
+        int b1 = mBgColor.blue();
+        int r2 = mFgColor.red();
+        int g2 = mFgColor.green();
+        int b2 = mFgColor.blue();
+        TConsole* pC = mpHost->mpConsole;
+        if (Q_UNLIKELY(!pC)) {
+            return true;
+        }
+        auto its = captureList.begin();
+        for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
+            int begin = *iti;
+            std::string& s = *its;
+            int length = QString::fromStdString(s).size();
+            pC->selectSection(begin, length);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            if (mBgColor != QColorConstants::Transparent) {
+#else
+            if (mBgColor != QColor("transparent")) {
+#endif
+                pC->setBgColor(r1, g1, b1, 255);
+            }
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            if (mFgColor != QColorConstants::Transparent) {
+#else
+            if (mFgColor != QColor("transparent")) {
+#endif
+                pC->setFgColor(r2, g2, b2);
+            }
+        }
+        pC->reset();
+    }
+    if (mIsMultiline) {
+        updateMultistates(regexNumber, captureList, posList);
+        return true;
+    } else {
+        TLuaInterpreter* pL = mpHost->getLuaInterpreter();
+        pL->setCaptureGroups(captureList, posList);
+        // call lua trigger function with number of matches and matches themselves as arguments
+        execute();
+        pL->clearCaptureGroups();
+        if (mFilterTrigger) {
+            if (!captureList.empty()) {
+                filter(captureList.front(), posList.front());
+            }
+        }
+        return true;
+    }
 }
 
 bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOffset)
