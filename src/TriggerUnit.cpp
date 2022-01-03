@@ -268,8 +268,10 @@ strcpy(subject, data.toUtf8().data());
         rebuildParallelizables();
     }
 
-    for (auto trigger : mTriggerRootNodeList) {
-        trigger->matchWithoutProcessing(subject, data, line);
+    // QFuture<TTrigger*> matchedTriggers = QtConcurrent::mapped(mParallelizableTriggers, std::bind(&TTrigger::matchWithoutProcessing, subject, data, line));
+    for (auto trigger : mParallelizableTriggers) {
+        // trigger->matchWithoutProcessing(subject, data, line);
+
     }
 
     for (auto trigger : mTriggerRootNodeList) {

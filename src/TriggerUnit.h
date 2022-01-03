@@ -26,6 +26,11 @@
 #include <QMultiMap>
 #include <QPointer>
 #include <QString>
+#include <QtConcurrent>
+#include <random>
+#include <iostream>
+#include <memory>
+#include <functional>
 #include "post_guard.h"
 
 #include <list>
