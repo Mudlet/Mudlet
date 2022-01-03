@@ -97,6 +97,7 @@ signals:
 private:
     TriggerUnit() = default;
     QVector<TTrigger*> mParallelizableTriggers;  // TODO - better name
+    bool mRebuildParallelizables = true;
 
     void initStats();
     void _assembleReport(TTrigger*);
@@ -106,7 +107,8 @@ private:
     void removeTriggerRootNode(TTrigger* pT);
     void removeTrigger(TTrigger*);
     void markListDirty(); // TODO - better name
-    void markListDirtyMore(TTrigger* trigger);
+    void rebuildParallelizables();
+    void rebuildRecursively(TTrigger* trigger);
 
     QPointer<Host> mpHost;
     QMap<int, TTrigger*> mTriggerMap;

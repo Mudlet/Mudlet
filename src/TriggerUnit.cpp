@@ -252,24 +252,31 @@ int TriggerUnit::getNewID()
 
 void TriggerUnit::processDataStream(const QString& data, int line)
 {
-    if (!data.isEmpty()) {
-#if defined(Q_OS_WIN32)
-        // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
-        char* subject = static_cast<char*>(malloc(strlen(data.toUtf8().data()) + 1));
-        strcpy(subject, data.toUtf8().data());
-#else
-        char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
-#endif
-        for (auto trigger : mTriggerRootNodeList) {
-            trigger->match(subject, data, line);
-        }
-        free(subject);
-
-        for (auto& trigger : mCleanupList) {
-            delete trigger;
-        }
-        mCleanupList.clear();
+    if (data.isEmpty()) {
+        return;
     }
+
+#if defined(Q_OS_WIN32)
+    // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
+char* subject = static_cast<char*>(malloc(strlen(data.toUtf8().data()) + 1));
+strcpy(subject, data.toUtf8().data());
+#else
+    char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
+#endif
+
+    if (Q_UNLIKELY(mRebuildParallelizables)) {
+        rebuildParallelizables();
+    }
+
+    for (auto trigger : mTriggerRootNodeList) {
+        trigger->match(subject, data, line);
+    }
+    free(subject);
+
+    for (auto& trigger : mCleanupList) {
+        delete trigger;
+    }
+    mCleanupList.clear();
 }
 
 void TriggerUnit::compileAll()
@@ -439,6 +446,27 @@ void TriggerUnit::markCleanup(TTrigger* pT)
 
 void TriggerUnit::markListDirty()
 {
+    mRebuildParallelizables = true;
+    qDebug() << "mRebuildParallelizables now" << mRebuildParallelizables;
+}
+
+void TriggerUnit::rebuildRecursively(TTrigger* trigger)
+{
+    if (!trigger->isFolder()) {
+        mParallelizableTriggers.append(trigger);
+    }
+
+    for (auto childTrigger : *trigger->mpMyChildrenList) {
+        if (childTrigger->isFolder()) {
+            rebuildRecursively(childTrigger);
+        } else {
+            mParallelizableTriggers.append(childTrigger);
+        }
+    }
+}
+
+void TriggerUnit::rebuildParallelizables()
+{
     // should erase all items while keeping memory
     mParallelizableTriggers.erase(mParallelizableTriggers.begin(), mParallelizableTriggers.end());
 
@@ -449,24 +477,11 @@ void TriggerUnit::markListDirty()
         }
 
         if (trigger->isFolder()) {
-            markListDirtyMore(trigger);
+            rebuildRecursively(trigger);
         }
     }
     qDebug() << "trigger list changed, now has " << mParallelizableTriggers.size() << ": " << mParallelizableTriggers;
-}
 
-void TriggerUnit::markListDirtyMore(TTrigger* trigger)
-{
-    if (!trigger->isFolder()) {
-        mParallelizableTriggers.append(trigger);
-    }
-
-    for (auto childTrigger : *trigger->mpMyChildrenList) {
-        if (childTrigger->isFolder()) {
-            markListDirtyMore(childTrigger);
-        } else {
-            mParallelizableTriggers.append(childTrigger);
-        }
-    }
+    mRebuildParallelizables = false;
 }
 
