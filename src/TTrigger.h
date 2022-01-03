@@ -174,6 +174,15 @@ private:
 
     void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
     void filter(std::string&, int&);
+    bool processExactMatch(const QString &line, int regexNumber, int posOffset);
+    bool processRegexMatch(const char *subject, const QString &toMatch, int regexNumber, int posOffset,
+                           const QSharedPointer<pcre> &re, int numberOfCaptureGroups, int subject_length, int rc, int i,
+                           std::list<std::string> &captureList, std::list<int> &posList,
+                           QMap<QString, QPair<int, int>> &namePositions, NameGroupMatches &nameGroups, int *ovector);
+    bool processBeginOfLine(const QString &regex, int regexNumber, int posOffset);
+    bool processSubstringMatch(const QString &toMatch, const QString &regex, int regexNumber, int posOffset, int where);
+    bool processColorPattern(int regexNumber, std::list<std::string> &captureList, std::list<int> &posList);
+    bool processPromptMatch(int patternNumber);
 
 
     QList<int> mRegexCodePropertyList;
