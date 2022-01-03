@@ -269,6 +269,10 @@ strcpy(subject, data.toUtf8().data());
     }
 
     for (auto trigger : mTriggerRootNodeList) {
+        trigger->matchWithoutProcessing(subject, data, line);
+    }
+
+    for (auto trigger : mTriggerRootNodeList) {
         trigger->match(subject, data, line);
     }
     free(subject);

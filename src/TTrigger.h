@@ -108,6 +108,7 @@ public:
     bool setScript(const QString& script);
     bool compileScript();
     bool match(char*, const QString&, int line, int posOffset = 0);
+    bool matchWithoutProcessing(char* toMatchC, const QString& toMatch, int line);
 
     bool isMultiline() { return mIsMultiline; }
     int getTriggerType() { return mTriggerType; }

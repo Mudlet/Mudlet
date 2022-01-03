@@ -1002,7 +1002,10 @@ void TTrigger::processExactMatch(const QString &line, int regexNumber, int posOf
         }
     }
 }
-
+// subject: string to match as a char*
+// toMatch: string to match as a QString
+// line: line number in the buffer
+// posOffset: position in the line to start matching from; used by child triggers
 bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOffset)
 {
     bool ret = false;
@@ -1200,7 +1203,6 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
     }
     return false;
 }
-
 
 // This NOW uses proper ANSI numbers
 // A TColorTable is a simple struct that stores four values, the two given ANSI
@@ -1509,4 +1511,60 @@ void TTrigger::decodeColorPatternText(const QString& patternText, int& fgColorCo
         fgColorCode = scmIgnored;
         bgColorCode = scmIgnored;
     }
+}
+
+bool TTrigger::matchWithoutProcessing(char* toMatchC, const QString& toMatch, int line) // TODO: const?
+{
+    if (!isActive() || toMatch.size() < 1) {
+        return false;
+    }
+
+    bool matched = false;
+    int size = mRegexCodePropertyList.size();
+    for (int patternNumber = 0;; patternNumber++) {
+        if (patternNumber >= size) {
+            break;
+        }
+        matched = false;
+        switch (mRegexCodePropertyList.value(patternNumber)) {
+            case REGEX_SUBSTRING:
+                matched = match_substring(toMatch, mRegexCodeList.at(patternNumber), patternNumber);
+                break;
+
+            case REGEX_PERL:
+                matched = match_perl(toMatchC, toMatch, patternNumber);
+                break;
+
+            case REGEX_BEGIN_OF_LINE_SUBSTRING:
+                matched = match_begin_of_line_substring(toMatch, mRegexCodeList.at(patternNumber), patternNumber);
+                break;
+
+            case REGEX_EXACT_MATCH:
+                matched = match_exact_match(toMatch, mRegexCodeList.at(patternNumber), patternNumber);
+                break;
+
+            case REGEX_LUA_CODE:
+                matched = match_lua_code(patternNumber);
+                break;
+
+            case REGEX_LINE_SPACER:
+                matched = match_line_spacer(patternNumber);
+                break;
+
+            case REGEX_COLOR_PATTERN:
+                matched = match_color_pattern(line, patternNumber);
+                break;
+
+            case REGEX_PROMPT:
+                matched = match_prompt(patternNumber);
+                break;
+        }
+
+        if (matched) {
+            qDebug() << "trigger" << getName() << "matched using" << mRegexCodePropertyList.value(patternNumber);
+            return true;
+        }
+    }
+
+    return false;
 }
