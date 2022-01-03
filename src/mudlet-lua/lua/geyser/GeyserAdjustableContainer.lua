@@ -172,7 +172,7 @@ function Adjustable.Container:onMove (label, event)
         end
         local dx, dy = adjustInfo.x - x, adjustInfo.y - y
         local max, min = math.max, math.min
-        local hasScrollBox = self.windowname and Geyser.ParentWindows and Geyser.ParentWindows[self.windowname] and Geyser.ParentWindows[self.windowname].type == "scrollBox"
+        local hasScrollBox = self.windowname and Geyser.parentWindows and Geyser.parentWindows[self.windowname] and Geyser.parentWindows[self.windowname].type == "scrollBox"
         if adjustInfo.move and not self.connectedContainers then
             label:setCursor("ClosedHand")
             local tx, ty = max(0,x1-dx), max(0,y1-dy)
@@ -793,7 +793,7 @@ function Adjustable.Container:load(slot, dir)
         if mytable.windowname == "main" then
             self:changeContainer(Geyser)
         else
-            self:changeContainer(Geyser.ParentWindows[mytable.windowname])
+            self:changeContainer(Geyser.parentWindows[mytable.windowname])
         end
     end
 

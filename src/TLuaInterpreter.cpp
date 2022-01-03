@@ -3312,7 +3312,7 @@ int TLuaInterpreter::createScrollBox(lua_State* L)
 {
     QString name = "";
     int counter = 3;
-    //make the windowname optional by using counter. If windowname "main" add to main console
+    // make the windowname optional by using counter. If windowname "main" - add to main console
 
     QString windowName = getVerifiedString(L, __func__, 1, "scrollBox name");
     if (isMain(windowName)) {
