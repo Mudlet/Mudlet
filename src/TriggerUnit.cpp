@@ -26,6 +26,15 @@
 #include "TConsole.h"
 #include "TTrigger.h"
 
+TriggerUnit::TriggerUnit(Host *pHost) : statsPatterns(), mpHost(pHost), mMaxID(0), mModuleMember() {
+    initStats();
+
+    connect(this, &TriggerUnit::signal_triggerAdded, this, &TriggerUnit::markListDirty);
+    connect(this, &TriggerUnit::signal_triggerRemoved, this, &TriggerUnit::markListDirty);
+    connect(this, &TriggerUnit::signal_triggerEnabled, this, &TriggerUnit::markListDirty);
+    connect(this, &TriggerUnit::signal_triggerDisabled, this, &TriggerUnit::markListDirty);
+}
+
 void TriggerUnit::initStats()
 {
     statsTriggerTotal = 0;
@@ -100,6 +109,7 @@ void TriggerUnit::addTriggerRootNode(TTrigger* pT, int parentPosition, int child
 
     if (!moveTrigger) {
         mTriggerMap.insert(pT->getID(), pT);
+        emit signal_triggerAdded();
     }
 }
 
@@ -137,6 +147,7 @@ void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
     }
     mTriggerMap.remove(pT->getID());
     mTriggerRootNodeList.remove(pT);
+    emit signal_triggerRemoved();
 }
 
 TTrigger* TriggerUnit::getTrigger(int id)
@@ -157,19 +168,19 @@ TTrigger* TriggerUnit::getTriggerPrivate(int id)
     }
 }
 
-bool TriggerUnit::registerTrigger(TTrigger* pT)
+bool TriggerUnit::registerTrigger(TTrigger* newTrigger)
 {
-    if (!pT) {
+    if (!newTrigger) {
         return false;
     }
 
-    if (pT->getParent()) {
-        addTrigger(pT);
-        return true;
-    } else {
-        addTriggerRootNode(pT);
+    if (newTrigger->getParent()) {
+        addTrigger(newTrigger);
         return true;
     }
+
+    addTriggerRootNode(newTrigger);
+    return true;
 }
 
 void TriggerUnit::unregisterTrigger(TTrigger* pT)
@@ -198,6 +209,7 @@ void TriggerUnit::addTrigger(TTrigger* pT)
     }
 
     mTriggerMap.insert(pT->getID(), pT);
+    emit signal_triggerAdded();
 }
 
 void TriggerUnit::removeTrigger(TTrigger* pT)
@@ -212,6 +224,7 @@ void TriggerUnit::removeTrigger(TTrigger* pT)
     }
 
     mTriggerMap.remove(pT->getID());
+    emit signal_triggerRemoved();
 }
 
 // trigger matching order is permanent trigger objects first, temporary objects second
@@ -302,6 +315,8 @@ bool TriggerUnit::enableTrigger(const QString& name)
         ++it;
         found = true;
     }
+
+    emit signal_triggerEnabled();
     return found;
 }
 
@@ -315,6 +330,8 @@ bool TriggerUnit::disableTrigger(const QString& name)
         ++it;
         found = true;
     }
+
+    emit signal_triggerDisabled();
     return found;
 }
 
@@ -419,3 +436,37 @@ void TriggerUnit::markCleanup(TTrigger* pT)
     }
     mCleanupList.push_back(pT);
 }
+
+void TriggerUnit::markListDirty()
+{
+    // should erase all items while keeping memory
+    mTriggerPrematch.erase(mTriggerPrematch.begin(), mTriggerPrematch.end());
+
+    // as long as I don't have a pattern, check my children
+    for (auto trigger : mTriggerRootNodeList) {
+        if (!trigger->isFolder()) {
+            mTriggerPrematch.append(trigger);
+        }
+
+        if (trigger->isFolder()) {
+            markListDirtyMore(trigger);
+        }
+    }
+    qDebug() << "trigger list changed, now has " << mTriggerPrematch.size() << ": " << mTriggerPrematch;
+}
+
+void TriggerUnit::markListDirtyMore(TTrigger* trigger)
+{
+    if (!trigger->isFolder()) {
+        mTriggerPrematch.append(trigger);
+    }
+
+    for (auto childTrigger : *trigger->mpMyChildrenList) {
+        if (childTrigger->isFolder()) {
+            markListDirtyMore(childTrigger);
+        } else {
+            mTriggerPrematch.append(childTrigger);
+        }
+    }
+}
+

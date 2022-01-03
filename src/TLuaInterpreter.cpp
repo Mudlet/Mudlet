@@ -14941,11 +14941,9 @@ int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QSt
 // No documentation available in wiki - internal function
 int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& function, int expiryCount)
 {
-    TTrigger* pT;
-    QStringList sList;
-    sList << regex;
-    QList<int> propertyList;
-    propertyList << REGEX_SUBSTRING; // substring trigger is default
+    TTrigger* pT = nullptr;
+    QStringList sList {regex};
+    QList<int> propertyList {REGEX_SUBSTRING};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);

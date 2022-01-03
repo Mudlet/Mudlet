@@ -34,13 +34,15 @@ class Host;
 class TTrigger;
 
 
-class TriggerUnit
+class TriggerUnit : public QObject
 {
+    Q_OBJECT // Needed for signals
+
     friend class XMLexport;
     friend class XMLimport;
 
 public:
-    TriggerUnit(Host* pHost) : statsPatterns(), mpHost(pHost), mMaxID(0), mModuleMember() { initStats(); }
+    TriggerUnit(Host* pHost);
 
     std::list<TTrigger*> getTriggerRootNodeList()
     {
@@ -54,7 +56,7 @@ public:
     bool enableTrigger(const QString&);
     bool disableTrigger(const QString&);
     bool killTrigger(const QString& name);
-    bool registerTrigger(TTrigger* pT);
+    bool registerTrigger(TTrigger* newTrigger);
     void unregisterTrigger(TTrigger* pT);
     void reParentTrigger(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
     void processDataStream(const QString&, int);
@@ -86,8 +88,15 @@ public:
     int statsRegexTriggers;
     QList<TTrigger*> uninstallList;
 
+signals:
+    void signal_triggerAdded();
+    void signal_triggerRemoved();
+    void signal_triggerEnabled();
+    void signal_triggerDisabled();
+
 private:
     TriggerUnit() = default;
+    QVector<TTrigger*> mTriggerPrematch;  // TODO - better name
 
     void initStats();
     void _assembleReport(TTrigger*);
@@ -96,6 +105,8 @@ private:
     void addTrigger(TTrigger* pT);
     void removeTriggerRootNode(TTrigger* pT);
     void removeTrigger(TTrigger*);
+    void markListDirty(); // TODO - better name
+    void markListDirtyMore(TTrigger* trigger);
 
     QPointer<Host> mpHost;
     QMap<int, TTrigger*> mTriggerMap;
