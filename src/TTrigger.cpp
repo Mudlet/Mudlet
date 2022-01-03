@@ -283,7 +283,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
     return state;
 }
 
-bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber, int posOffset)
+bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber, int posOffset, bool process)
 {
     assert(mRegexMap.contains(regexNumber));
 
@@ -315,8 +315,10 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
         return false;
     }
 
-    processRegexMatch(subject, toMatch, regexNumber, posOffset, re, numberOfCaptureGroups, subject_length, rc, i,
-                      captureList, posList, namePositions, nameGroups, ovector);
+    if (process) {
+        processRegexMatch(subject, toMatch, regexNumber, posOffset, re, numberOfCaptureGroups, subject_length, rc, i,
+                          captureList, posList, namePositions, nameGroups, ovector);
+    }
 
     return true;
 }
@@ -516,12 +518,15 @@ void TTrigger::processRegexMatch(const char *subject, const QString &toMatch, in
     }
 }
 
-bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QString& regex, int regexNumber, int posOffset)
+bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QString& regex, int regexNumber, int posOffset, bool process)
 {
     if (toMatch.startsWith(regex)) {
-        processBeginOfLine(regex, regexNumber, posOffset);
+        if (process) {
+            processBeginOfLine(regex, regexNumber, posOffset);
+        }
         return true;
     }
+
     return false;
 }
 
@@ -650,13 +655,16 @@ void TTrigger::setExpiryCount(int expiryCount)
     mExpiryCount = expiryCount;
 }
 
-bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int regexNumber, int posOffset)
+bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int regexNumber, int posOffset, bool process)
 {
     int where = toMatch.indexOf(regex);
     if (where != -1) {
-        processSubstringMatch(toMatch, regex, regexNumber, posOffset, where);
+        if (process) {
+            processSubstringMatch(toMatch, regex, regexNumber, posOffset, where);
+        }
         return true;
     }
+
     return false;
 }
 
@@ -728,7 +736,7 @@ void TTrigger::processSubstringMatch(const QString &toMatch, const QString &rege
     }
 }
 
-bool TTrigger::match_color_pattern(int line, int regexNumber)
+bool TTrigger::match_color_pattern(int line, int regexNumber, bool process)
 {
     if (regexNumber >= mColorPatternList.size()) {
         return false;
@@ -794,7 +802,9 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
     }
 
     if (canExecute) {
-        processColorPattern(regexNumber, captureList, posList);
+        if (process) {
+            processColorPattern(regexNumber, captureList, posList);
+        }
         return true;
     }
     return false;
@@ -908,12 +918,15 @@ bool TTrigger::match_lua_code(int regexNumber)
     return false;
 }
 
-bool TTrigger::match_prompt(int patternNumber)
+bool TTrigger::match_prompt(int patternNumber, bool process)
 {
     if (mpHost->mpConsole->mIsPromptLine) {
-        processPromptMatch(patternNumber);
+        if (process) {
+            processPromptMatch(patternNumber);
+        }
         return true;
     }
+
     return false;
 }
 
@@ -930,7 +943,7 @@ void TTrigger::processPromptMatch(int patternNumber) {
     execute();
 }
 
-bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, int regexNumber, int posOffset)
+bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, int regexNumber, int posOffset, bool process)
 {
     QString text = toMatch;
     if (text.endsWith(QChar('\n'))) {
@@ -938,9 +951,12 @@ bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, in
     }
 
     if (text == line) {
-        processExactMatch(line, regexNumber, posOffset);
+        if (process) {
+            processExactMatch(line, regexNumber, posOffset);
+        }
         return true;
     }
+
     return false;
 }
 
@@ -1528,19 +1544,19 @@ bool TTrigger::matchWithoutProcessing(char* toMatchC, const QString& toMatch, in
         matched = false;
         switch (mRegexCodePropertyList.value(patternNumber)) {
             case REGEX_SUBSTRING:
-                matched = match_substring(toMatch, mRegexCodeList.at(patternNumber), patternNumber);
+                matched = match_substring(toMatch, mRegexCodeList.at(patternNumber), patternNumber, 0, false);
                 break;
 
             case REGEX_PERL:
-                matched = match_perl(toMatchC, toMatch, patternNumber);
+                matched = match_perl(toMatchC, toMatch, patternNumber, 0, false);
                 break;
 
             case REGEX_BEGIN_OF_LINE_SUBSTRING:
-                matched = match_begin_of_line_substring(toMatch, mRegexCodeList.at(patternNumber), patternNumber);
+                matched = match_begin_of_line_substring(toMatch, mRegexCodeList.at(patternNumber), patternNumber, 0, false);
                 break;
 
             case REGEX_EXACT_MATCH:
-                matched = match_exact_match(toMatch, mRegexCodeList.at(patternNumber), patternNumber);
+                matched = match_exact_match(toMatch, mRegexCodeList.at(patternNumber), patternNumber, 0, false);
                 break;
 
             case REGEX_LUA_CODE:
@@ -1552,11 +1568,11 @@ bool TTrigger::matchWithoutProcessing(char* toMatchC, const QString& toMatch, in
                 break;
 
             case REGEX_COLOR_PATTERN:
-                matched = match_color_pattern(line, patternNumber);
+                matched = match_color_pattern(line, patternNumber, false);
                 break;
 
             case REGEX_PROMPT:
-                matched = match_prompt(patternNumber);
+                matched = match_prompt(patternNumber, false);
                 break;
         }
 
