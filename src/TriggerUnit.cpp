@@ -440,32 +440,32 @@ void TriggerUnit::markCleanup(TTrigger* pT)
 void TriggerUnit::markListDirty()
 {
     // should erase all items while keeping memory
-    mTriggerPrematch.erase(mTriggerPrematch.begin(), mTriggerPrematch.end());
+    mParallelizableTriggers.erase(mParallelizableTriggers.begin(), mParallelizableTriggers.end());
 
     // as long as I don't have a pattern, check my children
     for (auto trigger : mTriggerRootNodeList) {
         if (!trigger->isFolder()) {
-            mTriggerPrematch.append(trigger);
+            mParallelizableTriggers.append(trigger);
         }
 
         if (trigger->isFolder()) {
             markListDirtyMore(trigger);
         }
     }
-    qDebug() << "trigger list changed, now has " << mTriggerPrematch.size() << ": " << mTriggerPrematch;
+    qDebug() << "trigger list changed, now has " << mParallelizableTriggers.size() << ": " << mParallelizableTriggers;
 }
 
 void TriggerUnit::markListDirtyMore(TTrigger* trigger)
 {
     if (!trigger->isFolder()) {
-        mTriggerPrematch.append(trigger);
+        mParallelizableTriggers.append(trigger);
     }
 
     for (auto childTrigger : *trigger->mpMyChildrenList) {
         if (childTrigger->isFolder()) {
             markListDirtyMore(childTrigger);
         } else {
-            mTriggerPrematch.append(childTrigger);
+            mParallelizableTriggers.append(childTrigger);
         }
     }
 }

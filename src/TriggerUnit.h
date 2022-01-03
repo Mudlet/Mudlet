@@ -96,7 +96,7 @@ signals:
 
 private:
     TriggerUnit() = default;
-    QVector<TTrigger*> mTriggerPrematch;  // TODO - better name
+    QVector<TTrigger*> mParallelizableTriggers;  // TODO - better name
 
     void initStats();
     void _assembleReport(TTrigger*);
