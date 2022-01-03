@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2019, 2021 by Stephen Lyons                  *
+ *   Copyright (C) 2015, 2017-2019, 2021-2022 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -242,6 +242,7 @@ private:
     void setKeepAlive(int socketHandle);
     void processChunks();
     void sendNAWS(int x, int y);
+    static std::pair<bool, bool> testReadReplayFile();
 
 
     QPointer<Host> mpHost;
@@ -304,7 +305,9 @@ private:
     QTimer* mTimerPass;
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
-    int mRecordLastChunkMSecTimeOffset;
+    qint32 mRecordLastChunkMSecTimeOffset = 0;
+    int mRecordingChunkCount = 0;
+    bool mReplayHasFaultyFormat = false;
     bool enableCHARSET;
     bool enableATCP;
     bool enableGMCP;
