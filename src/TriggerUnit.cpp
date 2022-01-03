@@ -268,11 +268,13 @@ strcpy(subject, data.toUtf8().data());
         rebuildParallelizables();
     }
 
-    // QFuture<TTrigger*> matchedTriggers = QtConcurrent::mapped(mParallelizableTriggers, std::bind(&TTrigger::matchWithoutProcessing, subject, data, line));
-    for (auto trigger : mParallelizableTriggers) {
-        // trigger->matchWithoutProcessing(subject, data, line);
+    const std::function func = [subject, data, line](TTrigger* trigger) -> bool
+    {
+        return trigger->matchWithoutProcessing(subject, data, line);
+    };
 
-    }
+    QVector<TTrigger*> matchedTriggers = QtConcurrent::blockingFiltered(mParallelizableTriggers, func);
+    qDebug() << "matchedTriggers" << matchedTriggers;
 
     for (auto trigger : mTriggerRootNodeList) {
         trigger->match(subject, data, line);
