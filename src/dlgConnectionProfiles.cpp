@@ -1511,9 +1511,7 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
     setItemName(pItem, profile_name);
 
     // add the new widget in
-    qDebug() << "before" << profiles_tree_widget->count();
     profiles_tree_widget->addItem(pItem);
-    qDebug() << "after" << profiles_tree_widget->count();
     pItem->setIcon(customIcon(profile_name, std::nullopt));
     profiles_tree_widget->setCurrentItem(pItem);
 
