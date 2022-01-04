@@ -328,6 +328,8 @@ void TTrigger::processRegexMatch(const char *subject, const QString &toMatch, in
                                  int i, std::list<std::string> &captureList, std::list<int> &posList,
                                  QMap<QString, QPair<int, int>> &namePositions, NameGroupMatches &nameGroups,
                                  int *ovector) {
+    Q_ASSERT_X(QThread::currentThread() == QCoreApplication::instance()->thread(), __func__, "can only be called from main thread");
+
     if (rc == 0) {
         if (mpHost->mpEditorDialog) {
             mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
@@ -531,6 +533,8 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
 }
 
 void TTrigger::processBeginOfLine(const QString &regex, int regexNumber, int posOffset) {
+    Q_ASSERT_X(QThread::currentThread() == QCoreApplication::instance()->thread(), __func__, "can only be called from main thread");
+
     std::list<std::string> captureList;
     std::list<int> posList;
     captureList.emplace_back(regex.toUtf8().constData());
@@ -670,6 +674,8 @@ bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int
 
 void TTrigger::processSubstringMatch(const QString &toMatch, const QString &regex, int regexNumber, int posOffset,
                                      int where) {
+    Q_ASSERT_X(QThread::currentThread() == QCoreApplication::instance()->thread(), __func__, "can only be called from main thread");
+
     std::list<std::string> captureList;
     std::list<int> posList;
     captureList.emplace_back(regex.toUtf8().constData());
@@ -811,6 +817,8 @@ bool TTrigger::match_color_pattern(int line, int regexNumber, bool process)
 }
 
 void TTrigger::processColorPattern(int regexNumber, std::list<std::string> &captureList, std::list<int> &posList) {
+    Q_ASSERT_X(QThread::currentThread() == QCoreApplication::instance()->thread(), __func__, "can only be called from main thread");
+
     if (mIsColorizerTrigger) {
         int r1 = mBgColor.red();
         int g1 = mBgColor.green();
@@ -931,6 +939,8 @@ bool TTrigger::match_prompt(int patternNumber, bool process)
 }
 
 void TTrigger::processPromptMatch(int patternNumber) {
+    Q_ASSERT_X(QThread::currentThread() == QCoreApplication::instance()->thread(), __func__, "can only be called from main thread");
+
     if (mudlet::debugMode) {
         TDebug(Qt::yellow, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(patternNumber) << ") matched.\n" >> mpHost;
     }
@@ -961,6 +971,8 @@ bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, in
 }
 
 void TTrigger::processExactMatch(const QString &line, int regexNumber, int posOffset) {
+    Q_ASSERT_X(QThread::currentThread() == QCoreApplication::instance()->thread(), __func__, "can only be called from main thread");
+
     std::list<std::string> captureList;
     std::list<int> posList;
     captureList.emplace_back(line.toUtf8().constData());
@@ -1557,14 +1569,6 @@ bool TTrigger::matchWithoutProcessing(char* toMatchC, const QString& toMatch, in
 
             case REGEX_EXACT_MATCH:
                 matched = match_exact_match(toMatch, mRegexCodeList.at(patternNumber), patternNumber, 0, false);
-                break;
-
-            case REGEX_LUA_CODE:
-                matched = match_lua_code(patternNumber);
-                break;
-
-            case REGEX_LINE_SPACER:
-                matched = match_line_spacer(patternNumber);
                 break;
 
             case REGEX_COLOR_PATTERN:
