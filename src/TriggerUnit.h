@@ -103,7 +103,7 @@ private:
     TriggerUnit() = default;
     QVector<TTrigger*> mParallelizableTriggers;  // TODO - better name
     bool mRebuildParallelizables = true;
-    QList<TTrigger*> mPrematchedTriggers;
+    QVector<TTrigger*> mPrematchedTriggers;
 
     void initStats();
     void _assembleReport(TTrigger*);
