@@ -454,7 +454,6 @@ void TriggerUnit::markCleanup(TTrigger* pT)
 void TriggerUnit::markListDirty()
 {
     mRebuildParallelizables = true;
-    qDebug() << "mRebuildParallelizables now" << mRebuildParallelizables;
 }
 
 void TriggerUnit::rebuildRecursively(TTrigger* trigger)
