@@ -124,9 +124,9 @@ public:
     bool match_perl(char*, const QString&, int, int posOffset = 0);
     bool match_wildcard(const QString&, int);
     bool match_exact_match(const QString&, const QString&, int, int posOffset = 0);
-    bool match_begin_of_line_substring(const QString& toMatch, const QString& regex, int regexNumber, int posOffset = 0);
+    bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset = 0);
     bool match_lua_code(int);
-    bool match_line_spacer(int regexNumber);
+    bool match_line_spacer(int patternNumber);
     bool match_color_pattern(int, int);
     bool match_prompt(int patternNumber);
     void setConditionLineDelta(int delta) { mConditionLineDelta = delta; }
@@ -174,14 +174,14 @@ private:
 
     void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
     void filter(std::string&, int&);
-    void processExactMatch(const QString &line, int regexNumber, int posOffset);
-    void processRegexMatch(const char *subject, const QString &toMatch, int regexNumber, int posOffset,
-                           const QSharedPointer<pcre> &re, int numberOfCaptureGroups, int subject_length, int rc, int i,
-                           std::list<std::string> &captureList, std::list<int> &posList,
-                           QMap<QString, QPair<int, int>> &namePositions, NameGroupMatches &nameGroups, int *ovector);
-    void processBeginOfLine(const QString &regex, int regexNumber, int posOffset);
-    void processSubstringMatch(const QString &toMatch, const QString &regex, int regexNumber, int posOffset, int where);
-    void processColorPattern(int regexNumber, std::list<std::string> &captureList, std::list<int> &posList);
+    void processExactMatch(const QString& line, int patternNumber, int posOffset);
+    void processRegexMatch(const char* haystackC, const QString& haystack, int patternNumber, int posOffset,
+                           const QSharedPointer<pcre>& re, int numberOfCaptureGroups, int haystackCLength, int rc, int i,
+                           std::list<std::string>& captureList, std::list<int>& posList,
+                           QMap<QString, QPair<int, int>> &namePositions, NameGroupMatches& nameGroups, int* ovector);
+    void processBeginOfLine(const QString& needle, int patternNumber, int posOffset);
+    void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where);
+    void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList);
     void processPromptMatch(int patternNumber);
 
 
