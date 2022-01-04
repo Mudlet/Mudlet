@@ -124,6 +124,32 @@ function Geyser.Label:setFont(font)
   self:echo()
 end
 
+--- return the size hint (the suggested size) of the label
+function Geyser.Label:getSizeHint()
+  return getLabelSizeHint(self.name)
+end
+
+--- adjust size of the Label to the suggested size (probably the content size)
+function Geyser.Label:adjustSize()
+  local width, height = self:getSizeHint()
+  self:resize(width, height)
+  return true
+end
+
+--- adjust size of the Label to the suggested height (probably the content height)
+function Geyser.Label:adjustHeight()
+  local width, height = self:getSizeHint()
+  self:resize(nil, height)
+  return true
+end
+
+--- adjust size of the Label to the suggested width (probably the content width)
+function Geyser.Label:adjustWidth()
+  local width, height = self:getSizeHint()
+  self:resize(width, nil)
+  return true
+end
+
 --- Set whether or not the text in the label should be bold
 -- @param bool True for bold
 function Geyser.Label:setBold(bool)
