@@ -176,7 +176,7 @@ private:
     void filter(std::string&, int&);
     void processExactMatch(const QString& line, int patternNumber, int posOffset);
     void processRegexMatch(const char* haystackC, const QString& haystack, int patternNumber, int posOffset,
-                           const QSharedPointer<pcre>& re, int numberOfCaptureGroups, int haystackCLength, int rc, int i,
+                           const QSharedPointer<pcre>& re, int numberOfCaptureGroups, int haystackCLength, int rc,
                            std::list<std::string>& captureList, std::list<int>& posList,
                            QMap<QString, QPair<int, int>> &namePositions, NameGroupMatches& nameGroups, int* ovector);
     void processBeginOfLine(const QString& needle, int patternNumber, int posOffset);

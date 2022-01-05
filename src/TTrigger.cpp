@@ -301,7 +301,7 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
 
     int numberOfCaptureGroups = 0;
     int haystackCLength = strlen(haystackC);
-    int rc, i;
+    int rc;
     std::list<std::string> captureList;
     std::list<int> posList;
     QMap<QString, QPair<int, int>> namePositions;
@@ -314,7 +314,7 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
         return false;
     }
 
-    processRegexMatch(haystackC, haystack, patternNumber, posOffset, re, numberOfCaptureGroups, haystackCLength, rc, i,
+    processRegexMatch(haystackC, haystack, patternNumber, posOffset, re, numberOfCaptureGroups, haystackCLength, rc,
                       captureList, posList, namePositions, nameGroups, ovector);
 
     return true;
@@ -322,7 +322,7 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
 
 void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack, int patternNumber, int posOffset,
                                  const QSharedPointer<pcre>& re, int numberOfCaptureGroups, int haystackCLength, int rc,
-                                 int i, std::list<std::string> &captureList, std::list<int>& posList,
+                                 std::list<std::string> &captureList, std::list<int>& posList,
                                  QMap<QString, QPair<int, int>> &namePositions, NameGroupMatches& nameGroups,
                                  int* ovector)
 {
@@ -337,6 +337,7 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
         TDebug(Qt::blue, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(patternNumber) << ") matched.\n" >> mpHost;
     }
 
+    int i = 0;
     for (i = 0; i < rc; i++) {
         const char *substring_start = haystackC + ovector[2 * i];
         int substring_length = ovector[2 * i + 1] - ovector[2 * i];
