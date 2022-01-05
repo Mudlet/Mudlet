@@ -1062,6 +1062,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 #endif
                 break;
             } else {
+                enableMSDP = true;
                 sendTelnetOption(TN_DO, OPT_MSDP);
                 //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
                 //NOTE: MSDP does not need quotes for string/vals
@@ -1267,6 +1268,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
             if (option == OPT_MSDP) {
                 // MSDP got turned off
+                enableMSDP = false;
                 raiseProtocolEvent("sysProtocolDisabled", "MSDP");
             }
 
@@ -1361,6 +1363,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
         if (option == OPT_MSDP && mpHost->mEnableMSDP) {
             // MSDP support
+            enableMSDP = true;
             sendTelnetOption(TN_WILL, OPT_MSDP);
             raiseProtocolEvent("sysProtocolEnabled", "MSDP");
             break;
@@ -1468,6 +1471,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
         if (option == OPT_MSDP) {
             // MSDP got turned off
+            enableMSDP = false;
             raiseProtocolEvent("sysProtocolDisabled", "MSDP");
         }
 
