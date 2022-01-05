@@ -180,6 +180,7 @@ public:
     bool isCHARSETEnabled() const { return enableCHARSET; }
     bool isATCPEnabled() const { return enableATCP; }
     bool isGMCPEnabled() const { return enableGMCP; }
+    bool isMSDPEnabled() const { return enableMSDP; }
     bool isMSSPEnabled() const { return enableMSSP; }
     bool isMSPEnabled() const { return enableMSP; }
     bool isChannel102Enabled() const { return enableChannel102; }
@@ -312,6 +313,7 @@ private:
     bool enableATCP;
     bool enableGMCP;
     bool enableMSSP;
+    bool enableMSDP = false;
     bool enableMSP;
     bool enableChannel102;
     bool mDontReconnect;
