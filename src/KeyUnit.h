@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018, 2020 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2018, 2020, 2022 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -72,38 +73,37 @@ public:
     void stopAllTriggers();
     void reenableAllTriggers();
 
+
     QMultiMap<QString, TKey*> mLookupTable;
     std::list<TKey*> mCleanupList;
-    int statsKeyTotal;
-    int statsTempKeys;
-    int statsActiveKeys;
-    int statsActiveKeysMax;
-    int statsActiveKeysMin;
-    int statsActiveKeysAverage;
-    int statsTempKeysCreated;
-    int statsTempKeysKilled;
     QList<TKey*> uninstallList;
     // Past behaviour is to only process the first key binding that matches,
     // ignoring any duplicates - but changing that behaviour unconditionally
     // could break things - so only do it if this flag is set:
     bool mRunAllKeyMatches;
 
+
 private:
     KeyUnit() = default;
 
     TKey* getKeyPrivate(int id);
-    void initStats();
-    void _assembleReport(TKey*);
+    void resetStats();
+    void assembleReport(TKey*);
     void addKeyRootNode(TKey* pT, int parentPosition = -1, int childPosition = -1, bool moveKey = false);
     void addKey(TKey* pT);
     void removeKeyRootNode(TKey* pT);
     void removeKey(TKey*);
+
+
     QPointer<Host> mpHost;
     QMap<int, TKey*> mKeyMap;
     std::list<TKey*> mKeyRootNodeList;
     int mMaxID;
     bool mModuleMember;
     QMap<int, QString> mKeys;
+    int statsItemsTotal = 0;
+    int statsTempItems = 0;
+    int statsActiveItems = 0;
 };
 
 #endif // MUDLET_KEYUNIT_H
