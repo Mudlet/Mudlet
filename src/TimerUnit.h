@@ -42,7 +42,7 @@ class TimerUnit
     friend class XMLimport;
 
 public:
-    TimerUnit(Host* pHost)
+    explicit TimerUnit(Host* pHost)
     : mpHost(pHost)
     , mMaxID(0)
     , mModuleMember()

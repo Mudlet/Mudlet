@@ -41,7 +41,10 @@ class ScriptUnit
     friend class XMLimport;
 
 public:
-    ScriptUnit(Host* pHost) : mpHost(pHost), mMaxID(0) {}
+    explicit ScriptUnit(Host* pHost)
+    : mpHost(pHost)
+    , mMaxID(0)
+    {}
 
     std::list<TScript*> getScriptRootNodeList()
     {

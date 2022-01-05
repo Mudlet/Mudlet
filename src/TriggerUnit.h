@@ -41,7 +41,7 @@ class TriggerUnit
     friend class XMLimport;
 
 public:
-    TriggerUnit(Host* pHost)
+    explicit TriggerUnit(Host* pHost)
     : mpHost(pHost)
     , mMaxID(0)
     , mModuleMember()

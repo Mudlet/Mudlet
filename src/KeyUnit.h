@@ -44,7 +44,7 @@ class KeyUnit : public QObject
     friend class XMLimport;
 
 public:
-    KeyUnit(Host* pHost);
+    explicit KeyUnit(Host* pHost);
 
     std::list<TKey*> getKeyRootNodeList()
     {

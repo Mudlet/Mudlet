@@ -41,7 +41,7 @@ class AliasUnit
     friend class XMLimport;
 
 public:
-    AliasUnit(Host* pHost)
+    explicit AliasUnit(Host* pHost)
     : mpHost(pHost)
     , mMaxID(0)
     , mModuleMember()
