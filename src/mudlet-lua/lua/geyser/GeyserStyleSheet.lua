@@ -24,7 +24,7 @@ function Geyser.StyleSheet:new(stylesheet, parent, target)
   elseif styleType == "table" then
     styleTable = table.deepcopy(stylesheet)
   else
-    printError("Geyser.StyleSheet:new stylesheet as string or table expected, got " .. styleType, true, true)
+    printError("Geyser.StyleSheet:new: stylesheet as string or table expected, got " .. styleType, true, true)
   end
   obj:setStyleTable(styleTable or {})
   obj:setParent(parent)
@@ -41,11 +41,11 @@ function Geyser.StyleSheet:parseCSS(stylesheet)
   end
   local stylesheetType = type(stylesheet)
   if type(stylesheet) ~= "string" then
-    printError("parseCss: stylesheet as string expected, got " .. stylesheetType, true, true)
+    printError("parseCSS: stylesheet as string expected, got " .. stylesheetType, true, true)
   end
   local styleTable = {}
   if not stylesheet:find(";") then
-    return nil, "No valid lines found in stylesheet. Lines must be terminated by a ;"
+    return nil, "no valid lines found in stylesheet. Lines must be terminated by a ;"
   end
   local target, styles = match(stylesheet,"(%w+)%s*{(.*)}")
   if styles then stylesheet = styles end
@@ -102,7 +102,7 @@ function Geyser.StyleSheet:setCSS(css)
   end
   local styleTable, target = self:parseCSS(css)
   if not styleTable then
-    return nil, f"Error parsing css: {target}"
+    return nil, f"error parsing css: {target}"
   end
   if target then
     self:setTarget(target)
