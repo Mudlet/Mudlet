@@ -156,7 +156,7 @@ end
 function Geyser.Label:autoAdjustSize()
   local width = self.autoWidth
   local height = self.autoHeight
-  if not(width and height) then
+  if not width and not height then
     return
   end
 
