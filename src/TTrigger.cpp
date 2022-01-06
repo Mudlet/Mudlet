@@ -299,13 +299,8 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
         return false; //regex compile error
     }
 
-    int numberOfCaptureGroups = 0;
     int haystackCLength = strlen(haystackC);
     int rc = -1;
-    std::list<std::string> captureList;
-    std::list<int> posList;
-    QMap<QString, QPair<int, int>> namePositions;
-    NameGroupMatches nameGroups;
     int ovector[MAX_CAPTURE_GROUPS * 3];
 
     rc = pcre_exec(re.data(), nullptr, haystackC, haystackCLength, 0, 0, ovector, MAX_CAPTURE_GROUPS * 3);
@@ -314,17 +309,13 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
         return false;
     }
 
-    processRegexMatch(haystackC, haystack, patternNumber, posOffset, re, numberOfCaptureGroups, haystackCLength, rc,
-                      captureList, posList, namePositions, nameGroups, ovector);
+    processRegexMatch(haystackC, haystack, patternNumber, posOffset, re, haystackCLength, rc, ovector);
 
     return true;
 }
 
 void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack, int patternNumber, int posOffset,
-                                 const QSharedPointer<pcre>& re, int numberOfCaptureGroups, int haystackCLength, int rc,
-                                 std::list<std::string> &captureList, std::list<int>& posList,
-                                 QMap<QString, QPair<int, int>> &namePositions, NameGroupMatches& nameGroups,
-                                 int* ovector)
+                                 const QSharedPointer<pcre>& re, int haystackCLength, int rc, int* ovector)
 {
     if (rc == 0) {
         if (mpHost->mpEditorDialog) {
@@ -338,6 +329,11 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
     }
 
     int i = 0;
+    int numberOfCaptureGroups = 0;
+    std::list<std::string> captureList;
+    std::list<int> posList;
+    QMap<QString, QPair<int, int>> namePositions;
+    NameGroupMatches nameGroups;
     for (i = 0; i < rc; i++) {
         const char *substring_start = haystackC + ovector[2 * i];
         int substring_length = ovector[2 * i + 1] - ovector[2 * i];
