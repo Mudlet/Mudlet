@@ -301,7 +301,7 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
 
     int numberOfCaptureGroups = 0;
     int haystackCLength = strlen(haystackC);
-    int rc;
+    int rc = -1;
     std::list<std::string> captureList;
     std::list<int> posList;
     QMap<QString, QPair<int, int>> namePositions;
