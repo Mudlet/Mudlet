@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -44,7 +44,7 @@ class ActionUnit
     friend class XMLimport;
 
 public:
-    ActionUnit(Host* pHost) : mpHost(pHost), mMaxID(0), mpToolBar(), mpEasyButtonBar(), mModuleMember() {}
+    explicit ActionUnit(Host* pHost) : mpHost(pHost), mMaxID(0), mpToolBar(), mpEasyButtonBar(), mModuleMember() {}
 
     std::list<TAction*> getActionRootNodeList()
     {

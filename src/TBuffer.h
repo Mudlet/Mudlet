@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2018, 2020 by Stephen Lyons                  *
+ *   Copyright (C) 2015, 2017-2018, 2020, 2022 by Stephen Lyons            *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -85,7 +85,7 @@ public:
     // Default constructor - the default argument means it can be used with no
     // supplied arguments, but it must NOT be marked 'explicit' so as to allow
     // this:
-    TChar(Host* pH = nullptr);
+    explicit TChar(Host* pH = nullptr);
     // A non-default constructor:
     TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkIndex = 0);
     // User defined copy-constructor:
@@ -143,7 +143,7 @@ class TBuffer
     inline static const int MAX_CHARACTERS_PER_ECHO = 1000000;
 
 public:
-    TBuffer(Host* pH);
+    explicit TBuffer(Host* pH);
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);

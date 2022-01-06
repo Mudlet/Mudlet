@@ -5,6 +5,7 @@
  *   Copyright (C) 2010-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -48,7 +49,7 @@ class dlgIRC : public QMainWindow, public Ui::irc
 
 public:
     Q_DISABLE_COPY(dlgIRC)
-    dlgIRC(Host*);
+    explicit dlgIRC(Host*);
     ~dlgIRC();
 
     static QString HostNameCfgItem;
