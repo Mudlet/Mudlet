@@ -935,7 +935,7 @@ bool TTrigger::match_exact_match(const QString& haystack, const QString& needle,
 {
     QString text = haystack;
     if (text.endsWith(QChar('\n'))) {
-        text.chop(1); //TODO: speed optimization
+        text.chop(1);
     }
 
     if (text == needle) {
