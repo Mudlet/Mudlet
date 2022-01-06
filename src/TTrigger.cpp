@@ -499,7 +499,7 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
                     for (int i = 1; iti != posList.end(); ++iti, ++its, i++) {
                         int begin = *iti;
                         std::string& s = *its;
-                        if (total > 1) {
+                        if (total > 1 && numberOfCaptureGroups > 0) {
                             // skip complete match in Perl /g option type of triggers
                             // to enable people to highlight capture groups if there are any
                             // otherwise highlight complete expression match
