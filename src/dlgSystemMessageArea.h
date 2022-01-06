@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -33,7 +34,7 @@ class dlgSystemMessageArea : public QWidget, public Ui::system_message_area
 
 public:
     Q_DISABLE_COPY(dlgSystemMessageArea)
-    dlgSystemMessageArea(QWidget*);
+    explicit dlgSystemMessageArea(QWidget*);
 };
 
 #endif // MUDLET_DLGSYSTEMMESSAGEAREA_H

@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2012 by Vadim Peretokin - vperetokin@gmail.com          *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2021-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -54,7 +54,7 @@ class ExitsTreeWidget : public QTreeWidget
 
 public:
     Q_DISABLE_COPY(ExitsTreeWidget)
-    ExitsTreeWidget(QWidget* pW);
+    explicit ExitsTreeWidget(QWidget* pW);
     void keyPressEvent(QKeyEvent* event) override;
 };
 

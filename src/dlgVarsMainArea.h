@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -33,7 +34,7 @@ class dlgVarsMainArea : public QWidget, public Ui::vars_main_area
 
 public:
     Q_DISABLE_COPY(dlgVarsMainArea)
-    dlgVarsMainArea(QWidget*);
+    explicit dlgVarsMainArea(QWidget*);
 };
 
 #endif // MUDLET_DLGVARSMAINAREA_H
