@@ -64,12 +64,14 @@ function Geyser.Label:echo(message, color, format)
   message = [[<div ]] .. alignment .. color .. fs ..
   [[">]] .. message .. [[</div>]]
   echo(self.name, message)
+  self:autoAdjustSize()
 end
 
 --- raw Echo without formatting/handholding stuff that Geyser.Label:echo() does
 -- @param message The message to print. Can contain html formatting.
 function Geyser.Label:rawEcho(message)
   echo(self.name, message)
+  self:autoAdjustSize()
 end
 
 --- sets the color of the text on the label
@@ -147,6 +149,46 @@ end
 function Geyser.Label:adjustWidth()
   local width, height = self:getSizeHint()
   self:resize(width, nil)
+  return true
+end
+
+--internal function to auto adjust label size to content
+function Geyser.Label:autoAdjustSize()
+  local width = self.autoWidth
+  local height = self.autoHeight
+  if not(width and height) then
+    return
+  end
+
+  if height then
+    self:adjustHeight()
+  end
+
+  if width then
+    self:adjustWidth()
+  end
+end
+
+---Enable autoAdjustSize
+-- @param set width to false if just autoAdjust height
+-- @param set height to false if just autoAdjust width
+function Geyser.Label:enableAutoAdjustSize(width, height)
+  self.autoHeight = true
+  self.autoWidth = true
+  if width == false then
+    self.autoWidth = false
+  end
+
+  if height == false then 
+    self.autoHeight = false
+  end
+  return true
+end
+
+--- Disable autoAdjustSize 
+function Geyser.Label:disableAutoAdjustSize()
+  self.autoHeight = false
+  self.autoWidth = false
   return true
 end
 
@@ -255,6 +297,7 @@ end
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setBackgroundImage (imageFileName)
   setBackgroundImage(self.name, imageFileName)
+  self:autoAdjustSize()
 end
 
 --- Sets a tiled background image for this label.
@@ -343,6 +386,7 @@ function Geyser.Label:setStyleSheet(css)
   css = css or self.stylesheet
   setLabelStyleSheet(self.name, css)
   self.stylesheet = css
+  self:autoAdjustSize()
 end
 --- Sets the tooltip of the label
 -- @param txt the tooltip txt
@@ -835,7 +879,7 @@ function Geyser.Label:new (cons, container)
   if cons.clickthrough then me:enableClickthrough() end
 
   if me.stylesheet then me:setStyleSheet() end
-
+  me:autoAdjustSize()
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
 end
