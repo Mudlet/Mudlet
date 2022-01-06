@@ -625,6 +625,7 @@ public:
     static int getProfileStats(lua_State* L);
     static int getBackgroundColor(lua_State* L);
     static int getLabelStylesheet(lua_State* L);
+    static int getLabelSizeHint(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
 

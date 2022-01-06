@@ -4080,6 +4080,24 @@ int TLuaInterpreter::getImageSize(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelSizeHint
+int TLuaInterpreter::getLabelSizeHint(lua_State* L)
+{
+    QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
+    }
+
+    auto size = host.mpConsole->getLabelSizeHint(labelName);
+    if (!size) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' does not exist").arg(labelName));
+    }
+    lua_pushnumber(L, size->width());
+    lua_pushnumber(L, size->height());
+    return 2;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCmdLineAction
 int TLuaInterpreter::setCmdLineAction(lua_State* L)
 {
@@ -14241,6 +14259,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getProfileStats", TLuaInterpreter::getProfileStats);
     lua_register(pGlobalLua, "getBackgroundColor", TLuaInterpreter::getBackgroundColor);
     lua_register(pGlobalLua, "getLabelStylesheet", TLuaInterpreter::getLabelStylesheet);
+    lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
