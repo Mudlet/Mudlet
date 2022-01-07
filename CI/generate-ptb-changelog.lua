@@ -8,6 +8,9 @@ local argparse = require "argparse"
 local lunajson = require "lunajson"
 
 -- don't load all of LuaGlobal, as that requires yajl installed
+-- mock utf8 as we don't need it here either
+utf8 = utf8 or {}
+
 local github_workspace = os.getenv("GITHUB_WORKSPACE")
 if github_workspace then
   -- the script struggles to load the load files relatively in CI
