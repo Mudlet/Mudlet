@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------------------
 --- Mudlet String Utils
---- Used both both LuaGlobal.lua and generate-ptb-changelog.lua
+--- Used by both LuaGlobal.lua and generate-ptb-changelog.lua
 ----------------------------------------------------------------------------------
 
 
