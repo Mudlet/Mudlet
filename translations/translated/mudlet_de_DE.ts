@@ -8389,7 +8389,8 @@ wahrscheinlich weniger nützlich für die normale Verwendung dieser Anwendung si
       <location filename="../src/main.cpp" line="284"/>
       <source>Copyright © 2008-2022  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>Copyright © 2008-2022 Mudlet-Entwickler
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="285"/>
