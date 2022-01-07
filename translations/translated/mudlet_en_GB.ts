@@ -1716,37 +1716,37 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1415"/>
       <source>Channel102 events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Channel102 events:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1419"/>
       <source>MSSP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>MSSP events:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1424"/>
       <source>MSDP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>MSDP events:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1435"/>
       <source>Trigger Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Trigger Report:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1439"/>
       <source>Timer Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Timer Report:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1443"/>
       <source>Alias Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Alias Report:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1447"/>
@@ -1758,7 +1758,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1451"/>
       <source>Script Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Script Report:</translation>
     </message>
   </context>
   <context>
