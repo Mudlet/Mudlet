@@ -116,6 +116,7 @@ local packages = {
   "geyser/GeyserUtil.lua",
   "geyser/GeyserColor.lua",
   "geyser/GeyserSetConstraints.lua",
+  "geyser/GeyserStyleSheet.lua",
   "geyser/GeyserContainer.lua",
   "geyser/GeyserWindow.lua",
   "geyser/GeyserLabel.lua",
