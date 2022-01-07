@@ -122,7 +122,6 @@ public:
     TTrigger* killTrigger(const QString&);
     bool match_substring(const QString&, const QString&, int, int posOffset = 0);
     bool match_perl(char*, const QString&, int, int posOffset = 0);
-    bool match_wildcard(const QString&, int);
     bool match_exact_match(const QString&, const QString&, int, int posOffset = 0);
     bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset = 0);
     bool match_lua_code(int);
