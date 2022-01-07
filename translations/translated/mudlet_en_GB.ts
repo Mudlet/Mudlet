@@ -1695,19 +1695,22 @@ Tried these locations:
 +--------------------------------------------------------------+
 </source>
       <comment>Header for the system&apos;s statistics information displayed in the console, it is 64 &apos;narrow&apos; characters wide</comment>
-      <translation type="unfinished"/>
+      <translation>+--------------------------------------------------------------+
+|                      system statistics                       |
++--------------------------------------------------------------+
+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1407"/>
       <source>GMCP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>GMCP events:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1411"/>
       <source>ATCP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>ATCP events:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1415"/>
@@ -1749,7 +1752,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1447"/>
       <source>Keybinding Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Keybinding Report:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1451"/>
@@ -4067,12 +4070,12 @@ changed.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="2627"/>
       <source>Cannot replay file &quot;%1&quot;, error message was: &quot;replay file seems to be corrupt&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Cannot replay file &quot;%1&quot;, error message was: &quot;replay file seems to be corrupt&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2629"/>
       <source>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2638"/>
@@ -5141,7 +5144,7 @@ Count</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="915"/>
       <source>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff &lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff &lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1072"/>
