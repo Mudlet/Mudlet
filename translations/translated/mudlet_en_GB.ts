@@ -7381,7 +7381,7 @@ for the selected room:</numerusform>
       <location filename="../src/dlgTriggerEditor.cpp" line="4782"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5564"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation type="unfinished"/>
+      <translation>Checked variables will be saved and loaded with your profile.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4917"/>
@@ -8316,7 +8316,8 @@ less likely to be useful for normal use of this application:
       <location filename="../src/main.cpp" line="284"/>
       <source>Copyright © 2008-2022  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>Copyright © 2008-2022  Mudlet developers
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="285"/>
