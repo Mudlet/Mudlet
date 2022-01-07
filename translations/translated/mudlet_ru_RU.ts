@@ -1691,67 +1691,70 @@ Tried these locations:
 +--------------------------------------------------------------+
 </source>
       <comment>Header for the system&apos;s statistics information displayed in the console, it is 64 &apos;narrow&apos; characters wide</comment>
-      <translation type="unfinished"/>
+      <translation>+--------------------------------------------------------------+
+|                     Статистика системы                       |
++--------------------------------------------------------------+
+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1407"/>
       <source>GMCP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>События GMCP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1411"/>
       <source>ATCP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>События ATCP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1415"/>
       <source>Channel102 events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>События канала 102:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1419"/>
       <source>MSSP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>События MSSP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1424"/>
       <source>MSDP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>События MSDP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1435"/>
       <source>Trigger Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Отчет о триггерах:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1439"/>
       <source>Timer Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Отчет о таймерах:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1443"/>
       <source>Alias Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Отчет по псевдонимам:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1447"/>
       <source>Keybinding Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Отчет по ключам:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1451"/>
       <source>Script Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Отчет о скриптах:</translation>
     </message>
   </context>
   <context>
@@ -4155,12 +4158,12 @@ changed.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="2627"/>
       <source>Cannot replay file &quot;%1&quot;, error message was: &quot;replay file seems to be corrupt&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Невозможно воспроизвести файл &quot;%1&quot;, сообщение об ошибке: &quot;Файл воспроизведения, кажется, поврежден&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2629"/>
       <source>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Воспроизведение прервано, поскольку файл поврежден.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2638"/>
@@ -5222,7 +5225,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="915"/>
       <source>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff &lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;utf8_filenames. ua - модифицирует стандартные функции Lua, чтобы они работали с именами UTF-8 в Windows&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff &lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1072"/>
