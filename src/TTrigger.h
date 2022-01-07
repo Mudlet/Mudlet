@@ -128,8 +128,8 @@ public:
     bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset = 0, bool process = true);
     bool match_lua_code(int);
     bool match_line_spacer(int patternNumber);
-    bool match_color_pattern(int line, int patternNumber, bool process);
-    bool match_prompt(int patternNumber);
+    bool match_color_pattern(int line, int patternNumber, bool process = true);
+    bool match_prompt(int patternNumber, bool process = true);
     void setConditionLineDelta(int delta) { mConditionLineDelta = delta; }
     int getConditionLineDelta() { return mConditionLineDelta; }
     bool registerTrigger();

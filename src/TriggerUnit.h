@@ -48,11 +48,7 @@ class TriggerUnit : public QObject
     friend class XMLimport;
 
 public:
-    explicit TriggerUnit(Host* pHost)
-    : mpHost(pHost)
-    , mMaxID(0)
-    , mModuleMember()
-    {}
+    explicit TriggerUnit(Host* pHost);
 
     std::list<TTrigger*> getTriggerRootNodeList()
     {
