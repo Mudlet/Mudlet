@@ -1691,67 +1691,70 @@ Diese Orte wurden ausprobiert:
 +--------------------------------------------------------------+
 </source>
       <comment>Header for the system&apos;s statistics information displayed in the console, it is 64 &apos;narrow&apos; characters wide</comment>
-      <translation type="unfinished"/>
+      <translation>+--------------------------------------------------------------+
+|                      Systemstatistiken                       |
++--------------------------------------------------------------+
+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1407"/>
       <source>GMCP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>GMCP-Ereignisse:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1411"/>
       <source>ATCP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>ATCP-Ereignisse:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1415"/>
       <source>Channel102 events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Channel102-Ereignisse:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1419"/>
       <source>MSSP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>MSSP-Ereignisse:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1424"/>
       <source>MSDP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>MSDP-Ereignis:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1435"/>
       <source>Trigger Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Trigger-Bericht:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1439"/>
       <source>Timer Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Timer-Bericht:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1443"/>
       <source>Alias Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Alias-Report:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1447"/>
       <source>Keybinding Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Keybinding-Bericht:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1451"/>
       <source>Script Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Skript-Bericht:</translation>
     </message>
   </context>
   <context>
