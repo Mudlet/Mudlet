@@ -8320,7 +8320,8 @@ less likely to be useful for normal use of this application:
       <location filename="../src/main.cpp" line="284"/>
       <source>Copyright © 2008-2022  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>版权所有 © 2008-2022  Mudlet developers
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="285"/>
