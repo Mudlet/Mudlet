@@ -8947,7 +8947,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="3726"/>
       <source>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation type="unfinished"/>
+      <translation>Infórmese acerca de esta versión de Mudlet, la gente que lo hizo y la licencia bajo la que se puede compartir.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="686"/>
