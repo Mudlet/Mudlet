@@ -186,8 +186,8 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
     }
 
     auto helpPackage = mudletPackage.append_child("HelpPackage");
-    if (pHost->moduleHelp.contains(moduleName) && pHost->moduleHelp.value(moduleName).contains(QStringLiteral("helpURL"))) {
-        helpPackage.append_child("helpURL").text().set(pHost->moduleHelp.value(moduleName).value(QStringLiteral("helpURL")).toUtf8().constData());
+    if (pHost->moduleHelp.contains(moduleName) && pHost->moduleHelp.value(moduleName).contains(qsl("helpURL"))) {
+        helpPackage.append_child("helpURL").text().set(pHost->moduleHelp.value(moduleName).value(qsl("helpURL")).toUtf8().constData());
     } else {
         helpPackage.append_child("helpURL").text().set("");
     }
@@ -210,7 +210,7 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
     auto future = QtConcurrent::run(this, &XMLexport::saveXml, filename_pugi_xml);
 
     auto watcher = new QFutureWatcher<bool>;
-    QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(QStringLiteral("profile")); });
+    QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(qsl("profile")); });
     watcher->setFuture(future);
     saveFutures.append(future);
 }
@@ -489,7 +489,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
                 mInstalledModules.append_child("key").text().set(it.key().toUtf8().constData());
                 QStringList entry = it.value();
                 mInstalledModules.append_child("filepath").text().set(entry.at(0).toUtf8().constData());
-                if (entry.at(0).endsWith(QStringLiteral("mpackage"), Qt::CaseInsensitive) || entry.at(0).endsWith(QStringLiteral("zip"), Qt::CaseInsensitive)) {
+                if (entry.at(0).endsWith(qsl("mpackage"), Qt::CaseInsensitive) || entry.at(0).endsWith(qsl("zip"), Qt::CaseInsensitive)) {
                     mInstalledModules.append_child("zipSync").text().set(entry.at(1).toUtf8().constData());
                     // ensure compatibility with previous versions
                     mInstalledModules.append_child("globalSave").text().set(0);
@@ -577,7 +577,16 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             mapInfoContributor.text().set(iterator.next().toUtf8().constData());
         }
     }
-
+    {
+        auto shortcuts = host.append_child("profileShortcuts");
+        auto iterator = mudlet::self()->mShortcutsManager->iterator();
+        while (iterator.hasNext()) {
+            auto key = iterator.next();
+            auto shortcut = shortcuts.append_child("profileShortcut");
+            shortcut.append_attribute("key") = key.toUtf8().constData();
+            shortcut.text().set(pHost->profileShortcuts.value(key)->toString().toUtf8().constData());
+        }
+    }
     {
         auto stopwatches = host.append_child("stopwatches");
         QListIterator<int> itStopWatchId(pHost->getStopWatchIds());
@@ -742,7 +751,7 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     if (writeGenericPackage(mpHost, mudletPackage)) {
         auto future = QtConcurrent::run(this, &XMLexport::saveXml, exportFileName);
         auto watcher = new QFutureWatcher<bool>;
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(QStringLiteral("profile")); });
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(qsl("profile")); });
         watcher->setFuture(future);
         saveFutures.append(future);
 
@@ -1177,7 +1186,7 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, c
 {
 
     QStringList results;
-    QRegularExpression regex = QRegularExpression(QStringLiteral("^ANSI_COLORS_F{(\\d+|IGNORE|DEFAULT)}_B{(\\d+|IGNORE|DEFAULT)}$"));
+    QRegularExpression regex = QRegularExpression(qsl("^ANSI_COLORS_F{(\\d+|IGNORE|DEFAULT)}_B{(\\d+|IGNORE|DEFAULT)}$"));
     QStringListIterator itPattern(patternList);
     QListIterator<int> itType(typeList);
     while (itPattern.hasNext() && itType.hasNext()) {
@@ -1278,7 +1287,7 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, c
                         qDebug() << "XMLexport::remapAnsiToColorNumber(...) ERROR - failed to extract BG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default background";
                     }
 
-                    results << QStringLiteral("FG%1BG%2").arg(QString::number(fg), QString::number(bg));
+                    results << qsl("FG%1BG%2").arg(QString::number(fg), QString::number(bg));
                 } else {
                     // No match - so insert previous string - which will cause
                     // a failure when it gets loaded as a REGEX_COLOR_PATTERN

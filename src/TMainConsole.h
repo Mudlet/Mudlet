@@ -31,6 +31,7 @@
 #include <QFile>
 #include <QTextStream>
 #include <QWidget>
+#include <optional>
 #include "post_guard.h"
 
 #include <hunspell/hunspell.h>
@@ -72,6 +73,8 @@ public:
     QSize getUserWindowSize(const QString& windowname) const;
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
     void setLabelStyleSheet(std::string& buf, std::string& sh);
+    std::optional<QString> getLabelStyleSheet(const QString& name) const;
+    std::optional<QSize> getLabelSizeHint(const QString& name) const;
     std::pair<bool, QString> deleteLabel(const QString&);
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape);

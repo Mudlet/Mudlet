@@ -122,11 +122,10 @@ public:
     TTrigger* killTrigger(const QString&);
     bool match_substring(const QString&, const QString&, int, int posOffset = 0);
     bool match_perl(char*, const QString&, int, int posOffset = 0);
-    bool match_wildcard(const QString&, int);
     bool match_exact_match(const QString&, const QString&, int, int posOffset = 0);
-    bool match_begin_of_line_substring(const QString& toMatch, const QString& regex, int regexNumber, int posOffset = 0);
+    bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset = 0);
     bool match_lua_code(int);
-    bool match_line_spacer(int regexNumber);
+    bool match_line_spacer(int patternNumber);
     bool match_color_pattern(int, int);
     bool match_prompt(int patternNumber);
     void setConditionLineDelta(int delta) { mConditionLineDelta = delta; }
@@ -174,6 +173,13 @@ private:
 
     void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
     void filter(std::string&, int&);
+    void processExactMatch(const QString& line, int patternNumber, int posOffset);
+    void processRegexMatch(const char* haystackC, const QString& haystack, int patternNumber, int posOffset,
+                           const QSharedPointer<pcre>& re, int haystackCLength, int rc, int* ovector);
+    void processBeginOfLine(const QString& needle, int patternNumber, int posOffset);
+    void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where);
+    void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList);
+    void processPromptMatch(int patternNumber);
 
 
     QList<int> mRegexCodePropertyList;
