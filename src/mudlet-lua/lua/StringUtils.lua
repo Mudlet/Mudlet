@@ -138,7 +138,7 @@ function string.patternEscape(self)
   return escaped
 end
 
---- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.patternEscape
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#utf8.patternEscape
 function utf8.patternEscape(self)
   local gsub = utf8.gsub
   local selfType = type(self)
