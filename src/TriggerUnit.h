@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -47,13 +48,18 @@ class TriggerUnit : public QObject
     friend class XMLimport;
 
 public:
-    TriggerUnit(Host* pHost);
+    explicit TriggerUnit(Host* pHost)
+    : mpHost(pHost)
+    , mMaxID(0)
+    , mModuleMember()
+    {}
 
     std::list<TTrigger*> getTriggerRootNodeList()
     {
         return mTriggerRootNodeList;
     }
 
+    void resetStats();
     TTrigger* getTrigger(int id);
     void removeAllTempTriggers();
     void reorderTriggersAfterPackageImport();
@@ -78,19 +84,6 @@ public:
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
 
-    int statsTriggerTotal;
-    int statsTempTriggers;
-    int statsPatterns;
-    int statsActiveTriggers;
-    int statsActiveTriggersMax;
-    int statsActiveTriggersMin;
-    int statsActiveTriggersAverage;
-    int statsTempTriggersCreated;
-    int statsTempTriggersKilled;
-    int statsAverageLineProcessingTime;
-    int statsMaxLineProcessingTime;
-    int statsMinLineProcessingTime;
-    int statsRegexTriggers;
     QList<TTrigger*> uninstallList;
 
 signals:
@@ -105,8 +98,7 @@ private:
     bool mRebuildParallelizables = true;
     QList<TTrigger*> mPrematchedTriggers;
 
-    void initStats();
-    void _assembleReport(TTrigger*);
+    void assembleReport(TTrigger*);
     TTrigger* getTriggerPrivate(int id);
     void addTriggerRootNode(TTrigger* pT, int parentPosition = -1, int childPosition = -1, bool moveTrigger = false);
     void addTrigger(TTrigger* pT);
@@ -121,6 +113,10 @@ private:
     std::list<TTrigger*> mTriggerRootNodeList;
     int mMaxID;
     bool mModuleMember;
+    int statsItemsTotal = 0;
+    int statsTempItems = 0;
+    int statsActiveItems = 0;
+    int statsPatterns = 0;
 };
 
 #endif // MUDLET_TRIGGERUNIT_H

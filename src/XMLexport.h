@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2019, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -49,13 +50,13 @@ class XMLexport : public QObject
     Q_OBJECT
 
 public:
-    XMLexport(Host*);
-    XMLexport(TTrigger*);
-    XMLexport(TTimer*);
-    XMLexport(TAlias*);
-    XMLexport(TAction*);
-    XMLexport(TScript*);
-    XMLexport(TKey*);
+    explicit XMLexport(Host*);
+    explicit XMLexport(TTrigger*);
+    explicit XMLexport(TTimer*);
+    explicit XMLexport(TAlias*);
+    explicit XMLexport(TAction*);
+    explicit XMLexport(TScript*);
+    explicit XMLexport(TKey*);
 
     void writeHost(Host*, pugi::xml_node hostPackage);
     void writeTrigger(TTrigger*, pugi::xml_node xmlParent);

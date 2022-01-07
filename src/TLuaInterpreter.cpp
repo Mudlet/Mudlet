@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -4074,6 +4074,24 @@ int TLuaInterpreter::getImageSize(lua_State* L)
     auto size = mudlet::self()->getImageSize(imageLocation);
     if (!size) {
         return warnArgumentValue(L, __func__, qsl("couldn't retrieve image size, is the location '%1' correct?").arg(imageLocation));
+    }
+    lua_pushnumber(L, size->width());
+    lua_pushnumber(L, size->height());
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelSizeHint
+int TLuaInterpreter::getLabelSizeHint(lua_State* L)
+{
+    QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
+    }
+
+    auto size = host.mpConsole->getLabelSizeHint(labelName);
+    if (!size) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' does not exist").arg(labelName));
     }
     lua_pushnumber(L, size->width());
     lua_pushnumber(L, size->height());
@@ -14241,6 +14259,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getProfileStats", TLuaInterpreter::getProfileStats);
     lua_register(pGlobalLua, "getBackgroundColor", TLuaInterpreter::getBackgroundColor);
     lua_register(pGlobalLua, "getLabelStylesheet", TLuaInterpreter::getLabelStylesheet);
+    lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -16159,6 +16178,7 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     auto [_2, aliasesTotal, tempAliases, activeAliases] = host.getAliasUnit()->assembleReport();
     auto [_3, timersTotal, tempTimers, activeTimers] = host.getTimerUnit()->assembleReport();
     auto [_4, keysTotal, tempKeys, activeKeys] = host.getKeyUnit()->assembleReport();
+    auto [_5, scriptsTotal, tempScripts, activeScripts] = host.getScriptUnit()->assembleReport();
 
     lua_newtable(L);
 
@@ -16231,6 +16251,23 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 
     lua_pushstring(L, "active");
     lua_pushnumber(L, activeKeys);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
+
+    // Scripts
+    lua_pushstring(L, "scripts");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, scriptsTotal);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "temp");
+    lua_pushnumber(L, tempScripts);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeScripts);
     lua_settable(L, -3);
     lua_settable(L, -3);
 
