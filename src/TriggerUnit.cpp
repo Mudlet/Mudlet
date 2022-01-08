@@ -21,6 +21,7 @@
 
 
 #include "TriggerUnit.h"
+#include <nanobench.h>
 
 
 #include "Host.h"
@@ -259,27 +260,45 @@ strcpy(subject, data.toUtf8().data());
         rebuildParallelizables();
     }
 
-    QElapsedTimer timer;
-    timer.start();
+    ankerl::nanobench::Bench().minEpochIterations(2000).warmup(100).run("QtConcurrent filtered.results()", [&] {
+        // can't use blockingFiltered until Qt6 due to a bug in Qt5: https://bugreports.qt.io/browse/QTBUG-94463
+        auto list = QtConcurrent::filtered(mParallelizableTriggers, [subject, data, line](TTrigger* trigger) -> bool
+        {
+            return trigger->matchWithoutProcessing(subject, data, line);
+        }).results();
+    });
 
-    // can't use blockingFiltered until Qt6 due to a bug in Qt5: https://bugreports.qt.io/browse/QTBUG-94463
-    mPrematchedTriggers = QtConcurrent::filtered(mParallelizableTriggers, [subject, data, line](TTrigger* trigger) -> bool
-    {
-        return trigger->matchWithoutProcessing(subject, data, line);
-    }).results();
+    ankerl::nanobench::Bench().minEpochIterations(2000).warmup(100).run("plain for loop", [&] {
+        QList<TTrigger*> list;
 
-    //if (timer.elapsed() > 0) {qDebug() << "Prematching took" << timer.elapsed() << "milliseconds";}
-    timer.restart();
+        for (auto trigger : mParallelizableTriggers) {
+            if (trigger->matchWithoutProcessing(subject, data, line)) {
+                list.append(trigger);
+            }
+        }
+    });
 
-    if (!mPrematchedTriggers.isEmpty()) {
-        //qDebug() << "mPrematchedTriggers" << mPrematchedTriggers;
-    }
+    // ankerl::nanobench::Bench().minEpochIterations(2000).run("match", [&] {
+    //     for (auto trigger : mTriggerRootNodeList) {
+    //         trigger->match(subject, data, line);
+    //     }
+    // });
 
-    for (auto trigger : mTriggerRootNodeList) {
-        trigger->match(subject, data, line);
-    }
-    // if (timer.elapsed() > 0) {qDebug() << "Matching took" << timer.elapsed() << "milliseconds";}
+    // ankerl::nanobench::Bench().minEpochIterations(2000).run("prematch + match", [&] {
+    //     // can't use blockingFiltered until Qt6 due to a bug in Qt5: https://bugreports.qt.io/browse/QTBUG-94463
+    //     mPrematchedTriggers = QtConcurrent::filtered(mParallelizableTriggers, [subject, data, line](TTrigger* trigger) -> bool
+    //     {
+    //         return trigger->matchWithoutProcessing(subject, data, line);
+    //     }).results();
 
+    //     // if (!mPrematchedTriggers.isEmpty()) {
+    //     //     qDebug() << "mPrematchedTriggers" << mPrematchedTriggers;
+    //     // }
+
+    //     for (auto trigger : mTriggerRootNodeList) {
+    //         trigger->match(subject, data, line);
+    //     }
+    // });
     free(subject);
 
     for (auto& trigger : mCleanupList) {

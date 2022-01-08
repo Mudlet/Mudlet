@@ -433,7 +433,8 @@ target_link_libraries(
   Qt5::Widgets
   ZIP::ZIP
   ZLIB::ZLIB
-  qt5keychain)
+  qt5keychain
+  nanobench)
 
 if(Qt5TextToSpeech_FOUND)
   target_link_libraries(mudlet Qt5::TextToSpeech)
