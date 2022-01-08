@@ -50,6 +50,9 @@ class TriggerUnit : public QObject
 public:
     explicit TriggerUnit(Host* pHost);
 
+    QList<TTrigger*> uninstallList;
+    QList<TTrigger*> mPrematchedTriggers;
+
     std::list<TTrigger*> getTriggerRootNodeList()
     {
         return mTriggerRootNodeList;
@@ -80,8 +83,6 @@ public:
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
 
-    QList<TTrigger*> uninstallList;
-
 signals:
     void signal_triggerAdded();
     void signal_triggerRemoved();
@@ -92,7 +93,6 @@ private:
     TriggerUnit() = default;
     QVector<TTrigger*> mParallelizableTriggers;  // TODO - better name
     bool mRebuildParallelizables = true;
-    QList<TTrigger*> mPrematchedTriggers;
 
     void assembleReport(TTrigger*);
     TTrigger* getTriggerPrivate(int id);

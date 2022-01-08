@@ -259,16 +259,27 @@ strcpy(subject, data.toUtf8().data());
         rebuildParallelizables();
     }
 
+    QElapsedTimer timer;
+    timer.start();
+
     // can't use blockingFiltered until Qt6 due to a bug in Qt5: https://bugreports.qt.io/browse/QTBUG-94463
     mPrematchedTriggers = QtConcurrent::filtered(mParallelizableTriggers, [subject, data, line](TTrigger* trigger) -> bool
     {
         return trigger->matchWithoutProcessing(subject, data, line);
     }).results();
-    qDebug() << "mPrematchedTriggers" << mPrematchedTriggers;
+
+    //if (timer.elapsed() > 0) {qDebug() << "Prematching took" << timer.elapsed() << "milliseconds";}
+    timer.restart();
+
+    if (!mPrematchedTriggers.isEmpty()) {
+        //qDebug() << "mPrematchedTriggers" << mPrematchedTriggers;
+    }
 
     for (auto trigger : mTriggerRootNodeList) {
         trigger->match(subject, data, line);
     }
+    // if (timer.elapsed() > 0) {qDebug() << "Matching took" << timer.elapsed() << "milliseconds";}
+
     free(subject);
 
     for (auto& trigger : mCleanupList) {

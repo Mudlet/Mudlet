@@ -1067,6 +1067,8 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
             }
         }
 
+        const auto& prematched = mpHost->getTriggerUnit()->mPrematchedTriggers;
+
         int size = mRegexCodePropertyList.size();
         for (int patternNumber = 0;; patternNumber++) {
             if (patternNumber >= size) {
@@ -1083,11 +1085,22 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
                 break;
 
             case REGEX_BEGIN_OF_LINE_SUBSTRING:
-                ret = match_begin_of_line_substring(haystack, mRegexCodeList.at(patternNumber), patternNumber, posOffset);
+                if (prematched.contains(this)) {
+                    //qDebug() << "already prematched, going straght to processing for" << this;
+                    processBeginOfLine(haystack, patternNumber, posOffset);
+                } else if (!isParallizable()) {
+                    ret = match_begin_of_line_substring(haystack, mRegexCodeList.at(patternNumber), patternNumber, posOffset);
+                }
+
                 break;
 
             case REGEX_EXACT_MATCH:
-                ret = match_exact_match(haystack, mRegexCodeList.at(patternNumber), patternNumber, posOffset);
+                if (prematched.contains(this)) {
+                    //qDebug() << "already prematched, going straght to processing for" << this;
+                    processExactMatch(haystack, patternNumber, posOffset);
+                } else if (!isParallizable()) {
+                    ret = match_exact_match(haystack, mRegexCodeList.at(patternNumber), patternNumber, posOffset);
+                }
                 break;
 
             case REGEX_LUA_CODE:
@@ -1103,7 +1116,12 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
                 break;
 
             case REGEX_PROMPT:
-                ret = match_prompt(patternNumber);
+                if (prematched.contains(this)) {
+                    //qDebug() << "already prematched, going straght to processing for" << this;
+                    processPromptMatch(patternNumber);
+                } else if (!isParallizable()) {
+                    ret = match_prompt(patternNumber);
+                }
                 break;
             }
             // policy: one match is enough to fire on OR-trigger, but in the case of
@@ -1584,7 +1602,7 @@ bool TTrigger::matchWithoutProcessing(char* toMatchC, const QString& toMatch, in
         }
 
         if (matched) {
-            qDebug() << "trigger" << getName() << this << "prematched using" << mRegexCodePropertyList.value(patternNumber);
+            // qDebug() << "triggeR" << getName() << this << "prematched using" << mRegexCodePropertyList.value(patternNumber);
             return true;
         }
     }
