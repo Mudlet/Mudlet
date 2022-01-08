@@ -27,6 +27,7 @@
 
 #include "Host.h"
 #include <QRegularExpression>
+#include <QtDebug>
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TMatchState.h"
@@ -668,7 +669,7 @@ bool TTrigger::match_substring(const QString& haystack, const QString& needle, i
     return false;
 }
 
-void TTrigger::processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset,
+void TTrigger::processSubstringMatch(const QString& haystack, const QString& needle, int patternNumber, int posOffset,
                                      int where)
 {
     Q_ASSERT_X(QThread::currentThread() == QCoreApplication::instance()->thread(), __func__, "can only be called from main thread");
@@ -684,7 +685,7 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
         }
     }
     if (mudlet::debugMode) {
-        TDebug(Qt::cyan, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> mpHost;
+        TDebug(Qt::cyan, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(patternNumber) << ") matched.\n" >> mpHost;
     }
     if (mIsColorizerTrigger) {
         int r1 = mBgColor.red();
@@ -722,7 +723,7 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
         pC->reset();
     }
     if (mIsMultiline) {
-        updateMultistates(regexNumber, captureList, posList);
+        updateMultistates(patternNumber, captureList, posList);
         return;
     } else {
         TLuaInterpreter* pL = mpHost->getLuaInterpreter();
@@ -968,13 +969,13 @@ bool TTrigger::match_exact_match(const QString& haystack, const QString& needle,
     return false;
 }
 
-void TTrigger::processExactMatch(const QString& line, int patternNumber, int posOffset)
+void TTrigger::processExactMatch(const QString& needle, int patternNumber, int posOffset)
 {
     Q_ASSERT_X(QThread::currentThread() == QCoreApplication::instance()->thread(), __func__, "can only be called from main thread");
 
     std::list<std::string> captureList;
     std::list<int> posList;
-    captureList.emplace_back(line.toUtf8().constData());
+    captureList.emplace_back(needle.toUtf8().constData());
     posList.push_back(0 + posOffset);
     if (mudlet::debugMode) {
         TDebug(Qt::yellow, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(patternNumber) << ") matched.\n" >> mpHost;
@@ -1577,6 +1578,9 @@ bool TTrigger::matchWithoutProcessing(char* toMatchC, const QString& toMatch, in
             case REGEX_PROMPT:
                 matched = match_prompt(patternNumber, false);
                 break;
+
+            default:
+                qCritical() << "Unsupported pattern type for multithreading, trigger" << getName() << "pattern" << patternNumber+1 << this << "shouldn't be multithreaded";
         }
 
         if (matched) {

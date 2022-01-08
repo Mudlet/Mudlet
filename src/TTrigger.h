@@ -118,6 +118,8 @@ public:
     void setLineDelta(int b) { mLineDelta = b; }
     void setTriggerType(int b) { mTriggerType = b; }
     void setIsMultiline(bool b) { mIsMultiline = b; }
+    // TODO: mark as const
+    bool isParallizable() { return !isFolder() && !isMultiline() && !isFilterChain() && mRegexCodeList.size() == 1; }
     void enableTrigger(const QString&);
     void disableTrigger(const QString&);
     TTrigger* killTrigger(const QString&);
@@ -159,6 +161,7 @@ public:
     int mKeepFiring;
     QPointer<Host> mpHost;
     QString mName;
+    // TODO: rename to mPatternList or mPatterns;
     QStringList mRegexCodeList;
     bool exportItem;
     bool mModuleMasterFolder;
@@ -175,11 +178,11 @@ private:
 
     void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
     void filter(std::string&, int&);
-    void processExactMatch(const QString& line, int patternNumber, int posOffset);
+    void processExactMatch(const QString& needle, int patternNumber, int posOffset);
     void processRegexMatch(const char* haystackC, const QString& haystack, int patternNumber, int posOffset,
                            const QSharedPointer<pcre>& re, int haystackCLength, int rc, int* ovector);
     void processBeginOfLine(const QString& needle, int patternNumber, int posOffset);
-    void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where);
+    void processSubstringMatch(const QString& haystack, const QString& needle, int patternNumber, int posOffset, int where);
     void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList);
     void processPromptMatch(int patternNumber);
 

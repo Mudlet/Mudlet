@@ -101,7 +101,7 @@ private:
     void removeTriggerRootNode(TTrigger* pT);
     void removeTrigger(TTrigger*);
     void markListDirty(); // TODO - better name
-    void rebuildParallelizables();
+    void rebuildParallelizables(); // or rebuildPrematchables() ?
     void rebuildRecursively(TTrigger* trigger);
 
     QPointer<Host> mpHost;

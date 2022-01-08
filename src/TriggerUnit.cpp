@@ -435,7 +435,7 @@ void TriggerUnit::markListDirty()
 
 void TriggerUnit::rebuildRecursively(TTrigger* trigger)
 {
-    if (!trigger->isFolder()) {
+    if (trigger->isParallizable()) {
         mParallelizableTriggers.append(trigger);
     }
 
@@ -455,7 +455,7 @@ void TriggerUnit::rebuildParallelizables()
 
     // as long as I don't have a pattern, check my children
     for (auto trigger : mTriggerRootNodeList) {
-        if (!trigger->isFolder()) {
+        if (trigger->isParallizable()) {
             mParallelizableTriggers.append(trigger);
         }
 
