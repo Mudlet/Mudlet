@@ -437,13 +437,19 @@ void TriggerUnit::rebuildRecursively(TTrigger* trigger)
 {
     if (trigger->isParallizable()) {
         mParallelizableTriggers.append(trigger);
+        qDebug() << "added1" << trigger->getName() << trigger << "to mParallelizableTriggers" << trigger->mRegexCodeList.size();
+    } else {
+        qDebug() << "ignored1" << trigger->getName() << trigger;
     }
 
     for (auto childTrigger : *trigger->mpMyChildrenList) {
+        if (childTrigger->isParallizable()) {
+            mParallelizableTriggers.append(childTrigger);
+            qDebug() << "added2" << childTrigger->getName() << childTrigger << "to mParallelizableTriggers" << childTrigger->mRegexCodeList.size();
+        }
+
         if (childTrigger->isFolder()) {
             rebuildRecursively(childTrigger);
-        } else {
-            mParallelizableTriggers.append(childTrigger);
         }
     }
 }
@@ -457,13 +463,14 @@ void TriggerUnit::rebuildParallelizables()
     for (auto trigger : mTriggerRootNodeList) {
         if (trigger->isParallizable()) {
             mParallelizableTriggers.append(trigger);
+            qDebug() << "added3" << trigger->getName() << trigger << "to mParallelizableTriggers" << trigger->mRegexCodeList.size();
         }
 
         if (trigger->isFolder()) {
             rebuildRecursively(trigger);
         }
     }
-    qDebug() << "trigger list changed, now has " << mParallelizableTriggers.size() << ": " << mParallelizableTriggers;
+    qDebug() << "trigger list changed, now has" << mParallelizableTriggers.size() << ":" << mParallelizableTriggers;
 
     mRebuildParallelizables = false;
 }

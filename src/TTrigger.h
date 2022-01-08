@@ -28,6 +28,7 @@
 #include "pre_guard.h"
 #include <QApplication>
 #include <QColor>
+#include <QDebug>
 #include <QMap>
 #include <QPointer>
 #include <QSharedPointer>
@@ -216,5 +217,16 @@ private:
     // -1: don't self-destruct, 0: delete, 1+: number of times it can still fire
     int mExpiryCount;
 };
+
+#ifndef QT_NO_DEBUG_STREAM
+// Note "inline" is REQUIRED:
+inline QDebug& operator<<(QDebug& debug, const TTrigger& trigger)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace() << trigger.mName;
+
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
 
 #endif // MUDLET_TTRIGGER_H

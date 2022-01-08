@@ -1584,7 +1584,7 @@ bool TTrigger::matchWithoutProcessing(char* toMatchC, const QString& toMatch, in
         }
 
         if (matched) {
-            qDebug() << "trigger" << getName() << "matched using" << mRegexCodePropertyList.value(patternNumber);
+            qDebug() << "trigger" << getName() << this << "prematched using" << mRegexCodePropertyList.value(patternNumber);
             return true;
         }
     }
