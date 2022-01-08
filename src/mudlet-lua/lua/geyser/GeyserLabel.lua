@@ -192,6 +192,29 @@ function Geyser.Label:disableAutoAdjustSize()
   return true
 end
 
+function Geyser.Label:setMovie(fileName)
+  result, error = setMovie(self.name, fileName)
+  self:autoAdjustSize()
+  return result, error
+end
+
+function Geyser.Label:setMovieStart()
+  return setMovieStart(self.name)
+end
+
+function Geyser.Label:setMoviePaused()
+  return setMoviePaused(self.name)
+end
+
+function Geyser.Label:setMovieSpeed(speed)
+  return setMovieSpeed(self.name, speed)
+end
+
+function Geyser.Label:setMovieFrame(frameNr)
+  return setMovieFrame(self.name, frameNr)
+end
+
+
 --- Set whether or not the text in the label should be bold
 -- @param bool True for bold
 function Geyser.Label:setBold(bool)

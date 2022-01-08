@@ -3537,6 +3537,35 @@ bool Host::setLabelOnLeave(const QString& name, const int func)
     return false;
 }
 
+std::pair<bool, QString> Host::setMovie(const QString& name, const QString& moviePath)
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (!pL) {
+        return {false, qsl("label '%1' does not exist").arg(name)};
+    }
+
+    auto myMovie = pL->movie();
+    if (!myMovie) {
+        myMovie = new QMovie();
+        myMovie->setCacheMode(QMovie::CacheAll);
+    }
+
+    myMovie->setFileName(moviePath);
+
+    if (!myMovie->isValid()) {
+        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
+    }
+    myMovie->stop();
+    pL->setMovie(myMovie);
+    myMovie->start();
+    return {true, QString()};
+
+}
+
 QSize Host::calcFontSize(const QString& windowName)
 {
     if (!mpConsole) {

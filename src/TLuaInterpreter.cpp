@@ -37,6 +37,7 @@
 #include "TEvent.h"
 #include "TFlipButton.h"
 #include "TForkedProcess.h"
+#include "TLabel.h"
 #include "TMapLabel.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
@@ -64,6 +65,7 @@
 #include <QTableWidget>
 #include <QToolTip>
 #include <QFileInfo>
+#include <QMovie>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
@@ -117,6 +119,7 @@ static const char *bad_window_type = "%s: bad argument #%d type (window name as 
 static const char *bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
 static const char *bad_window_value = "window \"%s\" not found";
 static const char *bad_cmdline_value = "command line \"%s\" not found";
+static const char *bad_label_value = "label \"%s\" not found";
 
 #define WINDOW_NAME(_L, _pos)                                                                  \
     ({                                                                                         \
@@ -174,6 +177,19 @@ static const char *bad_cmdline_value = "command line \"%s\" not found";
             return 2;                                                                          \
         }                                                                                      \
         cmdLine_;                                                                              \
+    })
+
+#define LABEL(_L, _name)                                                                       \
+    ({                                                                                         \
+        const QString& name_ = (_name);                                                        \
+        auto console_ = getHostFromLua(_L).mpConsole;                                          \
+        auto label_ = console_->mLabelMap.value(name_);                                        \
+        if (!label_) {                                                                         \
+            lua_pushnil(L);                                                                    \
+            lua_pushfstring(L, bad_label_value, name_.toUtf8().constData());                   \
+            return 2;                                                                          \
+        }                                                                                      \
+        label_;                                                                                \
     })
 
 // variable names within these macros have trailing underscores because in
@@ -4241,6 +4257,80 @@ int TLuaInterpreter::setLabelOnEnter(lua_State* L)
 int TLuaInterpreter::setLabelOnLeave(lua_State* L)
 {
     return setLabelCallback(L, qsl("setLabelOnLeave"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovie
+int TLuaInterpreter::setMovie(lua_State* L)
+{
+    QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
+    }
+    QString moviePath = getVerifiedString(L, __func__, 2, "movie (gif) path");
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.setMovie(labelName, moviePath); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// No documentation available in wiki - internal function
+int TLuaInterpreter::setMovieFunc(lua_State* L, const QString& funcName)
+{
+    QString labelName = getVerifiedString(L, funcName.toUtf8().constData(), 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
+    }
+    auto pN = LABEL(L, labelName);
+    lua_remove(L, 1);
+    auto movie = pN->movie();
+    if (!movie) {
+        return warnArgumentValue(L, __func__, qsl("no movie found at label '%1'").arg(labelName));
+    }
+
+    if (funcName == qsl("setMovieStart")) {
+        movie->start();
+    } else if (funcName == qsl("setMoviePaused")) {
+        movie->setPaused(movie->state() != QMovie::Paused);
+    } else if (funcName == qsl("setMovieFrame")) {
+        int frame = getVerifiedInt(L, funcName.toUtf8().constData(), 1, "movie frame number");
+        lua_pushboolean(L, movie->jumpToFrame(frame));
+        return 1;
+    } else if (funcName == qsl("setMovieSpeed")) {
+        int speed = getVerifiedInt(L, funcName.toUtf8().constData(), 1, "movie playback speed in %");
+        movie->setSpeed(speed);
+    } else {
+        return warnArgumentValue(L, __func__, qsl("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieStart
+int TLuaInterpreter::setMovieStart(lua_State* L)
+{
+    return setMovieFunc(L, qsl("setMovieStart"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMoviePaused
+int TLuaInterpreter::setMoviePaused(lua_State* L)
+{
+    return setMovieFunc(L, qsl("setMoviePaused"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieFrame
+int TLuaInterpreter::setMovieFrame(lua_State* L)
+{
+    return setMovieFunc(L, qsl("setMovieFrame"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieSpeed
+int TLuaInterpreter::setMovieSpeed(lua_State* L)
+{
+    return setMovieFunc(L, qsl("setMovieSpeed"));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextFormat
@@ -13896,6 +13986,11 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setLabelWheelCallback", TLuaInterpreter::setLabelWheelCallback);
     lua_register(pGlobalLua, "setLabelOnEnter", TLuaInterpreter::setLabelOnEnter);
     lua_register(pGlobalLua, "setLabelOnLeave", TLuaInterpreter::setLabelOnLeave);
+    lua_register(pGlobalLua, "setMovie", TLuaInterpreter::setMovie);
+    lua_register(pGlobalLua, "setMovieStart", TLuaInterpreter::setMovieStart);
+    lua_register(pGlobalLua, "setMovieSpeed", TLuaInterpreter::setMovieSpeed);
+    lua_register(pGlobalLua, "setMovieFrame", TLuaInterpreter::setMovieFrame);
+    lua_register(pGlobalLua, "setMoviePaused", TLuaInterpreter::setMoviePaused);
     lua_register(pGlobalLua, "getImageSize", TLuaInterpreter::getImageSize);
     lua_register(pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow);
     lua_register(pGlobalLua, "setWindow", TLuaInterpreter::setWindow);

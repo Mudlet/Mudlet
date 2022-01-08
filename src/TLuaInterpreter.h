@@ -391,6 +391,11 @@ public:
     static int resetBackgroundImage(lua_State*);
     static int setBackgroundColor(lua_State*);
     static int setLabelClickCallback(lua_State*);
+    static int setMovie(lua_State*);
+    static int setMovieStart(lua_State*);
+    static int setMovieSpeed(lua_State*);
+    static int setMovieFrame(lua_State*);
+    static int setMoviePaused(lua_State*);
     static int setCmdLineAction(lua_State*);
     static int resetCmdLineAction(lua_State*);
     static int setCmdLineStyleSheet(lua_State*);
@@ -652,6 +657,7 @@ private:
     void logError(std::string& e, const QString&, const QString& function);
     void logEventError(const QString& event, const QString& error);
     static int setLabelCallback(lua_State*, const QString& funcName);
+    static int setMovieFunc(lua_State*, const QString& funcName);
     std::pair<bool, QString> validLuaCode(const QString &code);
     std::pair<bool, QString> validateLuaCodeParam(int index);
     QByteArray encodeBytes(const char*);
