@@ -64,7 +64,7 @@ void TMedia::playMedia(TMediaData& mediaData)
     bool fileRelative = TMedia::isFileRelative(mediaData);
 
     if (!fileRelative && (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP)) {
-        return; // MSP and GMCP files will not have absolute paths. Something is wrong.
+        return; // MSP and MCMP files will not have absolute paths. Something is wrong.
     }
 
     if (!mediaData.getMediaFileName().contains('*') && !mediaData.getMediaFileName().contains('?')) { // File path wildcards are * and ?
@@ -167,7 +167,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
         bool fileRelative = TMedia::isFileRelative(mediaData);
 
         if (!fileRelative && (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP)) {
-            return; // MSP and GMCP files will not have absolute paths. Something is wrong.
+            return; // MSP and MCMP files will not have absolute paths. Something is wrong.
         }
 
         // API files may start as absolute, but get copied into the media folder for processing. Trim the path from the file name.
