@@ -397,6 +397,22 @@ strcpy(subject, data.toUtf8().data());
         );
     });
 
+    benchmark.run("tbb::parallel_for, affinity scheduler", [&] {
+        std::vector<TTrigger*> output;
+        output.reserve(size(mParallelizableTriggers));
+        static tbb::affinity_partitioner affinity_partitioner;
+
+        // semantically incorrect as it doesn't store all results in the output vector
+        tbb::parallel_for(tbb::blocked_range<int>(0, mParallelizableTriggers.size()),
+            [&](const tbb::blocked_range<int>& r) {
+                for(int i=r.begin(); i!=r.end(); ++i) {
+                    mParallelizableTriggers.at(i)->matchWithoutProcessing(subject, data, line);
+                }
+            },
+            affinity_partitioner
+        );
+    });
+
     // ankerl::nanobench::Bench().minEpochIterations(2000).warmup(100).run("tbb::parallel_for_each", [&] {
     //     std::vector<TTrigger*> output;
     //     output.reserve(size(mParallelizableTriggers));
