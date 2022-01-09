@@ -103,6 +103,7 @@ private:
     static int parseJSONByMediaVolume(QJsonObject& json);
     static int parseJSONByMediaFadeIn(QJsonObject& json);
     static int parseJSONByMediaFadeOut(QJsonObject& json);
+    static int parseJSONByMediaStart(QJsonObject& json);
     static int parseJSONByMediaPriority(QJsonObject& json);
     static int parseJSONByMediaLoops(QJsonObject& json);
     static TMediaData::MediaContinue parseJSONByMediaContinue(QJsonObject& json);

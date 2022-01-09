@@ -42,6 +42,8 @@ public:
 
     static const int MediaFadeNotSet = 0;
 
+    static const int MediaStartDefault = 0;
+
     TMediaData()
     {}
 
@@ -69,6 +71,8 @@ public:
     void setMediaFadeIn(int mediaFadeIn) { mMediaFadeIn = mediaFadeIn; }
     int getMediaFadeOut() const { return mMediaFadeOut; }
     void setMediaFadeOut(int mediaFadeOut) { mMediaFadeOut = mediaFadeOut; }
+    int getMediaStart() const { return mMediaStart; }
+    void setMediaStart(int mediaStart) { mMediaStart = mediaStart; }
     QString getMediaAbsolutePathFileName() const { return mMediaAbsolutePathFileName; }
     void setMediaAbsolutePathFileName(QString mediaAbsolutePathFileName) { mMediaAbsolutePathFileName = mediaAbsolutePathFileName; }
 
@@ -79,6 +83,7 @@ private:
     int mMediaVolume = MediaVolumeDefault;
     int mMediaFadeIn = MediaFadeNotSet;
     int mMediaFadeOut = MediaFadeNotSet;
+    int mMediaStart = MediaStartDefault;
     int mMediaLoops = MediaLoopsDefault;
     int mMediaPriority = MediaPriorityNotSet;
     bool mMediaContinue = MediaContinueDefault;

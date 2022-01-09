@@ -726,10 +726,11 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
         int volume = pPlayer.getMediaData().getMediaVolume();
         int fadeInPosition = pPlayer.getMediaData().getMediaFadeIn();
         int fadeOutPosition = pPlayer.getMediaData().getMediaFadeOut();
+        int startPosition = pPlayer.getMediaData().getMediaStart();
 
         if (fadeInPosition != TMediaData::MediaFadeNotSet) {
             if (progress < fadeInPosition) {
-                double fadeInVolume = static_cast<double>(volume * progress) / static_cast<double>(fadeInPosition * 1.0);
+                double fadeInVolume = static_cast<double>(volume * (progress - startPosition)) / static_cast<double>((fadeInPosition - startPosition) * 1.0);
 
                 pPlayer.getMediaPlayer()->setVolume(qRound(fadeInVolume));
             } else if (progress == fadeInPosition) {
@@ -987,8 +988,9 @@ void TMedia::play(TMediaData& mediaData)
         break;
     }
 
-    // Set volume and play media
+    // Set volume, start and play media
     pPlayer.getMediaPlayer()->setVolume(mediaData.getMediaFadeIn() != TMediaData::MediaFadeNotSet ? 1 : mediaData.getMediaVolume());
+    pPlayer.getMediaPlayer()->setPosition(mediaData.getMediaStart());
     pPlayer.getMediaPlayer()->play();
 }
 
@@ -1104,6 +1106,30 @@ int TMedia::parseJSONByMediaFadeOut(QJsonObject& json)
     }
 
     return mediaFadeOut;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#start
+int TMedia::parseJSONByMediaStart(QJsonObject& json)
+{
+    int mediaStart = TMediaData::MediaStartDefault;
+
+    auto mediaStartJSON = json.value(qsl("start"));
+
+    if (mediaStartJSON != QJsonValue::Undefined && mediaStartJSON.isString() && !mediaStartJSON.toString().isEmpty()) {
+        mediaStart = mediaStartJSON.toString().toInt();
+
+        if (mediaStart < TMediaData::MediaStartDefault) {
+            mediaStart = TMediaData::MediaStartDefault;
+        }
+    } else if (mediaStartJSON != QJsonValue::Undefined && mediaStartJSON.toInt()) {
+        mediaStart = mediaStartJSON.toInt();
+
+        if (mediaStart < TMediaData::MediaStartDefault) {
+            mediaStart = TMediaData::MediaStartDefault;
+        }
+    }
+
+    return mediaStart;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#priority:_1_to_100
@@ -1279,6 +1305,7 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaVolume(TMedia::parseJSONByMediaVolume(json));
     mediaData.setMediaFadeIn(TMedia::parseJSONByMediaFadeIn(json));
     mediaData.setMediaFadeOut(TMedia::parseJSONByMediaFadeOut(json));
+    mediaData.setMediaStart(TMedia::parseJSONByMediaStart(json));
     mediaData.setMediaLoops(TMedia::parseJSONByMediaLoops(json));
     mediaData.setMediaPriority(TMedia::parseJSONByMediaPriority(json));
     mediaData.setMediaContinue(TMedia::parseJSONByMediaContinue(json));
