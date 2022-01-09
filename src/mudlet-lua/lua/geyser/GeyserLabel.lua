@@ -192,24 +192,32 @@ function Geyser.Label:disableAutoAdjustSize()
   return true
 end
 
+---setMovie allows to set a gif animation on a label
+-- @param filename the path to the gif file
 function Geyser.Label:setMovie(fileName)
   result, error = setMovie(self.name, fileName)
   self:autoAdjustSize()
   return result, error
 end
 
-function Geyser.Label:setMovieStart()
+---startMovie starts animation on label
+function Geyser.Label:startMovie()
   return setMovieStart(self.name)
 end
 
-function Geyser.Label:setMoviePaused()
+---pauseMovie pauses or resumes animation on label
+function Geyser.Label:pauseMovie()
   return setMoviePaused(self.name)
 end
 
+---setMovieSpeed change the speed of the animation
+--@param speed is the speed in percent for example 200 for 200% which means double the animation speed
 function Geyser.Label:setMovieSpeed(speed)
   return setMovieSpeed(self.name, speed)
 end
 
+---setMovieFrame jumps to the given frame of the animation
+--@param frameNr is the number of the frame to jump
 function Geyser.Label:setMovieFrame(frameNr)
   return setMovieFrame(self.name, frameNr)
 end

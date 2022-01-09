@@ -4277,7 +4277,7 @@ int TLuaInterpreter::setMovie(lua_State* L)
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::setMovieFunc(lua_State* L, const QString& funcName)
+int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
 {
     QString labelName = getVerifiedString(L, funcName.toUtf8().constData(), 1, "label name");
     if (labelName.isEmpty()) {
@@ -4312,25 +4312,25 @@ int TLuaInterpreter::setMovieFunc(lua_State* L, const QString& funcName)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieStart
 int TLuaInterpreter::setMovieStart(lua_State* L)
 {
-    return setMovieFunc(L, qsl("setMovieStart"));
+    return movieFunc(L, qsl("setMovieStart"));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMoviePaused
 int TLuaInterpreter::setMoviePaused(lua_State* L)
 {
-    return setMovieFunc(L, qsl("setMoviePaused"));
+    return movieFunc(L, qsl("setMoviePaused"));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieFrame
 int TLuaInterpreter::setMovieFrame(lua_State* L)
 {
-    return setMovieFunc(L, qsl("setMovieFrame"));
+    return movieFunc(L, qsl("setMovieFrame"));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieSpeed
 int TLuaInterpreter::setMovieSpeed(lua_State* L)
 {
-    return setMovieFunc(L, qsl("setMovieSpeed"));
+    return movieFunc(L, qsl("setMovieSpeed"));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextFormat

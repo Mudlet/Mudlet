@@ -657,7 +657,7 @@ private:
     void logError(std::string& e, const QString&, const QString& function);
     void logEventError(const QString& event, const QString& error);
     static int setLabelCallback(lua_State*, const QString& funcName);
-    static int setMovieFunc(lua_State*, const QString& funcName);
+    static int movieFunc(lua_State*, const QString& funcName);
     std::pair<bool, QString> validLuaCode(const QString &code);
     std::pair<bool, QString> validateLuaCodeParam(int index);
     QByteArray encodeBytes(const char*);
