@@ -5418,16 +5418,11 @@ int TLuaInterpreter::loadMediaFileAsKeyValueArguments(lua_State* L)
     }
 
     for (int i = 1; i <= numArgs; i += 2) {
-        if (lua_type(L, i) != LUA_TSTRING) {
-            lua_pushfstring(L, "loadSound/MusicFile: bad argument #%d type (keys must be strings, got: %s)", i, luaL_typename(L, -2));
-            return lua_error(L);
-        }
-
         if (lua_isnil(L, (i + 1))) {
             continue; // If the value for the key is nil, move on.
         }
 
-        QString key = lua_tostring(L, i);
+        QString key = getVerifiedString(L, __func__, i, "keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("url")) {
@@ -5464,12 +5459,7 @@ int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L)
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
-        if (lua_type(L, -2) != LUA_TSTRING) {
-            lua_pushfstring(L, "loadSound/MusicFile: bad argument #1 type (table keys must be strings, got index: %s)", luaL_typename(L, -2));
-            return lua_error(L);
-        }
-
-        QString key = lua_tostring(L, -2);
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("url")) {
@@ -5656,16 +5646,11 @@ int TLuaInterpreter::playMusicFileAsKeyValueArguments(lua_State* L)
     }
 
     for (int i = 1; i <= numArgs; i += 2) {
-        if (lua_type(L, i) != LUA_TSTRING) {
-            lua_pushfstring(L, "playMusicFile: bad argument #%d type (keys must be strings, got: %s)", i, luaL_typename(L, -2));
-            return lua_error(L);
-        }
-
         if (lua_isnil(L, (i + 1))) {
             continue; // If the value for the key is nil, move on.
         }
 
-        QString key = lua_tostring(L, i);
+        QString key = getVerifiedString(L, __func__, i, "keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag") || key == QLatin1String("url")) {
@@ -5755,12 +5740,7 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
-        if (lua_type(L, -2) != LUA_TSTRING) {
-            lua_pushfstring(L, "playMusicFile: bad argument #1 type (table keys must be strings, got index: %s)", luaL_typename(L, -2));
-            return lua_error(L);
-        }
-
-        QString key = lua_tostring(L, -2);
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag")) {
@@ -5985,16 +5965,11 @@ int TLuaInterpreter::playSoundFileAsKeyValueArguments(lua_State* L)
     }
 
     for (int i = 1; i <= numArgs; i += 2) {
-        if (lua_type(L, i) != LUA_TSTRING) {
-            lua_pushfstring(L, "playSoundFile: bad argument #%s type (keys must be strings, got: %s)", i, luaL_typename(L, -2));
-            return lua_error(L);
-        }
-
         if (lua_isnil(L, (i + 1))) {
             continue; // If the value for the key is nil, move on.
         }
 
-        QString key = lua_tostring(L, i);
+        QString key = getVerifiedString(L, __func__, i, "keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag") || key == QLatin1String("url")) {
@@ -6091,12 +6066,7 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
-        if (lua_type(L, -2) != LUA_TSTRING) {
-            lua_pushfstring(L, "playSoundFile: bad argument #1 type (table keys must be strings, got index: %s)", luaL_typename(L, -2));
-            return lua_error(L);
-        }
-
-        QString key = lua_tostring(L, -2);
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag")) {
@@ -6306,16 +6276,11 @@ int TLuaInterpreter::stopMusicAsKeyValueArguments(lua_State* L)
     }
 
     for (int i = 1; i <= numArgs; i += 2) {
-        if (lua_type(L, i) != LUA_TSTRING) {
-            lua_pushfstring(L, "stopMusic: bad argument #%s type (keys must be strings, got: %s)", i, luaL_typename(L, -2));
-            return lua_error(L);
-        }
-
         if (lua_isnil(L, (i + 1))) {
             continue; // If the value for the key is nil, move on.
         }
 
-        QString key = lua_tostring(L, i);
+        QString key = getVerifiedString(L, __func__, i, "keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
@@ -6349,12 +6314,7 @@ int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L)
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
-        if (lua_type(L, -2) != LUA_TSTRING) {
-            lua_pushfstring(L, "stopMusic: bad argument #1 type (table keys must be strings, got index: %s)", luaL_typename(L, -2));
-            return lua_error(L);
-        }
-
-        QString key = lua_tostring(L, -2);
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
@@ -6488,16 +6448,11 @@ int TLuaInterpreter::stopSoundsAsKeyValueArguments(lua_State* L)
     }
 
     for (int i = 1; i <= numArgs; i += 2) {
-        if (lua_type(L, i) != LUA_TSTRING) {
-            lua_pushfstring(L, "stopSounds: bad argument #%s type (keys must be strings, got: %s)", i, luaL_typename(L, -2));
-            return lua_error(L);
-        }
-
         if (lua_isnil(L, (i + 1))) {
             continue; // If the value for the key is nil, move on.
         }
 
-        QString key = lua_tostring(L, i);
+        QString key = getVerifiedString(L, __func__, i, "keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
@@ -6542,12 +6497,7 @@ int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L)
     lua_pushnil(L);
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
-        if (lua_type(L, -2) != LUA_TSTRING) {
-            lua_pushfstring(L, "stopSounds: bad argument #1 type (table keys must be strings, got index: %s)", luaL_typename(L, -2));
-            return lua_error(L);
-        }
-
-        QString key = lua_tostring(L, -2);
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
         key = key.toLower();
 
         if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
