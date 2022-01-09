@@ -120,7 +120,7 @@ public:
     void setTriggerType(int b) { mTriggerType = b; }
     void setIsMultiline(bool b) { mIsMultiline = b; }
     // TODO: mark as const
-    bool isParallizable() { return !isFolder() && !isMultiline() && !isFilterChain() && mRegexCodeList.size() == 1; }
+    bool isParallizable() { return !isFolder() && !isMultiline() && !isFilterChain() && mRegexCodeList.size() == 1 && mRegexCodePropertyList.at(0) != REGEX_LUA_CODE; }
     void enableTrigger(const QString&);
     void disableTrigger(const QString&);
     TTrigger* killTrigger(const QString&);
