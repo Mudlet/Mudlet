@@ -266,7 +266,7 @@ strcpy(subject, data.toUtf8().data());
 
     ankerl::nanobench::Bench benchmark;
     benchmark.title("Implementations")
-        .minEpochIterations(4000)
+        .minEpochIterations(2000)
         .warmup(100)
         .relative(true);
 
