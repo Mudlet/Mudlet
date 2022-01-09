@@ -5857,7 +5857,7 @@ int TLuaInterpreter::playMusicFile(lua_State* L)
         if (arg1 != QLatin1String("name")) {
             retValue = TLuaInterpreter::playMusicFileAsOrderedArguments(L);
         } else {
-            retValue = LuaInterpreter::playMusicFileAsKeyValueArguments(L);
+            retValue = TLuaInterpreter::playMusicFileAsKeyValueArguments(L);
         }
     }
 
@@ -6394,7 +6394,7 @@ int TLuaInterpreter::stopMusic(lua_State* L)
 
             if (arg1 != QLatin1String("name")) {
                 // values as ordered args: name[,key][,tag])
-                retValue = LuaInterpreter::stopMusicAsOrderedArguments(L);
+                retValue = TLuaInterpreter::stopMusicAsOrderedArguments(L);
             } else {
                 // args as key/value pairs
                 retValue = TLuaInterpreter::stopMusicAsKeyValueArguments(L);
