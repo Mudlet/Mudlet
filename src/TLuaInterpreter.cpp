@@ -5501,6 +5501,8 @@ int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadMusicFile
 int TLuaInterpreter::loadMusicFile(lua_State* L)
 {
+    int retValue = 0;
+
     if (!lua_gettop(L)) {
         return warnArgumentValue(L, __func__, "loadMusicFile: requires an argument");
     }
@@ -5509,18 +5511,20 @@ int TLuaInterpreter::loadMusicFile(lua_State* L)
         QString arg1 = getVerifiedString(L, __func__, 1, "name");
 
         if (arg1 != QLatin1String("name")) {
-            return TLuaInterpreter::loadMediaFileAsOrderedArguments(L);
+            retValue = TLuaInterpreter::loadMediaFileAsOrderedArguments(L);
         } else {
-            return TLuaInterpreter::loadMediaFileAsKeyValueArguments(L);
+            retValue = TLuaInterpreter::loadMediaFileAsKeyValueArguments(L);
         }
     }
 
-    return TLuaInterpreter::loadMediaFileAsTableArgument(L);
+    return retValue ? retValue : TLuaInterpreter::loadMediaFileAsTableArgument(L);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadSoundFile
 int TLuaInterpreter::loadSoundFile(lua_State* L)
 {
+    int retValue = 0;
+
     if (!lua_gettop(L)) {
         return warnArgumentValue(L, __func__, "loadSoundFile: requires an argument");
     }
@@ -5529,13 +5533,13 @@ int TLuaInterpreter::loadSoundFile(lua_State* L)
         QString arg1 = getVerifiedString(L, __func__, 1, "name");
 
         if (arg1 != QLatin1String("name")) {
-            return TLuaInterpreter::loadMediaFileAsOrderedArguments(L);
+            retValue = TLuaInterpreter::loadMediaFileAsOrderedArguments(L);
         } else {
-            return TLuaInterpreter::loadMediaFileAsKeyValueArguments(L);
+            retValue = TLuaInterpreter::loadMediaFileAsKeyValueArguments(L);
         }
     }
 
-    return TLuaInterpreter::loadMediaFileAsTableArgument(L);
+    return retValue ? retValue : TLuaInterpreter::loadMediaFileAsTableArgument(L);
 }
 
 // Private
@@ -5545,8 +5549,8 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L)
     TMediaData mediaData{};
     int numArgs = lua_gettop(L);
     QString stringValue;
-    int intValue;
-    bool boolValue;
+    int intValue = 0;
+    bool boolValue = 0;
 
     if (numArgs > 9) {
         return warnArgumentValue(L, __func__, "playMusicFile: requires no more than 9 arguments");
@@ -5725,7 +5729,7 @@ int TLuaInterpreter::playMusicFileAsKeyValueArguments(lua_State* L)
             }
         } else if (key == QLatin1String("continue")) {
             bool value = getVerifiedBool(L, __func__, (i + 1), "value for continue");
-            mediaData.setMediaContinue(lua_toboolean(L, -1));
+            mediaData.setMediaContinue(value);
         } else {
             return warnArgumentValue(L, __func__, "playMusicFile: requires valid key/value argument pairs");
         }
@@ -5819,7 +5823,7 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
                 mediaData.setMediaLoops(value);
             } else if (key == QLatin1String("continue")) {
                 bool value = getVerifiedBool(L, __func__, -1, "value for continue must be boolean");
-                mediaData.setMediaContinue(lua_toboolean(L, -1));
+                mediaData.setMediaContinue(value);
             }
         }
 
@@ -5841,6 +5845,8 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#playMusicFile
 int TLuaInterpreter::playMusicFile(lua_State* L)
 {
+    int retValue = 0;
+
     if (!lua_gettop(L)) {
         return warnArgumentValue(L, __func__, "playMusicFile: requires an argument");
     }
@@ -5849,13 +5855,13 @@ int TLuaInterpreter::playMusicFile(lua_State* L)
         QString arg1 = getVerifiedString(L, __func__, 1, "name");
 
         if (arg1 != QLatin1String("name")) {
-            return TLuaInterpreter::playMusicFileAsOrderedArguments(L);
+            retValue = TLuaInterpreter::playMusicFileAsOrderedArguments(L);
         } else {
-            return TLuaInterpreter::playMusicFileAsKeyValueArguments(L);
+            retValue = LuaInterpreter::playMusicFileAsKeyValueArguments(L);
         }
     }
 
-    return TLuaInterpreter::playMusicFileAsTableArgument(L);
+    return retValue ? retValue : TLuaInterpreter::playMusicFileAsTableArgument(L);
 }
 
 // Private
@@ -5865,7 +5871,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L)
     TMediaData mediaData{};
     int numArgs = lua_gettop(L);
     QString stringValue;
-    int intValue;
+    int intValue = 0;
 
     if (numArgs > 9) {
         return warnArgumentValue(L, __func__, "playSoundFile: requires no more than 9 arguments");
@@ -6182,6 +6188,8 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#playSoundFile
 int TLuaInterpreter::playSoundFile(lua_State* L)
 {
+    int retValue = 0;
+
     if (!lua_gettop(L)) {
         return warnArgumentValue(L, __func__, "playSoundFile: requires an argument");
     }
@@ -6190,13 +6198,13 @@ int TLuaInterpreter::playSoundFile(lua_State* L)
         QString arg1 = getVerifiedString(L, __func__, 1, "name");
 
         if (arg1 != QLatin1String("name")) {
-            return TLuaInterpreter::playSoundFileAsOrderedArguments(L);
+            retValue = TLuaInterpreter::playSoundFileAsOrderedArguments(L);
         } else {
-            return TLuaInterpreter::playSoundFileAsKeyValueArguments(L);
+            retValue = TLuaInterpreter::playSoundFileAsKeyValueArguments(L);
         }
     }
 
-    return TLuaInterpreter::playSoundFileAsTableArgument(L);
+    return retValue ? retValue : TLuaInterpreter::playSoundFileAsTableArgument(L);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopAllMedia
@@ -6378,6 +6386,7 @@ int TLuaInterpreter::stopMusic(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TMediaData mediaData{};
+    int retValue = 0;
 
     if (lua_gettop(L)) {
         if (!lua_istable(L, 1)) {
@@ -6385,15 +6394,19 @@ int TLuaInterpreter::stopMusic(lua_State* L)
 
             if (arg1 != QLatin1String("name")) {
                 // values as ordered args: name[,key][,tag])
-                return TLuaInterpreter::stopMusicAsOrderedArguments(L);
+                retValue = LuaInterpreter::stopMusicAsOrderedArguments(L);
             } else {
                 // args as key/value pairs
-                return TLuaInterpreter::stopMusicAsKeyValueArguments(L);
+                retValue = TLuaInterpreter::stopMusicAsKeyValueArguments(L);
             }
         } else {
             // arg as table
-            return TLuaInterpreter::stopMusicAsTableArgument(L);
+            retValue = TLuaInterpreter::stopMusicAsTableArgument(L);
         }
+    }
+
+    if (retValue) {
+        return retValue;
     }
 
     // no args
@@ -6412,7 +6425,7 @@ int TLuaInterpreter::stopSoundsAsOrderedArguments(lua_State* L)
     TMediaData mediaData{};
     int numArgs = lua_gettop(L);
     QString stringValue;
-    int intValue;
+    int intValue = 0;
 
     if (numArgs > 4) {
         return warnArgumentValue(L, __func__, "playMusic: requires no more than 3 arguments");
@@ -6578,6 +6591,7 @@ int TLuaInterpreter::stopSounds(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TMediaData mediaData{};
+    int retValue = 0;
 
     if (lua_gettop(L)) {
         if (!lua_istable(L, 1)) {
@@ -6585,15 +6599,19 @@ int TLuaInterpreter::stopSounds(lua_State* L)
 
             if (arg1 != QLatin1String("name")) {
                 // values as ordered args: name[,key][,tag][,priority])
-                return TLuaInterpreter::stopSoundsAsOrderedArguments(L);
+                retValue = TLuaInterpreter::stopSoundsAsOrderedArguments(L);
             } else {
                 // args as key/value pairs
-                return TLuaInterpreter::stopSoundsAsKeyValueArguments(L);
+                retValue = TLuaInterpreter::stopSoundsAsKeyValueArguments(L);
             }
         } else {
             // arg as table
-            return TLuaInterpreter::stopSoundsAsTableArgument(L);
+            retValue = TLuaInterpreter::stopSoundsAsTableArgument(L);
         }
+    }
+
+    if (retValue) {
+        return retValue;
     }
 
     // no args
