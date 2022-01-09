@@ -14920,11 +14920,9 @@ int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& fu
 // No documentation available in wiki - internal function
 int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QString& function, int expiryCount)
 {
-    TTrigger* pT;
-    QStringList sList;
-    sList << regex;
-    QList<int> propertyList;
-    propertyList << REGEX_EXACT_MATCH;
+    TTrigger* pT = nullptr;
+    QStringList sList {regex};
+    QList<int> propertyList {REGEX_EXACT_MATCH};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -14940,11 +14938,9 @@ int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QStr
 // No documentation available in wiki - internal function
 int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QString& function, int expiryCount)
 {
-    TTrigger* pT;
-    QStringList sList;
-    sList << regex;
-    QList<int> propertyList;
-    propertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
+    TTrigger* pT = nullptr;
+    QStringList sList {regex};
+    QList<int> propertyList {REGEX_BEGIN_OF_LINE_SUBSTRING};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -15041,12 +15037,9 @@ int TLuaInterpreter::startTempColorTrigger(int fg, int bg, const QString& functi
 // No documentation available in wiki - internal function
 int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& function, int expiryCount)
 {
-    TTrigger* pT;
-    QStringList sList;
-    sList << regex;
-
-    QList<int> propertyList;
-    propertyList << REGEX_PERL; // substring trigger is default
+    TTrigger* pT = nullptr;
+    QStringList sList {regex};
+    QList<int> propertyList {REGEX_PERL};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
