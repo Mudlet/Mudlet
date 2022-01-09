@@ -141,14 +141,14 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     }
 
     // Set the properties of the log options
-    lineEdit_logFileFolder->setToolTip(tr("<p>Location which will be used to store log files - matching logs will be appended to.</p>"));
-    pushButton_whereToLog->setToolTip(tr("<p>Select a directory where logs will be saved.</p>"));
-    pushButton_resetLogDir->setToolTip(tr("<p>Reset the directory so that logs are saved to the profile's <i>log</i> directory.</p>"));
+    lineEdit_logFileFolder->setToolTip(utils::richText(tr("Location which will be used to store log files - matching logs will be appended to.")));
+    pushButton_whereToLog->setToolTip(utils::richText(tr("Select a directory where logs will be saved.")));
+    pushButton_resetLogDir->setToolTip(utils::richText(tr("Reset the directory so that logs are saved to the profile's <i>log</i> directory.")));
     comboBox_logFileNameFormat->setToolTip(tr("<p>This option sets the format of the log name.</p>"
-                                                                  "<p>If <i>Named file</i> is selected, you can set a custom file name. (Logs are appended "
-                                                                  "if a log file of the same name already exists.)</p>"));
-    lineEdit_logFileName->setToolTip(tr("<p>Set a custom name for your log. (New logs are appended if a log file of the same name "
-                                                            "already exists).</p>"));
+                                              "<p>If <i>Named file</i> is selected, you can set a custom file name. (Logs are appended "
+                                              "if a log file of the same name already exists.)</p>"));
+    lineEdit_logFileName->setToolTip(utils::richText(tr("Set a custom name for your log. (New logs are appended if a log file of the same name "
+                                                        "already exists).")));
     lineEdit_logFileName->setPlaceholderText(tr("logfile",
                                                 "Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2})."));
     label_logFileNameExtension->setVisible(false);
@@ -168,7 +168,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         // disabled in dev builds
         checkbox_noAutomaticUpdates->setChecked(true);
         checkbox_noAutomaticUpdates->setDisabled(true);
-        checkbox_noAutomaticUpdates->setToolTip(tr("<p>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.</p>"));
+        checkbox_noAutomaticUpdates->setToolTip(utils::richText(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.")));
     } else {
         checkbox_noAutomaticUpdates->setChecked(!pMudlet->updater->updateAutomatically());
         // This is the extra connect(...) relating to settings' changes saved by
@@ -195,19 +195,19 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                           "run <b>correctly</b> when the timer's interval is less than this setting.</p>"
                                                           "<p><u>Any timer script that has errors will still have its error messages reported whatever the setting.</u></p>"));
 
-    pushButton_showGlyphUsage->setToolTip(tr("<p>This will bring up a display showing all the symbols used in the current "
-                                             "map and whether they can be drawn using just the specified font, any other "
-                                             "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
-                                             "that make up that symbol, so that they can be identified even if they "
-                                             "cannot be displayed; also, up to the first thirty two rooms that are using "
-                                             "that symbol are listed, which may help to identify any unexpected or odd cases.</p>"));
-    fontComboBox_mapSymbols->setToolTip(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
-                                           "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
-    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(tr("<p>Using a single font is likely to produce a more consistent style but may "
-                                                        "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
-                                                        "does not have a needed glyph (a font's individual character/symbol) to represent "
-                                                        "the grapheme (what is to be represented).  Clearing this checkbox will allow "
-                                                        "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
+    pushButton_showGlyphUsage->setToolTip(utils::richText(tr("This will bring up a display showing all the symbols used in the current "
+                                                             "map and whether they can be drawn using just the specified font, any other "
+                                                             "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
+                                                             "that make up that symbol, so that they can be identified even if they "
+                                                             "cannot be displayed; also, up to the first thirty two rooms that are using "
+                                                             "that symbol are listed, which may help to identify any unexpected or odd cases.")));
+    fontComboBox_mapSymbols->setToolTip(utils::richText(tr("Select the only or the primary font used (depending on <i>Only use symbols "
+                                                               "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.")));
+    checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(utils::richText(tr("Using a single font is likely to produce a more consistent style but may "
+                                                                        "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
+                                                                        "does not have a needed glyph (a font's individual character/symbol) to represent "
+                                                                        "the grapheme (what is to be represented).  Clearing this checkbox will allow "
+                                                                        "the best alternative glyph from another font to be used to draw that grapheme.")));
     checkBox_runAllKeyBindings->setToolTip(tr("<p>If <b>not</b> checked Mudlet will only react to the first matching keybinding "
                                               "(combination of key and modifiers) even if more than one of them is set to be "
                                               "active. This means that a temporary keybinding (not visible in the Editor) "
@@ -607,6 +607,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     ircHostSecure->setChecked(dlgIRC::readIrcHostSecure(pHost));
     ircChannels->setText(dlgIRC::readIrcChannels(pHost).join(" "));
     ircNick->setText(dlgIRC::readIrcNickName(pHost));
+    ircPassword->setText(dlgIRC::readIrcPassword(pHost));
 
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
     dictList->clear();
@@ -669,7 +670,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             key.replace(QLatin1String("-"), QLatin1String("_"));
             if (mudlet::self()->mDictionaryLanguageCodeMap.contains(key)) {
                 item->setText(mudlet::self()->mDictionaryLanguageCodeMap.value(key));
-                item->setToolTip(tr("<p>From the dictionary file <tt>%1.dic</tt> (and its companion affix <tt>.aff</tt> file).</p>").arg(dir.absoluteFilePath(entries.at(i))));
+                item->setToolTip(utils::richText(tr("From the dictionary file <tt>%1.dic</tt> (and its companion affix <tt>.aff</tt> file).").arg(dir.absoluteFilePath(entries.at(i)))));
             } else {
                 item->setText(tr("%1 - not recognised").arg(entries.at(i)));
                 item->setToolTip(tr("<p>Mudlet does not recognise the code \"%1\", please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!</p>"
@@ -697,7 +698,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     } else {
         dictList->setEnabled(false);
-        dictList->setToolTip(tr("No Hunspell dictionary files found, spell-checking will not be available."));
+        dictList->setToolTip(utils::richText(tr("No Hunspell dictionary files found, spell-checking will not be available.")));
     }
     dictList->blockSignals(false);
 
@@ -1297,6 +1298,7 @@ void dlgProfilePreferences::clearHostDetails()
     ircHostPort->clear();
     ircChannels->clear();
     ircNick->clear();
+    ircPassword->clear();
 
     dictList->clear();
     checkBox_spellCheck->setChecked(false);
@@ -2638,12 +2640,14 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
         QString oldIrcNick = dlgIRC::readIrcNickName(pHost);
+        QString oldIrcPass = dlgIRC::readIrcPassword(pHost);
         QString oldIrcHost = dlgIRC::readIrcHostName(pHost);
         QString oldIrcPort = QString::number(dlgIRC::readIrcHostPort(pHost));
         bool oldIrcSecure = dlgIRC::readIrcHostSecure(pHost);
         QString oldIrcChannels = dlgIRC::readIrcChannels(pHost).join(" ");
 
         QString newIrcNick = ircNick->text();
+        QString newIrcPass = ircPassword->text();
         QString newIrcHost = ircHostName->text();
         QString newIrcPort = ircHostPort->text();
         bool newIrcSecure = ircHostSecure->isChecked();
@@ -2694,6 +2698,11 @@ void dlgProfilePreferences::slot_save_and_exit()
             if (pHost->mpDlgIRC) {
                 pHost->mpDlgIRC->connection->setNickName(newIrcNick);
             }
+        }
+
+        if (oldIrcPass != newIrcPass) {
+            dlgIRC::writeIrcPassword(pHost, newIrcPass);
+            restartIrcClient = true;
         }
 
         if (oldIrcChannels != newIrcChannels) {
@@ -2916,7 +2925,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TTrigger*> triggers = pHost->getTriggerUnit()->getTriggerRootNodeList();
     for (auto trigger : triggers) {
         if (!trigger->getScript().isEmpty() && !trigger->isTemporary()) {
-            items.push_back(std::make_tuple(trigger->getName(), qsl("trigger"), trigger->getID()));
+            items.push_back({trigger->getName(), qsl("trigger"), trigger->getID()});
         }
         addTriggersToPreview(trigger, items);
     }
@@ -2924,7 +2933,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TAlias*> aliases = pHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : aliases) {
         if (!alias->getScript().isEmpty() && !alias->isTemporary()) {
-            items.push_back(std::make_tuple(alias->getName(), qsl("alias"), alias->getID()));
+            items.push_back({alias->getName(), qsl("alias"), alias->getID()});
         }
         addAliasesToPreview(alias, items);
     }
@@ -2932,7 +2941,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TScript*> scripts = pHost->getScriptUnit()->getScriptRootNodeList();
     for (auto script : scripts) {
         if (!script->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(script->getName(), qsl("script"), script->getID()));
+            items.push_back({script->getName(), qsl("script"), script->getID()});
         }
         addScriptsToPreview(script, items);
     }
@@ -2940,7 +2949,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TTimer*> timers = pHost->getTimerUnit()->getTimerRootNodeList();
     for (auto timer : timers) {
         if (!timer->getScript().isEmpty() && !timer->isTemporary()) {
-            items.push_back(std::make_tuple(timer->getName(), qsl("timer"), timer->getID()));
+            items.push_back({timer->getName(), qsl("timer"), timer->getID()});
         }
         addTimersToPreview(timer, items);
     }
@@ -2948,7 +2957,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TKey*> keys = pHost->getKeyUnit()->getKeyRootNodeList();
     for (auto key : keys) {
         if (!key->getScript().isEmpty() && !key->isTemporary()) {
-            items.push_back(std::make_tuple(key->getName(), qsl("key"), key->getID()));
+            items.push_back({key->getName(), qsl("key"), key->getID()});
         }
         addKeysToPreview(key, items);
     }
@@ -2956,7 +2965,7 @@ void dlgProfilePreferences::populateScriptsList()
     std::list<TAction*> actions = pHost->getActionUnit()->getActionRootNodeList();
     for (auto action : actions) {
         if (!action->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(action->getName(), qsl("button"), action->getID()));
+            items.push_back({action->getName(), qsl("button"), action->getID()});
         }
         addActionsToPreview(action, items);
     }
@@ -2965,10 +2974,10 @@ void dlgProfilePreferences::populateScriptsList()
     combobox->setUpdatesEnabled(false);
     combobox->clear();
 
-    for (auto item : items) {
-        combobox->addItem(qsl("%1 (%2)").arg(std::get<0>(item), std::get<1>(item)),
+    for (auto [name, type, id] : items) {
+        combobox->addItem(qsl("%1 (%2)").arg(name, type),
                           // store the item type and ID in data so we can pull up the script for it later
-                          QVariant::fromValue(QPair<QString, int>(std::get<1>(item), std::get<2>(item))));
+                          QVariant::fromValue(QPair<QString, int>(type, id)));
     }
     combobox->setUpdatesEnabled(true);
 }
@@ -2979,7 +2988,7 @@ void dlgProfilePreferences::addTriggersToPreview(TTrigger* pTriggerParent, std::
     std::list<TTrigger*>* childTriggers = pTriggerParent->getChildrenList();
     for (auto trigger : *childTriggers) {
         if (!trigger->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(trigger->getName(), qsl("trigger"), trigger->getID()));
+            items.push_back({trigger->getName(), qsl("trigger"), trigger->getID()});
         }
 
         if (trigger->hasChildren()) {
@@ -2994,7 +3003,7 @@ void dlgProfilePreferences::addAliasesToPreview(TAlias* pAliasParent, std::vecto
     std::list<TAlias*>* childrenList = pAliasParent->getChildrenList();
     for (auto alias : *childrenList) {
         if (!alias->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(alias->getName(), qsl("alias"), alias->getID()));
+            items.push_back({alias->getName(), qsl("alias"), alias->getID()});
         }
 
         if (alias->hasChildren()) {
@@ -3009,7 +3018,7 @@ void dlgProfilePreferences::addTimersToPreview(TTimer* pTimerParent, std::vector
     std::list<TTimer*>* childrenList = pTimerParent->getChildrenList();
     for (auto timer : *childrenList) {
         if (!timer->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(timer->getName(), qsl("timer"), timer->getID()));
+            items.push_back({timer->getName(), qsl("timer"), timer->getID()});
         }
 
         if (timer->hasChildren()) {
@@ -3024,7 +3033,7 @@ void dlgProfilePreferences::addKeysToPreview(TKey* pKeyParent, std::vector<std::
     std::list<TKey*>* childrenList = pKeyParent->getChildrenList();
     for (auto key : *childrenList) {
         if (!key->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(key->getName(), qsl("key"), key->getID()));
+            items.push_back({key->getName(), qsl("key"), key->getID()});
         }
 
         if (key->hasChildren()) {
@@ -3039,7 +3048,7 @@ void dlgProfilePreferences::addScriptsToPreview(TScript* pScriptParent, std::vec
     std::list<TScript*>* childrenList = pScriptParent->getChildrenList();
     for (auto script : *childrenList) {
         if (!script->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(script->getName(), qsl("script"), script->getID()));
+            items.push_back({script->getName(), qsl("script"), script->getID()});
         }
 
         if (script->hasChildren()) {
@@ -3054,7 +3063,7 @@ void dlgProfilePreferences::addActionsToPreview(TAction* pActionParent, std::vec
     std::list<TAction*>* childrenList = pActionParent->getChildrenList();
     for (auto action : *childrenList) {
         if (!action->getScript().isEmpty()) {
-            items.push_back(std::make_tuple(action->getName(), qsl("button"), action->getID()));
+            items.push_back({action->getName(), qsl("button"), action->getID()});
         }
 
         if (action->hasChildren()) {
@@ -3382,14 +3391,12 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         }
         auto * pSymbolInFont = new QTableWidgetItem();
         pSymbolInFont->setTextAlignment(Qt::AlignCenter);
-        pSymbolInFont->setToolTip(qsl("<html><head/><body>%1</body></html>")
-                                  .arg(tr("<p>The room symbol will appear like this if only symbols (glyphs) from the specific font are used.</p>")));
+        pSymbolInFont->setToolTip(utils::richText(tr("The room symbol will appear like this if only symbols (glyphs) from the specific font are used.")));
         pSymbolInFont->setFont(selectedFont);
 
         auto * pSymbolAnyFont = new QTableWidgetItem();
         pSymbolAnyFont->setTextAlignment(Qt::AlignCenter);
-        pSymbolAnyFont->setToolTip(qsl("<html><head/><body>%1</body></html>")
-                                   .arg(tr("<p>The room symbol will appear like this if symbols (glyphs) from any font can be used.</p>")));
+        pSymbolAnyFont->setToolTip(utils::richText(tr("The room symbol will appear like this if symbols (glyphs) from any font can be used.")));
         pSymbolAnyFont->setFont(anyFont);
 
         QFontMetrics SymbolInFontMetrics(selectedFont);
@@ -3417,21 +3424,19 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
 
         QTableWidgetItem* pCodePointDisplay = new QTableWidgetItem(codePointsString.join(qsl(", ")));
         pCodePointDisplay->setTextAlignment(Qt::AlignCenter);
-        pCodePointDisplay->setToolTip(qsl("<html><head/><body>%1</body></html>")
-                                      .arg(tr("<p>These are the sequence of hexadecimal numbers that are used by the Unicode consortium "
-                                              "to identify the graphemes needed to create the symbol.  These numbers can be utilised "
-                                              "to determine precisely what is to be drawn even if some fonts have glyphs that are the "
-                                              "same for different codepoints or combination of codepoints.</p>"
-                                              "<p>Character entry utilities such as <i>charmap.exe</i> on <i>Windows</i> or <i>gucharmap</i> "
-                                              "on many Unix type operating systems will also use these numbers which cover "
-                                              "everything from U+0020 {Space} to U+10FFFD the last usable number in the <i>Private Use "
-                                              "Plane 16</i> via most of the written marks that humanity has ever made.</p>")));
+        pCodePointDisplay->setToolTip(tr("<p>These are the sequence of hexadecimal numbers that are used by the Unicode consortium "
+                                         "to identify the graphemes needed to create the symbol.  These numbers can be utilised "
+                                         "to determine precisely what is to be drawn even if some fonts have glyphs that are the "
+                                         "same for different codepoints or combination of codepoints.</p>"
+                                         "<p>Character entry utilities such as <i>charmap.exe</i> on <i>Windows</i> or <i>gucharmap</i> "
+                                         "on many Unix type operating systems will also use these numbers which cover "
+                                         "everything from U+0020 {Space} to U+10FFFD the last usable number in the <i>Private Use "
+                                         "Plane 16</i> via most of the written marks that humanity has ever made.</p>"));
 
         // Need to pad the numbers with spaces so that sorting works correctly:
         QTableWidgetItem* pUsageCount = new QTableWidgetItem(qsl("%1").arg(roomsWithSymbol.count(), 5, 10, QChar(' ')));
         pUsageCount->setTextAlignment(Qt::AlignCenter);
-        pUsageCount->setToolTip(qsl("<html><head/><body>%1</body></html>")
-                                .arg(tr("<p>How many rooms in the whole map have this symbol.")));
+        pUsageCount->setToolTip(utils::richText(tr("How many rooms in the whole map have this symbol.")));
 
         QStringList roomNumberStringList;
         QListIterator<int> itRoom(roomsWithSymbol);
@@ -3449,17 +3454,15 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
             }
         }
         QTableWidgetItem* pRoomNumbers = new QTableWidgetItem(roomNumberStringList.join(qsl(", ")));
-        pRoomNumbers->setToolTip(qsl("<html><head/><body>%1</body></html>")
-                                 .arg(tr("<p>The rooms with this symbol, up to a maximum of thirty-two, if there are more "
-                                         "than this, it is indicated but they are not shown.</p>")));
+        pRoomNumbers->setToolTip(utils::richText(tr("The rooms with this symbol, up to a maximum of thirty-two, if there are more "
+                                                    "than this, it is indicated but they are not shown.")));
 
         auto * pDummyButton = new QToolButton();
         if (isSingleFontUsable) {
             pSymbolInFont->setText(symbol);
             pSymbolAnyFont->setText(symbol);
             pDummyButton->setIcon(QIcon(qsl(":/icons/dialog-ok-apply.png")));
-            pDummyButton->setToolTip(qsl("<html><head/><body>%1</body></html>")
-                                     .arg(tr("<p>The symbol can be made entirely from glyphs in the specified font.</p>")));
+            pDummyButton->setToolTip(utils::richText(tr("The symbol can be made entirely from glyphs in the specified font.")));
         } else {
             // Need to switch to a different font as it is possible that the
             // single font may not have the replacement glyph either...!
@@ -3468,24 +3471,22 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
             if (isAllFontUsable) {
                 pSymbolAnyFont->setText(symbol);
                 pDummyButton->setIcon(QIcon(qsl(":/icons/dialog-warning.png")));
-                pDummyButton->setToolTip(qsl("<html><head/><body>%1</body></html>")
-                                         .arg(tr("<p>The symbol cannot be made entirely from glyphs in the specified font, but, "
-                                                 "using other fonts in the system, it can. Either un-check the <i>Only use symbols "
-                                                 "(glyphs) from chosen font</i> option or try and choose another font that does "
-                                                 "have the needed glyphs.</p><p><i>You need not close this table to try another font, "
-                                                 "changing it on the main preferences dialogue will update this table after a slight "
-                                                 "delay.</i></p>")));
+                pDummyButton->setToolTip(tr("<p>The symbol cannot be made entirely from glyphs in the specified font, but, "
+                                            "using other fonts in the system, it can. Either un-check the <i>Only use symbols "
+                                            "(glyphs) from chosen font</i> option or try and choose another font that does "
+                                            "have the needed glyphs.</p>"
+                                            "<p><i>You need not close this table to try another font, changing it on the main "
+                                            "preferences dialogue will update this table after a slight delay.</i></p>"));
             } else {
                 pSymbolAnyFont->setText(QString(QChar::ReplacementCharacter));
                 pDummyButton->setIcon(QIcon(qsl(":/icons/dialog-error.png")));
-                pDummyButton->setToolTip(qsl("<html><head/><body>%1</body></html>")
-                                         .arg(tr("<p>The symbol cannot be drawn using any of the fonts in the system, either an "
-                                                 "invalid string was entered as the symbol for the indicated rooms or the map was "
-                                                 "created on a different systems with a different set of fonts available to use. "
-                                                 "You may be able to correct this by installing an additional font using whatever "
-                                                 "method is appropriate for this system or by editing the map to use a different "
-                                                 "symbol. It may be possible to do the latter via a lua script using the "
-                                                 "<i>getRoomChar</i> and <i>setRoomChar</i> functions.</p>")));
+                pDummyButton->setToolTip(utils::richText(tr("The symbol cannot be drawn using any of the fonts in the system, either an "
+                                                            "invalid string was entered as the symbol for the indicated rooms or the map was "
+                                                            "created on a different systems with a different set of fonts available to use. "
+                                                            "You may be able to correct this by installing an additional font using whatever "
+                                                            "method is appropriate for this system or by editing the map to use a different "
+                                                            "symbol. It may be possible to do the latter via a lua script using the "
+                                                            "<i>getRoomChar</i> and <i>setRoomChar</i> functions.")));
             }
         }
         pTableWidget->setCellWidget(++row, 0, pDummyButton);
@@ -3505,6 +3506,9 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
     mpDialogMapGlyphUsage->raise();
 }
 
+// The setToolTip() calls at the end of this method use the lambda method
+// defined within this method and NOT the Qt method with the same name but
+// different signature:
 void dlgProfilePreferences::generateDiscordTooltips()
 {
     if (!mpHost) {

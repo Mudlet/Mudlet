@@ -95,6 +95,31 @@ Don't:
 * assume English-centric plural forms, other languages do not necessarily have the simple add an "s"/"es" for more/less then the singular case.
 * assume universal quote and number punctuation formats. There are languages that use « and » instead of " for "quoting" words or phrases. Qt can provide Locale specific displays of numbers/dates/times.
 
+# Tooltip tips:
+* Tooltips are (ideally) short pieces of text that can give additional hints or help with a control or setting. As such they are sentences so should end with the appropriate punctuation, usually a period (a.k.a. full-stop).
+* To avoid long single line tooltips that sprawl across the screen it is necessary to signal to the Qt libraries that the text is "rich-text", and this is done by the inclusion of HTML-like tags in the text. At a bare minimum this can be done by surrounding the text with a pair of paragraph tags: `<p>`...`</p>`.
+* To help with the above there is a static helper functon defined in the `utils` class called `richText(`...`)` that can be put around the text that will insert those tags. As such text is user facing as part of the User Interface (UI) it must be put through the translation system - and thus will likely be inside the `QObject` class's `tr()` method.
+* So as to reduce the need for translators to have to deal with HTML-like tags in the texts they have to work on, the `richText` function will eliminate the need for them to remember a pair of `<p>`...`</p>` around a **single** paragraph of text; however when **more** than one paragraph is used it is clearer to NOT use the `utils::richText(`...`)` and include the paragraph tags around each of them. The on-line translation system we use (CrowdIn) can be set to handle/hide HTML tags but it needs to see matched pairs to be able to make sense of them, so:
+
+Do:
+  * Single paragraph:
+```cpp
+    widget->setToolTip(utils::richText(tr("A single sentence or paragraph that is a tool-tip.")));
+```
+
+* More than one paragraph:
+```cpp
+    widget->setToolTip(tr("<p>The first paragraph that is a tool-tip.</p>"
+                          "<p>Another paragraph, maybe in a different style, e.g. <i>italics</i> or <b>bold</b>.</p>")));
+```
+
+Don't:
+  * More than one paragraph:
+```cpp
+    widget->setToolTip(utils::richText(tr("The first paragraph that is a tool-tip.</p>"
+                                          "<p>Another paragraph, maybe in a different style, e.g. <i>italics</i> or <b>bold</b>.")));
+```
+
 # Git commit guidelines for core team
 
 ## Refactoring

@@ -1233,19 +1233,11 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
             // At least one unnamed area and at least one duplicate area name
             // - may be the same items
             alertText = tr("[ ALERT ] - Empty and duplicate area names detected in Map file!");
-            informativeText = tr("[ INFO ]  - Due to some situations not being checked in the past,  Mudlet had\n"
-                                 "allowed the map to have more than one area with the same or no name.\n"
-                                 "These make some things confusing and are now disallowed.\n"
-                                 "  To resolve these cases, an area without a name here (or created in\n"
-                                 "the future) will automatically be assigned the name \"%1\".\n"
-                                 "  Duplicated area names will cause all but the first encountered one\n"
-                                 "to gain a \"_###\" style suffix where each \"###\" is an increasing\n"
-                                 "number; you may wish to change these, perhaps by replacing them with\n"
-                                 "a \"(sub-area name)\" but it is entirely up to you how you do this,\n"
-                                 "other than you will not be able to set one area's name to that of\n"
-                                 "another that exists at the time.\n"
-                                 "  If there were more than one area without a name then all but the\n"
-                                 "first will also gain a suffix in this manner.\n"
+            informativeText = tr("[ INFO ]  - Mudlet had previously allowed the map to have more than one area\n"
+                                  "with the same or no name. To resolve these cases, an area without a name\n"
+                                  "here (or created in the future) will automatically be assigned the name \"%1\".\n"
+                                  "Duplicated area names will cause all but the first encountered one to gain a\n"
+                                  "\"_###\" style suffix.\n"
                                  "%2").arg(mpMap->getUnnamedAreaName(), extraTextForMatchingSuffixAlreadyUsed);
         } else if (!renamedMap.empty()) {
             // Duplicates but no unnnamed area

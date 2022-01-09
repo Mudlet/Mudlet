@@ -485,8 +485,8 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
 }
 
 contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
-    exists("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri") {
-        include("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri")
+    exists("$${PWD}/../3rdparty/qtkeychain/qtkeychain.pri") {
+        include("$${PWD}/../3rdparty/qtkeychain/qtkeychain.pri")
     } else {
         error("Cannot locate QtKeychain submodule source code, build abandoned!")
     }

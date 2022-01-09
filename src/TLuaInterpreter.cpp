@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -3020,14 +3020,14 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         saveToDir = lua_tostring(L, 1);
     }
 
-    std::tuple<bool, QString, QString> result = host.saveProfile(saveToDir);
+    auto [ok, filename, error] = host.saveProfile(saveToDir);
 
-    if (std::get<0>(result)) {
+    if (ok) {
         lua_pushboolean(L, true);
-        lua_pushstring(L, (std::get<1>(result).toUtf8().constData()));
+        lua_pushstring(L, (filename.toUtf8().constData()));
         return 2;
     } else {
-        auto message = QString("Couldn't save '%1' to '%2' because: %3").arg(host.getName(), std::get<1>(result), std::get<2>(result));
+        auto message = QString("Couldn't save '%1' to '%2' because: %3").arg(host.getName(), filename, error);
         return warnArgumentValue(L, __func__, message);
     }
 }
@@ -4112,6 +4112,24 @@ int TLuaInterpreter::getImageSize(lua_State* L)
     auto size = mudlet::self()->getImageSize(imageLocation);
     if (!size) {
         return warnArgumentValue(L, __func__, qsl("couldn't retrieve image size, is the location '%1' correct?").arg(imageLocation));
+    }
+    lua_pushnumber(L, size->width());
+    lua_pushnumber(L, size->height());
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelSizeHint
+int TLuaInterpreter::getLabelSizeHint(lua_State* L)
+{
+    QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
+    }
+
+    auto size = host.mpConsole->getLabelSizeHint(labelName);
+    if (!size) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' does not exist").arg(labelName));
     }
     lua_pushnumber(L, size->width());
     lua_pushnumber(L, size->height());
@@ -10703,7 +10721,9 @@ int TLuaInterpreter::installPackage(lua_State* L)
 {
     QString location = getVerifiedString(L, __func__, 1, "package location path and file name");
     Host& host = getHostFromLua(L);
-    lua_pushboolean(L, host.installPackage(location, 0));
+    if (auto [success, message] = host.installPackage(location, 0); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
     return 1;
 }
 
@@ -10723,9 +10743,8 @@ int TLuaInterpreter::installModule(lua_State* L)
     Host& host = getHostFromLua(L);
     QString module = QDir::fromNativeSeparators(modName);
 
-    if (!host.installPackage(module, 3)) {
-        lua_pushboolean(L, false);
-        return 1;
+    if (auto [success, message] = host.installPackage(module, 3); !success) {
+        return warnArgumentValue(L, __func__, message);
     }
     auto moduleManager = host.mpModuleManager;
     if (moduleManager && moduleManager->mModuleTable->isVisible()) {
@@ -11194,6 +11213,7 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     int args = lua_gettop(L);
     int secure = false;
     int port = 6667;
+    QString password;
     std::string addr = getVerifiedString(L, __func__, 1, "hostname").toStdString();
     if (addr.empty()) {
         return warnArgumentValue(L, __func__, "hostname must not be empty");
@@ -11206,6 +11226,9 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     }
     if (args > 2) {
         secure = getVerifiedBool(L, __func__, 3, "secure {default = false}", true);
+    }
+    if (args > 3) {
+            password = getVerifiedString(L, __func__, 4, "server password", true);
     }
 
     Host* pHost = &getHostFromLua(L);
@@ -11222,6 +11245,11 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     result = dlgIRC::writeIrcHostSecure(pHost, secure);
     if (!result.first) {
         return warnArgumentValue(L, __func__, qsl("unable to save secure, reason: %1").arg(result.second));
+    }
+
+    result = dlgIRC::writeIrcPassword(pHost, password);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, QStringLiteral("unable to save password, reason: %1").arg(result.second));
     }
 
     lua_pushboolean(L, true);
@@ -14270,6 +14298,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getProfileStats", TLuaInterpreter::getProfileStats);
     lua_register(pGlobalLua, "getBackgroundColor", TLuaInterpreter::getBackgroundColor);
     lua_register(pGlobalLua, "getLabelStylesheet", TLuaInterpreter::getLabelStylesheet);
+    lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -14930,11 +14959,9 @@ int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& fu
 // No documentation available in wiki - internal function
 int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QString& function, int expiryCount)
 {
-    TTrigger* pT;
-    QStringList sList;
-    sList << regex;
-    QList<int> propertyList;
-    propertyList << REGEX_EXACT_MATCH;
+    TTrigger* pT = nullptr;
+    QStringList sList {regex};
+    QList<int> propertyList {REGEX_EXACT_MATCH};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -14950,11 +14977,9 @@ int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QStr
 // No documentation available in wiki - internal function
 int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QString& function, int expiryCount)
 {
-    TTrigger* pT;
-    QStringList sList;
-    sList << regex;
-    QList<int> propertyList;
-    propertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
+    TTrigger* pT = nullptr;
+    QStringList sList {regex};
+    QList<int> propertyList {REGEX_BEGIN_OF_LINE_SUBSTRING};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -14970,11 +14995,9 @@ int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QSt
 // No documentation available in wiki - internal function
 int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& function, int expiryCount)
 {
-    TTrigger* pT;
-    QStringList sList;
-    sList << regex;
-    QList<int> propertyList;
-    propertyList << REGEX_SUBSTRING; // substring trigger is default
+    TTrigger* pT = nullptr;
+    QStringList sList {regex};
+    QList<int> propertyList {REGEX_SUBSTRING};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -15053,12 +15076,9 @@ int TLuaInterpreter::startTempColorTrigger(int fg, int bg, const QString& functi
 // No documentation available in wiki - internal function
 int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& function, int expiryCount)
 {
-    TTrigger* pT;
-    QStringList sList;
-    sList << regex;
-
-    QList<int> propertyList;
-    propertyList << REGEX_PERL; // substring trigger is default
+    TTrigger* pT = nullptr;
+    QStringList sList {regex};
+    QList<int> propertyList {REGEX_PERL};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -16190,6 +16210,7 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     auto [_2, aliasesTotal, tempAliases, activeAliases] = host.getAliasUnit()->assembleReport();
     auto [_3, timersTotal, tempTimers, activeTimers] = host.getTimerUnit()->assembleReport();
     auto [_4, keysTotal, tempKeys, activeKeys] = host.getKeyUnit()->assembleReport();
+    auto [_5, scriptsTotal, tempScripts, activeScripts] = host.getScriptUnit()->assembleReport();
 
     lua_newtable(L);
 
@@ -16262,6 +16283,23 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 
     lua_pushstring(L, "active");
     lua_pushnumber(L, activeKeys);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
+
+    // Scripts
+    lua_pushstring(L, "scripts");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, scriptsTotal);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "temp");
+    lua_pushnumber(L, tempScripts);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeScripts);
     lua_settable(L, -3);
     lua_settable(L, -3);
 

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2019, 2021 by Stephen Lyons             *
+ *   Copyright (C) 2013-2014, 2017-2019, 2021-2022 by Stephen Lyons        *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
@@ -60,7 +60,10 @@ using namespace std::chrono_literals;
 // of the messages
 #define DEBUG_TELNET 1
 
-char loadBuffer[100001];
+
+constexpr size_t BUFFER_SIZE = 100000L;
+// TODO: https://github.com/Mudlet/Mudlet/issues/5780 (1 of 7) - investigate switching from using `char[]` to `std::array<char>`
+char loadBuffer[BUFFER_SIZE + 1];
 int loadedBytes;
 QDataStream replayStream;
 QFile replayFile;
@@ -95,7 +98,6 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mMCCP_version_1(false)
 , mMCCP_version_2(false)
 , mIsTimerPosting()
-, mRecordLastChunkMSecTimeOffset()
 , enableCHARSET(false)
 , enableATCP(false)
 , enableGMCP(false)
@@ -1060,6 +1062,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 #endif
                 break;
             } else {
+                enableMSDP = true;
                 sendTelnetOption(TN_DO, OPT_MSDP);
                 //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
                 //NOTE: MSDP does not need quotes for string/vals
@@ -1265,6 +1268,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
             if (option == OPT_MSDP) {
                 // MSDP got turned off
+                enableMSDP = false;
                 raiseProtocolEvent("sysProtocolDisabled", "MSDP");
             }
 
@@ -1359,6 +1363,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
         if (option == OPT_MSDP && mpHost->mEnableMSDP) {
             // MSDP support
+            enableMSDP = true;
             sendTelnetOption(TN_WILL, OPT_MSDP);
             raiseProtocolEvent("sysProtocolEnabled", "MSDP");
             break;
@@ -1466,6 +1471,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
         if (option == OPT_MSDP) {
             // MSDP got turned off
+            enableMSDP = false;
             raiseProtocolEvent("sysProtocolDisabled", "MSDP");
         }
 
@@ -2555,11 +2561,11 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     mZstream.avail_in = length;
     mZstream.next_in = (Bytef*)in_buffer;
 
-    mZstream.avail_out = 100000;
+    mZstream.avail_out = BUFFER_SIZE;
     mZstream.next_out = (Bytef*)out_buffer;
 
     int zval = inflate(&mZstream, Z_SYNC_FLUSH);
-    int outSize = 100000 - mZstream.avail_out;
+    int outSize = BUFFER_SIZE - mZstream.avail_out;
 
     length = mZstream.avail_in;
     in_buffer = (char*)mZstream.next_in;
@@ -2585,6 +2591,7 @@ void cTelnet::recordReplay()
 {
     mRecordLastChunkMSecTimeOffset = 0;
     mRecordingChunkTimer.start();
+    mRecordingChunkCount = 0;
 }
 
 bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
@@ -2606,9 +2613,25 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         }
         loadingReplay = true;
         if (mudlet::self()->replayStart()) {
-            // TODO: consider moving to a QTimeLine based system...?
-            // This initiates the replay chunk reading/processing cycle:
-            loadReplayChunk();
+            auto [ok, modifiedFormat] = testReadReplayFile();
+            if (Q_LIKELY(ok)) {
+                mReplayHasFaultyFormat = modifiedFormat;
+                // This initiates the replay chunk reading/processing cycle:
+                loadReplayChunk();
+            } else {
+                // Amelioration code should now prevent this from happening
+                loadingReplay = false;
+                replayFile.close();
+                if (pErrMsg) {
+                    // Called from lua case:
+                    *pErrMsg = tr("Cannot replay file \"%1\", error message was: \"replay file seems to be corrupt\".").arg(name);
+                } else {
+                    postMessage(tr("[ WARN ]  - The replay has been aborted as the file seems to be corrupt."));
+                }
+                mudlet::self()->replayOver();
+                return false;
+            }
+
         } else {
             loadingReplay = false;
             if (pErrMsg) {
@@ -2635,12 +2658,23 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
     return true;
 }
 
+// TODO: https://github.com/Mudlet/Mudlet/issues/5779 - consider enhancing replay system, possibly using the QTimeLine class
 void cTelnet::loadReplayChunk()
 {
     if (!replayStream.atEnd()) {
-        int offset;
-        int amount;
-        replayStream >> offset;
+        qint32 amount = 0;
+        qint32 offset = 0;
+        if (mReplayHasFaultyFormat) {
+            qint64 temp = 0;
+            replayStream >> temp;
+            // 2^30 milliseconds is over 12 days so that sort of delay between
+            // steps is not likely - and only using a 32 bit integer type is
+            // going to be okay:
+            offset = static_cast<qint32>(temp);
+        } else {
+            replayStream >> offset;
+        }
+
         replayStream >> amount;
 
         loadedBytes = replayStream.readRawData(loadBuffer, amount);
@@ -2658,7 +2692,6 @@ void cTelnet::loadReplayChunk()
         mudlet::self()->replayOver();
     }
 }
-
 
 void cTelnet::slot_processReplayChunk()
 {
@@ -2759,15 +2792,17 @@ void cTelnet::handle_socket_signal_readyRead()
         mWaitingForResponse = false;
     }
 
-    char in_buffer[100010];
+    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (2 of 7) - investigate switching from using `char[]` to `std::array<char>`
+    char in_buffer[BUFFER_SIZE + 10];
 
-    int amount = socket.read(in_buffer, 100000);
+    int amount = socket.read(in_buffer, BUFFER_SIZE);
     processSocketData(in_buffer, amount);
 }
 
 void cTelnet::processSocketData(char* in_buffer, int amount)
 {
-    char out_buffer[100010];
+    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (3 of 7) - investigate switching from using `char[]` to `std::array<char>`
+    char out_buffer[BUFFER_SIZE + 10];
 
     in_buffer[amount + 1] = '\0';
     if (amount == -1) {
@@ -2778,7 +2813,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
     }
 
     std::string cleandata = "";
-    int datalen;
+    qint32 datalen = 0;
     do {
         datalen = amount;
         char* buffer = in_buffer;
@@ -2786,11 +2821,21 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
             datalen = decompressBuffer(in_buffer, amount, out_buffer);
             buffer = out_buffer;
         }
-        buffer[datalen] = '\0';
+        // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
+        buffer[static_cast<size_t>(datalen)] = '\0';
         if (mpHost->mpConsole->mRecordReplay) {
-            mpHost->mpConsole->mReplayStream << mRecordingChunkTimer.elapsed() - mRecordLastChunkMSecTimeOffset;
-            mpHost->mpConsole->mReplayStream << datalen;
+            ++mRecordingChunkCount;
+            // QElapsedTimer::elapsed() returns a qint64, it replaces a
+            // previous QTime::elapsed() which returns a int (effectively a
+            // qint32):
+            qint32 recordingChunkInterval = static_cast<qint32>(mRecordingChunkTimer.elapsed()) - mRecordLastChunkMSecTimeOffset;
+            mpHost->mpConsole->mReplayStream << recordingChunkInterval; // 4 bytes
+            mpHost->mpConsole->mReplayStream << datalen;                // 4 bytes
             mpHost->mpConsole->mReplayStream.writeRawData(buffer, datalen);
+#if defined(DEBUG_RECORDING)
+            qDebug().noquote().nospace() << "cTelnet::processSocketData(...) INFO - recording chunk: " << mRecordingChunkCount << " is " << datalen
+                                         << " bytes and has an interval of: " << recordingChunkInterval << " mSecond since the previous chunk.";
+#endif
         }
 
         recvdGA = false;
@@ -2941,7 +2986,7 @@ Some data loss is likely - please mention this problem to the game admins.)", co
                 }
             }
         } //for
-    } while (datalen == 100000);
+    } while (datalen == BUFFER_SIZE);
 
     if (!cleandata.empty()) {
         gotRest(cleandata);
@@ -3087,4 +3132,81 @@ void cTelnet::setPostingTimeout(const int timeout)
     if (mTimeOut != timeout) {
         mTimeOut = timeout;
     }
+}
+
+// Tries reading the replay in two different manners depending on whether the
+// the first integer value in the chunk data uses 4 (original) or 8 (modified)
+// bytes - as an unintended side effect of https://github.com/Mudlet/Mudlet/pull/4400
+// - returns two booleans, the first is true if the file can be read and the
+// second true if it is in the modified format:
+/*static*/ std::pair<bool, bool> cTelnet::testReadReplayFile()
+{
+    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (5 of 7) - investigate switching from using `char[]` to `std::array<char>`
+    char replayBuffer[BUFFER_SIZE+1];
+
+    quint64 totalElapsed = 0;
+    int replayChunks = 0;
+    bool readableAsOriginalFormat = true;
+    // Don't set this until we try it:
+    bool readableAsModifiedFormat = false;
+    {
+        // Try with both numbers being 4 byte signed integers
+        // (first was int type prior to that PR):
+        qint32 offset = 0;
+        qint32 amount = 0;
+        while (readableAsOriginalFormat && !replayStream.atEnd()) {
+            replayStream >> offset;
+            replayStream >> amount;
+            if (amount < 1 || offset < 0 || amount > static_cast<qint32>(BUFFER_SIZE)) {
+                readableAsOriginalFormat = false;
+            } else {
+                int replayloadedBytes = replayStream.readRawData(replayBuffer, amount);
+                if (replayloadedBytes > -1) {
+                    ++replayChunks;
+                    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (6 of 7) - investigate switching from using `char[]` to `std::array<char>`
+                    replayBuffer[replayloadedBytes] = '\0';
+                    totalElapsed += static_cast<quint64>(offset);
+                }
+            }
+        }
+    }
+
+    // rewind the data to the start as if we haven't just read some/all of it
+    replayStream.device()->seek(0);
+
+    if (!readableAsOriginalFormat) {
+        readableAsModifiedFormat = true;
+        totalElapsed = 0;
+        replayChunks = 0;
+        // Try with first number being an 8 byte signed integer
+        // (was int type prior to that PR):
+        qint64 offset = 0;
+        qint32 amount = 0;
+        while (readableAsModifiedFormat && !replayStream.atEnd()) {
+            replayStream >> offset;
+            replayStream >> amount;
+            if (amount < 1 || offset < 0 || amount > static_cast<qint32>(BUFFER_SIZE) || offset > INT32_MAX) {
+                readableAsModifiedFormat = false;
+            } else {
+                int replayloadedBytes = replayStream.readRawData(replayBuffer, amount);
+                if (replayloadedBytes > -1) {
+                    ++replayChunks;
+                    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (7 of 7) - investigate switching from using `char[]` to `std::array<char>`
+                    replayBuffer[replayloadedBytes] = '\0';
+                    totalElapsed += static_cast<quint64>(offset);
+                }
+            }
+        }
+
+        replayStream.device()->seek(0);
+    }
+
+    if (readableAsOriginalFormat | readableAsModifiedFormat) {
+        qDebug().nospace().noquote() << "cTelnet::testReadReplayFile() INFO - The " << (readableAsOriginalFormat ? "original" : "modified") << " format replay has: " << replayChunks
+                                     << " chunks and covers a period of: " << QTime(0, 0).addMSecs(static_cast<int>(totalElapsed)).toString(QStringLiteral("hh:mm:ss.zzz")) << " (hh:mm:ss).";
+
+        return {true, readableAsModifiedFormat};
+    }
+
+    return {false, false};
 }

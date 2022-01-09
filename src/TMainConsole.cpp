@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -115,6 +115,16 @@ std::optional<QString> TMainConsole::getLabelStyleSheet(const QString& name) con
     QMap<QString, TLabel*>::const_iterator it = mLabelMap.constFind(name);
     if (it != mLabelMap.cend() && it.key() == name) {
         return it.value()->styleSheet();
+    }
+
+    return {};
+}
+
+std::optional<QSize> TMainConsole::getLabelSizeHint(const QString& name) const
+{
+    QMap<QString, TLabel*>::const_iterator it = mLabelMap.constFind(name);
+    if (it != mLabelMap.cend() && it.key() == name) {
+        return it.value()->sizeHint();
     }
 
     return {};
@@ -316,11 +326,10 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
             }
             mLogStream << qsl("%1\n")
                          .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
-                                                  "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
+                                                      "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
 
         }
-        logButton->setToolTip(qsl("<html><head/><body>%1</body></html>")
-                              .arg(tr("<p>Stop logging game output to log file.</p>")));
+        logButton->setToolTip(utils::richText(tr("Stop logging game output to log file.")));
     } else {
         // Logging is being turned off
         buffer.logRemainingOutput();
@@ -336,8 +345,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
         }
         mLogFile.flush();
         mLogFile.close();
-        logButton->setToolTip(qsl("<html><head/><body>%1</body></html>")
-                              .arg(tr("<p>Start logging game output to log file.</p>")));
+        logButton->setToolTip(utils::richText(tr("Start logging game output to log file.")));
     }
 }
 
@@ -1437,43 +1445,73 @@ void TMainConsole::resizeEvent(QResizeEvent* event)
 
 void TMainConsole::showStatistics()
 {
-    QStringList header;
-    header << "\n"
-           << "+--------------------------------------------------------------+\n"
-           << "|               system statistics                              |\n"
-           << "+--------------------------------------------------------------+\n";
+    auto pHost = getHost();
+    if (!pHost) {
+        return;
+    }
 
-    QString h = header.join("");
-    QString msg = h;
-    print(msg, QColor(150, 120, 0), Qt::black);
+    QString header = tr("+--------------------------------------------------------------+\n"
+                        "|                      system statistics                       |\n"
+                        "+--------------------------------------------------------------+\n",
+                        "Header for the system's statistics information displayed in the console, it is 64 'narrow' characters wide");
+    print(header, QColor(150, 120, 0), Qt::black);
 
-    QString script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nGMCP events:\n]]);setUnderline(false);setFgColor(150,120,0);display( gmcp );";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nATCP events:\n]]);setUnderline(false);setFgColor(150,120,0); display( atcp );";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nchannel102 events:\n]]);setUnderline(false);setFgColor(150,120,0);display( channel102 );";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
+    QStringList subjects;
+    QStringList tables;
+    if (pHost->mTelnet.isGMCPEnabled()) {
+        subjects << tr("GMCP events:", "Heading for the system's statistics information displayed in the console");
+        tables << QLatin1String("gmcp");
+    }
+    if (pHost->mTelnet.isATCPEnabled()) {
+        subjects << tr("ATCP events:", "Heading for the system's statistics information displayed in the console");
+        tables << QLatin1String("atcp");
+    }
+    if (pHost->mTelnet.isChannel102Enabled()) {
+        subjects << tr("Channel102 events:", "Heading for the system's statistics information displayed in the console");
+        tables << QLatin1String("channel102");
+    }
+    if (pHost->mTelnet.isMSSPEnabled()) {
+        subjects << tr("MSSP events:", "Heading for the system's statistics information displayed in the console");
+        tables << QLatin1String("mssp");
+    }
+    if (pHost->mTelnet.isMSDPEnabled()) {
+        // This might be a nil rather than an empty table if not present:
+        subjects << tr("MSDP events:", "Heading for the system's statistics information displayed in the console");
+        tables << QLatin1String("msdp");
+    }
 
+    Q_ASSERT_X(subjects.count() == tables.count(), "TMainConsole::showStatistics()", "mismatch in titles and built-in tables to show");
+    for (int i = 0, total = subjects.count(); i < total; ++i) {
+        mpHost->mLuaInterpreter.compileAndExecuteScript(QStringLiteral("setFgColor(190,150,0); setUnderline(true); echo([[\n\n%1\n]]);setUnderline(false);setFgColor(150,120,0);display( %2 );")
+                                                        .arg(subjects.at(i), tables.at(i)));
+    }
 
-    script = "setFgColor(190,150,0); setUnderline(true); echo([[\n\nTrigger Report:\n\n]]); setBold(false);setUnderline(false);setFgColor(150,120,0)";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    msg = std::get<0>(mpHost->getTriggerUnit()->assembleReport());
-    print(msg, QColor(150, 120, 0), Qt::black);
+    const QString itemScript = "setFgColor(190,150,0); setUnderline(true); echo([[\n\n%1\n]]); setBold(false);setUnderline(false);setFgColor(150,120,0)";
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Trigger Report:", "Heading for the system's statistics information displayed in the console")));
+    QString itemMsg = std::get<0>(mpHost->getTriggerUnit()->assembleReport());
+    print(itemMsg, QColor(150, 120, 0), Qt::black);
 
-    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nTimer Report:\n\n]]);setBold(false);setUnderline(false);setFgColor(150,120,0)";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    msg = std::get<0>(mpHost->getTimerUnit()->assembleReport());;
-    print(msg, QColor(150, 120, 0), Qt::black);
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Timer Report:", "Heading for the system's statistics information displayed in the console")));
+    itemMsg = std::get<0>(mpHost->getTimerUnit()->assembleReport());;
+    print(itemMsg, QColor(150, 120, 0), Qt::black);
 
-    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nKeybinding Report:\n\n]]);setBold(false);setUnderline(false);setFgColor(150,120,0)";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    msg = std::get<0>(mpHost->getKeyUnit()->assembleReport());
-    print(msg, QColor(150, 120, 0), Qt::black);
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Alias Report:", "Heading for the system's statistics information displayed in the console")));
+    itemMsg = std::get<0>(mpHost->getAliasUnit()->assembleReport());
+    print(itemMsg, QColor(150, 120, 0), Qt::black);
 
-    QString footer = QString("\n+--------------------------------------------------------------+\n");
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Keybinding Report:", "Heading for the system's statistics information displayed in the console")));
+    itemMsg = std::get<0>(mpHost->getKeyUnit()->assembleReport());
+    print(itemMsg, QColor(150, 120, 0), Qt::black);
+
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Script Report:", "Heading for the system's statistics information displayed in the console")));
+    itemMsg = std::get<0>(mpHost->getScriptUnit()->assembleReport());
+    print(itemMsg, QColor(150, 120, 0), Qt::black);
+
+    // Footer for the system's statistics information displayed in the console, it should be 64 'narrow' characters wide
+    QString footer = QStringLiteral("\n+--------------------------------------------------------------+\n");
     mpHost->mpConsole->print(footer, QColor(150, 120, 0), Qt::black);
-    script = "resetFormat();";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
+
+    mpHost->mLuaInterpreter.compileAndExecuteScript(QLatin1String("resetFormat();"));
 
     mpHost->mpConsole->raise();
 }

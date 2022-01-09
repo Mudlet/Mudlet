@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2015-2016, 2018-2019, 2021 by Stephen Lyons             *
+ *   Copyright (C) 2015-2016, 2018-2019, 2021-2022 by Stephen Lyons        *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
@@ -287,11 +287,6 @@ public:
     void setGlobalStyleSheet(const QString& styleSheet);
     void setupPreInstallPackages(const QString& gameUrl);
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
-
-    // This construct will be very useful for formatting tooltips and by
-    // defining a static function/method here we can save using the same
-    // qsl all over the place:
-    static QString htmlWrapper(const QString& text) { return qsl("<html><head/><body>%1</body></html>").arg(text); }
 
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
     // "How to find and replace string?" by "Czarek Tomczak":
@@ -766,7 +761,7 @@ class TConsoleMonitor : public QObject
 
 public:
     Q_DISABLE_COPY(TConsoleMonitor)
-    TConsoleMonitor(QObject* parent) : QObject(parent) {}
+    explicit TConsoleMonitor(QObject* parent) : QObject(parent) {}
 protected:
     bool eventFilter(QObject* obj, QEvent* event) override;
 };
@@ -782,7 +777,7 @@ class translation
     friend void mudlet::scanForQtTranslations(const QString&);
 
 public:
-    translation(const int translationPercent = -1) : mTranslatedPercentage(translationPercent) {}
+    explicit translation(const int translationPercent = -1) : mTranslatedPercentage(translationPercent) {}
 
     const QString& getNativeName() const { return mNativeName; }
     const QString& getMudletTranslationFileName() const { return mMudletTranslationFileName; }

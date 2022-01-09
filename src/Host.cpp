@@ -1661,7 +1661,7 @@ bool Host::isClosingDown()
     return mIsClosingDown;
 }
 
-bool Host::installPackage(const QString& fileName, int module)
+std::pair<bool, QString> Host::installPackage(const QString& fileName, int module)
 {
     // As the pointed to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
@@ -1676,12 +1676,12 @@ bool Host::installPackage(const QString& fileName, int module)
     //     This separation is necessary to be able to reuse code while avoiding infinite loops from script installations.
 
     if (fileName.isEmpty()) {
-        return false;
+        return {false, qsl("no package file was actually given")};
     }
 
     QFile file(fileName);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        return false;
+        return {false, qsl("could not open file '%1").arg(fileName)};
     }
 
     QString packageName = fileName.section(qsl("/"), -1);
@@ -1695,11 +1695,11 @@ bool Host::installPackage(const QString& fileName, int module)
         if ((module == 2) && (mActiveModules.contains(packageName))) {
             uninstallPackage(packageName, 2);
         } else if ((module == 3) && (mActiveModules.contains(packageName))) {
-            return false; //we're already installed
+            return {false, qsl("module %1 is already installed").arg(packageName)}; //we're already installed
         }
     } else {
         if (mInstalledPackages.contains(packageName)) {
-            return false;
+            return {false, qsl("package %1 is already installed").arg(packageName)};
         }
     }
     //the extra module check is needed here to prevent infinite loops from script loaded modules
@@ -1723,7 +1723,7 @@ bool Host::installPackage(const QString& fileName, int module)
         pUnzipDialog = dynamic_cast<QDialog*>(loader.load(&uiFile, nullptr));
         uiFile.close();
         if (!pUnzipDialog) {
-            return false;
+            return {false, qsl("could not load unpacking progress dialog")};
         }
 
         auto * pLabel = pUnzipDialog->findChild<QLabel*>(qsl("label"));
@@ -1747,7 +1747,7 @@ bool Host::installPackage(const QString& fileName, int module)
         pUnzipDialog->deleteLater();
         pUnzipDialog = nullptr;
         if (!successful) {
-            return false;
+            return {false, qsl("could not unzip package")};
         }
 
         // requirements for zip packages:
@@ -1771,7 +1771,7 @@ bool Host::installPackage(const QString& fileName, int module)
                 if (mInstalledPackages.contains(packageName)) {
                     // cleanup and quit if already installed
                     removeDir(_dir.absolutePath(), _dir.absolutePath());
-                    return false;
+                    return {false, qsl("package %1 is already installed").arg(packageName)};
                 }
             }
             // continuing, so update the folder name on disk
@@ -1880,7 +1880,7 @@ bool Host::installPackage(const QString& fileName, int module)
     }
 
 
-    return true;
+    return {true, QString()};
 }
 
 // credit: http://john.nachtimwald.com/2010/06/08/qt-remove-directory-and-its-contents/
