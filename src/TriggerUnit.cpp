@@ -23,6 +23,10 @@
 #include "TriggerUnit.h"
 #include <nanobench.h>
 
+#include <execution>
+#include <tbb/parallel_for_each.h>
+#include <tbb/parallel_scan.h>
+#include <tbb/partitioner.h>
 
 #include "Host.h"
 #include "TConsole.h"
@@ -260,15 +264,13 @@ strcpy(subject, data.toUtf8().data());
         rebuildParallelizables();
     }
 
-    ankerl::nanobench::Bench().minEpochIterations(2000).warmup(100).run("QtConcurrent filtered.results()", [&] {
-        // can't use blockingFiltered until Qt6 due to a bug in Qt5: https://bugreports.qt.io/browse/QTBUG-94463
-        auto list = QtConcurrent::filtered(mParallelizableTriggers, [subject, data, line](TTrigger* trigger) -> bool
-        {
-            return trigger->matchWithoutProcessing(subject, data, line);
-        }).results();
-    });
+    ankerl::nanobench::Bench benchmark;
+    benchmark.title("Implementations")
+        .minEpochIterations(4000)
+        .warmup(100)
+        .relative(true);
 
-    ankerl::nanobench::Bench().minEpochIterations(2000).warmup(100).run("plain for loop", [&] {
+    benchmark.run("plain for loop", [&] {
         QList<TTrigger*> list;
 
         for (auto trigger : mParallelizableTriggers) {
@@ -277,6 +279,142 @@ strcpy(subject, data.toUtf8().data());
             }
         }
     });
+
+    // benchmark.run("std::copy_if", [&] {
+    //     std::vector<TTrigger*> output;
+    //     output.reserve(size(mParallelizableTriggers));
+
+    //     std::copy_if(
+    //         std::execution::par_unseq,
+    //         begin(mParallelizableTriggers),end(mParallelizableTriggers),
+    //         back_inserter(output),
+    //         [subject, data, line](TTrigger* trigger) -> bool {
+    //             return trigger->matchWithoutProcessing(subject, data, line);
+    //         }
+    //     );
+    // });
+
+    // benchmark.run("tbb::parallel_for_each, no acc.", [&] {
+    //     std::vector<TTrigger*> output;
+    //     output.reserve(size(mParallelizableTriggers));
+
+    //     // semantically incorrect as it doesn't store all results in the output vector
+    //     tbb::parallel_for_each(mParallelizableTriggers, [subject, data, line](TTrigger* trigger) -> bool {
+    //         return trigger->matchWithoutProcessing(subject, data, line);
+    //     });
+    // });
+
+
+
+    benchmark.run("tbb::parallel_for, automatic grain", [&] {
+        std::vector<TTrigger*> output;
+        output.reserve(size(mParallelizableTriggers));
+
+        // semantically incorrect as it doesn't store all results in the output vector
+        tbb::parallel_for(tbb::blocked_range<int>(0, mParallelizableTriggers.size()),
+            [&](const tbb::blocked_range<int>& r) {
+                for(int i=r.begin(); i!=r.end(); ++i) {
+                    mParallelizableTriggers.at(i)->matchWithoutProcessing(subject, data, line);
+                }
+            }
+        );
+    });
+
+    benchmark.run("tbb::parallel_for, 10 grainsize", [&] {
+        std::vector<TTrigger*> output;
+        output.reserve(size(mParallelizableTriggers));
+
+        // semantically incorrect as it doesn't store all results in the output vector
+        tbb::parallel_for(tbb::blocked_range<int>(0, mParallelizableTriggers.size(), 10),
+            [&](const tbb::blocked_range<int>& r) {
+                for(int i=r.begin(); i!=r.end(); ++i) {
+                    mParallelizableTriggers.at(i)->matchWithoutProcessing(subject, data, line);
+                }
+            },
+            tbb::simple_partitioner()
+        );
+    });
+
+    benchmark.run("tbb::parallel_for, 100 grainsize", [&] {
+        std::vector<TTrigger*> output;
+        output.reserve(size(mParallelizableTriggers));
+
+        // semantically incorrect as it doesn't store all results in the output vector
+        tbb::parallel_for(tbb::blocked_range<int>(0, mParallelizableTriggers.size(), 100),
+            [&](const tbb::blocked_range<int>& r) {
+                for(int i=r.begin(); i!=r.end(); ++i) {
+                    mParallelizableTriggers.at(i)->matchWithoutProcessing(subject, data, line);
+                }
+            },
+            tbb::simple_partitioner()
+        );
+    });
+
+    benchmark.run("tbb::parallel_for, 1000 grainsize", [&] {
+        std::vector<TTrigger*> output;
+        output.reserve(size(mParallelizableTriggers));
+
+        // semantically incorrect as it doesn't store all results in the output vector
+        tbb::parallel_for(tbb::blocked_range<int>(0, mParallelizableTriggers.size(), 1000),
+            [&](const tbb::blocked_range<int>& r) {
+                for(int i=r.begin(); i!=r.end(); ++i) {
+                    mParallelizableTriggers.at(i)->matchWithoutProcessing(subject, data, line);
+                }
+            },
+            tbb::simple_partitioner()
+        );
+    });
+
+
+    benchmark.run("tbb::parallel_for, 10000 grainsize", [&] {
+        std::vector<TTrigger*> output;
+        output.reserve(size(mParallelizableTriggers));
+
+        // semantically incorrect as it doesn't store all results in the output vector
+        tbb::parallel_for(tbb::blocked_range<int>(0, mParallelizableTriggers.size(), 10000),
+            [&](const tbb::blocked_range<int>& r) {
+                for(int i=r.begin(); i!=r.end(); ++i) {
+                    mParallelizableTriggers.at(i)->matchWithoutProcessing(subject, data, line);
+                }
+            },
+            tbb::simple_partitioner()
+        );
+    });
+
+
+    benchmark.run("tbb::parallel_for, 100000 grainsize", [&] {
+        std::vector<TTrigger*> output;
+        output.reserve(size(mParallelizableTriggers));
+
+        // semantically incorrect as it doesn't store all results in the output vector
+        tbb::parallel_for(tbb::blocked_range<int>(0, mParallelizableTriggers.size(), 100000),
+            [&](const tbb::blocked_range<int>& r) {
+                for(int i=r.begin(); i!=r.end(); ++i) {
+                    mParallelizableTriggers.at(i)->matchWithoutProcessing(subject, data, line);
+                }
+            },
+            tbb::simple_partitioner()
+        );
+    });
+
+    // ankerl::nanobench::Bench().minEpochIterations(2000).warmup(100).run("tbb::parallel_for_each", [&] {
+    //     std::vector<TTrigger*> output;
+    //     output.reserve(size(mParallelizableTriggers));
+
+    //     tbb::parallel_reduce(mParallelizableTriggers, [subject, data, line, output](TTrigger* trigger) -> void {
+    //         if (trigger->matchWithoutProcessing(subject, data, line)) {
+    //             output.emplace_back(trigger);
+    //         }
+    //     });
+    // });
+
+    // benchmark.run("QtConcurrent filtered.results()", [&] {
+    //     // can't use blockingFiltered until Qt6 due to a bug in Qt5: https://bugreports.qt.io/browse/QTBUG-94463
+    //     auto list = QtConcurrent::filtered(mParallelizableTriggers, [subject, data, line](TTrigger* trigger) -> bool
+    //     {
+    //         return trigger->matchWithoutProcessing(subject, data, line);
+    //     }).results();
+    // });
 
     // ankerl::nanobench::Bench().minEpochIterations(2000).run("match", [&] {
     //     for (auto trigger : mTriggerRootNodeList) {
@@ -299,6 +437,7 @@ strcpy(subject, data.toUtf8().data());
     //         trigger->match(subject, data, line);
     //     }
     // });
+    qDebug() << "---";
     free(subject);
 
     for (auto& trigger : mCleanupList) {
@@ -467,15 +606,11 @@ void TriggerUnit::rebuildRecursively(TTrigger* trigger)
 {
     if (trigger->isParallizable()) {
         mParallelizableTriggers.append(trigger);
-        qDebug() << "added1" << trigger->getName() << trigger << "to mParallelizableTriggers" << trigger->mRegexCodeList.size();
-    } else {
-        qDebug() << "ignored1" << trigger->getName() << trigger;
     }
 
     for (auto childTrigger : *trigger->mpMyChildrenList) {
         if (childTrigger->isParallizable()) {
             mParallelizableTriggers.append(childTrigger);
-            qDebug() << "added2" << childTrigger->getName() << childTrigger << "to mParallelizableTriggers" << childTrigger->mRegexCodeList.size();
         }
 
         if (childTrigger->isFolder()) {
@@ -493,14 +628,13 @@ void TriggerUnit::rebuildParallelizables()
     for (auto trigger : mTriggerRootNodeList) {
         if (trigger->isParallizable()) {
             mParallelizableTriggers.append(trigger);
-            qDebug() << "added3" << trigger->getName() << trigger << "to mParallelizableTriggers" << trigger->mRegexCodeList.size();
         }
 
         if (trigger->isFolder()) {
             rebuildRecursively(trigger);
         }
     }
-    qDebug() << "trigger list changed, now has" << mParallelizableTriggers.size() << ":" << mParallelizableTriggers;
+    // qDebug() << "trigger list changed, now has" << mParallelizableTriggers.size() << ":" << mParallelizableTriggers;
 
     mRebuildParallelizables = false;
 }
