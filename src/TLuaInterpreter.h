@@ -431,8 +431,17 @@ public:
     static int tempColorTrigger(lua_State*);
     static int isAnsiFgColor(lua_State*);
     static int isAnsiBgColor(lua_State*);
-    static int stopSounds(lua_State*);
+    static int receiveMSP(lua_State*);
+    static int loadMusicFile(lua_State*);
+    static int loadSoundFile(lua_State*);
+    static int playMusicFile(lua_State*);
     static int playSoundFile(lua_State*);
+    static int stopAllMedia(lua_State*);
+    static int stopAllMusic(lua_State*);
+    static int stopAllSounds(lua_State*);
+    static int stopMusic(lua_State*);
+    static int stopSounds(lua_State*);
+    static int purgeMediaCache(lua_State*);
     static void setBorderSize(lua_State*, int, int, bool resizeMudlet = true);
     static int setBorderSizes(lua_State*);
     static int setBorderTop(lua_State*);
@@ -488,12 +497,6 @@ public:
     static int setPopup(lua_State*);
     static int sendATCP(lua_State*);
     static int sendGMCP(lua_State*);
-    static int receiveMSP(lua_State*);
-    static int purgeMediaCache(lua_State*);
-    static int sourceMedia(lua_State*);
-    static int loadMedia(lua_State*);
-    static int playMedia(lua_State*);
-    static int stopMedia(lua_State*);
     static int saveMap(lua_State* L);
     static int loadMap(lua_State* L);
     static int setExitStub(lua_State* L);
@@ -677,6 +680,21 @@ private:
     void insertNativeSeparatorsFunction(lua_State* L);
     static void pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel& label);
     static std::pair<int, TAction*> getTActionFromIdOrName(lua_State*, const int, const char*);
+    static int loadMediaFileAsOrderedArguments(lua_State* L);
+    static int loadMediaFileAsKeyValueArguments(lua_State* L);
+    static int loadMediaFileAsTableArgument(lua_State* L);
+    static int playMusicFileAsOrderedArguments(lua_State* L);
+    static int playMusicFileAsKeyValueArguments(lua_State* L);
+    static int playMusicFileAsTableArgument(lua_State* L);
+    static int playSoundFileAsOrderedArguments(lua_State* L);
+    static int playSoundFileAsKeyValueArguments(lua_State* L);
+    static int playSoundFileAsTableArgument(lua_State* L);
+    static int stopMusicAsOrderedArguments(lua_State* L);
+    static int stopMusicAsKeyValueArguments(lua_State* L);
+    static int stopMusicAsTableArgument(lua_State* L);
+    static int stopSoundsAsOrderedArguments(lua_State* L);
+    static int stopSoundsAsKeyValueArguments(lua_State* L);
+    static int stopSoundsAsTableArgument(lua_State* L);
 
     const int LUA_FUNCTION_MAX_ARGS = 50;
 

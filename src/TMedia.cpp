@@ -45,11 +45,6 @@ TMedia::TMedia(Host* pHost, const QString& profileName)
 
 TMedia::~TMedia() = default;
 
-void TMedia::sourceMedia(TMediaData& mediaData)
-{
-    TMedia::processUrl(mediaData);
-}
-
 void TMedia::playMedia(TMediaData& mediaData)
 {
     if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
@@ -62,7 +57,7 @@ void TMedia::playMedia(TMediaData& mediaData)
 
     mediaData.setMediaFileName(mediaData.getMediaFileName().replace(QLatin1Char('\\'), QLatin1Char('/')));
 
-    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && mediaData.getMediaFileName() == "Off") {
+    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && mediaData.getMediaFileName() == qsl("Off")) {
         return;
     }
 
@@ -251,7 +246,7 @@ bool TMedia::purgeMediaCache()
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << qsl("TMedia::purgeMediaCache() WARNING - Not able to reference directory: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
+        qWarning() << qsl("TMedia::purgeMediaCache() WARNING - not able to reference directory: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
         return false;
     }
 
@@ -279,13 +274,13 @@ void TMedia::transitionNonRelativeFile(TMediaData& mediaData)
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << qsl("TMedia::playMedia() WARNING - Attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
+        qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
     } else {
         QString mediaFilePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', -1));
         QFile mediaFile(mediaFilePath);
 
         if (!mediaFile.exists() && !QFile::copy(mediaData.getMediaFileName(), mediaFilePath)) {
-            qWarning() << qsl("TMedia::playMedia() WARNING - Attempt made to copy file %1 to a directory %2 failed.").arg(mediaData.getMediaFileName(), mediaFilePath);
+            qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to copy file %1 to a directory %2 failed.").arg(mediaData.getMediaFileName(), mediaFilePath);
         } else {
             mediaData.setMediaFileName(mediaData.getMediaFileName().section('/', -1));
         }
@@ -296,7 +291,7 @@ QUrl TMedia::parseUrl(TMediaData& mediaData)
 {
     QUrl url;
 
-    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && mediaData.getMediaFileName() == "Off") {
+    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && mediaData.getMediaFileName() == qsl("Off")) {
         if (mediaData.getMediaUrl().isEmpty()) { // MSP is !!SOUND(Off) or !!MUSIC(Off)
             mpHost->mpMedia->stopMedia(mediaData);
         } else { // MSP is !!SOUND(Off U=https://example.com/sounds) or !!MUSIC(Off U=https://example.com/sounds)
@@ -307,8 +302,6 @@ QUrl TMedia::parseUrl(TMediaData& mediaData)
             url = QUrl::fromUserInput(mpHost->getMediaLocationMSP());
         } else if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->getMediaLocationGMCP().isEmpty()) {
             url = QUrl::fromUserInput(mpHost->getMediaLocationGMCP());
-        } else if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolAPI && !mpHost->getMediaLocationAPI().isEmpty()) {
-            url = QUrl::fromUserInput(mpHost->getMediaLocationAPI());
         } else {
             url = QUrl::fromUserInput(qsl("https://www.%1/media/").arg(mpHost->mUrl));
         }
@@ -324,7 +317,7 @@ bool TMedia::isValidUrl(QUrl& url)
     bool isValid = false;
 
     if (!url.isValid()) {
-        qWarning() << qsl("TMedia::validUrl() WARNING - Attempt made to reference an invalid URL: %1 and the error message was:\"%2\".").arg(url.toString(), url.errorString());
+        qWarning() << qsl("TMedia::validUrl() WARNING - attempt made to reference an invalid URL: %1 and the error message was:\"%2\".").arg(url.toString(), url.errorString());
     } else {
         isValid = true;
     }
@@ -339,7 +332,7 @@ bool TMedia::isFileRelative(TMediaData& mediaData)
     if (!QFileInfo(mediaData.getMediaFileName()).isRelative()) {
         if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP) {
             qWarning()
-                    << qsl("TMedia::isFileRelative() WARNING - Attempt made to send an absolute path as a media file name: %1.  Only relative paths are permitted.").arg(mediaData.getMediaFileName());
+                    << qsl("TMedia::isFileRelative() WARNING - attempt made to send an absolute path as a media file name: %1.  Only relative paths are permitted.").arg(mediaData.getMediaFileName());
         }
     } else {
         isFileRelative = true;
@@ -391,7 +384,7 @@ QStringList TMedia::getFileNameList(TMediaData& mediaData)
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << qsl("TMedia::getFileNameList() WARNING - Attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
+        qWarning() << qsl("TMedia::getFileNameList() WARNING - attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
         return fileNameList;
     }
 
@@ -400,7 +393,7 @@ QStringList TMedia::getFileNameList(TMediaData& mediaData)
         QDir mediaSubDir(mediaSubPath);
 
         if (!mediaSubDir.mkpath(mediaSubPath)) {
-            qWarning() << qsl("TMedia::getFileNameList() WARNING - Attempt made to create a directory failed: %1")
+            qWarning() << qsl("TMedia::getFileNameList() WARNING - attempt made to create a directory failed: %1")
                                   .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
             return fileNameList;
         }
@@ -432,7 +425,7 @@ QUrl TMedia::getFileUrl(TMediaData& mediaData)
         break;
 
     case TMediaData::MediaProtocolAPI:
-        mediaLocation = mpHost->getMediaLocationAPI();
+        mediaLocation = mediaData.getMediaUrl();
         break;
     }
 
@@ -472,9 +465,6 @@ bool TMedia::processUrl(TMediaData& mediaData)
             break;
 
         case TMediaData::MediaProtocolAPI:
-            if (mpHost->getMediaLocationAPI().isEmpty() || url.toString() != mpHost->getMediaLocationAPI()) {
-                mpHost->setMediaLocationAPI(url.toString());
-            }
             break;
 
         default:
@@ -572,7 +562,7 @@ void TMedia::downloadFile(TMediaData& mediaData)
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << qsl("TMedia::downloadFile() WARNING - Attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
+        qWarning() << qsl("TMedia::downloadFile() WARNING - attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
         return;
     }
 
@@ -581,7 +571,7 @@ void TMedia::downloadFile(TMediaData& mediaData)
         QDir mediaSubDir(mediaSubPath);
 
         if (!mediaSubDir.mkpath(mediaSubPath)) {
-            qWarning() << qsl("TMedia::downloadFile() WARNING - Attempt made to create a directory failed: %1")
+            qWarning() << qsl("TMedia::downloadFile() WARNING - attempt made to create a directory failed: %1")
                                   .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
             return;
         }
@@ -591,7 +581,7 @@ void TMedia::downloadFile(TMediaData& mediaData)
     QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
 
     if (!dir.mkpath(cacheDir)) {
-        qWarning() << "TMedia::downloadFile() WARNING - Couldn't create cache directory for sound file(s): " << cacheDir;
+        qWarning() << "TMedia::downloadFile() WARNING - couldn't create cache directory for sound file(s): " << cacheDir;
         return;
     }
 
@@ -701,7 +691,7 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
         pPlayer = TMediaPlayer(mpHost, mediaData);
 
         if (!pPlayer.getMediaPlayer()) { // It should be impossible to ever reach this.
-            qWarning() << qsl("TMedia::getMediaPlayer() WARNING - Unable to create new QMediaPlayer object.");
+            qWarning() << qsl("TMedia::getMediaPlayer() WARNING - unable to create new QMediaPlayer object.");
             return pPlayer;
         }
     }
@@ -870,7 +860,7 @@ void TMedia::play(TMediaData& mediaData)
     QStringList fileNameList = TMedia::getFileNameList(mediaData);
 
     if (fileNameList.isEmpty()) { // This should not happen.
-        qWarning() << qsl("TMedia::play() WARNING - Could not generate a list of media file names.");
+        qWarning() << qsl("TMedia::play() WARNING - could not generate a list of media file names.");
         return;
     }
 
@@ -890,7 +880,7 @@ void TMedia::play(TMediaData& mediaData)
 
     // It should be impossible to ever reach this.
     if (!pPlayer.getMediaPlayer()) {
-        qWarning() << qsl("TMedia::play() WARNING - Unable to create new QMediaPlayer object.");
+        qWarning() << qsl("TMedia::play() WARNING - unable to create new QMediaPlayer object.");
         return;
     }
 

@@ -316,8 +316,6 @@ public:
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
-    void setMediaLocationAPI(const QString& mediaUrl);
-    QString getMediaLocationAPI() const;
     void setMediaLocationGMCP(const QString& mediaUrl);
     QString getMediaLocationGMCP() const;
     void setMediaLocationMSP(const QString& mediaUrl);
@@ -421,7 +419,6 @@ public:
 
     TMxpMudlet mMxpClient;
     TMxpProcessor mMxpProcessor;
-    QString mMediaLocationAPI;
     QString mMediaLocationGMCP;
     QString mMediaLocationMSP;
     QTextStream mErrorLogStream;
