@@ -350,7 +350,7 @@ void TriggerUnit::assembleReport(TTrigger* pItem)
         if (pChild->isTemporary()) {
             ++statsTempItems;
         }
-        statsPatterns += pChild->mRegexCodeList.size();
+        statsPatterns += pChild->mPatterns.size();
         assembleReport(pChild);
     }
 }
@@ -366,7 +366,7 @@ std::tuple<QString, int, int, int, int> TriggerUnit::assembleReport()
         if (pItem->isTemporary()) {
             ++statsTempItems;
         }
-        statsPatterns += pItem->mRegexCodeList.size();
+        statsPatterns += pItem->mPatterns.size();
         assembleReport(pItem);
     }
     QStringList msg;

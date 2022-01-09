@@ -72,7 +72,7 @@ class TTrigger : public Tree<TTrigger>
 public:
     virtual ~TTrigger();
     TTrigger(TTrigger* parent, Host* pHost);
-    TTrigger(const QString& name, const QStringList& regexList, const QList<int>& regexPropertyList, bool isMultiline, Host* pHost); //throws exception ExObjNoCreate
+    TTrigger(const QString& name, const QStringList& patterns, const QList<int>& patternKinds, bool isMultiline, Host* pHost); //throws exception ExObjNoCreate
 
     // Used as ANSI color code for either fore or back ground in color triggers
     // that is not considered when checking the color - both being set to this
@@ -92,8 +92,8 @@ public:
     void setCommand(const QString& b) { mCommand = b; }
     QString getName() { return mName; }
     void setName(const QString& name);
-    QStringList& getRegexCodeList() { return mRegexCodeList; }
-    QList<int> getRegexCodePropertyList() { return mRegexCodePropertyList; }
+    QStringList& getPatternsList() { return mPatterns; }
+    QList<int> getRegexCodePropertyList() { return mPatternKinds; }
     QColor getFgColor() const { return mFgColor; }
     QColor getBgColor() const { return mBgColor; }
     void setColorizerFgColor(const QColor& c) { mFgColor = c; }
@@ -103,7 +103,7 @@ public:
     void compile();
     void execute();
     bool isFilterChain();
-    bool setRegexCodeList(QStringList regex, QList<int> regexPropertyList);
+    bool setRegexCodeList(QStringList regex, QList<int> patternKinds);
     QString getScript() { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
@@ -157,7 +157,7 @@ public:
     int mKeepFiring;
     QPointer<Host> mpHost;
     QString mName;
-    QStringList mRegexCodeList;
+    QStringList mPatterns;
     bool exportItem;
     bool mModuleMasterFolder;
     // specifies whenever the payload is Lua code as a string
@@ -182,7 +182,7 @@ private:
     void processPromptMatch(int patternNumber);
 
 
-    QList<int> mRegexCodePropertyList;
+    QList<int> mPatternKinds;
     QMap<int, QSharedPointer<pcre>> mRegexMap;
 
     // Lua code as a string to run

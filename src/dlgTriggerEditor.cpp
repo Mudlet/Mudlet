@@ -1948,7 +1948,7 @@ void dlgTriggerEditor::searchTriggers(const QString& s)
         }
 
         // Trigger patterns
-        QStringList textList = trigger->getRegexCodeList();
+        QStringList textList = trigger->getPatternsList();
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
@@ -2050,7 +2050,7 @@ void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const Q
         }
 
         // Trigger patterns
-        QStringList textList = trigger->getRegexCodeList();
+        QStringList textList = trigger->getPatternsList();
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
             if (textList.at(index).isEmpty() || !textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
@@ -3286,8 +3286,8 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     } else {
         name = tr("New trigger");
     }
-    QStringList regexList;
-    QList<int> regexPropertyList;
+    QStringList patterns;
+    QList<int> patternKinds;
     QString script = "";
     QStringList nameL;
     nameL << name;
@@ -3325,7 +3325,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     } else {
     //insert a new root item
     ROOT_TRIGGER:
-        pT = new TTrigger(name, regexList, regexPropertyList, false, mpHost);
+        pT = new TTrigger(name, patterns, patternKinds, false, mpHost);
         pNewItem = new QTreeWidgetItem(mpTriggerBaseItem, nameL);
         treeWidget_triggers->insertTopLevelItem(0, pNewItem);
     }
@@ -3336,7 +3336,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
 
 
     pT->setName(name);
-    pT->setRegexCodeList(regexList, regexPropertyList);
+    pT->setRegexCodeList(patterns, patternKinds);
     pT->setScript(script);
     pT->setIsFolder(isFolder);
     pT->setIsActive(false);
@@ -3987,8 +3987,8 @@ void dlgTriggerEditor::saveTrigger()
     QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
     QString command = mpTriggersMainArea->lineEdit_trigger_command->text();
     bool isMultiline = mpTriggersMainArea->groupBox_multiLineTrigger->isChecked();
-    QStringList regexList;
-    QList<int> regexPropertyList;
+    QStringList patterns;
+    QList<int> patternKinds;
     for (int i = 0; i < 50; i++) {
         QString pattern = mTriggerPatternEdit.at(i)->lineEdit_pattern->text();
         int patternType = mTriggerPatternEdit.at(i)->comboBox_patternType->currentIndex();
@@ -3998,32 +3998,32 @@ void dlgTriggerEditor::saveTrigger()
 
         switch (patternType) {
         case 0:
-            regexPropertyList << REGEX_SUBSTRING;
+            patternKinds << REGEX_SUBSTRING;
             break;
         case 1:
-            regexPropertyList << REGEX_PERL;
+            patternKinds << REGEX_PERL;
             break;
         case 2:
-            regexPropertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
+            patternKinds << REGEX_BEGIN_OF_LINE_SUBSTRING;
             break;
         case 3:
-            regexPropertyList << REGEX_EXACT_MATCH;
+            patternKinds << REGEX_EXACT_MATCH;
             break;
         case 4:
-            regexPropertyList << REGEX_LUA_CODE;
+            patternKinds << REGEX_LUA_CODE;
             break;
         case 5:
-            regexPropertyList << REGEX_LINE_SPACER;
+            patternKinds << REGEX_LINE_SPACER;
             pattern = mTriggerPatternEdit.at(i)->spinBox_lineSpacer->text();
             break;
         case 6:
-            regexPropertyList << REGEX_COLOR_PATTERN;
+            patternKinds << REGEX_COLOR_PATTERN;
             break;
         case 7:
-            regexPropertyList << REGEX_PROMPT;
+            patternKinds << REGEX_PROMPT;
             break;
         }
-        regexList << pattern;
+        patterns << pattern;
     }
 
     QString script = mpSourceEditorEdbeeDocument->text();
@@ -4034,7 +4034,7 @@ void dlgTriggerEditor::saveTrigger()
         QString old_name = pT->getName();
         pT->setName(name);
         pT->setCommand(command);
-        pT->setRegexCodeList(regexList, regexPropertyList);
+        pT->setRegexCodeList(patterns, patternKinds);
 
         pT->setScript(script);
         pT->setIsMultiline(isMultiline);
@@ -5044,7 +5044,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
     int ID = pItem->data(0, Qt::UserRole).toInt();
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(ID);
     if (pT) {
-        QStringList patternList = pT->getRegexCodeList();
+        QStringList patternList = pT->getPatternsList();
         QList<int> propertyList = pT->getRegexCodePropertyList();
 
         if (patternList.size() != propertyList.size()) {
