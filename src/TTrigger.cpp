@@ -1005,6 +1005,10 @@ void TTrigger::processExactMatch(const QString& line, int patternNumber, int pos
     }
 }
 
+// haystackC: string to match as a char*
+// haystack: string to match as a QString
+// line: line number in the buffer
+// posOffset: position in the line to start matching from; used by child triggers
 bool TTrigger::match(char* haystackC, const QString& haystack, int line, int posOffset)
 {
     bool ret = false;
