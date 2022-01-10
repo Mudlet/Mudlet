@@ -172,10 +172,14 @@ function Adjustable.Container:onMove (label, event)
         end
         local dx, dy = adjustInfo.x - x, adjustInfo.y - y
         local max, min = math.max, math.min
+        local hasScrollBox = self.windowname and Geyser.parentWindows and Geyser.parentWindows[self.windowname] and Geyser.parentWindows[self.windowname].type == "scrollBox"
         if adjustInfo.move and not self.connectedContainers then
             label:setCursor("ClosedHand")
             local tx, ty = max(0,x1-dx), max(0,y1-dy)
-            tx, ty = min(tx, winw - w), min(ty, winh - h)
+            -- get rid of move/size limits when in scrollbox (as it is scrollable)
+            if not(hasScrollBox) then
+                tx, ty = min(tx, winw - w), min(ty, winh - h)
+            end
             tx = make_percent(tx/winw)
             ty = make_percent(ty/winh)
             self:move(tx, ty)
@@ -199,8 +203,10 @@ function Adjustable.Container:onMove (label, event)
                 tw = w2
             end
             tx, ty, tw, th = max(0,tx), max(0,ty), max(10,tw), max(10,th)
-            tw, th = min(tw, winw), min(th, winh)
-            tx, ty = min(tx, winw-tw), min(ty, winh-th)
+            if not(hasScrollBox) then
+                tw, th = min(tw, winw), min(th, winh)
+                tx, ty = min(tx, winw-tw), min(ty, winh-th)
+            end
             tx = make_percent(tx/winw)
             ty = make_percent(ty/winh)
             self:move(tx, ty)
@@ -782,12 +788,12 @@ function Adjustable.Container:load(slot, dir)
 
     mytable.windowname = mytable.windowname or "main"
     
-    -- send Adjustable Container to a UserWindow if saved there
+    -- send Adjustable Container to a UserWindow/ScrollBox if saved there
     if mytable.windowname ~= self.windowname then
         if mytable.windowname == "main" then
             self:changeContainer(Geyser)
         else
-            self:changeContainer(Geyser.windowList[mytable.windowname.."Container"].windowList[mytable.windowname])
+            self:changeContainer(Geyser.parentWindows[mytable.windowname])
         end
     end
 

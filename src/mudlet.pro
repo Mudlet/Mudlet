@@ -574,6 +574,7 @@ SOURCES += \
     TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
+    TScrollBox.cpp \
     TLinkStore.cpp \
     TLuaInterpreter.cpp \
     TMainConsole.cpp \
@@ -687,6 +688,7 @@ HEADERS += \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
+    TScrollBox.h \
     TLinkStore.h \
     TLuaInterpreter.h \
     TMainConsole.h \
@@ -907,6 +909,7 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/GeyserMapper.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserMiniConsole.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserReposition.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserScrollBox.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserSetConstraints.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserTests.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserUserWindow.lua \
