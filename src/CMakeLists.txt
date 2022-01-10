@@ -105,6 +105,7 @@ set(mudlet_SRCS
     TimerUnit.cpp
     TKey.cpp
     TLabel.cpp
+    TScrollBox.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
     TMap.cpp
@@ -248,6 +249,7 @@ set(mudlet_HDRS
     TimerUnit.h
     TKey.h
     TLabel.h
+    TScrollBox.h
     TLinkStore.h
     TLuaInterpreter.h
     TMainConsole.h
