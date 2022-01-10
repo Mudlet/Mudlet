@@ -138,7 +138,7 @@ jobs:
         # add new tap to brew for installing gon
         brew tap mitchellh/gon
         # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip ccache luarocks expect mitchellh/gon/gon tbb
+        brew install pkg-config libzzip libzip ccache luarocks expect mitchellh/gon/gon
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
@@ -172,7 +172,7 @@ jobs:
         # If not available, use other methods
         # imagemagick is for the desktop screenshot
         sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 \
-          libxkbcommon-x11-0 imagemagick libtbb-dev -y
+          libxkbcommon-x11-0 imagemagick -y
 
         # switch to GCC that supports C++17 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 7
