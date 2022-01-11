@@ -71,6 +71,10 @@ else()
   set(APP_TARGET mudlet)
 endif()
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 # APP_BUILD should only be empty/null in official "release" builds, developers
 # may like to set the MUDLET_VERSION_BUILD environment variable to their user
 # and branch names to make it easier to tell different builds apart!
