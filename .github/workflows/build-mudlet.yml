@@ -127,6 +127,9 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
 
+    - name: Install latest Luarocks
+      uses: leafo/gh-actions-luarocks@v4
+
     - name: (macOS) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'macOS'
       env:
@@ -138,7 +141,7 @@ jobs:
         # add new tap to brew for installing gon
         brew tap mitchellh/gon
         # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip ccache luarocks expect mitchellh/gon/gon
+        brew install pkg-config libzzip libzip ccache expect mitchellh/gon/gon
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
@@ -171,7 +174,7 @@ jobs:
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
         # imagemagick is for the desktop screenshot
-        sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 \
+        sudo apt-get install ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 \
           libxkbcommon-x11-0 imagemagick -y
 
         # switch to GCC that supports C++17 while retaining support for older OS's
