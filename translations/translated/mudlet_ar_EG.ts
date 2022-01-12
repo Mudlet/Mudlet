@@ -24,7 +24,7 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="295"/>
       <source>Could not verify download integrity.</source>
-      <translation type="unfinished"/>
+      <translation>لا يمكن التحقق من صحة التحميل.</translation>
     </message>
   </context>
   <context>
