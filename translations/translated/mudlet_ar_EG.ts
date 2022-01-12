@@ -6,7 +6,7 @@
     <message>
       <location filename="../src/discord.cpp" line="151"/>
       <source>via Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>عبر Mudlet</translation>
     </message>
   </context>
   <context>
@@ -19,7 +19,7 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="284"/>
       <source>No data received from server</source>
-      <translation type="unfinished"/>
+      <translation>لم يتم تلقي بيانات من الخادم</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="295"/>
