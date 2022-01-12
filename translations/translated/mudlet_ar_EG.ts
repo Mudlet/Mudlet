@@ -32,12 +32,12 @@
     <message>
       <location filename="../src/glwidget.cpp" line="288"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>لا توجد غرف في الخريطة - قم بتحميل واحدة أخرى، أو ابدأ في رسم الخرائط من البداية.</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>ليس لديك خريطة حتى الآن - قم بتحميل واحدة، أو ابدأ الرسم من البداية.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="290"/>
