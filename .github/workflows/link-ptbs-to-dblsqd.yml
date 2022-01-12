@@ -77,7 +77,5 @@ jobs:
         echo "Linking ${bold}macOS PTB${normal} ${PTB_VERSION}..."
         dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${MACOS_PTB_URL}" 1>$MACOS_OUTPUT || EXIT_CODE_MACOS=$?
 
-        if [ "${EXIT_CODE_LINUX}" != 0 && "This combination of os:arch and type exists already for this release." not present in $LINUX_OUTPUT ] && [ "${EXIT_CODE_MACOS}" != 0 && "This combination of os:arch and type exists already for this release." not present in $MACOS_OUTPUT ]; then
-          exit 1
-        fi
-
+        [ -z "$EXIT_CODE_LINUX" ] || [ "$LINUX_OUTPUT" != *"This combination of os:arch and type exists already for this release."* ] && exit 1
+        [ -z "$EXIT_CODE_MACOS" ] || [ "$MACOS_OUTPUT" != *"This combination of os:arch and type exists already for this release."* ] && exit 1
