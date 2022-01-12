@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2019, 2021 by Stephen Lyons                  *
+ *   Copyright (C) 2015, 2017-2019, 2021-2022 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -155,7 +155,7 @@ public:
     bool purgeMediaCache();
     void atcpComposerCancel();
     void atcpComposerSave(QString);
-    void setDisplayDimensions();
+    void checkNAWS();
     void setAutoReconnect(bool status);
     void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
@@ -180,6 +180,7 @@ public:
     bool isCHARSETEnabled() const { return enableCHARSET; }
     bool isATCPEnabled() const { return enableATCP; }
     bool isGMCPEnabled() const { return enableGMCP; }
+    bool isMSDPEnabled() const { return enableMSDP; }
     bool isMSSPEnabled() const { return enableMSSP; }
     bool isMSPEnabled() const { return enableMSP; }
     bool isChannel102Enabled() const { return enableChannel102; }
@@ -241,6 +242,8 @@ private:
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void setKeepAlive(int socketHandle);
     void processChunks();
+    void sendNAWS(int x, int y);
+    static std::pair<bool, bool> testReadReplayFile();
 
 
     QPointer<Host> mpHost;
@@ -303,11 +306,14 @@ private:
     QTimer* mTimerPass;
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
-    int mRecordLastChunkMSecTimeOffset;
+    qint32 mRecordLastChunkMSecTimeOffset = 0;
+    int mRecordingChunkCount = 0;
+    bool mReplayHasFaultyFormat = false;
     bool enableCHARSET;
     bool enableATCP;
     bool enableGMCP;
     bool enableMSSP;
+    bool enableMSDP = false;
     bool enableMSP;
     bool enableChannel102;
     bool mDontReconnect;
@@ -331,6 +337,11 @@ private:
 
     // server problem w/ not terminating IAC SB: only warn once
     bool mIncompleteSB;
+
+    // Need to track the current width and height of the TMainConsole so that
+    // we can send NAWS data when it changes:
+    int mNaws_x = 0;
+    int mNaws_y = 0;
 
 private slots:
 #if !defined(QT_NO_SSL)

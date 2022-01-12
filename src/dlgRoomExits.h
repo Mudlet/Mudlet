@@ -29,11 +29,60 @@
 #include <QDialog>
 #include <QPointer>
 #include <QSet>
+#include <QStyledItemDelegate>
 #include "post_guard.h"
 
 class QAction;
 class Host;
 class TRoom;
+
+// We need to forward reference the main class declared further down so these
+// classes can refer to it:
+class dlgRoomExits;
+
+class WeightSpinBoxDelegate : public QStyledItemDelegate
+{
+    Q_OBJECT
+
+public:
+    explicit WeightSpinBoxDelegate(QObject* parent = nullptr);
+
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override;
+    void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override;
+    void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+};
+
+class RoomIdLineEditDelegate : public QStyledItemDelegate
+{
+    Q_OBJECT
+
+public:
+    explicit RoomIdLineEditDelegate(QObject* parent = nullptr);
+
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override;
+    void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override;
+    void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+
+    // We need to keep a pointer to the QLineEditor so we can tweak it whilst
+    // text is being entered into it - as the methods we are overriding are
+    // are all marked const we need to mark our additions as mutable so we can
+    // modify them in use:
+    mutable QPointer<QLineEdit> mpEditor;
+    mutable dlgRoomExits* mpDlgRoomExits = nullptr;
+    mutable QTreeWidgetItem* mpItem = nullptr;
+
+    // We also need to access some external (to this class) things which we will
+    // source by looking up our chain of ancestors to the dlgRoomExits instance:
+    mutable QPointer<Host> mpHost;
+
+    // The area ID of the room whose exits we are working on:
+    mutable int mAreaID = 0;
+
+private slots:
+    void slot_specialRoomExitIdEdited(const QString&) const;
+};
 
 class TExit
 {
@@ -66,6 +115,7 @@ public:
 class dlgRoomExits : public QDialog, public Ui::room_exits
 {
     Q_OBJECT
+    friend class RoomIdLineEditDelegate;
 
 public:
     Q_DISABLE_COPY(dlgRoomExits)
@@ -73,10 +123,13 @@ public:
     ~dlgRoomExits();
 
     void setActionOnExit(QLineEdit*, QAction*) const;
-    // FIXME: INTENDED TO BE USED IN A SEPARATE PR - DELETE THIS COMMENT LINE WHEN THAT GOES IN AND THE CODE IS UNCOMMENTED...
-//    QAction* getActionOnExit(QLineEdit*) const;
+    QAction* getActionOnExit(QLineEdit*) const;
+    QPointer<Host> getHost() const { return mpHost; }
+    int getAreaID() const { return mAreaID; }
 
 
+    QString mSpecialExitRoomIdPlaceholder;
+    QString mSpecialExitCommandPlaceholder;
     QSet<QAction*> mAllExitActionsSet;
     QIcon mIcon_invalidExit;
     QIcon mIcon_inAreaExit;
@@ -139,6 +192,8 @@ private:
                                QSpinBox* pW,
                                QRadioButton* pDoorType_none, QRadioButton* pDoorType_open, QRadioButton* pDoorType_closed, QRadioButton* pDoorType_locked,
                                const QString& noExitToolTipText) const;
+    void setIconAndToolTipsOnSpecialExit(QTreeWidgetItem*, const bool);
+
 
     QPointer<Host> mpHost;
     QTreeWidgetItem* mpEditItem = nullptr;

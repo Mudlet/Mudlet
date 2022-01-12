@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2018-2019 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2018-2019, 2021 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -51,25 +51,25 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
     // existing color is in that range of numbers:
     buttonBox->button(QDialogButtonBox::Apply)->setText(tr("More colors"));
     buttonBox->button(QDialogButtonBox::Apply)->setCheckable(true);
-    buttonBox->button(QDialogButtonBox::Apply)->setToolTip(tr("Click to access all 256 ANSI colors."));
+    buttonBox->button(QDialogButtonBox::Apply)->setToolTip(utils::richText(tr("Click to access all 256 ANSI colors.")));
     connect(buttonBox->button(QDialogButtonBox::Apply), &QAbstractButton::clicked, this, &dlgColorTrigger::slot_moreColorsClicked);
 
     connect(buttonBox->button(QDialogButtonBox::Ignore), &QAbstractButton::clicked, this, &dlgColorTrigger::slot_resetColorClicked);
-    buttonBox->button(QDialogButtonBox::Ignore)->setToolTip(mudlet::htmlWrapper(mIsBackground
-                                                                                ? tr("<p>Click to make the color trigger ignore the text's background color - however choosing this for both foreground and background is an error.</p>")
-                                                                                : tr("<p>Click to make the color trigger ignore the text's foreground color - however choosing this for both foreground and background is an error.</p>")));
+    buttonBox->button(QDialogButtonBox::Ignore)->setToolTip(utils::richText(mIsBackground
+                                                                            ? tr("Click to make the color trigger ignore the text's background color - however choosing this for both foreground and background is an error.")
+                                                                            : tr("Click to make the color trigger ignore the text's foreground color - however choosing this for both foreground and background is an error.")));
     // The Reset button means trigger only if the text is not set to anything
     // so is in the "default" colour - what ever THAT is:
     connect(buttonBox->button(QDialogButtonBox::Reset), &QAbstractButton::clicked, this, &dlgColorTrigger::slot_defaultColorClicked);
     buttonBox->button(QDialogButtonBox::Reset)->setText(tr("Default"));
-    buttonBox->button(QDialogButtonBox::Reset)->setToolTip(mudlet::htmlWrapper(mIsBackground
-                                                                                ? tr("<p>Click to make the color trigger when the text's background color has not been modified from its normal value.</p>")
-                                                                                : tr("<p>Click to make the color trigger when the text's foreground color has not been modified from its normal value.</p>")));
+    buttonBox->button(QDialogButtonBox::Reset)->setToolTip(utils::richText(mIsBackground
+                                                                                ? tr("Click to make the color trigger when the text's background color has not been modified from its normal value.")
+                                                                                : tr("Click to make the color trigger when the text's foreground color has not been modified from its normal value.")));
     connect(mSignalMapper, SIGNAL(mapped(int)), this, SLOT(slot_basicColorClicked(int)));
 
-    groupBox_basicColors->setToolTip(mudlet::htmlWrapper(mIsBackground
-                                                         ? tr("<p>Click a color to make the trigger fire only when the text's background color matches the color number indicated.</p>")
-                                                         : tr("<p>Click a color to make the trigger fire only when the text's foreground color matches the color number indicated.</p>")));
+    groupBox_basicColors->setToolTip(utils::richText(mIsBackground
+                                                     ? tr("Click a color to make the trigger fire only when the text's background color matches the color number indicated.")
+                                                     : tr("Click a color to make the trigger fire only when the text's foreground color matches the color number indicated.")));
 
     connect(pushButton_setUsingRgbValue, &QAbstractButton::clicked, this, &dlgColorTrigger::slot_rgbColorClicked);
     connect(pushButton_setUsingGrayValue, &QAbstractButton::clicked, this, &dlgColorTrigger::slot_grayColorClicked);
@@ -226,7 +226,7 @@ void dlgColorTrigger::slot_rgbColorChanged()
 {
     mRgbAnsiColorNumber = 16 + 36 * horizontalSlider_red->value() + 6 * horizontalSlider_green->value() + horizontalSlider_blue->value();
     mRgbAnsiColor = QColor(horizontalSlider_red->value() * 51, horizontalSlider_green->value() * 51, horizontalSlider_blue->value() * 51);
-    label_rgbValue->setText(QStringLiteral("[%1]").arg(QString::number(mRgbAnsiColorNumber)));
+    label_rgbValue->setText(qsl("[%1]").arg(QString::number(mRgbAnsiColorNumber)));
     // Use the same stylesheet code as in the main editor and for the basic 16
     // color buttons but because this is a QLabel we need to replace one word in
     // the generated stylesheet:
@@ -245,7 +245,7 @@ void dlgColorTrigger::slot_grayColorChanged(int sliderValue)
     int value = (sliderValue - 232) * 10 + 8;
 
     mGrayAnsiColor = QColor(value, value, value);
-    label_grayValue->setText(QStringLiteral("[%1]").arg(QString::number(mGrayAnsiColorNumber)));
+    label_grayValue->setText(qsl("[%1]").arg(QString::number(mGrayAnsiColorNumber)));
     // Use the same stylesheet code as in the main editor and for the basic 16
     // color buttons but because this is a QLabel we need to replace one word in
     // the generated stylesheet:
@@ -372,7 +372,7 @@ void dlgColorTrigger::slot_moreColorsClicked()
     // Implement a one-shot action by disabling it once it is pressed:
     buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
 
-    buttonBox->button(QDialogButtonBox::Apply)->setToolTip(tr("All color options are showing."));
+    buttonBox->button(QDialogButtonBox::Apply)->setToolTip(utils::richText(tr("All color options are showing.")));
 
     if (groupBox_rgbScale->isHidden()) {
         groupBox_rgbScale->show();

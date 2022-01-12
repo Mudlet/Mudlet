@@ -8,6 +8,9 @@ local argparse = require "argparse"
 local lunajson = require "lunajson"
 
 -- don't load all of LuaGlobal, as that requires yajl installed
+-- mock utf8 as we don't need it here either
+utf8 = utf8 or {}
+
 local github_workspace = os.getenv("GITHUB_WORKSPACE")
 if github_workspace then
   -- the script struggles to load the load files relatively in CI
@@ -125,7 +128,7 @@ function convert_to_html(text)
   text = text.."\n"
   for s in string.gmatch(text, "(.-)\n") do
     s = escape_for_html(s)
-    s = s:gsub("%(#(.-)%)", [[<a href="https://github.com/Mudlet/Mudlet/pull/%1">(#%1)</a>]])
+    s = s:gsub("%(#(.-)%)", [[<a href='https://github.com/Mudlet/Mudlet/pull/%1'>(#%1)</a>]])
 		t[#t+1] = string.format("<p>%s</p>", s)
   end
 
@@ -169,7 +172,7 @@ function print_sorted_changelog(changelog)
       other[#other+1] = prefix .. line
     end
   end
-  local hopen = [[<h5 style="margin-top: 1em;margin-bottom: 1em;">]]
+  local hopen = [[<h5 style='margin-top: 1em;margin-bottom: 1em;'>]]
   local hclose = "</h5>"
   local addLines = lines_to_html(table.concat(add, "\n"))
   addLines = addLines and f"{hopen}Added:{hclose}\n{addLines}\n" or ""

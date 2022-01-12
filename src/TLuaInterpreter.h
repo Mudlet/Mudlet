@@ -375,6 +375,7 @@ public:
     static int setStopWatchName(lua_State*);
     static int getStopWatchBrokenDownTime(lua_State*);
     static int createMiniConsole(lua_State*);
+    static int createScrollBox(lua_State*);
     static int createLabel(lua_State*);
     static int createLabelMainWindow(lua_State* L, const QString& labelName);
     static int createLabelUserWindow(lua_State* L, const QString& windowName, const QString& labelName);
@@ -618,6 +619,14 @@ public:
     static int addMouseEvent(lua_State* L);
     static int removeMouseEvent(lua_State* L);
     static int getMouseEvents(lua_State* L);
+    static int addCommandLineMenuEvent(lua_State* L);
+    static int removeCommandLineMenuEvent(lua_State* L);
+    static int deleteMap(lua_State*);
+    static int windowType(lua_State*);
+    static int getProfileStats(lua_State* L);
+    static int getBackgroundColor(lua_State* L);
+    static int getLabelStylesheet(lua_State* L);
+    static int getLabelSizeHint(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
 

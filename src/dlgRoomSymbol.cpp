@@ -154,7 +154,7 @@ QString dlgRoomSymbol::getNewSymbol()
     if (mpSymbols.size() <= 1) {
         return lineEdit_roomSymbol->text();
     } else {
-        QRegularExpression countStripper(QStringLiteral("^(.*) {.*}$"));
+        QRegularExpression countStripper(qsl("^(.*) {.*}$"));
         QRegularExpressionMatch match = countStripper.match(comboBox_roomSymbol->currentText());
         if (match.hasMatch() && match.lastCapturedIndex() > 0) {
             return match.captured(1);
@@ -169,11 +169,11 @@ void dlgRoomSymbol::updatePreview()
     auto newSymbol = getNewSymbol();
     label_preview->setFont(getFontForPreview(newSymbol));
     label_preview->setText(newSymbol);
-    auto bgStyle = QStringLiteral("background-color: %1; color: %2; border: 1px solid; border-radius: 1px;").arg(realColor.name(), backgroundBasedColor(realColor).name());
+    auto bgStyle = qsl("background-color: %1; color: %2; border: 1px solid; border-radius: 1px;").arg(realColor.name(), backgroundBasedColor(realColor).name());
     pushButton_roomSymbolColor->setStyleSheet(bgStyle);
     label_preview->setStyleSheet(
-            QStringLiteral("color: %1; background-color: %2; border: %3;")
-                    .arg(realColor.name(), roomColor.name(), mpHost->mMapperShowRoomBorders ? QStringLiteral("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : QStringLiteral("none")));
+            qsl("color: %1; background-color: %2; border: %3;")
+                    .arg(realColor.name(), roomColor.name(), mpHost->mMapperShowRoomBorders ? qsl("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : qsl("none")));
 }
 
 QFont dlgRoomSymbol::getFontForPreview(QString text) {

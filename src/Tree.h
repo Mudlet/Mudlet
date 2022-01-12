@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2019, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -35,7 +35,7 @@ template <class T>
 class Tree
 {
 public:
-    explicit Tree();
+    Tree();
     explicit Tree(T* parent);
     virtual ~Tree();
 
@@ -92,29 +92,29 @@ private:
 
 template <class T>
 Tree<T>::Tree()
-: mpParent( nullptr )
+: mpParent(nullptr)
 , mpMyChildrenList( new std::list<T *> )
-, mID( 0 )
-, mOK_init( true )
-, mOK_code( true )
-, mActive( false )
-, mUserActiveState( false )
-, mTemporary( false )
-, mFolder( false )
+, mID(0)
+, mOK_init(true)
+, mOK_code(true)
+, mActive(false)
+, mUserActiveState(false)
+, mTemporary(false)
+, mFolder(false)
 {
 }
 
 template <class T>
 Tree<T>::Tree( T * pParent )
-: mpParent( pParent )
+: mpParent(pParent)
 , mpMyChildrenList( new std::list<T *> )
-, mID( 0 )
-, mOK_init( true )
-, mOK_code( true )
-, mActive( false )
-, mUserActiveState( false )
-, mTemporary( false )
-, mFolder( false )
+, mID(0)
+, mOK_init(true)
+, mOK_code(true)
+, mActive(false)
+, mUserActiveState(false)
+, mTemporary(false)
+, mFolder(false)
 {
     if (pParent) {
         pParent->addChild(static_cast<T*>(this));

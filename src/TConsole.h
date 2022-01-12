@@ -57,6 +57,7 @@ class TTextEdit;
 class TCommandLine;
 class TDockWidget;
 class TLabel;
+class TScrollBox;
 class TSplitter;
 class dlgNotepad;
 
@@ -158,10 +159,11 @@ public:
     void setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference = QVector<int>());
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
-    void showStatistics();
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int, int);
+    QColor getConsoleBgColor() const { return mBgColor; }
+
 // Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> getFgColor();
     std::list<int> getBgColor();
@@ -215,9 +217,9 @@ public:
     //1 = unclicked/up; 2 = clicked/down, 0 is NOT valid:
     int mButtonState = 1;
 
-    QString mConsoleName = QStringLiteral("main");
+    QString mConsoleName = qsl("main");
     QString mCurrentLine;
-    QString mDisplayFontName = QStringLiteral("Bitstream Vera Sans Mono");
+    QString mDisplayFontName = qsl("Bitstream Vera Sans Mono");
     int mDisplayFontSize = 14;
     QFont mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
     int mEngineCursor = -1;
@@ -307,15 +309,15 @@ inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
     QString text;
     QDebugStateSaver saver(debug);
     switch (type) {
-    case TConsole::UnknownType:           text = QStringLiteral("Unknown"); break;
-    case TConsole::CentralDebugConsole:   text = QStringLiteral("Central Debug Console"); break;
-    case TConsole::ErrorConsole:          text = QStringLiteral("Profile Error Console"); break;
-    case TConsole::MainConsole:           text = QStringLiteral("Profile Main Console"); break;
-    case TConsole::SubConsole:            text = QStringLiteral("Mini Console"); break;
-    case TConsole::UserWindow:            text = QStringLiteral("User Window"); break;
-    case TConsole::Buffer:                text = QStringLiteral("Buffer"); break;
+    case TConsole::UnknownType:           text = qsl("Unknown"); break;
+    case TConsole::CentralDebugConsole:   text = qsl("Central Debug Console"); break;
+    case TConsole::ErrorConsole:          text = qsl("Profile Error Console"); break;
+    case TConsole::MainConsole:           text = qsl("Profile Main Console"); break;
+    case TConsole::SubConsole:            text = qsl("Mini Console"); break;
+    case TConsole::UserWindow:            text = qsl("User Window"); break;
+    case TConsole::Buffer:                text = qsl("Buffer"); break;
     default:
-        text = QStringLiteral("Non-coded Type");
+        text = qsl("Non-coded Type");
     }
     debug.nospace() << text;
     return debug;
