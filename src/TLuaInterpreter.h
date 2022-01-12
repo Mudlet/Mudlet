@@ -436,9 +436,6 @@ public:
     static int loadSoundFile(lua_State*);
     static int playMusicFile(lua_State*);
     static int playSoundFile(lua_State*);
-    static int stopAllMedia(lua_State*);
-    static int stopAllMusic(lua_State*);
-    static int stopAllSounds(lua_State*);
     static int stopMusic(lua_State*);
     static int stopSounds(lua_State*);
     static int purgeMediaCache(lua_State*);
