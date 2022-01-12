@@ -50,7 +50,7 @@
     <message>
       <location filename="../src/Host.cpp" line="479"/>
       <source>Text to send to the game</source>
-      <translation type="unfinished"/>
+      <translation>النص المراد إرساله إلى اللعبة</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="629"/>
