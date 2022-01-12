@@ -81,7 +81,9 @@
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>جاري فك الضغط عن الوحدة البرمجية
+&quot;%1&quot;
+برجاء الانتظار...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1734"/>
@@ -93,7 +95,7 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="1738"/>
       <source>Unpacking</source>
-      <translation type="unfinished"/>
+      <translation>جاري فك الضغط</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2381"/>
