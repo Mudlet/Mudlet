@@ -5377,6 +5377,13 @@ int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L)
         switch (i) {
         case 1:
             stringValue = getVerifiedString(L, __func__, i, "name");
+
+            if (QDir::homePath().contains('\\')) {
+                stringValue.replace('/', R"(\)");
+            } else {
+                stringValue.replace('\\', "/");
+            }
+
             mediaData.setMediaFileName(stringValue);
             break;
         case 2:
@@ -5414,6 +5421,12 @@ int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L)
             QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : "value for url");
 
             if (key == QLatin1String("name") && !value.isEmpty()) {
+                if (QDir::homePath().contains('\\')) {
+                    value.replace('/', R"(\)");
+                } else {
+                    value.replace('\\', "/");
+                }
+
                 mediaData.setMediaFileName(value);
             } else if (key == QLatin1String("url") && !value.isEmpty()) {
                 mediaData.setMediaUrl(value);
@@ -5486,6 +5499,13 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L)
         switch (i) {
         case 1:
             stringValue = getVerifiedString(L, __func__, i, "name");
+
+            if (QDir::homePath().contains('\\')) {
+                stringValue.replace('/', R"(\)");
+            } else {
+                stringValue.replace('\\', "/");
+            }
+
             mediaData.setMediaFileName(stringValue);
             break;
         case 2:
@@ -5593,6 +5613,12 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
                                                                             : "value for url");
 
             if (key == QLatin1String("name") && !value.isEmpty()) {
+                if (QDir::homePath().contains('\\')) {
+                    value.replace('/', R"(\)");
+                } else {
+                    value.replace('\\', "/");
+                }
+
                 mediaData.setMediaFileName(value);
             } else if (key == QLatin1String("url") && !value.isEmpty()) {
                 mediaData.setMediaUrl(value);
@@ -5704,6 +5730,13 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L)
         switch (i) {
         case 1:
             stringValue = getVerifiedString(L, __func__, i, "name");
+
+            if (QDir::homePath().contains('\\')) {
+                stringValue.replace('/', R"(\)");
+            } else {
+                stringValue.replace('\\', "/");
+            }
+
             mediaData.setMediaFileName(stringValue);
             break;
         case 2:
@@ -5819,6 +5852,12 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
                                                                             : "value for url");
 
             if (key == QLatin1String("name") && !value.isEmpty()) {
+                if (QDir::homePath().contains('\\')) {
+                    value.replace('/', R"(\)");
+                } else {
+                    value.replace('\\', "/");
+                }
+
                 mediaData.setMediaFileName(value);
             } else if (key == QLatin1String("url") && !value.isEmpty()) {
                 mediaData.setMediaUrl(value);
@@ -5920,47 +5959,6 @@ int TLuaInterpreter::playSoundFile(lua_State* L)
     return playSoundFileAsOrderedArguments(L);
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopAllMedia
-int TLuaInterpreter::stopAllMedia(lua_State* L)
-{
-    Host& host = getHostFromLua(L);
-    TMediaData mediaData{};
-
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-
-    host.mpMedia->stopMedia(mediaData);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopAllMusic
-int TLuaInterpreter::stopAllMusic(lua_State* L)
-{
-    Host& host = getHostFromLua(L);
-    TMediaData mediaData{};
-
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeMusic);
-
-    host.mpMedia->stopMedia(mediaData);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopAllSounds
-int TLuaInterpreter::stopAllSounds(lua_State* L)
-{
-    Host& host = getHostFromLua(L);
-    TMediaData mediaData{};
-
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
-    mediaData.setMediaType(TMediaData::MediaTypeSound);
-
-    host.mpMedia->stopMedia(mediaData);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
 // Private
 int TLuaInterpreter::stopMusicAsOrderedArguments(lua_State* L)
 {
@@ -5978,6 +5976,13 @@ int TLuaInterpreter::stopMusicAsOrderedArguments(lua_State* L)
         switch (i) {
         case 1:
             stringValue = getVerifiedString(L, __func__, i, "name");
+
+            if (QDir::homePath().contains('\\')) {
+                stringValue.replace('/', R"(\)");
+            } else {
+                stringValue.replace('\\', "/");
+            }
+
             mediaData.setMediaFileName(stringValue);
             break;
         case 2:
@@ -6015,6 +6020,12 @@ int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L)
             QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
 
             if (key == QLatin1String("name") && !value.isEmpty()) {
+                if (QDir::homePath().contains('\\')) {
+                    value.replace('/', R"(\)");
+                } else {
+                    value.replace('\\', "/");
+                }
+
                 mediaData.setMediaFileName(value);
             } else if (key == QLatin1String("key") && !value.isEmpty()) {
                 mediaData.setMediaKey(value);
@@ -6076,6 +6087,13 @@ int TLuaInterpreter::stopSoundsAsOrderedArguments(lua_State* L)
         switch (i) {
         case 1:
             stringValue = getVerifiedString(L, __func__, i, "name");
+
+            if (QDir::homePath().contains('\\')) {
+                stringValue.replace('/', R"(\)");
+            } else {
+                stringValue.replace('\\', "/");
+            }
+
             mediaData.setMediaFileName(stringValue);
             break;
         case 2:
@@ -6124,6 +6142,12 @@ int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L)
             QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
 
             if (key == QLatin1String("name") && !value.isEmpty()) {
+                if (QDir::homePath().contains('\\')) {
+                    value.replace('/', R"(\)");
+                } else {
+                    value.replace('\\', "/");
+                }
+
                 mediaData.setMediaFileName(value);
             } else if (key == QLatin1String("key") && !value.isEmpty()) {
                 mediaData.setMediaKey(value);
@@ -14719,9 +14743,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "loadMusicFile", TLuaInterpreter::loadMusicFile);
     lua_register(pGlobalLua, "playSoundFile", TLuaInterpreter::playSoundFile);
     lua_register(pGlobalLua, "playMusicFile", TLuaInterpreter::playMusicFile);
-    lua_register(pGlobalLua, "stopAllMedia", TLuaInterpreter::stopAllMedia);
-    lua_register(pGlobalLua, "stopAllMusic", TLuaInterpreter::stopAllMusic);
-    lua_register(pGlobalLua, "stopAllSounds", TLuaInterpreter::stopAllSounds);
     lua_register(pGlobalLua, "stopMusic", TLuaInterpreter::stopMusic);
     lua_register(pGlobalLua, "stopSounds", TLuaInterpreter::stopSounds);
     lua_register(pGlobalLua, "purgeMediaCache", TLuaInterpreter::purgeMediaCache);
