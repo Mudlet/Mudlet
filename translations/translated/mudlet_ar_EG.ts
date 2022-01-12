@@ -74,7 +74,7 @@
       <location filename="../src/Host.cpp" line="933"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - %1 ساعدنا على جعل Mudlet أفضل من خلال الإبلاغ عن أي مشاكل.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1732"/>
