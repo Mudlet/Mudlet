@@ -90,7 +90,9 @@ please wait...</source>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>جاري فك الضغط عن الحزمة
+&quot;%1&quot;
+برجاء الانتظار...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1738"/>
