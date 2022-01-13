@@ -28,7 +28,7 @@
 class TMediaData
 {
 public:
-    enum MediaProtocol { MediaProtocolMSP = 90, MediaProtocolGMCP = 201, MediaProtocolNotSet = 0 };
+    enum MediaProtocol { MediaProtocolAPI = -1, MediaProtocolMSP = 90, MediaProtocolGMCP = 201, MediaProtocolNotSet = 0 };
 
     enum MediaType { MediaTypeSound = 1, MediaTypeMusic = 2, MediaTypeNotSet = 0 };
 
@@ -41,6 +41,8 @@ public:
     enum MediaContinue { MediaContinueDefault = true, MediaContinueRestart = false };
 
     static const int MediaFadeNotSet = 0;
+
+    static const int MediaStartDefault = 0;
 
     TMediaData()
     {}
@@ -69,6 +71,8 @@ public:
     void setMediaFadeIn(int mediaFadeIn) { mMediaFadeIn = mediaFadeIn; }
     int getMediaFadeOut() const { return mMediaFadeOut; }
     void setMediaFadeOut(int mediaFadeOut) { mMediaFadeOut = mediaFadeOut; }
+    int getMediaStart() const { return mMediaStart; }
+    void setMediaStart(int mediaStart) { mMediaStart = mediaStart; }
     QString getMediaAbsolutePathFileName() const { return mMediaAbsolutePathFileName; }
     void setMediaAbsolutePathFileName(QString mediaAbsolutePathFileName) { mMediaAbsolutePathFileName = mediaAbsolutePathFileName; }
 
@@ -79,6 +83,7 @@ private:
     int mMediaVolume = MediaVolumeDefault;
     int mMediaFadeIn = MediaFadeNotSet;
     int mMediaFadeOut = MediaFadeNotSet;
+    int mMediaStart = MediaStartDefault;
     int mMediaLoops = MediaLoopsDefault;
     int mMediaPriority = MediaPriorityNotSet;
     bool mMediaContinue = MediaContinueDefault;

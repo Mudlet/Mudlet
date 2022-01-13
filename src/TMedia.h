@@ -79,6 +79,7 @@ public:
 
 private:
     void stopAllMediaPlayers();
+    void transitionNonRelativeFile(TMediaData& mediaData);
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);
     static bool isFileRelative(TMediaData& mediaData);
@@ -102,6 +103,7 @@ private:
     static int parseJSONByMediaVolume(QJsonObject& json);
     static int parseJSONByMediaFadeIn(QJsonObject& json);
     static int parseJSONByMediaFadeOut(QJsonObject& json);
+    static int parseJSONByMediaStart(QJsonObject& json);
     static int parseJSONByMediaPriority(QJsonObject& json);
     static int parseJSONByMediaLoops(QJsonObject& json);
     static TMediaData::MediaContinue parseJSONByMediaContinue(QJsonObject& json);
@@ -121,6 +123,8 @@ private:
     QList<TMediaPlayer> mMSPMusicList;
     QList<TMediaPlayer> mGMCPSoundList;
     QList<TMediaPlayer> mGMCPMusicList;
+    QList<TMediaPlayer> mAPISoundList;
+    QList<TMediaPlayer> mAPIMusicList;
 
     QNetworkAccessManager* mpNetworkAccessManager;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;
