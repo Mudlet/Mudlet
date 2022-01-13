@@ -6,7 +6,7 @@
     <message>
       <location filename="../src/discord.cpp" line="151"/>
       <source>via Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>عبر Mudlet</translation>
     </message>
   </context>
   <context>
@@ -19,12 +19,12 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="284"/>
       <source>No data received from server</source>
-      <translation type="unfinished"/>
+      <translation>لم يتم تلقي بيانات من الخادم</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="295"/>
       <source>Could not verify download integrity.</source>
-      <translation type="unfinished"/>
+      <translation>لا يمكن التحقق من صحة التحميل.</translation>
     </message>
   </context>
   <context>
@@ -32,7 +32,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="288"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>لا توجد غرف في الخريطة - قم بتحميل واحدة أخرى، أو ابدأ في رسم الخرائط من البداية.</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
@@ -50,38 +50,40 @@
     <message>
       <location filename="../src/Host.cpp" line="479"/>
       <source>Text to send to the game</source>
-      <translation type="unfinished"/>
+      <translation>النص المراد إرساله إلى اللعبة</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="629"/>
       <source>Failed to open xml file &quot;%1&quot; inside module %2 to update it. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when the xml file inside the module zip cannot be updated for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>فشل فتح ملف xml &quot;%1&quot; داخل الوحدة البرمجية %2 لتحديثه. رسالة الخطأ كانت: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="641"/>
       <source>Failed to save &quot;%1&quot; to module &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when a module is saved as package but cannot be done for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>فشل حفظ &quot;%1&quot; إلى الوحدة البرمجية &quot;%2&quot;. رسالة الخطأ كانت: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="932"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - %1 شكرا جزيلا على استخدام ال  Public Test Build!</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="933"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - %1 ساعدنا على جعل Mudlet أفضل من خلال الإبلاغ عن أي مشاكل.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1732"/>
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>جاري فك الضغط عن الوحدة البرمجية
+&quot;%1&quot;
+برجاء الانتظار...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1734"/>
@@ -93,7 +95,7 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="1738"/>
       <source>Unpacking</source>
-      <translation type="unfinished"/>
+      <translation>جاري فك الضغط</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2381"/>
