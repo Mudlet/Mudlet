@@ -71,10 +71,6 @@
     "message": "Paketti %s asennettu onnistuneesti.",
     "description": "Success message after drag&drop of package file onto Mudlet - %s is the file name"
   },
-  "Mudlet.packageInstallFail": {
-    "message": "Paketin '%s' asennus epäonnistui.",
-    "description": "Failure message after drag&drop of package file onto Mudlet - %s is the file name"
-  },
   "Mudlet.packageDownloading": {
     "message": "Ladataan pakettia osoitteesta %s.",
     "description": "Download package from Url for installation - %s is source url"
