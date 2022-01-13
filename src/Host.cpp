@@ -3548,10 +3548,12 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
         return {false, qsl("label '%1' does not exist").arg(name)};
     }
 
-    auto myMovie = pL->movie();
+    auto myMovie = pL->myMovie;
     if (!myMovie) {
         myMovie = new QMovie();
         myMovie->setCacheMode(QMovie::CacheAll);
+        pL->myMovie = myMovie;
+        myMovie->setParent(pL);
     }
 
     myMovie->setFileName(moviePath);

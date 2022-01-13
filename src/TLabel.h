@@ -28,6 +28,7 @@
 
 #include "pre_guard.h"
 #include <QLabel>
+#include <QMovie>
 #include <QPointer>
 #include <QString>
 #include "post_guard.h"
@@ -59,7 +60,6 @@ public:
     void enterEvent(QEvent*) override;
     void setClickThrough(bool clickthrough);
 
-
     QPointer<Host> mpHost;
     int mClickFunction = 0;
     int mDoubleClickFunction = 0;
@@ -68,6 +68,7 @@ public:
     int mWheelFunction = 0;
     int mEnterFunction = 0;
     int mLeaveFunction = 0;
+    QMovie* myMovie = nullptr;
 
 private:
     void releaseFunc(const int existingFunction, const int newFunction);
