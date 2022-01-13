@@ -102,7 +102,7 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="2381"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>تلعب الآن %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2383"/>
