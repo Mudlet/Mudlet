@@ -115,7 +115,7 @@ please wait...</source>
       <location filename="../src/Host.cpp" line="2776"/>
       <location filename="../src/Host.cpp" line="3727"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>الخريطة %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3743"/>
