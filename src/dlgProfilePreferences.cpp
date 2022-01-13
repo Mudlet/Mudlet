@@ -428,6 +428,7 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_enableTextAnalyzer->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
+    groupBox_controlCharacterHandling->setEnabled(false);
 
     // ===== tab_codeEditor =====
     groupbox_codeEditorThemeSelection->setEnabled(false);
@@ -533,6 +534,7 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_enableTextAnalyzer->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
+    groupBox_controlCharacterHandling->setEnabled(true);
 
     // ===== tab_codeEditor =====
     groupbox_codeEditorThemeSelection->setEnabled(true);

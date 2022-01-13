@@ -214,51 +214,6 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="2" colspan="2">
-           <widget class="QGroupBox" name="groupBox_controlCharacterHandling">
-            <property name="title">
-             <string>Replacement of Control Characters on-screen:</string>
-            </property>
-            <property name="flat">
-             <bool>true</bool>
-            </property>
-            <layout class="QVBoxLayout" name="verticalLayout_groupBox_controlCharacterHandling">
-             <item>
-              <widget class="QRadioButton" name="radioButton_controlCharacterHandling_none">
-               <property name="text">
-                <string>None</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">controlCharacterHandler</string>
-               </attribute>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="radioButton_controlCharacterHandling_pictures">
-               <property name="text">
-                <string>Unicode &quot;Control Pictures&quot;</string>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">controlCharacterHandler</string>
-               </attribute>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="radioButton_controlCharacterHandling_oemFont">
-               <property name="text">
-                <string>CP437 (OEM Font)- like</string>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">controlCharacterHandler</string>
-               </attribute>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
          </layout>
         </widget>
        </item>
@@ -1237,6 +1192,51 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Enable text analyzer</string>
             </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QGroupBox" name="groupBox_controlCharacterHandling">
+            <property name="title">
+             <string>Replacement of Control Characters on-screen:</string>
+            </property>
+            <property name="flat">
+             <bool>true</bool>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_groupBox_controlCharacterHandling">
+             <item>
+              <widget class="QRadioButton" name="radioButton_controlCharacterHandling_none">
+               <property name="text">
+                <string>None</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">controlCharacterHandler</string>
+               </attribute>
+              </widget>
+             </item>
+             <item>
+              <widget class="QRadioButton" name="radioButton_controlCharacterHandling_pictures">
+               <property name="text">
+                <string>Unicode &quot;Control Pictures&quot;</string>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">controlCharacterHandler</string>
+               </attribute>
+              </widget>
+             </item>
+             <item>
+              <widget class="QRadioButton" name="radioButton_controlCharacterHandling_oemFont">
+               <property name="text">
+                <string>CP437 (OEM Font)- like</string>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">controlCharacterHandler</string>
+               </attribute>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
@@ -3880,6 +3880,9 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_showSpacesAndTabs</tabstop>
   <tabstop>checkBox_showLineFeedsAndParagraphs</tabstop>
   <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
+  <tabstop>radioButton_controlCharacterHandling_none</tabstop>
+  <tabstop>radioButton_controlCharacterHandling_pictures</tabstop>
+  <tabstop>radioButton_controlCharacterHandling_oemFont</tabstop>
   <tabstop>code_editor_theme_selection_combobox</tabstop>
   <tabstop>script_preview_combobox</tabstop>
   <tabstop>checkBox_autocompleteLuaCode</tabstop>
