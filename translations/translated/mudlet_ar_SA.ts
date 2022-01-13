@@ -14,7 +14,7 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="275"/>
       <source>Too many redirects.</source>
-      <translation type="unfinished"/>
+      <translation>هناك عمليات إعادة توجيه أكثر من اللازم.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="284"/>
@@ -37,7 +37,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>ليس لديك خريطة حتى الآن - قم بتحميل واحدة، أو ابدأ الرسم من البداية.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="290"/>
