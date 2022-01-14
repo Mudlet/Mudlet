@@ -17031,7 +17031,7 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    auto [_1, triggersTotal, triggerPatterns, tempTriggers, activeTriggers] = host.getTriggerUnit()->assembleReport();
+    auto [_1, triggersTotal, totalPatterns, tempTriggers, activeTriggers, activePatterns] = host.getTriggerUnit()->assembleReport();
     auto [_2, aliasesTotal, tempAliases, activeAliases] = host.getAliasUnit()->assembleReport();
     auto [_3, timersTotal, tempTimers, activeTimers] = host.getTimerUnit()->assembleReport();
     auto [_4, keysTotal, tempKeys, activeKeys] = host.getKeyUnit()->assembleReport();
@@ -17040,90 +17040,102 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_newtable(L);
 
     // Triggers
-    //lua_pushstring(L, "triggers");
+    lua_pushstring(L, "triggers");
     lua_newtable(L);
 
     lua_pushstring(L, "total");
-    lua_setfield(L, -2, "triggersTotal");
-
-    lua_pushstring(L, "patterns");
-    lua_setfield(L, -2, "triggerPatterns");
+    lua_pushnumber(L, triggersTotal);
+    lua_settable(L, -3);
 
     lua_pushstring(L, "temp");
-    lua_setfield(L, -2, "tempTriggers");
+    lua_pushnumber(L, tempTriggers);
+    lua_settable(L, -3);
 
     lua_pushstring(L, "active");
-    lua_setfield(L, -2, "activeTriggers");
+    lua_pushnumber(L, activeTriggers);
+    lua_settable(L, -3); // active
 
-    lua_setfield(L, -2, "triggers");
+    lua_pushstring(L, "patterns");
+    lua_newtable(L);
 
-    // // Aliases
-    // lua_pushstring(L, "aliases");
-    // lua_newtable(L);
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, totalPatterns);
+    lua_settable(L, -3);
 
-    // lua_pushstring(L, "total");
-    // lua_pushnumber(L, aliasesTotal);
-    // lua_settable(L, -3);
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activePatterns);
+    lua_settable(L, -3);
 
-    // lua_pushstring(L, "temp");
-    // lua_pushnumber(L, tempAliases);
-    // lua_settable(L, -3);
+    lua_settable(L, -3); // patterns
+    lua_settable(L, -3); // triggers
 
-    // lua_pushstring(L, "active");
-    // lua_pushnumber(L, activeAliases);
-    // lua_settable(L, -3);
-    // lua_settable(L, -3);
+    // Aliases
+    lua_pushstring(L, "aliases");
+    lua_newtable(L);
 
-    // // Timers
-    // lua_pushstring(L, "timers");
-    // lua_newtable(L);
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, aliasesTotal);
+    lua_settable(L, -3);
 
-    // lua_pushstring(L, "total");
-    // lua_pushnumber(L, timersTotal);
-    // lua_settable(L, -3);
+    lua_pushstring(L, "temp");
+    lua_pushnumber(L, tempAliases);
+    lua_settable(L, -3);
 
-    // lua_pushstring(L, "temp");
-    // lua_pushnumber(L, tempTimers);
-    // lua_settable(L, -3);
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeAliases);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
 
-    // lua_pushstring(L, "active");
-    // lua_pushnumber(L, activeTimers);
-    // lua_settable(L, -3);
-    // lua_settable(L, -3);
+    // Timers
+    lua_pushstring(L, "timers");
+    lua_newtable(L);
 
-    // // Keys
-    // lua_pushstring(L, "keys");
-    // lua_newtable(L);
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, timersTotal);
+    lua_settable(L, -3);
 
-    // lua_pushstring(L, "total");
-    // lua_pushnumber(L, keysTotal);
-    // lua_settable(L, -3);
+    lua_pushstring(L, "temp");
+    lua_pushnumber(L, tempTimers);
+    lua_settable(L, -3);
 
-    // lua_pushstring(L, "temp");
-    // lua_pushnumber(L, tempKeys);
-    // lua_settable(L, -3);
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeTimers);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
 
-    // lua_pushstring(L, "active");
-    // lua_pushnumber(L, activeKeys);
-    // lua_settable(L, -3);
-    // lua_settable(L, -3);
+    // Keys
+    lua_pushstring(L, "keys");
+    lua_newtable(L);
 
-    // // Scripts
-    // lua_pushstring(L, "scripts");
-    // lua_newtable(L);
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, keysTotal);
+    lua_settable(L, -3);
 
-    // lua_pushstring(L, "total");
-    // lua_pushnumber(L, scriptsTotal);
-    // lua_settable(L, -3);
+    lua_pushstring(L, "temp");
+    lua_pushnumber(L, tempKeys);
+    lua_settable(L, -3);
 
-    // lua_pushstring(L, "temp");
-    // lua_pushnumber(L, tempScripts);
-    // lua_settable(L, -3);
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeKeys);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
 
-    // lua_pushstring(L, "active");
-    // lua_pushnumber(L, activeScripts);
-    // lua_settable(L, -3);
-    // lua_settable(L, -3);
+    // Scripts
+    lua_pushstring(L, "scripts");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, scriptsTotal);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "temp");
+    lua_pushnumber(L, tempScripts);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeScripts);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
 
     return 1;
 }
