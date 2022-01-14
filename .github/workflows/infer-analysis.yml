@@ -19,7 +19,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-20.04
-            buildname: '(optional, can merge without me)'
+            buildname: '(takes a while, can merge without me)'
             triplet: x64-linux
             compiler: clang_64
             qt: '5.14.1'
