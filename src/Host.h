@@ -373,6 +373,7 @@ public:
     bool setLabelWheelCallback(const QString&, const int);
     bool setLabelOnEnter(const QString&, const int);
     bool setLabelOnLeave(const QString&, const int);
+    std::pair<bool, QString> setMovie(const QString& labelName, const QString& moviePath);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     std::optional<QColor> getBackgroundColor(const QString& name) const;
     bool setBackgroundImage(const QString& name, QString& path, int mode);
