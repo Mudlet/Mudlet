@@ -118,13 +118,19 @@ jobs:
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
         buildWithCMakeArgs: >-
           --target autogen
+
     - name: Infer
       run: |
           cd '${{github.workspace}}/b/ninja'
           git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} > index.txt
-          infer capture --compilation-database build/compile_commands.json
+          infer capture --compilation-database compile_commands.json
           infer analyse --changed-files-index index.txt
+
     - name: Check Infer report
       uses: srz-zumix/reviewdog-action-infer@v1
       with:
         report_path: '${{github.workspace}}/b/ninja/infer-out'
+
+    - name: Setup tmate session
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
