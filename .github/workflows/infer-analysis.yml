@@ -1,6 +1,8 @@
 name: 🔍 Check improvements with Infer
 
 on:
+# temporary debug
+  pull_request:
   pull_request_target:
   #  commented out for debugging
     # paths:
