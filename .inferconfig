@@ -1,0 +1,21 @@
+// Config file for infer (https://fbinfer.com/)
+//
+// Note: This JSON flavor supports comments but not extra trailing commas.
+{
+  "biabduction": true,
+  "bufferoverrun": true,
+  "cost": true,
+  "linters": true,
+  "liveness": true,
+  "no-starvation": true,
+  "racerd": true,
+  "siof": true,
+  "uninit ": true,
+  "loop-hoisting": true,
+  "pulse": true,
+  "force-delete-results-dir": true,
+  "skip-analysis-in-path": [
+    "3rdparty",
+    "test"
+  ]
+}
