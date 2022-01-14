@@ -10,12 +10,13 @@
   "no-starvation": true,
   "racerd": true,
   "siof": true,
-  "uninit ": true,
+  "uninit": true,
   "loop-hoisting": true,
   "pulse": true,
   "force-delete-results-dir": true,
   "skip-analysis-in-path": [
     "3rdparty",
-    "test"
+    "test",
+    "qrc_"
   ]
 }
