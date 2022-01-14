@@ -2,6 +2,7 @@
 //
 // Note: This JSON flavor supports comments but not extra trailing commas.
 {
+  // all checkers applicable for C++
   "biabduction": true,
   "bufferoverrun": true,
   "cost": true,
@@ -13,6 +14,7 @@
   "uninit": true,
   "loop-hoisting": true,
   "pulse": true,
+
   "force-delete-results-dir": true,
   "skip-analysis-in-path": [
     "3rdparty",
