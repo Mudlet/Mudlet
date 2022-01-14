@@ -39,6 +39,14 @@ TLabel::TLabel(Host* pH, QWidget* pW)
     setMouseTracking(true);
 }
 
+TLabel::~TLabel()
+{
+    if (mpMovie) {
+        mpMovie->deleteLater();
+        mpMovie = nullptr;
+    }
+}
+
 void TLabel::setClick(const int func)
 {
     releaseFunc(mClickFunction, func);
