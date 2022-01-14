@@ -17031,7 +17031,7 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    auto [_1, triggersTotal, triggerPatterns, tempTriggers, activeTriggers] = host.getTriggerUnit()->assembleReport();
+    auto [_1, triggersTotal, totalPatterns, tempTriggers, activeTriggers, activePatterns] = host.getTriggerUnit()->assembleReport();
     auto [_2, aliasesTotal, tempAliases, activeAliases] = host.getAliasUnit()->assembleReport();
     auto [_3, timersTotal, tempTimers, activeTimers] = host.getTimerUnit()->assembleReport();
     auto [_4, keysTotal, tempKeys, activeKeys] = host.getKeyUnit()->assembleReport();
@@ -17047,18 +17047,27 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_pushnumber(L, triggersTotal);
     lua_settable(L, -3);
 
-    lua_pushstring(L, "patterns");
-    lua_pushnumber(L, triggerPatterns);
-    lua_settable(L, -3);
-
     lua_pushstring(L, "temp");
     lua_pushnumber(L, tempTriggers);
     lua_settable(L, -3);
 
     lua_pushstring(L, "active");
     lua_pushnumber(L, activeTriggers);
+    lua_settable(L, -3); // active
+
+    lua_pushstring(L, "patterns");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, totalPatterns);
     lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activePatterns);
     lua_settable(L, -3);
+
+    lua_settable(L, -3); // patterns
+    lua_settable(L, -3); // triggers
 
     // Aliases
     lua_pushstring(L, "aliases");

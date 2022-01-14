@@ -68,7 +68,7 @@ public:
     void setTriggerStayOpen(const QString&, int);
     void stopAllTriggers();
     void reenableAllTriggers();
-    std::tuple<QString, int, int, int, int> assembleReport();
+    std::tuple<QString, int, int, int, int, int> assembleReport();
     std::list<TTrigger*> mCleanupList;
     int getNewID();
     QMultiMap<QString, TTrigger*> mLookupTable;
@@ -96,7 +96,8 @@ private:
     int statsItemsTotal = 0;
     int statsTempItems = 0;
     int statsActiveItems = 0;
-    int statsPatterns = 0;
+    int statsPatternsTotal = 0;
+    int statsPatternsActive = 0;
 };
 
 #endif // MUDLET_TRIGGERUNIT_H

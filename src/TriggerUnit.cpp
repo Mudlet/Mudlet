@@ -32,7 +32,8 @@ void TriggerUnit::resetStats()
     statsItemsTotal = 0;
     statsTempItems = 0;
     statsActiveItems = 0;
-    statsPatterns = 0;
+    statsPatternsTotal = 0;
+    statsPatternsActive = 0;
 }
 
 void TriggerUnit::_uninstall(TTrigger* pChild, const QString& packageName)
@@ -344,40 +345,44 @@ void TriggerUnit::assembleReport(TTrigger* pItem)
         ++statsItemsTotal;
         if (pChild->isActive()) {
             ++statsActiveItems;
+            statsPatternsActive += pChild->mRegexCodeList.size();
         }
         if (pChild->isTemporary()) {
             ++statsTempItems;
         }
-        statsPatterns += pChild->mRegexCodeList.size();
+        statsPatternsTotal += pChild->mRegexCodeList.size();
         assembleReport(pChild);
     }
 }
 
-std::tuple<QString, int, int, int, int> TriggerUnit::assembleReport()
+std::tuple<QString, int, int, int, int, int> TriggerUnit::assembleReport()
 {
     resetStats();
     for (auto pItem : mTriggerRootNodeList) {
         ++statsItemsTotal;
         if (pItem->isActive()) {
             ++statsActiveItems;
+            statsPatternsActive += pItem->mRegexCodeList.size();
         }
         if (pItem->isTemporary()) {
             ++statsTempItems;
         }
-        statsPatterns += pItem->mRegexCodeList.size();
+        statsPatternsTotal += pItem->mRegexCodeList.size();
         assembleReport(pItem);
     }
     QStringList msg;
-    msg << QLatin1String("Triggers current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
-        << QLatin1String("Trigger patterns total: ") << QString::number(statsPatterns) << QLatin1String("\n")
+    msg << QLatin1String("triggers current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
         << QLatin1String("tempTriggers current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
-        << QLatin1String("active Triggers: ") << QString::number(statsActiveItems) << QLatin1String("\n");
+        << QLatin1String("active triggers: ") << QString::number(statsActiveItems) << QLatin1String("\n")
+        << QLatin1String("trigger patterns total: ") << QString::number(statsPatternsTotal) << QLatin1String("\n")
+        << QLatin1String("active patterns total: ") << QString::number(statsPatternsActive) << QLatin1String("\n");
     return {
         msg.join(QString()),
         statsItemsTotal,
-        statsPatterns,
+        statsPatternsTotal,
         statsTempItems,
-        statsActiveItems
+        statsActiveItems,
+        statsPatternsActive
     };
 }
 
