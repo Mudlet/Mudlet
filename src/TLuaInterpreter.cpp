@@ -4284,7 +4284,6 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
         return warnArgumentValue(L, __func__, "label name cannot be an empty string");
     }
     auto pN = LABEL(L, labelName);
-    lua_remove(L, 1);
     auto movie = pN->movie();
     if (!movie) {
         return warnArgumentValue(L, __func__, qsl("no movie found at label '%1'").arg(labelName));
@@ -4295,11 +4294,11 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
     } else if (funcName == qsl("setMoviePaused")) {
         movie->setPaused(movie->state() != QMovie::Paused);
     } else if (funcName == qsl("setMovieFrame")) {
-        int frame = getVerifiedInt(L, funcName.toUtf8().constData(), 1, "movie frame number");
+        int frame = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie frame number");
         lua_pushboolean(L, movie->jumpToFrame(frame));
         return 1;
     } else if (funcName == qsl("setMovieSpeed")) {
-        int speed = getVerifiedInt(L, funcName.toUtf8().constData(), 1, "movie playback speed in %");
+        int speed = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie playback speed in %");
         movie->setSpeed(speed);
     } else {
         return warnArgumentValue(L, __func__, qsl("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));

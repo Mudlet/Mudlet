@@ -44,6 +44,8 @@ class TLabel : public QLabel
 public:
     Q_DISABLE_COPY(TLabel)
     explicit TLabel(Host* pH, QWidget* pW = nullptr);
+    ~TLabel();
+
     void setClick(const int func);
     void setDoubleClick(const int func);
     void setRelease(const int func);
@@ -68,7 +70,7 @@ public:
     int mWheelFunction = 0;
     int mEnterFunction = 0;
     int mLeaveFunction = 0;
-    QMovie* myMovie = nullptr;
+    QMovie* mpMovie = nullptr;
 
 private:
     void releaseFunc(const int existingFunction, const int newFunction);
