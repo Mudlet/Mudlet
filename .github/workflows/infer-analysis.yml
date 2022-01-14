@@ -120,8 +120,10 @@ jobs:
 
     - name: Infer
       run: |
+          git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} > ${{runner.workspace}}/b/ninja/index.txt
+
           cd '${{runner.workspace}}/b/ninja'
-          git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} > index.txt
+
           infer capture --compilation-database compile_commands.json --jobs $(nproc)
           infer analyse --changed-files-index index.txt --jobs $(nproc)
 
@@ -133,3 +135,4 @@ jobs:
     - name: Setup tmate session
       if: ${{ failure() }}
       uses: mxschmitt/action-tmate@v3
+      timeout-minutes: 15
