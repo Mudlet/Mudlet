@@ -115,6 +115,7 @@ jobs:
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
           -DVCPKG_APPLOCAL_DEPS=OFF
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
@@ -130,7 +131,7 @@ jobs:
     - name: Check Infer report
       uses: srz-zumix/reviewdog-action-infer@v1
       with:
-        report_path: '${{github.workspace}}/b/ninja/infer-out'
+        report_path: '${{runner.workspace}}/b/ninja/infer-out'
 
     - name: Setup tmate session
       if: ${{ failure() }}
