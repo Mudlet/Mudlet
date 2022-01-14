@@ -14,6 +14,7 @@ function GeyserReposition(event, w, h, arg)
       window:reposition()
     end
   end
+  Geyser.adjustMainWrap()
 end
 
 registerAnonymousEventHandler("sysWindowResizeEvent", "GeyserReposition")

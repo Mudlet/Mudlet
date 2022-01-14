@@ -13,7 +13,7 @@
 -- of default limits for new windows, in fact, it is the root container
 -- window, and is the metatable for Geyser.Container. It has the
 -- minimum number of functions needed to behave as a Container.
-Geyser = Geyser or { i = 0, x = 0, y = 0 }
+Geyser = Geyser or { i = 0, x = 0, y = 0, autoWrapMain = false }
 
 --Layout policies. Fixed = Do not stretch/shrink, Dynamic = Do stretch/shrink
 Geyser.Fixed, Geyser.Dynamic = 0, 1
@@ -220,4 +220,26 @@ function Geyser:changeContainer (container)
   end
   -- use add2 without overwriting childrens' add functions
   container:add2(self, cons, false)
+end
+
+-- internal function which calculates the wrapwidth for the main console automatically, if configured to do so.
+function Geyser.adjustMainWrap()
+  if not Geyser.autoWrapMain then return end
+  local mwidth, _ = getMainWindowSize()
+  local borders = getBorderSizes()
+  local fwidth, _ = calcFontSize()
+  local consoleWidth = mwidth - borders.left - borders.right
+  local charWidth = math.floor(consoleWidth / fwidth)
+  setWindowWrap(charWidth)
+end
+
+--- Enables autowrapping for the main console
+function Geyser.enableMainConsoleAutoWrap()
+  Geyser.autoWrapMain = true
+  Geyser.adjustMainWrap()
+end
+
+--- Disables autowrapping for the main console
+function Geyser.disableMainConsoleAutoWrap()
+  Geyser.autoWrapMain = false
 end
