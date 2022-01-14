@@ -102,22 +102,21 @@ jobs:
     - name: Setup Infer
       uses: srz-zumix/setup-infer@v1
 
-    - name: Generate compile_commands.json
+    - name: Build Mudlet
       uses: lukka/run-cmake@v3
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
-        # has to be the github workspace, not the runner workspace, for the docker-based clang-tidy-review
-        buildDirectory: '${{github.workspace}}/b/ninja'
+        buildDirectory: '${{runner.workspace}}/b/ninja'
+        # enable for a debug build (1/2)
+        # buildWithCMakeArgs: --config RelWithDebInfo
         cmakeAppendedArgs: >-
-          -DCMAKE_GLOBAL_AUTOGEN_TARGET=ON
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
           -DVCPKG_APPLOCAL_DEPS=OFF
-          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-        buildWithCMakeArgs: >-
-          --target autogen
+      env:
+        NINJA_STATUS: '[%f/%t %o/sec] '
 
     - name: Infer
       run: |
