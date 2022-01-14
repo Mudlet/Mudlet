@@ -565,10 +565,10 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     uint unicode = getGraphemeBaseCharacter(grapheme);
     int charWidth = 0;
 
-    switch (mpConsole->mControlHandlingMode) {
+    switch (mpConsole->mControlCharacterMode) {
     default:
-        // No special handling:
-        if (unicode == '\a' || unicode == '\t') {
+        // No special handling, except for these:
+        if (Q_UNLIKELY(unicode == '\a' || unicode == '\t')) {
             if (unicode == '\t') {
                 charWidth = mTabStopwidth - (column % mTabStopwidth);
                 graphemes.append(QString(QChar::Tabulation));
@@ -586,10 +586,10 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
             graphemes.append((charWidth < 1) ? QChar() : grapheme);
         }
         break;
-    case 1:
+    case TConsole::PictureControlCharacterReplacement:
         replaceControlCharacterWith_Picture(unicode, grapheme, column, graphemes, charWidth);
         break;
-    case 2:
+    case TConsole::OEMFontControlCharacterReplacement:
         replaceControlCharacterWith_OEMFont(unicode, grapheme, column, graphemes, charWidth);
         break;
     } // End of switch

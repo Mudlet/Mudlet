@@ -944,10 +944,22 @@ void XMLimport::readHostPackage(Host* pHost)
     }
 
     if (attributes().hasAttribute(QLatin1String("ControlCharacterHandling"))) {
-        pHost->setControlCharacterMode(qBound(0, attributes().value(QLatin1String("ControlCharacterHandling")).toInt(), 2));
+        switch (attributes().value(QLatin1String("ControlCharacterHandling")).toInt()) {
+        case 1:
+            pHost->setControlCharacterMode(TConsole::PictureControlCharacterReplacement);
+            break;
+        case 2:
+            pHost->setControlCharacterMode(TConsole::OEMFontControlCharacterReplacement);
+            break;
+        case 0:
+            [[fallthrough]];
+        default:
+            pHost->setControlCharacterMode(TConsole::NoControlCharacterReplacement);
+        }
+
     } else {
-        // The default value, also used up to Mudlet 4.13.1:
-        pHost->setControlCharacterMode(0);
+        // The default value, also used up to Mudlet 4.14.1:
+        pHost->setControlCharacterMode(TConsole::NoControlCharacterReplacement);
     }
 
     while (!atEnd()) {

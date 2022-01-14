@@ -1194,49 +1194,36 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
-           <widget class="QGroupBox" name="groupBox_controlCharacterHandling">
-            <property name="title">
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_controlCharacterHandling">
+            <property name="text">
              <string>Replacement of Control Characters on-screen:</string>
             </property>
-            <property name="flat">
-             <bool>true</bool>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QComboBox" name="comboBox_controlCharacterHandling">
+            <property name="currentIndex">
+             <number>0</number>
             </property>
-            <layout class="QVBoxLayout" name="verticalLayout_groupBox_controlCharacterHandling">
-             <item>
-              <widget class="QRadioButton" name="radioButton_controlCharacterHandling_none">
-               <property name="text">
-                <string>None</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">controlCharacterHandler</string>
-               </attribute>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="radioButton_controlCharacterHandling_pictures">
-               <property name="text">
-                <string>Unicode &quot;Control Pictures&quot;</string>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">controlCharacterHandler</string>
-               </attribute>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="radioButton_controlCharacterHandling_oemFont">
-               <property name="text">
-                <string>CP437 (OEM Font)- like</string>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">controlCharacterHandler</string>
-               </attribute>
-              </widget>
-             </item>
-            </layout>
+            <property name="sizeAdjustPolicy">
+             <enum>QComboBox::AdjustToMinimumContentsLengthWithIcon</enum>
+            </property>
+            <item>
+             <property name="text">
+              <string>None</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Unicode &quot;Control Pictures&quot;</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>CP437 (OEM Font)- like</string>
+             </property>
+            </item>
            </widget>
           </item>
          </layout>
@@ -3880,9 +3867,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_showSpacesAndTabs</tabstop>
   <tabstop>checkBox_showLineFeedsAndParagraphs</tabstop>
   <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
-  <tabstop>radioButton_controlCharacterHandling_none</tabstop>
-  <tabstop>radioButton_controlCharacterHandling_pictures</tabstop>
-  <tabstop>radioButton_controlCharacterHandling_oemFont</tabstop>
+  <tabstop>comboBox_controlCharacterHandling</tabstop>
   <tabstop>code_editor_theme_selection_combobox</tabstop>
   <tabstop>script_preview_combobox</tabstop>
   <tabstop>checkBox_autocompleteLuaCode</tabstop>
@@ -3992,7 +3977,4 @@ you can use it but there could be issues with aligning columns of text</string>
   <include location="../mudlet.qrc"/>
  </resources>
  <connections/>
- <buttongroups>
-  <buttongroup name="controlCharacterHandler"/>
- </buttongroups>
 </ui>

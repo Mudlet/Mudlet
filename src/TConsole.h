@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2021 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2022 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2020 by Matthias Urlichs matthias@urlichs.de            *
@@ -76,8 +76,14 @@ public:
         UserWindow = 0x10, // Floatable/Dockable console, should be uniquely named in pool of SubConsole/UserWindow/Buffers AND Labels
         Buffer = 0x20 // Non-visible store for data that can be copied to/from other per profile TConsoles, should be uniquely named in pool of SubConsole/UserWindow/Buffers AND Labels
     };
-
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
+
+    enum ControlCharacterMode {
+        NoControlCharacterReplacement = 0x0,
+        PictureControlCharacterReplacement = 0x1,
+        OEMFontControlCharacterReplacement = 0x2
+    };
+    Q_ENUM(ControlCharacterMode)
 
     Q_DISABLE_COPY(TConsole)
     explicit TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
@@ -277,7 +283,7 @@ public:
     int mBgImageMode = 0;
     QString mBgImagePath;
     bool mHScrollBarEnabled = false;
-    int mControlHandlingMode = 0;
+    ControlCharacterMode mControlCharacterMode = NoControlCharacterReplacement;
 
 
 public slots:
@@ -286,7 +292,7 @@ public slots:
     void slot_toggleReplayRecording();
     void slot_stop_all_triggers(bool);
     void slot_toggleLogging();
-    void slot_changeControlCharacterHandling(const int);
+    void slot_changeControlCharacterHandling(const TConsole::ControlCharacterMode);
 
 
 protected:

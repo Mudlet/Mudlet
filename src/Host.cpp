@@ -3895,14 +3895,16 @@ void Host::setupIreDriverBugfix()
     }
 }
 
-void Host::setControlCharacterMode(const int mode)
+void Host::setControlCharacterMode(const TConsole::ControlCharacterMode mode)
 {
-    if (mode < 0 || mode > 2) {
+    if (Q_UNLIKELY(!(mode == TConsole::NoControlCharacterReplacement
+                     || mode == TConsole::PictureControlCharacterReplacement
+                     || mode == TConsole::OEMFontControlCharacterReplacement))) {
         return;
     }
 
-    if (mControlCharacterHandlingMode != mode) {
-        mControlCharacterHandlingMode = mode;
+    if (mControlCharacterMode != mode) {
+        mControlCharacterMode = mode;
         emit signal_controlCharacterHandlingChanged(mode);
     }
 }
