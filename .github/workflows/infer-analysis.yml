@@ -2,9 +2,11 @@ name: 🔍 Check improvements with Infer
 
 on:
   pull_request_target:
-    paths:
-    - '**.cpp'
-    - '**.h'
+  #  commented out for debugging
+    # paths:
+    # - '**.cpp'
+    # - '**.h'
+  workflow_dispatch:
 
 jobs:
   compile-mudlet:
