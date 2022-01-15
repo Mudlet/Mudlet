@@ -57,16 +57,14 @@ void TMedia::playMedia(TMediaData& mediaData)
 
     mediaData.setMediaFileName(mediaData.getMediaFileName().replace(QLatin1Char('\\'), QLatin1Char('/')));
 
-    if (!TMedia::isFileRelative(mediaData)) {
+    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && mediaData.getMediaFileName() == qsl("Off")) {
         return;
     }
 
-    if (!TMedia::processUrl(mediaData)) {
-        return;
-    }
+    bool fileRelative = TMedia::isFileRelative(mediaData);
 
-    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && mediaData.getMediaFileName() == "Off") {
-        return;
+    if (!fileRelative && (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP)) {
+        return; // MSP and MCMP files will not have absolute paths. Something is wrong.
     }
 
     if (!mediaData.getMediaFileName().contains('*') && !mediaData.getMediaFileName().contains('?')) { // File path wildcards are * and ?
@@ -81,17 +79,27 @@ void TMedia::playMedia(TMediaData& mediaData)
             }
         }
 
-        QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
+        if (!fileRelative) { // API files may start as absolute, but get copied into the media folder for processing.
+            TMedia::transitionNonRelativeFile(mediaData);
+        }
 
+        QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
         QFile mediaFile(absolutePathFileName);
 
         if (!mediaFile.exists()) {
-            TMedia::downloadFile(mediaData);
+            if (fileRelative) {
+                if (!TMedia::processUrl(mediaData)) {
+                    return;
+                }
+
+                TMedia::downloadFile(mediaData);
+            }
+
             return;
         }
 
         if (mediaData.getMediaVolume() == TMediaData::MediaVolumePreload) {
-            return; // A "feature", primarily for MSP, to enable volume 0 (zero) to preload files (already loaded above).  Processing complete.  Exit!
+            return; // A "feature", primarily for MSP & API, to enable volume 0 (zero) to preload files (already loaded above).  Processing complete.  Exit!
         }
     }
 
@@ -136,8 +144,36 @@ void TMedia::stopMedia(TMediaData& mediaData)
         }
         break;
 
+
+    case TMediaData::MediaProtocolAPI:
+        switch (mediaData.getMediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mAPISoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mAPIMusicList;
+            break;
+        case TMediaData::MediaTypeNotSet:
+            mTMediaPlayerList = (mAPISoundList + mAPIMusicList);
+            break;
+        }
+        break;
+
     default:
         return;
+    }
+
+    if (!mediaData.getMediaFileName().isEmpty()) {
+        bool fileRelative = TMedia::isFileRelative(mediaData);
+
+        if (!fileRelative && (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP)) {
+            return; // MSP and MCMP files will not have absolute paths. Something is wrong.
+        }
+
+        // API files may start as absolute, but get copied into the media folder for processing. Trim the path from the file name.
+        if (!fileRelative) {
+            mediaData.setMediaFileName(mediaData.getMediaFileName().section('/', -1));
+        }
     }
 
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
@@ -145,7 +181,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
     while (itTMediaPlayer.hasNext()) {
         TMediaPlayer pPlayer = itTMediaPlayer.next();
 
-        if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP) {
+        if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolAPI) {
             if (!mediaData.getMediaKey().isEmpty() && !pPlayer.getMediaData().getMediaKey().isEmpty() && pPlayer.getMediaData().getMediaKey() != mediaData.getMediaKey()) {
                 continue;
             }
@@ -210,7 +246,7 @@ bool TMedia::purgeMediaCache()
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << qsl("TMedia::purgeMediaCache() WARNING - Not able to reference directory: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
+        qWarning() << qsl("TMedia::purgeMediaCache() WARNING - not able to reference directory: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
         return false;
     }
 
@@ -223,7 +259,7 @@ bool TMedia::purgeMediaCache()
 // Private
 void TMedia::stopAllMediaPlayers()
 {
-    QList<TMediaPlayer> mTMediaPlayerList = (mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList);
+    QList<TMediaPlayer> mTMediaPlayerList = (mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList + mAPISoundList + mAPIMusicList);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
@@ -232,11 +268,30 @@ void TMedia::stopAllMediaPlayers()
     }
 }
 
+void TMedia::transitionNonRelativeFile(TMediaData& mediaData)
+{
+    QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
+    QDir mediaDir(mediaPath);
+
+    if (!mediaDir.mkpath(mediaPath)) {
+        qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
+    } else {
+        QString mediaFilePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', -1));
+        QFile mediaFile(mediaFilePath);
+
+        if (!mediaFile.exists() && !QFile::copy(mediaData.getMediaFileName(), mediaFilePath)) {
+            qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to copy file %1 to a directory %2 failed.").arg(mediaData.getMediaFileName(), mediaFilePath);
+        } else {
+            mediaData.setMediaFileName(mediaData.getMediaFileName().section('/', -1));
+        }
+    }
+}
+
 QUrl TMedia::parseUrl(TMediaData& mediaData)
 {
     QUrl url;
 
-    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && mediaData.getMediaFileName() == "Off") {
+    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && mediaData.getMediaFileName() == qsl("Off")) {
         if (mediaData.getMediaUrl().isEmpty()) { // MSP is !!SOUND(Off) or !!MUSIC(Off)
             mpHost->mpMedia->stopMedia(mediaData);
         } else { // MSP is !!SOUND(Off U=https://example.com/sounds) or !!MUSIC(Off U=https://example.com/sounds)
@@ -262,7 +317,7 @@ bool TMedia::isValidUrl(QUrl& url)
     bool isValid = false;
 
     if (!url.isValid()) {
-        qWarning() << qsl("TMedia::validUrl() WARNING - Attempt made to reference an invalid URL: %1 and the error message was:\"%2\".").arg(url.toString(), url.errorString());
+        qWarning() << qsl("TMedia::validUrl() WARNING - attempt made to reference an invalid URL: %1 and the error message was:\"%2\".").arg(url.toString(), url.errorString());
     } else {
         isValid = true;
     }
@@ -275,7 +330,10 @@ bool TMedia::isFileRelative(TMediaData& mediaData)
     bool isFileRelative = false;
 
     if (!QFileInfo(mediaData.getMediaFileName()).isRelative()) {
-        qWarning() << qsl("TMedia::isFileRelative() WARNING - Attempt made to send an absolute path as a media file name: %1.  Only relative paths are permitted.").arg(mediaData.getMediaFileName());
+        if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP) {
+            qWarning()
+                    << qsl("TMedia::isFileRelative() WARNING - attempt made to send an absolute path as a media file name: %1.  Only relative paths are permitted.").arg(mediaData.getMediaFileName());
+        }
     } else {
         isFileRelative = true;
     }
@@ -289,7 +347,12 @@ QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir& dir)
 
     // No more than one '*' wildcard per the specification
     if ((mediaData.getMediaFileName().contains('*') || mediaData.getMediaFileName().contains('?')) && mediaData.getMediaFileName().count('*') < 2) {
-        dir.setNameFilters(QStringList() << mediaData.getMediaFileName());
+        if (!mediaData.getMediaFileName().contains('/')) {
+            dir.setNameFilters(QStringList() << mediaData.getMediaFileName());
+        } else { // Directory information needs filtered from the filter
+            dir.setNameFilters(QStringList() << mediaData.getMediaFileName().section('/', -1));
+        }
+
         QStringList fileNames(dir.entryList(QDir::Files | QDir::Readable, QDir::Name));
 
         for (auto& fileName : qAsConst(fileNames)) {
@@ -321,7 +384,7 @@ QStringList TMedia::getFileNameList(TMediaData& mediaData)
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << qsl("TMedia::getFileNameList() WARNING - Attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
+        qWarning() << qsl("TMedia::getFileNameList() WARNING - attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
         return fileNameList;
     }
 
@@ -330,7 +393,7 @@ QStringList TMedia::getFileNameList(TMediaData& mediaData)
         QDir mediaSubDir(mediaSubPath);
 
         if (!mediaSubDir.mkpath(mediaSubPath)) {
-            qWarning() << qsl("TMedia::getFileNameList() WARNING - Attempt made to create a directory failed: %1")
+            qWarning() << qsl("TMedia::getFileNameList() WARNING - attempt made to create a directory failed: %1")
                                   .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
             return fileNameList;
         }
@@ -359,6 +422,10 @@ QUrl TMedia::getFileUrl(TMediaData& mediaData)
 
     case TMediaData::MediaProtocolGMCP:
         mediaLocation = mpHost->getMediaLocationGMCP();
+        break;
+
+    case TMediaData::MediaProtocolAPI:
+        mediaLocation = mediaData.getMediaUrl();
         break;
     }
 
@@ -395,6 +462,9 @@ bool TMedia::processUrl(TMediaData& mediaData)
             if (mpHost->getMediaLocationGMCP().isEmpty() || url.toString() != mpHost->getMediaLocationGMCP()) {
                 mpHost->setMediaLocationGMCP(url.toString());
             }
+            break;
+
+        case TMediaData::MediaProtocolAPI:
             break;
 
         default:
@@ -492,7 +562,7 @@ void TMedia::downloadFile(TMediaData& mediaData)
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << qsl("TMedia::downloadFile() WARNING - Attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
+        qWarning() << qsl("TMedia::downloadFile() WARNING - attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
         return;
     }
 
@@ -501,7 +571,7 @@ void TMedia::downloadFile(TMediaData& mediaData)
         QDir mediaSubDir(mediaSubPath);
 
         if (!mediaSubDir.mkpath(mediaSubPath)) {
-            qWarning() << qsl("TMedia::downloadFile() WARNING - Attempt made to create a directory failed: %1")
+            qWarning() << qsl("TMedia::downloadFile() WARNING - attempt made to create a directory failed: %1")
                                   .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
             return;
         }
@@ -511,7 +581,7 @@ void TMedia::downloadFile(TMediaData& mediaData)
     QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
 
     if (!dir.mkpath(cacheDir)) {
-        qWarning() << "TMedia::downloadFile() WARNING - Couldn't create cache directory for sound file(s): " << cacheDir;
+        qWarning() << "TMedia::downloadFile() WARNING - couldn't create cache directory for sound file(s): " << cacheDir;
         return;
     }
 
@@ -585,6 +655,17 @@ QList<TMediaPlayer> TMedia::getMediaPlayerList(TMediaData& mediaData)
             break;
         }
         break;
+
+    case TMediaData::MediaProtocolAPI:
+        switch (mediaData.getMediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mAPISoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mAPIMusicList;
+            break;
+        }
+        break;
     }
 
     return mTMediaPlayerList;
@@ -610,7 +691,7 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
         pPlayer = TMediaPlayer(mpHost, mediaData);
 
         if (!pPlayer.getMediaPlayer()) { // It should be impossible to ever reach this.
-            qWarning() << qsl("TMedia::getMediaPlayer() WARNING - Unable to create new QMediaPlayer object.");
+            qWarning() << qsl("TMedia::getMediaPlayer() WARNING - unable to create new QMediaPlayer object.");
             return pPlayer;
         }
     }
@@ -645,10 +726,11 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
         int volume = pPlayer.getMediaData().getMediaVolume();
         int fadeInPosition = pPlayer.getMediaData().getMediaFadeIn();
         int fadeOutPosition = pPlayer.getMediaData().getMediaFadeOut();
+        int startPosition = pPlayer.getMediaData().getMediaStart();
 
         if (fadeInPosition != TMediaData::MediaFadeNotSet) {
             if (progress < fadeInPosition) {
-                double fadeInVolume = static_cast<double>(volume * progress) / static_cast<double>(fadeInPosition * 1.0);
+                double fadeInVolume = static_cast<double>(volume * (progress - startPosition)) / static_cast<double>((fadeInPosition - startPosition) * 1.0);
 
                 pPlayer.getMediaPlayer()->setVolume(qRound(fadeInVolume));
             } else if (progress == fadeInPosition) {
@@ -687,7 +769,7 @@ TMediaPlayer TMedia::matchMediaPlayer(TMediaData& mediaData, const QString& abso
 #endif
                 pPlayer = pTestPlayer;
                 pPlayer.setMediaData(mediaData);
-                pPlayer.getMediaPlayer()->setVolume(mediaData.getMediaVolume());
+                pPlayer.getMediaPlayer()->setVolume(mediaData.getMediaFadeIn() != TMediaData::MediaFadeNotSet ? 1 : mediaData.getMediaVolume());
                 break;
             }
         }
@@ -779,7 +861,7 @@ void TMedia::play(TMediaData& mediaData)
     QStringList fileNameList = TMedia::getFileNameList(mediaData);
 
     if (fileNameList.isEmpty()) { // This should not happen.
-        qWarning() << qsl("TMedia::play() WARNING - Could not generate a list of media file names.");
+        qWarning() << qsl("TMedia::play() WARNING - could not generate a list of media file names.");
         return;
     }
 
@@ -799,7 +881,7 @@ void TMedia::play(TMediaData& mediaData)
 
     // It should be impossible to ever reach this.
     if (!pPlayer.getMediaPlayer()) {
-        qWarning() << qsl("TMedia::play() WARNING - Unable to create new QMediaPlayer object.");
+        qWarning() << qsl("TMedia::play() WARNING - unable to create new QMediaPlayer object.");
         return;
     }
 
@@ -816,7 +898,7 @@ void TMedia::play(TMediaData& mediaData)
             return;
         }
 
-        if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mediaData.getMediaKey().isEmpty()) {
+        if (!mediaData.getMediaKey().isEmpty() && (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolAPI)) {
             TMedia::matchMediaKeyAndStopMediaVariants(mediaData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
         }
 
@@ -835,7 +917,7 @@ void TMedia::play(TMediaData& mediaData)
                 return;
             }
 
-            if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mediaData.getMediaKey().isEmpty()) {
+            if (!mediaData.getMediaKey().isEmpty() && (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolAPI)) {
                 TMedia::matchMediaKeyAndStopMediaVariants(mediaData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
             }
 
@@ -858,7 +940,7 @@ void TMedia::play(TMediaData& mediaData)
                         return;
                     }
 
-                    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mediaData.getMediaKey().isEmpty()) {
+                    if (!mediaData.getMediaKey().isEmpty() && (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolAPI)) {
                         TMedia::matchMediaKeyAndStopMediaVariants(mediaData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
                     }
                 }
@@ -893,10 +975,22 @@ void TMedia::play(TMediaData& mediaData)
             break;
         }
         break;
+
+    case TMediaData::MediaProtocolAPI:
+        switch (mediaData.getMediaType()) {
+        case TMediaData::MediaTypeSound:
+            mAPISoundList.append(pPlayer);
+            break;
+        case TMediaData::MediaTypeMusic:
+            mAPIMusicList.append(pPlayer);
+            break;
+        }
+        break;
     }
 
-    // Set volume and play media
-    pPlayer.getMediaPlayer()->setVolume(mediaData.getMediaVolume());
+    // Set volume, start and play media
+    pPlayer.getMediaPlayer()->setVolume(mediaData.getMediaFadeIn() != TMediaData::MediaFadeNotSet ? 1 : mediaData.getMediaVolume());
+    pPlayer.getMediaPlayer()->setPosition(mediaData.getMediaStart());
     pPlayer.getMediaPlayer()->play();
 }
 
@@ -1012,6 +1106,30 @@ int TMedia::parseJSONByMediaFadeOut(QJsonObject& json)
     }
 
     return mediaFadeOut;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#start
+int TMedia::parseJSONByMediaStart(QJsonObject& json)
+{
+    int mediaStart = TMediaData::MediaStartDefault;
+
+    auto mediaStartJSON = json.value(qsl("start"));
+
+    if (mediaStartJSON != QJsonValue::Undefined && mediaStartJSON.isString() && !mediaStartJSON.toString().isEmpty()) {
+        mediaStart = mediaStartJSON.toString().toInt();
+
+        if (mediaStart < TMediaData::MediaStartDefault) {
+            mediaStart = TMediaData::MediaStartDefault;
+        }
+    } else if (mediaStartJSON != QJsonValue::Undefined && mediaStartJSON.toInt()) {
+        mediaStart = mediaStartJSON.toInt();
+
+        if (mediaStart < TMediaData::MediaStartDefault) {
+            mediaStart = TMediaData::MediaStartDefault;
+        }
+    }
+
+    return mediaStart;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#priority:_1_to_100
@@ -1187,6 +1305,7 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaVolume(TMedia::parseJSONByMediaVolume(json));
     mediaData.setMediaFadeIn(TMedia::parseJSONByMediaFadeIn(json));
     mediaData.setMediaFadeOut(TMedia::parseJSONByMediaFadeOut(json));
+    mediaData.setMediaStart(TMedia::parseJSONByMediaStart(json));
     mediaData.setMediaLoops(TMedia::parseJSONByMediaLoops(json));
     mediaData.setMediaPriority(TMedia::parseJSONByMediaPriority(json));
     mediaData.setMediaContinue(TMedia::parseJSONByMediaContinue(json));

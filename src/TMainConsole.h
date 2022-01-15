@@ -26,7 +26,7 @@
 
 
 #include "TConsole.h"
-
+#include "TScrollBox.h"
 #include "pre_guard.h"
 #include <QFile>
 #include <QTextStream>
@@ -51,6 +51,7 @@ public:
     void resetMainConsole();
 
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    TScrollBox* createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height);
     bool raiseWindow(const QString& name);
     bool lowerWindow(const QString& name);
     bool showWindow(const QString& name);
@@ -116,6 +117,7 @@ public:
     QMap<QString, TDockWidget*> mDockWidgetMap;
     QMap<QString, TCommandLine*> mSubCommandLineMap;
     QMap<QString, TLabel*> mLabelMap;
+    QMap<QString, TScrollBox*> mScrollBoxMap;
     TBuffer mClipboard;
     QFile mLogFile;
     QString mLogFileName;

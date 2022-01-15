@@ -192,6 +192,37 @@ function Geyser.Label:disableAutoAdjustSize()
   return true
 end
 
+---setMovie allows to set a gif animation on a label
+-- @param filename the path to the gif file
+function Geyser.Label:setMovie(fileName)
+  result, error = setMovie(self.name, fileName)
+  self:autoAdjustSize()
+  return result, error
+end
+
+---startMovie starts animation on label
+function Geyser.Label:startMovie()
+  return setMovieStart(self.name)
+end
+
+---pauseMovie pauses or resumes animation on label
+function Geyser.Label:pauseMovie()
+  return setMoviePaused(self.name)
+end
+
+---setMovieSpeed change the speed of the animation
+--@param speed is the speed in percent for example 200 for 200% which means double the animation speed
+function Geyser.Label:setMovieSpeed(speed)
+  return setMovieSpeed(self.name, speed)
+end
+
+---setMovieFrame jumps to the given frame of the animation
+--@param frameNr is the number of the frame to jump
+function Geyser.Label:setMovieFrame(frameNr)
+  return setMovieFrame(self.name, frameNr)
+end
+
+
 --- Set whether or not the text in the label should be bold
 -- @param bool True for bold
 function Geyser.Label:setBold(bool)
@@ -938,7 +969,7 @@ function Geyser.Label:addChild(cons, container)
   cons = cons or {}
   cons.type = cons.type or "nestedLabel"
   if self.windowname ~= "main" and not container then
-    container = Geyser.windowList[self.windowname.."Container"].windowList[self.windowname]
+    container = Geyser.parentWindows[self.windowname]
   end
   local flyOut = false
   local flyDir, layoutDir
@@ -1037,7 +1068,7 @@ if self.windowname ~= myMenu.MenuLabels[name].windowname then
   if self.windowname == "main" then
     myMenu.MenuLabels[name]:changeContainer(Geyser)
   else
-    myMenu.MenuLabels[name]:changeContainer(Geyser.windowList[self.windowname.."Container"].windowList[self.windowname])
+    myMenu.MenuLabels[name]:changeContainer(Geyser.parentWindows[self.windowname])
   end
 end
 

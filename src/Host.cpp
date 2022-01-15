@@ -2957,6 +2957,26 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
     return {false, qsl("miniconsole/userwindow '%1' already exists").arg(name)};
 }
 
+std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pS = mpConsole->mScrollBoxMap.value(name);
+    if (!pS) {
+        pS = mpConsole->createScrollBox(windowname, name, x, y, width, height);
+        if (pS) {
+            return {true, QString()};
+        }
+    } else if (pS) {
+        pS->resize(width, height);
+        pS->move(x, y);
+        return {false, qsl("scrollBox '%1' already exists, moving/resizing '%1'").arg(name)};
+    }
+    return {false, qsl("scrollBox '%1' already exists").arg(name)};
+}
+
 std::pair<bool, QString> Host::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
 {
     if (!mpConsole) {
@@ -3095,6 +3115,7 @@ bool Host::showWindow(const QString& name)
     auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pL = mpConsole->mLabelMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
+    auto pS = mpConsole->mScrollBoxMap.value(name);
     // check labels first as they are shown/hidden more often
     if (pL) {
         pL->show();
@@ -3109,6 +3130,11 @@ bool Host::showWindow(const QString& name)
         } else {
             return mpConsole->showWindow(name);
         }
+    }
+
+    if (pS) {
+        pS->show();
+        return true;
     }
 
     if (pN) {
@@ -3128,6 +3154,7 @@ bool Host::hideWindow(const QString& name)
     auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pL = mpConsole->mLabelMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
+    auto pS = mpConsole->mScrollBoxMap.value(name);
 
     // check labels first as they are shown/hidden more often
     if (pL) {
@@ -3140,6 +3167,11 @@ bool Host::hideWindow(const QString& name)
             pD->update();
         }
         return mpConsole->hideWindow(name);
+    }
+
+    if (pS) {
+        pS->hide();
+        return true;
     }
 
     if (pN) {
@@ -3160,6 +3192,7 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
     auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
+    auto pS = mpConsole->mScrollBoxMap.value(name);
 
     if (pL) {
         pL->resize(x1, y1);
@@ -3182,6 +3215,11 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
         return true;
     }
 
+    if (pS) {
+        pS->resize(x1, y1);
+        return true;
+    }
+
     if (pN) {
         pN->resize(x1, y1);
         return true;
@@ -3200,6 +3238,7 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
     auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
+    auto pS = mpConsole->mScrollBoxMap.value(name);
 
     if (pL) {
         pL->move(x1, y1);
@@ -3224,6 +3263,11 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
         return true;
     }
 
+    if (pS) {
+        pS->move(x1, y1);
+        return true;
+    }
+
     if (pN) {
         pN->move(x1, y1);
         return true;
@@ -3237,20 +3281,27 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     if (!mpConsole) {
         return {false, QString()};
     }
-
+    //children
     auto pL = mpConsole->mLabelMap.value(name);
     auto pC = mpConsole->mSubConsoleMap.value(name);
-    auto pD = mpConsole->mDockWidgetMap.value(windowname);
-    auto pW = mpConsole->mpMainFrame;
     auto pM = mpConsole->mpMapper;
     auto pN = mpConsole->mSubCommandLineMap.value(name);
+    auto pS = mpConsole->mScrollBoxMap.value(name);
+    //parents
+    auto pW = mpConsole->mpMainFrame;
+    auto pD = mpConsole->mDockWidgetMap.value(windowname);
+    auto pSW = mpConsole->mScrollBoxMap.value(windowname);
 
-    if (!pD && windowname.toLower() != QLatin1String("main")) {
+    if (!pSW && !pD && windowname.toLower() != QLatin1String("main")) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
     if (pD) {
         pW = pD->widget();
+    }
+
+    if (pSW) {
+        pW = pSW->widget();
     }
 
     if (pL) {
@@ -3267,6 +3318,13 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         pC->mOldY = y1;
         if (show) {
             pC->show();
+        }
+        return {true, QString()};
+    } else if (pS) {
+        pS->setParent(pW);
+        pS->move(x1, y1);
+        if (show) {
+            pS->show();
         }
         return {true, QString()};
     } else if (pN) {
@@ -3535,6 +3593,37 @@ bool Host::setLabelOnLeave(const QString& name, const int func)
         return true;
     }
     return false;
+}
+
+std::pair<bool, QString> Host::setMovie(const QString& name, const QString& moviePath)
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (!pL) {
+        return {false, qsl("label '%1' does not exist").arg(name)};
+    }
+
+    auto myMovie = pL->mpMovie;
+    if (!myMovie) {
+        myMovie = new QMovie();
+        myMovie->setCacheMode(QMovie::CacheAll);
+        pL->mpMovie = myMovie;
+        myMovie->setParent(pL);
+    }
+
+    myMovie->setFileName(moviePath);
+
+    if (!myMovie->isValid()) {
+        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
+    }
+    myMovie->stop();
+    pL->setMovie(myMovie);
+    myMovie->start();
+    return {true, QString()};
+
 }
 
 QSize Host::calcFontSize(const QString& windowName)
