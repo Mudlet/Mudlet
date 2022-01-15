@@ -233,24 +233,26 @@ int TriggerUnit::getNewID()
 
 void TriggerUnit::processDataStream(const QString& data, int line)
 {
-    if (!data.isEmpty()) {
-#if defined(Q_OS_WIN32)
-        // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
-        char* subject = static_cast<char*>(malloc(strlen(data.toUtf8().data()) + 1));
-        strcpy(subject, data.toUtf8().data());
-#else
-        char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
-#endif
-        for (auto trigger : mTriggerRootNodeList) {
-            trigger->match(subject, data, line);
-        }
-        free(subject);
-
-        for (auto& trigger : mCleanupList) {
-            delete trigger;
-        }
-        mCleanupList.clear();
+    if (data.isEmpty()) {
+        return;
     }
+
+#if defined(Q_OS_WIN32)
+    // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
+    char* subject = static_cast<char*>(malloc(strlen(data.toUtf8().data()) + 1));
+    strcpy(subject, data.toUtf8().data());
+#else
+    char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
+#endif
+    for (auto trigger : mTriggerRootNodeList) {
+        trigger->match(subject, data, line);
+    }
+    free(subject);
+
+    for (auto& trigger : mCleanupList) {
+        delete trigger;
+    }
+    mCleanupList.clear();
 }
 
 void TriggerUnit::compileAll()
@@ -345,12 +347,12 @@ void TriggerUnit::assembleReport(TTrigger* pItem)
         ++statsItemsTotal;
         if (pChild->isActive()) {
             ++statsActiveItems;
-            statsPatternsActive += pChild->mRegexCodeList.size();
+            statsPatternsActive += pChild->mPatterns.size();
         }
         if (pChild->isTemporary()) {
             ++statsTempItems;
         }
-        statsPatternsTotal += pChild->mRegexCodeList.size();
+        statsPatternsTotal += pChild->mPatterns.size();
         assembleReport(pChild);
     }
 }
@@ -362,12 +364,12 @@ std::tuple<QString, int, int, int, int, int> TriggerUnit::assembleReport()
         ++statsItemsTotal;
         if (pItem->isActive()) {
             ++statsActiveItems;
-            statsPatternsActive += pItem->mRegexCodeList.size();
+            statsPatternsActive += pItem->mPatterns.size();
         }
         if (pItem->isTemporary()) {
             ++statsTempItems;
         }
-        statsPatternsTotal += pItem->mRegexCodeList.size();
+        statsPatternsTotal += pItem->mPatterns.size();
         assembleReport(pItem);
     }
     QStringList msg;

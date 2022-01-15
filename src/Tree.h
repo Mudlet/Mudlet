@@ -58,7 +58,7 @@ public:
     void setShouldBeActive(bool b);
     bool isTemporary() const;
     void setTemporary(bool state);
-    // Returns true if all the ancesters of this node are active. If there are no ancestors it also returns true.
+    // Returns true if all the ancestors of this node are active. If there are no ancestors it also returns true.
     bool ancestorsActive() const;
     QString& getError();
     void setError(QString);
