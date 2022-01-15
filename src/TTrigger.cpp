@@ -157,7 +157,7 @@ static void pcre_deleter(pcre* pointer)
 }
 
 //FIXME: lock if code *OR* regex doesn't compile
-bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> propertyList)
+bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds)
 {
     patterns.replaceInStrings("\n", "");
     mPatterns.clear();
