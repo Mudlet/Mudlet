@@ -126,7 +126,7 @@ jobs:
           cd '${{runner.workspace}}/b/ninja'
 
           infer capture --progress-bar-style plain --keep-going --jobs $(nproc) --compilation-database compile_commands.json
-          infer analyse --progress-bar-style plain --keep-going --jobs $(nproc) --changed-files-index index.txt
+          infer analyze --progress-bar-style plain --keep-going --jobs $(nproc) --changed-files-index index.txt
 
     - name: Check Infer report
       uses: srz-zumix/reviewdog-action-infer@v1
