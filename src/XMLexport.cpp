@@ -870,13 +870,13 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
             auto regexCodeList = trigger.append_child("regexCodeList");
             // Revert the first 16 ANSI colour codes back to the wrong values
             // that are still used in the save files
-            QStringList unfixedAnsiColourPatternList = remapAnsiToColorNumber(pT->mRegexCodeList, pT->mRegexCodePropertyList);
+            QStringList unfixedAnsiColourPatternList = remapAnsiToColorNumber(pT->mPatterns, pT->mPatternKinds);
             for (int i = 0; i < unfixedAnsiColourPatternList.size(); ++i) {
                 regexCodeList.append_child("string").text().set(unfixedAnsiColourPatternList.at(i).toUtf8().constData());
             }
 
             auto regexCodePropertyList = trigger.append_child("regexCodePropertyList");
-            for (int i : qAsConst(pT->mRegexCodePropertyList)) {
+            for (int i : qAsConst(pT->mPatternKinds)) {
                 regexCodePropertyList.append_child("integer").text().set(QString::number(i).toUtf8().constData());
             }
         }
