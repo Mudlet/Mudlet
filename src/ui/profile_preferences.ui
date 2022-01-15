@@ -1256,9 +1256,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <item>
               <widget class="edbee::TextEditorWidget" name="edbeePreviewWidget" native="true">
                <property name="font">
-                <font>
-                 <family>Bitstream Vera Sans Mono</family>
-                </font>
+                <font/>
                </property>
               </widget>
              </item>
@@ -2653,7 +2651,7 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>IRC client options</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_ircOptions" rowstretch="0,0,0">
+         <layout class="QGridLayout" name="gridLayout_groupBox_ircOptions" rowstretch="0,0,0,0">
           <item row="0" column="0">
            <widget class="QLabel" name="lblIrcHostName">
             <property name="text">
@@ -3077,7 +3075,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
             <property name="font">
              <font>
-              <family>Arial Black</family>
               <pointsize>16</pointsize>
               <stylestrategy>PreferAntialias</stylestrategy>
              </font>
@@ -3228,7 +3225,6 @@ you can use it but there could be issues with aligning columns of text</string>
                </property>
                <property name="font">
                 <font>
-                 <family>Arial</family>
                  <pointsize>8</pointsize>
                  <stylestrategy>PreferAntialias</stylestrategy>
                 </font>
@@ -3361,9 +3357,9 @@ you can use it but there could be issues with aligning columns of text</string>
       <attribute name="title">
        <string>Shortcuts</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_3">
-       <item row="0" column="0">
-        <widget class="QGroupBox" name="verticalLayout_main_window_shortcuts">
+      <layout class="QVBoxLayout" name="vBoxLayout_tab_shortcuts">
+       <item>
+        <widget class="QGroupBox" name="groupBox_main_window_shortcuts">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -3379,7 +3375,7 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="alignment">
           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_2">
+         <layout class="QVBoxLayout" name="verticalLayout_groupBox_mainWindowShortcuts">
           <property name="sizeConstraint">
            <enum>QLayout::SetMinimumSize</enum>
           </property>
@@ -3394,14 +3390,16 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item>
-           <layout class="QGridLayout" name="gridLayout_groupBox_shortcuts">
-            <property name="horizontalSpacing">
-             <number>20</number>
-            </property>
-           </layout>
+           <widget class="QFrame" name="frame_shortcuts">
+            <layout class="QGridLayout" name="gridLayout_groupBox_shortcuts">
+             <property name="horizontalSpacing">
+              <number>20</number>
+             </property>
+            </layout>
+           </widget>
           </item>
           <item alignment="Qt::AlignRight">
-           <widget class="QPushButton" name="pushButton_resetMainWindowShortctus">
+           <widget class="QToolButton" name="toolButton_resetMainWindowShortcuts">
             <property name="text">
              <string>Reset to defaults</string>
             </property>
@@ -3410,8 +3408,8 @@ you can use it but there could be issues with aligning columns of text</string>
          </layout>
         </widget>
        </item>
-       <item row="1" column="0">
-        <spacer name="verticalSpacer">
+       <item>
+        <spacer name="verticalSpacer_shortcuts">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -3794,6 +3792,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>comboBox_encoding</tabstop>
   <tabstop>mAlertOnNewData</tabstop>
   <tabstop>mFORCE_SAVE_ON_EXIT</tabstop>
+  <tabstop>comboBox_appearance</tabstop>
   <tabstop>acceptServerGUI</tabstop>
   <tabstop>acceptServerMedia</tabstop>
   <tabstop>mEnableGMCP</tabstop>
@@ -3838,6 +3837,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>code_editor_theme_selection_combobox</tabstop>
   <tabstop>script_preview_combobox</tabstop>
   <tabstop>checkBox_autocompleteLuaCode</tabstop>
+  <tabstop>checkBox_showBidi</tabstop>
   <tabstop>pushButton_foreground_color</tabstop>
   <tabstop>pushButton_command_line_foreground_color</tabstop>
   <tabstop>pushButton_command_foreground_color</tabstop>
@@ -3926,6 +3926,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>lineEdit_proxyPort</tabstop>
   <tabstop>lineEdit_proxyUsername</tabstop>
   <tabstop>lineEdit_proxyPassword</tabstop>
+  <tabstop>toolButton_resetMainWindowShortcuts</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
   <tabstop>mFORCE_CHARSET_NEGOTIATION_OFF</tabstop>
