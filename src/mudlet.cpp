@@ -1431,10 +1431,10 @@ void mudlet::closeHost(const QString& name)
     int hostCount = mHostManager.getHostCount();
     emit signal_hostDestroyed(pH, --hostCount);
     mHostManager.deleteHost(pH->getName());
-    updateMultiviewControlsEnabled();
+    updateEnableOfMViewControls();
 }
 
-void mudlet::updateMultiviewControlsEnabled()
+void mudlet::updateEnableOfMViewControls()
 {
     const bool isEnabled = (mHostManager.getHostCount() - 1);
     if (mpActionMultiView->isEnabled() != isEnabled){
@@ -1445,7 +1445,7 @@ void mudlet::updateMultiviewControlsEnabled()
     }
 }
 
-void mudlet::reshowAllMainConsolesIfRequired()
+void mudlet::reshowRequiredMainConsoles()
 {
     if (mpTabBar->count() > 1 && mMultiView) {
         for (auto pHost: mHostManager) {
@@ -1526,9 +1526,9 @@ void mudlet::slot_tab_changed(int tabID)
 
     updateDiscordNamedIcon();
 
-    updateMultiviewControlsEnabled();
+    updateEnableOfMViewControls();
     // Regenerate the multi-view mode if it is enabled:
-    reshowAllMainConsolesIfRequired();
+    reshowRequiredMainConsoles();
 
     emit signal_tabChanged(mpCurrentActiveHost->getName());
 }
@@ -2842,7 +2842,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
     enableToolbarButtons();
-    updateMultiviewControlsEnabled();
+    updateEnableOfMViewControls();
 }
 
 void mudlet::processEventLoopHack()
