@@ -347,13 +347,12 @@ void TriggerUnit::assembleReport(TTrigger* pItem)
         ++statsItemsTotal;
         if (pChild->isActive()) {
             ++statsActiveItems;
-            statsPatternsActive += pChild->mRegexCodeList.size();
+            statsPatternsActive += pChild->mPatterns.size();
         }
         if (pChild->isTemporary()) {
             ++statsTempItems;
         }
-        statsPatterns += pChild->mPatterns.size();
-        statsPatternsTotal += pChild->mRegexCodeList.size();
+        statsPatternsTotal += pChild->mPatterns.size();
         assembleReport(pChild);
     }
 }
@@ -365,13 +364,12 @@ std::tuple<QString, int, int, int, int, int> TriggerUnit::assembleReport()
         ++statsItemsTotal;
         if (pItem->isActive()) {
             ++statsActiveItems;
-            statsPatternsActive += pItem->mRegexCodeList.size();
+            statsPatternsActive += pItem->mPatterns.size();
         }
         if (pItem->isTemporary()) {
             ++statsTempItems;
         }
-        statsPatterns += pItem->mPatterns.size();
-        statsPatternsTotal += pItem->mRegexCodeList.size();
+        statsPatternsTotal += pItem->mPatterns.size();
         assembleReport(pItem);
     }
     QStringList msg;

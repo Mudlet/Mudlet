@@ -182,12 +182,12 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds)
     }
     mTriggerContainsPerlRegex = false;
 
-    if (propertyList.size() != patterns.size()) {
+    if (patternKinds.size() != patterns.size()) {
         //FIXME: ronny managed to trigger this somehow
-        qDebug() << "[CRITICAL ERROR (plz report):] Trigger name=" << mName << " aborting reason: propertyList.size() != patterns.size()";
+        qDebug() << "[CRITICAL ERROR (plz report):] Trigger name=" << mName << " aborting reason: patternKinds.size() != patterns.size()";
     }
 
-    if ((propertyList.empty()) && (!isFolder()) && (!mColorTrigger)) {
+    if ((patternKinds.empty()) && (!isFolder()) && (!mColorTrigger)) {
         setError(qsl("<b><font color='blue'>%1</font></b>")
                 .arg(tr("Error: This trigger has no patterns defined, yet. Add some to activate it.")));
         mOK_init = false;
@@ -197,14 +197,14 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds)
     bool state = true;
 
     for (int i = 0; i < patterns.size(); i++) {
-        if (patterns.at(i).isEmpty() && propertyList.at(i) != REGEX_PROMPT) {
+        if (patterns.at(i).isEmpty() && patternKinds.at(i) != REGEX_PROMPT) {
             continue;
         }
 
         mPatterns.append(patterns.at(i));
-        mPatternKinds.append(propertyList.at(i));
+        mPatternKinds.append(patternKinds.at(i));
 
-        if (propertyList.at(i) == REGEX_PERL) {
+        if (patternKinds.at(i) == REGEX_PERL) {
             const char* error;
             const QByteArray& regexp = patterns.at(i).toUtf8();
 
@@ -232,7 +232,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds)
             mTriggerContainsPerlRegex = true;
         }
 
-        if (propertyList.at(i) == REGEX_LUA_CODE) {
+        if (patternKinds.at(i) == REGEX_LUA_CODE) {
             std::string funcName;
             std::stringstream func;
             func << "trigger" << mID << "condition" << i;
@@ -253,7 +253,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds)
             }
         }
 
-        if (propertyList[i] == REGEX_COLOR_PATTERN) {
+        if (patternKinds[i] == REGEX_COLOR_PATTERN) {
             int textAnsiFg = scmIgnored;
             int textAnsiBg = scmIgnored;
             // Decode the pattern string to the colour codes wanted:
