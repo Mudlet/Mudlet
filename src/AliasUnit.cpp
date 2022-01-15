@@ -27,6 +27,8 @@
 
 void AliasUnit::_uninstall(TAlias* pChild, const QString& packageName)
 {
+    int unused;
+    
     std::list<TAlias*>* childrenList = pChild->mpMyChildrenList;
     for (auto alias : *childrenList) {
         _uninstall(alias, packageName);
