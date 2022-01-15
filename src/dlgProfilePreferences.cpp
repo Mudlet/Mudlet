@@ -273,7 +273,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
     connect(pMudlet, &mudlet::signal_appearanceChanged, this, &dlgProfilePreferences::slot_setAppearance);
     connect(comboBox_appearance, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) { dlgProfilePreferences::slot_setAppearance(mudlet::Appearance(index)); });
-    connect(pushButton_resetMainWindowShortctus, &QPushButton::released, this, [=]() {
+    connect(toolButton_resetMainWindowShortcuts, &QPushButton::released, this, [=]() {
         emit signal_resetMainWindowShortcutsToDefaults();
     });
 
@@ -435,6 +435,7 @@ void dlgProfilePreferences::disableHostDetails()
     theme_download_label->hide();
 
     groupBox_autoComplete->setEnabled(false);
+    groupBox_advancedEditor->setEnabled(false);
 
     // ===== tab_displayColors =====
     groupBox_displayColors->setEnabled(false);
@@ -448,6 +449,10 @@ void dlgProfilePreferences::disableHostDetails()
     pushButton_saveMap->setEnabled(false);
     label_loadMap->setEnabled(false);
     pushButton_loadMap->setEnabled(false);
+    label_deleteMap->setEnabled(false);
+    checkBox_enablMapDeleteButton->setEnabled(false);
+    checkBox_enablMapDeleteButton->setChecked(false);
+    pushButton_deleteMap->setEnabled(false);
     label_copyMap->setEnabled(false);
     label_mapFileSaveFormatVersion->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
@@ -480,6 +485,9 @@ void dlgProfilePreferences::disableHostDetails()
     groupBox_ircOptions->setEnabled(false);
 
     groupBox_discordPrivacy->hide();
+
+    // ===== tab_shortcuts =====
+    groupBox_main_window_shortcuts->setEnabled(false);
 
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(false);
@@ -538,6 +546,7 @@ void dlgProfilePreferences::enableHostDetails()
     groupbox_codeEditorThemeSelection->setEnabled(true);
 
     groupBox_autoComplete->setEnabled(true);
+    groupBox_advancedEditor->setEnabled(true);
 
     // ===== tab_displayColors =====
     groupBox_displayColors->setEnabled(true);
@@ -551,6 +560,8 @@ void dlgProfilePreferences::enableHostDetails()
     pushButton_saveMap->setEnabled(true);
     label_loadMap->setEnabled(true);
     pushButton_loadMap->setEnabled(true);
+    label_deleteMap->setEnabled(true);
+    checkBox_enablMapDeleteButton->setEnabled(true);
     label_copyMap->setEnabled(true);
     label_mapFileSaveFormatVersion->setEnabled(true);
 
@@ -571,6 +582,9 @@ void dlgProfilePreferences::enableHostDetails()
 
     // ===== tab_chat =====
     groupBox_ircOptions->setEnabled(true);
+
+    // ===== tab_shortcuts =====
+    groupBox_main_window_shortcuts->setEnabled(true);
 
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(true);
