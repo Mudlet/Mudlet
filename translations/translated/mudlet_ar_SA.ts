@@ -14,7 +14,7 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="275"/>
       <source>Too many redirects.</source>
-      <translation type="unfinished"/>
+      <translation>هناك عمليات إعادة توجيه أكثر من اللازم.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="284"/>
@@ -37,7 +37,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>ليس لديك خريطة حتى الآن - قم بتحميل واحدة، أو ابدأ الرسم من البداية.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="290"/>
@@ -90,7 +90,9 @@ please wait...</source>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>جاري فك الضغط عن الحزمة
+&quot;%1&quot;
+برجاء الانتظار...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1738"/>
@@ -100,7 +102,7 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="2381"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>تلعب الآن %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2383"/>
@@ -113,7 +115,7 @@ please wait...</source>
       <location filename="../src/Host.cpp" line="2776"/>
       <location filename="../src/Host.cpp" line="3727"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>الخريطة %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3743"/>
@@ -123,7 +125,7 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="3753"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>جاري تحميل الخريطة(3) في %1 تقرير</translation>
     </message>
   </context>
   <context>
@@ -132,7 +134,7 @@ please wait...</source>
       <location filename="../src/KeyUnit.cpp" line="332"/>
       <source>%1undefined key (code: 0x%2)</source>
       <comment>%1 is a string describing the modifier keys (e.g. &quot;shift&quot; or &quot;control&quot;) used with the key, whose &apos;code&apos; number, in %2 is not one that we have a name for. This is probably one of those extra keys around the edge of the keyboard that some people have.</comment>
-      <translation type="unfinished"/>
+      <translation>%1مفتاح غير محدد (code: 0x%2)</translation>
     </message>
   </context>
   <context>
@@ -142,27 +144,31 @@ please wait...</source>
       <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. %2 is the (text) name of the area, %3 is the number for it, %4 to %9 are pairs (min &lt;-&gt; max) of extremes for each of x,y and z coordinates</comment>
-      <translation type="unfinished"/>
+      <translation>المنطقة:%1%2 المعرف:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
+</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="140"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>اسم الغرفة: %1
+</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="153"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when NO rooms are selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the current player&apos;s room.</comment>
-      <translation type="unfinished"/>
+      <translation>الغرفة%1المعرف:%1%2 المكان%1على%1الخريطة: (%3,%4,%5) ‑%1الموقع الحالي للاعب
+</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="170"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when ONE room is selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the selected Room.</comment>
-      <translation type="unfinished"/>
+      <translation>الغرفة%1المعرف:%1%2 الموقع%1على%1الخريطة: (%3,%4,%5) ‑%1الغرفة المختارة
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mapInfoContributorManager.cpp" line="188"/>
