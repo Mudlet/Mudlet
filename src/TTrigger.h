@@ -103,7 +103,7 @@ public:
     void compile();
     void execute();
     bool isFilterChain();
-    bool setRegexCodeList(QStringList regex, QList<int> patternKinds);
+    bool setRegexCodeList(QStringList patterns, QList<int> patternKinds);
     QString getScript() { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
