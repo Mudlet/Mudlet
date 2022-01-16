@@ -1197,7 +1197,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="4" column="0">
            <widget class="QLabel" name="label_controlCharacterHandling">
             <property name="text">
-             <string>Replacement of Control Characters on-screen:</string>
+             <string>Display control characters as:</string>
             </property>
            </widget>
           </item>
@@ -1211,12 +1211,12 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
             <item>
              <property name="text">
-              <string>None</string>
+              <string>nothing</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Unicode &quot;Control Pictures&quot;</string>
+              <string>Unicode Control Pictures</string>
              </property>
             </item>
             <item>
