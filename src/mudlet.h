@@ -332,7 +332,7 @@ public:
     void refreshTabBar();
     void updateDiscordNamedIcon();
     // Has to be public as it needs to be called from dlgConnectionProfiles class:
-    void updateEnableOfMViewControls();
+    void updateMultiViewControls();
 
     bool firstLaunch = false;
     // Needed to work around a (likely only Windows) issue:
