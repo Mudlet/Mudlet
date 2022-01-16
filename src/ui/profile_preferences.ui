@@ -202,7 +202,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="4">
+          <item row="1" column="0" colspan="2">
            <widget class="QLabel" name="label_languageChangeWarning">
             <property name="font">
              <font>
@@ -1192,6 +1192,38 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Enable text analyzer</string>
             </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_controlCharacterHandling">
+            <property name="text">
+             <string>Display control characters as:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QComboBox" name="comboBox_controlCharacterHandling">
+            <property name="currentIndex">
+             <number>0</number>
+            </property>
+            <property name="sizeAdjustPolicy">
+             <enum>QComboBox::AdjustToMinimumContentsLengthWithIcon</enum>
+            </property>
+            <item>
+             <property name="text">
+              <string>nothing</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Unicode Control Pictures</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>CP437 (OEM Font)- like</string>
+             </property>
+            </item>
            </widget>
           </item>
          </layout>
@@ -3834,6 +3866,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_showSpacesAndTabs</tabstop>
   <tabstop>checkBox_showLineFeedsAndParagraphs</tabstop>
   <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
+  <tabstop>comboBox_controlCharacterHandling</tabstop>
   <tabstop>code_editor_theme_selection_combobox</tabstop>
   <tabstop>script_preview_combobox</tabstop>
   <tabstop>checkBox_autocompleteLuaCode</tabstop>

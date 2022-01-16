@@ -3926,6 +3926,20 @@ void Host::setupIreDriverBugfix()
     }
 }
 
+void Host::setControlCharacterMode(const TConsole::ControlCharacterMode mode)
+{
+    if (Q_UNLIKELY(!(mode == TConsole::NoControlCharacterReplacement
+                     || mode == TConsole::PictureControlCharacterReplacement
+                     || mode == TConsole::OEMFontControlCharacterReplacement))) {
+        return;
+    }
+
+    if (mControlCharacterMode != mode) {
+        mControlCharacterMode = mode;
+        emit signal_controlCharacterHandlingChanged(mode);
+    }
+}
+
 std::optional<QString> Host::windowType(const QString& name) const
 {
     if (mpConsole->mLabelMap.contains(name)) {

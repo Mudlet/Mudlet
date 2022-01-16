@@ -200,6 +200,8 @@ public:
     void            getUserDictionaryOptions(bool& useDictionary, bool& useShared) {
                         useDictionary = mEnableUserDictionary;
                         useShared = mUseSharedDictionary; }
+    void            setControlCharacterMode(const TConsole::ControlCharacterMode mode);
+    TConsole::ControlCharacterMode  getControlCharacterMode() const { return mControlCharacterMode; }
 
     void closingDown();
     bool isClosingDown();
@@ -647,6 +649,9 @@ signals:
     // To tell all TConsole's upper TTextEdit panes to report all Codepoint
     // problems as they arrive as well as a summery upon destruction:
     void signal_changeDebugShowAllProblemCodepoints(const bool);
+    // Tells all consoles associated with this Host (but NOT the Central Debug
+    // one) to change the way they show  control characters:
+    void signal_controlCharacterHandlingChanged(const TConsole::ControlCharacterMode);
 
 private slots:
     void slot_purgeTemps();
@@ -789,6 +794,19 @@ private:
     bool mCompactInputLine;
 
     QTimer purgeTimer;
+
+    // How to display (most) incoming control characters in TConsoles:
+    // TConsole::NoControlCharacterReplacement (0x0) = as is, no replacement
+    // TConsole::PictureControlCharacterReplacement (0x1) = as Unicode "Control
+    //   Pictures" - use Unicode codepoints in range U+2400 to U+2421
+    // TConsole::PictureControlCharacterReplacement (0x2) = as "OEM Font"
+    //   characters (most often seen as a part of CP437
+    //   encoding), see the corresponding Wikipedia page, e.g.
+    //   EN: https://en.wikipedia.org/wiki/Code_page_437
+    //   DE: https://de.wikipedia.org/wiki/Codepage_437
+    //   RU: https://ru.wikipedia.org/wiki/CP437
+    TConsole::ControlCharacterMode mControlCharacterMode;
+
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

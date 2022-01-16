@@ -71,6 +71,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpBufferSearchBox(new QLineEdit)
 , mpBufferSearchUp(new QToolButton)
 , mpBufferSearchDown(new QToolButton)
+, mControlCharacterMode(pH->getControlCharacterMode())
 , mType(type)
 {
     auto ps = new QShortcut(this);
@@ -497,7 +498,12 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mDisplayFont = mpHost->getDisplayFont();
         mDisplayFontName = mDisplayFont.family();
         mDisplayFontSize = mDisplayFont.pointSize();
+
+        // They always use "Control Pictures" to show control characters:
+        mControlCharacterMode = PictureControlCharacterReplacement;
         refreshView();
+    } else if (mpHost) {
+        connect(mpHost, &Host::signal_controlCharacterHandlingChanged, this, &TConsole::slot_changeControlCharacterHandling);
     }
 
     if (mType & (MainConsole | UserWindow)) {
@@ -1971,4 +1977,10 @@ void TConsole::mouseReleaseEvent(QMouseEvent* event)
     raiseMudletMousePressOrReleaseEvent(event, false);
 }
 
-
+void TConsole::TConsole::slot_changeControlCharacterHandling(const ControlCharacterMode mode)
+{
+    if (mControlCharacterMode != mode) {
+        mControlCharacterMode = mode;
+        refreshView();
+    }
+}
