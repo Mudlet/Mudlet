@@ -94,7 +94,7 @@ void TTimer::setName(const QString& name)
     }
     mName = name;
     // Merely for information if needed later:
-    mpQTimer->setObjectName(QStringLiteral("timer(Host:%1)(TTimerId:%2)").arg(mpHost->getName(), name));
+    mpQTimer->setObjectName(qsl("timer(Host:%1)(TTimerId:%2)").arg(mpHost->getName(), name));
     mpHost->getTimerUnit()->mLookupTable.insert(name, this);
 }
 

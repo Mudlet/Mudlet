@@ -89,7 +89,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.13.1
+VERSION = 4.14.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -485,8 +485,8 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
 }
 
 contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
-    exists("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri") {
-        include("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri")
+    exists("$${PWD}/../3rdparty/qtkeychain/qtkeychain.pri") {
+        include("$${PWD}/../3rdparty/qtkeychain/qtkeychain.pri")
     } else {
         error("Cannot locate QtKeychain submodule source code, build abandoned!")
     }
@@ -555,6 +555,7 @@ SOURCES += \
     mudlet.cpp \
     MxpTag.cpp \
     ScriptUnit.cpp \
+    ShortcutsManager.cpp \
     T2DMap.cpp \
     TAction.cpp \
     TAlias.cpp \
@@ -573,6 +574,7 @@ SOURCES += \
     TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
+    TScrollBox.cpp \
     TLinkStore.cpp \
     TLuaInterpreter.cpp \
     TMainConsole.cpp \
@@ -664,6 +666,7 @@ HEADERS += \
     pre_guard.h \
     post_guard.h \
     ScriptUnit.h \
+    ShortcutsManager.h \
     T2DMap.h \
     TAction.h \
     TAlias.h \
@@ -685,6 +688,7 @@ HEADERS += \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
+    TScrollBox.h \
     TLinkStore.h \
     TLuaInterpreter.h \
     TMainConsole.h \
@@ -732,6 +736,7 @@ HEADERS += \
     TTrigger.h \
     TVar.h \
     VarUnit.h \
+    utils.h \
     XMLexport.h \
     XMLimport.h \
     widechar_width.h \
@@ -904,6 +909,7 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/GeyserMapper.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserMiniConsole.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserReposition.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserScrollBox.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserSetConstraints.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserTests.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserUserWindow.lua \

@@ -202,7 +202,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="4">
+          <item row="1" column="0" colspan="2">
            <widget class="QLabel" name="label_languageChangeWarning">
             <property name="font">
              <font>
@@ -1194,6 +1194,38 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_controlCharacterHandling">
+            <property name="text">
+             <string>Display control characters as:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QComboBox" name="comboBox_controlCharacterHandling">
+            <property name="currentIndex">
+             <number>0</number>
+            </property>
+            <property name="sizeAdjustPolicy">
+             <enum>QComboBox::AdjustToMinimumContentsLengthWithIcon</enum>
+            </property>
+            <item>
+             <property name="text">
+              <string>nothing</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Unicode Control Pictures</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>CP437 (OEM Font)- like</string>
+             </property>
+            </item>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -1256,9 +1288,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <item>
               <widget class="edbee::TextEditorWidget" name="edbeePreviewWidget" native="true">
                <property name="font">
-                <font>
-                 <family>Bitstream Vera Sans Mono</family>
-                </font>
+                <font/>
                </property>
               </widget>
              </item>
@@ -2653,7 +2683,7 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>IRC client options</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_ircOptions" rowstretch="0,0,0">
+         <layout class="QGridLayout" name="gridLayout_groupBox_ircOptions" rowstretch="0,0,0,0">
           <item row="0" column="0">
            <widget class="QLabel" name="lblIrcHostName">
             <property name="text">
@@ -2716,7 +2746,24 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
+          <item row="2" column="0">
+           <widget class="QLabel" name="lblIrcPassword">
+            <property name="text">
+             <string>Server password: </string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="ircPassword">
+            <property name="echoMode">
+             <enum>QLineEdit::Password</enum>
+            </property>
+            <property name="placeholderText">
+             <string>password (optional)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="2">
            <widget class="QCheckBox" name="ircHostSecure">
             <property name="toolTip">
              <string>&lt;p&gt;TLS/SSL is usually on port 6697. IRC networks often use a &lt;b&gt;+&lt;/b&gt; when listing secure ports offered.&lt;/p&gt;</string>
@@ -3060,7 +3107,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
             <property name="font">
              <font>
-              <family>Arial Black</family>
               <pointsize>16</pointsize>
               <stylestrategy>PreferAntialias</stylestrategy>
              </font>
@@ -3211,7 +3257,6 @@ you can use it but there could be issues with aligning columns of text</string>
                </property>
                <property name="font">
                 <font>
-                 <family>Arial</family>
                  <pointsize>8</pointsize>
                  <stylestrategy>PreferAntialias</stylestrategy>
                 </font>
@@ -3329,6 +3374,76 @@ you can use it but there could be issues with aligning columns of text</string>
          </property>
          <property name="sizeType">
           <enum>QSizePolicy::Expanding</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_shortcuts">
+      <attribute name="title">
+       <string>Shortcuts</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="vBoxLayout_tab_shortcuts">
+       <item>
+        <widget class="QGroupBox" name="groupBox_main_window_shortcuts">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="title">
+          <string>Main window shortcuts</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_groupBox_mainWindowShortcuts">
+          <property name="sizeConstraint">
+           <enum>QLayout::SetMinimumSize</enum>
+          </property>
+          <item>
+           <widget class="QLabel" name="label_shortcutsInstructions">
+            <property name="text">
+             <string>To disable shortcut input 'Esc' key.</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="frame_shortcuts">
+            <layout class="QGridLayout" name="gridLayout_groupBox_shortcuts">
+             <property name="horizontalSpacing">
+              <number>20</number>
+             </property>
+            </layout>
+           </widget>
+          </item>
+          <item alignment="Qt::AlignRight">
+           <widget class="QToolButton" name="toolButton_resetMainWindowShortcuts">
+            <property name="text">
+             <string>Reset to defaults</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_shortcuts">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -3709,6 +3824,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>comboBox_encoding</tabstop>
   <tabstop>mAlertOnNewData</tabstop>
   <tabstop>mFORCE_SAVE_ON_EXIT</tabstop>
+  <tabstop>comboBox_appearance</tabstop>
   <tabstop>acceptServerGUI</tabstop>
   <tabstop>acceptServerMedia</tabstop>
   <tabstop>mEnableGMCP</tabstop>
@@ -3750,9 +3866,11 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_showSpacesAndTabs</tabstop>
   <tabstop>checkBox_showLineFeedsAndParagraphs</tabstop>
   <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
+  <tabstop>comboBox_controlCharacterHandling</tabstop>
   <tabstop>code_editor_theme_selection_combobox</tabstop>
   <tabstop>script_preview_combobox</tabstop>
   <tabstop>checkBox_autocompleteLuaCode</tabstop>
+  <tabstop>checkBox_showBidi</tabstop>
   <tabstop>pushButton_foreground_color</tabstop>
   <tabstop>pushButton_command_line_foreground_color</tabstop>
   <tabstop>pushButton_command_foreground_color</tabstop>
@@ -3819,6 +3937,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>reset_colors_button_2</tabstop>
   <tabstop>ircHostName</tabstop>
   <tabstop>ircNick</tabstop>
+  <tabstop>ircPassword</tabstop>
   <tabstop>ircHostSecure</tabstop>
   <tabstop>ircHostPort</tabstop>
   <tabstop>ircChannels</tabstop>
@@ -3840,6 +3959,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>lineEdit_proxyPort</tabstop>
   <tabstop>lineEdit_proxyUsername</tabstop>
   <tabstop>lineEdit_proxyPassword</tabstop>
+  <tabstop>toolButton_resetMainWindowShortcuts</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
   <tabstop>mFORCE_CHARSET_NEGOTIATION_OFF</tabstop>

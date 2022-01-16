@@ -67,10 +67,11 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpScrollBar(new QScrollBar)
 , mpHScrollBar(new QScrollBar(Qt::Horizontal))
 , mpLineEdit_networkLatency(new QLineEdit)
-, mProfileName(mpHost ? mpHost->getName() : QStringLiteral("debug console"))
+, mProfileName(mpHost ? mpHost->getName() : qsl("debug console"))
 , mpBufferSearchBox(new QLineEdit)
 , mpBufferSearchUp(new QToolButton)
 , mpBufferSearchDown(new QToolButton)
+, mControlCharacterMode(pH->getControlCharacterMode())
 , mType(type)
 {
     auto ps = new QShortcut(this);
@@ -126,7 +127,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     framePalette.setColor(QPalette::Window, QColor(0, 0, 0, 255));
     mpMainFrame->setPalette(framePalette);
     mpMainFrame->setAutoFillBackground(true);
-    mpMainFrame->setObjectName(QStringLiteral("MainFrame"));
+    mpMainFrame->setObjectName(qsl("MainFrame"));
 
     auto centralLayout = new QVBoxLayout;
     setLayout(centralLayout);
@@ -196,7 +197,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
     mpMainDisplay->setContentsMargins(0, 0, 0, 0);
     auto layout = new QVBoxLayout;
-    mpMainDisplay->setObjectName(QStringLiteral("MainDisplay"));
+    mpMainDisplay->setObjectName(qsl("MainDisplay"));
     mpMainDisplay->setLayout(layout);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
@@ -218,7 +219,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     }
 
     layer = new QWidget(mpMainDisplay);
-    layer->setObjectName(QStringLiteral("layer"));
+    layer->setObjectName(qsl("layer"));
     layer->setStyleSheet("QWidget#layer{background-color: rgba(0,0,0,0)}");
     layer->setContentsMargins(0, 0, 0, 0);
     layer->setSizePolicy(sizePolicy);
@@ -239,7 +240,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     splitter->setOrientation(Qt::Vertical);
     splitter->setHandleWidth(3);
     //QSplitter covers the background if not set to transparent and a new AppStyleSheet is set for example by DarkTheme
-    auto styleSheet = QStringLiteral("QSplitter { background-color: rgba(0,0,0,0) }");
+    auto styleSheet = qsl("QSplitter { background-color: rgba(0,0,0,0) }");
     splitter->setStyleSheet(styleSheet);
     splitter->setParent(layer);
 
@@ -292,20 +293,20 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutLayer2->setSpacing(0);
 
     mpButtonMainLayer = new QWidget;
-    mpButtonMainLayer->setObjectName(QStringLiteral("mpButtonMainLayer"));
+    mpButtonMainLayer->setObjectName(qsl("mpButtonMainLayer"));
     mpButtonMainLayer->setSizePolicy(sizePolicy);
     mpButtonMainLayer->setContentsMargins(0, 0, 0, 0);
     auto layoutButtonMainLayer = new QVBoxLayout(mpButtonMainLayer);
-    layoutButtonMainLayer->setObjectName(QStringLiteral("layoutButtonMainLayer"));
+    layoutButtonMainLayer->setObjectName(qsl("layoutButtonMainLayer"));
     layoutButtonMainLayer->setContentsMargins(0, 0, 0, 0);
 
     layoutButtonMainLayer->setSpacing(0);
     /*mpButtonMainLayer->setMinimumHeight(31);
            mpButtonMainLayer->setMaximumHeight(31);*/
     auto buttonLayer = new QWidget;
-    buttonLayer->setObjectName(QStringLiteral("buttonLayer"));
+    buttonLayer->setObjectName(qsl("buttonLayer"));
     auto layoutButtonLayer = new QGridLayout(buttonLayer);
-    layoutButtonLayer->setObjectName(QStringLiteral("layoutButtonLayer"));
+    layoutButtonLayer->setObjectName(qsl("layoutButtonLayer"));
     layoutButtonLayer->setContentsMargins(0, 0, 0, 0);
     layoutButtonLayer->setSpacing(0);
 
@@ -320,9 +321,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     timeStampButton->setMaximumSize(QSize(30, 30));
     timeStampButton->setSizePolicy(sizePolicy5);
     timeStampButton->setFocusPolicy(Qt::NoFocus);
-    timeStampButton->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
-        tr("Show Time Stamps.")));
-    timeStampButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-information.png")));
+    timeStampButton->setToolTip(utils::richText(tr("Show Time Stamps.")));
+    timeStampButton->setIcon(QIcon(qsl(":/icons/dialog-information.png")));
     connect(timeStampButton, &QAbstractButton::toggled, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
     connect(timeStampButton, &QAbstractButton::toggled, mLowerPane, &TTextEdit::slot_toggleTimeStamps);
 
@@ -332,9 +332,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     replayButton->setMaximumSize(QSize(30, 30));
     replayButton->setSizePolicy(sizePolicy5);
     replayButton->setFocusPolicy(Qt::NoFocus);
-    replayButton->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
-        tr("Record a replay.")));
-    replayButton->setIcon(QIcon(QStringLiteral(":/icons/media-tape.png")));
+    replayButton->setToolTip(utils::richText(tr("Record a replay.")));
+    replayButton->setIcon(QIcon(qsl(":/icons/media-tape.png")));
     connect(replayButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleReplayRecording);
 
     logButton = new QToolButton;
@@ -343,20 +342,18 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     logButton->setCheckable(true);
     logButton->setSizePolicy(sizePolicy5);
     logButton->setFocusPolicy(Qt::NoFocus);
-    logButton->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
-        tr("Start logging game output to log file.")));
+    logButton->setToolTip(utils::richText(tr("Start logging game output to log file.")));
     QIcon logIcon;
-    logIcon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-downloads.png")), QIcon::Normal, QIcon::Off);
-    logIcon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-downloads-red-cross.png")), QIcon::Normal, QIcon::On);
+    logIcon.addPixmap(QPixmap(qsl(":/icons/folder-downloads.png")), QIcon::Normal, QIcon::Off);
+    logIcon.addPixmap(QPixmap(qsl(":/icons/folder-downloads-red-cross.png")), QIcon::Normal, QIcon::On);
     logButton->setIcon(logIcon);
     connect(logButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleLogging);
 
     mpLineEdit_networkLatency->setReadOnly(true);
     mpLineEdit_networkLatency->setSizePolicy(sizePolicy4);
     mpLineEdit_networkLatency->setFocusPolicy(Qt::NoFocus);
-    mpLineEdit_networkLatency->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
-        tr("<i>N:</i> is the latency of the game server and network (aka ping, in seconds), <br>"
-           "<i>S:</i> is the system processing time - how long your triggers took to process the last line(s).")));
+    mpLineEdit_networkLatency->setToolTip(utils::richText(tr("<i>N:</i> is the latency of the game server and network (aka ping, in seconds),<br>"
+                                                             "<i>S:</i> is the system processing time - how long your triggers took to process the last line(s).")));
     mpLineEdit_networkLatency->setMaximumSize(120, 30);
     mpLineEdit_networkLatency->setMinimumSize(120, 30);
     mpLineEdit_networkLatency->setAutoFillBackground(true);
@@ -383,12 +380,11 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     emergencyStop->setMinimumSize(QSize(30, 30));
     emergencyStop->setMaximumSize(QSize(30, 30));
-    emergencyStop->setIcon(QIcon(QStringLiteral(":/icons/edit-bomb.png")));
+    emergencyStop->setIcon(QIcon(qsl(":/icons/edit-bomb.png")));
     emergencyStop->setSizePolicy(sizePolicy4);
     emergencyStop->setFocusPolicy(Qt::NoFocus);
     emergencyStop->setCheckable(true);
-    emergencyStop->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
-        tr("Emergency Stop. Stops all timers and triggers.")));
+    emergencyStop->setToolTip(utils::richText(tr("Emergency Stop. Stops all timers and triggers.")));
     connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stop_all_triggers);
 
     mpBufferSearchBox->setMinimumSize(QSize(100, 30));
@@ -403,18 +399,16 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     commandLinePalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
     commandLinePalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
     commandLinePalette.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
-    mpBufferSearchBox->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
-        tr("Search buffer.")));
+    mpBufferSearchBox->setToolTip(utils::richText(tr("Search buffer.")));
     connect(mpBufferSearchBox, &QLineEdit::returnPressed, this, &TConsole::slot_searchBufferUp);
 
 
     mpBufferSearchUp->setMinimumSize(QSize(30, 30));
     mpBufferSearchUp->setMaximumSize(QSize(30, 30));
     mpBufferSearchUp->setSizePolicy(sizePolicy5);
-    mpBufferSearchUp->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
-        tr("Earlier search result.")));
+    mpBufferSearchUp->setToolTip(utils::richText(tr("Earlier search result.")));
     mpBufferSearchUp->setFocusPolicy(Qt::NoFocus);
-    mpBufferSearchUp->setIcon(QIcon(QStringLiteral(":/icons/export.png")));
+    mpBufferSearchUp->setIcon(QIcon(qsl(":/icons/export.png")));
     connect(mpBufferSearchUp, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferUp);
 
 
@@ -422,9 +416,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpBufferSearchDown->setMaximumSize(QSize(30, 30));
     mpBufferSearchDown->setSizePolicy(sizePolicy5);
     mpBufferSearchDown->setFocusPolicy(Qt::NoFocus);
-    mpBufferSearchDown->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
-        tr("Later search result.")));
-    mpBufferSearchDown->setIcon(QIcon(QStringLiteral(":/icons/import.png")));
+    mpBufferSearchDown->setToolTip(utils::richText(tr("Later search result.")));
+    mpBufferSearchDown->setIcon(QIcon(qsl(":/icons/import.png")));
     connect(mpBufferSearchDown, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferDown);
 
 
@@ -505,7 +498,12 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mDisplayFont = mpHost->getDisplayFont();
         mDisplayFontName = mDisplayFont.family();
         mDisplayFontSize = mDisplayFont.pointSize();
+
+        // They always use "Control Pictures" to show control characters:
+        mControlCharacterMode = PictureControlCharacterReplacement;
         refreshView();
+    } else if (mpHost) {
+        connect(mpHost, &Host::signal_controlCharacterHandlingChanged, this, &TConsole::slot_changeControlCharacterHandling);
     }
 
     if (mType & (MainConsole | UserWindow)) {
@@ -735,7 +733,7 @@ void TConsole::closeEvent(QCloseEvent* event)
     }
 
     TEvent conCloseEvent{};
-    conCloseEvent.mArgumentList.append(QStringLiteral("sysExitEvent"));
+    conCloseEvent.mArgumentList.append(qsl("sysExitEvent"));
     conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(conCloseEvent);
 
@@ -779,16 +777,16 @@ void TConsole::closeEvent(QCloseEvent* event)
             mudlet::self()->saveWindowLayout();
 
             mpHost->modulesToWrite.clear();
-            std::tuple<bool, QString, QString> result = mpHost->saveProfile();
+            auto [ok, filename, error] = mpHost->saveProfile();
 
-            if (!std::get<0>(result)) {
-                QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(std::get<2>(result)));
+            if (!ok) {
+                QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(error));
                 goto ASK;
             } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
                 // There is a map loaded - but it *could* have no rooms at all!
                 QDir dir_map;
                 QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
+                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
                 }
@@ -855,7 +853,7 @@ void TConsole::slot_toggleReplayRecording()
     mRecordReplay = !mRecordReplay;
     if (mRecordReplay) {
         QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, mProfileName);
-        QString mLogFileName = QStringLiteral("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
+        QString mLogFileName = qsl("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
         QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
             dirLogFile.mkpath(directoryLogFile);
@@ -876,7 +874,7 @@ void TConsole::slot_toggleReplayRecording()
 
 QString getColorCode(QColor color)
 {
-    return QStringLiteral("%1,%2,%3,%4").arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha());
+    return qsl("%1,%2,%3,%4").arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha());
 }
 
 void TConsole::changeColors()
@@ -893,7 +891,7 @@ void TConsole::changeColors()
         mUpperPane->setFont(mDisplayFont);
         mLowerPane->setFont(mDisplayFont);
         if (!mBgImageMode) {
-            auto styleSheet = QStringLiteral("QWidget#MainDisplay{background-color: rgba(%1);}").arg(getColorCode(mBgColor));
+            auto styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1);}").arg(getColorCode(mBgColor));
             mpMainDisplay->setStyleSheet(styleSheet);
         } else {
             setConsoleBackgroundImage(mBgImagePath, mBgImageMode);
@@ -926,7 +924,7 @@ void TConsole::changeColors()
         mUpperPane->setFont(mpHost->getDisplayFont());
         mLowerPane->setFont(mpHost->getDisplayFont());
         if (!mBgImageMode) {
-            auto styleSheet = QStringLiteral("QWidget#MainDisplay{background-color: rgba(%1);}").arg(getColorCode(mpHost->mBgColor));
+            auto styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1);}").arg(getColorCode(mpHost->mBgColor));
             mpMainDisplay->setStyleSheet(styleSheet);
         } else {
             setConsoleBackgroundImage(mBgImagePath, mBgImageMode);
@@ -1370,15 +1368,15 @@ bool TConsole::setConsoleBackgroundImage(const QString& imgPath, int mode)
     }
 
     if (mode == 1) {
-        styleSheet = QStringLiteral("QWidget#MainDisplay{background-color: rgba(%1); border-image: url(%2);}").arg(getColorCode(bgColor)).arg(imgPath);
+        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); border-image: url(%2);}").arg(getColorCode(bgColor)).arg(imgPath);
     } else if (mode == 2) {
-        styleSheet = QStringLiteral("QWidget#MainDisplay{background-color: rgba(%1); background-image: url(%2); background-repeat: no-repeat; background-position: center; background-origin: margin;}")
+        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); background-image: url(%2); background-repeat: no-repeat; background-position: center; background-origin: margin;}")
                              .arg(getColorCode(bgColor))
                              .arg(imgPath);
     } else if (mode == 3) {
-        styleSheet = QStringLiteral("QWidget#MainDisplay{background-color: rgba(%1); background-image: url(%2);}").arg(getColorCode(bgColor)).arg(imgPath);
+        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); background-image: url(%2);}").arg(getColorCode(bgColor)).arg(imgPath);
     } else if (mode == 4) {
-        styleSheet = QStringLiteral("QWidget#MainDisplay{background-color: rgba(%1); %2}").arg(getColorCode(bgColor)).arg(imgPath);
+        styleSheet = qsl("QWidget#MainDisplay{background-color: rgba(%1); %2}").arg(getColorCode(bgColor)).arg(imgPath);
     } else {
         return false;
     }
@@ -1547,14 +1545,14 @@ bool TConsole::selectSection(int from, int to)
 std::tuple<bool, QString, int, int> TConsole::getSelection()
 {
     if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
-        return std::make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
+        return std::make_tuple(false, qsl("the selection is no longer valid"), 0, 0);
     }
 
     const auto start = P_begin.x();
     const auto length = P_end.x() - P_begin.x();
     const auto line = buffer.line(mUserCursor.y());
     if (line.size() < start) {
-        return std::make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
+        return std::make_tuple(false, qsl("the selection is no longer valid"), 0, 0);
     }
 
     const auto text = line.mid(start, length);
@@ -1680,7 +1678,7 @@ void TConsole::print(const QString& msg)
     mLowerPane->showNewLines();
 
     if (Q_UNLIKELY(mudlet::self()->mMirrorToStdOut)) {
-        qDebug().nospace().noquote() << QStringLiteral("%1| %2").arg(mConsoleName, msg);
+        qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, msg);
     }
 }
 
@@ -1693,7 +1691,7 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
     mLowerPane->showNewLines();
 
     if (Q_UNLIKELY(mudlet::self()->mMirrorToStdOut)) {
-        qDebug().nospace().noquote() << QStringLiteral("%1| %2").arg(mConsoleName, msg);
+        qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, msg);
     }
 }
 
@@ -1758,10 +1756,10 @@ void TConsole::slot_stop_all_triggers(bool b)
 {
     if (b) {
         mpHost->stopAllTriggers();
-        emergencyStop->setIcon(QIcon(QStringLiteral(":/icons/red-bomb.png")));
+        emergencyStop->setIcon(QIcon(qsl(":/icons/red-bomb.png")));
     } else {
         mpHost->reenableAllTriggers();
-        emergencyStop->setIcon(QIcon(QStringLiteral(":/icons/edit-bomb.png")));
+        emergencyStop->setIcon(QIcon(qsl(":/icons/edit-bomb.png")));
     }
 }
 
@@ -1807,7 +1805,7 @@ void TConsole::slot_searchBufferUp()
             return;
         }
     }
-    print(QStringLiteral("%1\n").arg(tr("No search results, sorry!")));
+    print(qsl("%1\n").arg(tr("No search results, sorry!")));
 }
 
 void TConsole::slot_searchBufferDown()
@@ -1846,7 +1844,7 @@ void TConsole::slot_searchBufferDown()
             return;
         }
     }
-    print(QStringLiteral("%1\n").arg(tr("No search results, sorry!")));
+    print(qsl("%1\n").arg(tr("No search results, sorry!")));
 }
 
 QSize TConsole::getMainWindowSize() const
@@ -1925,7 +1923,7 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     mudlet::self()->activateProfile(mpHost);
 
     TEvent mudletEvent{};
-    mudletEvent.mArgumentList.append(isPressEvent ? QStringLiteral("sysWindowMousePressEvent") : QStringLiteral("sysWindowMouseReleaseEvent"));
+    mudletEvent.mArgumentList.append(isPressEvent ? qsl("sysWindowMousePressEvent") : qsl("sysWindowMouseReleaseEvent"));
     switch (event->button()) {
     case Qt::LeftButton:    mudletEvent.mArgumentList.append(QString::number(1));   break;
     case Qt::RightButton:   mudletEvent.mArgumentList.append(QString::number(2));   break;
@@ -1979,4 +1977,10 @@ void TConsole::mouseReleaseEvent(QMouseEvent* event)
     raiseMudletMousePressOrReleaseEvent(event, false);
 }
 
-
+void TConsole::TConsole::slot_changeControlCharacterHandling(const ControlCharacterMode mode)
+{
+    if (mControlCharacterMode != mode) {
+        mControlCharacterMode = mode;
+        refreshView();
+    }
+}
