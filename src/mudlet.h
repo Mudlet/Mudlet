@@ -327,6 +327,8 @@ public:
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     void refreshTabBar();
     void updateDiscordNamedIcon();
+    // Has to be public as it needs to be called from dlgConnectionProfiles class:
+    void updateMultiViewControls();
 
     bool firstLaunch = false;
     // Needed to work around a (likely only Windows) issue:
@@ -620,6 +622,7 @@ private:
     static bool desktopInDarkMode();
     void assignKeySequences();
     void closeHost(const QString& name);
+    void reshowRequiredMainConsoles();
 
     QWidget* mpWidget_profileContainer;
     QHBoxLayout* mpHBoxLayout_profileContainer;
