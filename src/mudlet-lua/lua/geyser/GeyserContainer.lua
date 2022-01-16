@@ -360,7 +360,7 @@ function Geyser.Container:new(cons, container)
       container=Geyser
     end
    --Create Root-Container for UserWindow and add Children
-   if (container == Geyser) and (me.windowname) and (me.windowname ~= "main") then
+   if (container == Geyser) and (me.windowname) and (me.windowname ~= "main") and me.type == "userwindow" then
         container = Geyser.Container:new({name=me.windowname.."Container", type = "userwindow", x=0, y=0, width="100%", height="100%"})
         if me.useAdd2 then
           container:add2(me)

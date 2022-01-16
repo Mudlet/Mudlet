@@ -5,6 +5,7 @@ on:
     paths:
     - '**.cpp'
     - '**.h'
+    - '.github/workflows/clangtidy-diff-analysis.yml'
 
 jobs:
   compile-mudlet:
@@ -113,10 +114,11 @@ jobs:
           --target autogen
 
     - name: Check C++ changes against style guide
-      uses: ZedThree/clang-tidy-review@v0.7.0
+      uses: ZedThree/clang-tidy-review@v0.7.1
       id: static_analysis
       with:
         build_dir: 'b/ninja' # path is relative to checkout directory
+        exclude: '3rdparty'
         # PLACEMARKER: list of clang-tidy checks
         clang_tidy_checks: '-*,performance-*,readability-*,bugprone-*,clang-analyzer-*,cppcoreguidelines-*,mpi-*,misc-*,-readability-implicit-bool-conversion,-readability-qualified-auto,-cppcoreguidelines-owning-memory,-cppcoreguidelines-avoid-magic-numbers,-readability-magic-numbers,-readability-static-accessed-through-instance,-cppcoreguidelines-pro-type-static-cast-downcast,-bugprone-suspicious-enum-usage,-readability-uppercase-literal-suffix,-cppcoreguidelines-avoid-non-const-global-variables,-cppcoreguidelines-pro-bounds-array-to-pointer-decay,-misc-no-recursion,-readability-isolate-declaration,-cppcoreguidelines-pro-type-vararg,-misc-non-private-member-variables-in-classes,-performance-no-automatic-move,-readability-avoid-const-params-in-decls,-cppcoreguidelines-non-private-member-variables-in-classes'
         # the action doesn't see system-level libraries, need to replicate them here

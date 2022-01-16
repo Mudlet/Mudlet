@@ -943,6 +943,25 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->mTelnet.setPostingTimeout(300);
     }
 
+    if (attributes().hasAttribute(QLatin1String("ControlCharacterHandling"))) {
+        switch (attributes().value(QLatin1String("ControlCharacterHandling")).toInt()) {
+        case 1:
+            pHost->setControlCharacterMode(TConsole::PictureControlCharacterReplacement);
+            break;
+        case 2:
+            pHost->setControlCharacterMode(TConsole::OEMFontControlCharacterReplacement);
+            break;
+        case 0:
+            [[fallthrough]];
+        default:
+            pHost->setControlCharacterMode(TConsole::NoControlCharacterReplacement);
+        }
+
+    } else {
+        // The default value, also used up to Mudlet 4.14.1:
+        pHost->setControlCharacterMode(TConsole::NoControlCharacterReplacement);
+    }
+
     while (!atEnd()) {
         readNext();
 
@@ -1204,22 +1223,22 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
             } else if (name() == "regexCodeList") {
                 // This and the next one ought to be combined into a single element
                 // in the next revision - sample code for "RegexCode" elements
-                // inside a "RegexList" container (with a "size" attribute) is
+                // inside a "patterns" container (with a "size" attribute) is
                 // commented out in the XMLexporter class.
-                readStringList(pT->mRegexCodeList);
+                readStringList(pT->mPatterns);
             } else if (name() == "regexCodePropertyList") {
-                readIntegerList(pT->mRegexCodePropertyList, pT->getName());
-                if (Q_UNLIKELY(pT->mRegexCodeList.count() != pT->mRegexCodePropertyList.count())) {
+                readIntegerList(pT->mPatternKinds, pT->getName());
+                if (Q_UNLIKELY(pT->mPatterns.count() != pT->mPatternKinds.count())) {
                     qWarning().nospace() << "XMLimport::readTriggerGroup(...) ERROR: "
                                             "mismatch in regexCode details for Trigger: "
-                                         << pT->getName() << " there were " << pT->mRegexCodeList.count() << " 'regexCodeList' sub-elements and " << pT->mRegexCodePropertyList.count()
+                                         << pT->getName() << " there were " << pT->mPatterns.count() << " 'regexCodeList' sub-elements and " << pT->mPatternKinds.count()
                                          << " 'regexCodePropertyList' sub-elements so "
                                             "something is broken!";
                 }
                 // Fixup the first 16 incorrect ANSI colour numbers from old
                 // code if there are any
-                if (!pT->mRegexCodeList.isEmpty()) {
-                    remapColorsToAnsiNumber(pT->mRegexCodeList, pT->mRegexCodePropertyList);
+                if (!pT->mPatterns.isEmpty()) {
+                    remapColorsToAnsiNumber(pT->mPatterns, pT->mPatternKinds);
                 }
             } else if (name() == "TriggerGroup" || name() == "Trigger") {
                 readTriggerGroup(pT);
@@ -1229,7 +1248,7 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
         }
     }
 
-    if (!pT->setRegexCodeList(pT->mRegexCodeList, pT->mRegexCodePropertyList)) {
+    if (!pT->setRegexCodeList(pT->mPatterns, pT->mPatternKinds)) {
         qDebug().nospace() << "XMLimport::readTriggerGroup(...): ERROR: can not "
                               "initialize pattern list for trigger: "
                            << pT->getName();

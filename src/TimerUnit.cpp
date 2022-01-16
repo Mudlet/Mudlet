@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2019, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -31,6 +31,13 @@ TimerUnit::~TimerUnit()
     for (auto&& timer : qAsConst(mQTimerSet)) {
         delete timer;
     }
+}
+
+void TimerUnit::resetStats()
+{
+    statsItemsTotal = 0;
+    statsTempItems = 0;
+    statsActiveItems = 0;
 }
 
 void TimerUnit::_uninstall(TTimer* pChild, const QString& packageName)
@@ -383,56 +390,44 @@ void TimerUnit::markCleanup(TTimer* pT)
     mCleanupSet.insert(pT);
 }
 
-void TimerUnit::_assembleReport(TTimer* pChild)
+void TimerUnit::assembleReport(TTimer* pItem)
 {
-    std::list<TTimer*>* childrenList = pChild->mpMyChildrenList;
-    for (auto timer : *childrenList) {
-        _assembleReport(timer);
-        if (timer->isActive()) {
-            statsActiveTriggers++;
+    std::list<TTimer*>* childrenList = pItem->mpMyChildrenList;
+    for (auto pChild : *childrenList) {
+        ++statsItemsTotal;
+        if (pChild->isActive()) {
+            ++statsActiveItems;
         }
-        if (timer->isTemporary()) {
-            statsTempTriggers++;
+        if (pChild->isTemporary()) {
+            ++statsTempItems;
         }
-        statsTriggerTotal++;
+        assembleReport(pChild);
     }
 }
 
 std::tuple<QString, int, int, int> TimerUnit::assembleReport()
 {
-    statsActiveTriggers = 0;
-    statsTriggerTotal = 0;
-    statsTempTriggers = 0;
-    for (auto rootTimer : mTimerRootNodeList) {
-        if (rootTimer->isActive()) {
-            statsActiveTriggers++;
+    resetStats();
+    for (auto pItem : mTimerRootNodeList) {
+        ++statsItemsTotal;
+        if (pItem->isActive()) {
+            ++statsActiveItems;
         }
-        if (rootTimer->isTemporary()) {
-            statsTempTriggers++;
+        if (pItem->isTemporary()) {
+            ++statsTempItems;
         }
-        statsTriggerTotal++;
-        std::list<TTimer*>* childrenList = rootTimer->mpMyChildrenList;
-        for (auto childTimer : *childrenList) {
-            _assembleReport(childTimer);
-            if (childTimer->isActive()) {
-                statsActiveTriggers++;
-            }
-            if (childTimer->isTemporary()) {
-                statsTempTriggers++;
-            }
-            statsTriggerTotal++;
-        }
+        assembleReport(pItem);
     }
     QStringList msg;
-    msg << "timers current total: " << QString::number(statsTriggerTotal) << "\n"
-        << "tempTimers current total: " << QString::number(statsTempTriggers) << "\n"
-        << "active timers: " << QString::number(statsActiveTriggers) << "\n";
+    msg << QLatin1String("Timers current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
+        << QLatin1String("tempTimers current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
+        << QLatin1String("active Timers: ") << QString::number(statsActiveItems) << QLatin1String("\n");
 
     return {
         msg.join(QString()),
-        statsTriggerTotal,
-        statsTempTriggers,
-        statsActiveTriggers
+        statsItemsTotal,
+        statsTempItems,
+        statsActiveItems
     };
 }
 

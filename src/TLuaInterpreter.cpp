@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -37,6 +37,7 @@
 #include "TEvent.h"
 #include "TFlipButton.h"
 #include "TForkedProcess.h"
+#include "TLabel.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
@@ -65,6 +66,7 @@
 #include <QTableWidget>
 #include <QToolTip>
 #include <QFileInfo>
+#include <QMovie>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
@@ -118,6 +120,7 @@ static const char *bad_window_type = "%s: bad argument #%d type (window name as 
 static const char *bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
 static const char *bad_window_value = "window \"%s\" not found";
 static const char *bad_cmdline_value = "command line \"%s\" not found";
+static const char *bad_label_value = "label \"%s\" not found";
 
 #define WINDOW_NAME(_L, _pos)                                                                  \
     ({                                                                                         \
@@ -175,6 +178,19 @@ static const char *bad_cmdline_value = "command line \"%s\" not found";
             return 2;                                                                          \
         }                                                                                      \
         cmdLine_;                                                                              \
+    })
+
+#define LABEL(_L, _name)                                                                       \
+    ({                                                                                         \
+        const QString& name_ = (_name);                                                        \
+        auto console_ = getHostFromLua(_L).mpConsole;                                          \
+        auto label_ = console_->mLabelMap.value(name_);                                        \
+        if (!label_) {                                                                         \
+            lua_pushnil(L);                                                                    \
+            lua_pushfstring(L, bad_label_value, name_.toUtf8().constData());                   \
+            return 2;                                                                          \
+        }                                                                                      \
+        label_;                                                                                \
     })
 
 // variable names within these macros have trailing underscores because in
@@ -3308,6 +3324,44 @@ int TLuaInterpreter::createLabel(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createScrollBox
+int TLuaInterpreter::createScrollBox(lua_State* L)
+{
+    QString name = "";
+    int counter = 3;
+    // make the windowname optional by using counter. If windowname "main" - add to main console
+
+    QString windowName = getVerifiedString(L, __func__, 1, "scrollBox name");
+    if (isMain(windowName)) {
+        // createScrollBox only accepts the empty name as the main window
+        windowName.clear();
+    }
+
+    if (!lua_isnumber(L, 2) && lua_gettop(L) >= 2) {
+        name = getVerifiedString(L, __func__, 2, "scrollBox name");
+    } else {
+        name = windowName;
+        windowName.clear();
+        counter = 2;
+    }
+
+    int x = getVerifiedInt(L, __func__, counter, "scrollBox x-coordinate");
+    counter++;
+    int y = getVerifiedInt(L, __func__, counter, "scrollBox y-coordinate");
+    counter++;
+    int width = getVerifiedInt(L, __func__, counter, "scrollBox width");
+    counter++;
+    int height = getVerifiedInt(L, __func__, counter, "scrollBox height");
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.createScrollBox(windowName, name, x, y, width, height); !success) {
+        return warnArgumentValue(L, __func__, message, true);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Internal Function createLabel in an UserWindow
 int TLuaInterpreter::createLabelUserWindow(lua_State* L, const QString& windowName, const QString& labelName)
 {
@@ -4081,6 +4135,24 @@ int TLuaInterpreter::getImageSize(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelSizeHint
+int TLuaInterpreter::getLabelSizeHint(lua_State* L)
+{
+    QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
+    }
+
+    auto size = host.mpConsole->getLabelSizeHint(labelName);
+    if (!size) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' does not exist").arg(labelName));
+    }
+    lua_pushnumber(L, size->width());
+    lua_pushnumber(L, size->height());
+    return 2;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCmdLineAction
 int TLuaInterpreter::setCmdLineAction(lua_State* L)
 {
@@ -4224,6 +4296,79 @@ int TLuaInterpreter::setLabelOnEnter(lua_State* L)
 int TLuaInterpreter::setLabelOnLeave(lua_State* L)
 {
     return setLabelCallback(L, qsl("setLabelOnLeave"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovie
+int TLuaInterpreter::setMovie(lua_State* L)
+{
+    QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
+    }
+    QString moviePath = getVerifiedString(L, __func__, 2, "movie (gif) path");
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.setMovie(labelName, moviePath); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// No documentation available in wiki - internal function
+int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
+{
+    QString labelName = getVerifiedString(L, funcName.toUtf8().constData(), 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
+    }
+    auto pN = LABEL(L, labelName);
+    auto movie = pN->movie();
+    if (!movie) {
+        return warnArgumentValue(L, __func__, qsl("no movie found at label '%1'").arg(labelName));
+    }
+
+    if (funcName == qsl("setMovieStart")) {
+        movie->start();
+    } else if (funcName == qsl("setMoviePaused")) {
+        movie->setPaused(movie->state() != QMovie::Paused);
+    } else if (funcName == qsl("setMovieFrame")) {
+        int frame = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie frame number");
+        lua_pushboolean(L, movie->jumpToFrame(frame));
+        return 1;
+    } else if (funcName == qsl("setMovieSpeed")) {
+        int speed = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie playback speed in %");
+        movie->setSpeed(speed);
+    } else {
+        return warnArgumentValue(L, __func__, qsl("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieStart
+int TLuaInterpreter::setMovieStart(lua_State* L)
+{
+    return movieFunc(L, qsl("setMovieStart"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMoviePaused
+int TLuaInterpreter::setMoviePaused(lua_State* L)
+{
+    return movieFunc(L, qsl("setMoviePaused"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieFrame
+int TLuaInterpreter::setMovieFrame(lua_State* L)
+{
+    return movieFunc(L, qsl("setMovieFrame"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieSpeed
+int TLuaInterpreter::setMovieSpeed(lua_State* L)
+{
+    return movieFunc(L, qsl("setMovieSpeed"));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextFormat
@@ -7433,22 +7578,22 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    QStringList regexList;
+    QStringList patterns;
     QList<int> propertyList;
     TTrigger* pP = host.getTriggerUnit()->findTrigger(triggerName);
     if (!pP) {
-        regexList << pattern;
+        patterns << pattern;
         if (colorTrigger) {
             propertyList << REGEX_COLOR_PATTERN;
         } else {
             propertyList << REGEX_PERL;
         }
     } else {
-        regexList = pP->getRegexCodeList();
+        patterns = pP->getPatternsList();
         propertyList = pP->getRegexCodePropertyList();
     }
 
-    auto pT = new TTrigger("a", regexList, propertyList, multiLine, &host);
+    auto pT = new TTrigger("a", patterns, propertyList, multiLine, &host);
     pT->setIsFolder(false);
     pT->setIsActive(true);
     pT->setTemporary(true);
@@ -11486,7 +11631,9 @@ int TLuaInterpreter::installPackage(lua_State* L)
 {
     QString location = getVerifiedString(L, __func__, 1, "package location path and file name");
     Host& host = getHostFromLua(L);
-    lua_pushboolean(L, host.installPackage(location, 0));
+    if (auto [success, message] = host.installPackage(location, 0); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
     return 1;
 }
 
@@ -11506,9 +11653,8 @@ int TLuaInterpreter::installModule(lua_State* L)
     Host& host = getHostFromLua(L);
     QString module = QDir::fromNativeSeparators(modName);
 
-    if (!host.installPackage(module, 3)) {
-        lua_pushboolean(L, false);
-        return 1;
+    if (auto [success, message] = host.installPackage(module, 3); !success) {
+        return warnArgumentValue(L, __func__, message);
     }
     auto moduleManager = host.mpModuleManager;
     if (moduleManager && moduleManager->mModuleTable->isVisible()) {
@@ -14661,6 +14807,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getLastLineNumber", TLuaInterpreter::getLastLineNumber);
     lua_register(pGlobalLua, "getNetworkLatency", TLuaInterpreter::getNetworkLatency);
     lua_register(pGlobalLua, "createMiniConsole", TLuaInterpreter::createMiniConsole);
+    lua_register(pGlobalLua, "createScrollBox", TLuaInterpreter::createScrollBox);
     lua_register(pGlobalLua, "createLabel", TLuaInterpreter::createLabel);
     lua_register(pGlobalLua, "deleteLabel", TLuaInterpreter::deleteLabel);
     lua_register(pGlobalLua, "setLabelToolTip", TLuaInterpreter::setLabelToolTip);
@@ -14698,6 +14845,11 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setLabelWheelCallback", TLuaInterpreter::setLabelWheelCallback);
     lua_register(pGlobalLua, "setLabelOnEnter", TLuaInterpreter::setLabelOnEnter);
     lua_register(pGlobalLua, "setLabelOnLeave", TLuaInterpreter::setLabelOnLeave);
+    lua_register(pGlobalLua, "setMovie", TLuaInterpreter::setMovie);
+    lua_register(pGlobalLua, "setMovieStart", TLuaInterpreter::setMovieStart);
+    lua_register(pGlobalLua, "setMovieSpeed", TLuaInterpreter::setMovieSpeed);
+    lua_register(pGlobalLua, "setMovieFrame", TLuaInterpreter::setMovieFrame);
+    lua_register(pGlobalLua, "setMoviePaused", TLuaInterpreter::setMoviePaused);
     lua_register(pGlobalLua, "getImageSize", TLuaInterpreter::getImageSize);
     lua_register(pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow);
     lua_register(pGlobalLua, "setWindow", TLuaInterpreter::setWindow);
@@ -15065,6 +15217,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getProfileStats", TLuaInterpreter::getProfileStats);
     lua_register(pGlobalLua, "getBackgroundColor", TLuaInterpreter::getBackgroundColor);
     lua_register(pGlobalLua, "getLabelStylesheet", TLuaInterpreter::getLabelStylesheet);
+    lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -15725,11 +15878,9 @@ int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& fu
 // No documentation available in wiki - internal function
 int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QString& function, int expiryCount)
 {
-    TTrigger* pT;
-    QStringList sList;
-    sList << regex;
-    QList<int> propertyList;
-    propertyList << REGEX_EXACT_MATCH;
+    TTrigger* pT = nullptr;
+    QStringList sList {regex};
+    QList<int> propertyList {REGEX_EXACT_MATCH};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -15745,11 +15896,9 @@ int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QStr
 // No documentation available in wiki - internal function
 int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QString& function, int expiryCount)
 {
-    TTrigger* pT;
-    QStringList sList;
-    sList << regex;
-    QList<int> propertyList;
-    propertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
+    TTrigger* pT = nullptr;
+    QStringList sList {regex};
+    QList<int> propertyList {REGEX_BEGIN_OF_LINE_SUBSTRING};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -15765,11 +15914,9 @@ int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QSt
 // No documentation available in wiki - internal function
 int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& function, int expiryCount)
 {
-    TTrigger* pT;
-    QStringList sList;
-    sList << regex;
-    QList<int> propertyList;
-    propertyList << REGEX_SUBSTRING; // substring trigger is default
+    TTrigger* pT = nullptr;
+    QStringList sList {regex};
+    QList<int> propertyList {REGEX_SUBSTRING};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -15848,12 +15995,9 @@ int TLuaInterpreter::startTempColorTrigger(int fg, int bg, const QString& functi
 // No documentation available in wiki - internal function
 int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& function, int expiryCount)
 {
-    TTrigger* pT;
-    QStringList sList;
-    sList << regex;
-
-    QList<int> propertyList;
-    propertyList << REGEX_PERL; // substring trigger is default
+    TTrigger* pT = nullptr;
+    QStringList sList {regex};
+    QList<int> propertyList {REGEX_PERL};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -15867,24 +16011,24 @@ int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& 
 }
 
 // No documentation available in wiki - internal function
-std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regexList, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList;
-    for (int i = 0; i < regexList.size(); i++) {
+    for (int i = 0; i < patterns.size(); i++) {
         propertyList << REGEX_PERL;
     }
     if (parent.isEmpty()) {
-        pT = new TTrigger("a", regexList, propertyList, (regexList.size() > 1), mpHost);
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
             return std::pair(-1, qsl("parent '%1' not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList);
+        pT->setRegexCodeList(patterns, propertyList);
     }
-    pT->setIsFolder(regexList.empty());
+    pT->setIsFolder(patterns.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -15895,24 +16039,24 @@ std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& na
 }
 
 // No documentation available in wiki - internal function
-std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regexList, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList;
-    for (int i = 0; i < regexList.size(); i++) {
+    for (int i = 0; i < patterns.size(); i++) {
         propertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
     }
     if (parent.isEmpty()) {
-        pT = new TTrigger("a", regexList, propertyList, (regexList.size() > 1), mpHost);
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
             return {-1, qsl("parent '%1' not found").arg(parent)};
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList);
+        pT->setRegexCodeList(patterns, propertyList);
     }
-    pT->setIsFolder(regexList.empty());
+    pT->setIsFolder(patterns.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -15923,24 +16067,24 @@ std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const
 }
 
 // No documentation available in wiki - internal function
-std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regexList, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList;
-    for (int i = 0; i < regexList.size(); i++) {
+    for (int i = 0; i < patterns.size(); i++) {
         propertyList << REGEX_SUBSTRING;
     }
     if (parent.isEmpty()) {
-        pT = new TTrigger("a", regexList, propertyList, (regexList.size() > 1), mpHost);
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
             return {-1, qsl("parent '%1' not found").arg(parent)};
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList);
+        pT->setRegexCodeList(patterns, propertyList);
     }
-    pT->setIsFolder(regexList.empty());
+    pT->setIsFolder(patterns.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -15955,17 +16099,17 @@ std::pair<int, QString> TLuaInterpreter::startPermPromptTrigger(const QString& n
 {
     TTrigger* pT;
     QList<int> propertyList = {REGEX_PROMPT};
-    QStringList regexList = {QString()};
+    QStringList patterns = {QString()};
 
     if (parent.isEmpty()) {
-        pT = new TTrigger("a", regexList, propertyList, false, mpHost);
+        pT = new TTrigger("a", patterns, propertyList, false, mpHost);
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
             return {-1, qsl("parent '%1' not found").arg(parent)};
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList);
+        pT->setRegexCodeList(patterns, propertyList);
     }
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -16981,10 +17125,11 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    auto [_1, triggersTotal, triggerPatterns, tempTriggers, activeTriggers] = host.getTriggerUnit()->assembleReport();
+    auto [_1, triggersTotal, totalPatterns, tempTriggers, activeTriggers, activePatterns] = host.getTriggerUnit()->assembleReport();
     auto [_2, aliasesTotal, tempAliases, activeAliases] = host.getAliasUnit()->assembleReport();
     auto [_3, timersTotal, tempTimers, activeTimers] = host.getTimerUnit()->assembleReport();
     auto [_4, keysTotal, tempKeys, activeKeys] = host.getKeyUnit()->assembleReport();
+    auto [_5, scriptsTotal, tempScripts, activeScripts] = host.getScriptUnit()->assembleReport();
 
     lua_newtable(L);
 
@@ -16996,18 +17141,27 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_pushnumber(L, triggersTotal);
     lua_settable(L, -3);
 
-    lua_pushstring(L, "patterns");
-    lua_pushnumber(L, triggerPatterns);
-    lua_settable(L, -3);
-
     lua_pushstring(L, "temp");
     lua_pushnumber(L, tempTriggers);
     lua_settable(L, -3);
 
     lua_pushstring(L, "active");
     lua_pushnumber(L, activeTriggers);
+    lua_settable(L, -3); // active
+
+    lua_pushstring(L, "patterns");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, totalPatterns);
     lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activePatterns);
     lua_settable(L, -3);
+
+    lua_settable(L, -3); // patterns
+    lua_settable(L, -3); // triggers
 
     // Aliases
     lua_pushstring(L, "aliases");
@@ -17057,6 +17211,23 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 
     lua_pushstring(L, "active");
     lua_pushnumber(L, activeKeys);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
+
+    // Scripts
+    lua_pushstring(L, "scripts");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, scriptsTotal);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "temp");
+    lua_pushnumber(L, tempScripts);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeScripts);
     lua_settable(L, -3);
     lua_settable(L, -3);
 

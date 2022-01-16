@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -115,6 +115,16 @@ std::optional<QString> TMainConsole::getLabelStyleSheet(const QString& name) con
     QMap<QString, TLabel*>::const_iterator it = mLabelMap.constFind(name);
     if (it != mLabelMap.cend() && it.key() == name) {
         return it.value()->styleSheet();
+    }
+
+    return {};
+}
+
+std::optional<QSize> TMainConsole::getLabelSizeHint(const QString& name) const
+{
+    QMap<QString, TLabel*>::const_iterator it = mLabelMap.constFind(name);
+    if (it != mLabelMap.cend() && it.key() == name) {
+        return it.value()->sizeHint();
     }
 
     return {};
@@ -467,6 +477,13 @@ void TMainConsole::resetMainConsole()
         itLabel.value()->close();
         itLabel.remove();
     }
+
+    QMutableMapIterator<QString, TScrollBox*> itScrollBox(mScrollBoxMap);
+    while (itScrollBox.hasNext()) {
+        itScrollBox.next();
+        itScrollBox.value()->close();
+        itScrollBox.remove();
+    }
 }
 
 // This is a sub-console overlaid on to the main console
@@ -475,11 +492,14 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
     //if pW then add Console as Overlay to the Userwindow
     auto pW = mDockWidgetMap.value(windowname);
     auto pC = mSubConsoleMap.value(name);
+    auto pS = mScrollBoxMap.value(windowname);
     if (!pC) {
-        if (!pW) {
-            pC = new TConsole(mpHost, SubConsole, mpMainFrame);
-        } else {
+        if (pS) {
+            pC = new TConsole(mpHost, SubConsole, pS->widget());
+        } else if (pW) {
             pC = new TConsole(mpHost, SubConsole, pW->widget());
+        } else {
+            pC = new TConsole(mpHost, SubConsole, mpMainFrame);
         }
         if (!pC) {
             return nullptr;
@@ -507,16 +527,47 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
     }
 }
 
+// This is a scrollBox overlaid on to the main console
+TScrollBox* TMainConsole::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
+{
+    //if pW then add ScrollBox as Overlay to the Userwindow
+    auto pW = mDockWidgetMap.value(windowname);
+    auto pSW = mScrollBoxMap.value(windowname);
+    auto pS = mScrollBoxMap.value(name);
+    if (!pS) {
+        if (pW) {
+            pS = new TScrollBox(mpHost, pW->widget());
+        } else if (pSW) {
+            pS = new TScrollBox(mpHost, pSW->widget());
+        } else {
+            pS = new TScrollBox(mpHost, mpMainFrame);
+        }
+        mScrollBoxMap[name] = pS;
+        pS->setObjectName(name);
+        pS->setFocusPolicy(Qt::NoFocus);
+        pS->resize(width, height);
+        pS->setContentsMargins(0, 0, 0, 0);
+        pS->move(x, y);
+        pS->show();
+
+        return pS;
+    }
+    return nullptr;
+}
+
 TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
 {
     //if pW put Label in Userwindow
     auto pL = mLabelMap.value(name);
     auto pW = mDockWidgetMap.value(windowname);
+    auto pS = mScrollBoxMap.value(windowname);
     if (!pL) {
-        if (!pW) {
-            pL = new TLabel(mpHost, mpMainFrame);
-        } else {
+        if (pW) {
             pL = new TLabel(mpHost, pW->widget());
+        } else if (pS) {
+            pL = new TLabel(mpHost, pS->widget());
+        } else {
+            pL = new TLabel(mpHost, mpMainFrame);
         }
         mLabelMap[name] = pL;
         pL->setObjectName(name);
@@ -696,12 +747,15 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
 
     auto pN = mSubCommandLineMap.value(name);
     auto pW = mDockWidgetMap.value(windowname);
+    auto pS = mScrollBoxMap.value(windowname);
 
     if (!pN) {
-        if (!pW) {
-            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, mpMainFrame);
-        } else {
+        if (pS) {
+            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, pS->widget());
+        } else if (pW) {
             pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, pW->widget());
+        } else {
+            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, mpMainFrame);
         }
         mSubCommandLineMap[name] = pN;
         pN->mCommandLineName = name;
@@ -762,6 +816,7 @@ bool TMainConsole::raiseWindow(const QString& name)
     auto pL = mLabelMap.value(name);
     auto pM = mpMapper;
     auto pN = mSubCommandLineMap.value(name);
+    auto pS = mScrollBoxMap.value(name);
 
     if (pC) {
         pC->raise();
@@ -773,6 +828,10 @@ bool TMainConsole::raiseWindow(const QString& name)
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->raise();
+        return true;
+    }
+    if (pS) {
+        pS->raise();
         return true;
     }
     if (pN) {
@@ -789,6 +848,7 @@ bool TMainConsole::lowerWindow(const QString& name)
     auto pL = mLabelMap.value(name);
     auto pM = mpMapper;
     auto pN = mSubCommandLineMap.value(name);
+    auto pS = mScrollBoxMap.value(name);
 
     if (pC) {
         pC->lower();
@@ -802,6 +862,11 @@ bool TMainConsole::lowerWindow(const QString& name)
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->lower();
+        mpMainDisplay->lower();
+        return true;
+    }
+    if (pS) {
+        pS->lower();
         mpMainDisplay->lower();
         return true;
     }
@@ -1366,13 +1431,13 @@ void TMainConsole::slot_reloadMap(QList<QString> profilesList)
 
 void TMainConsole::resizeEvent(QResizeEvent* event)
 {
-    // Process the event like other TConsoles
-    TConsole::resizeEvent(event);
-
     auto pHost = getHost();
     if (!pHost) {
         return;
     }
+
+    // Process the event like other TConsoles
+    TConsole::resizeEvent(event);
 
     // Update the record of the text area size for NAWS purposes:
     pHost->updateDisplayDimensions();
@@ -1380,43 +1445,73 @@ void TMainConsole::resizeEvent(QResizeEvent* event)
 
 void TMainConsole::showStatistics()
 {
-    QStringList header;
-    header << "\n"
-           << "+--------------------------------------------------------------+\n"
-           << "|               system statistics                              |\n"
-           << "+--------------------------------------------------------------+\n";
+    auto pHost = getHost();
+    if (!pHost) {
+        return;
+    }
 
-    QString h = header.join("");
-    QString msg = h;
-    print(msg, QColor(150, 120, 0), Qt::black);
+    QString header = tr("+--------------------------------------------------------------+\n"
+                        "|                      system statistics                       |\n"
+                        "+--------------------------------------------------------------+\n",
+                        "Header for the system's statistics information displayed in the console, it is 64 'narrow' characters wide");
+    print(header, QColor(150, 120, 0), Qt::black);
 
-    QString script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nGMCP events:\n]]);setUnderline(false);setFgColor(150,120,0);display( gmcp );";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nATCP events:\n]]);setUnderline(false);setFgColor(150,120,0); display( atcp );";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nchannel102 events:\n]]);setUnderline(false);setFgColor(150,120,0);display( channel102 );";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
+    QStringList subjects;
+    QStringList tables;
+    if (pHost->mTelnet.isGMCPEnabled()) {
+        subjects << tr("GMCP events:", "Heading for the system's statistics information displayed in the console");
+        tables << QLatin1String("gmcp");
+    }
+    if (pHost->mTelnet.isATCPEnabled()) {
+        subjects << tr("ATCP events:", "Heading for the system's statistics information displayed in the console");
+        tables << QLatin1String("atcp");
+    }
+    if (pHost->mTelnet.isChannel102Enabled()) {
+        subjects << tr("Channel102 events:", "Heading for the system's statistics information displayed in the console");
+        tables << QLatin1String("channel102");
+    }
+    if (pHost->mTelnet.isMSSPEnabled()) {
+        subjects << tr("MSSP events:", "Heading for the system's statistics information displayed in the console");
+        tables << QLatin1String("mssp");
+    }
+    if (pHost->mTelnet.isMSDPEnabled()) {
+        // This might be a nil rather than an empty table if not present:
+        subjects << tr("MSDP events:", "Heading for the system's statistics information displayed in the console");
+        tables << QLatin1String("msdp");
+    }
 
+    Q_ASSERT_X(subjects.count() == tables.count(), "TMainConsole::showStatistics()", "mismatch in titles and built-in tables to show");
+    for (int i = 0, total = subjects.count(); i < total; ++i) {
+        mpHost->mLuaInterpreter.compileAndExecuteScript(QStringLiteral("setFgColor(190,150,0); setUnderline(true); echo([[\n\n%1\n]]);setUnderline(false);setFgColor(150,120,0);display( %2 );")
+                                                        .arg(subjects.at(i), tables.at(i)));
+    }
 
-    script = "setFgColor(190,150,0); setUnderline(true); echo([[\n\nTrigger Report:\n\n]]); setBold(false);setUnderline(false);setFgColor(150,120,0)";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    msg = std::get<0>(mpHost->getTriggerUnit()->assembleReport());
-    print(msg, QColor(150, 120, 0), Qt::black);
+    const QString itemScript = "setFgColor(190,150,0); setUnderline(true); echo([[\n\n%1\n]]); setBold(false);setUnderline(false);setFgColor(150,120,0)";
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Trigger Report:", "Heading for the system's statistics information displayed in the console")));
+    QString itemMsg = std::get<0>(mpHost->getTriggerUnit()->assembleReport());
+    print(itemMsg, QColor(150, 120, 0), Qt::black);
 
-    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nTimer Report:\n\n]]);setBold(false);setUnderline(false);setFgColor(150,120,0)";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    msg = std::get<0>(mpHost->getTimerUnit()->assembleReport());;
-    print(msg, QColor(150, 120, 0), Qt::black);
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Timer Report:", "Heading for the system's statistics information displayed in the console")));
+    itemMsg = std::get<0>(mpHost->getTimerUnit()->assembleReport());;
+    print(itemMsg, QColor(150, 120, 0), Qt::black);
 
-    script = "setFgColor(190,150,0); setUnderline(true);echo([[\n\nKeybinding Report:\n\n]]);setBold(false);setUnderline(false);setFgColor(150,120,0)";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
-    msg = std::get<0>(mpHost->getKeyUnit()->assembleReport());
-    print(msg, QColor(150, 120, 0), Qt::black);
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Alias Report:", "Heading for the system's statistics information displayed in the console")));
+    itemMsg = std::get<0>(mpHost->getAliasUnit()->assembleReport());
+    print(itemMsg, QColor(150, 120, 0), Qt::black);
 
-    QString footer = QString("\n+--------------------------------------------------------------+\n");
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Keybinding Report:", "Heading for the system's statistics information displayed in the console")));
+    itemMsg = std::get<0>(mpHost->getKeyUnit()->assembleReport());
+    print(itemMsg, QColor(150, 120, 0), Qt::black);
+
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Script Report:", "Heading for the system's statistics information displayed in the console")));
+    itemMsg = std::get<0>(mpHost->getScriptUnit()->assembleReport());
+    print(itemMsg, QColor(150, 120, 0), Qt::black);
+
+    // Footer for the system's statistics information displayed in the console, it should be 64 'narrow' characters wide
+    QString footer = QStringLiteral("\n+--------------------------------------------------------------+\n");
     mpHost->mpConsole->print(footer, QColor(150, 120, 0), Qt::black);
-    script = "resetFormat();";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(script);
+
+    mpHost->mLuaInterpreter.compileAndExecuteScript(QLatin1String("resetFormat();"));
 
     mpHost->mpConsole->raise();
 }
