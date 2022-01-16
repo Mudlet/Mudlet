@@ -273,7 +273,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
     connect(pMudlet, &mudlet::signal_appearanceChanged, this, &dlgProfilePreferences::slot_setAppearance);
     connect(comboBox_appearance, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) { dlgProfilePreferences::slot_setAppearance(mudlet::Appearance(index)); });
-    connect(pushButton_resetMainWindowShortctus, &QPushButton::released, this, [=]() {
+    connect(toolButton_resetMainWindowShortcuts, &QPushButton::released, this, [=]() {
         emit signal_resetMainWindowShortcutsToDefaults();
     });
 
@@ -428,6 +428,8 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_enableTextAnalyzer->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
+    label_controlCharacterHandling->setEnabled(false);
+    comboBox_controlCharacterHandling->setEnabled(false);
 
     // ===== tab_codeEditor =====
     groupbox_codeEditorThemeSelection->setEnabled(false);
@@ -435,6 +437,7 @@ void dlgProfilePreferences::disableHostDetails()
     theme_download_label->hide();
 
     groupBox_autoComplete->setEnabled(false);
+    groupBox_advancedEditor->setEnabled(false);
 
     // ===== tab_displayColors =====
     groupBox_displayColors->setEnabled(false);
@@ -448,6 +451,10 @@ void dlgProfilePreferences::disableHostDetails()
     pushButton_saveMap->setEnabled(false);
     label_loadMap->setEnabled(false);
     pushButton_loadMap->setEnabled(false);
+    label_deleteMap->setEnabled(false);
+    checkBox_enablMapDeleteButton->setEnabled(false);
+    checkBox_enablMapDeleteButton->setChecked(false);
+    pushButton_deleteMap->setEnabled(false);
     label_copyMap->setEnabled(false);
     label_mapFileSaveFormatVersion->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
@@ -480,6 +487,9 @@ void dlgProfilePreferences::disableHostDetails()
     groupBox_ircOptions->setEnabled(false);
 
     groupBox_discordPrivacy->hide();
+
+    // ===== tab_shortcuts =====
+    groupBox_main_window_shortcuts->setEnabled(false);
 
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(false);
@@ -533,11 +543,14 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_enableTextAnalyzer->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
+    label_controlCharacterHandling->setEnabled(true);
+    comboBox_controlCharacterHandling->setEnabled(true);
 
     // ===== tab_codeEditor =====
     groupbox_codeEditorThemeSelection->setEnabled(true);
 
     groupBox_autoComplete->setEnabled(true);
+    groupBox_advancedEditor->setEnabled(true);
 
     // ===== tab_displayColors =====
     groupBox_displayColors->setEnabled(true);
@@ -551,6 +564,8 @@ void dlgProfilePreferences::enableHostDetails()
     pushButton_saveMap->setEnabled(true);
     label_loadMap->setEnabled(true);
     pushButton_loadMap->setEnabled(true);
+    label_deleteMap->setEnabled(true);
+    checkBox_enablMapDeleteButton->setEnabled(true);
     label_copyMap->setEnabled(true);
     label_mapFileSaveFormatVersion->setEnabled(true);
 
@@ -571,6 +586,9 @@ void dlgProfilePreferences::enableHostDetails()
 
     // ===== tab_chat =====
     groupBox_ircOptions->setEnabled(true);
+
+    // ===== tab_shortcuts =====
+    groupBox_main_window_shortcuts->setEnabled(true);
 
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(true);
@@ -987,6 +1005,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             comboBox_encoding->setCurrentIndex(0);
         }
     }
+
+    comboBox_controlCharacterHandling->setItemData(0, TConsole::NoControlCharacterReplacement);
+    comboBox_controlCharacterHandling->setItemData(1, TConsole::PictureControlCharacterReplacement);
+    comboBox_controlCharacterHandling->setItemData(2, TConsole::OEMFontControlCharacterReplacement);
+    auto cch_index = comboBox_controlCharacterHandling->findData(pHost->getControlCharacterMode());
+    comboBox_controlCharacterHandling->setCurrentIndex((cch_index > 0) ? cch_index : 0);
+    connect(comboBox_controlCharacterHandling, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeControlCharacterHandling);
 
     timeEdit_timerDebugOutputMinimumInterval->setTime(pHost->mTimerDebugOutputSuppressionInterval);
     frame_notificationArea->hide();
@@ -4091,6 +4116,16 @@ void dlgProfilePreferences::slot_setPostingTimeout(const double timeout)
     }
 
     pHost->mTelnet.setPostingTimeout(qRound(1000.0 * timeout));
+}
+
+void dlgProfilePreferences::slot_changeControlCharacterHandling()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    pHost->setControlCharacterMode(comboBox_controlCharacterHandling->currentData().value<TConsole::ControlCharacterMode>());
 }
 
 void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)

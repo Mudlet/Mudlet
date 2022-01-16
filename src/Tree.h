@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2019, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -35,7 +35,7 @@ template <class T>
 class Tree
 {
 public:
-    explicit Tree();
+    Tree();
     explicit Tree(T* parent);
     virtual ~Tree();
 
@@ -58,7 +58,7 @@ public:
     void setShouldBeActive(bool b);
     bool isTemporary() const;
     void setTemporary(bool state);
-    // Returns true if all the ancesters of this node are active. If there are no ancestors it also returns true.
+    // Returns true if all the ancestors of this node are active. If there are no ancestors it also returns true.
     bool ancestorsActive() const;
     QString& getError();
     void setError(QString);

@@ -90,7 +90,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2021");
+        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2022");
         QFont font(qsl("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
@@ -912,6 +912,8 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     QString SingleConnectHeader(tr("<h2><u>singleshot_connect.h - part of KDToolBox</u><br>(https://github.com/KDAB/KDToolBox).</h2>"
                                    "<h3>Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &lt;info@kdab.comF&gt;.</h3>"));
 
+    QString Utf8_filenamesHeader(tr("<h2><u>utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows</u></h2>"
+                                    "<h3>Copyright © 2019 Egor-Skriptunoff <a href=\"https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0\">Github GIST</a></h3>"));
 
     // Now start to assemble the fragments above:
     QStringList license_3rdParty_texts;
@@ -1006,6 +1008,11 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     license_3rdParty_texts.append(qsl("<hr>%37%38")
                                   .arg(SingleConnectHeader,                    // 37 - singleshot_connect header - translatable
                                        MIT_Body));                             // 38 - singleshot_connect body MIT - not translatable
+
+    // Although this is only effective on Windows it is bundled in ALL builds
+    license_3rdParty_texts.append(qsl("<ht>%39%40")
+                                  .arg(Utf8_filenamesHeader,                   // 39 - utf8_filename header - translatable
+                                       MIT_Body));                             // 40 - utf8_filename body MIT - not translatable
 
     license_3rdParty_texts.append(qsl("</body></html>"));
 
