@@ -1,6 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,27 +18,48 @@
  ***************************************************************************/
 
 
-#include "dlgAliasMainArea.h"
+#include "TScrollBox.h"
 #include "mudlet.h"
 
-dlgAliasMainArea::dlgAliasMainArea(QWidget* pF) : QWidget(pF)
+#include "pre_guard.h"
+#include <QtEvents>
+#include "post_guard.h"
+
+
+TScrollBox::TScrollBox(Host* pH, QWidget* pW)
+: QScrollArea(pW)
+, mpHost(pH)
 {
-    // init generated dialog
-    setupUi(this);
+    setWidget(new TScrollBoxWidget());
+    setWidgetResizable(false);
+    widget()->resize(parentWidget()->size());
+}
 
-    connect(lineEdit_alias_name, &QLineEdit::editingFinished, this, &dlgAliasMainArea::slot_editing_name_finished);
 
-    if (mudlet::self()->firstLaunch) {
-        lineEdit_alias_pattern->setPlaceholderText("for example, ^myalias$ to match 'myalias'");
+TScrollBoxWidget::TScrollBoxWidget(QWidget* pW) : QWidget(pW) {}
+TScrollBoxWidget::~TScrollBoxWidget() {}
+
+void TScrollBoxWidget::childEvent(QChildEvent* event)
+{
+    auto child = event->child();
+    if (event->added())
+    {
+        child->installEventFilter(this);
+    }
+    if (event->removed())
+    {
+        child->removeEventFilter(this);
     }
 }
 
-void dlgAliasMainArea::trimName()
+bool TScrollBoxWidget::eventFilter(QObject* object, QEvent* event)
 {
-    lineEdit_alias_name->setText(lineEdit_alias_name->text().trimmed());
-}
+    Q_UNUSED(object);
 
-void dlgAliasMainArea::slot_editing_name_finished()
-{
-    trimName();
+    if (event->type() == QMoveEvent::Move || event->type() == QResizeEvent::Resize || event->type() == QHideEvent::Hide || event->type() == QShowEvent::Show)
+    {
+      adjustSize();
+    }
+
+    return false;
 }

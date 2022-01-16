@@ -105,6 +105,7 @@ set(mudlet_SRCS
     TimerUnit.cpp
     TKey.cpp
     TLabel.cpp
+    TScrollBox.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
     TMap.cpp
@@ -248,6 +249,7 @@ set(mudlet_HDRS
     TimerUnit.h
     TKey.h
     TLabel.h
+    TScrollBox.h
     TLinkStore.h
     TLuaInterpreter.h
     TMainConsole.h
@@ -310,10 +312,6 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_SRCS glwidget.cpp)
   list(APPEND mudlet_HDRS glwidget.h)
 endif(USE_3DMAPPER)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
 macro(set_alternate_linker linker)
   find_program(LINKER_EXECUTABLE ld.${USE_ALTERNATE_LINKER} ${USE_ALTERNATE_LINKER})

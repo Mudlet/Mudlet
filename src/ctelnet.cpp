@@ -3037,7 +3037,12 @@ Some data loss is likely - please mention this problem to the game admins.)", co
                 }
             } else {
                 if (ch == TN_BELL) {
-                    // flash taskbar for 3 seconds on the telnet bell
+                    // Flash taskbar for 3 seconds on the telnet bell, note
+                    // by processing it here rather than in the TTextEdit class
+                    // it is not possible to fake/test it with a Lua
+                    // feedTriggers(...) call - OTOH doing it there would make
+                    // a beep every time the screen was refreshed!
+                    // TODO: https://github.com/Mudlet/Mudlet/issues/5836 - provide option to actually make a (void) QApplication::beep() or a user-selected sound (different for each profile) and/or instead of the visual alert
                     QApplication::alert(mudlet::self(), 3000);
                 }
                 if (ch != '\r' && ch != '\0') {

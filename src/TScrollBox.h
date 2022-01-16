@@ -1,6 +1,8 @@
+#ifndef MUDLET_TSCROLLBOX_H
+#define MUDLET_TSCROLLBOX_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,28 +20,40 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "pre_guard.h"
+#include <QScrollArea>
+#include <QPointer>
+#include "post_guard.h"
 
-#include "dlgAliasMainArea.h"
-#include "mudlet.h"
+class Host;
 
-dlgAliasMainArea::dlgAliasMainArea(QWidget* pF) : QWidget(pF)
+class TScrollBox : public QScrollArea
 {
-    // init generated dialog
-    setupUi(this);
+    Q_OBJECT
 
-    connect(lineEdit_alias_name, &QLineEdit::editingFinished, this, &dlgAliasMainArea::slot_editing_name_finished);
+public:
+    Q_DISABLE_COPY(TScrollBox)
+    explicit TScrollBox(Host* pH, QWidget* pW = nullptr);
+    QPointer<Host> mpHost;
 
-    if (mudlet::self()->firstLaunch) {
-        lineEdit_alias_pattern->setPlaceholderText("for example, ^myalias$ to match 'myalias'");
-    }
-}
 
-void dlgAliasMainArea::trimName()
+private:
+};
+
+
+class TScrollBoxWidget : public QWidget
 {
-    lineEdit_alias_name->setText(lineEdit_alias_name->text().trimmed());
-}
+    Q_OBJECT
 
-void dlgAliasMainArea::slot_editing_name_finished()
-{
-    trimName();
-}
+public:
+    Q_DISABLE_COPY(TScrollBoxWidget)
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 13, 0))
+    Q_DISABLE_MOVE(TScrollBoxWidget)
+#endif
+    explicit TScrollBoxWidget(QWidget* pW = nullptr);
+    ~TScrollBoxWidget();
+    void childEvent(QChildEvent* event) override;
+    bool eventFilter(QObject* object, QEvent* event) override;
+};
+
+#endif // MUDLET_TSCROLLBOX_H

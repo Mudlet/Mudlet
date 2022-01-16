@@ -477,6 +477,13 @@ void TMainConsole::resetMainConsole()
         itLabel.value()->close();
         itLabel.remove();
     }
+
+    QMutableMapIterator<QString, TScrollBox*> itScrollBox(mScrollBoxMap);
+    while (itScrollBox.hasNext()) {
+        itScrollBox.next();
+        itScrollBox.value()->close();
+        itScrollBox.remove();
+    }
 }
 
 // This is a sub-console overlaid on to the main console
@@ -485,11 +492,14 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
     //if pW then add Console as Overlay to the Userwindow
     auto pW = mDockWidgetMap.value(windowname);
     auto pC = mSubConsoleMap.value(name);
+    auto pS = mScrollBoxMap.value(windowname);
     if (!pC) {
-        if (!pW) {
-            pC = new TConsole(mpHost, SubConsole, mpMainFrame);
-        } else {
+        if (pS) {
+            pC = new TConsole(mpHost, SubConsole, pS->widget());
+        } else if (pW) {
             pC = new TConsole(mpHost, SubConsole, pW->widget());
+        } else {
+            pC = new TConsole(mpHost, SubConsole, mpMainFrame);
         }
         if (!pC) {
             return nullptr;
@@ -517,16 +527,47 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
     }
 }
 
+// This is a scrollBox overlaid on to the main console
+TScrollBox* TMainConsole::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height)
+{
+    //if pW then add ScrollBox as Overlay to the Userwindow
+    auto pW = mDockWidgetMap.value(windowname);
+    auto pSW = mScrollBoxMap.value(windowname);
+    auto pS = mScrollBoxMap.value(name);
+    if (!pS) {
+        if (pW) {
+            pS = new TScrollBox(mpHost, pW->widget());
+        } else if (pSW) {
+            pS = new TScrollBox(mpHost, pSW->widget());
+        } else {
+            pS = new TScrollBox(mpHost, mpMainFrame);
+        }
+        mScrollBoxMap[name] = pS;
+        pS->setObjectName(name);
+        pS->setFocusPolicy(Qt::NoFocus);
+        pS->resize(width, height);
+        pS->setContentsMargins(0, 0, 0, 0);
+        pS->move(x, y);
+        pS->show();
+
+        return pS;
+    }
+    return nullptr;
+}
+
 TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
 {
     //if pW put Label in Userwindow
     auto pL = mLabelMap.value(name);
     auto pW = mDockWidgetMap.value(windowname);
+    auto pS = mScrollBoxMap.value(windowname);
     if (!pL) {
-        if (!pW) {
-            pL = new TLabel(mpHost, mpMainFrame);
-        } else {
+        if (pW) {
             pL = new TLabel(mpHost, pW->widget());
+        } else if (pS) {
+            pL = new TLabel(mpHost, pS->widget());
+        } else {
+            pL = new TLabel(mpHost, mpMainFrame);
         }
         mLabelMap[name] = pL;
         pL->setObjectName(name);
@@ -706,12 +747,15 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
 
     auto pN = mSubCommandLineMap.value(name);
     auto pW = mDockWidgetMap.value(windowname);
+    auto pS = mScrollBoxMap.value(windowname);
 
     if (!pN) {
-        if (!pW) {
-            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, mpMainFrame);
-        } else {
+        if (pS) {
+            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, pS->widget());
+        } else if (pW) {
             pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, pW->widget());
+        } else {
+            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, mpMainFrame);
         }
         mSubCommandLineMap[name] = pN;
         pN->mCommandLineName = name;
@@ -772,6 +816,7 @@ bool TMainConsole::raiseWindow(const QString& name)
     auto pL = mLabelMap.value(name);
     auto pM = mpMapper;
     auto pN = mSubCommandLineMap.value(name);
+    auto pS = mScrollBoxMap.value(name);
 
     if (pC) {
         pC->raise();
@@ -783,6 +828,10 @@ bool TMainConsole::raiseWindow(const QString& name)
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->raise();
+        return true;
+    }
+    if (pS) {
+        pS->raise();
         return true;
     }
     if (pN) {
@@ -799,6 +848,7 @@ bool TMainConsole::lowerWindow(const QString& name)
     auto pL = mLabelMap.value(name);
     auto pM = mpMapper;
     auto pN = mSubCommandLineMap.value(name);
+    auto pS = mScrollBoxMap.value(name);
 
     if (pC) {
         pC->lower();
@@ -812,6 +862,11 @@ bool TMainConsole::lowerWindow(const QString& name)
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->lower();
+        mpMainDisplay->lower();
+        return true;
+    }
+    if (pS) {
+        pS->lower();
         mpMainDisplay->lower();
         return true;
     }
@@ -1376,13 +1431,13 @@ void TMainConsole::slot_reloadMap(QList<QString> profilesList)
 
 void TMainConsole::resizeEvent(QResizeEvent* event)
 {
-    // Process the event like other TConsoles
-    TConsole::resizeEvent(event);
-
     auto pHost = getHost();
     if (!pHost) {
         return;
     }
+
+    // Process the event like other TConsoles
+    TConsole::resizeEvent(event);
 
     // Update the record of the text area size for NAWS purposes:
     pHost->updateDisplayDimensions();
