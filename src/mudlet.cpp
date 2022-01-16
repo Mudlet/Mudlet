@@ -1433,6 +1433,29 @@ void mudlet::closeHost(const QString& name)
     int hostCount = mHostManager.getHostCount();
     emit signal_hostDestroyed(pH, --hostCount);
     mHostManager.deleteHost(pH->getName());
+    updateMultiViewControls();
+}
+
+void mudlet::updateMultiViewControls()
+{
+    const bool isEnabled = (mHostManager.getHostCount() - 1);
+    if (mpActionMultiView->isEnabled() != isEnabled){
+        mpActionMultiView->setEnabled(isEnabled);
+    }
+    if (dactionMultiView->isEnabled() != isEnabled) {
+        dactionMultiView->setEnabled(isEnabled);
+    }
+}
+
+void mudlet::reshowRequiredMainConsoles()
+{
+    if (mpTabBar->count() > 1 && mMultiView) {
+        for (auto pHost: mHostManager) {
+            if (pHost->mpConsole) {
+                pHost->mpConsole->show();
+            }
+        }
+    }
 }
 
 void mudlet::slot_tab_changed(int tabID)
@@ -1505,28 +1528,9 @@ void mudlet::slot_tab_changed(int tabID)
 
     updateDiscordNamedIcon();
 
-    // Restore the multi-view mode if it was enabled:
-    if (mpTabBar->count() > 1) {
-        if (!mpActionMultiView->isEnabled() || !dactionMultiView->isEnabled()) {
-            mpActionMultiView->setEnabled(true);
-            dactionMultiView->setEnabled(true);
-        }
-        if (mMultiView) {
-            for (auto pHost: mHostManager) {
-                if (pHost->mpConsole && (pHost != mpCurrentActiveHost.data())) {
-                    // We skip showing the current tab as we have already done
-                    // a more thorough refreshment of that one...
-                    pHost->mpConsole->show();
-                }
-            }
-        }
-
-    } else {
-        if (mpActionMultiView->isEnabled() || dactionMultiView->isEnabled()) {
-            mpActionMultiView->setEnabled(false);
-            dactionMultiView->setEnabled(false);
-        }
-    }
+    updateMultiViewControls();
+    // Regenerate the multi-view mode if it is enabled:
+    reshowRequiredMainConsoles();
 
     emit signal_tabChanged(mpCurrentActiveHost->getName());
 }
@@ -1567,7 +1571,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     setWindowTitle(pH->getName() + " - " + version);
 
     mpSplitter_profileContainer->addWidget(pConsole);
-    if (mpCurrentActiveHost) {
+    if (mpCurrentActiveHost && !mMultiView) {
         mpCurrentActiveHost->mpConsole->hide();
     }
     mpCurrentActiveHost = pH;
@@ -2838,6 +2842,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
     enableToolbarButtons();
+    updateMultiViewControls();
 }
 
 void mudlet::processEventLoopHack()
@@ -4613,11 +4618,7 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
 
 void mudlet::activateProfile(Host* pHost)
 {
-    if (!mMultiView || !pHost) {
-        // We do not need to update the currently selected tab if we are not in
-        // multi-view mode as that will happen by the user selecting the tab
-        // themself - also, if the supplied argument is a nullptr we do not need
-        // to do anything:
+    if (!pHost) {
         return;
     }
 
