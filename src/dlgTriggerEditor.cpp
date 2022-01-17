@@ -621,8 +621,44 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                              .arg(hostName));
     toolBar2->setOrientation(Qt::Vertical);
 
-    QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
+    // Inserting them in this order also causes the first one (the top toolbar)
+    // to be listed first in the QMainWindows's default context menu:
     QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar);
+    QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
+
+    // (Top) "Actions" toolbar:
+    //: This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.
+    mpAction_restoreEditorActionsToolbar = new QAction(tr("Restore Actions toolbar"), this);
+    // (Left) "Items" toolbar:
+    //: This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.
+    mpAction_restoreEditorItemsToolbar = new QAction(tr("Restore Items toolbar"), this);
+
+    connect(mpAction_restoreEditorActionsToolbar, &QAction::triggered, this, &dlgTriggerEditor::slot_restoreEditorActionsToolbar);
+    connect(mpAction_restoreEditorItemsToolbar, &QAction::triggered, this, &dlgTriggerEditor::slot_restoreEditorItemsToolbar);
+    connect(toolBar, &QToolBar::visibilityChanged, this, &dlgTriggerEditor::slot_visibilityChangedEditorActionsToolbar);
+    connect(toolBar2, &QToolBar::visibilityChanged, this, &dlgTriggerEditor::slot_visibilityChangedEditorItemsToolbar);
+    connect(toolBar, &QToolBar::topLevelChanged, this, &dlgTriggerEditor::slot_floatingChangedEditorActionsToolbar);
+    connect(toolBar2, &QToolBar::topLevelChanged, this, &dlgTriggerEditor::slot_floatingChangedEditorItemsToolbar);
+
+    treeWidget_triggers->addAction(mpAction_restoreEditorActionsToolbar);
+    treeWidget_aliases->addAction(mpAction_restoreEditorActionsToolbar);
+    treeWidget_timers->addAction(mpAction_restoreEditorActionsToolbar);
+    treeWidget_scripts->addAction(mpAction_restoreEditorActionsToolbar);
+    treeWidget_actions->addAction(mpAction_restoreEditorActionsToolbar);
+    treeWidget_keys->addAction(mpAction_restoreEditorActionsToolbar);
+
+    treeWidget_triggers->addAction(mpAction_restoreEditorItemsToolbar);
+    treeWidget_aliases->addAction(mpAction_restoreEditorItemsToolbar);
+    treeWidget_timers->addAction(mpAction_restoreEditorItemsToolbar);
+    treeWidget_scripts->addAction(mpAction_restoreEditorItemsToolbar);
+    treeWidget_actions->addAction(mpAction_restoreEditorItemsToolbar);
+    treeWidget_keys->addAction(mpAction_restoreEditorItemsToolbar);
+
+    // These only have to be shown should the associated toolbar get hidden
+    // and by default the starting state for those is a visible one so these
+    // need to be hidden at the start:
+    mpAction_restoreEditorActionsToolbar->setVisible(false);
+    mpAction_restoreEditorItemsToolbar->setVisible(false);
     setShortcuts();
 
     auto config = mpSourceEditorEdbee->config();
@@ -9083,6 +9119,79 @@ void dlgTriggerEditor::setSearchOptions(const SearchOptions optionsState)
     mpAction_searchCaseSensitive->setChecked(optionsState & SearchOptionCaseSensitive);
     mpAction_searchIncludeVariables->setChecked(optionsState & SearchOptionIncludeVariables);
     createSearchOptionIcon();
+}
+
+void dlgTriggerEditor::showOrHideRestoreEditorActionsToolbarAction()
+{
+    if ((!toolBar->isVisible())
+        || toolBar->isFloating()
+        || (QMainWindow::toolBarArea(toolBar) & (Qt::ToolBarArea::LeftToolBarArea|Qt::ToolBarArea::RightToolBarArea|Qt::ToolBarArea::BottomToolBarArea))) {
+        // If it is NOT visible
+        // OR If the toolbar is floating
+        // OR it is docked in an area other than the top one
+        // then show the restore action
+        mpAction_restoreEditorActionsToolbar->setVisible(true);
+    } else {
+        // Otherwise - i.e. it is visible AND docked AND docked to the original
+        // area:
+        mpAction_restoreEditorActionsToolbar->setVisible(false);
+    }
+}
+
+void dlgTriggerEditor::showOrHideRestoreEditorItemsToolbarAction()
+{
+    if ((!toolBar2->isVisible())
+        || toolBar2->isFloating()
+        || (QMainWindow::toolBarArea(toolBar2) & (Qt::ToolBarArea::TopToolBarArea|Qt::ToolBarArea::RightToolBarArea|Qt::ToolBarArea::BottomToolBarArea))) {
+
+        mpAction_restoreEditorItemsToolbar->setVisible(true);
+    } else {
+        mpAction_restoreEditorItemsToolbar->setVisible(false);
+    }
+}
+
+// These two slots show/hide the restore option for the relevant toolbar
+// as the toolbar itself is hidden/shown:
+void dlgTriggerEditor::slot_visibilityChangedEditorActionsToolbar()
+{
+    showOrHideRestoreEditorActionsToolbarAction();
+}
+
+void dlgTriggerEditor::slot_visibilityChangedEditorItemsToolbar()
+{
+    showOrHideRestoreEditorItemsToolbarAction();
+}
+
+// These two get triggered twice during the dragging of a toolbar from one
+// docking area to another - as it briefly floats during the drag:
+void dlgTriggerEditor::slot_floatingChangedEditorActionsToolbar()
+{
+    showOrHideRestoreEditorActionsToolbarAction();
+}
+
+void dlgTriggerEditor::slot_floatingChangedEditorItemsToolbar()
+{
+    showOrHideRestoreEditorItemsToolbarAction();
+}
+
+// These two also triggers the corresponding signal that is connected to:
+// the showOrHideRestoreEditorXxxxxToolbarAction() SLOT:
+void dlgTriggerEditor::slot_restoreEditorActionsToolbar()
+{
+    if (!toolBar->isVisible()) {
+        // Reshow it
+        toolBar->show();
+    }
+    // Forces it to redock in the starting area:
+    QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar);
+}
+
+void dlgTriggerEditor::slot_restoreEditorItemsToolbar()
+{
+    if (!toolBar2->isVisible()) {
+        toolBar2->show();
+    }
+    QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
 }
 
 void dlgTriggerEditor::clearTriggerForm()

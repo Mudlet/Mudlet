@@ -293,6 +293,12 @@ private slots:
     void slot_clearSearchResults();
     void slot_clearSoundFile();
     void slot_editorContextMenu();
+    void slot_visibilityChangedEditorActionsToolbar();
+    void slot_visibilityChangedEditorItemsToolbar();
+    void slot_floatingChangedEditorActionsToolbar();
+    void slot_floatingChangedEditorItemsToolbar();
+    void slot_restoreEditorActionsToolbar();
+    void slot_restoreEditorItemsToolbar();
 
 public:
     TConsole* mpErrorConsole;
@@ -426,6 +432,10 @@ private:
     void key_grab_callback(const Qt::Key, const Qt::KeyboardModifiers);
     void setShortcuts(const bool setNotUnset = true);
 
+    void showOrHideRestoreEditorActionsToolbarAction();
+    void showOrHideRestoreEditorItemsToolbarAction();
+
+
     QToolBar* toolBar;
     QToolBar* toolBar2;
     bool showHiddenVars;
@@ -491,6 +501,10 @@ private:
 
     QAction* mProfileSaveAction;
     QAction* mProfileSaveAsAction;
+
+    // Enables the toolbars to be unhidden if they get hid:
+    QAction* mpAction_restoreEditorActionsToolbar = nullptr;
+    QAction* mpAction_restoreEditorItemsToolbar = nullptr;
 
     // We need to keep a record of this button as we have to disable it
     // for the "Variables" view:
