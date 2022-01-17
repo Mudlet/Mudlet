@@ -548,9 +548,8 @@ void dlgConnectionProfiles::slot_addProfile()
     fillout_form();
     welcome_message->hide();
 
-    requiredArea->show();
     informationalArea->show();
-    optionalArea->show();
+    toolbox_connectionInfo->show();
 
     QString newname = tr("new profile name");
 
@@ -1092,9 +1091,8 @@ void dlgConnectionProfiles::fillout_form()
 
     if (mProfileList.isEmpty()) {
         welcome_message->show();
-        requiredArea->hide();
+        toolbox_connectionInfo->hide();
         informationalArea->hide();
-        optionalArea->hide();
 
 // collapse the width as the default is too big and set the height to a reasonable default
 // to fit all of the 'Welcome' message
@@ -1107,9 +1105,8 @@ void dlgConnectionProfiles::fillout_form()
     } else {
         welcome_message->hide();
 
-        requiredArea->show();
+        toolbox_connectionInfo->show();
         informationalArea->show();
-        optionalArea->show();
     }
 
     profiles_tree_widget->setIconSize(QSize(120, 30));
