@@ -815,7 +815,9 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mEnableMSSP = attributes().value(qsl("mEnableMSSP")) == YES;
     pHost->mEnableMSP = attributes().value(qsl("mEnableMSP")) == YES;
     pHost->mMapStrongHighlight = attributes().value(qsl("mMapStrongHighlight")) == YES;
-    pHost->mLogStatus = attributes().value(qsl("mLogStatus")) == YES;
+    // It does not make sense to store this detail in the game save as it now
+    // handled outside of the profile game saves:
+    // pHost->mLogStatus = attributes().value(qsl("mLogStatus")) == YES;
     pHost->mEnableSpellCheck = attributes().value(qsl("mEnableSpellCheck")) == YES;
     bool enableUserDictionary = attributes().value(qsl("mEnableUserDictionary")) == YES;
     bool useSharedDictionary = attributes().value(qsl("mUseSharedDictionary")) == YES;

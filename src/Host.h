@@ -577,7 +577,7 @@ public:
     QColor mRoomBorderColor;
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
-    bool mLogStatus;
+    bool mLogStatus = false;
     bool mEnableSpellCheck;
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority

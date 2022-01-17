@@ -401,7 +401,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mEnableMSP") = pHost->mEnableMSP ? "yes" : "no";
     host.append_attribute("mEnableMSDP") = pHost->mEnableMSDP ? "yes" : "no";
     host.append_attribute("mMapStrongHighlight") = pHost->mMapStrongHighlight ? "yes" : "no";
-    host.append_attribute("mLogStatus") = pHost->mLogStatus ? "yes" : "no";
+    // It does not make sense to store this detail in the game save as it now
+    // handled outside of the profile game saves:
+    // host.append_attribute("mLogStatus") = pHost->mLogStatus ? "yes" : "no";
     host.append_attribute("mEnableSpellCheck") = pHost->mEnableSpellCheck ? "yes" : "no";
     bool enableUserDictionary;
     bool useSharedDictionary;

@@ -344,7 +344,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mRoomBorderColor(Qt::lightGray)
 #endif
 , mMapStrongHighlight(false)
-, mLogStatus(false)
 , mEnableSpellCheck(true)
 , mDiscordDisableServerSide(true)
 , mDiscordAccessFlags(DiscordLuaAccessEnabled | DiscordSetSubMask)
@@ -406,7 +405,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 {
     TDebug::addHost(this);
 
-    // mLogStatus = mudlet::self()->mAutolog;
+    // The "autolog" sentinel file controls whether logging the game's text as
+    // plain text or HTML is immediately resumed on profile loading. Do not
+    // confuse it with the "autologin" item, which controls whether the profile
+    // is automatically started when the Mudlet application is run!
+    mLogStatus = QFile::exists(mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, qsl("autolog")));
     mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
 
     // Copy across the details needed for the "color_table":

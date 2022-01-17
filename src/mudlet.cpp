@@ -184,7 +184,6 @@ mudlet::mudlet()
 , mpMainToolBar(nullptr)
 , version(qsl("Mudlet " APP_VERSION APP_BUILD))
 , mpCurrentActiveHost(nullptr)
-, mAutolog(false)
 , mpTabBar(nullptr)
 , mIsLoadingLayout(false)
 , mHasSavedLayout(false)
@@ -345,13 +344,6 @@ mudlet::mudlet()
     mpSplitter_profileContainer->setChildrenCollapsible(false);
 
     mpHBoxLayout_profileContainer->addWidget(mpSplitter_profileContainer);
-
-    QFile file_autolog(getMudletPath(mainDataItemPath, qsl("autolog")));
-    if (file_autolog.exists()) {
-        mAutolog = true;
-    } else {
-        mAutolog = false;
-    }
 
     mpButtonConnect = new QToolButton(this);
     mpButtonConnect->setText(tr("Connect"));
@@ -1540,7 +1532,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     if (pH->mpConsole) {
         return;
     }
-    pH->mLogStatus = mAutolog;
     auto pConsole = new TMainConsole(pH);
     if (!pConsole) {
         return;
@@ -1577,6 +1568,9 @@ void mudlet::addConsoleForNewHost(Host* pH)
     mpCurrentActiveHost = pH;
 
     if (pH->mLogStatus) {
+        // The above flag is set/reset at the start of the TMainConsole
+        // constructor - and if it is set we now need to "click" the button
+        // to immediately start logging the game output as text/HTML:
         pConsole->logButton->click();
     }
 
