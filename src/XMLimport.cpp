@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -815,9 +815,6 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mEnableMSSP = attributes().value(qsl("mEnableMSSP")) == YES;
     pHost->mEnableMSP = attributes().value(qsl("mEnableMSP")) == YES;
     pHost->mMapStrongHighlight = attributes().value(qsl("mMapStrongHighlight")) == YES;
-    // It does not make sense to store this detail in the game save as it now
-    // handled outside of the profile game saves:
-    // pHost->mLogStatus = attributes().value(qsl("mLogStatus")) == YES;
     pHost->mEnableSpellCheck = attributes().value(qsl("mEnableSpellCheck")) == YES;
     bool enableUserDictionary = attributes().value(qsl("mEnableUserDictionary")) == YES;
     bool useSharedDictionary = attributes().value(qsl("mUseSharedDictionary")) == YES;
