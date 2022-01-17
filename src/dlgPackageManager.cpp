@@ -1,6 +1,7 @@
 /***************************************************************************
- *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *   Copyright (C) 2011 by Heiko Koehn - KoehnHeiko@googlemail.com         *
+ *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -238,11 +239,15 @@ void dlgPackageManager::slot_toggle_remove_button()
 {
     QModelIndexList selection = mPackageTable->selectionModel()->selectedRows();
     int selectionCount = selection.count();
-    bool haveSelection = selectionCount != 0;
-
-    mRemoveButton->setEnabled(haveSelection);
-    if (selectionCount > 1) {
-        // let the translations decide whenever it should be 'Remove package', 'Remove packages', or whatever is language-appropriate
-        mRemoveButton->setText(tr("Remove packages", "Button in package manager to remove selected package(s)", selectionCount));
+    mRemoveButton->setEnabled(selectionCount);
+    if (selectionCount) {
+        mRemoveButton->setText(tr("Remove %n package(s)",
+                                  // Intentional comment to separate arguments
+                                  "Message on button in package manager to remove one or more (%n is the count of) selected package(s).",
+                                  selectionCount));
+    } else {
+        mRemoveButton->setText(tr("Remove package",
+                                  // Intentional comment to separate arguments
+                                  "Message on button in package manager initially and when there is no packages to remove."));
     }
 }
