@@ -1,5 +1,5 @@
 describe("Tests DebugTools.lua functions", function()
-  describe("printDebug(msg[, showTrace])", function()
+  describe("Tests the functionality of printDebug", function()
     local s
     before_each(function()
       s = spy.on(_G, "debugc")
@@ -29,7 +29,7 @@ describe("Tests DebugTools.lua functions", function()
     end)
   end)
 
-  describe("printError(msg[, showTrace, haltExecution])", function()
+  describe("Tests the functionality of printError", function()
     local s
     before_each(function()
       s = spy.on(_G, "errorc")

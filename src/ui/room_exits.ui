@@ -1920,7 +1920,7 @@
          <enum>Qt::StrongFocus</enum>
         </property>
         <property name="toolTip">
-         <string>&lt;p&gt;Click on an item to edit/change it, to DELETE a Special Exit set its Exit Room ID to zero.&lt;/p&gt;</string>
+         <string>&lt;p&gt;Click on an item to edit/change it. To delete a Special Exit, ether: select it and press the keyboard Delete key; or set its Exit roomID to less than one; or clear the name/command entry.&lt;/p&gt;</string>
         </property>
         <property name="frameShadow">
          <enum>QFrame::Raised</enum>
@@ -1963,6 +1963,15 @@ Room ID</string>
         </column>
         <column>
          <property name="text">
+          <string>Exit
+Status</string>
+         </property>
+         <property name="toolTip">
+          <string>&lt;p&gt;Indicates whether the exit is invalid, leads to another room in this area or leads to a room in another area.&lt;/p&gt;</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
           <string>No
 Route</string>
          </property>
@@ -1985,7 +1994,7 @@ Weight</string>
 None</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit (only functional choice currently).&lt;/p&gt;</string>
+          <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -1994,7 +2003,7 @@ None</string>
 Open</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</string>
+          <string>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2003,7 +2012,7 @@ Open</string>
 Closed</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</string>
+          <string>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2012,7 +2021,7 @@ Closed</string>
 Locked</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</string>
+          <string>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2021,7 +2030,7 @@ Locked</string>
 or LUA script</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;(Lua scripts need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</string>
+          <string>&lt;p&gt;(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</string>
          </property>
         </column>
        </widget>

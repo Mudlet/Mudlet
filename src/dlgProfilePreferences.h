@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2018, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -49,7 +50,7 @@ class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 
 public:
     Q_DISABLE_COPY(dlgProfilePreferences)
-    dlgProfilePreferences(QWidget*, Host* pHost = nullptr);
+    explicit dlgProfilePreferences(QWidget*, Host* pHost = nullptr);
     void setTab(QString tab);
 
 public slots:
@@ -143,7 +144,7 @@ private slots:
     void slot_changeShowToolBar(int);
     void slot_changeEditorTextOptions(const QTextOption::Flags);
     void slot_changeEnableFullScreenMode(const bool);
-    void slot_changeEnableDarkTheme(const bool);
+    void slot_setAppearance(const mudlet::Appearance);
     void slot_changeShowMapAuditErrors(const bool);
     void slot_changeAutomaticUpdates(const bool);
     void slot_setToolBarIconSize(const int);
@@ -159,6 +160,15 @@ private slots:
     void slot_setPlayerRoomOuterDiameter(const int);
     void slot_setPlayerRoomInnerDiameter(const int);
     void slot_setPostingTimeout(const double);
+    void slot_changeControlCharacterHandling();
+    void slot_enableDarkEditor(const QString&);
+    void slot_toggleMapDeleteButton(const bool);
+    void slot_deleteMap();
+
+signals:
+    void signal_themeUpdateCompleted();
+    void signal_preferencesSaved();
+    void signal_resetMainWindowShortcutsToDefaults();
 
 private:
     void setColors();
@@ -194,6 +204,7 @@ private:
     QPointer<QDialog> mpDialogMapGlyphUsage;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
+    QMap<QString, QKeySequence*> currentShortcuts;
 
     QString mLogDirPath;
     // Needed to remember the state on construction so that we can sent the same

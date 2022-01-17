@@ -147,9 +147,9 @@ public:
     int startTempRegexTrigger(const QString&, const QString&, int expiryCount = -1);
     int startTempColorTrigger(int, int, const QString&, int expiryCount = -1);
     int startTempPromptTrigger(const QString& function, int expiryCount = -1);
-    std::pair<int, QString> startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
-    std::pair<int, QString> startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
-    std::pair<int, QString> startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
+    std::pair<int, QString> startPermRegexTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function);
+    std::pair<int, QString> startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
+    std::pair<int, QString> startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     std::pair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     std::pair<int, QString> createPermScript(const QString& name, const QString& parent, const QString& luaCode);
@@ -375,6 +375,7 @@ public:
     static int setStopWatchName(lua_State*);
     static int getStopWatchBrokenDownTime(lua_State*);
     static int createMiniConsole(lua_State*);
+    static int createScrollBox(lua_State*);
     static int createLabel(lua_State*);
     static int createLabelMainWindow(lua_State* L, const QString& labelName);
     static int createLabelUserWindow(lua_State* L, const QString& windowName, const QString& labelName);
@@ -391,6 +392,11 @@ public:
     static int resetBackgroundImage(lua_State*);
     static int setBackgroundColor(lua_State*);
     static int setLabelClickCallback(lua_State*);
+    static int setMovie(lua_State*);
+    static int setMovieStart(lua_State*);
+    static int setMovieSpeed(lua_State*);
+    static int setMovieFrame(lua_State*);
+    static int setMoviePaused(lua_State*);
     static int setCmdLineAction(lua_State*);
     static int resetCmdLineAction(lua_State*);
     static int setCmdLineStyleSheet(lua_State*);
@@ -431,8 +437,14 @@ public:
     static int tempColorTrigger(lua_State*);
     static int isAnsiFgColor(lua_State*);
     static int isAnsiBgColor(lua_State*);
-    static int stopSounds(lua_State*);
+    static int receiveMSP(lua_State*);
+    static int loadMusicFile(lua_State*);
+    static int loadSoundFile(lua_State*);
+    static int playMusicFile(lua_State*);
     static int playSoundFile(lua_State*);
+    static int stopMusic(lua_State*);
+    static int stopSounds(lua_State*);
+    static int purgeMediaCache(lua_State*);
     static void setBorderSize(lua_State*, int, int, bool resizeMudlet = true);
     static int setBorderSizes(lua_State*);
     static int setBorderTop(lua_State*);
@@ -488,8 +500,6 @@ public:
     static int setPopup(lua_State*);
     static int sendATCP(lua_State*);
     static int sendGMCP(lua_State*);
-    static int receiveMSP(lua_State*);
-    static int purgeMediaCache(lua_State*);
     static int saveMap(lua_State* L);
     static int loadMap(lua_State* L);
     static int setExitStub(lua_State* L);
@@ -618,6 +628,14 @@ public:
     static int addMouseEvent(lua_State* L);
     static int removeMouseEvent(lua_State* L);
     static int getMouseEvents(lua_State* L);
+    static int addCommandLineMenuEvent(lua_State* L);
+    static int removeCommandLineMenuEvent(lua_State* L);
+    static int deleteMap(lua_State*);
+    static int windowType(lua_State*);
+    static int getProfileStats(lua_State* L);
+    static int getBackgroundColor(lua_State* L);
+    static int getLabelStylesheet(lua_State* L);
+    static int getLabelSizeHint(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
 
@@ -644,6 +662,7 @@ private:
     void logError(std::string& e, const QString&, const QString& function);
     void logEventError(const QString& event, const QString& error);
     static int setLabelCallback(lua_State*, const QString& funcName);
+    static int movieFunc(lua_State*, const QString& funcName);
     std::pair<bool, QString> validLuaCode(const QString &code);
     std::pair<bool, QString> validateLuaCodeParam(int index);
     QByteArray encodeBytes(const char*);
@@ -666,6 +685,16 @@ private:
     void insertNativeSeparatorsFunction(lua_State* L);
     static void pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel& label);
     static std::pair<int, TAction*> getTActionFromIdOrName(lua_State*, const int, const char*);
+    static int loadMediaFileAsOrderedArguments(lua_State* L);
+    static int loadMediaFileAsTableArgument(lua_State* L);
+    static int playMusicFileAsOrderedArguments(lua_State* L);
+    static int playMusicFileAsTableArgument(lua_State* L);
+    static int playSoundFileAsOrderedArguments(lua_State* L);
+    static int playSoundFileAsTableArgument(lua_State* L);
+    static int stopMusicAsOrderedArguments(lua_State* L);
+    static int stopMusicAsTableArgument(lua_State* L);
+    static int stopSoundsAsOrderedArguments(lua_State* L);
+    static int stopSoundsAsTableArgument(lua_State* L);
 
     const int LUA_FUNCTION_MAX_ARGS = 50;
 

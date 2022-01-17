@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>718</width>
-    <height>661</height>
+    <width>777</width>
+    <height>761</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -202,7 +202,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="4">
+          <item row="1" column="0" colspan="2">
            <widget class="QLabel" name="label_languageChangeWarning">
             <property name="font">
              <font>
@@ -223,47 +223,78 @@
           <string>Miscellaneous</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_miscellaneous">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="enableDarkTheme">
-            <property name="text">
-             <string>Use a dark theme</string>
-            </property>
-            <property name="toolTip">
-             <string>&lt;p&gt;Changes your Mudlet Style to a Dark Fusion Style.&lt;/p&gt;</string>
-            </property>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="comboBox_appearance">
+            <item>
+             <property name="text">
+              <string>System setting</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Light</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Dark</string>
+             </property>
+            </item>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="3" column="0">
            <widget class="QCheckBox" name="mAlertOnNewData">
-            <property name="text">
-             <string>Notify on new data</string>
-            </property>
             <property name="toolTip">
              <string>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</string>
             </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QCheckBox" name="acceptServerGUI">
             <property name="text">
-             <string>Allow server to install script packages</string>
+             <string>Notify on new data</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
+          <item row="4" column="0">
            <widget class="QCheckBox" name="mFORCE_SAVE_ON_EXIT">
             <property name="text">
              <string>Auto save on exit</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_appearance">
+            <property name="text">
+             <string>Appearance</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
            <widget class="QCheckBox" name="acceptServerMedia">
+            <property name="toolTip">
+             <string>&lt;p&gt;This also needs GMCP to be enabled in the next group below.&lt;/p&gt;</string>
+            </property>
             <property name="text">
              <string>Allow server to download and play media</string>
             </property>
-            <property name="toolTip">
-             <string>&lt;p&gt;This also needs GMCP to be enabled in the next group below.&lt;/p&gt;</string>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QCheckBox" name="acceptServerGUI">
+            <property name="text">
+             <string>Allow server to install script packages</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QLabel" name="label_darkEditorPrompt">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Set dark theme in &lt;a href=&quot;dark-code-editor&quot;&gt;code editor&lt;/a&gt; as well?</string>
+            </property>
+            <property name="textFormat">
+             <enum>Qt::RichText</enum>
             </property>
            </widget>
           </item>
@@ -684,7 +715,7 @@
          <property name="title">
           <string>Font</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout">
+         <layout class="QGridLayout" name="gridLayout_groupBox_font">
           <item row="0" column="0">
            <widget class="QLabel" name="label_30">
             <property name="text">
@@ -967,7 +998,7 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="frameShape">
              <enum>QFrame::NoFrame</enum>
             </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_wrap_at">
+            <layout class="QHBoxLayout" name="horizontalLayout_frame_wrap_at">
              <item>
               <widget class="QLabel" name="label_wrap_at_spinBox">
                <property name="sizePolicy">
@@ -1163,6 +1194,38 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_controlCharacterHandling">
+            <property name="text">
+             <string>Display control characters as:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QComboBox" name="comboBox_controlCharacterHandling">
+            <property name="currentIndex">
+             <number>0</number>
+            </property>
+            <property name="sizeAdjustPolicy">
+             <enum>QComboBox::AdjustToMinimumContentsLengthWithIcon</enum>
+            </property>
+            <item>
+             <property name="text">
+              <string>nothing</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Unicode Control Pictures</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>CP437 (OEM Font)- like</string>
+             </property>
+            </item>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -1185,7 +1248,7 @@ you can use it but there could be issues with aligning columns of text</string>
       <attribute name="title">
        <string>Editor</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_3">
+      <layout class="QVBoxLayout" name="verticalLayout_tab_codeEditor">
        <item>
         <widget class="QGroupBox" name="groupbox_codeEditorThemeSelection">
          <property name="title">
@@ -1206,7 +1269,10 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="frameShadow">
              <enum>QFrame::Raised</enum>
             </property>
-            <layout class="QGridLayout" name="gridLayout_frame_edbeePreviewWidget">
+            <layout class="QVBoxLayout" name="verticalLayout_frame_edbeePreviewWidget">
+             <property name="spacing">
+              <number>0</number>
+             </property>
              <property name="leftMargin">
               <number>0</number>
              </property>
@@ -1219,15 +1285,10 @@ you can use it but there could be issues with aligning columns of text</string>
              <property name="bottomMargin">
               <number>0</number>
              </property>
-             <property name="spacing">
-              <number>0</number>
-             </property>
-             <item row="0" column="0">
+             <item>
               <widget class="edbee::TextEditorWidget" name="edbeePreviewWidget" native="true">
                <property name="font">
-                <font>
-                 <family>Bitstream Vera Sans Mono</family>
-                </font>
+                <font/>
                </property>
               </widget>
              </item>
@@ -1267,15 +1328,34 @@ you can use it but there could be issues with aligning columns of text</string>
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="groupBox">
+        <widget class="QGroupBox" name="groupBox_autoComplete">
          <property name="title">
           <string>Autocomplete</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_4">
+         <layout class="QVBoxLayout" name="verticalLayout_groupBox_autoComplete">
           <item>
            <widget class="QCheckBox" name="checkBox_autocompleteLuaCode">
             <property name="text">
              <string>Autocomplete Lua functions in code editor</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_advancedEditor">
+         <property name="title">
+          <string>Advanced</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_groupBox_advancedEditor">
+          <item>
+           <widget class="QCheckBox" name="checkBox_showBidi">
+            <property name="toolTip">
+             <string>Shows bidirection Unicode characters which can be used to change the meaning of source code while remaining invisible to the eye</string>
+            </property>
+            <property name="text">
+             <string>Show invisible Unicode control characters</string>
             </property>
            </widget>
           </item>
@@ -1831,6 +1911,16 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="0" column="2">
+           <widget class="QCheckBox" name="checkBox_reportMapIssuesOnScreen">
+            <property name="toolTip">
+             <string>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps.&lt;/p&gt;&lt;p&gt;Unless this option is set, Mudlet will reduce the amount of on-screen messages by hiding many texts and showing a suggestion to review the report file instead.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Report map issues on screen</string>
+            </property>
+           </widget>
+          </item>
           <item row="1" column="0">
            <widget class="QLabel" name="label_loadMap">
             <property name="text">
@@ -1848,24 +1938,41 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="2">
-           <widget class="QCheckBox" name="checkBox_reportMapIssuesOnScreen">
-            <property name="toolTip">
-             <string>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps.&lt;/p&gt;&lt;p&gt;Unless this option is set, Mudlet will reduce the amount of on-screen messages by hiding many texts and showing a suggestion to review the report file instead.&lt;/p&gt;</string>
-            </property>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_deleteMap">
             <property name="text">
-             <string>Report map issues on screen</string>
+             <string>Delete map:</string>
+            </property>
+            <property name="buddy">
+             <cstring>checkBox_enablMapDeleteButton</cstring>
             </property>
            </widget>
           </item>
-          <item row="2" column="1" colspan="2">
+          <item row="2" column="1">
+           <widget class="QPushButton" name="pushButton_deleteMap">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Press to delete map</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QCheckBox" name="checkBox_enablMapDeleteButton">
+            <property name="text">
+             <string>Enable 'Delete map' button</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1" colspan="2">
            <widget class="Line" name="line_aboveCopyMap">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
+          <item row="4" column="0">
            <widget class="QLabel" name="label_copyMap">
             <property name="text">
              <string>Copy map to other profile(s):</string>
@@ -1875,7 +1982,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
+          <item row="4" column="1">
            <widget class="QPushButton" name="pushButton_chooseProfiles">
             <property name="enabled">
              <bool>false</bool>
@@ -1888,7 +1995,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="2">
+          <item row="4" column="2">
            <widget class="QPushButton" name="pushButton_copyMap">
             <property name="enabled">
              <bool>false</bool>
@@ -1901,22 +2008,13 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="0" colspan="3">
-           <widget class="QLabel" name="label_mapFileActionResult">
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>An action above happened</string>
-            </property>
-           </widget>
-          </item>
           <item row="5" column="0">
            <widget class="QLabel" name="label_mapFileSaveFormatVersion">
             <property name="text">
              <string>Map format version:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_mapFileSaveFormatVersion</cstring>
             </property>
            </widget>
           </item>
@@ -1948,6 +2046,18 @@ you can use it but there could be issues with aligning columns of text</string>
               <string># {default version}</string>
              </property>
             </item>
+           </widget>
+          </item>
+          <item row="6" column="0" colspan="3">
+           <widget class="QLabel" name="label_mapFileActionResult">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>An action above happened</string>
+            </property>
            </widget>
           </item>
          </layout>
@@ -1986,11 +2096,11 @@ you can use it but there could be issues with aligning columns of text</string>
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="groupBox_mapOptions">
+        <widget class="QGroupBox" name="groupBox_mapViewOptions">
          <property name="title">
           <string>Map view</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_mapOptions">
+         <layout class="QGridLayout" name="gridLayout_groupBox_mapViewOptions">
           <item row="0" column="0">
            <widget class="QCheckBox" name="mMapperUseAntiAlias">
             <property name="toolTip">
@@ -2053,7 +2163,7 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="4" column="0" colspan="2">
            <widget class="QWidget" name="widget_playerRoomStyle" native="true">
-            <layout class="QGridLayout" name="gridLayout_playerRoomStyle">
+            <layout class="QGridLayout" name="gridLayout_widget_playerRoomStyle">
              <property name="leftMargin">
               <number>0</number>
              </property>
@@ -2573,7 +2683,7 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>IRC client options</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_ircOptions" rowstretch="0,0">
+         <layout class="QGridLayout" name="gridLayout_groupBox_ircOptions" rowstretch="0,0,0,0">
           <item row="0" column="0">
            <widget class="QLabel" name="lblIrcHostName">
             <property name="text">
@@ -2636,7 +2746,24 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
+          <item row="2" column="0">
+           <widget class="QLabel" name="lblIrcPassword">
+            <property name="text">
+             <string>Server password: </string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="ircPassword">
+            <property name="echoMode">
+             <enum>QLineEdit::Password</enum>
+            </property>
+            <property name="placeholderText">
+             <string>password (optional)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="2">
            <widget class="QCheckBox" name="ircHostSecure">
             <property name="toolTip">
              <string>&lt;p&gt;TLS/SSL is usually on port 6697. IRC networks often use a &lt;b&gt;+&lt;/b&gt; when listing secure ports offered.&lt;/p&gt;</string>
@@ -2742,7 +2869,7 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="toolTip">
              <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
             </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_discordUser">
+            <layout class="QHBoxLayout" name="horizontalLayout_widget_discordUser">
              <item>
               <widget class="QLabel" name="label_discordUserName">
                <property name="text">
@@ -2959,7 +3086,7 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item row="3" column="0" colspan="2">
-           <widget class="QFrame" name="notificationArea">
+           <widget class="QFrame" name="frame_notificationArea">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -2980,7 +3107,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
             <property name="font">
              <font>
-              <family>Arial Black</family>
               <pointsize>16</pointsize>
               <stylestrategy>PreferAntialias</stylestrategy>
              </font>
@@ -3003,7 +3129,7 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="midLineWidth">
              <number>3</number>
             </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_notificationArea">
+            <layout class="QHBoxLayout" name="horizontalLayout_frame_notificationArea">
              <property name="spacing">
               <number>0</number>
              </property>
@@ -3131,8 +3257,8 @@ you can use it but there could be issues with aligning columns of text</string>
                </property>
                <property name="font">
                 <font>
-                 <family>Arial</family>
                  <pointsize>8</pointsize>
+                 <stylestrategy>PreferAntialias</stylestrategy>
                 </font>
                </property>
                <property name="autoFillBackground">
@@ -3259,6 +3385,76 @@ you can use it but there could be issues with aligning columns of text</string>
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tab_shortcuts">
+      <attribute name="title">
+       <string>Shortcuts</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="vBoxLayout_tab_shortcuts">
+       <item>
+        <widget class="QGroupBox" name="groupBox_main_window_shortcuts">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="title">
+          <string>Main window shortcuts</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_groupBox_mainWindowShortcuts">
+          <property name="sizeConstraint">
+           <enum>QLayout::SetMinimumSize</enum>
+          </property>
+          <item>
+           <widget class="QLabel" name="label_shortcutsInstructions">
+            <property name="text">
+             <string>To disable shortcut input 'Esc' key.</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="frame_shortcuts">
+            <layout class="QGridLayout" name="gridLayout_groupBox_shortcuts">
+             <property name="horizontalSpacing">
+              <number>20</number>
+             </property>
+            </layout>
+           </widget>
+          </item>
+          <item alignment="Qt::AlignRight">
+           <widget class="QToolButton" name="toolButton_resetMainWindowShortcuts">
+            <property name="text">
+             <string>Reset to defaults</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_shortcuts">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
      <widget class="QWidget" name="tab_specialOptions">
       <attribute name="title">
        <string>Special Options</string>
@@ -3269,7 +3465,7 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>Special options needed for some older game drivers (needs client restart to take effect)</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_older_game_options">
+         <layout class="QGridLayout" name="gridLayout_groupBox_specialOptions">
           <item row="0" column="0">
            <widget class="QCheckBox" name="mFORCE_MCCP_OFF">
             <property name="text">
@@ -3455,14 +3651,14 @@ you can use it but there could be issues with aligning columns of text</string>
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
+               <property name="toolTip">
+                <string comment="The term in '...' refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.">&lt;p&gt;Show 'LUA OK' messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</string>
+               </property>
                <property name="text">
                 <string>Show debug messages for timers not smaller than:</string>
                </property>
                <property name="buddy">
                 <cstring>timeEdit_timerDebugOutputMinimumInterval</cstring>
-               </property>
-               <property name="toolTip">
-                <string comment="The term in '...' refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.">&lt;p&gt;Show 'LUA OK' messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</string>
                </property>
               </widget>
              </item>
@@ -3511,7 +3707,7 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item row="6" column="0">
-           <widget class="QLabel" name="label_networkPackerTimeout">
+           <widget class="QLabel" name="label_networkPacketTimeout">
             <property name="text">
              <string>Additional text wait time:</string>
             </property>
@@ -3626,9 +3822,9 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>comboBox_toolBarVisibility</tabstop>
   <tabstop>comboBox_guiLanguage</tabstop>
   <tabstop>comboBox_encoding</tabstop>
-  <tabstop>enableDarkTheme</tabstop>
   <tabstop>mAlertOnNewData</tabstop>
   <tabstop>mFORCE_SAVE_ON_EXIT</tabstop>
+  <tabstop>comboBox_appearance</tabstop>
   <tabstop>acceptServerGUI</tabstop>
   <tabstop>acceptServerMedia</tabstop>
   <tabstop>mEnableGMCP</tabstop>
@@ -3670,9 +3866,11 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_showSpacesAndTabs</tabstop>
   <tabstop>checkBox_showLineFeedsAndParagraphs</tabstop>
   <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
+  <tabstop>comboBox_controlCharacterHandling</tabstop>
   <tabstop>code_editor_theme_selection_combobox</tabstop>
   <tabstop>script_preview_combobox</tabstop>
   <tabstop>checkBox_autocompleteLuaCode</tabstop>
+  <tabstop>checkBox_showBidi</tabstop>
   <tabstop>pushButton_foreground_color</tabstop>
   <tabstop>pushButton_command_line_foreground_color</tabstop>
   <tabstop>pushButton_command_foreground_color</tabstop>
@@ -3699,9 +3897,11 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_resetColors</tabstop>
   <tabstop>pushButton_saveMap</tabstop>
   <tabstop>pushButton_loadMap</tabstop>
+  <tabstop>pushButton_deleteMap</tabstop>
   <tabstop>pushButton_chooseProfiles</tabstop>
   <tabstop>comboBox_mapFileSaveFormatVersion</tabstop>
   <tabstop>checkBox_reportMapIssuesOnScreen</tabstop>
+  <tabstop>checkBox_enablMapDeleteButton</tabstop>
   <tabstop>pushButton_copyMap</tabstop>
   <tabstop>buttonDownloadMap</tabstop>
   <tabstop>mMapperUseAntiAlias</tabstop>
@@ -3737,6 +3937,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>reset_colors_button_2</tabstop>
   <tabstop>ircHostName</tabstop>
   <tabstop>ircNick</tabstop>
+  <tabstop>ircPassword</tabstop>
   <tabstop>ircHostSecure</tabstop>
   <tabstop>ircHostPort</tabstop>
   <tabstop>ircChannels</tabstop>
@@ -3758,6 +3959,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>lineEdit_proxyPort</tabstop>
   <tabstop>lineEdit_proxyUsername</tabstop>
   <tabstop>lineEdit_proxyPassword</tabstop>
+  <tabstop>toolButton_resetMainWindowShortcuts</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
   <tabstop>mFORCE_CHARSET_NEGOTIATION_OFF</tabstop>

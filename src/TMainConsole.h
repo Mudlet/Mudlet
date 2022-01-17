@@ -26,11 +26,12 @@
 
 
 #include "TConsole.h"
-
+#include "TScrollBox.h"
 #include "pre_guard.h"
 #include <QFile>
 #include <QTextStream>
 #include <QWidget>
+#include <optional>
 #include "post_guard.h"
 
 #include <hunspell/hunspell.h>
@@ -50,12 +51,13 @@ public:
     void resetMainConsole();
 
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    TScrollBox* createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height);
     bool raiseWindow(const QString& name);
     bool lowerWindow(const QString& name);
     bool showWindow(const QString& name);
     bool hideWindow(const QString& name);
     bool printWindow(const QString& name, const QString& text);
-    void setProfileName(const QString&);
+    void setProfileName(const QString&) override;
     void selectCurrentLine(std::string&);
     std::list<int> getFgColor(std::string& buf);
     std::list<int> getBgColor(std::string& buf);
@@ -72,6 +74,8 @@ public:
     QSize getUserWindowSize(const QString& windowname) const;
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
     void setLabelStyleSheet(std::string& buf, std::string& sh);
+    std::optional<QString> getLabelStyleSheet(const QString& name) const;
+    std::optional<QSize> getLabelSizeHint(const QString& name) const;
     std::pair<bool, QString> deleteLabel(const QString&);
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape);
@@ -113,6 +117,7 @@ public:
     QMap<QString, TDockWidget*> mDockWidgetMap;
     QMap<QString, TCommandLine*> mSubCommandLineMap;
     QMap<QString, TLabel*> mLabelMap;
+    QMap<QString, TScrollBox*> mScrollBoxMap;
     TBuffer mClipboard;
     QFile mLogFile;
     QString mLogFileName;

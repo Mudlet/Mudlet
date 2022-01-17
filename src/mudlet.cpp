@@ -56,6 +56,7 @@
 #include "VarUnit.h"
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QtUiTools/quiloader.h>
 #include <QDesktopServices>
 #include <QDesktopWidget>
@@ -70,6 +71,7 @@
 #include <QNetworkDiskCache>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QSplitter>
 #include <QStyleFactory>
 #include <QTableWidget>
 #include <QTextStream>
@@ -80,6 +82,20 @@
 #include <QVariantHash>
 #include <QRandomGenerator>
 #include <zip.h>
+#include <QStyle>
+#ifdef Q_OS_LINUX
+#elif defined(Q_OS_WIN32)
+#include <QSettings>
+#endif
+
+#if defined(Q_OS_MAC)
+// wrap in namespace since `Collection` defined in these headers will clash with Boost
+namespace coreMacOS {
+#include <CoreFoundation/CoreFoundation.h>
+#include <CoreServices/CoreServices.h>
+}
+#endif
+
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
@@ -166,7 +182,7 @@ mudlet::mudlet()
 , mWindowMinimized(false)
 , mReplaySpeed(1)
 , mpMainToolBar(nullptr)
-, version(QStringLiteral("Mudlet " APP_VERSION APP_BUILD))
+, version(qsl("Mudlet " APP_VERSION APP_BUILD))
 , mpCurrentActiveHost(nullptr)
 , mAutolog(false)
 , mpTabBar(nullptr)
@@ -230,6 +246,7 @@ mudlet::mudlet()
 , mpActionModuleManager(nullptr)
 , mpActionPackageExporter(nullptr)
 , mpActionReconnect(nullptr)
+, mpActionCloseProfile(nullptr)
 , mpActionScripts(nullptr)
 , mpActionTimers(nullptr)
 , mpActionTriggers(nullptr)
@@ -240,6 +257,8 @@ mudlet::mudlet()
 , mHunspell_sharedDictionary(nullptr)
 , mMultiView(false)
 {
+    firstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
+
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
     readEarlySettings(*mpSettings);
@@ -250,22 +269,23 @@ mudlet::mudlet()
     }
 
     qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
+    // We need to record this before we clobber it with our own substitute...
     mDefaultStyle = qApp->style()->objectName();
+    // ... which is applied here:
+    setAppearance(mAppearance, true);
 
-    scanForMudletTranslations(QStringLiteral(":/lang"));
+    scanForMudletTranslations(qsl(":/lang"));
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
-    if (mDarkTheme) {
-        setDarkTheme(mDarkTheme);
-    }
+
     if (QStringList{"windowsvista", "macintosh"}.contains(mDefaultStyle, Qt::CaseInsensitive)) {
         qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - QPushButton styling fix applied!";
-        mBG_ONLY_STYLESHEET = QStringLiteral("QPushButton {background-color: %1; border: 1px solid #8f8f91;}");
-        mTEXT_ON_BG_STYLESHEET = QStringLiteral("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}");
+        mBG_ONLY_STYLESHEET = qsl("QPushButton {background-color: %1; border: 1px solid #8f8f91;}");
+        mTEXT_ON_BG_STYLESHEET = qsl("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}");
     } else {
         qDebug().nospace().noquote() << "mudlet::mudlet() INFO - '" << mDefaultStyle << "' has been detected as the style factory in use - no styling fixes applied.";
-        mBG_ONLY_STYLESHEET = QStringLiteral("QPushButton {background-color: %1;}");
-        mTEXT_ON_BG_STYLESHEET = QStringLiteral("QPushButton {color: %1; background-color: %2;}");
+        mBG_ONLY_STYLESHEET = qsl("QPushButton {background-color: %1;}");
+        mTEXT_ON_BG_STYLESHEET = qsl("QPushButton {color: %1; background-color: %2;}");
     }
 
     setupUi(this);
@@ -281,14 +301,14 @@ mudlet::mudlet()
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(version);
     if (scmIsReleaseVersion) {
-        setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet.png")));
+        setWindowIcon(QIcon(qsl(":/icons/mudlet.png")));
     } else if (scmIsPublicTestVersion) {
-        setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_ptb_256px.png")));
+        setWindowIcon(QIcon(qsl(":/icons/mudlet_ptb_256px.png")));
     } else { // scmIsDevelopmentVersion
-        setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_dev_256px.png")));
+        setWindowIcon(QIcon(qsl(":/icons/mudlet_dev_256px.png")));
     }
     mpMainToolBar = new QToolBar(this);
-    mpMainToolBar->setObjectName(QStringLiteral("mpMainToolBar"));
+    mpMainToolBar->setObjectName(qsl("mpMainToolBar"));
     mpMainToolBar->setWindowTitle(tr("Main Toolbar"));
     addToolBar(mpMainToolBar);
     mpMainToolBar->setMovable(false);
@@ -315,159 +335,169 @@ mudlet::mudlet()
     mpWidget_profileContainer->setSizePolicy(sizePolicy);
     mpWidget_profileContainer->setFocusPolicy(Qt::NoFocus);
     mpWidget_profileContainer->setAutoFillBackground(true);
+
     layoutTopLevel->addWidget(mpWidget_profileContainer);
     mpHBoxLayout_profileContainer = new QHBoxLayout(mpWidget_profileContainer);
     mpHBoxLayout_profileContainer->setContentsMargins(0, 0, 0, 0);
 
+    mpSplitter_profileContainer = new QSplitter(Qt::Horizontal, mpWidget_profileContainer);
+    mpSplitter_profileContainer->setContentsMargins(0, 0, 0, 0);
+    mpSplitter_profileContainer->setChildrenCollapsible(false);
 
-    QFile file_autolog(getMudletPath(mainDataItemPath, QStringLiteral("autolog")));
+    mpHBoxLayout_profileContainer->addWidget(mpSplitter_profileContainer);
+
+    QFile file_autolog(getMudletPath(mainDataItemPath, qsl("autolog")));
     if (file_autolog.exists()) {
         mAutolog = true;
     } else {
         mAutolog = false;
     }
 
-    firstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
-
     mpButtonConnect = new QToolButton(this);
     mpButtonConnect->setText(tr("Connect"));
-    mpButtonConnect->setObjectName(QStringLiteral("connect"));
+    mpButtonConnect->setObjectName(qsl("connect"));
     mpButtonConnect->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonConnect->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonConnect->setAutoRaise(true);
     mpMainToolBar->addWidget(mpButtonConnect);
 
     mpActionConnect = new QAction(tr("Connect"), this);
-    mpActionConnect->setIcon(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")));
+    mpActionConnect->setIcon(QIcon(qsl(":/icons/preferences-web-browser-cache.png")));
     mpActionConnect->setIconText(tr("Connect"));
-    mpActionConnect->setObjectName(QStringLiteral("connect"));
+    mpActionConnect->setObjectName(qsl("connect"));
 
     mpActionDisconnect = new QAction(tr("Disconnect"), this);
-    mpActionDisconnect->setObjectName(QStringLiteral("disconnect"));
+    mpActionDisconnect->setObjectName(qsl("disconnect"));
+
+    mpActionCloseProfile = new QAction(tr("Close profile"), this);
+    mpActionCloseProfile->setIcon(QIcon(qsl(":/icons/profile-close.png")));
+    mpActionCloseProfile->setIconText(tr("Close profile"));
+    mpActionCloseProfile->setObjectName(qsl("close_profile"));
 
     mpButtonConnect->addAction(mpActionConnect);
     mpButtonConnect->addAction(mpActionDisconnect);
+    mpButtonConnect->addAction(mpActionCloseProfile);
     mpButtonConnect->setDefaultAction(mpActionConnect);
 
-    mpActionTriggers = new QAction(QIcon(QStringLiteral(":/icons/tools-wizard.png")), tr("Triggers"), this);
-    mpActionTriggers->setToolTip(tr("Show and edit triggers"));
+    mpActionTriggers = new QAction(QIcon(qsl(":/icons/tools-wizard.png")), tr("Triggers"), this);
+    mpActionTriggers->setToolTip(utils::richText(tr("Show and edit triggers")));
     mpMainToolBar->addAction(mpActionTriggers);
-    mpActionTriggers->setObjectName(QStringLiteral("triggers_action"));
+    mpActionTriggers->setObjectName(qsl("triggers_action"));
     // add name to the action's widget in the toolbar, which doesn't have one by default
     // see https://stackoverflow.com/a/32460562/72944
     mpMainToolBar->widgetForAction(mpActionTriggers)->setObjectName(mpActionTriggers->objectName());
 
-    mpActionAliases = new QAction(QIcon(QStringLiteral(":/icons/system-users.png")), tr("Aliases"), this);
-    mpActionAliases->setToolTip(tr("Show and edit aliases"));
+    mpActionAliases = new QAction(QIcon(qsl(":/icons/system-users.png")), tr("Aliases"), this);
+    mpActionAliases->setToolTip(utils::richText(tr("Show and edit aliases")));
     mpMainToolBar->addAction(mpActionAliases);
-    mpActionAliases->setObjectName(QStringLiteral("aliases_action"));
+    mpActionAliases->setObjectName(qsl("aliases_action"));
     mpMainToolBar->widgetForAction(mpActionAliases)->setObjectName(mpActionAliases->objectName());
 
-    mpActionTimers = new QAction(QIcon(QStringLiteral(":/icons/chronometer.png")), tr("Timers"), this);
-    mpActionTimers->setToolTip(tr("Show and edit timers"));
+    mpActionTimers = new QAction(QIcon(qsl(":/icons/chronometer.png")), tr("Timers"), this);
+    mpActionTimers->setToolTip(utils::richText(tr("Show and edit timers")));
     mpMainToolBar->addAction(mpActionTimers);
-    mpActionTimers->setObjectName(QStringLiteral("timers_action"));
+    mpActionTimers->setObjectName(qsl("timers_action"));
     mpMainToolBar->widgetForAction(mpActionTimers)->setObjectName(mpActionTimers->objectName());
 
-    mpActionButtons = new QAction(QIcon(QStringLiteral(":/icons/bookmarks.png")), tr("Buttons"), this);
-    mpActionButtons->setToolTip(tr("Show and edit easy buttons"));
+    mpActionButtons = new QAction(QIcon(qsl(":/icons/bookmarks.png")), tr("Buttons"), this);
+    mpActionButtons->setToolTip(utils::richText(tr("Show and edit easy buttons")));
     mpMainToolBar->addAction(mpActionButtons);
-    mpActionButtons->setObjectName(QStringLiteral("buttons_action"));
+    mpActionButtons->setObjectName(qsl("buttons_action"));
     mpMainToolBar->widgetForAction(mpActionButtons)->setObjectName(mpActionButtons->objectName());
 
-    mpActionScripts = new QAction(QIcon(QStringLiteral(":/icons/document-properties.png")), tr("Scripts"), this);
-    mpActionScripts->setToolTip(tr("Show and edit scripts"));
+    mpActionScripts = new QAction(QIcon(qsl(":/icons/document-properties.png")), tr("Scripts"), this);
+    mpActionScripts->setToolTip(utils::richText(tr("Show and edit scripts")));
     mpMainToolBar->addAction(mpActionScripts);
-    mpActionScripts->setObjectName(QStringLiteral("scripts_action"));
+    mpActionScripts->setObjectName(qsl("scripts_action"));
     mpMainToolBar->widgetForAction(mpActionScripts)->setObjectName(mpActionScripts->objectName());
 
-    mpActionKeys = new QAction(QIcon(QStringLiteral(":/icons/preferences-desktop-keyboard.png")), tr("Keys"), this);
-    mpActionKeys->setToolTip(tr("Show and edit keys"));
+    mpActionKeys = new QAction(QIcon(qsl(":/icons/preferences-desktop-keyboard.png")), tr("Keys"), this);
+    mpActionKeys->setToolTip(utils::richText(tr("Show and edit keys")));
     mpMainToolBar->addAction(mpActionKeys);
-    mpActionKeys->setObjectName(QStringLiteral("keys_action"));
+    mpActionKeys->setObjectName(qsl("keys_action"));
     mpMainToolBar->widgetForAction(mpActionKeys)->setObjectName(mpActionKeys->objectName());
 
-    mpActionVariables = new QAction(QIcon(QStringLiteral(":/icons/variables.png")), tr("Variables"), this);
-    mpActionVariables->setToolTip(tr("Show and edit Lua variables"));
+    mpActionVariables = new QAction(QIcon(qsl(":/icons/variables.png")), tr("Variables"), this);
+    mpActionVariables->setToolTip(utils::richText(tr("Show and edit Lua variables")));
     mpMainToolBar->addAction(mpActionVariables);
-    mpActionVariables->setObjectName(QStringLiteral("variables_action"));
+    mpActionVariables->setObjectName(qsl("variables_action"));
     mpMainToolBar->widgetForAction(mpActionVariables)->setObjectName(mpActionVariables->objectName());
 
     mpButtonDiscord = new QToolButton(this);
-    mpButtonDiscord->setText(QStringLiteral("Discord"));
-    mpButtonDiscord->setObjectName(QStringLiteral("discord"));
+    mpButtonDiscord->setText(qsl("Discord"));
+    mpButtonDiscord->setObjectName(qsl("discord"));
     mpButtonDiscord->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonDiscord->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonDiscord->setAutoRaise(true);
     mpMainToolBar->addWidget(mpButtonDiscord);
 
     mpActionDiscord = new QAction(tr("Open Discord"), this);
-    mpActionDiscord->setIcon(QIcon(QStringLiteral(":/icons/Discord-Logo-Color.png")));
-    mpActionDiscord->setIconText(QStringLiteral("Discord"));
-    mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
+    mpActionDiscord->setIcon(QIcon(qsl(":/icons/Discord-Logo-Color.png")));
+    mpActionDiscord->setIconText(qsl("Discord"));
+    mpActionDiscord->setObjectName(qsl("openDiscord"));
 
-    mpActionMudletDiscord = new QAction(QIcon(QStringLiteral(":/icons/mudlet_discord.png")), tr("Mudlet chat"), this);
-    mpActionMudletDiscord->setToolTip(tr("Open a link to the Mudlet server on Discord"));
+    mpActionMudletDiscord = new QAction(QIcon(qsl(":/icons/mudlet_discord.png")), tr("Mudlet chat"), this);
+    mpActionMudletDiscord->setToolTip(utils::richText(tr("Open a link to the Mudlet server on Discord")));
     mpMainToolBar->addAction(mpActionMudletDiscord);
-    mpActionMudletDiscord->setObjectName(QStringLiteral("mudlet_discord"));
+    mpActionMudletDiscord->setObjectName(qsl("mudlet_discord"));
     mpMainToolBar->widgetForAction(mpActionMudletDiscord)->setObjectName(mpActionMudletDiscord->objectName());
     mpActionMudletDiscord->setVisible(false); // Mudlet Discord becomes visible if game has custom invite
 
     mpActionIRC = new QAction(tr("Open IRC"), this);
-    mpActionIRC->setIcon(QIcon(QStringLiteral(":/icons/internet-telephony.png")));
-    mpActionIRC->setObjectName(QStringLiteral("openIRC"));
+    mpActionIRC->setIcon(QIcon(qsl(":/icons/internet-telephony.png")));
+    mpActionIRC->setObjectName(qsl("openIRC"));
 
     mpButtonDiscord->addAction(mpActionDiscord);
     mpButtonDiscord->addAction(mpActionIRC);
     mpButtonDiscord->setDefaultAction(mpActionDiscord);
 
-    mpActionMapper = new QAction(QIcon(QStringLiteral(":/icons/applications-internet.png")), tr("Map"), this);
-    mpActionMapper->setToolTip(tr("Show/hide the map"));
+    mpActionMapper = new QAction(QIcon(qsl(":/icons/applications-internet.png")), tr("Map"), this);
+    mpActionMapper->setToolTip(utils::richText(tr("Show/hide the map")));
     mpMainToolBar->addAction(mpActionMapper);
-    mpActionMapper->setObjectName(QStringLiteral("map_action"));
+    mpActionMapper->setObjectName(qsl("map_action"));
     mpMainToolBar->widgetForAction(mpActionMapper)->setObjectName(mpActionMapper->objectName());
 
-    mpActionHelp = new QAction(QIcon(QStringLiteral(":/icons/help-hint.png")), tr("Manual"), this);
-    mpActionHelp->setToolTip(tr("Browse reference material and documentation"));
+    mpActionHelp = new QAction(QIcon(qsl(":/icons/help-hint.png")), tr("Manual"), this);
+    mpActionHelp->setToolTip(utils::richText(tr("Browse reference material and documentation")));
     mpMainToolBar->addAction(mpActionHelp);
-    mpActionHelp->setObjectName(QStringLiteral("manual_action"));
+    mpActionHelp->setObjectName(qsl("manual_action"));
     mpMainToolBar->widgetForAction(mpActionHelp)->setObjectName(mpActionHelp->objectName());
 
-    mpActionOptions = new QAction(QIcon(QStringLiteral(":/icons/configure.png")), tr("Settings"), this);
-    mpActionOptions->setToolTip(tr("See and edit profile preferences"));
+    mpActionOptions = new QAction(QIcon(qsl(":/icons/configure.png")), tr("Settings"), this);
+    mpActionOptions->setToolTip(utils::richText(tr("See and edit profile preferences")));
     mpMainToolBar->addAction(mpActionOptions);
-    mpActionOptions->setObjectName(QStringLiteral("settings_action"));
+    mpActionOptions->setObjectName(qsl("settings_action"));
     mpMainToolBar->widgetForAction(mpActionOptions)->setObjectName(mpActionOptions->objectName());
 
     // TODO: Consider changing to ":/icons/mudlet_notepad.png" as per the icon
     // now used for the window when the visual change to the toolbar caused can
     // be managed
-    mpActionNotes = new QAction(QIcon(QStringLiteral(":/icons/applications-accessories.png")), tr("Notepad"), this);
-    mpActionNotes->setToolTip(tr("Open a notepad that you can store your notes in"));
+    mpActionNotes = new QAction(QIcon(qsl(":/icons/applications-accessories.png")), tr("Notepad"), this);
+    mpActionNotes->setToolTip(utils::richText(tr("Open a notepad that you can store your notes in")));
     mpMainToolBar->addAction(mpActionNotes);
-    mpActionNotes->setObjectName(QStringLiteral("notepad_action"));
+    mpActionNotes->setObjectName(qsl("notepad_action"));
     mpMainToolBar->widgetForAction(mpActionNotes)->setObjectName(mpActionNotes->objectName());
 
     mpButtonPackageManagers = new QToolButton(this);
     mpButtonPackageManagers->setText(tr("Packages (exp.)"));
-    mpButtonPackageManagers->setObjectName(QStringLiteral("package_manager"));
+    mpButtonPackageManagers->setObjectName(qsl("package_manager"));
     mpButtonPackageManagers->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonPackageManagers->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonPackageManagers->setAutoRaise(true);
     mpMainToolBar->addWidget(mpButtonPackageManagers);
 
     mpActionPackageManager = new QAction(tr("Package Manager (experimental)"), this);
-    mpActionPackageManager->setIcon(QIcon(QStringLiteral(":/icons/package-manager.png")));
+    mpActionPackageManager->setIcon(QIcon(qsl(":/icons/package-manager.png")));
     mpActionPackageManager->setIconText(tr("Packages (exp.)", "exp. stands for experimental; shortened so it doesn't make buttons huge in the main interface"));
-    mpActionPackageManager->setObjectName(QStringLiteral("package_manager"));
+    mpActionPackageManager->setObjectName(qsl("package_manager"));
 
     mpActionModuleManager = new QAction(tr("Module Manager"), this);
-    mpActionModuleManager->setIcon(QIcon(QStringLiteral(":/icons/module-manager.png")));
-    mpActionModuleManager->setObjectName(QStringLiteral("module_manager"));
+    mpActionModuleManager->setIcon(QIcon(qsl(":/icons/module-manager.png")));
+    mpActionModuleManager->setObjectName(qsl("module_manager"));
 
     mpActionPackageExporter = new QAction(tr("Package Exporter"), this);
-    mpActionPackageExporter->setIcon(QIcon(QStringLiteral(":/icons/package-exporter.png")));
-    mpActionPackageExporter->setObjectName(QStringLiteral("package_exporter"));
+    mpActionPackageExporter->setIcon(QIcon(qsl(":/icons/package-exporter.png")));
+    mpActionPackageExporter->setObjectName(qsl("package_exporter"));
 
     mpButtonPackageManagers->addAction(mpActionPackageManager);
     mpButtonPackageManagers->addAction(mpActionModuleManager);
@@ -475,26 +505,26 @@ mudlet::mudlet()
     mpButtonPackageManagers->setDefaultAction(mpActionPackageManager);
 
 
-    mpActionReplay = new QAction(QIcon(QStringLiteral(":/icons/media-optical.png")), tr("Replay"), this);
-    mpActionReplay->setObjectName(QStringLiteral("replay_action"));
+    mpActionReplay = new QAction(QIcon(qsl(":/icons/media-optical.png")), tr("Replay"), this);
+    mpActionReplay->setObjectName(qsl("replay_action"));
     mpMainToolBar->addAction(mpActionReplay);
     mpMainToolBar->widgetForAction(mpActionReplay)->setObjectName(mpActionReplay->objectName());
 
-    mpActionReconnect = new QAction(QIcon(QStringLiteral(":/icons/system-restart.png")), tr("Reconnect"), this);
-    mpActionReconnect->setToolTip(tr("Disconnects you from the game and connects once again"));
+    mpActionReconnect = new QAction(QIcon(qsl(":/icons/system-restart.png")), tr("Reconnect"), this);
+    mpActionReconnect->setToolTip(utils::richText(tr("Disconnects you from the game and connects once again")));
     mpMainToolBar->addAction(mpActionReconnect);
-    mpActionReconnect->setObjectName(QStringLiteral("reconnect_action"));
+    mpActionReconnect->setObjectName(qsl("reconnect_action"));
     mpMainToolBar->widgetForAction(mpActionReconnect)->setObjectName(mpActionReconnect->objectName());
 
-    mpActionMultiView = new QAction(QIcon(QStringLiteral(":/icons/view-split-left-right.png")), tr("MultiView"), this);
-    mpActionMultiView->setToolTip(tr("<p>Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.</p>",
-                                     // Intentional comment to separate arguments
-                                     "Same text is used in 2 places."));
+    mpActionMultiView = new QAction(QIcon(qsl(":/icons/view-split-left-right.png")), tr("MultiView"), this);
+    mpActionMultiView->setToolTip(utils::richText(tr("Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.",
+                                                 // Intentional comment to separate arguments
+                                                 "Same text is used in 2 places.")));
     mpMainToolBar->addAction(mpActionMultiView);
     mpActionMultiView->setCheckable(true);
     mpActionMultiView->setChecked(false);
     mpActionMultiView->setEnabled(false);
-    mpActionMultiView->setObjectName(QStringLiteral("multiview_action"));
+    mpActionMultiView->setObjectName(qsl("multiview_action"));
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
 #if defined(INCLUDE_UPDATER)
@@ -502,35 +532,35 @@ mudlet::mudlet()
         mpActionReportIssue = new QAction(tr("Report issue"), this);
         QStringList issueReportIcons {"face-uncertain.png", "face-surprise.png", "face-smile.png", "face-sad.png", "face-plain.png"};
         auto randomIcon = QRandomGenerator::global()->bounded(issueReportIcons.size());
-        mpActionReportIssue->setIcon(QIcon(QStringLiteral(":/icons/%1").arg(issueReportIcons.at(randomIcon))));
-        mpActionReportIssue->setToolTip(tr("The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!"));
+        mpActionReportIssue->setIcon(QIcon(qsl(":/icons/%1").arg(issueReportIcons.at(randomIcon))));
+        mpActionReportIssue->setToolTip(utils::richText(tr("The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!")));
         mpMainToolBar->addAction(mpActionReportIssue);
-        mpActionReportIssue->setObjectName(QStringLiteral("reportissue_action"));
+        mpActionReportIssue->setObjectName(qsl("reportissue_action"));
         mpMainToolBar->widgetForAction(mpActionReportIssue)->setObjectName(mpActionReportIssue->objectName());
     }
 #endif
 
-    mpActionAbout = new QAction(QIcon(QStringLiteral(":/icons/mudlet_information.png")), tr("About"), this);
-    mpActionAbout->setToolTip(tr("<p>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</p>",
-                                 // Intentional comment
-                                 "Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation)."));
+    mpActionAbout = new QAction(QIcon(qsl(":/icons/mudlet_information.png")), tr("About"), this);
+    mpActionAbout->setToolTip(utils::richText(tr("Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.",
+                                                 // Intentional comment
+                                                 "Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).")));
     mpMainToolBar->addAction(mpActionAbout);
-    mpActionAbout->setObjectName(QStringLiteral("about_action"));
+    mpActionAbout->setObjectName(qsl("about_action"));
     mpMainToolBar->widgetForAction(mpActionAbout)->setObjectName(mpActionAbout->objectName());
 
     disableToolbarButtons();
 
     if (mEnableFullScreenMode) {
         showFullScreen();
-        QAction* actionFullScreeniew = new QAction(QIcon(QStringLiteral(":/icons/dialog-cancel.png")), tr("Toggle Full Screen View"), this);
+        QAction* actionFullScreeniew = new QAction(QIcon(qsl(":/icons/dialog-cancel.png")), tr("Toggle Full Screen View"), this);
         actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
         mpMainToolBar->addAction(actionFullScreeniew);
-        actionFullScreeniew->setObjectName(QStringLiteral("fullscreen_action"));
+        actionFullScreeniew->setObjectName(qsl("fullscreen_action"));
         mpMainToolBar->widgetForAction(actionFullScreeniew)->setObjectName(actionFullScreeniew->objectName());
         connect(actionFullScreeniew, &QAction::triggered, this, &mudlet::toggleFullScreenView);
     }
 
-    QFont mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
+    QFont mainFont = QFont(qsl("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     mpWidget_profileContainer->setFont(mainFont);
     mpWidget_profileContainer->show();
 
@@ -547,6 +577,7 @@ mudlet::mudlet()
     connect(mpActionMultiView.data(), &QAction::triggered, this, &mudlet::slot_multi_view);
     connect(mpActionReconnect.data(), &QAction::triggered, this, &mudlet::slot_reconnect);
     connect(mpActionDisconnect.data(), &QAction::triggered, this, &mudlet::slot_disconnect);
+    connect(mpActionCloseProfile.data(), &QAction::triggered, this, &mudlet::slot_close_current_profile);
     connect(mpActionReplay.data(), &QAction::triggered, this, &mudlet::slot_replay);
     connect(mpActionNotes.data(), &QAction::triggered, this, &mudlet::slot_notes);
     connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_mapper);
@@ -557,12 +588,10 @@ mudlet::mudlet()
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_package_exporter);
 
-    // PLACEMARKER: Save for later restoration (1 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
-    // QAction* mactionCloseProfile = new QAction(tr("Close"), this);
-
     connect(dactionConnect, &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
     connect(dactionReconnect, &QAction::triggered, this, &mudlet::slot_reconnect);
     connect(dactionDisconnect, &QAction::triggered, this, &mudlet::slot_disconnect);
+    connect(dactionCloseProfile, &QAction::triggered, this, &mudlet::slot_close_current_profile);
     connect(dactionNotepad, &QAction::triggered, this, &mudlet::slot_notes);
     connect(dactionReplay, &QAction::triggered, this, &mudlet::slot_replay);
 
@@ -631,6 +660,7 @@ mudlet::mudlet()
     connectKeySequence = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_C);
     disconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_D);
     reconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_R);
+    closeProfileKeySequence = QKeySequence(Qt::CTRL | Qt::Key_W);
 #else
     triggersKeySequence = QKeySequence(Qt::ALT | Qt::Key_E);
     showMapKeySequence = QKeySequence(Qt::ALT | Qt::Key_M);
@@ -643,8 +673,28 @@ mudlet::mudlet()
     connectKeySequence = QKeySequence(Qt::ALT | Qt::Key_C);
     disconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_D);
     reconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_R);
+    closeProfileKeySequence = QKeySequence(Qt::ALT | Qt::Key_W);
 #endif
     connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_update_shortcuts);
+    connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assign_shortcuts_from_profile);
+    connect(this, &mudlet::signal_profileActivated, this, &mudlet::slot_assign_shortcuts_from_profile);
+    connect(this, &mudlet::signal_tabChanged, this, [=]() {
+        slot_assign_shortcuts_from_profile(getActiveHost());
+    });
+
+    mShortcutsManager = new ShortcutsManager();
+    mShortcutsManager->registerShortcut(qsl("Script editor"), tr("Script editor"), &triggersKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Show Map"), tr("Show Map"), &showMapKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Compact input line"), tr("Compact input line"), &inputLineKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Preferences"), tr("Preferences"), &optionsKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Notepad"), tr("Notepad"), &notepadKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Package manager"), tr("Package manager"), &packagesKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Module manager"), tr("Module manager"), &modulesKeySequence);
+    mShortcutsManager->registerShortcut(qsl("MultiView"), tr("MultiView"), &multiViewKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Play"), tr("Play"), &connectKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Disconnect"), tr("Disconnect"), &disconnectKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Reconnect"), tr("Reconnect"), &reconnectKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Close profile"), tr("Close profile"), &closeProfileKeySequence);
 
     mpSettings = getQSettings();
     readLateSettings(*mpSettings);
@@ -715,7 +765,7 @@ void mudlet::initEdbee()
     //QFile file(fileName);
     //if( file.exists() && file.open(QIODevice::ReadOnly) ) {
 
-    loadEdbeeTheme(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
+    loadEdbeeTheme(qsl("Mudlet"), qsl("Mudlet.tmTheme"));
 }
 
 void mudlet::loadMaps()
@@ -731,263 +781,263 @@ void mudlet::loadMaps()
     // Initially populated from the dictionaries provided within the Debian
     // GNU/Linux distribution:
     //: In the translation source texts the language is the leading term, with, generally, the (primary) country(ies) in the brackets, with a trailing language disabiguation after a '-' Chinese is an exception!
-    mDictionaryLanguageCodeMap = {{QStringLiteral("af"), tr("Afrikaans")},
-                                  {QStringLiteral("af_za"), tr("Afrikaans (South Africa)")},
-                                  {QStringLiteral("an"), tr("Aragonese")},
-                                  {QStringLiteral("an_es"), tr("Aragonese (Spain)")},
-                                  {QStringLiteral("ar"), tr("Arabic")},
-                                  {QStringLiteral("ar_ae"), tr("Arabic (United Arab Emirates)")},
-                                  {QStringLiteral("ar_bh"), tr("Arabic (Bahrain)")},
-                                  {QStringLiteral("ar_dz"), tr("Arabic (Algeria)")},
-                                  {QStringLiteral("ar_eg"), tr("Arabic (Egypt)")},
-                                  {QStringLiteral("ar_in"), tr("Arabic (India)")},
-                                  {QStringLiteral("ar_iq"), tr("Arabic (Iraq)")},
-                                  {QStringLiteral("ar_jo"), tr("Arabic (Jordan)")},
-                                  {QStringLiteral("ar_kw"), tr("Arabic (Kuwait)")},
-                                  {QStringLiteral("ar_lb"), tr("Arabic (Lebanon)")},
-                                  {QStringLiteral("ar_ly"), tr("Arabic (Libya)")},
-                                  {QStringLiteral("ar_ma"), tr("Arabic (Morocco)")},
-                                  {QStringLiteral("ar_om"), tr("Arabic (Oman)")},
-                                  {QStringLiteral("ar_qa"), tr("Arabic (Qatar)")},
-                                  {QStringLiteral("ar_sa"), tr("Arabic (Saudi Arabia)")},
-                                  {QStringLiteral("ar_sd"), tr("Arabic (Sudan)")},
-                                  {QStringLiteral("ar_sy"), tr("Arabic (Syria)")},
-                                  {QStringLiteral("ar_tn"), tr("Arabic (Tunisia)")},
-                                  {QStringLiteral("ar_ye"), tr("Arabic (Yemen)")},
-                                  {QStringLiteral("be"), tr("Belarusian")},
-                                  {QStringLiteral("be_by"), tr("Belarusian (Belarus)")},
-                                  {QStringLiteral("be_ru"), tr("Belarusian (Russia)")},
-                                  {QStringLiteral("bg"), tr("Bulgarian")},
-                                  {QStringLiteral("bg_bg"), tr("Bulgarian (Bulgaria)")},
-                                  {QStringLiteral("bn"), tr("Bangla")},
-                                  {QStringLiteral("bn_bd"), tr("Bangla (Bangladesh)")},
-                                  {QStringLiteral("bn_in"), tr("Bangla (India)")},
-                                  {QStringLiteral("bo"), tr("Tibetan")},
-                                  {QStringLiteral("bo_cn"), tr("Tibetan (China)")},
-                                  {QStringLiteral("bo_in"), tr("Tibetan (India)")},
-                                  {QStringLiteral("br"), tr("Breton")},
-                                  {QStringLiteral("br_fr"), tr("Breton (France)")},
-                                  {QStringLiteral("bs"), tr("Bosnian")},
-                                  {QStringLiteral("bs_ba"), tr("Bosnian (Bosnia/Herzegovina)")},
-                                  {QStringLiteral("bs_ba_cyrl"), tr("Bosnian (Bosnia/Herzegovina - Cyrillic alphabet)")},
-                                  {QStringLiteral("ca"), tr("Catalan")},
-                                  {QStringLiteral("ca_es"), tr("Catalan (Spain)")},
-                                  {QStringLiteral("ca_es_valencia"), tr("Catalan (Spain - Valencian)")},
-                                  {QStringLiteral("ckb"), tr("Central Kurdish")},
-                                  {QStringLiteral("ckb_iq"), tr("Central Kurdish (Iraq)")},
-                                  {QStringLiteral("cs"), tr("Czech")},
-                                  {QStringLiteral("cs_cz"), tr("Czech (Czechia)")},
-                                  {QStringLiteral("da"), tr("Danish")},
-                                  {QStringLiteral("da_dk"), tr("Danish (Denmark)")},
-                                  {QStringLiteral("de"), tr("German")},
-                                  {QStringLiteral("de_at"), tr("German (Austria)")},
-                                  {QStringLiteral("de_at_frami"), tr("German (Austria, revised by F M Baumann)")},
-                                  {QStringLiteral("de_be"), tr("German (Belgium)")},
-                                  {QStringLiteral("de_ch"), tr("German (Switzerland)")},
-                                  {QStringLiteral("de_ch_frami"), tr("German (Switzerland, revised by F M Baumann)")},
-                                  {QStringLiteral("de_de"), tr("German (Germany/Belgium/Luxemburg)")},
-                                  {QStringLiteral("de_de_frami"), tr("German (Germany/Belgium/Luxemburg, revised by F M Baumann)")},
-                                  {QStringLiteral("de_li"), tr("German (Liechtenstein)")},
-                                  {QStringLiteral("de_lu"), tr("German (Luxembourg)")},
-                                  {QStringLiteral("dz"), tr("Dzongkha")},
-                                  {QStringLiteral("dz_bt"), tr("Dzongkha (Bhutan)")},
-                                  {QStringLiteral("el"), tr("Greek")},
-                                  {QStringLiteral("el_gr"), tr("Greek (Greece)")},
-                                  {QStringLiteral("en"), tr("English")},
-                                  {QStringLiteral("en_ag"), tr("English (Antigua/Barbuda)")},
-                                  {QStringLiteral("en_au"), tr("English (Australia)")},
-                                  {QStringLiteral("en_au_large"), tr("English (Australia, Large)", "This dictionary contains larger vocabulary.")},
-                                  {QStringLiteral("en_bs"), tr("English (Bahamas)")},
-                                  {QStringLiteral("en_bw"), tr("English (Botswana)")},
-                                  {QStringLiteral("en_bz"), tr("English (Belize)")},
-                                  {QStringLiteral("en_ca"), tr("English (Canada)")},
-                                  {QStringLiteral("en_ca_large"), tr("English (Canada, Large)", "This dictionary contains larger vocabulary.")},
-                                  {QStringLiteral("en_dk"), tr("English (Denmark)")},
-                                  {QStringLiteral("en_gb"), tr("English (United Kingdom)")},
-                                  {QStringLiteral("en_gb_large"), tr("English (United Kingdom, Large)", "This dictionary contains larger vocabulary.")},
-                                  {QStringLiteral("en_gb_ise"), tr("English (United Kingdom - 'ise' not 'ize')", "This dictionary prefers the British 'ise' form over the American 'ize' one.")},
-                                  {QStringLiteral("en_gh"), tr("English (Ghana)")},
-                                  {QStringLiteral("en_hk"), tr("English (Hong Kong SAR China)")},
-                                  {QStringLiteral("en_ie"), tr("English (Ireland)")},
-                                  {QStringLiteral("en_in"), tr("English (India)")},
-                                  {QStringLiteral("en_jm"), tr("English (Jamaica)")},
-                                  {QStringLiteral("en_na"), tr("English (Namibia)")},
-                                  {QStringLiteral("en_ng"), tr("English (Nigeria)")},
-                                  {QStringLiteral("en_nz"), tr("English (New Zealand)")},
-                                  {QStringLiteral("en_ph"), tr("English (Philippines)")},
-                                  {QStringLiteral("en_sg"), tr("English (Singapore)")},
-                                  {QStringLiteral("en_tt"), tr("English (Trinidad/Tobago)")},
-                                  {QStringLiteral("en_us"), tr("English (United States)")},
-                                  {QStringLiteral("en_us_large"), tr("English (United States, Large)", "This dictionary contains larger vocabulary.")},
-                                  {QStringLiteral("en_za"), tr("English (South Africa)")},
-                                  {QStringLiteral("en_zw"), tr("English (Zimbabwe)")},
-                                  {QStringLiteral("es"), tr("Spanish")},
-                                  {QStringLiteral("es_ar"), tr("Spanish (Argentina)")},
-                                  {QStringLiteral("es_bo"), tr("Spanish (Bolivia)")},
-                                  {QStringLiteral("es_cl"), tr("Spanish (Chile)")},
-                                  {QStringLiteral("es_co"), tr("Spanish (Colombia)")},
-                                  {QStringLiteral("es_cr"), tr("Spanish (Costa Rica)")},
-                                  {QStringLiteral("es_cu"), tr("Spanish (Cuba)")},
-                                  {QStringLiteral("es_do"), tr("Spanish (Dominican Republic)")},
-                                  {QStringLiteral("es_ec"), tr("Spanish (Ecuador)")},
-                                  {QStringLiteral("es_es"), tr("Spanish (Spain)")},
-                                  {QStringLiteral("es_gt"), tr("Spanish (Guatemala)")},
-                                  {QStringLiteral("es_hn"), tr("Spanish (Honduras)")},
-                                  {QStringLiteral("es_mx"), tr("Spanish (Mexico)")},
-                                  {QStringLiteral("es_ni"), tr("Spanish (Nicaragua)")},
-                                  {QStringLiteral("es_pa"), tr("Spanish (Panama)")},
-                                  {QStringLiteral("es_pe"), tr("Spanish (Peru)")},
-                                  {QStringLiteral("es_pr"), tr("Spanish (Puerto Rico)")},
-                                  {QStringLiteral("es_py"), tr("Spanish (Paraguay)")},
-                                  {QStringLiteral("es_sv"), tr("Spanish (El Savador)")},
-                                  {QStringLiteral("es_us"), tr("Spanish (United States)")},
-                                  {QStringLiteral("es_uy"), tr("Spanish (Uruguay)")},
-                                  {QStringLiteral("es_ve"), tr("Spanish (Venezuela)")},
-                                  {QStringLiteral("et"), tr("Estonian")},
-                                  {QStringLiteral("et_ee"), tr("Estonian (Estonia)")},
-                                  {QStringLiteral("eu"), tr("Basque")},
-                                  {QStringLiteral("eu_es"), tr("Basque (Spain)")},
-                                  {QStringLiteral("eu_fr"), tr("Basque (France)")},
-                                  {QStringLiteral("fi"), tr("Finnish")},
-                                  {QStringLiteral("fi_fi"), tr("Finnish")},
-                                  {QStringLiteral("fr"), tr("French")},
-                                  {QStringLiteral("fr_be"), tr("French (Belgium)")},
-                                  {QStringLiteral("fr_ca"), tr("French (Catalan)")},
-                                  {QStringLiteral("fr_ch"), tr("French (Switzerland)")},
-                                  {QStringLiteral("fr_fr"), tr("French (France)")},
-                                  {QStringLiteral("fr_lu"), tr("French (Luxemburg)")},
-                                  {QStringLiteral("fr_mc"), tr("French (Monaco)")},
-                                  {QStringLiteral("gd"), tr("Gaelic")},
-                                  {QStringLiteral("gd_gb"), tr("Gaelic (United Kingdom {Scots})")},
-                                  {QStringLiteral("gl"), tr("Galician")},
-                                  {QStringLiteral("gl_es"), tr("Galician (Spain)")},
-                                  {QStringLiteral("gn"), tr("Guarani")},
-                                  {QStringLiteral("gn_py"), tr("Guarani (Paraguay)")},
-                                  {QStringLiteral("gu"), tr("Gujarati")},
-                                  {QStringLiteral("gu_in"), tr("Gujarati (India)")},
+    mDictionaryLanguageCodeMap = {{qsl("af"), tr("Afrikaans")},
+                                  {qsl("af_za"), tr("Afrikaans (South Africa)")},
+                                  {qsl("an"), tr("Aragonese")},
+                                  {qsl("an_es"), tr("Aragonese (Spain)")},
+                                  {qsl("ar"), tr("Arabic")},
+                                  {qsl("ar_ae"), tr("Arabic (United Arab Emirates)")},
+                                  {qsl("ar_bh"), tr("Arabic (Bahrain)")},
+                                  {qsl("ar_dz"), tr("Arabic (Algeria)")},
+                                  {qsl("ar_eg"), tr("Arabic (Egypt)")},
+                                  {qsl("ar_in"), tr("Arabic (India)")},
+                                  {qsl("ar_iq"), tr("Arabic (Iraq)")},
+                                  {qsl("ar_jo"), tr("Arabic (Jordan)")},
+                                  {qsl("ar_kw"), tr("Arabic (Kuwait)")},
+                                  {qsl("ar_lb"), tr("Arabic (Lebanon)")},
+                                  {qsl("ar_ly"), tr("Arabic (Libya)")},
+                                  {qsl("ar_ma"), tr("Arabic (Morocco)")},
+                                  {qsl("ar_om"), tr("Arabic (Oman)")},
+                                  {qsl("ar_qa"), tr("Arabic (Qatar)")},
+                                  {qsl("ar_sa"), tr("Arabic (Saudi Arabia)")},
+                                  {qsl("ar_sd"), tr("Arabic (Sudan)")},
+                                  {qsl("ar_sy"), tr("Arabic (Syria)")},
+                                  {qsl("ar_tn"), tr("Arabic (Tunisia)")},
+                                  {qsl("ar_ye"), tr("Arabic (Yemen)")},
+                                  {qsl("be"), tr("Belarusian")},
+                                  {qsl("be_by"), tr("Belarusian (Belarus)")},
+                                  {qsl("be_ru"), tr("Belarusian (Russia)")},
+                                  {qsl("bg"), tr("Bulgarian")},
+                                  {qsl("bg_bg"), tr("Bulgarian (Bulgaria)")},
+                                  {qsl("bn"), tr("Bangla")},
+                                  {qsl("bn_bd"), tr("Bangla (Bangladesh)")},
+                                  {qsl("bn_in"), tr("Bangla (India)")},
+                                  {qsl("bo"), tr("Tibetan")},
+                                  {qsl("bo_cn"), tr("Tibetan (China)")},
+                                  {qsl("bo_in"), tr("Tibetan (India)")},
+                                  {qsl("br"), tr("Breton")},
+                                  {qsl("br_fr"), tr("Breton (France)")},
+                                  {qsl("bs"), tr("Bosnian")},
+                                  {qsl("bs_ba"), tr("Bosnian (Bosnia/Herzegovina)")},
+                                  {qsl("bs_ba_cyrl"), tr("Bosnian (Bosnia/Herzegovina - Cyrillic alphabet)")},
+                                  {qsl("ca"), tr("Catalan")},
+                                  {qsl("ca_es"), tr("Catalan (Spain)")},
+                                  {qsl("ca_es_valencia"), tr("Catalan (Spain - Valencian)")},
+                                  {qsl("ckb"), tr("Central Kurdish")},
+                                  {qsl("ckb_iq"), tr("Central Kurdish (Iraq)")},
+                                  {qsl("cs"), tr("Czech")},
+                                  {qsl("cs_cz"), tr("Czech (Czechia)")},
+                                  {qsl("da"), tr("Danish")},
+                                  {qsl("da_dk"), tr("Danish (Denmark)")},
+                                  {qsl("de"), tr("German")},
+                                  {qsl("de_at"), tr("German (Austria)")},
+                                  {qsl("de_at_frami"), tr("German (Austria, revised by F M Baumann)")},
+                                  {qsl("de_be"), tr("German (Belgium)")},
+                                  {qsl("de_ch"), tr("German (Switzerland)")},
+                                  {qsl("de_ch_frami"), tr("German (Switzerland, revised by F M Baumann)")},
+                                  {qsl("de_de"), tr("German (Germany/Belgium/Luxemburg)")},
+                                  {qsl("de_de_frami"), tr("German (Germany/Belgium/Luxemburg, revised by F M Baumann)")},
+                                  {qsl("de_li"), tr("German (Liechtenstein)")},
+                                  {qsl("de_lu"), tr("German (Luxembourg)")},
+                                  {qsl("dz"), tr("Dzongkha")},
+                                  {qsl("dz_bt"), tr("Dzongkha (Bhutan)")},
+                                  {qsl("el"), tr("Greek")},
+                                  {qsl("el_gr"), tr("Greek (Greece)")},
+                                  {qsl("en"), tr("English")},
+                                  {qsl("en_ag"), tr("English (Antigua/Barbuda)")},
+                                  {qsl("en_au"), tr("English (Australia)")},
+                                  {qsl("en_au_large"), tr("English (Australia, Large)", "This dictionary contains larger vocabulary.")},
+                                  {qsl("en_bs"), tr("English (Bahamas)")},
+                                  {qsl("en_bw"), tr("English (Botswana)")},
+                                  {qsl("en_bz"), tr("English (Belize)")},
+                                  {qsl("en_ca"), tr("English (Canada)")},
+                                  {qsl("en_ca_large"), tr("English (Canada, Large)", "This dictionary contains larger vocabulary.")},
+                                  {qsl("en_dk"), tr("English (Denmark)")},
+                                  {qsl("en_gb"), tr("English (United Kingdom)")},
+                                  {qsl("en_gb_large"), tr("English (United Kingdom, Large)", "This dictionary contains larger vocabulary.")},
+                                  {qsl("en_gb_ise"), tr("English (United Kingdom - 'ise' not 'ize')", "This dictionary prefers the British 'ise' form over the American 'ize' one.")},
+                                  {qsl("en_gh"), tr("English (Ghana)")},
+                                  {qsl("en_hk"), tr("English (Hong Kong SAR China)")},
+                                  {qsl("en_ie"), tr("English (Ireland)")},
+                                  {qsl("en_in"), tr("English (India)")},
+                                  {qsl("en_jm"), tr("English (Jamaica)")},
+                                  {qsl("en_na"), tr("English (Namibia)")},
+                                  {qsl("en_ng"), tr("English (Nigeria)")},
+                                  {qsl("en_nz"), tr("English (New Zealand)")},
+                                  {qsl("en_ph"), tr("English (Philippines)")},
+                                  {qsl("en_sg"), tr("English (Singapore)")},
+                                  {qsl("en_tt"), tr("English (Trinidad/Tobago)")},
+                                  {qsl("en_us"), tr("English (United States)")},
+                                  {qsl("en_us_large"), tr("English (United States, Large)", "This dictionary contains larger vocabulary.")},
+                                  {qsl("en_za"), tr("English (South Africa)")},
+                                  {qsl("en_zw"), tr("English (Zimbabwe)")},
+                                  {qsl("es"), tr("Spanish")},
+                                  {qsl("es_ar"), tr("Spanish (Argentina)")},
+                                  {qsl("es_bo"), tr("Spanish (Bolivia)")},
+                                  {qsl("es_cl"), tr("Spanish (Chile)")},
+                                  {qsl("es_co"), tr("Spanish (Colombia)")},
+                                  {qsl("es_cr"), tr("Spanish (Costa Rica)")},
+                                  {qsl("es_cu"), tr("Spanish (Cuba)")},
+                                  {qsl("es_do"), tr("Spanish (Dominican Republic)")},
+                                  {qsl("es_ec"), tr("Spanish (Ecuador)")},
+                                  {qsl("es_es"), tr("Spanish (Spain)")},
+                                  {qsl("es_gt"), tr("Spanish (Guatemala)")},
+                                  {qsl("es_hn"), tr("Spanish (Honduras)")},
+                                  {qsl("es_mx"), tr("Spanish (Mexico)")},
+                                  {qsl("es_ni"), tr("Spanish (Nicaragua)")},
+                                  {qsl("es_pa"), tr("Spanish (Panama)")},
+                                  {qsl("es_pe"), tr("Spanish (Peru)")},
+                                  {qsl("es_pr"), tr("Spanish (Puerto Rico)")},
+                                  {qsl("es_py"), tr("Spanish (Paraguay)")},
+                                  {qsl("es_sv"), tr("Spanish (El Savador)")},
+                                  {qsl("es_us"), tr("Spanish (United States)")},
+                                  {qsl("es_uy"), tr("Spanish (Uruguay)")},
+                                  {qsl("es_ve"), tr("Spanish (Venezuela)")},
+                                  {qsl("et"), tr("Estonian")},
+                                  {qsl("et_ee"), tr("Estonian (Estonia)")},
+                                  {qsl("eu"), tr("Basque")},
+                                  {qsl("eu_es"), tr("Basque (Spain)")},
+                                  {qsl("eu_fr"), tr("Basque (France)")},
+                                  {qsl("fi"), tr("Finnish")},
+                                  {qsl("fi_fi"), tr("Finnish")},
+                                  {qsl("fr"), tr("French")},
+                                  {qsl("fr_be"), tr("French (Belgium)")},
+                                  {qsl("fr_ca"), tr("French (Catalan)")},
+                                  {qsl("fr_ch"), tr("French (Switzerland)")},
+                                  {qsl("fr_fr"), tr("French (France)")},
+                                  {qsl("fr_lu"), tr("French (Luxemburg)")},
+                                  {qsl("fr_mc"), tr("French (Monaco)")},
+                                  {qsl("gd"), tr("Gaelic")},
+                                  {qsl("gd_gb"), tr("Gaelic (United Kingdom {Scots})")},
+                                  {qsl("gl"), tr("Galician")},
+                                  {qsl("gl_es"), tr("Galician (Spain)")},
+                                  {qsl("gn"), tr("Guarani")},
+                                  {qsl("gn_py"), tr("Guarani (Paraguay)")},
+                                  {qsl("gu"), tr("Gujarati")},
+                                  {qsl("gu_in"), tr("Gujarati (India)")},
                                   // Debian uses gug instead of gn for some reason:
-                                  {QStringLiteral("gug"), tr("Guarani")},
-                                  {QStringLiteral("gug_py"), tr("Guarani (Paraguay)")},
-                                  {QStringLiteral("he"), tr("Hebrew")},
-                                  {QStringLiteral("he_il"), tr("Hebrew (Israel)")},
-                                  {QStringLiteral("hi"), tr("Hindi")},
-                                  {QStringLiteral("hi_in"), tr("Hindi (India)")},
-                                  {QStringLiteral("hr"), tr("Croatian")},
-                                  {QStringLiteral("hr_hr"), tr("Croatian (Croatia)")},
-                                  {QStringLiteral("hu"), tr("Hungarian")},
-                                  {QStringLiteral("hu_hu"), tr("Hungarian (Hungary)")},
-                                  {QStringLiteral("hy"), tr("Armenian")},
-                                  {QStringLiteral("hy_am"), tr("Armenian (Armenia)")},
-                                  {QStringLiteral("id"), tr("Indonesian")},
-                                  {QStringLiteral("id_id"), tr("Indonesian (Indonesia)")},
-                                  {QStringLiteral("ie"), tr("Interlingue", "formerly known as Occidental, and not to be mistaken for Interlingua")},
-                                  {QStringLiteral("is"), tr("Icelandic")},
-                                  {QStringLiteral("is_is"), tr("Icelandic (Iceland)")},
-                                  {QStringLiteral("it"), tr("Italian")},
-                                  {QStringLiteral("it_ch"), tr("Italian (Switzerland)")},
-                                  {QStringLiteral("it_it"), tr("Italian (Italy)")},
-                                  {QStringLiteral("kk"), tr("Kazakh")},
-                                  {QStringLiteral("kk_kz"), tr("Kazakh (Kazakhstan)")},
-                                  {QStringLiteral("kmr"), tr("Kurmanji")},
-                                  {QStringLiteral("kmr_latn"), tr("Kurmanji {Latin-alphabet Kurdish}")},
-                                  {QStringLiteral("ko"), tr("Korean")},
-                                  {QStringLiteral("ko_kr"), tr("Korean (South Korea)")},
-                                  {QStringLiteral("ku"), tr("Kurdish")},
-                                  {QStringLiteral("ku_sy"), tr("Kurdish (Syria)")},
-                                  {QStringLiteral("ku_tr"), tr("Kurdish (Turkey)")},
-                                  {QStringLiteral("lo"), tr("Lao")},
-                                  {QStringLiteral("lo_la"), tr("Lao (Laos)")},
-                                  {QStringLiteral("lt"), tr("Lithuanian")},
-                                  {QStringLiteral("lt_lt"), tr("Lithuanian (Lithuania)")},
-                                  {QStringLiteral("lv"), tr("Latvian")},
-                                  {QStringLiteral("lv_lv"), tr("Latvian (Latvia)")},
-                                  {QStringLiteral("ml"), tr("Malayalam")},
-                                  {QStringLiteral("ml_in"), tr("Malayalam (India)")},
-                                  {QStringLiteral("nb"), tr("Norwegian Bokmål")},
-                                  {QStringLiteral("nb_no"), tr("Norwegian Bokmål (Norway)")},
-                                  {QStringLiteral("ne"), tr("Nepali")},
-                                  {QStringLiteral("ne_np"), tr("Nepali (Nepal)")},
-                                  {QStringLiteral("nl"), tr("Dutch")},
-                                  {QStringLiteral("nl_an"), tr("Dutch (Netherlands Antilles)")},
-                                  {QStringLiteral("nl_aw"), tr("Dutch (Aruba)")},
-                                  {QStringLiteral("nl_be"), tr("Dutch (Belgium)")},
-                                  {QStringLiteral("nl_nl"), tr("Dutch (Netherlands)")},
-                                  {QStringLiteral("nl_sr"), tr("Dutch (Suriname)")},
-                                  {QStringLiteral("nn"), tr("Norwegian Nynorsk")},
-                                  {QStringLiteral("nn_no"), tr("Norwegian Nynorsk (Norway)")},
-                                  {QStringLiteral("oc"), tr("Occitan")},
-                                  {QStringLiteral("oc_fr"), tr("Occitan (France)")},
-                                  {QStringLiteral("pl"), tr("Polish")},
-                                  {QStringLiteral("pl_pl"), tr("Polish (Poland)")},
-                                  {QStringLiteral("pt"), tr("Portuguese")},
-                                  {QStringLiteral("pt_br"), tr("Portuguese (Brazil)")},
-                                  {QStringLiteral("pt_pt"), tr("Portuguese (Portugal)")},
-                                  {QStringLiteral("ro"), tr("Romanian")},
-                                  {QStringLiteral("ro_ro"), tr("Romanian (Romania)")},
-                                  {QStringLiteral("ru"), tr("Russian")},
-                                  {QStringLiteral("ru_ru"), tr("Russian (Russia)")},
-                                  {QStringLiteral("se"), tr("Northern Sami")},
-                                  {QStringLiteral("se_fi"), tr("Northern Sami (Finland)")},
-                                  {QStringLiteral("se_no"), tr("Northern Sami (Norway)")},
-                                  {QStringLiteral("se_se"), tr("Northern Sami (Sweden)")},
-                                  {QStringLiteral("sh"), tr("Shtokavian", "This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state without a state indication")},
-                                  {QStringLiteral("sh_yu"), tr("Shtokavian (former state of Yugoslavia)", "This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state with a (withdrawn from ISO 3166) state indication")},
-                                  {QStringLiteral("si"), tr("Sinhala")},
-                                  {QStringLiteral("si_lk"), tr("Sinhala (Sri Lanka)")},
-                                  {QStringLiteral("sk"), tr("Slovak")},
-                                  {QStringLiteral("sk_sk"), tr("Slovak (Slovakia)")},
-                                  {QStringLiteral("sl"), tr("Slovenian")},
-                                  {QStringLiteral("sl_si"), tr("Slovenian (Slovenia)")},
-                                  {QStringLiteral("so"), tr("Somali")},
-                                  {QStringLiteral("so_so"), tr("Somali (Somalia)")},
-                                  {QStringLiteral("sq"), tr("Albanian")},
-                                  {QStringLiteral("sq_al"), tr("Albanian (Albania)")},
-                                  {QStringLiteral("sr"), tr("Serbian")},
-                                  {QStringLiteral("sr_me"), tr("Serbian (Montenegro)")},
-                                  {QStringLiteral("sr_rs"), tr("Serbian (Serbia)")},
-                                  {QStringLiteral("sr_latn_rs"), tr("Serbian (Serbia - Latin-alphabet)")},
-                                  {QStringLiteral("sr_yu"), tr("Serbian (former state of Yugoslavia)")},
-                                  {QStringLiteral("ss"), tr("Swati")},
-                                  {QStringLiteral("ss_sz"), tr("Swati (Swaziland)")},
-                                  {QStringLiteral("ss_za"), tr("Swati (South Africa)")},
-                                  {QStringLiteral("sv"), tr("Swedish")},
-                                  {QStringLiteral("sv_se"), tr("Swedish (Sweden)")},
-                                  {QStringLiteral("sv_fi"), tr("Swedish (Finland)")},
-                                  {QStringLiteral("sw"), tr("Swahili")},
-                                  {QStringLiteral("sw_ke"), tr("Swahili (Kenya)")},
-                                  {QStringLiteral("sw_tz"), tr("Swahili (Tanzania)")},
-                                  {QStringLiteral("te"), tr("Telugu")},
-                                  {QStringLiteral("te_in"), tr("Telugu (India)")},
-                                  {QStringLiteral("th"), tr("Thai")},
-                                  {QStringLiteral("th_th"), tr("Thai (Thailand)")},
-                                  {QStringLiteral("ti"), tr("Tigrinya")},
-                                  {QStringLiteral("ti_er"), tr("Tigrinya (Eritrea)")},
-                                  {QStringLiteral("ti_et"), tr("Tigrinya (Ethiopia)")},
-                                  {QStringLiteral("tk"), tr("Turkmen")},
-                                  {QStringLiteral("tk_tm"), tr("Turkmen (Turkmenistan)")},
-                                  {QStringLiteral("tn"), tr("Tswana")},
-                                  {QStringLiteral("tn_bw"), tr("Tswana (Botswana)")},
-                                  {QStringLiteral("tn_za"), tr("Tswana (South Africa)")},
-                                  {QStringLiteral("tr"), tr("Turkish")},
-                                  {QStringLiteral("tr_tr"), tr("Turkish (Turkey)")},
-                                  {QStringLiteral("ts"), tr("Tsonga")},
-                                  {QStringLiteral("ts_za"), tr("Tsonga (South Africa)")},
-                                  {QStringLiteral("uk"), tr("Ukrainian")},
-                                  {QStringLiteral("uk_ua"), tr("Ukrainian (Ukraine)")},
-                                  {QStringLiteral("uz"), tr("Uzbek")},
-                                  {QStringLiteral("uz_uz"), tr("Uzbek (Uzbekistan)")},
-                                  {QStringLiteral("ve"), tr("Venda")},
-                                  {QStringLiteral("vi"), tr("Vietnamese")},
-                                  {QStringLiteral("vi_vn"), tr("Vietnamese (Vietnam)")},
-                                  {QStringLiteral("vi_daucu"), tr("Vietnamese (DauCu variant - old-style diacritics)")},
-                                  {QStringLiteral("vi_daumoi"), tr("Vietnamese (DauMoi variant - new-style diacritics)")},
-                                  {QStringLiteral("wa"), tr("Walloon")},
-                                  {QStringLiteral("xh"), tr("Xhosa")},
-                                  {QStringLiteral("yi"), tr("Yiddish")},
-                                  {QStringLiteral("zh"), tr("Chinese")},
-                                  {QStringLiteral("zh_cn"), tr("Chinese (China - simplified)")},
-                                  {QStringLiteral("zh_tw"), tr("Chinese (Taiwan - traditional)")},
-                                  {QStringLiteral("zu"), tr("Zulu")}};
+                                  {qsl("gug"), tr("Guarani")},
+                                  {qsl("gug_py"), tr("Guarani (Paraguay)")},
+                                  {qsl("he"), tr("Hebrew")},
+                                  {qsl("he_il"), tr("Hebrew (Israel)")},
+                                  {qsl("hi"), tr("Hindi")},
+                                  {qsl("hi_in"), tr("Hindi (India)")},
+                                  {qsl("hr"), tr("Croatian")},
+                                  {qsl("hr_hr"), tr("Croatian (Croatia)")},
+                                  {qsl("hu"), tr("Hungarian")},
+                                  {qsl("hu_hu"), tr("Hungarian (Hungary)")},
+                                  {qsl("hy"), tr("Armenian")},
+                                  {qsl("hy_am"), tr("Armenian (Armenia)")},
+                                  {qsl("id"), tr("Indonesian")},
+                                  {qsl("id_id"), tr("Indonesian (Indonesia)")},
+                                  {qsl("ie"), tr("Interlingue", "formerly known as Occidental, and not to be mistaken for Interlingua")},
+                                  {qsl("is"), tr("Icelandic")},
+                                  {qsl("is_is"), tr("Icelandic (Iceland)")},
+                                  {qsl("it"), tr("Italian")},
+                                  {qsl("it_ch"), tr("Italian (Switzerland)")},
+                                  {qsl("it_it"), tr("Italian (Italy)")},
+                                  {qsl("kk"), tr("Kazakh")},
+                                  {qsl("kk_kz"), tr("Kazakh (Kazakhstan)")},
+                                  {qsl("kmr"), tr("Kurmanji")},
+                                  {qsl("kmr_latn"), tr("Kurmanji {Latin-alphabet Kurdish}")},
+                                  {qsl("ko"), tr("Korean")},
+                                  {qsl("ko_kr"), tr("Korean (South Korea)")},
+                                  {qsl("ku"), tr("Kurdish")},
+                                  {qsl("ku_sy"), tr("Kurdish (Syria)")},
+                                  {qsl("ku_tr"), tr("Kurdish (Turkey)")},
+                                  {qsl("lo"), tr("Lao")},
+                                  {qsl("lo_la"), tr("Lao (Laos)")},
+                                  {qsl("lt"), tr("Lithuanian")},
+                                  {qsl("lt_lt"), tr("Lithuanian (Lithuania)")},
+                                  {qsl("lv"), tr("Latvian")},
+                                  {qsl("lv_lv"), tr("Latvian (Latvia)")},
+                                  {qsl("ml"), tr("Malayalam")},
+                                  {qsl("ml_in"), tr("Malayalam (India)")},
+                                  {qsl("nb"), tr("Norwegian Bokmål")},
+                                  {qsl("nb_no"), tr("Norwegian Bokmål (Norway)")},
+                                  {qsl("ne"), tr("Nepali")},
+                                  {qsl("ne_np"), tr("Nepali (Nepal)")},
+                                  {qsl("nl"), tr("Dutch")},
+                                  {qsl("nl_an"), tr("Dutch (Netherlands Antilles)")},
+                                  {qsl("nl_aw"), tr("Dutch (Aruba)")},
+                                  {qsl("nl_be"), tr("Dutch (Belgium)")},
+                                  {qsl("nl_nl"), tr("Dutch (Netherlands)")},
+                                  {qsl("nl_sr"), tr("Dutch (Suriname)")},
+                                  {qsl("nn"), tr("Norwegian Nynorsk")},
+                                  {qsl("nn_no"), tr("Norwegian Nynorsk (Norway)")},
+                                  {qsl("oc"), tr("Occitan")},
+                                  {qsl("oc_fr"), tr("Occitan (France)")},
+                                  {qsl("pl"), tr("Polish")},
+                                  {qsl("pl_pl"), tr("Polish (Poland)")},
+                                  {qsl("pt"), tr("Portuguese")},
+                                  {qsl("pt_br"), tr("Portuguese (Brazil)")},
+                                  {qsl("pt_pt"), tr("Portuguese (Portugal)")},
+                                  {qsl("ro"), tr("Romanian")},
+                                  {qsl("ro_ro"), tr("Romanian (Romania)")},
+                                  {qsl("ru"), tr("Russian")},
+                                  {qsl("ru_ru"), tr("Russian (Russia)")},
+                                  {qsl("se"), tr("Northern Sami")},
+                                  {qsl("se_fi"), tr("Northern Sami (Finland)")},
+                                  {qsl("se_no"), tr("Northern Sami (Norway)")},
+                                  {qsl("se_se"), tr("Northern Sami (Sweden)")},
+                                  {qsl("sh"), tr("Shtokavian", "This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state without a state indication")},
+                                  {qsl("sh_yu"), tr("Shtokavian (former state of Yugoslavia)", "This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state with a (withdrawn from ISO 3166) state indication")},
+                                  {qsl("si"), tr("Sinhala")},
+                                  {qsl("si_lk"), tr("Sinhala (Sri Lanka)")},
+                                  {qsl("sk"), tr("Slovak")},
+                                  {qsl("sk_sk"), tr("Slovak (Slovakia)")},
+                                  {qsl("sl"), tr("Slovenian")},
+                                  {qsl("sl_si"), tr("Slovenian (Slovenia)")},
+                                  {qsl("so"), tr("Somali")},
+                                  {qsl("so_so"), tr("Somali (Somalia)")},
+                                  {qsl("sq"), tr("Albanian")},
+                                  {qsl("sq_al"), tr("Albanian (Albania)")},
+                                  {qsl("sr"), tr("Serbian")},
+                                  {qsl("sr_me"), tr("Serbian (Montenegro)")},
+                                  {qsl("sr_rs"), tr("Serbian (Serbia)")},
+                                  {qsl("sr_latn_rs"), tr("Serbian (Serbia - Latin-alphabet)")},
+                                  {qsl("sr_yu"), tr("Serbian (former state of Yugoslavia)")},
+                                  {qsl("ss"), tr("Swati")},
+                                  {qsl("ss_sz"), tr("Swati (Swaziland)")},
+                                  {qsl("ss_za"), tr("Swati (South Africa)")},
+                                  {qsl("sv"), tr("Swedish")},
+                                  {qsl("sv_se"), tr("Swedish (Sweden)")},
+                                  {qsl("sv_fi"), tr("Swedish (Finland)")},
+                                  {qsl("sw"), tr("Swahili")},
+                                  {qsl("sw_ke"), tr("Swahili (Kenya)")},
+                                  {qsl("sw_tz"), tr("Swahili (Tanzania)")},
+                                  {qsl("te"), tr("Telugu")},
+                                  {qsl("te_in"), tr("Telugu (India)")},
+                                  {qsl("th"), tr("Thai")},
+                                  {qsl("th_th"), tr("Thai (Thailand)")},
+                                  {qsl("ti"), tr("Tigrinya")},
+                                  {qsl("ti_er"), tr("Tigrinya (Eritrea)")},
+                                  {qsl("ti_et"), tr("Tigrinya (Ethiopia)")},
+                                  {qsl("tk"), tr("Turkmen")},
+                                  {qsl("tk_tm"), tr("Turkmen (Turkmenistan)")},
+                                  {qsl("tn"), tr("Tswana")},
+                                  {qsl("tn_bw"), tr("Tswana (Botswana)")},
+                                  {qsl("tn_za"), tr("Tswana (South Africa)")},
+                                  {qsl("tr"), tr("Turkish")},
+                                  {qsl("tr_tr"), tr("Turkish (Turkey)")},
+                                  {qsl("ts"), tr("Tsonga")},
+                                  {qsl("ts_za"), tr("Tsonga (South Africa)")},
+                                  {qsl("uk"), tr("Ukrainian")},
+                                  {qsl("uk_ua"), tr("Ukrainian (Ukraine)")},
+                                  {qsl("uz"), tr("Uzbek")},
+                                  {qsl("uz_uz"), tr("Uzbek (Uzbekistan)")},
+                                  {qsl("ve"), tr("Venda")},
+                                  {qsl("vi"), tr("Vietnamese")},
+                                  {qsl("vi_vn"), tr("Vietnamese (Vietnam)")},
+                                  {qsl("vi_daucu"), tr("Vietnamese (DauCu variant - old-style diacritics)")},
+                                  {qsl("vi_daumoi"), tr("Vietnamese (DauMoi variant - new-style diacritics)")},
+                                  {qsl("wa"), tr("Walloon")},
+                                  {qsl("xh"), tr("Xhosa")},
+                                  {qsl("yi"), tr("Yiddish")},
+                                  {qsl("zh"), tr("Chinese")},
+                                  {qsl("zh_cn"), tr("Chinese (China - simplified)")},
+                                  {qsl("zh_tw"), tr("Chinese (Taiwan - traditional)")},
+                                  {qsl("zu"), tr("Zulu")}};
 
     mEncodingNameMap = {{"ASCII", tr("ASCII (Basic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"UTF-8", tr("UTF-8 (Recommended)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
@@ -1011,15 +1061,15 @@ void mudlet::loadMaps()
                         {"ISO 8859-15", tr("ISO 8859-15 (Western)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"ISO 8859-16", tr("ISO 8859-16 (Romanian)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"CP437", tr("CP437 (OEM Font)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
-                        {"M_CP437", QStringLiteral("m ") % tr("CP437 (OEM Font)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"M_CP437", qsl("m ") % tr("CP437 (OEM Font)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"CP667", tr("CP667 (Mazovia)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
-                        {"M_CP667", QStringLiteral("m ") % tr("CP667 (Mazovia)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"M_CP667", qsl("m ") % tr("CP667 (Mazovia)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"CP737", tr("CP737 (DOS Greek)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
-                        {"M_CP737", QStringLiteral("m ") % tr("CP737 (DOS Greek)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"M_CP737", qsl("m ") % tr("CP737 (DOS Greek)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"CP850", tr("CP850 (Western Europe)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"CP866", tr("CP866 (Cyrillic/Russian)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"CP869", tr("CP869 (DOS Greek 2)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
-                        {"M_CP869",  QStringLiteral("m ") % tr("CP869 (DOS Greek 2)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"M_CP869",  qsl("m ") % tr("CP869 (DOS Greek 2)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"CP1161", tr("CP1161 (Latin/Thai)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"KOI8-R", tr("KOI8-R (Cyrillic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"KOI8-U", tr("KOI8-U (Cyrillic/Ukrainian)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
@@ -1063,12 +1113,12 @@ void mudlet::scanForMudletTranslations(const QString& path)
     mTranslationsMap.clear();
 
     QDir translationDir(path);
-    translationDir.setNameFilters(QStringList() << QStringLiteral("mudlet_*.qm"));
+    translationDir.setNameFilters(QStringList() << qsl("mudlet_*.qm"));
     QStringList translationFilesList(translationDir.entryList(QDir::Files | QDir::Readable, QDir::Name));
 
     QJsonObject translationStats;
-    if (path == QStringLiteral(":/lang")) {
-        QFile file(QStringLiteral(":/translation-stats.json"));
+    if (path == qsl(":/lang")) {
+        QFile file(qsl(":/translation-stats.json"));
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QByteArray saveData = file.readAll();
             QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
@@ -1081,8 +1131,8 @@ void mudlet::scanForMudletTranslations(const QString& path)
 
     for (auto& translationFileName : qAsConst(translationFilesList)) {
         QString languageCode(translationFileName);
-        languageCode.remove(QStringLiteral("mudlet_"), Qt::CaseInsensitive);
-        languageCode.remove(QStringLiteral(".qm"), Qt::CaseInsensitive);
+        languageCode.remove(qsl("mudlet_"), Qt::CaseInsensitive);
+        languageCode.remove(qsl(".qm"), Qt::CaseInsensitive);
         int percentageTranslated = -1;
 
         std::unique_ptr<QTranslator> pMudletTranslator = std::make_unique<QTranslator>();
@@ -1093,7 +1143,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 // from the expected resource file and the translation
                 // statistics file was also found from there
 
-                auto value = translationStats.value(languageCode).toObject().value(QStringLiteral("translatedpc"));
+                auto value = translationStats.value(languageCode).toObject().value(qsl("translatedpc"));
                 if (value != QJsonValue::Undefined) {
                     percentageTranslated = value.toInt();
                 } else {
@@ -1103,37 +1153,39 @@ void mudlet::scanForMudletTranslations(const QString& path)
             // PLACEMARKER: Start of locale codes to native language decoding - insert an entry here for any further Mudlet supported languages
             translation currentTranslation(percentageTranslated);
             if (!languageCode.compare(QLatin1String("en_US"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("English (American)");
+                currentTranslation.mNativeName = qsl("English (American)");
             } else if (!languageCode.compare(QLatin1String("en_GB"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("English (British)");
+                currentTranslation.mNativeName = qsl("English (British)");
             } else if (!languageCode.compare(QLatin1String("zh_CN"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("简化字");
+                currentTranslation.mNativeName = qsl("简化字");
             } else if (!languageCode.compare(QLatin1String("zh_TW"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("繁體字");
+                currentTranslation.mNativeName = qsl("繁體字");
             } else if (!languageCode.compare(QLatin1String("nl_NL"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("Nederlands");
+                currentTranslation.mNativeName = qsl("Nederlands");
             } else if (!languageCode.compare(QLatin1String("fr_FR"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("Français");
+                currentTranslation.mNativeName = qsl("Français");
             } else if (!languageCode.compare(QLatin1String("de_DE"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("Deutsch");
+                currentTranslation.mNativeName = qsl("Deutsch");
             } else if (!languageCode.compare(QLatin1String("el_GR"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("ελληνικά");
+                currentTranslation.mNativeName = qsl("ελληνικά");
             } else if (!languageCode.compare(QLatin1String("it_IT"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("Italiano");
+                currentTranslation.mNativeName = qsl("Italiano");
             } else if (!languageCode.compare(QLatin1String("pl_PL"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("Polski");
+                currentTranslation.mNativeName = qsl("Polski");
             } else if (!languageCode.compare(QLatin1String("ru_RU"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("Pусский");
+                currentTranslation.mNativeName = qsl("Pусский");
             } else if (!languageCode.compare(QLatin1String("es_ES"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("Español");
+                currentTranslation.mNativeName = qsl("Español");
             } else if (!languageCode.compare(QLatin1String("pt_PT"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("Portugês");
+                currentTranslation.mNativeName = qsl("Portugês");
             } else if (!languageCode.compare(QLatin1String("pt_BR"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("Português (Brasil)");
+                currentTranslation.mNativeName = qsl("Português (Brasil)");
             } else if (!languageCode.compare(QLatin1String("tr_TR"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("Türkçe");
+                currentTranslation.mNativeName = qsl("Türkçe");
             } else if (!languageCode.compare(QLatin1String("fi_FI"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("Suomeksi");
+                currentTranslation.mNativeName = qsl("Suomeksi");
+            } else if (!languageCode.compare(QLatin1String("ar_SA"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = qsl("العربية");
             } else {
                 currentTranslation.mNativeName = languageCode;
             }
@@ -1161,7 +1213,7 @@ void mudlet::scanForQtTranslations(const QString& path)
         itTranslation.next();
         const QString languageCode = itTranslation.key();
         std::unique_ptr<QTranslator> pQtTranslator = std::make_unique<QTranslator>();
-        QString translationFileName(QStringLiteral("qt_%1.qm").arg(languageCode));
+        QString translationFileName(qsl("qt_%1.qm").arg(languageCode));
         if (pQtTranslator->load(translationFileName, path)) {
             qDebug().noquote().nospace() << "    found a Qt translation for locale code: \"" << languageCode << "\"";
             /*
@@ -1283,10 +1335,28 @@ void mudlet::slot_package_exporter()
     d->show();
 }
 
+void mudlet::slot_close_current_profile()
+{
+    Host* pH = getActiveHost();
+    if (!pH) {
+        return;
+    }
+    slot_close_profile_requested(mpTabBar->currentIndex());
+
+    if (!getActiveHost()) {
+        disableToolbarButtons();
+        slot_show_connection_dialog();
+    }
+}
 
 void mudlet::slot_close_profile_requested(int tab)
 {
     QString name = mpTabBar->tabData(tab).toString();
+    closeHost(name);
+}
+
+void mudlet::closeHost(const QString& name)
+{
     Host* pH = mHostManager.getHost(name);
     if (!pH) {
         return;
@@ -1351,7 +1421,7 @@ void mudlet::slot_close_profile_requested(int tab)
 
     pH->mpConsole->close();
 
-    mpTabBar->removeTab(tab);
+    mpTabBar->removeTab(name);
     // PLACEMARKER: Host destruction (1) - from close button on tab bar
     // Unfortunately the spaghetti nature of the code means that the profile
     // is also (maybe) saved (or not) in the TConsole::close() call prior to
@@ -1363,6 +1433,29 @@ void mudlet::slot_close_profile_requested(int tab)
     int hostCount = mHostManager.getHostCount();
     emit signal_hostDestroyed(pH, --hostCount);
     mHostManager.deleteHost(pH->getName());
+    updateMultiViewControls();
+}
+
+void mudlet::updateMultiViewControls()
+{
+    const bool isEnabled = (mHostManager.getHostCount() - 1);
+    if (mpActionMultiView->isEnabled() != isEnabled){
+        mpActionMultiView->setEnabled(isEnabled);
+    }
+    if (dactionMultiView->isEnabled() != isEnabled) {
+        dactionMultiView->setEnabled(isEnabled);
+    }
+}
+
+void mudlet::reshowRequiredMainConsoles()
+{
+    if (mpTabBar->count() > 1 && mMultiView) {
+        for (auto pHost: mHostManager) {
+            if (pHost->mpConsole) {
+                pHost->mpConsole->show();
+            }
+        }
+    }
 }
 
 void mudlet::slot_tab_changed(int tabID)
@@ -1435,28 +1528,9 @@ void mudlet::slot_tab_changed(int tabID)
 
     updateDiscordNamedIcon();
 
-    // Restore the multi-view mode if it was enabled:
-    if (mpTabBar->count() > 1) {
-        if (!mpActionMultiView->isEnabled() || !dactionMultiView->isEnabled()) {
-            mpActionMultiView->setEnabled(true);
-            dactionMultiView->setEnabled(true);
-        }
-        if (mMultiView) {
-            for (auto pHost: mHostManager) {
-                if (pHost->mpConsole && (pHost != mpCurrentActiveHost.data())) {
-                    // We skip showing the current tab as we have already done
-                    // a more thorough refreshment of that one...
-                    pHost->mpConsole->show();
-                }
-            }
-        }
-
-    } else {
-        if (mpActionMultiView->isEnabled() || dactionMultiView->isEnabled()) {
-            mpActionMultiView->setEnabled(false);
-            dactionMultiView->setEnabled(false);
-        }
-    }
+    updateMultiViewControls();
+    // Regenerate the multi-view mode if it is enabled:
+    reshowRequiredMainConsoles();
 
     emit signal_tabChanged(mpCurrentActiveHost->getName());
 }
@@ -1496,8 +1570,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
     //update the main window title when we spawn a new tab
     setWindowTitle(pH->getName() + " - " + version);
 
-    mpHBoxLayout_profileContainer->addWidget(pConsole);
-    if (mpCurrentActiveHost) {
+    mpSplitter_profileContainer->addWidget(pConsole);
+    if (mpCurrentActiveHost && !mMultiView) {
         mpCurrentActiveHost->mpConsole->hide();
     }
     mpCurrentActiveHost = pH;
@@ -1591,9 +1665,8 @@ void mudlet::disableToolbarButtons()
     mpButtonPackageManagers->setEnabled(false);
     mpActionIRC->setEnabled(false);
     mpActionReplay->setEnabled(false);
-    mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                               .arg(tr("<p>Load a Mudlet replay.</p>"
-                                       "<p><i>Disabled until a profile is loaded.</i></p>")));
+    mpActionReplay->setToolTip(tr("<p>Load a Mudlet replay.</p>"
+                                  "<p><i>Disabled until a profile is loaded.</i></p>"));
     // The menu items will not show tool-tips unless the parent menu is set to
     // show tool-tips which is likely to be done in near future when there are
     // more texts to show {the default is to repeat the menu text which is not
@@ -1603,6 +1676,9 @@ void mudlet::disableToolbarButtons()
     dactionReplay->setEnabled(false);
     mpActionReconnect->setEnabled(false);
     mpActionDisconnect->setEnabled(false);
+
+    mpActionCloseProfile->setEnabled(false);
+    dactionCloseProfile->setEnabled(false);
 }
 
 void mudlet::enableToolbarButtons()
@@ -1626,8 +1702,7 @@ void mudlet::enableToolbarButtons()
         // toolbar pointer will be non-null}:
         mpActionReplay->setEnabled(true);
         dactionReplay->setEnabled(true);
-        mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                   .arg(tr("<p>Load a Mudlet replay.</p>")));
+        mpActionReplay->setToolTip(utils::richText(tr("Load a Mudlet replay.")));
         // The menu items will not show tool-tips unless the parent menu is set to
         // show tool-tips which is likely to be done in near future when there are
         // more texts to show {the default is to repeat the menu text which is not
@@ -1637,6 +1712,9 @@ void mudlet::enableToolbarButtons()
 
     mpActionReconnect->setEnabled(true);
     mpActionDisconnect->setEnabled(true);
+
+    mpActionCloseProfile->setEnabled(true);
+    dactionCloseProfile->setEnabled(true);
 
     // As this is called when a profile is loaded it is time to check whether
     // we need to continue to show the main menu and/or the main toolbar
@@ -1651,7 +1729,7 @@ bool mudlet::saveWindowLayout()
         return false;
     }
 
-    QString layoutFilePath = getMudletPath(mainDataItemPath, QStringLiteral("windowLayout.dat"));
+    QString layoutFilePath = getMudletPath(mainDataItemPath, qsl("windowLayout.dat"));
 
     QFile layoutFile(layoutFilePath);
     if (layoutFile.open(QIODevice::WriteOnly)) {
@@ -1680,7 +1758,7 @@ bool mudlet::loadWindowLayout()
     }
     qDebug() << "mudlet::loadWindowLayout() - loading layout.";
 
-    QString layoutFilePath = getMudletPath(mainDataItemPath, QStringLiteral("windowLayout.dat"));
+    QString layoutFilePath = getMudletPath(mainDataItemPath, qsl("windowLayout.dat"));
 
     QFile layoutFile(layoutFilePath);
     if (layoutFile.exists()) {
@@ -1750,16 +1828,24 @@ Host* mudlet::getActiveHost()
 
 void mudlet::closeEvent(QCloseEvent* event)
 {
+    QVector<QString> closingHosts;
+
     for (auto pHost : mHostManager) {
-        auto pC = pHost->mpConsole;
-        if (!pC) {
+        const auto console = pHost->mpConsole;
+        if (!console) {
             continue;
         }
-        if (!pC->close()) {
+        if (!console->close()) {
+            // close out any profiles that we have agreed to close so far
+            for (const auto& hostName : qAsConst(closingHosts)) {
+                closeHost(hostName);
+            }
+
             event->ignore();
             return;
         } else {
-            pC->mUserAgreedToCloseConsole = true;
+            console->mUserAgreedToCloseConsole = true;
+            closingHosts.append(pHost->getName());
         }
     }
 
@@ -1849,15 +1935,25 @@ void mudlet::readEarlySettings(const QSettings& settings)
     mShowIconsOnMenuCheckedState = static_cast<Qt::CheckState>(settings.value("showIconsInMenus", QVariant(Qt::PartiallyChecked)).toInt());
 
     // PLACEMARKER: Full-screen mode controlled by File (1 of 2) At some point we might removal this "if" and only consider the QSetting - dropping consideration of the sentinel file:
-    if (settings.contains(QStringLiteral("enableFullScreenMode"))) {
+    if (settings.contains(qsl("enableFullScreenMode"))) {
         // We have a setting stored for this
-        mEnableFullScreenMode = settings.value(QStringLiteral("enableFullScreenMode"), QVariant(false)).toBool();
+        mEnableFullScreenMode = settings.value(qsl("enableFullScreenMode"), QVariant(false)).toBool();
     } else {
         // We do not have a QSettings value stored so check for the sentinel file:
-        QFile file_use_smallscreen(getMudletPath(mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
+        QFile file_use_smallscreen(getMudletPath(mainDataItemPath, qsl("mudlet_option_use_smallscreen")));
         mEnableFullScreenMode = file_use_smallscreen.exists();
     }
-    mDarkTheme = settings.value(QStringLiteral("darkTheme"), QVariant(false)).toBool();
+
+    // PTBs had a boolean setting, migrate it to one that can respect the system setting as well
+    auto oldDarkTheme = settings.value(qsl("darkTheme"), QVariant(false)).toBool();
+
+    auto appearance = settings.value(qsl("appearance"), QVariant(0)).toInt();
+    if (appearance == 0) {
+        mAppearance = settings.contains(qsl("darkTheme")) ? (oldDarkTheme ? Appearance::dark : Appearance::light) : Appearance::system;
+    } else {
+        mAppearance = static_cast<Appearance>(appearance);
+    }
+
     mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
     mUserLocale = QLocale(mInterfaceLanguage);
     if (mUserLocale == QLocale::c()) {
@@ -1869,13 +1965,13 @@ void mudlet::readEarlySettings(const QSettings& settings)
 
 void mudlet::readLateSettings(const QSettings& settings)
 {
-    QPoint pos = settings.value(QStringLiteral("pos"), QPoint(0, 0)).toPoint();
-    QSize size = settings.value(QStringLiteral("size"), QSize(750, 550)).toSize();
+    QPoint pos = settings.value(qsl("pos"), QPoint(0, 0)).toPoint();
+    QSize size = settings.value(qsl("size"), QSize(750, 550)).toSize();
     // A sensible default has already been set up according to whether we are on
     // a netbook or not before this gets called so only change if there is a
     // setting stored:
-    if (settings.contains(QStringLiteral("mainiconsize"))) {
-        setToolBarIconSize(settings.value(QStringLiteral("mainiconsize")).toInt());
+    if (settings.contains(qsl("mainiconsize"))) {
+        setToolBarIconSize(settings.value(qsl("mainiconsize")).toInt());
     }
     setEditorTreeWidgetIconSize(settings.value("tefoldericonsize", QVariant(3)).toInt());
     // We have abandoned previous "showMenuBar" / "showToolBar" booleans
@@ -1895,7 +1991,7 @@ void mudlet::readLateSettings(const QSettings& settings)
     if (settings.value("maximized", false).toBool()) {
         showMaximized();
     }
-    mCopyAsImageTimeout = settings.value(QStringLiteral("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
+    mCopyAsImageTimeout = settings.value(qsl("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -2028,7 +2124,9 @@ void mudlet::writeSettings()
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
     settings.setValue("interfaceLanguage", mInterfaceLanguage);
-    settings.setValue("darkTheme", mDarkTheme);
+    // value only used during PTBs, remove it to reduce confusion in the future
+    settings.remove("darkTheme");
+    settings.setValue("appearance", mAppearance);
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -2192,6 +2290,9 @@ void mudlet::show_options_dialog(const QString& tab)
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_data_protocol, &QWidget::hide);
         connect(mpActionReconnect.data(), &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
+        connect(pPrefs, &dlgProfilePreferences::signal_preferencesSaved, this, [=]() {
+            slot_assign_shortcuts_from_profile(getActiveHost());
+        });
         pPrefs->setAttribute(Qt::WA_DeleteOnClose);
     }
 
@@ -2203,91 +2304,172 @@ void mudlet::show_options_dialog(const QString& tab)
     pPrefs->show();
 }
 
+void mudlet::slot_assign_shortcuts_from_profile(Host* pHost)
+{
+    if (pHost) {
+        auto iterator = mShortcutsManager->iterator();
+        while (iterator.hasNext()) {
+            auto key = iterator.next();
+            mShortcutsManager->setShortcut(key, pHost->profileShortcuts.value(key));
+        }
+    }
+    assignKeySequences();
+}
+
 void mudlet::slot_update_shortcuts()
 {
-    if (mpMainToolBar->isVisible()) {
+    if (Q_LIKELY(mMenuVisibleState.has_value())) {
+        if ((mMenuBarVisibility == visibleNever
+            || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()))
+           && (!mMenuVisibleState.value()) ) {
+
+            /*
+             * IF   EITHER the menu is NOT to be shown
+             *      OR the menu is only to be show when there is no profiles AND there IS one
+             *      (so the menu should be hidden)
+             *    AND
+             *      the setting says it is hidden
+             * THEN
+             *    Skip doing anything
+             */
+            return;
+        }
+
+        if ((mMenuBarVisibility == visibleAlways
+            || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && !mHostManager.getHostCount()))
+           && (mMenuVisibleState.value()) ) {
+
+            /*
+             * IF   EITHER the menu IS to be shown
+             *      OR the menu is only to be show when there is no profiles AND there is NOT one
+             *      (so the menu should be shown)
+             *    AND
+             *      the setting says it is shown
+             * THEN
+             *    Skip doing anything
+             */
+            return;
+        }
+    }
+    assignKeySequences();
+}
+
+void mudlet::assignKeySequences()
+{
+    mMenuVisibleState = !(mMenuBarVisibility == visibleNever || (mMenuBarVisibility == visibleOnlyWithoutLoadedProfile && mHostManager.getHostCount()));
+    if (!mMenuVisibleState.value()) {
+        // The menu is hidden so wire the QKeySequences directly to the slots:
+
+        // If there was a shortcut then get rid of it - no need for a
+        // call to "disconnect(...)" as that happens on deletion and since it
+        // is okay to delete a nullptr there is no need to include a non-null
+        // test first:
+        delete triggersShortcut.data();
         triggersShortcut = new QShortcut(triggersKeySequence, this);
         connect(triggersShortcut.data(), &QShortcut::activated, this, &mudlet::show_editor_dialog);
         dactionScriptEditor->setShortcut(QKeySequence());
 
+        delete showMapShortcut.data();
         showMapShortcut = new QShortcut(showMapKeySequence, this);
         connect(showMapShortcut.data(), &QShortcut::activated, this, &mudlet::slot_mapper);
         dactionShowMap->setShortcut(QKeySequence());
 
+        delete inputLineShortcut.data();
         inputLineShortcut = new QShortcut(inputLineKeySequence, this);
         connect(inputLineShortcut.data(), &QShortcut::activated, this, &mudlet::slot_toggle_compact_input_line);
         dactionInputLine->setShortcut(QKeySequence());
 
+        delete optionsShortcut.data();
         optionsShortcut = new QShortcut(optionsKeySequence, this);
         connect(optionsShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_options_dialog);
         dactionOptions->setShortcut(QKeySequence());
 
+        delete notepadShortcut.data();
         notepadShortcut = new QShortcut(notepadKeySequence, this);
         connect(notepadShortcut.data(), &QShortcut::activated, this, &mudlet::slot_notes);
         dactionNotepad->setShortcut(QKeySequence());
 
+        delete packagesShortcut.data();
         packagesShortcut = new QShortcut(packagesKeySequence, this);
         connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_package_manager);
         dactionPackageManager->setShortcut(QKeySequence());
 
+        delete modulesShortcut.data();
         modulesShortcut = new QShortcut(packagesKeySequence, this);
         connect(modulesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_module_manager);
         dactionModuleManager->setShortcut(QKeySequence());
 
+        delete multiViewShortcut.data();
         multiViewShortcut = new QShortcut(multiViewKeySequence, this);
         connect(multiViewShortcut.data(), &QShortcut::activated, this, &mudlet::slot_toggle_multi_view);
         dactionMultiView->setShortcut(QKeySequence());
 
+        delete connectShortcut.data();
         connectShortcut = new QShortcut(connectKeySequence, this);
         connect(connectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_connection_dialog);
         dactionConnect->setShortcut(QKeySequence());
 
+        delete disconnectShortcut.data();
         disconnectShortcut = new QShortcut(disconnectKeySequence, this);
         connect(disconnectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_disconnect);
         dactionDisconnect->setShortcut(QKeySequence());
 
+        delete reconnectShortcut.data();
         reconnectShortcut = new QShortcut(reconnectKeySequence, this);
         connect(reconnectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_reconnect);
         dactionReconnect->setShortcut(QKeySequence());
+
+        delete closeProfileShortcut.data();
+        closeProfileShortcut = new QShortcut(closeProfileKeySequence, this);
+        connect(closeProfileShortcut.data(), &QShortcut::activated, this, &mudlet::slot_close_current_profile);
+        dactionCloseProfile->setShortcut(QKeySequence());
     } else {
-        triggersShortcut.clear();
+        // The menu is shown so tie the QKeySequences to the menu items and it
+        // is those that will call the slots:
+
+        // Because we are deleting the object that it points at
+        // this will also clear() the shortcut pointer:
+        delete triggersShortcut.data();
         dactionScriptEditor->setShortcut(triggersKeySequence);
 
-        showMapShortcut.clear();
+        delete showMapShortcut.data();
         dactionShowMap->setShortcut(showMapKeySequence);
 
-        inputLineShortcut.clear();
+        delete inputLineShortcut.data();
         dactionInputLine->setShortcut(inputLineKeySequence);
 
-        optionsShortcut.clear();
+        delete optionsShortcut.data();
         dactionOptions->setShortcut(optionsKeySequence);
 
-        notepadShortcut.clear();
+        delete notepadShortcut.data();
         dactionNotepad->setShortcut(notepadKeySequence);
 
-        packagesShortcut.clear();
+        delete packagesShortcut.data();
         dactionPackageManager->setShortcut(packagesKeySequence);
 
-        modulesShortcut.clear();
+        delete modulesShortcut.data();
         dactionModuleManager->setShortcut(modulesKeySequence);
 
-        multiViewShortcut.clear();
+        delete multiViewShortcut.data();
         dactionMultiView->setShortcut(multiViewKeySequence);
 
-        connectShortcut.clear();
+        delete connectShortcut.data();
         dactionConnect->setShortcut(connectKeySequence);
 
-        disconnectShortcut.clear();
+        delete disconnectShortcut.data();
         dactionDisconnect->setShortcut(disconnectKeySequence);
 
-        reconnectShortcut.clear();
+        delete reconnectShortcut.data();
         dactionReconnect->setShortcut(reconnectKeySequence);
+
+        delete closeProfileShortcut.data();
+        dactionCloseProfile->setShortcut(closeProfileKeySequence);
     }
 }
 
 void mudlet::slot_show_options_dialog()
 {
-    show_options_dialog(QStringLiteral("tab_general"));
+    show_options_dialog(qsl("tab_general"));
 }
 
 void mudlet::show_help_dialog()
@@ -2350,7 +2532,7 @@ void mudlet::slot_notes()
         format.setFont(pHost->getDisplayFont());
         pNotes->notesEdit->setCurrentCharFormat(format);
         pNotes->setWindowTitle(tr("%1 - notes").arg(pHost->getName()));
-        pNotes->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_notepad.png")));
+        pNotes->setWindowIcon(QIcon(qsl(":/icons/mudlet_notepad.png")));
         pHost->mpNotePad->setStyleSheet(pHost->mProfileStyleSheet);
         pHost->mpNotePad->notesEdit->setStyleSheet(pHost->mProfileStyleSheet);
     }
@@ -2397,8 +2579,8 @@ void mudlet::updateDiscordNamedIcon()
     QString gameName = pHost->getDiscordGameName();
 
     bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
-    
-    mpActionDiscord->setIconText(gameName.isEmpty() ? QStringLiteral("Discord") : QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90));
+
+    mpActionDiscord->setIconText(gameName.isEmpty() ? qsl("Discord") : QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90));
 
     if (mpActionMudletDiscord->isVisible() != hasCustom) {
         mpActionMudletDiscord->setVisible(hasCustom);
@@ -2493,12 +2675,12 @@ void mudlet::startAutoLogin(const QString& cliProfile)
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     hostList += mudlet::scmDefaultGames.keys();
-    hostList << QStringLiteral("Mudlet self-test");
+    hostList << qsl("Mudlet self-test");
     hostList.removeDuplicates();
     bool openedProfile = false;
 
     for (auto& pHost : hostList) {
-        QString val = readProfileData(pHost, QStringLiteral("autologin"));
+        QString val = readProfileData(pHost, qsl("autologin"));
         if (val.toInt() == Qt::Checked || pHost == cliProfile) {
             doAutoLogin(pHost);
             openedProfile = true;
@@ -2581,7 +2763,7 @@ void mudlet::attachDebugArea(const QString& hostname)
     mpDebugConsole->setWrapAt(100);
     mpDebugArea->setCentralWidget(mpDebugConsole);
     mpDebugArea->setWindowTitle(tr("Central Debug Console"));
-    mpDebugArea->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_debug.png")));
+    mpDebugArea->setWindowIcon(QIcon(qsl(":/icons/mudlet_debug.png")));
 
     auto consoleCloser = new TConsoleMonitor(mpDebugArea);
     mpDebugArea->installEventFilter(consoleCloser);
@@ -2633,7 +2815,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
             pHost->mSslTsl = it.value().tlsEnabled;
         }
     } else {
-        QFile file(QStringLiteral("%1/%2").arg(folder, entries.at(0)));
+        QFile file(qsl("%1/%2").arg(folder, entries.at(0)));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
@@ -2646,12 +2828,12 @@ void mudlet::doAutoLogin(const QString& profile_name)
         }
     }
 
-    pHost->setLogin(readProfileData(profile_name, QStringLiteral("login")));
-    pHost->setPass(readProfileData(profile_name, QStringLiteral("password")));
+    pHost->setLogin(readProfileData(profile_name, qsl("login")));
+    pHost->setPass(readProfileData(profile_name, qsl("password")));
 
     // This settings also need to be configured, note that the only time not to
     // save the setting is on profile loading:
-    pHost->mTelnet.setEncoding(readProfileData(profile_name, QStringLiteral("encoding")).toUtf8(), false);
+    pHost->mTelnet.setEncoding(readProfileData(profile_name, qsl("encoding")).toUtf8(), false);
 
     if (preInstallPackages) {
         mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
@@ -2660,6 +2842,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
     enableToolbarButtons();
+    updateMultiViewControls();
 }
 
 void mudlet::processEventLoopHack()
@@ -2816,6 +2999,14 @@ void mudlet::slot_compact_input_line(const bool state)
     }
     if (mpCurrentActiveHost) {
         mpCurrentActiveHost->setCompactInputLine(state);
+        // Make sure players don't get confused when accidentally hiding buttons.
+        if (state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown) {
+            QKeySequence* shortcut = mShortcutsManager->getSequence(tr("Compact input line"));
+            QString infoMsg = tr("[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.",
+                                 "Here %1 will be replaced with the keyboard shortcut, default is ALT+L.").arg(shortcut->toString());
+            mpCurrentActiveHost->postMessage(infoMsg);
+            mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown = true;
+        }
     }
 }
 
@@ -2828,7 +3019,7 @@ mudlet::~mudlet()
     mpTimerReplay = nullptr;
 
     if (mHunspell_sharedDictionary) {
-        saveDictionary(getMudletPath(mainDataItemPath, QStringLiteral("mudlet")), mWordSet_shared);
+        saveDictionary(getMudletPath(mainDataItemPath, qsl("mudlet")), mWordSet_shared);
         mHunspell_sharedDictionary = nullptr;
     }
     if (!mTranslatorsLoadedList.isEmpty()) {
@@ -2871,8 +3062,7 @@ bool mudlet::replayStart()
     mpActionReplay->setChecked(true);
     mpActionReplay->setEnabled(false);
     dactionReplay->setEnabled(false);
-    mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                               .arg(tr("<p>Cannot load a replay as one is already in progress in this or another profile.</p>")));
+    mpActionReplay->setToolTip(utils::richText(tr("Cannot load a replay as one is already in progress in this or another profile.")));
     dactionReplay->setToolTip(mpActionReplay->toolTip());
 
     mpToolBarReplay = new QToolBar(this);
@@ -2889,17 +3079,15 @@ bool mudlet::replayStart()
     mpLabelReplayTime = new QLabel(this);
     mpActionReplayTime = mpToolBarReplay->addWidget(mpLabelReplayTime);
 
-    mpActionReplaySpeedUp = new QAction(QIcon(QStringLiteral(":/icons/export.png")), tr("Faster"), this);
-    mpActionReplaySpeedUp->setObjectName(QStringLiteral("replay_speed_up_action"));
-    mpActionReplaySpeedUp->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                      .arg(tr("<p>Replay each step with a shorter time interval between steps.</p>")));
+    mpActionReplaySpeedUp = new QAction(QIcon(qsl(":/icons/export.png")), tr("Faster"), this);
+    mpActionReplaySpeedUp->setObjectName(qsl("replay_speed_up_action"));
+    mpActionReplaySpeedUp->setToolTip(utils::richText(tr("Replay each step with a shorter time interval between steps.")));
     mpToolBarReplay->addAction(mpActionReplaySpeedUp);
     mpToolBarReplay->widgetForAction(mpActionReplaySpeedUp)->setObjectName(mpActionReplaySpeedUp->objectName());
 
-    mpActionReplaySpeedDown = new QAction(QIcon(QStringLiteral(":/icons/import.png")), tr("Slower"), this);
-    mpActionReplaySpeedDown->setObjectName(QStringLiteral("replay_speed_down_action"));
-    mpActionReplaySpeedDown->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
-                                        .arg(tr("<p>Replay each step with a longer time interval between steps.</p>")));
+    mpActionReplaySpeedDown = new QAction(QIcon(qsl(":/icons/import.png")), tr("Slower"), this);
+    mpActionReplaySpeedDown->setObjectName(qsl("replay_speed_down_action"));
+    mpActionReplaySpeedDown->setToolTip(utils::richText(tr("Replay each step with a longer time interval between steps.")));
     mpToolBarReplay->addAction(mpActionReplaySpeedDown);
     mpToolBarReplay->widgetForAction(mpActionReplaySpeedDown)->setObjectName(mpActionReplaySpeedDown->objectName());
 
@@ -2909,14 +3097,14 @@ bool mudlet::replayStart()
     connect(mpActionReplaySpeedUp.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedUp);
     connect(mpActionReplaySpeedDown.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedDown);
 
-    mpLabelReplaySpeedDisplay->setText(QStringLiteral("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
+    mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
 
     mpTimerReplay = new QTimer(this);
     mpTimerReplay->setInterval(1000);
     mpTimerReplay->setSingleShot(false);
     connect(mpTimerReplay.data(), &QTimer::timeout, this, &mudlet::slot_replayTimeChanged);
 
-    mpLabelReplayTime->setText(QStringLiteral("<font size=25><b>%1</b></font>").arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
+    mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
 
     mpLabelReplaySpeedDisplay->show();
     mpLabelReplayTime->show();
@@ -2932,7 +3120,7 @@ void mudlet::slot_replayTimeChanged()
 {
     // This can get called by a QTimer after mpLabelReplayTime has been destroyed:
     if (mpLabelReplayTime) {
-        mpLabelReplayTime->setText(QStringLiteral("<font size=25><b>%1</b></font>")
+        mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>")
                                    .arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
         mpLabelReplayTime->show();
     }
@@ -2970,7 +3158,7 @@ void mudlet::replayOver()
     mpActionReplay->setCheckable(false);
     mpActionReplay->setEnabled(true);
     dactionReplay->setEnabled(true);
-    mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>").arg(tr("<p>Load a Mudlet replay.</p>")));
+    mpActionReplay->setToolTip(utils::richText(tr("Load a Mudlet replay.")));
     dactionReplay->setToolTip(mpActionReplay->toolTip());
 }
 
@@ -2978,7 +3166,7 @@ void mudlet::slot_replaySpeedUp()
 {
     if (mpLabelReplaySpeedDisplay) {
         mReplaySpeed = mReplaySpeed * 2;
-        mpLabelReplaySpeedDisplay->setText(QStringLiteral("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
+        mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
 
         mpLabelReplaySpeedDisplay->show();
     }
@@ -2991,7 +3179,7 @@ void mudlet::slot_replaySpeedDown()
         if (mReplaySpeed < 1) {
             mReplaySpeed = 1;
         }
-        mpLabelReplaySpeedDisplay->setText(QStringLiteral("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
+        mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
         mpLabelReplaySpeedDisplay->show();
     }
 }
@@ -3033,7 +3221,7 @@ void mudlet::playSound(const QString& s, int soundVolume)
 
         if (!pPlayer) {
             /* It (should) be impossible to ever reach this */
-            TDebug(Qt::white, Qt::red) << QStringLiteral("Play sound: unable to create new QMediaPlayer object\n") >> pHost;
+            TDebug(Qt::white, Qt::red) << qsl("Play sound: unable to create new QMediaPlayer object\n") >> pHost;
             return;
         }
 
@@ -3111,7 +3299,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
         if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs)) {
             QString entryInArchive(zs.name);
-            QString pathInArchive(entryInArchive.section(QStringLiteral("/"), 0, -2));
+            QString pathInArchive(entryInArchive.section(qsl("/"), 0, -2));
             // TODO: We are supposed to validate the fields (except the
             // "valid" one itself) in zs before using them:
             // i.e. check that zs.name is valid ( zs.valid & ZIP_STAT_NAME )
@@ -3131,7 +3319,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     QMapIterator<QString, QString> itPath(directoriesNeededMap);
     while (itPath.hasNext()) {
         itPath.next();
-        QString folderToCreate = QStringLiteral("%1%2").arg(destination, itPath.value());
+        QString folderToCreate = qsl("%1%2").arg(destination, itPath.value());
         if (!tmpDir.exists(folderToCreate)) {
             if (!tmpDir.mkpath(folderToCreate)) {
                 zip_close(archive);
@@ -3154,7 +3342,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
                 return false;
             }
 
-            QFile fd(QStringLiteral("%1%2").arg(destination, entryInArchive));
+            QFile fd(qsl("%1%2").arg(destination, entryInArchive));
 
             if (!fd.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
                 zip_fclose(zf);
@@ -3198,7 +3386,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
 //loads the luaFunctionList for use by the edbee Autocompleter
 bool mudlet::loadLuaFunctionList()
 {
-    auto jsonFile = QFile(QStringLiteral(":/lua-function-list.json"));
+    auto jsonFile = QFile(qsl(":/lua-function-list.json"));
     if (!jsonFile.open(QFile::ReadOnly)) {
         return false;
     }
@@ -3332,172 +3520,172 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
     switch (mode) {
     case mainPath:
         // The root of all mudlet data for the user - does not end in a '/'
-        return QStringLiteral("%1/.config/mudlet").arg(QDir::homePath());
+        return qsl("%1/.config/mudlet").arg(QDir::homePath());
     case mainDataItemPath:
         // Takes one extra argument as a file (or directory) relating to
         // (profile independent) mudlet data - may end with a '/' if the extra
         // argument does:
-        return QStringLiteral("%1/.config/mudlet/%2").arg(QDir::homePath(), extra1);
+        return qsl("%1/.config/mudlet/%2").arg(QDir::homePath(), extra1);
     case mainFontsPath:
         // (Added for 3.5.0) a revised location to store Mudlet provided fonts
-        return QStringLiteral("%1/.config/mudlet/fonts").arg(QDir::homePath());
+        return qsl("%1/.config/mudlet/fonts").arg(QDir::homePath());
     case profilesPath:
         // The directory containing all the saved user's profiles - does not end
         // in '/'
-        return QStringLiteral("%1/.config/mudlet/profiles").arg(QDir::homePath());
+        return qsl("%1/.config/mudlet/profiles").arg(QDir::homePath());
     case profileHomePath:
         // Takes one extra argument (profile name) that returns the base
         // directory for that profile - does NOT end in a '/' unless the
         // supplied profle name does:
-        return QStringLiteral("%1/.config/mudlet/profiles/%2").arg(QDir::homePath(), extra1);
+        return qsl("%1/.config/mudlet/profiles/%2").arg(QDir::homePath(), extra1);
     case profileMediaPath:
         // Takes one extra argument (profile name) that returns the directory
         // for the profile's cached media files - does NOT end in a '/'
-        return QStringLiteral("%1/.config/mudlet/profiles/%2/media").arg(QDir::homePath(), extra1);
+        return qsl("%1/.config/mudlet/profiles/%2/media").arg(QDir::homePath(), extra1);
     case profileMediaPathFileName:
         // Takes two extra arguments (profile name, mediaFileName) that returns
         // the pathFile name for any media file:
-        return QStringLiteral("%1/.config/mudlet/profiles/%2/media/%3").arg(QDir::homePath(), extra1, extra2);
+        return qsl("%1/.config/mudlet/profiles/%2/media/%3").arg(QDir::homePath(), extra1, extra2);
     case profileXmlFilesPath:
         // Takes one extra argument (profile name) that returns the directory
         // for the profile game save XML files - ends in a '/'
-        return QStringLiteral("%1/.config/mudlet/profiles/%2/current/").arg(QDir::homePath(), extra1);
+        return qsl("%1/.config/mudlet/profiles/%2/current/").arg(QDir::homePath(), extra1);
     case profileMapsPath:
         // Takes one extra argument (profile name) that returns the directory
         // for the profile game save maps files - does NOT end in a '/'
-        return QStringLiteral("%1/.config/mudlet/profiles/%2/map").arg(QDir::homePath(), extra1);
+        return qsl("%1/.config/mudlet/profiles/%2/map").arg(QDir::homePath(), extra1);
     case profileDateTimeStampedMapPathFileName:
         // Takes two extra arguments (profile name, dataTime stamp) that returns
         // the pathFile name for a dateTime stamped map file:
-        return QStringLiteral("%1/.config/mudlet/profiles/%2/map/%3map.dat").arg(QDir::homePath(), extra1, extra2);
+        return qsl("%1/.config/mudlet/profiles/%2/map/%3map.dat").arg(QDir::homePath(), extra1, extra2);
     case profileDateTimeStampedJsonMapPathFileName:
         // Takes two extra arguments (profile name, dataTime stamp) that returns
         // the pathFile name for a dateTime stamped JSON map file:
-        return QStringLiteral("%1/.config/mudlet/profiles/%2/map/%3map.json").arg(QDir::homePath(), extra1, extra2);
+        return qsl("%1/.config/mudlet/profiles/%2/map/%3map.json").arg(QDir::homePath(), extra1, extra2);
     case profileMapPathFileName:
         // Takes two extra arguments (profile name, mapFileName) that returns
         // the pathFile name for any map file:
-        return QStringLiteral("%1/.config/mudlet/profiles/%2/map/%3").arg(QDir::homePath(), extra1, extra2);
+        return qsl("%1/.config/mudlet/profiles/%2/map/%3").arg(QDir::homePath(), extra1, extra2);
     case profileXmlMapPathFileName:
         // Takes one extra argument (profile name) that returns the pathFile
         // name for the downloaded IRE Server provided XML map:
-        return QStringLiteral("%1/.config/mudlet/profiles/%2/map.xml").arg(QDir::homePath(), extra1);
+        return qsl("%1/.config/mudlet/profiles/%2/map.xml").arg(QDir::homePath(), extra1);
     case profileDataItemPath:
         // Takes two extra arguments (profile name, data item) that gives a
         // path file name for, typically a data item stored as a single item
         // (binary) profile data) file (ideally these can be moved to a per
         // profile QSettings file but that is a future pipe-dream on my part
         // SlySven):
-        return QStringLiteral("%1/.config/mudlet/profiles/%2/%3").arg(QDir::homePath(), extra1, extra2);
+        return qsl("%1/.config/mudlet/profiles/%2/%3").arg(QDir::homePath(), extra1, extra2);
     case profilePackagePath:
         // Takes two extra arguments (profile name, package name) returns the
         // per profile directory used to store (unpacked) package contents
         // - ends with a '/':
-        return QStringLiteral("%1/.config/mudlet/profiles/%2/%3/").arg(QDir::homePath(), extra1, extra2);
+        return qsl("%1/.config/mudlet/profiles/%2/%3/").arg(QDir::homePath(), extra1, extra2);
     case profilePackagePathFileName:
         // Takes two extra arguments (profile name, package name) returns the
         // filename of the XML file that contains the (per profile, unpacked)
         // package mudlet items in that package/module:
-        return QStringLiteral("%1/.config/mudlet/profiles/%2/%3/%3.xml").arg(QDir::homePath(), extra1, extra2);
+        return qsl("%1/.config/mudlet/profiles/%2/%3/%3.xml").arg(QDir::homePath(), extra1, extra2);
     case profileReplayAndLogFilesPath:
         // Takes one extra argument (profile name) that returns the directory
         // that contains replays (*.dat files) and logs (*.html or *.txt) files
         // for that profile - does NOT end in '/':
-        return QStringLiteral("%1/.config/mudlet/profiles/%2/log").arg(QDir::homePath(), extra1);
+        return qsl("%1/.config/mudlet/profiles/%2/log").arg(QDir::homePath(), extra1);
     case profileLogErrorsFilePath:
         // Takes one extra argument (profile name) that returns the pathFileName
         // to the map auditing report file that is appended to each time a
         // map is loaded:
-        return QStringLiteral("%1/.config/mudlet/profiles/%2/log/errors.txt").arg(QDir::homePath(), extra1);
+        return qsl("%1/.config/mudlet/profiles/%2/log/errors.txt").arg(QDir::homePath(), extra1);
     case editorWidgetThemePathFile:
         // Takes two extra arguments (profile name, theme name) that returns the
         // pathFileName of the theme file used by the edbee editor - also
         // handles the special case of the default theme "mudlet.tmTheme" that
         // is carried internally in the resource file:
-        if (extra1.compare(QStringLiteral("Mudlet.tmTheme"), Qt::CaseSensitive)) {
+        if (extra1.compare(qsl("Mudlet.tmTheme"), Qt::CaseSensitive)) {
             // No match
-            return QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), extra1);
+            return qsl("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes/%2").arg(QDir::homePath(), extra1);
         } else {
             // Match - return path to copy held in resource file
-            return QStringLiteral(":/edbee_defaults/Mudlet.tmTheme");
+            return qsl(":/edbee_defaults/Mudlet.tmTheme");
         }
     case editorWidgetThemeJsonFile:
         // Returns the pathFileName to the external JSON file needed to process
         // an edbee editor widget theme:
-        return QStringLiteral("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath());
+        return qsl("%1/.config/mudlet/edbee/Colorsublime-Themes-master/themes.json").arg(QDir::homePath());
     case moduleBackupsPath:
         // Returns the directory used to store module backups that is used in
         // when saving/resyncing packages/modules - ends in a '/'
-        return QStringLiteral("%1/.config/mudlet/moduleBackups/").arg(QDir::homePath());
+        return qsl("%1/.config/mudlet/moduleBackups/").arg(QDir::homePath());
     case qtTranslationsPath:
         return QLibraryInfo::location(QLibraryInfo::TranslationsPath);
     case hunspellDictionaryPath:
         // Added for 3.18.0 when user dictionary capability added
 #if defined(Q_OS_MACOS)
         mudlet::self()->mUsingMudletDictionaries = true;
-        return QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
+        return qsl("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
 #elif defined(Q_OS_FREEBSD)
-        if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(extra1))) {
+        if (QFile::exists(qsl("/usr/local/share/hunspell/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/local/share/hunspell/");
-        } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(extra1))) {
+        } else if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/share/hunspell/");
-        } else if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        } else if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
-            return QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
+        } else if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
-            return QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
+            return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
         } else {
             // From build within ./src
             mudlet::self()->mUsingMudletDictionaries = true;
-            return QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
+            return qsl("%1/").arg(QCoreApplication::applicationDirPath());
         }
 #elif defined(Q_OS_LINUX)
-        if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(extra1))) {
+        if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/share/hunspell/");
-        } else if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        } else if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory
             // alongside the ./src one. {Typically QMake builds from Qtcreator
             // with CONFIG containing both 'debug_and_release' and
             // 'debug_and_release_target' (this is normal also on Windows):
             mudlet::self()->mUsingMudletDictionaries = true;
-            return QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
+        } else if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one. {Typically
             // QMake builds from Qtcreator with CONFIG NOT containing both
             // 'debug_and_release' and 'debug_and_release_target':
             mudlet::self()->mUsingMudletDictionaries = true;
-            return QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(QStringLiteral("%1/../../mudlet/src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
+        } else if (QFile::exists(qsl("%1/../../mudlet/src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory above the ./src one. {Typically
             // CMake builds from Qtcreator which are outside of the unpacked
             // source code from a git repo or tarball - which has to have been
             // unpacked/placed in a directory called 'mudlet'}:
             mudlet::self()->mUsingMudletDictionaries = true;
-            return QStringLiteral("%1/../../mudlet/src/").arg(QCoreApplication::applicationDirPath());
+            return qsl("%1/../../mudlet/src/").arg(QCoreApplication::applicationDirPath());
         } else {
             // From build within ./src AND installer builds that bundle
             // dictionaries in the same directory as the executable:
             mudlet::self()->mUsingMudletDictionaries = true;
-            return QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
+            return qsl("%1/").arg(QCoreApplication::applicationDirPath());
         }
 #else
         // Probably Windows!
         mudlet::self()->mUsingMudletDictionaries = true;
-        if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
-            return QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
+        } else if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one:
-            return QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
+            return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
         } else {
             // From build within ./src
-            return QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
+            return qsl("%1/").arg(QCoreApplication::applicationDirPath());
         }
 #endif
     }
@@ -3522,7 +3710,7 @@ void mudlet::slot_check_manual_update()
 
 void mudlet::slot_report_issue()
 {
-    QDesktopServices::openUrl(QUrl(QStringLiteral("https://github.com/Mudlet/Mudlet/issues/new")));
+    QDesktopServices::openUrl(QUrl(qsl("https://github.com/Mudlet/Mudlet/issues/new")));
 }
 
 // Means to turn-off the hard coded popup delay in QActions provided by:
@@ -3542,17 +3730,17 @@ void mudlet::slot_updateAvailable(const int updateCount)
     } else {
         mpActionAbout->setIcon(QIcon());
     }
-    mpActionAbout->setToolTip(tr("<p>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</p>",
-                                 // Intentional comment
-                                 "Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - "
-                                 "please ensure all have the same translation)."));
+    mpActionAbout->setToolTip(utils::richText(tr("Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.",
+                                                 // Intentional comment
+                                                 "Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - "
+                                                 "please ensure all have the same translation).")));
 
     // Create a new button (QActions actually turn into QToolButtons when they
     // are placed on a QToolBar - but we need to generate one ourselves so we
     // can modify the popupMode away from the delayed one that is hardwared into
     // the transmuted QAction-to-QToolButton ones):
     mpButtonAbout = new QToolButton();
-    mpButtonAbout->setIcon(QIcon(QStringLiteral(":/icons/mudlet_important.png")));
+    mpButtonAbout->setIcon(QIcon(qsl(":/icons/mudlet_important.png")));
     mpButtonAbout->setToolTip(tr("<p>About Mudlet</p>"
                                  "<p><i>%n update(s) is/are now available!</i><p>",
                                  // Intentional comment
@@ -3576,10 +3764,10 @@ void mudlet::slot_updateAvailable(const int updateCount)
                                                    "Review update(s) menu item, %n is the count of how many updates are available",
                                                    updateCount),
                                                 this, &mudlet::slot_check_manual_update);
-    pActionReview->setToolTip(tr("<p>Review the update(s) available...</p>",
-                                 // Intentional comment
-                                 "Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here",
-                                 updateCount));
+    pActionReview->setToolTip(utils::richText(tr("Review the update(s) available...",
+                                                 // Intentional comment
+                                                 "Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here",
+                                                 updateCount)));
     // Override the default hide tooltips state:
     pUpdateMenu->setToolTipsVisible(true);
     // Screw the menu onto the button
@@ -3635,7 +3823,7 @@ bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pEr
         // profile - but the window for this is likely to be a fraction of a
         // second...
         if (pErrMsg) {
-            *pErrMsg = QStringLiteral("cannot perform replay, another one seems to already be in progress; try again when it has finished.");
+            *pErrMsg = qsl("cannot perform replay, another one seems to already be in progress; try again when it has finished.");
         } else {
             pHost->postMessage(tr("[ WARN ]  - Cannot perform replay, another one may already be in progress,\n"
                                   "try again when it has finished."));
@@ -3645,7 +3833,7 @@ bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pEr
 
     QString absoluteReplayFileName;
     if (QFileInfo(replayFileName).isRelative()) {
-        absoluteReplayFileName = QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()), replayFileName);
+        absoluteReplayFileName = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, pHost->getName()), replayFileName);
     } else {
         absoluteReplayFileName = replayFileName;
     }
@@ -3700,7 +3888,7 @@ void mudlet::setEnableFullScreenMode(const bool state)
     // PLACEMARKER: Full-screen mode controlled by File (2 of 2) At some point we might consider removal of all but the first line of the "if" branch of code and drop maintaining the sentinel file presence/absence:
     if (state != mEnableFullScreenMode) {
         mEnableFullScreenMode = state;
-        QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet_option_use_smallscreen")));
+        QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_option_use_smallscreen")));
         if (state) {
             file_use_smallscreen.open(QIODevice::WriteOnly | QIODevice::Text);
             QTextStream out(&file_use_smallscreen);
@@ -3728,12 +3916,12 @@ bool mudlet::migratePasswordsToSecureStorage()
                                    .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     for (const auto& profile : profiles) {
-        const auto password = readProfileData(profile, QStringLiteral("password"));
+        const auto password = readProfileData(profile, qsl("password"));
         if (password.isEmpty()) {
             continue;
         }
 
-        auto *job = new QKeychain::WritePasswordJob(QStringLiteral("Mudlet profile"));
+        auto *job = new QKeychain::WritePasswordJob(qsl("Mudlet profile"));
         job->setAutoDelete(false);
         job->setInsecureFallback(false);
 
@@ -3763,7 +3951,7 @@ void mudlet::slot_password_migrated_to_secure(QKeychain::Job* job)
     if (job->error()) {
         qWarning() << "mudlet::slot_password_saved ERROR: couldn't migrate for" << profileName << "; error was:" << job->errorString();
     } else {
-        deleteProfileData(profileName, QStringLiteral("password"));
+        deleteProfileData(profileName, qsl("password"));
     }
     mProfilePasswordsToMigrate.removeAll(profileName);
     job->deleteLater();
@@ -3778,7 +3966,7 @@ void mudlet::slot_password_migrated_to_secure(QKeychain::Job* job)
 bool mudlet::migratePasswordsToProfileStorage()
 {
     if (!mProfilePasswordsToMigrate.isEmpty()) {
-        qWarning() << "mudlet::migratePasswordsToProfileStorage() warning: password migration is already in progress, won't start another.";
+        qWarning() << "mudlet::migratePasswordsToProfileStorage() WARNING - password migration is already in progress, so not starting a duplicate action.";
         return false;
     }
     mStorePasswordsSecurely = false;
@@ -3786,7 +3974,7 @@ bool mudlet::migratePasswordsToProfileStorage()
     QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     for (const auto& profile : profiles) {
-        auto* job = new QKeychain::ReadPasswordJob(QStringLiteral("Mudlet profile"));
+        auto* job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile"));
         job->setAutoDelete(false);
         job->setInsecureFallback(false);
         job->setKey(profile);
@@ -3811,15 +3999,16 @@ void mudlet::slot_password_migrated_to_profile(QKeychain::Job* job)
 
     if (job->error()) {
         const auto error = job->errorString();
-        if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
-            qWarning() << "mudlet::slot_password_migrated_to_profile ERROR: couldn't migrate for" << profileName << "; error was:" << error;
+        if (error != qsl("Entry not found") && error != qsl("No match")) {
+            qWarning().nospace().noquote() << "mudlet::slot_password_migrated_to_profile(...) ERROR - could not migrate for \"" << profileName << "\"; error was: " << error << ".";
         }
+
     } else {
         auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
-        writeProfileData(profileName, QStringLiteral("password"), readJob->textData());
+        writeProfileData(profileName, qsl("password"), readJob->textData());
 
         // delete from secure storage
-        auto *job = new QKeychain::DeletePasswordJob(QStringLiteral("Mudlet profile"));
+        auto *job = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
         job->setAutoDelete(true);
         job->setKey(profileName);
         job->setProperty("profile", profileName);
@@ -3861,9 +4050,19 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
         emit signal_showIconsOnMenusChanged(state);
     }
 }
-void mudlet::setDarkTheme(const bool& state)
+
+void mudlet::setAppearance(const Appearance state, const bool& loading)
 {
-    if (state) {
+    if (state == mAppearance && !loading) {
+        return;
+    }
+
+    mDarkMode = false;
+    if (state == Appearance::dark || (state == Appearance::system && desktopInDarkMode())) {
+        mDarkMode = true;
+    }
+
+    if (mDarkMode) {
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         qApp->setStyle(new DarkTheme);
         getHostManager().changeAllHostColour(getActiveHost());
@@ -3872,8 +4071,8 @@ void mudlet::setDarkTheme(const bool& state)
         qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
         getHostManager().changeAllHostColour(getActiveHost());
     }
-    mDarkTheme = state;
-    emit signal_enableDarkThemeChanged(state);
+    mAppearance = state;
+    emit signal_appearanceChanged(state);
 }
 
 void mudlet::setInterfaceLanguage(const QString& languageCode)
@@ -3904,7 +4103,7 @@ QString mudlet::autodetectPreferredLanguage()
 {
     // en_GB is a temporary special exception due to its likeness to en_US, while its
     // translation is still only at 20%
-    QVector<QString> availableQualityTranslations {QStringLiteral("en_GB")};
+    QVector<QString> availableQualityTranslations {qsl("en_GB")};
     for (auto& code : getAvailableTranslationCodes()) {
         auto& translation = mTranslationsMap.value(code);
         if (translation.fromResourceFile()) {
@@ -3916,12 +4115,12 @@ QString mudlet::autodetectPreferredLanguage()
     }
 
     for (auto language : QLocale::system().uiLanguages()) {
-        if (availableQualityTranslations.contains(language.replace(QStringLiteral("-"), QStringLiteral("_")))) {
+        if (availableQualityTranslations.contains(language.replace(qsl("-"), qsl("_")))) {
             return language;
         }
     }
 
-    return QStringLiteral("en_US");
+    return qsl("en_US");
 }
 
 // Returns false on significant failure (where the caller will have to bail out)
@@ -4058,7 +4257,7 @@ bool mudlet::overwriteAffixFile(QFile& aff, QHash<QString, unsigned int>& gc)
     }
 
     // Generate TRY line:
-    QString tryLine = QStringLiteral("TRY ");
+    QString tryLine = qsl("TRY ");
     QMapIterator<unsigned int, QString> itGrapheme(sortedGraphemeCounts);
     itGrapheme.toBack();
     while (itGrapheme.hasPrevious()) {
@@ -4067,7 +4266,7 @@ bool mudlet::overwriteAffixFile(QFile& aff, QHash<QString, unsigned int>& gc)
     }
 
     QStringList affixLines;
-    affixLines << QStringLiteral("SET UTF-8");
+    affixLines << qsl("SET UTF-8");
     affixLines << tryLine;
 
     // Finally, having got the needed content, write it out:
@@ -4133,8 +4332,8 @@ int mudlet::scanWordList(QStringList& wl, QHash<QString, unsigned int>& gc)
 Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QString>& wordSet)
 {
     // Need to check that the files exist first:
-    QString dictionaryPathFileName(getMudletPath(mudlet::profileDataItemPath, hostName, QStringLiteral("profile.dic")));
-    QString affixPathFileName(getMudletPath(mudlet::profileDataItemPath, hostName, QStringLiteral("profile.aff")));
+    QString dictionaryPathFileName(getMudletPath(mudlet::profileDataItemPath, hostName, qsl("profile.dic")));
+    QString affixPathFileName(getMudletPath(mudlet::profileDataItemPath, hostName, qsl("profile.aff")));
     QFile dictionary(dictionaryPathFileName);
     QFile affix(affixPathFileName);
     int oldWordCount = 0;
@@ -4182,8 +4381,8 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
 #endif
 
 #if defined(Q_OS_WIN32)
-    mudlet::self()->sanitizeUtf8Path(affixPathFileName, QStringLiteral("profile.dic"));
-    mudlet::self()->sanitizeUtf8Path(dictionaryPathFileName, QStringLiteral("profile.aff"));
+    mudlet::self()->sanitizeUtf8Path(affixPathFileName, qsl("profile.dic"));
+    mudlet::self()->sanitizeUtf8Path(dictionaryPathFileName, qsl("profile.aff"));
 #endif
     return Hunspell_create(affixPathFileName.toUtf8().constData(), dictionaryPathFileName.toUtf8().constData());
 }
@@ -4200,8 +4399,8 @@ Hunhandle* mudlet::prepareSharedDictionary()
     }
 
     // Need to check that the files exist first:
-    QString dictionaryPathFileName(getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet.dic")));
-    QString affixPathFileName(getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet.aff")));
+    QString dictionaryPathFileName(getMudletPath(mudlet::mainDataItemPath, qsl("mudlet.dic")));
+    QString affixPathFileName(getMudletPath(mudlet::mainDataItemPath, qsl("mudlet.aff")));
     QFile dictionary(dictionaryPathFileName);
     QFile affix(affixPathFileName);
     int oldWordCount = 0;
@@ -4237,8 +4436,8 @@ Hunhandle* mudlet::prepareSharedDictionary()
 #endif
 
 #if defined(Q_OS_WIN32)
-    mudlet::self()->sanitizeUtf8Path(affixPathFileName, QStringLiteral("profile.dic"));
-    mudlet::self()->sanitizeUtf8Path(dictionaryPathFileName, QStringLiteral("profile.aff"));
+    mudlet::self()->sanitizeUtf8Path(affixPathFileName, qsl("profile.dic"));
+    mudlet::self()->sanitizeUtf8Path(dictionaryPathFileName, qsl("profile.aff"));
 #endif
     mHunspell_sharedDictionary = Hunspell_create(affixPathFileName.toUtf8().constData(), dictionaryPathFileName.toUtf8().constData());
     return mHunspell_sharedDictionary;
@@ -4249,8 +4448,8 @@ Hunhandle* mudlet::prepareSharedDictionary()
 bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& wordSet)
 {
     // First update the line count in the list of words
-    QString dictionaryPathFileName(QStringLiteral("%1.dic").arg(pathFileBaseName));
-    QString affixPathFileName(QStringLiteral("%1.aff").arg(pathFileBaseName));
+    QString dictionaryPathFileName(qsl("%1.dic").arg(pathFileBaseName));
+    QString affixPathFileName(qsl("%1.aff").arg(pathFileBaseName));
     QFile dictionary(dictionaryPathFileName);
     QFile affix(affixPathFileName);
     QHash<QString, unsigned int> graphemeCounts;
@@ -4328,15 +4527,15 @@ QSet<QString> mudlet::getWordSet()
 std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QString& newIconPath)
 {
     QDir dir;
-    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, QStringLiteral("profileicon"));
+    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, qsl("profileicon"));
     if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
         qWarning() << "mudlet::setProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
-        return {false, QStringLiteral("couldn't remove existing icon file")};
+        return {false, qsl("couldn't remove existing icon file")};
     }
 
     if (!QFile::copy(newIconPath, profileIconPath)) {
         qWarning() << "mudlet::setProfileIcon() ERROR: couldn't copy new icon" << newIconPath<< " to" << profileIconPath;
-        return {false, QStringLiteral("couldn't copy icon file into new location")};
+        return {false, qsl("couldn't copy icon file into new location")};
     }
 
     return {true, QString()};
@@ -4345,10 +4544,10 @@ std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QS
 std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
 {
     QDir dir;
-    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, QStringLiteral("profileicon"));
+    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, qsl("profileicon"));
     if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
         qWarning() << "mudlet::resetProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
-        return {false, QStringLiteral("couldn't remove existing icon file")};
+        return {false, qsl("couldn't remove existing icon file")};
     }
 
     return {true, QString()};
@@ -4378,7 +4577,7 @@ static QString getShortPathName(const QString& name)
 // this is only an issue for the Win32 API; macOS and Linux don't have such issues
 void mudlet::sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const
 {
-    static auto findNonAscii = QRegularExpression(QStringLiteral("([^ -~])"));
+    static auto findNonAscii = QRegularExpression(qsl("([^ -~])"));
 
     auto nonAscii = findNonAscii.match(originalLocation);
     if (!nonAscii.hasMatch()) {
@@ -4392,7 +4591,7 @@ void mudlet::sanitizeUtf8Path(QString& originalLocation, const QString& fileName
         return;
     }
 
-    const QString pureANSIpath = QStringLiteral("C:\\Windows\\Temp\\mudlet_%1").arg(fileName);
+    const QString pureANSIpath = qsl("C:\\Windows\\Temp\\mudlet_%1").arg(fileName);
     if (!QFileInfo::exists(pureANSIpath)) {
         if (!QFile::copy(originalLocation, pureANSIpath)) {
             qWarning() << "mudlet::sanitizeUtf8Path() ERROR: couldn't copy" << originalLocation << "to location without ASCII characters";
@@ -4408,9 +4607,9 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
 {
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
 #if !defined(QT_NO_SSL)
-    if (url.scheme() == QStringLiteral("https")) {
+    if (url.scheme() == qsl("https")) {
         QSslConfiguration config(QSslConfiguration::defaultConfiguration());
         request.setSslConfiguration(config);
     }
@@ -4419,11 +4618,7 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
 
 void mudlet::activateProfile(Host* pHost)
 {
-    if (!mMultiView || !pHost) {
-        // We do not need to update the currently selected tab if we are not in
-        // multi-view mode as that will happen by the user selecting the tab
-        // themself - also, if the supplied argument is a nullptr we do not need
-        // to do anything:
+    if (!pHost) {
         return;
     }
 
@@ -4441,6 +4636,7 @@ void mudlet::activateProfile(Host* pHost)
         updateDiscordNamedIcon();
         dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
         pHost->updateDisplayDimensions();
+        emit signal_profileActivated(pHost, tabToBeActive);
     }
 }
 
@@ -4468,33 +4664,28 @@ void mudlet::setupTrayIcon()
 
 void mudlet::slot_tabMoved(const int oldPos, const int newPos)
 {
-    Q_UNUSED(newPos)
-    Q_UNUSED(oldPos)
     const QStringList& tabNamesInOrder = mpTabBar->tabNames();
-    int itemsCount = mpHBoxLayout_profileContainer->count();
+    int itemsCount = mpSplitter_profileContainer->count();
     Q_ASSERT_X(itemsCount == tabNamesInOrder.count(), "mudlet::slot_tabMoved(...)", "mismatch in count of tabs and TMainConsoles");
-    QMap<QString, QLayoutItem*> layoutItemMap;
-    // Gather the QLayoutItem pointers for each TMainConsole and store them
+    QMap<QString, QWidget*> widgetMap;
+    // Gather the QWidget pointers for each TMainConsole and store them
     // against their profile name:
-    for (int profileIndex = 0, total = mpHBoxLayout_profileContainer->count(); profileIndex < total; ++profileIndex) {
-        auto pLayoutItem = mpHBoxLayout_profileContainer->itemAt(profileIndex);
-        auto pWidget = pLayoutItem->widget();
+    for (int profileIndex = 0; profileIndex < itemsCount; ++profileIndex) {
+        auto pWidget = mpSplitter_profileContainer->widget(profileIndex);
         if (pWidget) {
             auto name = pWidget->property("HostName").toString();
-            layoutItemMap.insert(name, pLayoutItem);
+            widgetMap.insert(name, pWidget);
+        } else {
+            qWarning().nospace().noquote() << "mudlet::slot_tabMoved(" << oldPos<< ", " << newPos << ") WARNING - nullptr for pointer to TMainConsole at 'profileIndex': " << profileIndex << ".";
         }
     }
-    // Now go through all the names, pull the associated QLayoutItem from the
-    // layout and then re-add each of them at the end in turn - once we have
+    // Now go through all the names, pull the associated TMainConsoles from the
+    // splitter and then re-add each of them at the end in turn - once we have
     // gone through them all it will mean that they are in the same order as the
     // tabs:
     for (int index = 0; index < itemsCount; ++index) {
         const auto& wantedTabName = tabNamesInOrder.at(index);
-        auto pLayoutItem = layoutItemMap.value(wantedTabName);
-        // This will remove the item from wherever it is in the layout:
-        mpHBoxLayout_profileContainer->removeItem(pLayoutItem);
-        // This will re-add the item to the end of the layout:
-        mpHBoxLayout_profileContainer->addItem(pLayoutItem);
+        mpSplitter_profileContainer->addWidget(widgetMap.value(wantedTabName));
     }
 }
 
@@ -4517,17 +4708,17 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
     const QHash<QString, QStringList> defaultScripts = {
         // clang-format off
         // scripts to pre-install for a profile      games this applies to, * means all games
-        {QStringLiteral(":/run-lua-code-v4.xml"),    {QStringLiteral("*")}},
-        {QStringLiteral(":/echo.xml"),               {QStringLiteral("*")}},
-        {QStringLiteral(":/deleteOldProfiles.xml"),  {QStringLiteral("*")}},
-        {QStringLiteral(":/CF-loader.xml"),          {QStringLiteral("carrionfields.net")}},
-        {QStringLiteral(":/run-tests.xml"),          {QStringLiteral("mudlet.org")}},
-        {QStringLiteral(":/mudlet-mapper.xml"),      {QStringLiteral("aetolia.com"),
-                                                      QStringLiteral("achaea.com"),
-                                                      QStringLiteral("lusternia.com"),
-                                                      QStringLiteral("imperian.com"),
-                                                      QStringLiteral("starmourn.com"),
-                                                      QStringLiteral("stickmud.com")}},
+        {qsl(":/run-lua-code-v4.xml"),    {qsl("*")}},
+        {qsl(":/echo.xml"),               {qsl("*")}},
+        {qsl(":/deleteOldProfiles.xml"),  {qsl("*")}},
+        {qsl(":/CF-loader.xml"),          {qsl("carrionfields.net")}},
+        {qsl(":/run-tests.xml"),          {qsl("mudlet.org")}},
+        {qsl(":/mudlet-mapper.xml"),      {qsl("aetolia.com"),
+                                                      qsl("achaea.com"),
+                                                      qsl("lusternia.com"),
+                                                      qsl("imperian.com"),
+                                                      qsl("starmourn.com"),
+                                                      qsl("stickmud.com")}},
         // clang-format on
     };
 
@@ -4539,7 +4730,36 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         }
     }
 
-    if (!mudlet::self()->packagesToInstallList.contains(QStringLiteral(":/mudlet-mapper.xml"))) {
-        mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
+    if (!mudlet::self()->packagesToInstallList.contains(qsl(":/mudlet-mapper.xml"))) {
+        mudlet::self()->packagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
     }
+}
+
+// Referenced from github.com/keepassxreboot/keepassxc. Licensed under GPL2/3.
+// Copyright (C) 2020 KeePassXC Team <team@keepassxc.org>
+bool mudlet::desktopInDarkMode()
+{
+#if defined(Q_OS_WIN32)
+    QSettings settings(R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)", QSettings::NativeFormat);
+    return settings.value("AppsUseLightTheme", 1).toInt() == 0;
+#elif defined(Q_OS_MAC)
+    bool isDark = false;
+    CFStringRef uiStyleKey = CFSTR("AppleInterfaceStyle");
+    CFStringRef uiStyle = nullptr;
+    CFStringRef darkUiStyle = CFSTR("Dark");
+    if (uiStyle = (CFStringRef) coreMacOS::CFPreferencesCopyAppValue(uiStyleKey, coreMacOS::kCFPreferencesCurrentApplication); uiStyle)
+    {
+        isDark = (coreMacOS::kCFCompareEqualTo == coreMacOS::CFStringCompare(uiStyle, darkUiStyle, 0));
+        coreMacOS::CFRelease(uiStyle);
+    }
+    return isDark;
+#elif defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+    QProcess process;
+    process.start(qsl("gsettings"), QStringList() << qsl("get") << qsl("org.gnome.desktop.interface") << qsl("gtk-theme"));
+    process.waitForFinished();
+    QString output = QString::fromUtf8(process.readAllStandardOutput());
+    return output.contains(qsl("-dark"), Qt::CaseInsensitive);
+#endif
+
+    return false;
 }
