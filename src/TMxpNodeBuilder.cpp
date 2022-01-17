@@ -185,7 +185,7 @@ bool TMxpNodeBuilder::acceptSequence(char ch, std::string& buffer)
         if (QChar(ch).isSpace()) {
             mHasSequence = true;
             return false;
-        } else if (ch == '/') {
+        } else if (ch == '/' && mCurrentTagAttrs.empty() && mCurrentAttrValue.empty()) {
             // Special case for end tags in the format <a given prefix/tag_name> used in MateriaMagica
             mCurrentTagName.clear();
             resetCurrentAttribute();
