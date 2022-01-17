@@ -146,7 +146,7 @@ end
 local function changeNestContainer(windowname, label)
   for k,v in ipairs(label.nestedLabels) do
     if windowname ~= "main" then
-      v:changeContainer(Geyser.windowList[windowname.."Container"].windowList[windowname])
+      v:changeContainer(Geyser.parentWindows[windowname])
     else
       v:changeContainer(Geyser)
     end
@@ -218,6 +218,6 @@ function Geyser:changeContainer (container)
     setMyWindow(self, windowname)
     setContainerWindow(self, windowname)
   end
-  -- use add2 without overwriting childrens add functions
+  -- use add2 without overwriting childrens' add functions
   container:add2(self, cons, false)
 end

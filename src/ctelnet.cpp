@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2002-2005 by Tomas Mecir - kmuddy@kmuddy.com            *
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2019, 2021 by Stephen Lyons             *
+ *   Copyright (C) 2013-2014, 2017-2019, 2021-2022 by Stephen Lyons        *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2015 by Florian Scheel - keneanung@googlemail.com       *
@@ -60,7 +60,10 @@ using namespace std::chrono_literals;
 // of the messages
 #define DEBUG_TELNET 1
 
-char loadBuffer[100001];
+
+constexpr size_t BUFFER_SIZE = 100000L;
+// TODO: https://github.com/Mudlet/Mudlet/issues/5780 (1 of 7) - investigate switching from using `char[]` to `std::array<char>`
+char loadBuffer[BUFFER_SIZE + 1];
 int loadedBytes;
 QDataStream replayStream;
 QFile replayFile;
@@ -95,7 +98,6 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mMCCP_version_1(false)
 , mMCCP_version_2(false)
 , mIsTimerPosting()
-, mRecordLastChunkMSecTimeOffset()
 , enableCHARSET(false)
 , enableATCP(false)
 , enableGMCP(false)
@@ -115,9 +117,9 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     // than that in the initialisation list so that it is processed as a change
     // to set up the initial encoder
     encodingChanged("UTF-8");
-    termType = QStringLiteral("Mudlet " APP_VERSION);
+    termType = qsl("Mudlet " APP_VERSION);
     if (QByteArray(APP_BUILD).trimmed().length()) {
-        termType.append(QStringLiteral(APP_BUILD));
+        termType.append(qsl(APP_BUILD));
     }
 
     command = "";
@@ -152,7 +154,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     // initialize telnet session
     reset();
 
-    mpPostingTimer->setInterval(300); //FIXME
+    mpPostingTimer->setInterval(mTimeOut);
     connect(mpPostingTimer, &QTimer::timeout, this, &cTelnet::slot_timerPosting);
 
     mTimerLogin = new QTimer(this);
@@ -332,13 +334,13 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
             // output in cTelnet::sendData(...)
             mEncoding.clear();
             if (saveValue) {
-                mpHost->writeProfileData(QStringLiteral("encoding"), reportedEncoding);
+                mpHost->writeProfileData(qsl("encoding"), reportedEncoding);
             }
         }
     } else if (!(mAcceptableEncodings.contains(newEncoding) || mAcceptableEncodings.contains("M_" + newEncoding))) {
         // Not in list (even with a "M_" prefix that indicates the relevant
         // QTextCodec is actually one of our own TTextCodecs) - so reject it
-        // Since we want to hide the implimentation detail that some of the
+        // Since we want to hide the implementation detail that some of the
         // encoding names could have a "M_"  prefix we will need to preprocess
         // the list of encodings.
         // Since the mAcceptableEncodings list is unchanging once it has been
@@ -363,7 +365,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
     } else if (mEncoding != newEncoding && ("M_" + mEncoding) != newEncoding) {
         encodingChanged(newEncoding);
         if (saveValue) {
-            mpHost->writeProfileData(QStringLiteral("encoding"), QLatin1String(mEncoding));
+            mpHost->writeProfileData(qsl("encoding"), QLatin1String(mEncoding));
         }
     }
 
@@ -477,7 +479,7 @@ void cTelnet::handle_socket_signal_connected()
     } else {
         msg = tr("[ INFO ]  - A connection has been established successfully.");
     }
-    msg.append(QStringLiteral("\n    \n    "));
+    msg.append(qsl("\n    \n    "));
     postMessage(msg);
     QString func = "onConnect";
     QString nothing = "";
@@ -489,7 +491,7 @@ void cTelnet::handle_socket_signal_connected()
     emit signal_connected(mpHost);
 
     TEvent event {};
-    event.mArgumentList.append(QStringLiteral("sysConnectionEvent"));
+    event.mArgumentList.append(qsl("sysConnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
 }
@@ -506,7 +508,7 @@ void cTelnet::handle_socket_signal_disconnected()
 
     emit signal_disconnected(mpHost);
 
-    event.mArgumentList.append(QStringLiteral("sysDisconnectionEvent"));
+    event.mArgumentList.append(qsl("sysDisconnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
 
@@ -542,18 +544,18 @@ void cTelnet::handle_socket_signal_disconnected()
             mDontReconnect = true;
 
             for (int a = 0; a < sslErrors.count(); ++a) {
-                reason.append(QStringLiteral("        %1\n").arg(QString(sslErrors.at(a).errorString())));
+                reason.append(qsl("        %1\n").arg(QString(sslErrors.at(a).errorString())));
             }
             QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: ") % reason;
             postMessage(err);
         } else {
 #endif
             if (mDontReconnect) {
-                reason = QStringLiteral("User Disconnected");
+                reason = qsl("User Disconnected");
             } else {
                 reason = socket.errorString();
             }
-            if (reason == QStringLiteral("Error during SSL handshake: error:140770FC:SSL routines:SSL23_GET_SERVER_HELLO:unknown protocol")) {
+            if (reason == qsl("Error during SSL handshake: error:140770FC:SSL routines:SSL23_GET_SERVER_HELLO:unknown protocol")) {
                 reason = tr("Secure connections aren't supported by this game on this port - try turning the option off.");
             }
             QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: ") % reason;
@@ -564,7 +566,7 @@ void cTelnet::handle_socket_signal_disconnected()
     }
 
     if (sslerr) {
-        mudlet::self()->show_options_dialog(QStringLiteral("tab_connection"));
+        mudlet::self()->show_options_dialog(qsl("tab_connection"));
     }
 #endif
 
@@ -635,7 +637,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
 
     if (Q_LIKELY(permitDataSendRequestEvent)) {
         TEvent event{};
-        event.mArgumentList.append(QStringLiteral("sysDataSendRequest"));
+        event.mArgumentList.append(qsl("sysDataSendRequest"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(data);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -725,7 +727,7 @@ bool cTelnet::socketOutRaw(std::string& data)
         if (chunkWritten < 0) {
             // -1 is the sentinel (error) value but any other negative value
             // would not make sense and it would break the cast to the
-            // (unsigned) std::size_t type in the next code fragement!
+            // (unsigned) std::size_t type in the next code fragment!
             return false;
         }
 
@@ -743,42 +745,52 @@ bool cTelnet::socketOutRaw(std::string& data)
     return true;
 }
 
-void cTelnet::setDisplayDimensions()
+void cTelnet::checkNAWS()
 {
-    int x = (mpHost->mScreenWidth < mpHost->mWrapAt) ? mpHost->mScreenWidth : mpHost->mWrapAt;
-    int y = mpHost->mScreenHeight;
-    if (myOptionState[static_cast<size_t>(OPT_NAWS)]) {
-        std::string s;
-        s = TN_IAC;
-        s += TN_SB;
-        s += OPT_NAWS;
-        char x1, x2, y1, y2;
-        x1 = x / 256;
-        x2 = x % 256;
-        y1 = y / 256;
-        y2 = y % 256;
-        //IAC must be doubled
-        s += x1;
-        if (x1 == TN_IAC) {
-            s += TN_IAC;
-        }
-        s += x2;
-        if (x2 == TN_IAC) {
-            s += TN_IAC;
-        }
-        s += y1;
-        if (y1 == TN_IAC) {
-            s += TN_IAC;
-        }
-        s += y2;
-        if (y2 == TN_IAC) {
-            s += TN_IAC;
-        }
-
-        s += TN_IAC;
-        s += TN_SE;
-        socketOutRaw(s);
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
     }
+    int naws_x = (pHost->mScreenWidth < pHost->mWrapAt) ? pHost->mScreenWidth : pHost->mWrapAt;
+    int naws_y = pHost->mScreenHeight;
+    if ((naws_y > 0) && (myOptionState[static_cast<size_t>(OPT_NAWS)]) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
+        sendNAWS(naws_x, naws_y);
+        mNaws_x = naws_x;
+        mNaws_y = naws_y;
+    }
+}
+
+void cTelnet::sendNAWS(int x, int y)
+{
+    std::string s;
+    s = TN_IAC;
+    s += TN_SB;
+    s += OPT_NAWS;
+    char x1 = static_cast<char>(x / 256);
+    char x2 = static_cast<char>(x % 256);
+    char y1 = static_cast<char>(y / 256);
+    char y2 = static_cast<char>(y % 256);
+    //IAC must be doubled
+    s += x1;
+    if (x1 == TN_IAC) {
+        s += TN_IAC;
+    }
+    s += x2;
+    if (x2 == TN_IAC) {
+        s += TN_IAC;
+    }
+    s += y1;
+    if (y1 == TN_IAC) {
+        s += TN_IAC;
+    }
+    s += y2;
+    if (y2 == TN_IAC) {
+        s += TN_IAC;
+    }
+
+    s += TN_IAC;
+    s += TN_SE;
+    socketOutRaw(s);
 }
 
 void cTelnet::sendTelnetOption(char type, char option)
@@ -937,7 +949,7 @@ QString cTelnet::decodeOption(const unsigned char ch) const
     // Official:
     case 255:   return QLatin1String("EXTENDED_OPTIONS_LIST (255)");
     default:
-        return QStringLiteral("UNKNOWN (%1)").arg(ch, 3);
+        return qsl("UNKNOWN (%1)").arg(ch, 3);
     }
 }
 
@@ -1050,6 +1062,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 #endif
                 break;
             } else {
+                enableMSDP = true;
                 sendTelnetOption(TN_DO, OPT_MSDP);
                 //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
                 //NOTE: MSDP does not need quotes for string/vals
@@ -1188,7 +1201,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
             triedToEnable[idxOption] = false;
         } else {
             if (!hisOptionState[idxOption]) {
-                //only if this is not set; if it's set, something's wrong wth the server
+                //only if this is not set; if it's set, something's wrong with the server
                 //(according to telnet specification, option announcement may not be
                 //unless explicitly requested)
 
@@ -1255,6 +1268,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
             if (option == OPT_MSDP) {
                 // MSDP got turned off
+                enableMSDP = false;
                 raiseProtocolEvent("sysProtocolDisabled", "MSDP");
             }
 
@@ -1349,6 +1363,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
         if (option == OPT_MSDP && mpHost->mEnableMSDP) {
             // MSDP support
+            enableMSDP = true;
             sendTelnetOption(TN_WILL, OPT_MSDP);
             raiseProtocolEvent("sysProtocolEnabled", "MSDP");
             break;
@@ -1431,7 +1446,13 @@ void cTelnet::processTelnetCommand(const std::string& command)
         }
         if (option == OPT_NAWS) {
             //NAWS
-            setDisplayDimensions();
+            // Ensure that the stored copies of the screen dimensions have been
+            // reset before we do this so that they are different from real,
+            // used values:
+            mNaws_x = 0;
+            mNaws_y = 0;
+            // thus sending of the values is performed when we check them:
+            checkNAWS();
         }
         break;
     }
@@ -1450,6 +1471,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
         if (option == OPT_MSDP) {
             // MSDP got turned off
+            enableMSDP = false;
             raiseProtocolEvent("sysProtocolDisabled", "MSDP");
         }
 
@@ -1645,7 +1667,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 // encoding is wrong.
                 QString msg = decodeBytes(payload);
                 QString version = msg.section(QChar::LineFeed, 0);
-                version.remove(QStringLiteral("Client.GUI "), Qt::CaseInsensitive);
+                version.remove(qsl("Client.GUI "), Qt::CaseInsensitive);
                 version.replace(QChar::LineFeed, QChar::Space);
                 version = version.section(QChar::Space, 0, 0);
 
@@ -1654,10 +1676,10 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 QString fileName = packageName;
                 // As this is a file name it must be handled case insensitively to allow
                 // for platforms which may not be case sensitive (MacOs!):
-                packageName.remove(QStringLiteral(".zip"), Qt::CaseInsensitive);
-                packageName.remove(QStringLiteral(".trigger"), Qt::CaseInsensitive);
-                packageName.remove(QStringLiteral(".xml"), Qt::CaseInsensitive);
-                packageName.remove(QStringLiteral(".mpackage"), Qt::CaseInsensitive);
+                packageName.remove(qsl(".zip"), Qt::CaseInsensitive);
+                packageName.remove(qsl(".trigger"), Qt::CaseInsensitive);
+                packageName.remove(qsl(".xml"), Qt::CaseInsensitive);
+                packageName.remove(qsl(".mpackage"), Qt::CaseInsensitive);
                 packageName.remove(QLatin1Char('/'));
                 packageName.remove(QLatin1Char('\\'));
                 packageName.remove(QLatin1Char('.'));
@@ -1665,10 +1687,10 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 if (mpHost->mServerGUI_Package_version != version) {
                     postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
                                    "Uninstalling old version '%2'.")
-                                .arg(version, mpHost->mServerGUI_Package_version != QStringLiteral("-1") ? mpHost->mServerGUI_Package_version : QStringLiteral("(unknown)")));
+                                .arg(version, mpHost->mServerGUI_Package_version != qsl("-1") ? mpHost->mServerGUI_Package_version : qsl("(unknown)")));
                     // uninstall by previous known package name or current if we don't
                     // know it (in case of manual installation)
-                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != QStringLiteral("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
                     mpHost->mServerGUI_Package_version = version;
                 }
 
@@ -1834,7 +1856,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
     } //end switch 1
 
     // raise sysTelnetEvent for all unhandled protocols
-    // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reaons
+    // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reasons
     if (command[1] != TN_GA && command[1] != TN_EOR) {
         auto type = static_cast<unsigned char>(command[1]);
         auto telnetOption = static_cast<unsigned char>(command[2]);
@@ -1844,7 +1866,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
         }
 
         TEvent event {};
-        event.mArgumentList.append(QStringLiteral("sysTelnetEvent"));
+        event.mArgumentList.append(qsl("sysTelnetEvent"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(QString::number(type));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -1933,14 +1955,8 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
 
 void cTelnet::setGMCPVariables(const QByteArray& msg)
 {
-    QString transcodedMsg;
-    if (mpOutOfBandDataIncomingCodec) {
-        // Message is encoded
-        transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
-    } else {
-        // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = msg;
-    }
+    // JSON (and thus the GMCP data) is always utf8
+    QString transcodedMsg(msg);
 
     QString packageMessage;
     QString data;
@@ -1958,7 +1974,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         data = transcodedMsg.section(QChar::LineFeed, 1);
     }
 
-    if (transcodedMsg.startsWith(QStringLiteral("Client.GUI"), Qt::CaseInsensitive)) {
+    if (transcodedMsg.startsWith(qsl("Client.GUI"), Qt::CaseInsensitive)) {
         if (!mpHost->mAcceptServerGUI) {
             return;
         }
@@ -2000,7 +2016,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
                 return;
             }
 
-            auto versionJSON = json.value(QStringLiteral("version"));
+            auto versionJSON = json.value(qsl("version"));
 
             if (versionJSON != QJsonValue::Undefined && !versionJSON.toString().isEmpty()) {
                 version = versionJSON.toString();
@@ -2008,7 +2024,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
                 return;
             }
 
-            auto urlJSON = json.value(QStringLiteral("url"));
+            auto urlJSON = json.value(qsl("url"));
 
             if (urlJSON != QJsonValue::Undefined && !urlJSON.toString().isEmpty()) {
                 url = urlJSON.toString();
@@ -2021,10 +2037,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         QString fileName = packageName;
         // As this is a file name it must be handled case insensitively to allow
         // for platforms which may not be case sensitive (MacOs!):
-        packageName.remove(QStringLiteral(".zip"), Qt::CaseInsensitive);
-        packageName.remove(QStringLiteral(".trigger"), Qt::CaseInsensitive);
-        packageName.remove(QStringLiteral(".xml"), Qt::CaseInsensitive);
-        packageName.remove(QStringLiteral(".mpackage"), Qt::CaseInsensitive);
+        packageName.remove(qsl(".zip"), Qt::CaseInsensitive);
+        packageName.remove(qsl(".trigger"), Qt::CaseInsensitive);
+        packageName.remove(qsl(".xml"), Qt::CaseInsensitive);
+        packageName.remove(qsl(".mpackage"), Qt::CaseInsensitive);
         packageName.remove(QLatin1Char('/'));
         packageName.remove(QLatin1Char('\\'));
         packageName.remove(QLatin1Char('.'));
@@ -2033,10 +2049,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         if (mpHost->mServerGUI_Package_version != version) {
             postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
                            "Uninstalling old version '%2'.")
-                        .arg(version, mpHost->mServerGUI_Package_version != QStringLiteral("-1") ? mpHost->mServerGUI_Package_version : QStringLiteral("(unknown)")));
+                        .arg(version, mpHost->mServerGUI_Package_version != qsl("-1") ? mpHost->mServerGUI_Package_version : qsl("(unknown)")));
             // uninstall by previous known package name or current if we don't
             // know it (in case of manual installation)
-            mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != QStringLiteral("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+            mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
             mpHost->mServerGUI_Package_version = version;
         }
 
@@ -2071,7 +2087,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpHost->processDiscordGMCP(packageMessage, data);
     }
 
-    if (mpHost->mAcceptServerMedia && packageMessage.startsWith(QStringLiteral("Client.Media"), Qt::CaseInsensitive)) {
+    if (mpHost->mAcceptServerMedia && packageMessage.startsWith(qsl("Client.Media"), Qt::CaseInsensitive)) {
         mpHost->mpMedia->parseGMCP(packageMessage, data);
     }
 
@@ -2120,7 +2136,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
     transcodedMsg.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
 
-    if (!transcodedMsg.endsWith(QStringLiteral(")"))) {
+    if (!transcodedMsg.endsWith(qsl(")"))) {
         return;
     } else {
         // Met the MSP standard so far. Remove this last right parenthesis.
@@ -2131,12 +2147,12 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolMSP);
 
-    if (transcodedMsg.startsWith(QStringLiteral("!!SOUND("))) {
+    if (transcodedMsg.startsWith(qsl("!!SOUND("))) {
         mediaData.setMediaType(TMediaData::MediaTypeSound);
-        transcodedMsg.remove(QStringLiteral("!!SOUND("));
-    } else if (transcodedMsg.startsWith(QStringLiteral("!!MUSIC("))) {
+        transcodedMsg.remove(qsl("!!SOUND("));
+    } else if (transcodedMsg.startsWith(qsl("!!MUSIC("))) {
         mediaData.setMediaType(TMediaData::MediaTypeMusic);
-        transcodedMsg.remove(QStringLiteral("!!MUSIC("));
+        transcodedMsg.remove(qsl("!!MUSIC("));
     } else {
         // Does not meet the MSP standard.
         return;
@@ -2305,7 +2321,7 @@ void cTelnet::atcpComposerSave(QString txt)
 // following prefix.
 // Prefixes are made uppercase.
 // Will store messages if the TConsole on which they are to be placed is not yet
-// in existance as happens during startup, then pumps them out in order of
+// in existence as happens during startup, then pumps them out in order of
 // arrival once a message arrives when the TConsole DOES exist.
 void cTelnet::postMessage(QString msg)
 {
@@ -2338,7 +2354,7 @@ void cTelnet::postMessage(QString msg)
             if (prefix.contains(tr("ERROR", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("ERROR"))) {
                 mpHost->mpConsole->print(prefix, Qt::red, mpHost->mBgColor);                                  // Bright Red
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(255, 255, 50), mpHost->mBgColor); // Bright Yellow
-                for (quint8 _i = 0; _i < body.size(); ++_i) {
+                for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     // Fix for lua using tabs for indentation which was messing up justification:
@@ -2350,7 +2366,7 @@ void cTelnet::postMessage(QString msg)
             } else if (prefix.contains(tr("LUA", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("LUA"))) {
                 mpHost->mpConsole->print(prefix, QColor(80, 160, 255), mpHost->mBgColor);                    // Light blue
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 200, 50), mpHost->mBgColor); // Light green
-                for (quint8 _i = 0; _i < body.size(); ++_i) {
+                for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2361,7 +2377,7 @@ void cTelnet::postMessage(QString msg)
             } else if (prefix.contains(tr("WARN", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("WARN"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);                     // Cyan
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 150, 0), mpHost->mBgColor); // Orange
-                for (quint8 _i = 0; _i < body.size(); ++_i) {
+                for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2372,7 +2388,7 @@ void cTelnet::postMessage(QString msg)
             } else if (prefix.contains(tr("ALERT", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("ALERT"))) {
                 mpHost->mpConsole->print(prefix, QColor(190, 100, 50), mpHost->mBgColor);                     // Orange-ish
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 190, 50), mpHost->mBgColor); // Yellow
-                for (quint8 _i = 0; _i < body.size(); ++_i) {
+                for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2383,7 +2399,7 @@ void cTelnet::postMessage(QString msg)
             } else if (prefix.contains(tr("INFO", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("INFO"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);                   // Cyan
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
-                for (quint8 _i = 0; _i < body.size(); ++_i) {
+                for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2394,7 +2410,7 @@ void cTelnet::postMessage(QString msg)
             } else if (prefix.contains(tr("OK", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("OK"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 160, 0), mpHost->mBgColor);                        // Light Green
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orange-ish
-                for (quint8 _i = 0; _i < body.size(); ++_i) {
+                for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2405,7 +2421,7 @@ void cTelnet::postMessage(QString msg)
             } else {                                                                                        // Unrecognised but still in a "[ something ] -  message..." format
                 mpHost->mpConsole->print(prefix, QColor(190, 50, 50), mpHost->mBgColor);                    // Foreground red, background bright grey
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 50, 50), mpHost->mBgColor); //Foreground dark grey, background bright grey
-                for (quint8 _i = 0; _i < body.size(); ++_i) {
+                for (int _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2427,6 +2443,9 @@ void cTelnet::postMessage(QString msg)
 void cTelnet::gotPrompt(std::string& mud_data)
 {
     mpPostingTimer->stop();
+    if (mpPostingTimer->interval() != mTimeOut) {
+        mpPostingTimer->setInterval(mTimeOut);
+    }
     mMudData += mud_data;
 
     if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
@@ -2476,6 +2495,9 @@ void cTelnet::gotRest(std::string& mud_data)
         if (i != std::string::npos) {
             mMudData += mud_data.substr(0, i + 1);
             postData();
+            if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
+                mpPostingTimer->setInterval(mTimeOut);
+            }
             mpPostingTimer->start();
             mIsTimerPosting = true;
             if (i + 1 < mud_data.size()) {
@@ -2486,6 +2508,9 @@ void cTelnet::gotRest(std::string& mud_data)
         } else {
             mMudData += mud_data;
             if (!mIsTimerPosting) {
+                if (mpPostingTimer->interval() != mTimeOut) {
+                    mpPostingTimer->setInterval(mTimeOut);
+                }
                 mpPostingTimer->start();
                 mIsTimerPosting = true;
             }
@@ -2536,11 +2561,11 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     mZstream.avail_in = length;
     mZstream.next_in = (Bytef*)in_buffer;
 
-    mZstream.avail_out = 100000;
+    mZstream.avail_out = BUFFER_SIZE;
     mZstream.next_out = (Bytef*)out_buffer;
 
     int zval = inflate(&mZstream, Z_SYNC_FLUSH);
-    int outSize = 100000 - mZstream.avail_out;
+    int outSize = BUFFER_SIZE - mZstream.avail_out;
 
     length = mZstream.avail_in;
     in_buffer = (char*)mZstream.next_in;
@@ -2566,6 +2591,7 @@ void cTelnet::recordReplay()
 {
     mRecordLastChunkMSecTimeOffset = 0;
     mRecordingChunkTimer.start();
+    mRecordingChunkCount = 0;
 }
 
 bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
@@ -2587,9 +2613,25 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         }
         loadingReplay = true;
         if (mudlet::self()->replayStart()) {
-            // TODO: consider moving to a QTimeLine based system...?
-            // This initiates the replay chunk reading/processing cycle:
-            loadReplayChunk();
+            auto [ok, modifiedFormat] = testReadReplayFile();
+            if (Q_LIKELY(ok)) {
+                mReplayHasFaultyFormat = modifiedFormat;
+                // This initiates the replay chunk reading/processing cycle:
+                loadReplayChunk();
+            } else {
+                // Amelioration code should now prevent this from happening
+                loadingReplay = false;
+                replayFile.close();
+                if (pErrMsg) {
+                    // Called from lua case:
+                    *pErrMsg = tr("Cannot replay file \"%1\", error message was: \"replay file seems to be corrupt\".").arg(name);
+                } else {
+                    postMessage(tr("[ WARN ]  - The replay has been aborted as the file seems to be corrupt."));
+                }
+                mudlet::self()->replayOver();
+                return false;
+            }
+
         } else {
             loadingReplay = false;
             if (pErrMsg) {
@@ -2616,12 +2658,23 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
     return true;
 }
 
+// TODO: https://github.com/Mudlet/Mudlet/issues/5779 - consider enhancing replay system, possibly using the QTimeLine class
 void cTelnet::loadReplayChunk()
 {
     if (!replayStream.atEnd()) {
-        int offset;
-        int amount;
-        replayStream >> offset;
+        qint32 amount = 0;
+        qint32 offset = 0;
+        if (mReplayHasFaultyFormat) {
+            qint64 temp = 0;
+            replayStream >> temp;
+            // 2^30 milliseconds is over 12 days so that sort of delay between
+            // steps is not likely - and only using a 32 bit integer type is
+            // going to be okay:
+            offset = static_cast<qint32>(temp);
+        } else {
+            replayStream >> offset;
+        }
+
         replayStream >> amount;
 
         loadedBytes = replayStream.readRawData(loadBuffer, amount);
@@ -2639,7 +2692,6 @@ void cTelnet::loadReplayChunk()
         mudlet::self()->replayOver();
     }
 }
-
 
 void cTelnet::slot_processReplayChunk()
 {
@@ -2740,15 +2792,17 @@ void cTelnet::handle_socket_signal_readyRead()
         mWaitingForResponse = false;
     }
 
-    char in_buffer[100010];
+    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (2 of 7) - investigate switching from using `char[]` to `std::array<char>`
+    char in_buffer[BUFFER_SIZE + 10];
 
-    int amount = socket.read(in_buffer, 100000);
+    int amount = socket.read(in_buffer, BUFFER_SIZE);
     processSocketData(in_buffer, amount);
 }
 
 void cTelnet::processSocketData(char* in_buffer, int amount)
 {
-    char out_buffer[100010];
+    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (3 of 7) - investigate switching from using `char[]` to `std::array<char>`
+    char out_buffer[BUFFER_SIZE + 10];
 
     in_buffer[amount + 1] = '\0';
     if (amount == -1) {
@@ -2759,7 +2813,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
     }
 
     std::string cleandata = "";
-    int datalen;
+    qint32 datalen = 0;
     do {
         datalen = amount;
         char* buffer = in_buffer;
@@ -2767,11 +2821,21 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
             datalen = decompressBuffer(in_buffer, amount, out_buffer);
             buffer = out_buffer;
         }
-        buffer[datalen] = '\0';
+        // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
+        buffer[static_cast<size_t>(datalen)] = '\0';
         if (mpHost->mpConsole->mRecordReplay) {
-            mpHost->mpConsole->mReplayStream << mRecordingChunkTimer.elapsed() - mRecordLastChunkMSecTimeOffset;
-            mpHost->mpConsole->mReplayStream << datalen;
+            ++mRecordingChunkCount;
+            // QElapsedTimer::elapsed() returns a qint64, it replaces a
+            // previous QTime::elapsed() which returns a int (effectively a
+            // qint32):
+            qint32 recordingChunkInterval = static_cast<qint32>(mRecordingChunkTimer.elapsed()) - mRecordLastChunkMSecTimeOffset;
+            mpHost->mpConsole->mReplayStream << recordingChunkInterval; // 4 bytes
+            mpHost->mpConsole->mReplayStream << datalen;                // 4 bytes
             mpHost->mpConsole->mReplayStream.writeRawData(buffer, datalen);
+#if defined(DEBUG_RECORDING)
+            qDebug().noquote().nospace() << "cTelnet::processSocketData(...) INFO - recording chunk: " << mRecordingChunkCount << " is " << datalen
+                                         << " bytes and has an interval of: " << recordingChunkInterval << " mSecond since the previous chunk.";
+#endif
         }
 
         recvdGA = false;
@@ -2871,7 +2935,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                         processTelnetCommand(command);
                         if (!mIncompleteSB) {
                             mIncompleteSB = true;
-                            qWarning(R"("TELNET: the server did not properly complete a subnegotiation (code %02x).\nSome data loss is likely - please mention this problem to the game admins.)",command[2]);
+                            qWarning(R"("TELNET: the server did not properly complete a subnegotiation (code %02x).
+Some data loss is likely - please mention this problem to the game admins.)", command[2]);
                         }
 
 
@@ -2894,7 +2959,12 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                 }
             } else {
                 if (ch == TN_BELL) {
-                    // flash taskbar for 3 seconds on the telnet bell
+                    // Flash taskbar for 3 seconds on the telnet bell, note
+                    // by processing it here rather than in the TTextEdit class
+                    // it is not possible to fake/test it with a Lua
+                    // feedTriggers(...) call - OTOH doing it there would make
+                    // a beep every time the screen was refreshed!
+                    // TODO: https://github.com/Mudlet/Mudlet/issues/5836 - provide option to actually make a (void) QApplication::beep() or a user-selected sound (different for each profile) and/or instead of the visual alert
                     QApplication::alert(mudlet::self(), 3000);
                 }
                 if (ch != '\r' && ch != '\0') {
@@ -2921,7 +2991,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                 }
             }
         } //for
-    } while (datalen == 100000);
+    } while (datalen == BUFFER_SIZE);
 
     if (!cleandata.empty()) {
         gotRest(cleandata);
@@ -3041,7 +3111,7 @@ QByteArray cTelnet::decodeBytes(const char* bytes)
 // encoding and cooks any 0xff bytes by doubling them to get them through Telnet
 // protocol handling in the Server - this is needed, at least, for the following
 //  characters in the following encodings which WILL become the 0xff value:
-// 'ÿ' {U+00FF Latin small letter y with diaresis} ==> ISO 8859-1/9/14/15/16
+// 'ÿ' {U+00FF Latin small letter y with diaeresis} ==> ISO 8859-1/9/14/15/16
 // '˙' {U+02D9 Dot above}                          ==> ISO 8859-2/3/4
 // 'џ' {U+045F Cyrillic small letter dzhe}         ==> ISO 8859-5
 // 'ĸ' {U+0138 Latin small letter kra}             ==> ISO 8859-10
@@ -3060,4 +3130,88 @@ std::string cTelnet::encodeAndCookBytes(const std::string& data)
         // a garenteed terminating null byte.
         return mudlet::replaceString(data, "\xff", "\xff\xff");
     }
+}
+
+void cTelnet::setPostingTimeout(const int timeout)
+{
+    if (mTimeOut != timeout) {
+        mTimeOut = timeout;
+    }
+}
+
+// Tries reading the replay in two different manners depending on whether the
+// the first integer value in the chunk data uses 4 (original) or 8 (modified)
+// bytes - as an unintended side effect of https://github.com/Mudlet/Mudlet/pull/4400
+// - returns two booleans, the first is true if the file can be read and the
+// second true if it is in the modified format:
+/*static*/ std::pair<bool, bool> cTelnet::testReadReplayFile()
+{
+    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (5 of 7) - investigate switching from using `char[]` to `std::array<char>`
+    char replayBuffer[BUFFER_SIZE+1];
+
+    quint64 totalElapsed = 0;
+    int replayChunks = 0;
+    bool readableAsOriginalFormat = true;
+    // Don't set this until we try it:
+    bool readableAsModifiedFormat = false;
+    {
+        // Try with both numbers being 4 byte signed integers
+        // (first was int type prior to that PR):
+        qint32 offset = 0;
+        qint32 amount = 0;
+        while (readableAsOriginalFormat && !replayStream.atEnd()) {
+            replayStream >> offset;
+            replayStream >> amount;
+            if (amount < 1 || offset < 0 || amount > static_cast<qint32>(BUFFER_SIZE)) {
+                readableAsOriginalFormat = false;
+            } else {
+                int replayloadedBytes = replayStream.readRawData(replayBuffer, amount);
+                if (replayloadedBytes > -1) {
+                    ++replayChunks;
+                    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (6 of 7) - investigate switching from using `char[]` to `std::array<char>`
+                    replayBuffer[replayloadedBytes] = '\0';
+                    totalElapsed += static_cast<quint64>(offset);
+                }
+            }
+        }
+    }
+
+    // rewind the data to the start as if we haven't just read some/all of it
+    replayStream.device()->seek(0);
+
+    if (!readableAsOriginalFormat) {
+        readableAsModifiedFormat = true;
+        totalElapsed = 0;
+        replayChunks = 0;
+        // Try with first number being an 8 byte signed integer
+        // (was int type prior to that PR):
+        qint64 offset = 0;
+        qint32 amount = 0;
+        while (readableAsModifiedFormat && !replayStream.atEnd()) {
+            replayStream >> offset;
+            replayStream >> amount;
+            if (amount < 1 || offset < 0 || amount > static_cast<qint32>(BUFFER_SIZE) || offset > INT32_MAX) {
+                readableAsModifiedFormat = false;
+            } else {
+                int replayloadedBytes = replayStream.readRawData(replayBuffer, amount);
+                if (replayloadedBytes > -1) {
+                    ++replayChunks;
+                    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (7 of 7) - investigate switching from using `char[]` to `std::array<char>`
+                    replayBuffer[replayloadedBytes] = '\0';
+                    totalElapsed += static_cast<quint64>(offset);
+                }
+            }
+        }
+
+        replayStream.device()->seek(0);
+    }
+
+    if (readableAsOriginalFormat | readableAsModifiedFormat) {
+        qDebug().nospace().noquote() << "cTelnet::testReadReplayFile() INFO - The " << (readableAsOriginalFormat ? "original" : "modified") << " format replay has: " << replayChunks
+                                     << " chunks and covers a period of: " << QTime(0, 0).addMSecs(static_cast<int>(totalElapsed)).toString(QStringLiteral("hh:mm:ss.zzz")) << " (hh:mm:ss).";
+
+        return {true, readableAsModifiedFormat};
+    }
+
+    return {false, false};
 }

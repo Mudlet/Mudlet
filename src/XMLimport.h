@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2017, 2020 by Stephen Lyons                        *
+ *   Copyright (C) 2016-2017, 2020, 2022 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -52,13 +52,13 @@ class XMLimport : public QXmlStreamReader
     Q_DECLARE_TR_FUNCTIONS(XMLimport);
 
 public:
-    XMLimport(Host*);
+    explicit XMLimport(Host*);
     virtual ~XMLimport() {}
-    bool importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = Q_NULLPTR);
+    bool importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = nullptr);
     std::pair<dlgTriggerEditor::EditorViewType, int> importFromClipboard();
 
 private:
-    const QString YES = QStringLiteral("yes");
+    const QString YES = qsl("yes");
 
     std::pair<dlgTriggerEditor::EditorViewType, int> readPackage();
     void readUnknownPackage();
@@ -91,6 +91,7 @@ private:
 
     void readHostPackage(Host*);
     void readMapInfoContributors();
+    void readProfileShortcuts();
     void readStopWatchMap();
     int readTriggerGroup(TTrigger*);
     int readTimerGroup(TTimer*);

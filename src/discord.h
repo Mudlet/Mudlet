@@ -136,7 +136,7 @@ inline QDebug& operator<<(QDebug& debug, const localDiscordPresence& ldp)
     QDebugStateSaver saver(debug);
     Q_UNUSED(saver);
 
-    QString result = QStringLiteral("localDiscordPresence(\n"
+    QString result = qsl("localDiscordPresence(\n"
                                     "    mDetails: \"%1\"  mState: \"%2\" mInstance: %3\n"
                                     "    mLargeImageKey: \"%4\"  mLargeImageText: \"%5\" \n"
                                     "    mSmallImageKey: \"%6\"  mSmallImageText: \"%7\" \n")
@@ -145,7 +145,7 @@ inline QDebug& operator<<(QDebug& debug, const localDiscordPresence& ldp)
                           ldp.getLargeImageKey(), ldp.getLargeImageText(),
                           ldp.getSmallImageKey(), ldp.getSmallImageText());
 
-    result.append(QStringLiteral("    mPartyId: \"%1\"  mPartySize: %2 mPartyMax %3\n"
+    result.append(qsl("    mPartyId: \"%1\"  mPartySize: %2 mPartyMax %3\n"
                                  "    mMatchSecret: \"%4\"  mJoinSecret: \"%5\" mSpectateSecret \"%6\"\n"
                                  "    mStartTimeStamp: %7  mEndTimeStamp: %8)\n")
                   .arg(ldp.getPartyId(), QString::number(ldp.getPartySize()), QString::number(ldp.getPartyMax()),
@@ -184,6 +184,7 @@ public:
     void setParty(Host*, int);
     void setParty(Host*, int, int);
     bool setApplicationID(Host*, const QString&);
+    void resetData(Host*);
     QString getApplicationId(Host* pHost) const;
 
     // These retrieve the cached data:

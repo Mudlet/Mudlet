@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2017-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -43,83 +43,83 @@
 #include "post_guard.h"
 
 XMLexport::XMLexport( Host * pH )
-: mpHost( pH )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+: mpHost(pH)
+, mpTrigger(nullptr)
+, mpTimer(nullptr)
+, mpAlias(nullptr)
+, mpAction(nullptr)
+, mpScript(nullptr)
+, mpKey(nullptr)
 {
 }
 
 XMLexport::XMLexport( TTrigger * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( pT )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+: mpHost(nullptr)
+, mpTrigger(pT)
+, mpTimer(nullptr)
+, mpAlias(nullptr)
+, mpAction(nullptr)
+, mpScript(nullptr)
+, mpKey(nullptr)
 {
 }
 
 XMLexport::XMLexport( TTimer * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( pT )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+: mpHost(nullptr)
+, mpTrigger(nullptr)
+, mpTimer(pT)
+, mpAlias(nullptr)
+, mpAction(nullptr)
+, mpScript(nullptr)
+, mpKey(nullptr)
 {
 }
 
 XMLexport::XMLexport( TAlias * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( pT )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+: mpHost(nullptr)
+, mpTrigger(nullptr)
+, mpTimer(nullptr)
+, mpAlias(pT)
+, mpAction(nullptr)
+, mpScript(nullptr)
+, mpKey(nullptr)
 {
 }
 
 XMLexport::XMLexport( TAction * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( pT )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+: mpHost(nullptr)
+, mpTrigger(nullptr)
+, mpTimer(nullptr)
+, mpAlias(nullptr)
+, mpAction(pT)
+, mpScript(nullptr)
+, mpKey(nullptr)
 {
 }
 
 XMLexport::XMLexport( TScript * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( pT )
-, mpKey( Q_NULLPTR )
+: mpHost(nullptr)
+, mpTrigger(nullptr)
+, mpTimer(nullptr)
+, mpAlias(nullptr)
+, mpAction(nullptr)
+, mpScript(pT)
+, mpKey(nullptr)
 {
 }
 
 XMLexport::XMLexport( TKey * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( pT )
+: mpHost(nullptr)
+, mpTrigger(nullptr)
+, mpTimer(nullptr)
+, mpAlias(nullptr)
+, mpAction(nullptr)
+, mpScript(nullptr)
+, mpKey(pT)
 {
 }
 
-void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileName)
+void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileName, bool async)
 {
     auto pHost = mpHost;
     auto mudletPackage = writeXmlHeader();
@@ -186,17 +186,21 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
     }
 
     auto helpPackage = mudletPackage.append_child("HelpPackage");
-    if (pHost->moduleHelp.contains(moduleName) && pHost->moduleHelp.value(moduleName).contains(QStringLiteral("helpURL"))) {
-        helpPackage.append_child("helpURL").text().set(pHost->moduleHelp.value(moduleName).value(QStringLiteral("helpURL")).toUtf8().constData());
+    if (pHost->moduleHelp.contains(moduleName) && pHost->moduleHelp.value(moduleName).contains(qsl("helpURL"))) {
+        helpPackage.append_child("helpURL").text().set(pHost->moduleHelp.value(moduleName).value(qsl("helpURL")).toUtf8().constData());
     } else {
         helpPackage.append_child("helpURL").text().set("");
     }
-
-    auto future = QtConcurrent::run(this, &XMLexport::saveXml, fileName);
-    auto watcher = new QFutureWatcher<bool>;
-    QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(fileName); });
-    watcher->setFuture(future);
-    saveFutures.append(future);
+    if (async) {
+        auto future = QtConcurrent::run(this, &XMLexport::saveXml, fileName);
+        auto watcher = new QFutureWatcher<bool>;
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(fileName); });
+        watcher->setFuture(future);
+        saveFutures.append(future);
+    } else {
+        saveXml(fileName);
+        mpHost->xmlSaved(fileName);
+    }
 }
 
 void XMLexport::exportHost(const QString& filename_pugi_xml)
@@ -206,7 +210,7 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
     auto future = QtConcurrent::run(this, &XMLexport::saveXml, filename_pugi_xml);
 
     auto watcher = new QFutureWatcher<bool>;
-    QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(QStringLiteral("profile")); });
+    QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(qsl("profile")); });
     watcher->setFuture(future);
     saveFutures.append(future);
 }
@@ -332,11 +336,11 @@ bool XMLexport::saveXmlFile(QFile& file)
 {
     std::stringstream saveStringStream(std::ios::out);
     // Remember, the mExportDoc is the data in the form of a pugi::xml_document
-    // instance - the save method needs a stream that impliments the
+    // instance - the save method needs a stream that implements the
     // std::ostream interface into which it can push the data:
     mExportDoc.save(saveStringStream);
     // We need to do our own replacement of ASCII control characters that are
-    // not valid in XML verison 1.0 and that means we cannot use the pugixml
+    // not valid in XML version 1.0 and that means we cannot use the pugixml
     // file methods as it does that in a different way which is not helpful
     // as we do not use that library for READING the XML files - so convert
     // the data to a std::string :
@@ -422,6 +426,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
     host.append_attribute("mEditorAutoComplete") = pHost->mEditorAutoComplete ? "yes" : "no";
+    host.append_attribute("mEditorShowBidi") = pHost->mEditorShowBidi ? "yes" : "no";
     host.append_attribute("mEditorTheme") = pHost->mEditorTheme.toUtf8().constData();
     host.append_attribute("mEditorThemeFile") = pHost->mEditorThemeFile.toUtf8().constData();
     host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toUtf8().constData();
@@ -463,6 +468,13 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mDoubleClickIgnore") = ignore.toUtf8().constData();
     host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toUtf8().constData();
     host.append_attribute("DebugShowAllProblemCodepoints") = pHost->debugShowAllProblemCodepoints() ? "yes" : "no";
+    host.append_attribute("NetworkPacketTimeout") = pHost->mTelnet.getPostingTimeout();
+    if (int mode = pHost->getControlCharacterMode(); mode) {
+        // Don't bother to include the attribute if it is the default (zero)
+        // value - and as it is an ASCII digit it only needs
+        // QString::toLatin1() encoding:
+        host.append_attribute("ControlCharacterHandling") = QString::number(mode).toLatin1().constData();
+    }
 
     { // Blocked so that indentation reflects that of the XML file
         host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());
@@ -482,7 +494,13 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
                 mInstalledModules.append_child("key").text().set(it.key().toUtf8().constData());
                 QStringList entry = it.value();
                 mInstalledModules.append_child("filepath").text().set(entry.at(0).toUtf8().constData());
-                mInstalledModules.append_child("globalSave").text().set(entry.at(1).toUtf8().constData());
+                if (entry.at(0).endsWith(qsl("mpackage"), Qt::CaseInsensitive) || entry.at(0).endsWith(qsl("zip"), Qt::CaseInsensitive)) {
+                    mInstalledModules.append_child("zipSync").text().set(entry.at(1).toUtf8().constData());
+                    // ensure compatibility with previous versions
+                    mInstalledModules.append_child("globalSave").text().set(0);
+                } else {
+                    mInstalledModules.append_child("globalSave").text().set(entry.at(1).toUtf8().constData());
+                }
                 if (entry.at(1).toInt()) {
                     pHost->modulesToWrite.insert(it.key(), entry);
                 }
@@ -547,6 +565,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mLightMagenta2").text().set(pHost->mLightMagenta_2.name().toUtf8().constData());
         host.append_child("mWhite2").text().set(pHost->mWhite_2.name().toUtf8().constData());
         host.append_child("mLightWhite2").text().set(pHost->mLightWhite_2.name().toUtf8().constData());
+        // this crashes
         host.append_child("mSpellDic").text().set(pHost->mpConsole->getSystemSpellDictionary().toUtf8().constData());
         // TODO: Consider removing these sub-elements that duplicate the same
         // attributes - which WERE bugged - when we update the XML format, must leave
@@ -563,7 +582,16 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             mapInfoContributor.text().set(iterator.next().toUtf8().constData());
         }
     }
-
+    {
+        auto shortcuts = host.append_child("profileShortcuts");
+        auto iterator = mudlet::self()->mShortcutsManager->iterator();
+        while (iterator.hasNext()) {
+            auto key = iterator.next();
+            auto shortcut = shortcuts.append_child("profileShortcut");
+            shortcut.append_attribute("key") = key.toUtf8().constData();
+            shortcut.text().set(pHost->profileShortcuts.value(key)->toString().toUtf8().constData());
+        }
+    }
     {
         auto stopwatches = host.append_child("stopwatches");
         QListIterator<int> itStopWatchId(pHost->getStopWatchIds());
@@ -728,7 +756,7 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     if (writeGenericPackage(mpHost, mudletPackage)) {
         auto future = QtConcurrent::run(this, &XMLexport::saveXml, exportFileName);
         auto watcher = new QFutureWatcher<bool>;
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(QStringLiteral("profile")); });
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(qsl("profile")); });
         watcher->setFuture(future);
         saveFutures.append(future);
 
@@ -848,13 +876,13 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
             auto regexCodeList = trigger.append_child("regexCodeList");
             // Revert the first 16 ANSI colour codes back to the wrong values
             // that are still used in the save files
-            QStringList unfixedAnsiColourPatternList = remapAnsiToColorNumber(pT->mRegexCodeList, pT->mRegexCodePropertyList);
+            QStringList unfixedAnsiColourPatternList = remapAnsiToColorNumber(pT->mPatterns, pT->mPatternKinds);
             for (int i = 0; i < unfixedAnsiColourPatternList.size(); ++i) {
                 regexCodeList.append_child("string").text().set(unfixedAnsiColourPatternList.at(i).toUtf8().constData());
             }
 
             auto regexCodePropertyList = trigger.append_child("regexCodePropertyList");
-            for (int i : qAsConst(pT->mRegexCodePropertyList)) {
+            for (int i : qAsConst(pT->mPatternKinds)) {
                 regexCodePropertyList.append_child("integer").text().set(QString::number(i).toUtf8().constData());
             }
         }
@@ -1163,7 +1191,7 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, c
 {
 
     QStringList results;
-    QRegularExpression regex = QRegularExpression(QStringLiteral("^ANSI_COLORS_F{(\\d+|IGNORE|DEFAULT)}_B{(\\d+|IGNORE|DEFAULT)}$"));
+    QRegularExpression regex = QRegularExpression(qsl("^ANSI_COLORS_F{(\\d+|IGNORE|DEFAULT)}_B{(\\d+|IGNORE|DEFAULT)}$"));
     QStringListIterator itPattern(patternList);
     QListIterator<int> itType(typeList);
     while (itPattern.hasNext() && itType.hasNext()) {
@@ -1264,7 +1292,7 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, c
                         qDebug() << "XMLexport::remapAnsiToColorNumber(...) ERROR - failed to extract BG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default background";
                     }
 
-                    results << QStringLiteral("FG%1BG%2").arg(QString::number(fg), QString::number(bg));
+                    results << qsl("FG%1BG%2").arg(QString::number(fg), QString::number(bg));
                 } else {
                     // No match - so insert previous string - which will cause
                     // a failure when it gets loaded as a REGEX_COLOR_PATTERN

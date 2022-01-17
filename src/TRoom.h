@@ -134,8 +134,8 @@ public:
                    QMap<QString, bool>&,
                    QHash<int, int>);
     QString dirCodeToDisplayName(int) const;
-    inline QString dirCodeToString(const int) const;
-    inline QString dirCodeToShortString(const int) const;
+    static QString dirCodeToShortString(const int);
+    static QString dirCodeToString(const int);
     inline int stringToDirCode(const QString&) const;
     bool hasExitOrSpecialExit(const QString&) const;
     void writeJsonRoom(QJsonArray&) const;

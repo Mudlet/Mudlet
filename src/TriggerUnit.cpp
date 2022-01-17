@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,20 +27,13 @@
 #include "TConsole.h"
 #include "TTrigger.h"
 
-void TriggerUnit::initStats()
+void TriggerUnit::resetStats()
 {
-    statsTriggerTotal = 0;
-    statsTempTriggers = 0;
-    statsActiveTriggers = 0;
-    statsActiveTriggersMax = 0;
-    statsActiveTriggersMin = 0;
-    statsActiveTriggersAverage = 0;
-    statsTempTriggersCreated = 0;
-    statsTempTriggersKilled = 0;
-    statsAverageLineProcessingTime = 0;
-    statsMaxLineProcessingTime = 0;
-    statsMinLineProcessingTime = 0;
-    statsRegexTriggers = 0;
+    statsItemsTotal = 0;
+    statsTempItems = 0;
+    statsActiveItems = 0;
+    statsPatternsTotal = 0;
+    statsPatternsActive = 0;
 }
 
 void TriggerUnit::_uninstall(TTrigger* pChild, const QString& packageName)
@@ -239,24 +233,26 @@ int TriggerUnit::getNewID()
 
 void TriggerUnit::processDataStream(const QString& data, int line)
 {
-    if (!data.isEmpty()) {
-#if defined(Q_OS_WIN32)
-        // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
-        char* subject = (char*)malloc(strlen(data.toUtf8().data()) + 1);
-        strcpy(subject, data.toUtf8().data());
-#else
-        char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
-#endif
-        for (auto trigger : mTriggerRootNodeList) {
-            trigger->match(subject, data, line);
-        }
-        free(subject);
-
-        for (auto& trigger : mCleanupList) {
-            delete trigger;
-        }
-        mCleanupList.clear();
+    if (data.isEmpty()) {
+        return;
     }
+
+#if defined(Q_OS_WIN32)
+    // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
+    char* subject = static_cast<char*>(malloc(strlen(data.toUtf8().data()) + 1));
+    strcpy(subject, data.toUtf8().data());
+#else
+    char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
+#endif
+    for (auto trigger : mTriggerRootNodeList) {
+        trigger->match(subject, data, line);
+    }
+    free(subject);
+
+    for (auto& trigger : mCleanupList) {
+        delete trigger;
+    }
+    mCleanupList.clear();
 }
 
 void TriggerUnit::compileAll()
@@ -344,56 +340,52 @@ bool TriggerUnit::killTrigger(const QString& name)
     return false;
 }
 
-void TriggerUnit::_assembleReport(TTrigger* pChild)
+void TriggerUnit::assembleReport(TTrigger* pItem)
 {
-    std::list<TTrigger*>* childrenList = pChild->mpMyChildrenList;
-    for (auto trigger : *childrenList) {
-        _assembleReport(trigger);
-        if (trigger->isActive()) {
-            statsActiveTriggers++;
+    std::list<TTrigger*>* childrenList = pItem->mpMyChildrenList;
+    for (auto pChild : *childrenList) {
+        ++statsItemsTotal;
+        if (pChild->isActive()) {
+            ++statsActiveItems;
+            statsPatternsActive += pChild->mPatterns.size();
         }
-        if (trigger->isTemporary()) {
-            statsTempTriggers++;
+        if (pChild->isTemporary()) {
+            ++statsTempItems;
         }
-        statsPatterns += trigger->mRegexCodeList.size();
-        statsTriggerTotal++;
+        statsPatternsTotal += pChild->mPatterns.size();
+        assembleReport(pChild);
     }
 }
 
-QString TriggerUnit::assembleReport()
+std::tuple<QString, int, int, int, int, int> TriggerUnit::assembleReport()
 {
-    statsActiveTriggers = 0;
-    statsTriggerTotal = 0;
-    statsTempTriggers = 0;
-    statsPatterns = 0;
-    for (auto rootTrigger : mTriggerRootNodeList) {
-        if (rootTrigger->isActive()) {
-            statsActiveTriggers++;
+    resetStats();
+    for (auto pItem : mTriggerRootNodeList) {
+        ++statsItemsTotal;
+        if (pItem->isActive()) {
+            ++statsActiveItems;
+            statsPatternsActive += pItem->mPatterns.size();
         }
-        if (rootTrigger->isTemporary()) {
-            statsTempTriggers++;
+        if (pItem->isTemporary()) {
+            ++statsTempItems;
         }
-        statsPatterns += rootTrigger->mRegexCodeList.size();
-        statsTriggerTotal++;
-        std::list<TTrigger*>* childrenList = rootTrigger->mpMyChildrenList;
-        for (auto childTrigger : *childrenList) {
-            _assembleReport(childTrigger);
-            if (childTrigger->isActive()) {
-                statsActiveTriggers++;
-            }
-            if (childTrigger->isTemporary()) {
-                statsTempTriggers++;
-            }
-            statsPatterns += childTrigger->mRegexCodeList.size();
-            statsTriggerTotal++;
-        }
+        statsPatternsTotal += pItem->mPatterns.size();
+        assembleReport(pItem);
     }
     QStringList msg;
-    msg << "triggers current total: " << QString::number(statsTriggerTotal) << "\n"
-        << "trigger patterns total: " << QString::number(statsPatterns) << "\n"
-        << "tempTriggers current total: " << QString::number(statsTempTriggers) << "\n"
-        << "active triggers: " << QString::number(statsActiveTriggers) << "\n";
-    return msg.join("");
+    msg << QLatin1String("triggers current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
+        << QLatin1String("tempTriggers current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
+        << QLatin1String("active triggers: ") << QString::number(statsActiveItems) << QLatin1String("\n")
+        << QLatin1String("trigger patterns total: ") << QString::number(statsPatternsTotal) << QLatin1String("\n")
+        << QLatin1String("active patterns total: ") << QString::number(statsPatternsActive) << QLatin1String("\n");
+    return {
+        msg.join(QString()),
+        statsItemsTotal,
+        statsPatternsTotal,
+        statsTempItems,
+        statsActiveItems,
+        statsPatternsActive
+    };
 }
 
 void TriggerUnit::doCleanup()

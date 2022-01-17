@@ -31,13 +31,13 @@
 
 
 TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
-: QDockWidget( pW )
-, mpTAction( pA )
-, mVerticalOrientation( false )
+: QDockWidget(pW)
+, mpTAction(pA)
+, mVerticalOrientation(false)
 , mpWidget( new QWidget( this ) )
-, mRecordMove( false )
-, mpLayout( nullptr )
-, mItemCount( 0 )
+, mRecordMove(false)
+, mpLayout(nullptr)
+, mItemCount(0)
 {
     setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     setWidget(mpWidget);
@@ -68,7 +68,7 @@ void TToolBar::setName(const QString& name)
 {
     mName = name;
     QString hostName(mpTAction->mpHost->getName());
-    setObjectName(QStringLiteral("dockToolBar_%1_%2").arg(hostName, name));
+    setObjectName(qsl("dockToolBar_%1_%2").arg(hostName, name));
     // Actually put something in as the title so that the main window context
     // menu no longer has empty entries which are disabled:
     setWindowTitle(tr("Toolbar - %1 - %2").arg(hostName, name));

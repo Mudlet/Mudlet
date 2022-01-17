@@ -22,13 +22,13 @@
 
 #include "TCommandLine.h"
 
-
 #include "Host.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TSplitter.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
+#include "TEvent.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -39,7 +39,7 @@
 
 TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
-, mCommandLineName(QStringLiteral("main"))
+, mCommandLineName(qsl("main"))
 , mpHost(pHost)
 , mType(type)
 , mpKeyUnit(pHost->getKeyUnit())
@@ -69,7 +69,7 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
     //style subCommandLines by stylesheet
     if (mType != MainCommandLine) {
         QColor c = mpHost->mCommandLineBgColor;
-        QString styleSheet{QStringLiteral("QPlainTextEdit{background-color: rgb(%1, %2, %3);}").arg(c.red()).arg(c.green()).arg(c.blue())};
+        QString styleSheet{qsl("QPlainTextEdit{background-color: rgb(%1, %2, %3);}").arg(c.red()).arg(c.green()).arg(c.blue())};
         setStyleSheet(styleSheet);
     }
 
@@ -120,7 +120,7 @@ bool TCommandLine::event(QEvent* event)
         auto* ke = dynamic_cast<QKeyEvent*>(event);
         if (!ke) {
             // Something is wrong -
-            qCritical().noquote() << "TCommandLine::event(QEvent*) CRITICAL - a QEvent that is supposed to be a QKeyEvent is not dynmically castable to the latter - so the processing of this event "
+            qCritical().noquote() << "TCommandLine::event(QEvent*) CRITICAL - a QEvent that is supposed to be a QKeyEvent is not dynamically castable to the latter - so the processing of this event "
                                      "has been aborted - please report this to Mudlet Makers.";
             // Indicate that we don't want to touch this event with a barge-pole!
             return false;
@@ -147,7 +147,7 @@ bool TCommandLine::event(QEvent* event)
 
             if (keybindingMatched(ke)) {
                 // Process as a possible key binding if there are ANY modifiers
-                // other than just a <SHIFT> one; may actaully be configured as
+                // other than just a <SHIFT> one; may actually be configured as
                 // a non-breaking space when used with a modifier!
                 return true;
             }
@@ -285,6 +285,7 @@ bool TCommandLine::event(QEvent* event)
             if ((ke->modifiers() & allModifiers) == Qt::ShiftModifier) {
                 textCursor().insertBlock();
                 ke->accept();
+                adjustHeight();
                 return true;
 
             }
@@ -671,8 +672,8 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             if (handle_profile) {
                 // TODO: Make icons for these?
 //                if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
-//                    action_addWord = new QAction(QIcon(QPixmap(QStringLiteral(":/icons/dictionary-add-word.png"))), tr("Add to user dictionary"));
-//                    action_removeWord = new QAction(QIcon(QPixmap(QStringLiteral(":/icons/dictionary-remove-word.png"))), tr("Remove from user dictionary"));
+//                    action_addWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-add-word.png"))), tr("Add to user dictionary"));
+//                    action_removeWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-remove-word.png"))), tr("Remove from user dictionary"));
 //                } else {
                 action_addWord = new QAction(tr("Add to user dictionary"));
                 action_addWord->setEnabled(false);
@@ -830,9 +831,22 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             } else {
                 popup->insertActions(separator_aboveStandardMenu, spellings_system);
             }
-            // else the word is in the dictionary - in either case show the context
+            // else the word is in the dictionary - in either ca`se show the context
             // menu - either the one with the prefixed spellings, or the standard
             // one:
+        }
+
+        popup->addSeparator();
+        foreach(auto label, contextMenuItems.keys()) {
+            auto eventName = contextMenuItems.value(label);
+            auto action = new QAction(label, this);
+            connect(action, &QAction::triggered, [=]() {
+                TEvent event = {};
+                event.mArgumentList << eventName;
+                event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+                mpHost->raiseEvent(event);
+            });
+            popup->addAction(action);
         }
 
         mPopupPosition = event->pos();
@@ -927,9 +941,9 @@ void TCommandLine::handleTabCompletion(bool direction)
     buffer.replace(QChar::LineFeed, QChar::Space);
 
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
-    QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
+    QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
 #else
-    QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), QString::SkipEmptyParts);
+    QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), QString::SkipEmptyParts);
 #endif
 
     wordList.append(commandLineSuggestions.values());
@@ -944,7 +958,7 @@ void TCommandLine::handleTabCompletion(bool direction)
             return;
         }
         QString lastWord;
-        QRegularExpression reg = QRegularExpression(QStringLiteral(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
+        QRegularExpression reg = QRegularExpression(qsl(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
         QRegularExpressionMatch match = reg.match(mTabCompletionTyped);
         int typePosition = match.capturedStart();
         if (reg.captureCount() >= 1) {
@@ -953,7 +967,7 @@ void TCommandLine::handleTabCompletion(bool direction)
             lastWord = QString();
         }
 
-        QStringList filterList = wordList.filter(QRegularExpression(QStringLiteral(R"(^%1\w+)").arg(lastWord), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
+        QStringList filterList = wordList.filter(QRegularExpression(qsl(R"(^%1\w+)").arg(lastWord), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
         if (filterList.empty()) {
             return;
         }
@@ -977,7 +991,7 @@ void TCommandLine::handleTabCompletion(bool direction)
             }
             QString proposal = filterList[mTabCompletionCount];
             QString userWords = mTabCompletionTyped.left(typePosition);
-            setPlainText(QString(userWords + proposal).trimmed());
+            setPlainText(QString(userWords + proposal));
             moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
             mTabCompletionOld = toPlainText();
         }
@@ -1046,11 +1060,11 @@ void TCommandLine::historyMove(MoveDirection direction)
         } else {
             moveCursor(QTextCursor::End);
         }
-        adjustHeight();
     } else {
         mAutoCompletionCount += shift;
         handleAutoCompletion();
     }
+    adjustHeight();
 }
 
 void TCommandLine::slot_clearSelection(bool yes)
@@ -1167,7 +1181,7 @@ void TCommandLine::recheckWholeLine()
     QTextCursor c = textCursor();
     // Move Cursor AND selection anchor to start:
     c.movePosition(QTextCursor::Start);
-    // In case the first character is something other than the begining of a
+    // In case the first character is something other than the beginning of a
     // word
     c.movePosition(QTextCursor::NextWord);
     c.movePosition(QTextCursor::PreviousWord);

@@ -122,7 +122,7 @@ inline QDebug& operator<<(QDebug& debug, const stopWatch& stopwatch)
 {
     QDebugStateSaver saver(debug);
     Q_UNUSED(saver);
-    debug.nospace() << QStringLiteral("stopwatch(mIsRunning: %1 mInitialised: %2 mIsPersistent: %3 mEffectiveStartDateTime: %4 mElapsedTime: %5)")
+    debug.nospace() << qsl("stopwatch(mIsRunning: %1 mInitialised: %2 mIsPersistent: %3 mEffectiveStartDateTime: %4 mElapsedTime: %5)")
                        .arg((stopwatch.running() ? QLatin1String("true") : QLatin1String("false")),
                             (stopwatch.initialised() ? QLatin1String("true") : QLatin1String("false")),
                             (stopwatch.persistent() ? QLatin1String("true") : QLatin1String("false")),
@@ -165,8 +165,8 @@ public:
     void            setName(const QString& s);
     QString         getUrl()                         { return mUrl; }
     void            setUrl(const QString& s)         { mUrl = s; }
-    QString         getUserDefinedName()             { return mUserDefinedName; }
-    void            setUserDefinedName(const QString& s) { mUserDefinedName = s; }
+    QString         getDiscordGameName()             { return mDiscordGameName; }
+    void            setDiscordGameName(const QString& s) { mDiscordGameName = s; }
     int             getPort()                        { return mPort; }
     void            setPort(const int p)                 { mPort = p; }
     void            setAutoReconnect(const bool b)   { mTelnet.setAutoReconnect(b); }
@@ -192,12 +192,16 @@ public:
     bool            getMayRedefineColors() { return mServerMayRedefineColors; }
     void            setDiscordApplicationID(const QString& s);
     const QString&  getDiscordApplicationID();
+    void            setDiscordInviteURL(const QString& s);
+    const QString&  getDiscordInviteURL() const { return mDiscordInviteURL; }
     void            setSpellDic(const QString&);
     const QString&  getSpellDic() { return mSpellDic; }
     void            setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void            getUserDictionaryOptions(bool& useDictionary, bool& useShared) {
                         useDictionary = mEnableUserDictionary;
                         useShared = mUseSharedDictionary; }
+    void            setControlCharacterMode(const TConsole::ControlCharacterMode mode);
+    TConsole::ControlCharacterMode  getControlCharacterMode() const { return mControlCharacterMode; }
 
     void closingDown();
     bool isClosingDown();
@@ -260,8 +264,7 @@ public:
 
     void startSpeedWalk();
     void startSpeedWalk(int sourceRoom, int targetRoom);
-    void saveModules(int sync, bool backup = true);
-    void reloadModule(const QString& reloadModuleName);
+    void reloadModule(const QString& reloadModuleName, const QString& syncingFromHost = QString());
     std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String &value);
     std::pair<bool, QString> getModuleSync(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
@@ -295,9 +298,9 @@ public:
         mTelnet.set_USE_IRE_DRIVER_BUGFIX(b);
     }
 
-    void adjustNAWS();
+    void updateDisplayDimensions();
 
-    bool installPackage(const QString&, int);
+    std::pair<bool, QString> installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&, bool);
@@ -345,6 +348,7 @@ public:
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
     std::pair<bool, QString> openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
     std::pair<bool, QString> createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    std::pair<bool, QString> createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const;
     std::pair<bool, QString> createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
     bool setClickthrough(const QString& name, bool clickthrough);
     void hideMudletsVariables();
@@ -371,16 +375,21 @@ public:
     bool setLabelWheelCallback(const QString&, const int);
     bool setLabelOnEnter(const QString&, const int);
     bool setLabelOnLeave(const QString&, const int);
+    std::pair<bool, QString> setMovie(const QString& labelName, const QString& moviePath);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    std::optional<QColor> getBackgroundColor(const QString& name) const;
     bool setBackgroundImage(const QString& name, QString& path, int mode);
     bool resetBackgroundImage(const QString& name);
     void showHideOrCreateMapper(const bool loadDefaultMap);
     bool setProfileStyleSheet(const QString& styleSheet);
     void check_for_mappingscript();
+    void setupIreDriverBugfix();
 
     void setDockLayoutUpdated(const QString&);
     void setToolbarLayoutUpdated(TToolBar*);
     bool commitLayoutUpdates(bool flush = false);
+    void setScreenDimensions(const int width, const int height) { mScreenWidth = width; mScreenHeight = height; }
+    std::optional<QString> windowType(const QString& name) const;
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -504,6 +513,7 @@ public:
     int mWrapIndentCount;
 
     bool mEditorAutoComplete;
+    bool mEditorShowBidi = true;
 
     // code editor theme (human-friendly name)
     QString mEditorTheme;
@@ -570,9 +580,13 @@ public:
     bool mLogStatus;
     bool mEnableSpellCheck;
     QStringList mInstalledPackages;
+    // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> mInstalledModules;
+    // module name = priority
     QMap<QString, int> mModulePriorities;
+    // module name = location on disk, sync to other profiles?, priority
     QMap<QString, QStringList> modulesToWrite;
+    // module name = {"helpURL" = custom link}
     QMap<QString, QMap<QString, QString>> moduleHelp;
 
     // Privacy option to allow the game to set Discord Rich Presence information
@@ -602,6 +616,7 @@ public:
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
     bool mEnableTextAnalyzer;
+    bool mWritingHostAndModules = false;
     // Set from profile preferences, if the timer interval is less
     // than this then the normal reoccuring debug output of the entire command
     // and script for any timer with a timeout LESS than this is NOT shown
@@ -620,6 +635,10 @@ public:
     // string list: 0 - event name, 1 - display label, 2 - tooltip text
     QMap<QString, QStringList> mConsoleActions;
 
+    QMap<QString, QKeySequence*> profileShortcuts;
+
+    bool mTutorialForCompactLineAlreadyShown;
+
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
@@ -630,16 +649,17 @@ signals:
     // To tell all TConsole's upper TTextEdit panes to report all Codepoint
     // problems as they arrive as well as a summery upon destruction:
     void signal_changeDebugShowAllProblemCodepoints(const bool);
+    // Tells all consoles associated with this Host (but NOT the Central Debug
+    // one) to change the way they show  control characters:
+    void signal_controlCharacterHandlingChanged(const TConsole::ControlCharacterMode);
 
 private slots:
-    void slot_reloadModules();
     void slot_purgeTemps();
 
 private:
     void installPackageFonts(const QString &packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
-    void updateModuleZips() const;
     void loadSecuredPassword();
     void removeAllNonPersistentStopWatches();
     void updateConsolesFont();
@@ -647,6 +667,12 @@ private:
     void toggleMapperVisibility();
     void createMapper(const bool);
     void removePackageInfo(const QString &packageName, const bool);
+    static void createModuleBackup(const QString &filename, const QString& saveName);
+    void writeModule(const QString &moduleName, const QString &filename);
+    void waitForAsyncXmlSave();
+    void saveModules(bool backup = true);
+    void updateModuleZips(const QString &zipName, const QString &moduleName);
+    void reloadModules();
 
     QFont mDisplayFont;
     QStringList mModulesToSync;
@@ -665,6 +691,7 @@ private:
 
     int mHostID;
     QString mHostName;
+    QString mDiscordGameName; // Discord self-reported game name
 
     bool mIsClosingDown;
 
@@ -676,8 +703,6 @@ private:
 
     int mRetries;
     bool mSaveProfileOnExit;
-
-    QString mUserDefinedName;
 
     // To keep things simple for Lua the first stopwatch will be allocated a key
     // of 1 - and anything less that that will be rejected - and we force
@@ -705,8 +730,13 @@ private:
     // keeps track of all of the array writers we're currently operating with
     QHash<QString, XMLexport*> writers;
 
+    QFuture<void> mModuleFuture;
+
     // Will be null/empty if is to use Mudlet's default/own presence
     QString mDiscordApplicationID;
+
+    // Will be null/empty if they have not set their own invite
+    QString mDiscordInviteURL;
 
     // Will be null/empty if we are not concerned to check the use of Discord
     // Rich Presence against the local user currently logged into Discord -
@@ -734,7 +764,7 @@ private:
     bool mEnableUserDictionary;
     bool mUseSharedDictionary;
 
-    // These hold values that are needed in the TMap clas which are saved with
+    // These hold values that are needed in the TMap class which are saved with
     // the profile - but which cannot be kept there as that class is not
     // necessarily instantiated when the profile is read.
     // Base color(s) for the player room in the mappers:
@@ -764,6 +794,19 @@ private:
     bool mCompactInputLine;
 
     QTimer purgeTimer;
+
+    // How to display (most) incoming control characters in TConsoles:
+    // TConsole::NoControlCharacterReplacement (0x0) = as is, no replacement
+    // TConsole::PictureControlCharacterReplacement (0x1) = as Unicode "Control
+    //   Pictures" - use Unicode codepoints in range U+2400 to U+2421
+    // TConsole::PictureControlCharacterReplacement (0x2) = as "OEM Font"
+    //   characters (most often seen as a part of CP437
+    //   encoding), see the corresponding Wikipedia page, e.g.
+    //   EN: https://en.wikipedia.org/wiki/Code_page_437
+    //   DE: https://de.wikipedia.org/wiki/Codepage_437
+    //   RU: https://ru.wikipedia.org/wiki/CP437
+    TConsole::ControlCharacterMode mControlCharacterMode;
+
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

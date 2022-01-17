@@ -86,7 +86,7 @@ public:
 // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b, int a ) { mBgColor = QColor(r, g, b, a); }
     void resetHScrollbar() { mScreenOffset = 0; mMaxHRange = 0; }
-    int getScreenHeight() { return mScreenHeight; }
+    int getScreenHeight() const { return mScreenHeight; }
     void searchSelectionOnline();
     int getColumnCount();
     int getRowCount();
@@ -111,8 +111,6 @@ public:
     int mScrollVector;
     QRegion mSelectedRegion;
     bool mShowTimeStamps;
-    int mWrapAt;
-    int mWrapIndentCount {};
 
 public slots:
     void slot_toggleTimeStamps(const bool);
@@ -132,7 +130,6 @@ private slots:
     void slot_copySelectionToClipboardImage();
 
 private:
-    void initDefaultSettings();
     QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);
     static QString htmlCenter(const QString&);
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
@@ -145,6 +142,8 @@ private:
     bool establishSelectedText();
     void expandSelectionToWords();
     void expandSelectionToLine(int);
+    inline void replaceControlCharacterWith_Picture(const uint, const QString&, const int, QVector<QString>&, int&) const;
+    inline void replaceControlCharacterWith_OEMFont(const uint, const QString&, const int, QVector<QString>&, int&) const;
 
     int mFontHeight;
     int mFontWidth;
@@ -175,7 +174,7 @@ private:
     int mScreenHeight;
     // currently viewed screen area
     QPixmap mScreenMap;
-    int mScreenWidth;
+    int mScreenWidth = 100;
     int mScreenOffset;
     int mMaxHRange;
     QElapsedTimer mLastClickTimer;
@@ -195,7 +194,7 @@ private:
     // making this a const value for the moment:
     const int mTimeStampWidth;
     bool mShowAllCodepointIssues;
-    // Marked mutable so that it is permissable to change this in class methods
+    // Marked mutable so that it is permissible to change this in class methods
     // that are otherwise const!
     mutable QHash<uint, std::tuple<uint, std::string>> mProblemCodepoints;
     // We scroll on the basis that one vertical mouse wheel click is one line
