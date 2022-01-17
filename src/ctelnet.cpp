@@ -1623,7 +1623,6 @@ void cTelnet::processTelnetCommand(const std::string& command)
             // used - it is just bytes...
             QByteArray rawData = command.c_str();
             QString transcodedData;
-            QByteArray cleanData;
             
             if (command.size() < 6) {
                 return;
@@ -1633,14 +1632,13 @@ void cTelnet::processTelnetCommand(const std::string& command)
             
             transcodedData = rawdata;
             transcodedData.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
-            cleanData = transcodedData;
                 
             //rawData = rawData.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
 
-            // cleanData is in the Mud Server's encoding, trim off the Telnet suboption
+            // transcodedData is in the Mud Server's encoding, trim off the Telnet suboption
             // bytes from beginning (3) and end (2):
-            cleanData = cleanData.mid(3, static_cast<int>(cleanData.size()) - 5);
-            mpHost->mLuaInterpreter.msdp2Lua(cleanData.constData());
+            transcodedData = transcodedData.mid(3, static_cast<int>(transcodedData.size()) - 5);
+            mpHost->mLuaInterpreter.msdp2Lua(transcodedData.constData());
             return;
         }
 
