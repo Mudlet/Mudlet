@@ -1630,7 +1630,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
             rawData = rawData.replace(TN_BELL, QByteArray("\\\\7"));
             
-            transcodedData = rawdata;
+            transcodedData = rawData;
             transcodedData.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
                 
             //rawData = rawData.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
