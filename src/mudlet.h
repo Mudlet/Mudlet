@@ -366,7 +366,6 @@ public:
     QToolBar* mpMainToolBar;
     QString version;
     QPointer<Host> mpCurrentActiveHost;
-    bool mAutolog;
     QList<QMediaPlayer*> mMusicBoxList;
     TTabBar* mpTabBar;
     QStringList packagesToInstallList;
