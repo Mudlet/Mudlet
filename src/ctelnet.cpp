@@ -1627,6 +1627,8 @@ void cTelnet::processTelnetCommand(const std::string& command)
             }
 
             rawData = rawData.replace(TN_BELL, QByteArray("\\\\7"));
+            // testing escaping ansi color code \033
+            rawData = rawData.replace(QLatin1String("\u021B"), QLatin1String("\\u021B"));
 
             // rawData is in the Mud Server's encoding, trim off the Telnet suboption
             // bytes from beginning (3) and end (2):
