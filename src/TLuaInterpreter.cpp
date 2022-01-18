@@ -13778,8 +13778,11 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
 
     // Log error to Profile's Main TConsole:
     if (mpHost->mEchoLuaErrors) {
-        // ensure the Lua error is on a line of its own and is not prepended to the previous line
-        if (mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+        // ensure the Lua error is on a line of its own and is not prepended to
+        // the previous line, however there is a nasty gotcha in that during
+        // profile loading the (TMainConsole*) Host::mpConsole pointer is
+        // null - but then the buffer must itself be empty:
+        if (mpHost->mpConsole && mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
             mpHost->postMessage(qsl("\n"));
         }
 
