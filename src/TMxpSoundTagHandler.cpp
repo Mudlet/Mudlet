@@ -44,14 +44,6 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
 
         if (!volume.isEmpty()) {
             mediaData.setMediaVolume(volume.toInt());
-
-            if (mediaData.getMediaVolume() == TMediaData::MediaVolumePreload) {
-                // Support preloading
-            } else if (mediaData.getMediaVolume() > TMediaData::MediaVolumeMax) {
-                mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
-            } else if (mediaData.getMediaVolume() < TMediaData::MediaVolumeMin) {
-                mediaData.setMediaVolume(TMediaData::MediaVolumeMin);
-            }
         } else {
             mediaData.setMediaVolume(TMediaData::MediaVolumeMax); // MSP the Max is the Default
         }
