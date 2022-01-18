@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -51,8 +52,8 @@ private:
     Host* mpHost;
     QSet<TRoom*> mpRooms;
     QHash<QString, int> mpSymbols;
-    QColor selectedColor = nullptr;
-    QColor previewColor = nullptr;
+    QColor selectedColor;
+    QColor previewColor;
     QColor roomColor;
 
 private slots:
