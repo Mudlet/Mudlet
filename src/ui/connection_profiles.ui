@@ -642,7 +642,7 @@
              </item>
             </layout>
            </widget>
-           <widget class="QWidget" name="page_extra">
+           <widget class="QWidget" name="page_options">
             <property name="geometry">
              <rect>
               <x>0</x>
@@ -658,7 +658,7 @@
              </sizepolicy>
             </property>
             <attribute name="label">
-             <string>Extra</string>
+             <string>Options</string>
             </attribute>
             <layout class="QFormLayout" name="formLayout">
              <item row="0" column="0">
