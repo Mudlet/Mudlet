@@ -481,7 +481,7 @@
            <property name="tabSpacing">
             <number>0</number>
            </property>
-           <widget class="QWidget" name="page_required">
+           <widget class="QWidget" name="page_connection">
             <property name="geometry">
              <rect>
               <x>0</x>
@@ -497,80 +497,9 @@
              </sizepolicy>
             </property>
             <attribute name="label">
-             <string>Required</string>
+             <string>Connection info</string>
             </attribute>
             <layout class="QGridLayout" name="gridLayout">
-             <item row="0" column="0">
-              <widget class="QLabel" name="label_profileName">
-               <property name="text">
-                <string>Profile name:</string>
-               </property>
-               <property name="buddy">
-                <cstring>profile_name_entry</cstring>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1" colspan="2">
-              <widget class="QLineEdit" name="profile_name_entry">
-               <property name="font">
-                <font>
-                 <family>Bitstream Charter</family>
-                 <pointsize>9</pointsize>
-                </font>
-               </property>
-               <property name="accessibleName">
-                <string>Profile name</string>
-               </property>
-               <property name="accessibleDescription">
-                <string comment="Using lower case letters for 'ASCII' may make speech synthesisers say 'askey' which is quicker than 'Aay Ess Cee Eye Eye'!">A unique name for the profile but which is limited to a subset of ascii characters only.</string>
-               </property>
-               <property name="readOnly">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="label_serverUrl">
-               <property name="text">
-                <string>Server address:</string>
-               </property>
-               <property name="buddy">
-                <cstring>host_name_entry</cstring>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1" colspan="2">
-              <widget class="QLineEdit" name="host_name_entry">
-               <property name="minimumSize">
-                <size>
-                 <width>100</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <family>Bitstream Charter</family>
-                 <pointsize>9</pointsize>
-                </font>
-               </property>
-               <property name="accessibleName">
-                <string>Game server URL</string>
-               </property>
-               <property name="accessibleDescription">
-                <string>The Internet host name or IP address</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="0">
-              <widget class="QLabel" name="label_port">
-               <property name="text">
-                <string>Port:</string>
-               </property>
-               <property name="buddy">
-                <cstring>port_entry</cstring>
-               </property>
-              </widget>
-             </item>
              <item row="2" column="1">
               <widget class="QLineEdit" name="port_entry">
                <property name="minimumSize">
@@ -611,6 +540,57 @@
                </property>
               </widget>
              </item>
+             <item row="0" column="1" colspan="2">
+              <widget class="QLineEdit" name="profile_name_entry">
+               <property name="font">
+                <font>
+                 <family>Bitstream Charter</family>
+                 <pointsize>9</pointsize>
+                </font>
+               </property>
+               <property name="accessibleName">
+                <string>Profile name</string>
+               </property>
+               <property name="accessibleDescription">
+                <string comment="Using lower case letters for 'ASCII' may make speech synthesisers say 'askey' which is quicker than 'Aay Ess Cee Eye Eye'!">A unique name for the profile but which is limited to a subset of ascii characters only.</string>
+               </property>
+               <property name="readOnly">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_profileName">
+               <property name="text">
+                <string>Profile name:</string>
+               </property>
+               <property name="buddy">
+                <cstring>profile_name_entry</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1" colspan="2">
+              <widget class="QLineEdit" name="host_name_entry">
+               <property name="minimumSize">
+                <size>
+                 <width>100</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <family>Bitstream Charter</family>
+                 <pointsize>9</pointsize>
+                </font>
+               </property>
+               <property name="accessibleName">
+                <string>Game server URL</string>
+               </property>
+               <property name="accessibleDescription">
+                <string>The Internet host name or IP address</string>
+               </property>
+              </widget>
+             </item>
              <item row="2" column="2">
               <widget class="QCheckBox" name="port_ssl_tsl">
                <property name="accessibleName">
@@ -627,51 +607,48 @@
                </property>
               </widget>
              </item>
-             <item row="3" column="0">
-              <widget class="QLabel" name="label_profileHistory">
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_serverUrl">
                <property name="text">
-                <string>Profile history:</string>
+                <string>Server address:</string>
                </property>
                <property name="buddy">
-                <cstring>profile_history</cstring>
+                <cstring>host_name_entry</cstring>
                </property>
               </widget>
              </item>
-             <item row="3" column="1" colspan="2">
-              <widget class="QComboBox" name="profile_history">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_port">
+               <property name="text">
+                <string>Port:</string>
                </property>
-               <property name="minimumSize">
+               <property name="buddy">
+                <cstring>port_entry</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <spacer name="verticalSpacer">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
                 <size>
-                 <width>0</width>
-                 <height>0</height>
+                 <width>20</width>
+                 <height>40</height>
                 </size>
                </property>
-               <item>
-                <property name="text">
-                 <string>load newest profile</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>load oldest profile</string>
-                </property>
-               </item>
-              </widget>
+              </spacer>
              </item>
             </layout>
            </widget>
-           <widget class="QWidget" name="page_optional">
+           <widget class="QWidget" name="page_extra">
             <property name="geometry">
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>308</width>
-              <height>153</height>
+              <width>322</width>
+              <height>182</height>
              </rect>
             </property>
             <property name="sizePolicy">
@@ -681,12 +658,9 @@
              </sizepolicy>
             </property>
             <attribute name="label">
-             <string>Optional</string>
+             <string>Extra</string>
             </attribute>
-            <layout class="QFormLayout" name="formLayout_2">
-             <property name="fieldGrowthPolicy">
-              <enum>QFormLayout::ExpandingFieldsGrow</enum>
-             </property>
+            <layout class="QFormLayout" name="formLayout">
              <item row="0" column="0">
               <widget class="QLabel" name="label_characterName">
                <property name="text">
@@ -740,6 +714,42 @@
               </widget>
              </item>
              <item row="2" column="0">
+              <widget class="QLabel" name="label_profileHistory">
+               <property name="text">
+                <string>Profile history:</string>
+               </property>
+               <property name="buddy">
+                <cstring>profile_history</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QComboBox" name="profile_history">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <item>
+                <property name="text">
+                 <string>load newest profile</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>load oldest profile</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="3" column="0" colspan="2">
               <widget class="QCheckBox" name="discord_optin_checkBox">
                <property name="enabled">
                 <bool>false</bool>
@@ -768,7 +778,7 @@
                </property>
               </widget>
              </item>
-             <item row="3" column="0" colspan="2">
+             <item row="4" column="0" colspan="2">
               <widget class="QCheckBox" name="autologin_checkBox">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -793,7 +803,7 @@
                </property>
               </widget>
              </item>
-             <item row="4" column="0" colspan="2">
+             <item row="5" column="0" colspan="2">
               <widget class="QCheckBox" name="auto_reconnect">
                <property name="accessibleName">
                 <string>Auto-reconnect</string>
