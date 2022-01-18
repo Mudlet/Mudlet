@@ -108,24 +108,22 @@ function Geyser.MiniConsole:calcFontSize()
   return calcFontSize(self.name)
 end
 
--- Enables the scroll bar for this window
--- @param isVisible boolean to set visibility.
+--- Enables the scroll bar for this window
 function Geyser.MiniConsole:enableScrollBar()
   enableScrollBar(self.name)
 end
 
--- Disables the scroll bar for this window
--- @param isVisible boolean to set visibility.
+--- Disables the scroll bar for this window
 function Geyser.MiniConsole:disableScrollBar()
   disableScrollBar(self.name)
 end
 
--- Enables the horizontal scroll bar for this window
+--- Enables the horizontal scroll bar for this window
 function Geyser.MiniConsole:enableHorizontalScrollBar()
   enableHorizontalScrollBar(self.name)
 end
 
--- Disables the horizontal scroll bar for this window
+--- Disables the horizontal scroll bar for this window
 function Geyser.MiniConsole:disableHorizontalScrollBar()
   disableHorizontalScrollBar(self.name)
 end
