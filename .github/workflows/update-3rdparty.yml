@@ -256,7 +256,7 @@ jobs:
           commit-message: (autocommit) Update singleshot_connect.h to latest upstream
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
 
-  update-cmakes-cripts-source:
+  update-cmakes-scripts-source:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
