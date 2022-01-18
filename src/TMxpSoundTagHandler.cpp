@@ -111,7 +111,7 @@ QString TMxpSoundTagHandler::extractVolume(MxpStartTag* tag)
 {
     if (tag->hasAttribute(qsl("v"))) {
         return tag->getAttributeValue(qsl("v"));
-    } else if (tag->getAttributesCount() > 1) {
+    } else if (tag->getAttributesCount() > 1 && tag->getAttributeValue(1).isEmpty()) {
         return tag->getAttrName(1);
     }
 
