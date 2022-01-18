@@ -1622,14 +1622,14 @@ void cTelnet::processTelnetCommand(const std::string& command)
             // Using a QByteArray means there is no consideration of encoding
             // used - it is just bytes...
             QByteArray rawData = command.c_str();
-            QbyteArray qbaUnescapedCode, qbaEscapedCode;
+            QByteArray qbaUnescapedCode, qbaEscapedCode;
             QString qslUnescapedCode, qslEscapedCode;
             
-            qslUnescapedCode = QLatinString("\u001B");
-            qslEscapedCode = QLatinString("\\u001B");
+            qslUnescapedCode = QLatin1String("\u001B");
+            qslEscapedCode = QLatin1String("\\u001B");
             
-            qbaUnescapedCode += qbaUnescapedCode;
-            qslEscapedCode += qbaEscapedCode
+            qbaUnescapedCode += qslUnescapedCode;
+            qbaEscapedCode += qslEscapedCode;
             
             if (command.size() < 6) {
                 return;
