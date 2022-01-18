@@ -1622,7 +1622,14 @@ void cTelnet::processTelnetCommand(const std::string& command)
             // Using a QByteArray means there is no consideration of encoding
             // used - it is just bytes...
             QByteArray rawData = command.c_str();
-            QString transcodedData;
+            QbyteArray qbaUnescapedCode, qbaEscapedCode;
+            QString qslUnescapedCode, qslEscapedCode;
+            
+            qslUnescapedCode = QLatinString("\u001B");
+            qslEscapedCode = QLatinString("\\u001B");
+            
+            qbaUnescapedCode += qbaUnescapedCode;
+            qslEscapedCode += qbaEscapedCode
             
             if (command.size() < 6) {
                 return;
@@ -1630,15 +1637,12 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
             rawData = rawData.replace(TN_BELL, QByteArray("\\\\7"));
             
-            transcodedData = rawData;
-            transcodedData.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
-                
-            //rawData = rawData.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
+            rawData.replace(qbaUnescapedCode, qbaEscapedCode);
 
-            // transcodedData is in the Mud Server's encoding, trim off the Telnet suboption
+            // rawData is in the Mud Server's encoding, trim off the Telnet suboption
             // bytes from beginning (3) and end (2):
-            transcodedData = transcodedData.mid(3, static_cast<int>(transcodedData.size()) - 5);
-            mpHost->mLuaInterpreter.msdp2Lua(transcodedData.constData());
+            rawData = rawData.mid(3, static_cast<int>(rawData.size()) - 5);
+            mpHost->mLuaInterpreter.msdp2Lua(rawData.constData());
             return;
         }
 
