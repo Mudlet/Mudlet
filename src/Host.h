@@ -806,7 +806,7 @@ private:
     //   EN: https://en.wikipedia.org/wiki/Code_page_437
     //   DE: https://de.wikipedia.org/wiki/Codepage_437
     //   RU: https://ru.wikipedia.org/wiki/CP437
-    TConsole::ControlCharacterMode mControlCharacterMode;
+    TConsole::ControlCharacterMode mControlCharacterMode = TConsole::ControlCharacterMode::NoControlCharacterReplacement;
 
 };
 
