@@ -543,7 +543,7 @@ void XMLimport::readUnknownMapElement()
         if (isEndElement()) {
             break;
         } else if (isStartElement()) {
-            readMap();
+            readUnknownMapElement();
         }
     }
 }
@@ -621,7 +621,7 @@ void XMLimport::readUnknownPackage()
         }
 
         if (isStartElement()) {
-            readPackage();
+            readUnknownPackage();
         }
     }
 }
@@ -639,7 +639,7 @@ void XMLimport::readUnknownHostElement()
         }
 
         if (isStartElement()) {
-            readHostPackage(mpHost);
+            readUnknownHostElement();
         }
     }
 }
@@ -657,7 +657,7 @@ void XMLimport::readUnknownTriggerElement()
         }
 
         if (isStartElement()) {
-            readTriggerPackage();
+            readUnknownTriggerElement();
         }
     }
 }
@@ -675,7 +675,7 @@ void XMLimport::readUnknownTimerElement()
         }
 
         if (isStartElement()) {
-            readTimerPackage();
+            readUnknownTimerElement();
         }
     }
 }
@@ -693,7 +693,7 @@ void XMLimport::readUnknownAliasElement()
         }
 
         if (isStartElement()) {
-            readAliasPackage();
+            readUnknownAliasElement();
         }
     }
 }
@@ -711,7 +711,7 @@ void XMLimport::readUnknownActionElement()
         }
 
         if (isStartElement()) {
-            readActionPackage();
+            readUnknownActionElement();
         }
     }
 }
@@ -729,7 +729,7 @@ void XMLimport::readUnknownScriptElement()
         }
 
         if (isStartElement()) {
-            readScriptPackage();
+            readUnknownScriptElement();
         }
     }
 }
@@ -747,7 +747,7 @@ void XMLimport::readUnknownKeyElement()
         }
 
         if (isStartElement()) {
-            readKeyPackage();
+            readUnknownKeyElement();
         }
     }
 }
