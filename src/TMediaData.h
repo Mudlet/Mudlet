@@ -58,12 +58,8 @@ public:
         if (mediaVolume == TMediaData::MediaVolumePreload) {
             // Support preloading
             mMediaVolume = TMediaData::MediaVolumePreload;
-        } else if (mediaVolume > TMediaData::MediaVolumeMax) {
-            mMediaVolume = TMediaData::MediaVolumeMax;
-        } else if (mediaVolume < TMediaData::MediaVolumeMin) {
-            mMediaVolume = TMediaData::MediaVolumeMin;
         } else {
-            mMediaVolume = mediaVolume;
+            mMediaVolume =  qBound(TMediaData::MediaVolumeMin, mMediaVolume, TMediaData::MediaVolumeMax);
         }
     }
     int getMediaLoops() const { return mMediaLoops; }
