@@ -553,6 +553,15 @@ void TConsole::resizeEvent(QResizeEvent* event)
     int x = event->size().width();
     int y = event->size().height();
 
+    if (mType == MainConsole && !x) {
+        // When multi-view is NOT active but more than one profile is loaded
+        // switching between tabs causes the deselected profile to resize its
+        // main console to a width of zero - but that is not useful from a NAWS
+        // or event handling system point of view - so abort doing anything
+        // with the event:
+        return;
+    }
+
     if (mType & (MainConsole|Buffer|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
