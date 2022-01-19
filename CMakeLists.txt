@@ -65,6 +65,7 @@ endif()
 
 if(WIN32)
   set(APP_TARGET mudlet.exe)
+  set(MINGW_BASE_DIR C:\\Qt\\Tools\\mingw730_32)
 elseif(APPLE)
   set(APP_TARGET Mudlet)
 else()
