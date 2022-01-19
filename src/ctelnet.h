@@ -193,7 +193,7 @@ public:
 
 
     QMap<int, bool> supportedTelnetOptions;
-    bool mResponseProcessed =true;
+    bool mResponseProcessed = true;
     double networkLatencyTime = 0.0;
     QElapsedTimer networkLatencyTimer;
     bool mAlertOnNewData = true;
