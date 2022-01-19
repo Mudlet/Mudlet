@@ -60,12 +60,12 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     mpExportSelection = ui->treeWidget_exportSelection;
     mpSelectionText = ui->groupBox_exportSelection;
 
-    mpTriggers = new QTreeWidgetItem({tr("Triggers")});
-    mpAliases = new QTreeWidgetItem({tr("Aliases")});
-    mpTimers = new QTreeWidgetItem({tr("Timers")});
-    mpScripts = new QTreeWidgetItem({tr("Scripts")});
-    mpKeys = new QTreeWidgetItem({tr("Keys")});
-    mpButtons = new QTreeWidgetItem({tr("Buttons")});
+    mpTriggers = new QTreeWidgetItem(mpExportSelection, {tr("Triggers")});
+    mpAliases = new QTreeWidgetItem(mpExportSelection, {tr("Aliases")});
+    mpTimers = new QTreeWidgetItem(mpExportSelection, {tr("Timers")});
+    mpScripts = new QTreeWidgetItem(mpExportSelection, {tr("Scripts")});
+    mpKeys = new QTreeWidgetItem(mpExportSelection, {tr("Keys")});
+    mpButtons = new QTreeWidgetItem(mpExportSelection, {tr("Buttons")});
 
     mpExportSelection->addTopLevelItem(mpTriggers);
     mpExportSelection->addTopLevelItem(mpAliases);
