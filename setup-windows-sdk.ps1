@@ -30,6 +30,9 @@ if("$LastExitCode" -ne "0"){
   exit 1
 }
 
+[Environment]::SetEnvironmentVariable
+     ("QT_QPA_PLATFORM_PLUGIN_PATH", "$Env:MINGW_BASE_DIR\plugins\platform", [System.EnvironmentVariableTarget]::Machine)
+
 Write-Output "Running make"
 mingw32-make -j $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors")
 if("$LastExitCode" -ne "0"){
