@@ -96,6 +96,8 @@ else()
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
+set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/src")
+set(RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/src")
 
 include(IncludeOptionalModule)
 

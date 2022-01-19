@@ -466,6 +466,11 @@ if(WIN32)
   # The UNICODE and _UNICODE definitions are needed to make
   # (QString) mudlet::getShortPathName(const QString& name) work in Windows:
   target_compile_definitions(mudlet PRIVATE UNICODE _UNICODE)
+
+  add_custom_command(TARGET mudlet POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:mudlet> $<TARGET_FILE_DIR:mudlet>
+          COMMAND_EXPAND_LISTS
+          )
 endif()
 
 if(APPLE)
