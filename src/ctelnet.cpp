@@ -1629,7 +1629,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
             rawData = rawData.replace(TN_BELL, QByteArray("\\\\007"));
             
-            rrawData = rawData.replace(`\x1b`, QByteArray("\\\\027"));
+            rawData = rawData.replace("\x1b", QByteArray("\\\\027"));
 
             // rawData is in the Mud Server's encoding, trim off the Telnet suboption
             // bytes from beginning (3) and end (2):
