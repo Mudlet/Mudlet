@@ -1622,22 +1622,14 @@ void cTelnet::processTelnetCommand(const std::string& command)
             // Using a QByteArray means there is no consideration of encoding
             // used - it is just bytes...
             QByteArray rawData = command.c_str();
-            QByteArray qbaUnescapedCode, qbaEscapedCode;
-            QString qslUnescapedCode, qslEscapedCode;
-            
-            qslUnescapedCode = QLatin1String("\u001B");
-            qslEscapedCode = QLatin1String("\\u001B");
-            
-            qbaUnescapedCode += qslUnescapedCode;
-            qbaEscapedCode += qslEscapedCode;
             
             if (command.size() < 6) {
                 return;
             }
 
-            rawData = rawData.replace(TN_BELL, QByteArray("\\\\7"));
+            rawData = rawData.replace(TN_BELL, QByteArray("\\\\007"));
             
-            rawData.replace(qbaUnescapedCode, qbaEscapedCode);
+            rrawData = rawData.replace(`\x1b`, QByteArray("\\\\027"));
 
             // rawData is in the Mud Server's encoding, trim off the Telnet suboption
             // bytes from beginning (3) and end (2):
