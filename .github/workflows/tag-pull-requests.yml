@@ -6,18 +6,18 @@ on:
 
 jobs:
   add-milestone:
-  - uses: actions/checkout@v2
-    with:
-      fetch-depth: 0
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
 
-  - name: Get next milestone
-    id: next-milestone
-    uses: mikefarah/yq@master
-    with:
-      cmd: yq eval '.milestoned.next-milestone' '.github/repo-metadata.yml'
+    - name: Get next milestone
+      id: next-milestone
+      uses: mikefarah/yq@master
+      with:
+        cmd: yq eval '.milestoned.next-milestone' '.github/repo-metadata.yml'
 
-  - name: Assign PR to milestone
-    uses: zoispag/action-assign-milestone@v1
-    with:
-      repo-token: "${{ secrets.GITHUB_TOKEN }}"
-      milestone: "${{ steps.next-milestone.outputs.result }}"
+    - name: Assign PR to milestone
+      uses: zoispag/action-assign-milestone@v1
+      with:
+        repo-token: "${{ secrets.GITHUB_TOKEN }}"
+        milestone: "${{ steps.next-milestone.outputs.result }}"
