@@ -22,7 +22,8 @@ jobs:
 
     - name: Assign PR to milestone
       run: |
-        curl --request PATCH \
+        curl -s --request PATCH \
             --url ${{ github.event.pull_request.issue_url }} \
-            --header 'authorization: token ${{ secrets.GITHUB_TOKEN }}' \
+            --header 'authorization: token ${{ secrets.GH_PAT_UPDATE_PULL_REQUESTS }}' \
             --data '{"milestone": "${{ steps.next-milestone.outputs.result }}"}'
+      
