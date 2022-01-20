@@ -222,6 +222,11 @@ function Geyser.Label:setMovieFrame(frameNr)
   return setMovieFrame(self.name, frameNr)
 end
 
+---setMovieScale resizes the movie to the label size
+function Geyser.Label:setMovieScale()
+  return setMovieScale(self.name)
+end
+
 
 --- Set whether or not the text in the label should be bold
 -- @param bool True for bold
