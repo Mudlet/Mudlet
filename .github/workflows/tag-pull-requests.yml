@@ -21,9 +21,11 @@ jobs:
         cmd: yq eval '.milestones.next-milestone' '.github/repo-metadata.yml'
 
     - name: Assign PR to milestone
+      env:
+        TOKEN: ${{ secrets.GH_PAT_UPDATE_PULL_REQUESTS }}
       run: |
         curl -s --request PATCH \
             --url ${{ github.event.pull_request.issue_url }} \
-            --header 'authorization: token ${{ secrets.GH_PAT_UPDATE_PULL_REQUESTS }}' \
+            --header 'authorization: token ${TOKEN}' \
             --data '{"milestone": "${{ steps.next-milestone.outputs.result }}"}'
       
