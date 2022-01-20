@@ -21,7 +21,8 @@ jobs:
         cmd: yq eval '.milestones.next-milestone' '.github/repo-metadata.yml'
 
     - name: Assign PR to milestone
-      uses: zoispag/action-assign-milestone@v1
-      with:
-        repo-token: "${{ secrets.GITHUB_TOKEN }}"
-        milestone: "${{ steps.next-milestone.outputs.result }}"
+      run: |
+        curl --request PATCH \
+            --url ${{ github.event.pull_request.issue_url }} \
+            --header 'authorization: token ${{ secrets.GITHUB_TOKEN }}' \
+            --data '{"milestone": "${{ steps.next-milestone.outputs.result }}"}'
