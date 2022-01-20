@@ -2,7 +2,9 @@ name: Pull request
 
 on:
   pull_request_target:
+  # TODO: temporary, remove this
   pull_request:
+  push:
 
 jobs:
   add-milestone:
