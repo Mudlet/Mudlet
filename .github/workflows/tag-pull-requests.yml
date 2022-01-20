@@ -2,14 +2,10 @@ name: Pull request
 
 on:
   pull_request_target:
-  # TODO: temporary, remove this
-  pull_request:
-  push:
 
 jobs:
   add-milestone:
     runs-on: ubuntu-20.04
-    permissions: write-all
 
     steps:
     - uses: actions/checkout@v2
