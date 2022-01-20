@@ -9,8 +9,7 @@ on:
 jobs:
   add-milestone:
     runs-on: ubuntu-20.04
-    permissions:
-      issues: write
+    permissions: write-all
 
     steps:
     - uses: actions/checkout@v2
