@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2020-2021 by Stephen Lyons                        *
+ *   Copyright (C) 2016, 2020-2022 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -25,6 +25,7 @@
 
 #include "pre_guard.h"
 #include "ui_connection_profiles.h"
+#include <optional>
 #include <QTimer>
 #include <QKeyEvent>
 #include <pugixml.hpp>
@@ -43,7 +44,7 @@ class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 
 public:
     Q_DISABLE_COPY(dlgConnectionProfiles)
-    dlgConnectionProfiles(QWidget* parent = nullptr);
+    explicit dlgConnectionProfiles(QWidget* parent = nullptr);
     ~dlgConnectionProfiles();
 
     void fillout_form();
@@ -66,12 +67,12 @@ signals:
 public slots:
     void slot_update_name(const QString&);
     void slot_save_name();
-    void slot_update_url(const QString &);
+    void slot_update_url(const QString&);
     void slot_update_port(const QString&);
     void slot_update_SSL_TSL_port(int state);
-    void slot_update_login(const QString &);
-    void slot_update_pass(const QString &);
-    void slot_update_website(const QString &);
+    void slot_update_login(const QString&);
+    void slot_update_pass(const QString&);
+    void slot_update_website(const QString&);
     void slot_deleteprofile_check(const QString&);
     void slot_update_description();
 
@@ -83,7 +84,6 @@ public slots:
     void slot_update_autologin(int state);
     void slot_update_autoreconnect(int state);
     void slot_update_discord_optin(int state);
-    void slot_connectToServer();
     void slot_load();
     void slot_cancel();
     void slot_copy_profile();
@@ -118,7 +118,7 @@ private:
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
     void setItemName(QListWidgetItem*, const QString&) const;
-    QIcon customIcon(const QString&) const;
+    QIcon customIcon(const QString&, const std::optional<QColor>&) const;
     void addLetterToProfileSearch(const int);
     inline void clearNotificationArea();
 
@@ -139,10 +139,10 @@ private:
     QLineEdit* delete_profile_lineedit;
     QPushButton* delete_button;
     QString mDiscordApplicationId;
-    const QStringList mDefaultGames;
+    QString mDiscordInviteURL;
     QAction* mpAction_revealPassword;
     // true for the duration of the 'Copy profile' action
-    bool mCopyingProfile {};
+    bool mCopyingProfile{};
     QString mDateTimeFormat;
     QVector<QColor> mCustomIconColors;
     QTimer mSearchTextTimer;
@@ -152,6 +152,7 @@ private:
 private slots:
     void slot_profile_menu(QPoint pos);
     void slot_set_custom_icon();
+    void slot_set_custom_color();
     void slot_reset_custom_icon();
     void slot_togglePasswordVisibility(const bool);
     void slot_password_saved(QKeychain::Job* job);

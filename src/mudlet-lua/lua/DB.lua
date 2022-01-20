@@ -40,7 +40,7 @@ end
 datetime = {
   _directives = {
     ["%b"] = "(?P<abbrev_month_name>jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)",
-    ["%B"] = "(?P<month_name>january|febuary|march|april|may|june|july|august|september|october|november|december)",
+    ["%B"] = "(?P<month_name>january|february|march|april|may|june|july|august|september|october|november|december)",
     ["%d"] = "(?P<day_of_month>\\d{2})",
     ["%H"] = "(?P<hour_24>\\d{2})",
     ["%I"] = "(?P<hour_12>\\d{2})",
@@ -54,7 +54,7 @@ datetime = {
   _pattern_cache = {},
   _month_names = {
     ["january"] = 1,
-    ["febuary"] = 2,
+    ["february"] = 2,
     ["march"] = 3,
     ["april"] = 4,
     ["may"] = 5,
@@ -88,7 +88,7 @@ function datetime:calculate_UTCdiff(ts)
   local date, time = os.date, os.time
   local utc = date('!*t', ts)
   local lcl = date('*t', ts)
-  lcl.isdst = false
+  lcl.isdst = os.date("*t")["isdst"]
   return os.difftime(time(lcl), time(utc))
 end
 
@@ -176,7 +176,7 @@ function datetime:parse(source, format, as_epoch)
 
     dt.min = tonumber(m.minute)
     dt.sec = tonumber(m.second)
-    dt.isdst = false
+    dt.isdst = os.date("*t")["isdst"]
 
     if as_epoch then
       return os.time(dt)
@@ -226,7 +226,7 @@ end
 
 -- NOT LUADOC
 -- Converts a data value in Lua to its SQL equivalent; notably it will also escape single-quotes to
--- prevent inadvertant SQL injection.
+-- prevent inadvertent SQL injection.
 -- called when generating the schema
 function db:_sql_convert(value)
   local t = db:_sql_type(value)
@@ -253,7 +253,7 @@ end
 -- NOT LUADOC
 -- Given a sheet name and the details of an index, this function will return a unique index name to
 -- add to the database. The purpose of this is to create unique index names as indexes are tested
--- for existance on each call of db:create and not only on creation. That way new indexes can be
+-- for existence on each call of db:create and not only on creation. That way new indexes can be
 -- added after initial creation.
 function db:_index_name(tbl_name, params)
   local t = type(params)
@@ -385,7 +385,7 @@ end
 
 
 --- Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet
---- script: in fact it is reccommended you run this function at a top-level without any kind of guards.
+--- script: in fact it is recommended you run this function at a top-level without any kind of guards.
 --- If the named database does not exist it will create it. If the database does exist then it will add
 --- any columns or indexes which didn't exist before to that database. If the database already has all the
 --- specified columns and indexes, it will do nothing. <br/><br/>
@@ -407,7 +407,7 @@ end
 ---   REPLACE - The old record which matched the unique index is dropped, and the new one is added to replace it.
 ---   </pre>
 ---
---- @usage Example bellow will create a database with two sheets; the first is kills and is used to track every successful kill,
+--- @usage Example below will create a database with two sheets; the first is kills and is used to track every successful kill,
 ---   with both where and when the kill happened. It has one index, a compound index tracking the combination of name and area.
 ---   The second sheet has two indexes, but one is unique: it isn't possible to add two items to the enemies sheet with the same name.
 ---   <pre>
@@ -488,7 +488,7 @@ end
 
 
 -- NOT LUADOC
--- The migrate function is meant to upgrade an existing database live, to maintain a consistant
+-- The migrate function is meant to upgrade an existing database live, to maintain a consistent
 -- and correct set of sheets and fields, along with their indexes. It should be safe to run
 -- at any time, and must not cause any data loss. It simply adds to what is there: in perticular
 -- it is not capable of removing indexes, columns, or sheets after they have been defined.

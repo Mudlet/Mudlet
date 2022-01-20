@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2016, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,6 +31,8 @@
 #include <QString>
 #include "post_guard.h"
 
+#include "utils.h"
+
 class TArea;
 class TMap;
 class TRoom;
@@ -45,7 +48,7 @@ class TRoomDB
     Q_DECLARE_TR_FUNCTIONS(TRoomDB) // Needed so we can use tr() even though TRoomDB is NOT derived from QObject
 
 public:
-    TRoomDB(TMap*);
+    explicit TRoomDB(TMap*);
 
     TRoom* getRoom(int id);
     TArea* getArea(int id);
@@ -122,9 +125,9 @@ bool getUserDataBool(const QMap<QString, QString>& userData, const QString& key,
 static inline void setUserDataBool(QMap<QString, QString>& userData, const QString& key, bool value)
 {
     if (value) {
-        userData[key] = QStringLiteral("1");
+        userData[key] = qsl("1");
     } else {
-        userData[key] = QStringLiteral("0");
+        userData[key] = qsl("0");
     }
 }
 

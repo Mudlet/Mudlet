@@ -235,14 +235,14 @@ end</script>
 				<name>Alertness (Achaea+Imperian)</name>
 				<script>mmp.alertness = mmp.alertness or {}
 local alertness = mmp.alertness
- 
+
 local roomexists, getRoomName, anytolong, matches, deleteLine = mmp.roomexists, getRoomName, mmp.anytolong, matches, deleteLine
- 
+
 if mmp.debug then
  mmp.alertnessTime = mmp.alertnessTime or createStopWatch()
  startStopWatch(mmp.alertnessTime)
 end
- 
+
 if matches[4] ~= "location" then
   local longexitname = matches[4]
   alertness[longexitname] = alertness[longexitname] or {}
@@ -262,12 +262,12 @@ if not mmp.firstAlert then
 	mmp.firstAlert = true
 	mmp.pdb_lastupdate = {}
 end
- 
+
 mmp.pdb[matches[2]] = matches[3]
 mmp.pdb_lastupdate[matches[2]] = true
- 
+
 enableTrigger"Mudlet Mapper prompt trigger"
- 
+
 if mmp.debug then mmp.echo("alertness trigger for "..matches[2].." took "..stopStopWatch(mmp.alertnessTime).."s.") end</script>
 				<triggerType>0</triggerType>
 				<conditonLineDelta>0</conditonLineDelta>
@@ -845,7 +845,7 @@ mmp.locateAndEcho(matches[3], matches[2])</script>
 				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 					<name>Angel/Demon presences</name>
 					<script>disableTrigger("Angel sense")
-
+disableTrigger("Demon sense")
 mmp.pdb_lastupdate = {}</script>
 					<triggerType>0</triggerType>
 					<conditonLineDelta>0</conditonLineDelta>
@@ -890,7 +890,8 @@ mmp.pdb_lastupdate = {}</script>
 					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 						<name>Stop (angel presences)</name>
 						<script>setTriggerStayOpen("Angel/Demon presences", 0)
-enableTrigger("Angel sense")</script>
+enableTrigger("Angel sense")
+enableTrigger("Demon sense")</script>
 						<triggerType>0</triggerType>
 						<conditonLineDelta>0</conditonLineDelta>
 						<mStayOpen>0</mStayOpen>
@@ -1605,6 +1606,134 @@ end</script>
 						<integer>1</integer>
 					</regexCodePropertyList>
 				</Trigger>
+				<Trigger isActive="no" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>City has orb of confinement</name>
+					<script> -- disabled since the orb is now an rng chance and not a 100% blocker
+
+local orbTable = mmp.getAchaeaOrbTable()
+local areaID = getRoomArea(mmp.currentroom) or 0
+if areaID == 0 or mmp.game ~= "achaea" then
+  return
+end
+--don't know where we are
+for city, areas in pairs(orbTable) do
+  if table.contains(areas, areaID) then
+    if not mmp.settings["orb" .. city] then
+      mmp.settings:setOption("orb" .. city, true)
+      mmp.inside = true
+      raiseEvent("mmapper went inside")
+      if mmp.autowalking then
+        mmp.gotoRoom(mmp.speedWalkPath[#mmp.speedWalkPath])
+      end
+    end
+    return
+  end
+end
+if mmp.autowalking then
+  mmp.stop()
+end</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>A shimmering orb covers the city</string>
+						<string>A shimmering orb covers the city, preventing you from rising to the skies.</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>2</integer>
+						<integer>3</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Forestwatch</name>
+					<script>mmp.locateAndEcho(matches[3], matches[2])</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^(\w+) has entered the forest at (.+)\.$</string>
+						<string>^(\w+) leaves the forest from (.+)\.$</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Grove Eyes</name>
+					<script>mmp.pdb_lastupdate = {}</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>100</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>You detect the following people disturbing the tranquility of the forest.</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>3</integer>
+					</regexCodePropertyList>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Each person</name>
+						<script>mmp.locateAndEchoSide(matches[3], matches[2])</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>^(\w+) at (.+?)$</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>1</integer>
+						</regexCodePropertyList>
+					</Trigger>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>prompt</name>
+						<script>setTriggerStayOpen("Grove Eyes", 0)
+enableTrigger("Grove Eyes")</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string></string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>7</integer>
+						</regexCodePropertyList>
+					</Trigger>
+				</Trigger>
 			</TriggerGroup>
 			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>Aetolia</name>
@@ -1640,6 +1769,81 @@ mmp.game = "aetolia"</script>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>3</integer>
+					</regexCodePropertyList>
+				</Trigger>
+			</TriggerGroup>
+			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>Asteria</name>
+				<script></script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList />
+				<regexCodePropertyList />
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Login</name>
+					<script>raiseEvent("mmp logged in", "Asteria")
+mmp.game = "asteria"</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>99</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>Welcome to Asteria.</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>3</integer>
+					</regexCodePropertyList>
+				</Trigger>
+			</TriggerGroup>
+			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>Dragonswords</name>
+				<script></script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList />
+				<regexCodePropertyList />
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Login</name>
+					<script>raiseEvent("mmp logged in", "dragonswords")
+mmp.game = "dragonswords"
+mmp.echo("We're connected to Dragon Swords.")</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>Welcome to Dragon Swords.</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>2</integer>
 					</regexCodePropertyList>
 				</Trigger>
 			</TriggerGroup>
@@ -2543,7 +2747,7 @@ cecho("&lt;orange_red&gt;)")</script>
 					<regexCodeList />
 					<regexCodePropertyList />
 					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-						<name>Succesful transverse</name>
+						<name>Successful transverse</name>
 						<script>if mmp.game~= "lusternia" then return end
 if validTransverse then
   mmp.registerTransverseExit()
@@ -2588,7 +2792,7 @@ validTransverse = false</script>
 						</regexCodePropertyList>
 					</Trigger>
 					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-						<name>Succesful pathfind</name>
+						<name>Successful pathfind</name>
 						<script>if mmp.game~= "lusternia" then return end
 if validTransverse then
   mmp.clearPathfind()
@@ -2657,6 +2861,69 @@ end</script>
 						<integer>3</integer>
 					</regexCodePropertyList>
 				</Trigger>
+				<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Delayed bix movement.</name>
+					<script></script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList />
+					<regexCodePropertyList />
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Teleport Delays</name>
+						<script>mmp.customwalkdelay(10)</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>You run your fingers across the surface of .* and still your mind, preparing for the journey ahead.</string>
+							<string>^You reach out and touch the \w+-facing landmark of the Compass of the Basin, and the spinning needle within fixes on that direction. The compass begins vibrating sympathetically with strands of aether\.$</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>1</integer>
+							<integer>1</integer>
+						</regexCodePropertyList>
+					</Trigger>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Immediately retry on failed teleport</name>
+						<script>if mmp.autowalking then
+  mmp.customwalkdelay(0)
+  mmp.move()
+end</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>Your action disrupts your concentration and you cease reaching out to harness</string>
+							<string>You cease concentrating on traveling the planar paths.</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>2</integer>
+							<integer>3</integer>
+						</regexCodePropertyList>
+					</Trigger>
+				</TriggerGroup>
 			</TriggerGroup>
 			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>Imperian</name>
@@ -2987,7 +3254,7 @@ end</script>
 					</Trigger>
 					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 						<name>Lift at correct floor</name>
-						<script>if mmp.autowalking then 
+						<script>if mmp.autowalking then
 	mmp.liftFloor(nil,nil,true)
 	mmp.customwalkdelay(0)
 	mmp.deleteLineP()
@@ -3101,7 +3368,7 @@ end</script>
 						<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 							<name>each lift floor</name>
 							<script>if mmp.autowalking then
-  if matches[4] == "HERE" then 
+  if matches[4] == "HERE" then
   	mmp.liftFloor(matches[3],matches[2],true)
 		mmp.correctLiftFloor = true
   else
@@ -3500,7 +3767,7 @@ mmp.echo("We're connected to StickMUD.")</script>
 						<colorTriggerFgColor>#000000</colorTriggerFgColor>
 						<colorTriggerBgColor>#000000</colorTriggerBgColor>
 						<regexCodeList>
-							<string>^The door to the (\w+) is closed forcefully fromthe other side and the sound of a bolt being slammed home makes your lack of admittance clear\.$</string>
+							<string>^The door to the (\w+) is closed forcefully from the other side and the sound of a bolt being slammed home makes your lack of admittance clear\.$</string>
 						</regexCodeList>
 						<regexCodePropertyList>
 							<integer>1</integer>
@@ -3627,11 +3894,13 @@ mmp.echo("We're connected to StickMUD.")</script>
 						<string>There is a door in the way.</string>
 						<string>A closed door is in the way. You need to OPEN DOOR</string>
 						<string>There is an? (?:walnut|pine|oak|iron|reinforced) door in the way.</string>
+						<string>The door to the (\w+) is closed.</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>2</integer>
 						<integer>3</integer>
 						<integer>2</integer>
+						<integer>1</integer>
 						<integer>1</integer>
 					</regexCodePropertyList>
 				</Trigger>
@@ -3736,38 +4005,6 @@ end</script>
 					</regexCodePropertyList>
 				</Trigger>
 			</TriggerGroup>
-			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-				<name>City has orb of confinement</name>
-				<script>local areaID = getRoomArea(mmp.currentroom) or 0
-
-if areaID == 0 or not (mmp.game == "achaea") then return end --don't know where we are
-
-local area = mmp.cleanAreaName(areaID):lower()
-if not mmp.settings["orb"..area] then
-	mmp.settings:setOption("orb"..area,true)
-	mmp.inside = true
-	raiseEvent("mmapper went inside")
-end
-</script>
-				<triggerType>0</triggerType>
-				<conditonLineDelta>0</conditonLineDelta>
-				<mStayOpen>0</mStayOpen>
-				<mCommand></mCommand>
-				<packageName></packageName>
-				<mFgColor>#ff0000</mFgColor>
-				<mBgColor>#ffff00</mBgColor>
-				<mSoundFile></mSoundFile>
-				<colorTriggerFgColor>#000000</colorTriggerFgColor>
-				<colorTriggerBgColor>#000000</colorTriggerBgColor>
-				<regexCodeList>
-					<string>A shimmering orb covers the city</string>
-					<string>A shimmering orb covers the city, preventing you from rising to the skies.</string>
-				</regexCodeList>
-				<regexCodePropertyList>
-					<integer>2</integer>
-					<integer>3</integer>
-				</regexCodePropertyList>
-			</Trigger>
 		</TriggerGroup>
 	</TriggerPackage>
 	<TimerPackage>
@@ -4656,13 +4893,6 @@ mmp.echo(
 					<regex>^feature create (.+?)(?: char (.+))?$</regex>
 				</Alias>
 				<Alias isActive="yes" isFolder="no">
-					<name>List map features</name>
-					<script>mmp.listMapFeatures()</script>
-					<command></command>
-					<packageName></packageName>
-					<regex>^feature list$</regex>
-				</Alias>
-				<Alias isActive="yes" isFolder="no">
 					<name>Add map feature to room</name>
 					<script>mmp.roomCreateMapFeature(matches[3], matches[2] == "" and mmp.currentroom or tonumber(matches[2]))</script>
 					<command></command>
@@ -4714,7 +4944,7 @@ for key in pairs(getRooms()) do
   if char ~= "" then
     if translation[char] then
       if not mmp.roomCreateMapFeature(translation[char], key) then
-			  mmp.echo("An error occured when migrating room characters, see messages above for details. Migration incomplete!")
+			  mmp.echo("An error occurred when migrating room characters, see messages above for details. Migration incomplete!")
 			  return
 			end
     end
@@ -4914,6 +5144,13 @@ end</script>
 				<regex>^(?:mc|map create) ?(on|off)?$</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
+				<name>List map features</name>
+				<script>mmp.listMapFeatures()</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^feature list$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
 				<name>Save a map</name>
 				<script>local function s(location, format)
   local savednormal, savedjson = "not saved", "not saved"
@@ -4925,7 +5162,7 @@ end</script>
   elseif format == nil or format == "" then
     savednormal = saveMap(location)
   end
-  
+
   if savednormal == nil then
     mmp.echo("Couldn't save the map :(")
   elseif savednormal == true then
@@ -4966,14 +5203,14 @@ end</script>
     mmp.echo("Your Mudlet can't load maps in JSON, please upgrade first.")
     return
   end
-  
+
   local allok = true
   if string.ends(loc, ".json") then
     allok = loadJsonMap(loc)
   else
     allok = loadMap(loc)
   end
-  
+
   if not allok then
     mmp.echo("Couldn't load the map :(")
   else
@@ -5264,14 +5501,6 @@ end</script>
 						<regex>(?i)^manselink (\w+) (\w+)$</regex>
 					</Alias>
 					<Alias isActive="yes" isFolder="no">
-						<name>Astral jumping boots</name>
-						<script>mmp.astroboots(matches[2]:lower()=="on")
-mmp.echo("&lt;yellow&gt;Astral jumping "..(matches[2]:lower()=="on" and "enabled" or "disabled").."!")</script>
-						<command></command>
-						<packageName></packageName>
-						<regex>(?i)astroboots (on|off)$</regex>
-					</Alias>
-					<Alias isActive="yes" isFolder="no">
 						<name>Wildnodes toggle</name>
 						<script>if mmp.game ~= "lusternia" then return end
 mmp.wildnodes(matches[2]:lower()=="on")
@@ -5299,6 +5528,23 @@ mmp.echo("All astral nodes have been "..(matches[2]:lower()=="on" and "" or "un"
 --                                             --
 -- Note that you can also use external Scripts --
 -------------------------------------------------
+local spairs = spairs or function(tbl, order)
+  local keys = table.keys(tbl)
+  if order then
+    table.sort(keys, function(a,b) return order(tbl, a, b) end)
+  else
+    table.sort(keys)
+  end
+
+  local i = 0
+  return function()
+    i = i + 1
+    if keys[i] then
+      return keys[i], tbl[keys[i]]
+    end
+  end
+end
+
 
 function createOption(startingValue, onChangeFunc, allowedVarTypes, use, checkOption, games)
 	if allowedVarTypes then -- make sure our starting Value follows type rules
@@ -5450,34 +5696,18 @@ speedWalkCounter = 0
 mmp.speedWalk = mmp.speedWalk or {}
 mmp.speedWalkPath = mmp.speedWalkPath or {}
 mmp.speedWalkDir = mmp.speedWalkDir or {}
-mmp.lagtable = {
-    [1] = {
-        description = "Normal, default level.",
-        time = 0.5
-    },
-    [2] = {
-        description = "Decent, but slightly laggy.",
-        time = 1
-    },
-    [3] = {
-        description = "Noticably laggy with occasional spikes.",
-        time = 2
-    },
-    [4] = {
-        description = "Bad. Terrible. Terribad.",
-        time = 5
-    },
-    [5] = {
-        description = "Carrier Pigeon",
-        time = 10
-    }
-}
-local newversion = "21.4.1"
+mmp.lagtable =
+  {
+    [1] = {description = "Normal, default level.", time = 0.5},
+    [2] = {description = "Decent, but slightly laggy.", time = 1},
+    [3] = {description = "Noticeably laggy with occasional spikes.", time = 2},
+    [4] = {description = "Bad. Terrible. Terribad.", time = 5},
+    [5] = {description = "Carrier Pigeon", time = 10},
+  }
+local newversion = "21.12.2"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
-    mmp.echo(
-      "Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could."
-    )
+    mmp.echo("Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.")
   else
     mmp.echo("Mapper script updated - thanks! You don't need to restart.")
   end
@@ -5489,372 +5719,124 @@ function mmp.startup()
     return
   end
   local private_settings = {}
+
   --General settings
-  private_settings["echocolour"] =
-    createOption(
-      "cyan",
-      mmp.changeEchoColour,
-      {"string"},
-      "Set the color for room number echos?",
-      function(newSetting)
-        return color_table[newSetting] ~= nil
-      end
-    )
-  private_settings["crowdmap"] =
-    createOption(
-      false,
-      mmp.changeMapSource,
-      {"boolean"},
-      "Use a crowd-sourced map instead of IREs default?",
-      nil,
-      {achaea = true, starmourn = true, lusternia = true, stickmud = true}
-    )
-  private_settings["showcmds"] =
-    createOption(true, mmp.changeBoolFunc, {"boolean"}, "Show walking commands?")
-  private_settings["laglevel"] =
-    createOption(1, mmp.changeLaglevel, {"number"}, "How laggy is your connection, (fast 1&lt;-&gt;5 slow)?", mmp.verifyLaglevel)
-  private_settings["slowwalk"] =
-    createOption(
-      false, mmp.setSlowWalk, {"boolean"}, "Walk slowly instead of as quick as possible?"
-    )
-  private_settings["updatemap"] =
-    createOption(true, mmp.changeUpdateMap, {"boolean"}, "Check for new maps from your MUD?")
-  private_settings["waterwalk"] =
-    createOption(
-      true,
-      mmp.setWaterWalk,
-      {"boolean"},
-      "Have waterwalk (don't avoid water)?",
-      nil,
-      {achaea = true}
-    )
-  --locking things
-  private_settings["lockpathways"] =
-    createOption(
-      true, mmp.lockPathways, {"boolean"}, "Lock pathway exits?", nil, {lusternia = true}
-    )
-  private_settings["locksewers"] =
-    createOption(false, mmp.lockSewers, {"boolean"}, "Lock all sewers?", nil, {achaea = true})
-  private_settings["lockspecials"] =
-    createOption(false, mmp.lockSpecials, {"boolean"}, "Lock all special exits?")
-  private_settings["lockwormholes"] =
-    createOption(
-      true,
-      mmp.lockWormholes,
-      {"boolean"},
-      "Lock all wormholes?",
-      nil,
-      {achaea = true, imperian = true, aetolia = true}
-    )
+
+  private_settings["echocolour"] = createOption("cyan", mmp.changeEchoColour, {"string"}, "Set the color for room number echos?", function(newSetting) return color_table[newSetting] ~= nil end)
+  private_settings["crowdmap"] = createOption(false, mmp.changeMapSource, {"boolean"}, "Use a crowd-sourced map instead of IREs default?", nil, {achaea = true, starmourn = true, lusternia = true, stickmud = true, asteria = true, imperian = true})
+  private_settings["showcmds"] = createOption(true, mmp.changeBoolFunc, {"boolean"}, "Show walking commands?")
+  private_settings["laglevel"] = createOption(1, mmp.changeLaglevel, {"number"}, "How laggy is your connection, (fast 1&lt;-&gt;5 slow)?", mmp.verifyLaglevel)
+  private_settings["slowwalk"] = createOption(false, mmp.setSlowWalk, {"boolean"}, "Walk slowly instead of as quick as possible?")
+  private_settings["updatemap"] = createOption(true, mmp.changeUpdateMap, {"boolean"}, "Check for new maps from your MUD?")
+  private_settings["waterwalk"] = createOption(true, mmp.setWaterWalk, {"boolean"}, "Have waterwalk (don't avoid water)?", nil, {achaea = true})
+
+  --Settings that lock things
+
+  private_settings["lockpathways"] = createOption(true, mmp.lockPathways, {"boolean"}, "Lock pathway exits?", nil, {lusternia = true})
+  private_settings["locksewers"] = createOption(false, mmp.lockSewers, {"boolean"}, "Lock all sewers?", nil, {achaea = true})
+  private_settings["lockspecials"] = createOption(false, mmp.lockSpecials, {"boolean"}, "Lock all special exits?")
+  private_settings["lockwormholes"] = createOption(true, mmp.lockWormholes, {"boolean"}, "Lock all wormholes?", nil, {achaea = true, imperian = true, aetolia = true})
+
   --Sprint movement
-  private_settings["dash"] =
-    createOption(
-      false,
-      mmp.changeBoolFunc,
-      {"boolean"},
-      "Use Dash?",
-      nil,
-      {achaea = true, imperian = true, aetolia = true}
-    )
+
+  private_settings["dash"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Dash?", nil, {achaea = true, imperian = true, aetolia = true})
   private_settings["sprint"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Sprint?")
   private_settings["gallop"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Gallop?")
-  private_settings["runaway"] =
-    createOption(
-      false, mmp.changeBoolFunc, {"boolean"}, "Use Jester Runaway?", nil, {achaea = true}
-    )
+  private_settings["runaway"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Jester Runaway?", nil, {achaea = true})
+
   --Achaea wings and things
-  private_settings["winglanguage"] =
-    createOption(
-      "",
-      mmp.setWingsLanguage,
-      {"string"},
-      "Speak non-default language for wings:",
-      nil,
-      {achaea = true}
-    )
-  private_settings["pebble"] =
-    createOption(
-      false, mmp.lockPebble, {"boolean"}, "Make use of your enchanted pebble?", nil, {achaea = true}
-    )
-  private_settings["removewings"] =
-    createOption(
-      true,
-      mmp.setWingsRemoval,
-      {"boolean"},
-      "Remove Wings after using them?",
-      nil,
-      {achaea = true, imperian = true}
-    )
-  private_settings["harness"] =
-    createOption(
-      false, mmp.setHarness, {"boolean"}, "Use Stratospheric Harness?", nil, {achaea = true}
-    )
-  --PapaGuacamole
-  private_settings["duantahar"] =
-    createOption(false, mmp.setDuantahar, {"boolean"}, "Use Chenubian Wings?", nil, {achaea = true})
-  private_settings["duanatharan"] =
-    createOption(false, mmp.setDuanatharan, {"boolean"}, "Use Atavian Wings?", nil, {achaea = true})
-  private_settings["duanathar"] =
-    createOption(false, mmp.setDuanathar, {"boolean"}, "Use Eagle Wings?", nil, {achaea = true})
-  private_settings["duanatharic"] =
-    createOption(false, mmp.setDuanatharic, {"boolean"}, "Use Island Wings?", nil, {achaea = true})
-  private_settings["soar"] =
-    createOption(false, mmp.setSoar, {"boolean"}, "Use Aero Soar?", nil, {achaea = true})
-  private_settings["shackle"] =
-    createOption(false, mmp.changeBoolFunc, {"boolean"}, "Take off shackle?", nil, {achaea = true})
-  private_settings["universe"] =
-    createOption(false, mmp.setUniverse, {"boolean"}, "Use Universe Tarot?", nil, {achaea = true})
-  private_settings["gare"] =
-    createOption(false, mmp.setGare, {"boolean"}, "Use Gare?", nil, {achaea = true})
+
+  private_settings["winglanguage"] = createOption("", mmp.setWingsLanguage, {"string"}, "Speak non-default language for wings:", nil, {achaea = true})
+  private_settings["pebble"] = createOption(false, mmp.lockPebble, {"boolean"}, "Make use of your enchanted pebble?", nil, {achaea = true})
+  private_settings["removewings"] = createOption(true, mmp.setWingsRemoval, {"boolean"}, "Remove Wings after using them?", nil, {achaea = true, imperian = true})
+  private_settings["harness"] = createOption(false, mmp.setHarness, {"boolean"}, "Use Stratospheric Harness?", nil, {achaea = true})
+  private_settings["duantahar"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Chenubian Wings?", nil, {achaea = true})
+  private_settings["duanatharan"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Atavian Wings?", nil, {achaea = true})
+  private_settings["duanathar"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Eagle Wings?", nil, {achaea = true})
+  private_settings["duanatharic"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Island Wings?", nil, {achaea = true})
+  private_settings["soar"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Aero Soar?", nil, {achaea = true})
+  private_settings["shackle"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Take off shackle?", nil, {achaea = true})
+  private_settings["universe"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Universe Tarot?", nil, {achaea = true})
+  private_settings["gare"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Gare?", nil, {achaea = true})
+
+  --Wings pathfinding improvements
+
+  private_settings["betterwings"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Better Wings pathfinding?", nil, {achaea = true})
+
   --Achaea Orb of Confinement
-  private_settings["orbashtan"] =
-    createOption(
-      false,
-      function()
-        mmp.setOrb("ashtan")
-      end,
-      {"boolean"},
-      "Orb of Confinement active in Ashtan?",
-      nil,
-      {achaea = true}
-    )
-  private_settings["orbcyrene"] =
-    createOption(
-      false,
-      function()
-        mmp.setOrb("cyrene")
-      end,
-      {"boolean"},
-      "Orb of Confinement active in Cyrene?",
-      nil,
-      {achaea = true}
-    )
-  private_settings["orbeleusis"] =
-    createOption(
-      false,
-      function()
-        mmp.setOrb("eleusis")
-      end,
-      {"boolean"},
-      "Orb of Confinement active in Eleusis?",
-      nil,
-      {achaea = true}
-    )
-  private_settings["orbhashan"] =
-    createOption(
-      false,
-      function()
-        mmp.setOrb("hashan")
-      end,
-      {"boolean"},
-      "Orb of Confinement active in Hashan?",
-      nil,
-      {achaea = true}
-    )
-  private_settings["orbmhaldor"] =
-    createOption(
-      false,
-      function()
-        mmp.setOrb("mhaldor")
-      end,
-      {"boolean"},
-      "Orb of Confinement active in Mhaldor?",
-      nil,
-      {achaea = true}
-    )
-  private_settings["orbtargossas"] =
-    createOption(
-      false,
-      function()
-        mmp.setOrb("targossas")
-      end,
-      {"boolean"},
-      "Orb of Confinement active in Targossas?",
-      nil,
-      {achaea = true}
-    )
+
+  private_settings["orbashtan"] = createOption(false, function() mmp.setOrb("ashtan") end, {"boolean"}, "Orb of Confinement active in Ashtan?", nil, {achaea = true})
+  private_settings["orbcyrene"] = createOption(false, function() mmp.setOrb("cyrene") end, {"boolean"}, "Orb of Confinement active in Cyrene?", nil, {achaea = true})
+  private_settings["orbeleusis"] = createOption(false, function() mmp.setOrb("eleusis") end, {"boolean"}, "Orb of Confinement active in Eleusis?", nil, {achaea = true})
+  private_settings["orbhashan"] = createOption(false, function() mmp.setOrb("hashan") end, {"boolean"}, "Orb of Confinement active in Hashan?", nil, {achaea = true})
+  private_settings["orbmhaldor"] = createOption(false, function() mmp.setOrb("mhaldor") end, {"boolean"}, "Orb of Confinement active in Mhaldor?", nil, {achaea = true})
+  private_settings["orbtargossas"] = createOption(false, function() mmp.setOrb("targossas") end, {"boolean"}, "Orb of Confinement active in Targossas?", nil, {achaea = true})
+
   --Imperian wings
-  private_settings["shekinah"] =
-    createOption(false, mmp.setShekinah, {"boolean"}, "Use Seraphim Wings?", nil, {imperian = true})
-  private_settings["suriel"] =
-    createOption(false, mmp.setSuriel, {"boolean"}, "Use Orphanim Wings?", nil, {imperian = true})
+
+  private_settings["shekinah"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Seraphim Wings?", nil, {imperian = true})
+  private_settings["suriel"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Orphanim Wings?", nil, {imperian = true})
+
   --Lusternia bixes
-  private_settings["torus"] =
-    createOption(
-      false, mmp.setTorus, {"boolean"}, "Make use of your Torus?", nil, {lusternia = true}
-    )
-  private_settings["prism"] =
-    createOption(
-      false,
-      mmp.setPrism,
-      {"boolean"},
-      "Make use of your transplanar prism?",
-      nil,
-      {lusternia = true}
-    )
-  private_settings["cubix"] =
-    createOption(
-      false, mmp.setCubix, {"boolean"}, "Make use of your Cubix?", nil, {lusternia = true}
-    )
-  private_settings["medallion"] =
-    createOption(
-      false, mmp.setMedallion, {"boolean"}, "Make use of your Medallion?", nil, {lusternia = true}
-    )
+
+  private_settings["torus"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Torus?", nil, {lusternia = true})
+  private_settings["prism"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your transplanar prism?", nil, {lusternia = true})
+  private_settings["cubix"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Cubix?", nil, {lusternia = true})
+  private_settings["medallion"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Medallion?", nil, {lusternia = true})
+
   --Lusternia Bubblixes
-  private_settings["tibia"] =
-    createOption(
-      false, mmp.setTibia, {"boolean"}, "Make use of your Tibia?", nil, {lusternia = true}
-    )
-  private_settings["mud"] =
-    createOption(false, mmp.setMud, {"boolean"}, "Make use of your Mud?", nil, {lusternia = true})
-  private_settings["cookie"] =
-    createOption(
-      false, mmp.setCookie, {"boolean"}, "Make use of your Cookie?", nil, {lusternia = true}
-    )
-  private_settings["icicle"] =
-    createOption(
-      false, mmp.setIcicle, {"boolean"}, "Make use of your Icicle?", nil, {lusternia = true}
-    )
-  private_settings["screwdriver"] =
-    createOption(
-      false,
-      mmp.setScrewdriver,
-      {"boolean"},
-      "Make use of your Screwdriver?",
-      nil,
-      {lusternia = true}
-    )
-  private_settings["snowglobe"] =
-    createOption(
-      false, mmp.setSnowglobe, {"boolean"}, "Make use of your Snowglobe?", nil, {lusternia = true}
-    )
-  private_settings["head"] =
-    createOption(
-      false, mmp.setHead, {"boolean"}, "Make use of your Doll's Head?", nil, {lusternia = true}
-    )
-  private_settings["wheel"] =
-    createOption(
-      false, mmp.setWheel, {"boolean"}, "Make use of your Quartz Wheel?", nil, {lusternia = true}
-    )
+  private_settings["twist"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Mt. Dio Bix?", nil, {lusternia = true})
+  private_settings["figurine"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Icewynd Bix?", nil, {lusternia = true})
+  private_settings["periscope"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Aquagoria Bix?", nil, {lusternia = true})
+  private_settings["pebble"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Lyraa Bix?", nil, {lusternia = true})
+  private_settings["shard"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Xion Bix?", nil, {lusternia = true})
+  private_settings["tibia"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Cankermore Bix?", nil, {lusternia = true})
+  private_settings["mud"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Mucklemarsh Bix?", nil, {lusternia = true})
+  private_settings["cookie"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Crumkindivia Bix?", nil, {lusternia = true})
+  private_settings["icicle"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Frosticia Bix?", nil, {lusternia = true})
+  private_settings["screwdriver"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Facility Bix?", nil, {lusternia = true})
+  private_settings["snowglobe"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Tree of Trees Bix?", nil, {lusternia = true})
+  private_settings["head"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Bottledowns Bix?", nil, {lusternia = true})
+  private_settings["wheel"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Dramube Bix?", nil, {lusternia = true})
+
+  --lusternia athergoop setButtons
+
+  private_settings["buttons"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of Aethergoop Buttons?", nil, {lusternia = true})
+
   --Lusternia Curio collections
-  private_settings["bonecurio"] =
-    createOption(
-      false, mmp.setBonecurio, {"boolean"}, "Make use of your Bone curios?", nil, {lusternia = true}
-    )
-  private_settings["facecurio"] =
-    createOption(
-      false, mmp.setFacecurio, {"boolean"}, "Make use of your Face curios?", nil, {lusternia = true}
-    )
-  private_settings["feathercurio"] =
-    createOption(
-      false,
-      mmp.setFeathercurio,
-      {"boolean"},
-      "Make use of your Feather curios?",
-      nil,
-      {lusternia = true}
-    )
-  private_settings["figurecurio"] =
-    createOption(
-      false,
-      mmp.setFigurecurio,
-      {"boolean"},
-      "Make use of your Figure curios?",
-      nil,
-      {lusternia = true}
-    )
-  private_settings["flowercurio"] =
-    createOption(
-      false,
-      mmp.setFlowercurio,
-      {"boolean"},
-      "Make use of your Flower curios?",
-      nil,
-      {lusternia = true}
-    )
-  private_settings["fluttercurio"] =
-    createOption(
-      false,
-      mmp.setFluttercurio,
-      {"boolean"},
-      "Make use of your Flutter curios?",
-      nil,
-      {lusternia = true}
-    )
-  private_settings["toolcurio"] =
-    createOption(
-      false,
-      mmp.setToolcurio,
-      {"boolean"},
-      "Make use of your Tool curios]?",
-      nil,
-      {lusternia = true}
-    )
-  private_settings["vernalcurio"] =
-    createOption(
-      false,
-      mmp.setVernalcurio,
-      {"boolean"},
-      "Make use of your Vernal curios?",
-      nil,
-      {lusternia = true}
-    )
-  private_settings["utensilcurio"] =
-    createOption(
-      false,
-      mmp.setUtensilcurio,
-      {"boolean"},
-      "Make use of your Utensil curios?",
-      nil,
-      {lusternia = true}
-    )
-  private_settings["toycurio"] =
-    createOption(
-      false, mmp.setToycurio, {"boolean"}, "Make use of your Toy curios?", nil, {lusternia = true}
-    )
-  private_settings["soullesscurio"] =
-    createOption(
-      false,
-      mmp.setSoullesscurio,
-      {"boolean"},
-      "Make use of your Soulless curios?",
-      nil,
-      {lusternia = true}
-    )
-  --Lusternia epic
-  private_settings["fingerblade"] =
-    createOption(
-      false,
-      mmp.setFingerblade,
-      {"boolean"},
-      "Make use of your Fingerblade?",
-      nil,
-      {lusternia = true}
-    )
-  private_settings["blossom"] =
-    createOption(
-      false,
-      mmp.setBlossom,
-      {"boolean"},
-      "Make use of your Flame of dae'Seren?",
-      nil,
-      {lusternia = true}
-    )
-  private_settings["belt"] =
-    createOption(false, mmp.setBelt, {"boolean"}, "Make use of your Belt?", nil, {lusternia = true})
-  private_settings["mandala"] =
-    createOption(
-      false, mmp.setMandala, {"boolean"}, "Make use of your Mandala?", nil, {lusternia = true}
-    )
-  private_settings["mantle"] =
-    createOption(
-      false, mmp.setMantle, {"boolean"}, "Make use of your Mantle?", nil, {lusternia = true}
-    )
-  private_settings["key"] =
-    createOption(false, mmp.setKey, {"boolean"}, "Make use of your Key?", nil, {lusternia = true})
-  --misc
-  private_settings["caravan"] =
-    createOption(false, mmp.changeBoolFunc, {"boolean"}, "Walk caravans?", nil, {imperian = true})
+
+  private_settings["bonecurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Bone curios?", nil, {lusternia = true})
+  private_settings["facecurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Face curios?", nil, {lusternia = true})
+  private_settings["feathercurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Feather curios?", nil, {lusternia = true})
+  private_settings["figurecurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Figure curios?", nil, {lusternia = true})
+  private_settings["flowercurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Flower curios?", nil, {lusternia = true})
+  private_settings["fluttercurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Flutter curios?", nil, {lusternia = true})
+  private_settings["toolcurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Tool curios?", nil, {lusternia = true})
+  private_settings["vernalcurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Vernal curios?", nil, {lusternia = true})
+  private_settings["utensilcurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Utensil curios?", nil, {lusternia = true})
+  private_settings["toycurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Toy curios?", nil, {lusternia = true})
+  private_settings["soullesscurio"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Soulless curios?", nil, {lusternia = true})
+
+  --Lusternia epic quest bixes
+
+  private_settings["fingerblade"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Fingerblade?", nil, {lusternia = true})
+  private_settings["blossom"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Flame of dae'Seren?", nil, {lusternia = true})
+  private_settings["belt"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Belt?", nil, {lusternia = true})
+  private_settings["mandala"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Mandala?", nil, {lusternia = true})
+  private_settings["mantle"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Mantle?", nil, {lusternia = true})
+  private_settings["key"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Key?", nil, {lusternia = true})
+
+  --Lusternia other travel things
+  private_settings["compass"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use the Compass of the Basin?", nil, {lusternia = true})
+  private_settings["astrojump"] = createOption(false, mmp.astroboots, {"boolean"}, "Use Astral Jumping boots?", nil, {lusternia = true})
+
+
+  --I have no idea what this does tbh
+
+  private_settings["caravan"] = createOption(false, mmp.changeBoolFunc, {"boolean"}, "Walk caravans?", nil, {imperian = true})
+
+
+
   mmp.settings = createOptionsTable(private_settings)
   mmp.settings.disp = mmp.echo
   mmp.game = false
@@ -6028,6 +6010,8 @@ function mmp.clearpathcache()
   getpathcache = {}
 end
 
+registerAnonymousEventHandler("mmapper updated map","mmp.clearpathcache")
+
 function mmp.showpathcache()
   return getpathcache
 end
@@ -6149,6 +6133,26 @@ function mmp.openDoor()
   if not mmp.speedWalkDir[speedWalkCounter] then
     return
   end
+  if mmp.game == "asteria" then
+   send(
+    "open " ..
+    mmp.speedWalkDir[speedWalkCounter]:gsub("sprint ", ""):gsub("dash ", ""):gsub("gallop ", ""):gsub(
+      "runaway ", ""
+    ),
+    false
+  )
+  if mmp.settings.showcmds then
+    cecho(
+      string.format(
+        "&lt;red&gt;(&lt;maroon&gt;%d - &lt;dark_slate_grey&gt;open %s&lt;red&gt;)",
+        #mmp.speedWalkDir - speedWalkCounter + 1,
+        mmp.speedWalkDir[speedWalkCounter]:gsub("sprint ", ""):gsub("dash ", ""):gsub("gallop ", ""):gsub(
+          "runaway ", ""
+        )
+      )
+    )
+  end
+else
   send(
     "open door " ..
     mmp.speedWalkDir[speedWalkCounter]:gsub("sprint ", ""):gsub("dash ", ""):gsub("gallop ", ""):gsub(
@@ -6167,6 +6171,7 @@ function mmp.openDoor()
       )
     )
   end
+end
   mmp.hasty = true
   mmp.setmovetimer(getNetworkLatency())
 end
@@ -6241,7 +6246,7 @@ function mmp.canmove(fromtimer)
   end
   -- Achaea
   -- Lusternia
-  if
+ if
     (
       gmcp.Char and
       (not gmcp.Char.Vitals.bal or gmcp.Char.Vitals.bal == "1") and
@@ -6260,8 +6265,8 @@ function mmp.canmove(fromtimer)
       (not gmcp.Char.Balance or gmcp.Char.Balance.List.rarm == "1") and
       (not gmcp.Char.Balance or gmcp.Char.Balance.List.larm == "1") and
       (not gmcp.Char.Balance or gmcp.Char.Balance.List.legs == "1") and
-      (not gmcp.Char.Vitals.prone or (gmcp.Char.Vitals.prone == "0" or gmcp.Char.Vitals.prone == 0))
-    )
+      (not gmcp.Char.Vitals.prone or (gmcp.Char.Vitals.prone == "0" or gmcp.Char.Vitals.prone == 0)
+    ))
   then
     if fromtimer then
       mmp.move()
@@ -6512,7 +6517,7 @@ function mmp.fixPath(rFrom, rTo, dashtype)
         end
       end
       if repCount &gt; 1 then
-        -- Found direction repitition. Calculate dash path.
+        -- Found direction repetition. Calculate dash path.
         local exits = getRoomExits(mmp.speedWalkPath[index + (repCount - 1)])
         local pname = ""
         for word in mmp.speedWalkDir[index]:gmatch("%w") do
@@ -6584,12 +6589,12 @@ function mmp.getShortestOfMultipleRooms(possibleRooms)
   local shortestWeight, closestRoom = 10000000, 0
   local checkedsofar, outoftime = 0, false
   local getStopWatchTime, tonumber = getStopWatchTime, tonumber
-  
+
   -- allocate only 500ms to finding the shortest path, or more if we failed to find anything
   mmp.computeShortestWatch = mmp.computeShortestWatch or createStopWatch()
   startStopWatch(mmp.computeShortestWatch)
   raiseEvent("mmp link externals")
-  
+
   -- mmp.echo(string.format("Have %s rooms nodes, %ss taken so far...", table.size(possibleRooms), getStopWatchTime(mmp.computeShortestWatch)))
   for _, id in pairs(possibleRooms) do
     local possible, thisWeight = getPath(mmp.currentroom, tonumber(id))
@@ -6602,7 +6607,7 @@ function mmp.getShortestOfMultipleRooms(possibleRooms)
       outoftime = true
       break
     end
-	
+
     -- mmp.echo(string.format("pathed from %s to %s, running time so far: %s", mmp.currentroom, id, getStopWatchTime(mmp.computeShortestWatch)))
   end
   --mmp.echo(string.format("total time took: %s", getStopWatchTime(mmp.computeShortestWatch)))
@@ -6704,6 +6709,48 @@ end</script>
 					<string>gmcp.Room.Info</string>
 				</eventHandlerList>
 			</Script>
+			<Script isActive="yes" isFolder="no">
+				<name>mmapper_went_outside</name>
+				<packageName></packageName>
+				<script>--genericized version of the went_outside event handlers.
+--when you go outside, it sees if a shorter path can be found using external links. If so, routes you on the new path instead.
+function mmapper_went_outside()
+  if
+    not mmp.autowalking or
+    (mmp.currentroom == mmp.speedWalkPath[#mmp.speedWalkPath]) or
+    table.contains(gmcp.Room.Info.details, "indoors") or
+    table.contains(gmcp.Room.Info.details, "considered indoors") or
+    mmp.orbed(mmp.currentroom)
+  then
+    return
+  end
+  -- repath, maybe that'll allow us to use wings now.
+  local previousDirection = mmp.speedWalkDir[speedWalkCounter + 1]
+  if mmp.speedWalk.type == "room" then
+    raiseEvent("mmp link externals")
+    mmp.getPath(mmp.currentroom, mmp.speedWalkPath[#mmp.speedWalkPath])
+    raiseEvent("mmp clear externals")
+    -- don't need to check return value since that fact shouldnt've changed
+  else
+    mmp.gotoAreaID(getRoomArea(mmp.speedWalkPath[#mmp.speedWalkPath]))
+  end
+  -- if our path didn't change, re-instate it as it was (since the new path starts from this room that we checked at)
+  if speedWalkDir[1] ~= previousDirection then
+    speedWalkCounter = 0
+    mmp.echo("We got outside - going to shortcut with travel device.")
+    if mmp.speedWalk.type == "room" then
+      mmp.gotoRoom(mmp.speedWalkPath[#mmp.speedWalkPath])
+    else
+      mmp.gotoAreaID(getRoomArea(mmp.speedWalkPath[#mmp.speedWalkPath]))
+    end
+    mmp.ignore_speedwalking = true
+  end
+end</script>
+				<eventHandlerList>
+					<string>mmapper went outside</string>
+					<string>mmapper changed continent</string>
+				</eventHandlerList>
+			</Script>
 			<ScriptGroup isActive="yes" isFolder="yes">
 				<name>Wings and other fast travel</name>
 				<packageName></packageName>
@@ -6747,24 +6794,7 @@ registerAnonymousEventHandler("mmp clear externals", "mmp.removeWings")</script>
 					<packageName></packageName>
 					<script>registerAnonymousEventHandler("mmp link externals", "mmp.addWingsAchaea")
 
-function mmp.orbed()
-	-- orb of confinement - PapaGuacamole
-  local areaID = getRoomArea(mmp.currentroom)
-  return
-		(mmp.game == "achaea" and
-  		(
-    		(mmp.settings.orbashtan and areaID == 49) or
-    		(mmp.settings.orbcyrene and areaID == 57) or
-    		(mmp.settings.orbeleusis and areaID == 51) or
-    		(mmp.settings.orbhashan and areaID == 55) or
-    		(mmp.settings.orbmhaldor and areaID == 44) or
-    		(
-    			mmp.settings.orbtargossas and
-    			((mmp.settings.crowdmap and areaID == 368) or (not mmp.settings.crowdmap and areaID == 271))
-    		)
-  		)
-		)
-end
+
 
 function mmp.addWingsAchaea()
   --Trimmed down version of the original function, meant to only be used for wings. (Where the command varies based on several MCONFIGS)
@@ -6783,20 +6813,19 @@ function mmp.addWingsAchaea()
         word
       )
   end
-  --creates a special exit from your current room to a destination, and adds it to a table so it can be easily cleared later.
+
   --Achaea stuff!
   if mmp.game ~= "achaea" then
     return
   end
+  local area = getRoomArea(mmp.currentroom)
   --WINGS!
   if
     (mmp.settings.duanathar or mmp.settings.duanatharan or mmp.settings.duantahar) and
-    gmcp.Room and
-    not table.contains(gmcp.Room.Info.details, "indoors") and
-    not mmp.orbed()
+    not mmp.inside
   then
     --Sarapis wings.
-    if mmp.oncontinent(getRoomArea(mmp.currentroom), "Main") then
+    if mmp.oncontinent(area, "Main") then
       if mmp.settings.duanatharan then
         mmp.tempSpecialExit(4882, getcmd("duanatharan"))
         mmp.tempSpecialExit(3885, getcmd("duanathar"))
@@ -6807,7 +6836,7 @@ function mmp.addWingsAchaea()
         mmp.tempSpecialExit(3885, getcmd("duanathar"))
       end
       --Meropis Wings
-    elseif mmp.oncontinent(getRoomArea(mmp.currentroom), "Meropis") then
+    elseif mmp.oncontinent(area, "Meropis") then
       if mmp.settings.duanatharan then
         mmp.tempSpecialExit(51603, getcmd("duanatharan"))
         mmp.tempSpecialExit(51188, getcmd("duanathar"))
@@ -6818,49 +6847,37 @@ function mmp.addWingsAchaea()
         mmp.tempSpecialExit(51188, getcmd("duanathar"))
       end
     end
+  end
+  --Island wings.
+  if mmp.settings.duanatharic and not mmp.inside then
     if
-      mmp.settings.duanatharic and
-      gmcp.Room and
-      not table.contains(gmcp.Room.Info.details, "indoors") and
-      not mmp.orbed()
+      mmp.oncontinent(area, "Main") or
+      mmp.oncontinent(area, "Arcadia") or
+      mmp.oncontinent(area, "Outer") or
+      mmp.oncontinent(area, "Meropis") or
+      mmp.oncontinent(area, "Island") or
+      mmp.oncontinent(area, "North")
     then
-      --Island wings.
-      if
-        mmp.oncontinent(getRoomArea(mmp.currentroom), "Main") or
-        mmp.oncontinent(getRoomArea(mmp.currentroom), "Arcadia") or
-        mmp.oncontinent(getRoomArea(mmp.currentroom), "Outer") or
-        mmp.oncontinent(getRoomArea(mmp.currentroom), "Meropis") or
-        mmp.oncontinent(getRoomArea(mmp.currentroom), "Island") or
-        mmp.oncontinent(getRoomArea(mmp.currentroom), "North")
-      then
-        mmp.tempSpecialExit(47571, getcmd("duanatharic"))
-      end
+      mmp.tempSpecialExit(47571, getcmd("duanatharic"))
     end
   end
   -- Stratospheric Harness support -- PapaGuacamole
-  if
-    mmp.settings.harness and gmcp.Room and not table.contains(gmcp.Room.Info.details, "indoors")
-  then
+  if mmp.settings.harness and not mmp.inside then
     -- eastern isles
-    if mmp.oncontinent(getRoomArea(mmp.currentroom), "Eastern_Isles") then
+    if mmp.oncontinent(area, "Eastern_Isles") then
       mmp.tempSpecialExit(54231, "Shake Harness")
       -- northern isles
-    elseif mmp.oncontinent(getRoomArea(mmp.currentroom), "Northen_Isles") then
+    elseif mmp.oncontinent(area, "Northen_Isles") then
       mmp.tempSpecialExit(48719, "Shake Harness")
       -- western isles
-    elseif mmp.oncontinent(getRoomArea(mmp.currentroom), "Western_Isles") then
+    elseif mmp.oncontinent(area, "Western_Isles") then
       mmp.tempSpecialExit(54632, "Shake Harness")
     end
   end
   -- Air Elemental Aero Soar
-  if
-    mmp.settings.soar and
-    gmcp.Room and
-    not table.contains(gmcp.Room.Info.details, "indoors") and
-    not mmp.orbed()
-  then
+  if mmp.settings.soar and not mmp.inside then
     --Sarapis soar.
-    if mmp.oncontinent(getRoomArea(mmp.currentroom), "Main") then
+    if mmp.oncontinent(area, "Main") then
       if
         gmcp.Char.Status.class == "air Elemental Lord" or
         gmcp.Char.Status.class == "air Elemental Lady"
@@ -6873,7 +6890,7 @@ function mmp.addWingsAchaea()
         -- Stratosphere!
       end
       --Meropis soar
-    elseif mmp.oncontinent(getRoomArea(mmp.currentroom), "Meropis") then
+    elseif mmp.oncontinent(area, "Meropis") then
       if
         gmcp.Char.Status.class == "air Elemental Lord" or
         gmcp.Char.Status.class == "air Elemental Lady"
@@ -6888,7 +6905,7 @@ function mmp.addWingsAchaea()
     end
   end
   --universe tarot
-  if mmp.settings.universe and mmp.oncontinent(getRoomArea(mmp.currentroom), "Main") then
+  if mmp.settings.universe and mmp.oncontinent(area, "Main") then
     local tarotLocations =
       {
         azdun = 1772,
@@ -6923,11 +6940,11 @@ function mmp.addWingsAchaea()
   --gare
   if mmp.settings.gare and gmcp.Char and string.match(gmcp.Char.Status.race, "Dragon") then
     if
-      mmp.oncontinent(getRoomArea(mmp.currentroom), "Main") or
-      mmp.oncontinent(getRoomArea(mmp.currentroom), "Meropis") or
-      mmp.oncontinent(getRoomArea(mmp.currentroom), "Island") or
-      mmp.oncontinent(getRoomArea(mmp.currentroom), "North") or
-      mmp.oncontinent(getRoomArea(mmp.currentroom), "Arcadia")
+      mmp.oncontinent(area, "Main") or
+      mmp.oncontinent(area, "Meropis") or
+      mmp.oncontinent(area, "Island") or
+      mmp.oncontinent(area, "North") or
+      mmp.oncontinent(area, "Arcadia")
     then
       mmp.tempSpecialExit(
         12695,
@@ -6939,9 +6956,279 @@ function mmp.addWingsAchaea()
       )
     end
   end
-  --clears the path cache so it calculates a new route.
   mmp.clearpathcache()
 end</script>
+					<eventHandlerList />
+				</Script>
+				<Script isActive="yes" isFolder="no">
+					<name>Achaea betterWings</name>
+					<packageName></packageName>
+					<script>--builds a table based on current orb settings, then returns a function which can be used to quickly check that table.
+
+local function orbedBlackList()
+  local bannedAreas = {}
+  local areaTable = mmp.getAchaeaOrbTable()
+  for org, areas in pairs(areaTable) do
+    for _, area in pairs(areas) do
+      bannedAreas[area] = mmp.settings["orb" .. org]
+    end
+  end
+  return
+    function(roomId)
+      return not bannedAreas[getRoomArea(roomId)]
+    end
+end
+
+--searches for closest room that meets requirements.
+--does stuff to handle weighted rooms, locked rooms, special exits.
+
+local function closestOutdoors(startRoom)
+--visited is rooms which have already been found by the search.
+  local visited = {[startRoom] = true}
+  --checking is the rooms that it is currently checking to see if they meet the desired conditions.
+  local checking = {[startRoom] = true}
+  --nextCheck is a list of rooms which will be checked once the algorithm is finished with the rooms in checking.
+  local nextCheck = {}
+  --weightedRooms contains rooms with greater than 1 weight, so that they can be handled differently.
+  local weightedRooms = {}
+  local orbed = orbedBlackList()
+
+  --functions for handling weighted rooms.
+  local function addWeighted(room, weight)
+    if not weightedRooms[room] or weight &lt; weightedRooms[room] then
+      weightedRooms[room] = weight
+    end
+  end
+
+  --this function subtracts 1 from every room weight in the weighted room list.
+  --if they hit zero then it will add them to the checking table and removes them from weightedRooms
+
+  local function reduceWeights()
+    --display(weightedRooms)
+    local toDelete = {}
+    for room, weight in pairs(weightedRooms) do
+      weightedRooms[room] = weightedRooms[room] - 1
+      if weightedRooms[room] &lt;= 0 then
+        if not visited[room] then
+          checking[room] = true
+          visited[room] = true
+        end
+        toDelete[room] = true
+      end
+    end
+    --cleans up the weighted stuff.
+    for room, _ in pairs(toDelete) do
+      weightedRooms[room] = nil
+    end
+  end
+
+  local stopwatch = createStopWatch()
+  startStopWatch(stopwatch)
+  --only willing to search for 500ms. Will abort in longer cases,
+  while getStopWatchTime(stopwatch) &lt; .5 do
+    for room, val in pairs(checking) do
+      --if these conditions are met, returns a roomid and exits out.
+      --probably doesn't work great on weird planes, as when off plane, the room returned may not work for wings.
+      if getRoomUserData(room, "outdoors") == "y" and orbed(room) then
+        return room
+      end
+      local weights = getExitWeights(room)
+      --loops through all exits in the room, doing stuff.
+      for direction, destRoom in pairs(getRoomExits(room)) do
+        if not hasExitLock(room, direction) and not visited[destRoom] then
+          --if the exit+roomweight is higher than 1 (the default, for 1 room weight + 0 exit weight), then do a room weight subroutine
+          if
+            (((weights[direction] or 0) + getRoomWeight(destRoom)) &gt; 1) and not roomLocked(destRoom)
+          then
+            addWeighted(destRoom, (weights[direction] or 0) + getRoomWeight(destRoom))
+          else
+            --add it to visited, so it doesn't double back on it in the future.
+            visited[destRoom] = true
+            --if it's not locked, add it to nextCheck, which are the rooms that it searches through next cycle.
+            --if it is locked, just ignore it.
+            if not roomLocked(destRoom) then
+              nextCheck[destRoom] = true
+            end
+          end
+        end
+      end
+      --same as above loop, but for specialExits
+      for destRoom, specialExits in pairs(getSpecialExits(room)) do
+        for specialExit, locked in pairs(specialExits) do
+          if locked == "0" and not visited[destRoom] then
+            if
+              (((weights[direction] or 0) + getRoomWeight(destRoom)) &gt; 1) and
+              not roomLocked(destRoom)
+            then
+              addWeighted(destRoom, (weights[direction] or 0) + getRoomWeight(destRoom))
+            else
+              visited[destRoom] = true
+            end
+            if not roomLocked(destRoom) then
+              nextCheck[destRoom] = true
+            end
+          end
+        end
+      end
+    end
+    --replaces checking with the next set of rooms to check, and clears nextCheck.
+    checking, nextCheck = nextCheck, {}
+    reduceWeights()
+    --if no rooms on checking and weightedRooms, exits out.
+    --If no rooms in checking but there are rooms in weightedRooms, it will iterate down the weights until something is in checking.
+    if not next(checking) then
+      if next(weightedRooms) then
+        while next(weightedRooms) and not next(checking) do
+          reduceWeights()
+        end
+      else
+        return
+      end
+    end
+  end
+end
+
+--does the actual linking and stuff. Mostly copied over from the main wings script.
+--however, half of the checks have been removed because they were already done in the process
+--of searching for a valid outdoors room.
+
+local function linkWingsRemote(room)
+  local function getcmd(word)
+    return
+      mmp.settings.removewings and
+      string.format(
+        [[script:sendAll("wear wings", "say *%s %s", "remove wings", false)]],
+        (mmp.settings.winglanguage and mmp.settings.winglanguage or ""),
+        word
+      ) or
+      string.format(
+        [[script:send("say *%s %s", false)]],
+        (mmp.settings.winglanguage and mmp.settings.winglanguage or ""),
+        word
+      )
+  end
+
+  --decided to pull this out and set it as a local variable instead of calling it 20x throughout the script.
+  local area = getRoomArea(room)
+  --sarapis wings
+  if (mmp.settings.duanathar or mmp.settings.duanatharan or mmp.settings.duantahar) then
+    if mmp.oncontinent(area, "Main") then
+      if mmp.settings.duanatharan then
+        mmp.tempSpecialExit(room, 4882, getcmd("duanatharan"))
+        mmp.tempSpecialExit(room, 3885, getcmd("duanathar"))
+      elseif mmp.settings.duantahar then
+        mmp.tempSpecialExit(room, 42319, getcmd("duanathar"))
+        mmp.tempSpecialExit(room, 4882, getcmd("duanatharan"))
+      else
+        mmp.tempSpecialExit(room, 3885, getcmd("duanathar"))
+      end
+      --Meropis Wings
+    elseif mmp.oncontinent(area, "Meropis") then
+      if mmp.settings.duanatharan then
+        mmp.tempSpecialExit(room, 51603, getcmd("duanatharan"))
+        mmp.tempSpecialExit(room, 51188, getcmd("duanathar"))
+      elseif mmp.settings.duantahar then
+        mmp.tempSpecialExit(room, 42319, getcmd("duanathar"))
+        mmp.tempSpecialExit(room, 51603, getcmd("duanatharan"))
+      else
+        mmp.tempSpecialExit(room, 51188, getcmd("duanathar"))
+      end
+    end
+  end
+  --island wings
+  if
+    mmp.settings.duanatharic and
+    (
+      mmp.oncontinent(area, "Main") or
+      mmp.oncontinent(area, "Arcadia") or
+      mmp.oncontinent(area, "Outer") or
+      mmp.oncontinent(area, "Meropis") or
+      mmp.oncontinent(area, "Island") or
+      mmp.oncontinent(area, "North")
+    )
+  then
+    mmp.tempSpecialExit(room, 47571, getcmd("duanatharic"))
+  end
+  if mmp.settings.harness then
+    -- eastern isles
+    if mmp.oncontinent(area, "Eastern_Isles") then
+      mmp.tempSpecialExit(room, 54231, "Shake Harness")
+      -- northern isles
+    elseif mmp.oncontinent(area, "Northen_Isles") then
+      mmp.tempSpecialExit(room, 48719, "Shake Harness")
+      -- western isles
+    elseif mmp.oncontinent(area, "Western_Isles") then
+      mmp.tempSpecialExit(room, 54632, "Shake Harness")
+    end
+  end
+  if mmp.settings.soar then
+    --Sarapis soar.
+    if mmp.oncontinent(area, "Main") then
+      if
+        gmcp.Char.Status.class == "air Elemental Lord" or
+        gmcp.Char.Status.class == "air Elemental Lady"
+      then
+        mmp.tempSpecialExit(room, 4882, "aero soar high", 10)
+        -- duanatharan
+        mmp.tempSpecialExit(room, 3885, "aero soar low", 10)
+        -- duanathar
+        mmp.tempSpecialExit(room, 54173, "aero soar stratosphere", 10)
+        -- Stratosphere!
+      end
+      --Meropis soar
+    elseif mmp.oncontinent(area, "Meropis") then
+      if
+        gmcp.Char.Status.class == "air Elemental Lord" or
+        gmcp.Char.Status.class == "air Elemental Lady"
+      then
+        mmp.tempSpecialExit(room, 51603, "aero soar high", 10)
+        -- duanatharan
+        mmp.tempSpecialExit(room, 51188, "aero soar low", 10)
+        -- duanathar
+        mmp.tempSpecialExit(room, 54173, "aero soar stratosphere", 10)
+        -- Stratosphere!
+      end
+    end
+  end
+  mmp.clearpathcache()
+end
+
+--is called when you do pathfinding.
+
+function mmp.achaeaBetterWings()
+  --if you're not on achaea, or the crowdmap is not enabled, or the room you're in is flagged as outdoors, exit out.
+  if
+    (mmp.game ~= "achaea") or
+    (not mmp.settings.betterwings) or
+    (not mmp.settings.crowdmap) or
+    (getRoomUserData(mmp.currentroom, "outdoors") == "y" and orbedBlackList()(mmp.currentroom))
+  then
+    return
+  end
+  --if none of the shortcut items are enabled, return.
+  if
+    not (
+      mmp.settings.duanathar or
+      mmp.settings.duantahar or
+      mmp.settings.duanatharan or
+      mmp.settings.soar or
+      mmp.settings.harness or
+      mmp.settings.duanatharic
+    )
+  then
+    return
+  end
+  --find closest room, if that function returned something useful, call above function to create temporary remote special exits depending on settings.
+  local closestRoom = closestOutdoors(mmp.currentroom)
+  if closestRoom then
+    if mmp.debug then
+      mmp.echo("Closest outdoors room found at "..closestRoom)
+    end
+    linkWingsRemote(closestRoom)
+  end
+end
+
+registerAnonymousEventHandler("mmp link externals", "mmp.achaeaBetterWings")</script>
 					<eventHandlerList />
 				</Script>
 				<Script isActive="yes" isFolder="no">
@@ -6949,31 +7236,9 @@ end</script>
 					<packageName></packageName>
 					<script>registerAnonymousEventHandler("mmp link externals", "mmp.addWingsLusternia")
 
-local function linkBubblix(area, entranceRoom, command)
-  -- always add this link to allow pathfinding to the bubble regardless of indoor/outdoor
-  mmp.tempSpecialExit(148, entranceRoom, command)
-  -- always add this link to allow pathfinding from the bubbe regardless of indoor/outdoor
-  mmp.tempSpecialExit(entranceRoom, 6831, command)
-  if mmp.usebubblix() then
-    if not table.contains(gmcp.Room.Info.details, "an Aetherbubble") then
-      -- we are not in an Aetherbubble and could use a bubblix, so allow its use from here
-      mmp.tempSpecialExit(entranceRoom, command)
-    elseif gmcp.Room.Info.area == area then
-      -- we are in an Aetherbubble and it's the one the bubblix belongs to and we could use a bubblix, so allow its use from here
-      mmp.tempSpecialExit(6831, command)
-    end
-  end
-end
-
 function mmp.addWingsLusternia()
   if mmp.game ~= "lusternia" then
     return
-  end
-  --that dorky prism
-  if mmp.useprism() then
-    if mmp.settings.prism then
-      mmp.tempSpecialExit(6182, "touch prism")
-    end
   end
   --items that use standard bix rules
   if mmp.usebix() then
@@ -7006,7 +7271,13 @@ function mmp.addWingsLusternia()
     if mmp.settings.key then
       mmp.tempSpecialExit(18732, "touch key")
     end
-    --curio collections!
+  end
+  --things which use prism rules
+  if mmp.useprism() then
+    if mmp.settings.prism then
+      mmp.tempSpecialExit(6182, "touch prism")
+    end
+    --curio collections
     if mmp.settings.bonecurio then
       mmp.tempSpecialExit(28613, "curio collection activate bone")
     end
@@ -7042,29 +7313,99 @@ function mmp.addWingsLusternia()
     end
   end
   --all the bubblixes!
-  if mmp.settings.screwdriver then
-    linkBubblix("the Facility", 10185, "touch screwdriver")
+  local bubblixes =
+    {
+      {
+        setting = "figurine",
+        item = "icebix",
+        room = 23187,
+        areas = {"Northern Icewynd Mountains", "Southern Icewynd Mountains"},
+      },
+      {setting = "twist", item = "diobix", room = 18203, areas = {"Mount Dio"}},
+      {setting = "snowglobe", item = "treebix", room = 10992, areas = {"the Great Spirit Tree"}},
+      {setting = "periscope", item = "aquabix", room = 36073, areas = {"Aquagoria"}},
+      {setting = "pebble", item = "lyraabix", room = 33825, areas = {"Lyraa Ey Rielys"}},
+      {setting = "shard", item = "xionbix", room = 12652, areas = {"the Workshop of Xion"}},
+      {setting = "cookie", item = "crumbix", room = 9888, areas = {"Crumkindivia"}},
+      {setting = "wheel", item = "drambix", room = 10509, areas = {"the Dramube Triangle"}},
+      {setting = "head", item = "bottlebix", room = 11811, areas = {"the Bubble of Bottledowns"}},
+      {setting = "icicle", item = "frostbix", room = 10457, areas = {"Frosticia"}},
+      {setting = "screwdriver", item = "facbix", room = 10185, areas = {"the Facility"}},
+      {setting = "mud", item = "mucklebix", room = 9985, areas = {"Mucklemarsh"}},
+      {
+        setting = "tibia",
+        item = "cankerbix",
+        room = 11600,
+        areas = {"the Cankermore Battlegrounds"},
+      },
+    }
+  local shortcutCreated = false
+  for _, bubblix in pairs(bubblixes) do
+    if mmp.settings[bubblix.setting] then
+      local command = "touch " .. bubblix.item
+      if not shortcutCreated then
+        --for the first bubblix in the list, let it be used as a shortcut to aetherplex.
+        mmp.tempSpecialExit(bubblix.room, 6831, command)
+        shortcutCreated = true
+      end
+      --for every bix, create an exit from outside aetherplex to the bubble.
+      mmp.tempSpecialExit(148, bubblix.room, command)
+      if mmp.usebubblix() then
+        if table.contains(bubblix.areas, gmcp.Room.Info.area) then
+          mmp.tempSpecialExit(mmp.currentroom, 6831, command)
+        elseif not table.contains(gmcp.Room.Info.details, "an Aetherbubble") then
+          mmp.tempSpecialExit(mmp.currentroom, bubblix.room, command)
+        end
+      end
+    end
   end
-  if mmp.settings.wheel then
-    linkBubblix("the Dramube Triangle", 10509, "touch wheel")
+  --one use button travel!
+  if mmp.settings.buttons then
+    local colors =
+      {
+        blue = 36073,
+        brown = 11811,
+        black = 11600,
+        yellow = 9888,
+        red = 10509,
+        steel = 10185,
+        white = 10457,
+        purple = 47812,
+        green = 9985,
+        crystal = 12652,
+        wooden = 10992,
+      }
+    local exitScript = [[script:sendAll("outr %sbutton", "touch %sbutton", false)]]
+    if
+      table.contains(gmcp.Room.Info.details, "the Prime Material Plane") and
+      table.contains(gmcp.Room.Info.details, "outdoors")
+    then
+      for color, room in pairs(colors) do
+        mmp.tempSpecialExit(mmp.currentroom, room, exitScript:format(color, color), 20)
+      end
+    else
+      for color, room in pairs(colors) do
+        mmp.tempSpecialExit(148, room, exitScript:format(color, color), 20)
+      end
+    end
   end
-  if mmp.settings.mud then
-    linkBubblix("Mucklemarsh", 9985, "touch mud")
-  end
-  if mmp.settings.snowglobe then
-    linkBubblix("the Great Spirit Tree", 10992, "shake snowglobe")
-  end
-  if mmp.settings.cookie then
-    linkBubblix("Crumkindivia", 9888, "touch cookie")
-  end
-  if mmp.settings.head then
-    linkBubblix("the Bubble of Bottledowns", 11811, "touch doll")
-  end
-  if mmp.settings.icicle then
-    linkBubblix("Frosticia", 10457, "touch icicle")
-  end
-  if mmp.settings.tibia then
-    linkBubblix("the Cankermore Battlegrounds", 11600, "touch tibia")
+  --basin of life specific travel devices
+  if mmp.settings.compass then
+    local startingRoom = mmp.lusterniaInBasin() and mmp.currentroom or 148
+    local compassPoints =
+      {
+        north = 21695,
+        northeast = 10742,
+        northwest = 6546,
+        east = 9789,
+        southeast = 14998,
+        south = 10670,
+        southwest = 19613,
+        west = 20037,
+      }
+    for direction, destinationRoom in pairs(compassPoints) do
+      mmp.tempSpecialExit(startingRoom, destinationRoom, "Touch compass " .. direction, 40)
+    end
   end
   mmp.clearpathcache()
 end</script>
@@ -7730,11 +8071,32 @@ end</script>
   end
 end
 
-function mmp.roomFind(query)
+function mmp.roomFind(query, lines)
   if query:ends('.') then
     query = query:sub(1, -2)
   end
+  local defaultLine = 30 -- this could this to a setting instead of a static number
   local result = mmp.searchRoom(query)
+  if lines == 'all' then
+    lines = table.size(result)
+  end
+  lines = (lines ~= '') and tonumber(lines) or defaultLine
+
+  --create a new table (roomsTable) with keys and add areas to the table
+  local roomsTable = {}
+  for k, v in pairs(result) do
+    --not all rooms have an area associated with it in mmp.areatabler so need to either remove those or add one
+    local a = mmp.areatabler[getRoomArea(k)] or "unknown"
+    roomsTable[#roomsTable + 1] = {num = k, area = a, name = v}
+  end
+  --sort roomsTable by area name
+  table.sort(
+    roomsTable,
+    function(a, b)
+      return a.area &lt; b.area
+    end
+  )
+  --start displaying info
   if type(result) == "string" or not next(result) then
     cecho("&lt;grey&gt;You have no recollection of any room with that name.")
     return
@@ -7748,35 +8110,39 @@ function mmp.roomFind(query)
     return mmp.oncontinent(getRoomArea(roomid), "Main") and '' or ' (Meropis)'
   end
 
+  local i = 1
   if not tonumber(select(2, next(result))) then
-    -- old style
-    for roomid, roomname in pairs(result) do
-      roomid = tonumber(roomid)
-      cecho(string.format("  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (", tostring(roomname)))
+    cecho(string.format("&lt;white&gt; %-10s%-40s%s\n", "ROOM ID", "ROOM NAME", "ROOM AREA"))
+    for _, v in ipairs(roomsTable) do
+      if i &gt; lines then
+        break
+      end
+      roomid = tonumber(v.num)
+      roomname = v.name
+      roomarea = v.area
       cechoLink(
-        "&lt;" .. mmp.settings.echocolour .. "&gt;" .. roomid,
+        string.format("&lt;" .. mmp.settings.echocolour .. "&gt; %-10s", roomid),
         'mmp.gotoRoom(' .. roomid .. ')',
         string.format("Go to %s (%s)", roomid, tostring(roomname)),
         true
       )
-      cecho(
+      cecho(string.format("&lt;LightSlateGray&gt;%-40s", string.sub(tostring(roomname), 1, 39)))
+      cechoLink(
         string.format(
-          "&lt;DarkSlateGrey&gt;) in &lt;LightSlateGray&gt;%s%s&lt;DarkSlateGrey&gt;.",
+          "&lt;DarkSlateGrey&gt;%s%s&lt;DarkSlateGrey&gt;\n",
           mmp.cleanAreaName(tostring(mmp.areatabler[getRoomArea(roomid)])),
           showmeropis(roomid)
-        )
-      )
-      fg("DarkSlateGrey")
-      echoLink(
-        " &gt; Show path\n",
+        ),
         [[mmp.echoPath(mmp.currentroom, ]] .. roomid .. [[)]],
         "Display directions from here to " .. roomname,
         true
       )
       resetFormat()
+      i = i + 1
     end
   else
     -- new style
+    --- not sure what this new area code is but it doesn't seem to fire
     for roomname, roomid in pairs(result) do
       roomid = tonumber(roomid)
       cecho(string.format("  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (", tostring(roomname)))
@@ -7803,7 +8169,19 @@ function mmp.roomFind(query)
       resetFormat()
     end
   end
-  cecho(string.format("  &lt;DarkSlateGrey&gt;%d rooms found.\n", table.size(result)))
+  if table.size(result) &lt;= lines then
+    cecho(string.format("&lt;DarkSlateGrey&gt;%d rooms found.\n", table.size(result)))
+  else
+    lastRoomQuery = query
+    cechoLink(
+      string.format(
+        "&lt;DarkSlateGrey&gt;%d of %d rooms shown. Click to see all rooms.\n", lines, table.size(result)
+      ),
+      'mmp.roomFind(lastRoomQuery, "all")',
+      string.format("Show all %d rooms.", table.size(result)),
+      true
+    )
+  end
 end
 
 function mmp.echoRoomList(areaname, exact)
@@ -8209,7 +8587,7 @@ function mmp.roomLabel(input)
   if tk[1] and color_table[tk[1]] then
     fg = table.remove(tk, 1)
   end
-  -- next: is this a backround color?
+  -- next: is this a background color?
   if tk[1] and color_table[tk[1]] then
     bg = table.remove(tk, 1)
   end
@@ -8584,60 +8962,11 @@ function mmp.lockSpecials()
   mmp.doLock("special exits", lock)
 end
 
-function mmp.setDuanathar()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.duanathar then mmp.echo("Okay, will see about using Eagle wings when you goto somewhere while outside!")
-  else mmp.echo("Won't use Eagle wings anymore.") end
-end
-
-function mmp.setDuanatharan()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.duanatharan then mmp.echo("Okay, will see about using Atavian wings (both duanathar and duanatharan) when you goto somewhere while outside!")
-  else mmp.echo("Won't use Atavian wings anymore.") end
-end
-
-function mmp.setDuanatharic()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.duanatharic then mmp.echo("Okay, will see about using Island wings when you goto somewhere while outside!")
-  else mmp.echo("Won't use Island wings anymore.") end
-end
-
-function mmp.setDuantahar()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.duantahar then mmp.echo("Okay, will see about using Chenubian wings (duanathar, duanatharan, and duantahar) when you goto somewhere while outside!")
-  else mmp.echo("Won't use Chenubian wings anymore.") end
-end
-
-function mmp.setSoar()
-  mmp.clearpathcache() -- clear the cache so it'll use soar or will stop using soar
-
-  if mmp.settings.soar then mmp.echo("Okay, will see about using Aero Soar when you goto somewhere while outside!")
-  else mmp.echo("Won't use Aero Soar anymore.") end
-end
-
-function mmp.setUniverse()
-  mmp.clearpathcache()
-	
-	if mmp.settings.universe then mmp.echo("Okay, will see about using the Universe tarot whenever it's faster.")
-	else mmp.echo("Won't use Universe tarot anymore.") end
-
-end
-
-function mmp.setGare()
-  mmp.clearpathcache() -- clear the cache so it'll use gare or stop using gare
-
-  if mmp.settings.gare then mmp.echo("Okay, will see about using Gare when in Dragon form!")
-  else mmp.echo("Won't use Gare anymore.") end
-end
 
 function mmp.changeMapSource()
   local use = mmp.settings.crowdmap and true or false
-  if use and not (mmp.game == "achaea" or mmp.game == "starmourn" or mmp.game == "lusternia" or mmp.game == "stickmud") then
-    mmp.echo("Sorry - the crowdsourced map is only available for use in Achaea, Starmourn, Lusternia and StickMUD. If you'd like to help start one for your game, please post at http://forums.mudlet.org/viewtopic.php?f=13&amp;t=1696. If you are playing one of the games, then it is likely that you just downloaded the script - and it doesn't know what you are playing. Reconnect and it'll know.")
+  if use and not (mmp.game == "achaea" or mmp.game == "starmourn" or mmp.game == "lusternia" or mmp.game == "stickmud" or mmp.game == "asteria" or mmp.game == "imperian") then
+    mmp.echo("Sorry - the crowdsourced map is only available for use in Achaea, Starmourn, Lusternia, StickMUD and Asteria. If you'd like to help start one for your game, please post at http://forums.mudlet.org/viewtopic.php?f=13&amp;t=1696. If you are playing one of the games, then it is likely that you just downloaded the script - and it doesn't know what you are playing. Reconnect and it'll know.")
     mmp.settings.crowdmap = false
   elseif use and not loadMap then
    mmp.echo("Sorry - your Mudlet is too old and can't load maps. Please update: http://forums.mudlet.org/viewtopic.php?f=5&amp;t=1874")
@@ -8700,212 +9029,14 @@ function mmp.setWaterWalk()
   end
 end
 
-function mmp.setMedallion()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.medallion then mmp.echo("Okay, will see about using Medallion whenever it's quicker")
-  else mmp.echo("Won't use Medallion anymore.") end
+function mmp.setOrb(city)
+  if mmp.settings["orb"..city:lower()] then
+    mmp.echo("&lt;green&gt;Okay, we won't use wings in &lt;white&gt;" .. city:title().."&lt;green&gt;!")
+  else
+    mmp.echo("&lt;green&gt;Okay, we will use wings in &lt;white&gt;" .. city:title().."&lt;green&gt;!")
+  end
 end
-
-function mmp.setFingerblade()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.fingerblade then mmp.echo("Okay, will see about using Fingerblade whenever it's quicker")
-  else mmp.echo("Won't use Fingerblade anymore.") end
-end
-
-function mmp.setBlossom()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.blossom then mmp.echo("Okay, will see about using the Flame whenever it's quicker")
-  else mmp.echo("Won't use the Flame anymore.") end
-end
-
-function mmp.setMandala()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.mandala then mmp.echo("Okay, will see about using Mandala whenever it's quicker")
-  else mmp.echo("Won't use Mandala anymore.") end
-end
-
-function mmp.setBelt()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.belt then mmp.echo("Okay, will see about using Belt whenever it's quicker")
-  else mmp.echo("Won't use Belt anymore.") end
-end
-
-function mmp.setCubix()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.cubix then mmp.echo("Okay, will see about using Cubix whenever it's quicker")
-  else mmp.echo("Won't use Cubix anymore.") end
-end
-
-function mmp.setPrism()
-	mmp.clearpathcache()
-	if mmp.settings.prism then mmp.echo("Okay, will see about using Prism whenever it's quicker")
-	else mmp.echo("Won't use Prism anymore.") end
-end
-
-function mmp.setScrewdriver()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.screwdriver then mmp.echo("Okay, will see about using Screwdriver whenever it's quicker")
-  else mmp.echo("Won't use Screwdriver anymore.") end
-end
-
-function mmp.setWheel()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.wheel then mmp.echo("Okay, will see about using Wheel whenever it's quicker")
-  else mmp.echo("Won't use Wheel anymore.") end
-end
-
-function mmp.setMud()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.mud then mmp.echo("Okay, will see about using Mud whenever it's quicker")
-  else mmp.echo("Won't use Mud anymore.") end
-end
-function mmp.setSnowglobe()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.snowglobe then mmp.echo("Okay, will see about using Snowglobe whenever it's quicker")
-  else mmp.echo("Won't use Snowglobe anymore.") end
-end
-
-function mmp.setCookie()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.cookie then mmp.echo("Okay, will see about using Cookie whenever it's quicker")
-  else mmp.echo("Won't use Cookie anymore.") end
-end
-
-function mmp.setHead()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.head then mmp.echo("Okay, will see about using Doll's Head whenever it's quicker")
-  else mmp.echo("Won't use Doll's Head anymore.") end
-end
-
-function mmp.setIcicle()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.icicle then mmp.echo("Okay, will see about using Icicle whenever it's quicker")
-  else mmp.echo("Won't use Icicle anymore.") end
-end
-
-function mmp.setTibia()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.tibia then mmp.echo("Okay, will see about using Tibia whenever it's quicker")
-  else mmp.echo("Won't use Tibia anymore.") end
-end
-
-function mmp.setBonecurio()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.bonecurio then mmp.echo("Okay, will see about using Bone Curio collection whenever it's quicker")
-  else mmp.echo("Won't use Bone Curio collection anymore.") end
-end
-
-function mmp.setFlowercurio()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.flowercurio then mmp.echo("Okay, will see about using Flower Curio collection whenever it's quicker")
-  else mmp.echo("Won't use Flower Curio collection anymore.") end
-end
-
-function mmp.setTorus()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.torus then mmp.echo("Okay, will see about using your Torus whenever it's quicker")
-  else mmp.echo("Won't use your Torus anymore.") end
-end
-
-function mmp.setUtensilcurio()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.utensilcurio then mmp.echo("Okay, will see about using Utensil Curio collection whenever it's quicker")
-  else mmp.echo("Won't use Utensil Curio collection anymore.") end
-end
-
-function mmp.setFluttercurio()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.fluttercurio then mmp.echo("Okay, will see about using Flutter Curio collection whenever it's quicker")
-  else mmp.echo("Won't use Flutter Curio collection anymore.") end
-end
-
-function mmp.setToolcurio()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.toolcurio then mmp.echo("Okay, will see about using Tool Curio collection whenever it's quicker")
-  else mmp.echo("Won't use Tool Curio collection anymore.") end
-end
-
-function mmp.setFacecurio()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.facecurio then mmp.echo("Okay, will see about using Face Curio collection whenever it's quicker")
-  else mmp.echo("Won't use Face Curio collection anymore.") end
-end
-
-function mmp.setToycurio()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.toycurio then mmp.echo("Okay, will see about using Toy Curio collection whenever it's quicker")
-  else mmp.echo("Won't use Toy Curio collection anymore.") end
-end
-
-function mmp.setFeathercurio()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.feathercurio then mmp.echo("Okay, will see about using Feather Curio collection whenever it's quicker")
-  else mmp.echo("Won't use Feather Curio collection anymore.") end
-end
-
-function mmp.setFigurecurio()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.figurecurio then mmp.echo("Okay, will see about using Figure Curio collection whenever it's quicker")
-  else mmp.echo("Won't use Figure Curio collection anymore.") end
-end
-
-function mmp.setVernalcurio()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.vernalcurio then mmp.echo("Okay, will see about using Vernal Curio collection whenever it's quicker")
-  else mmp.echo("Won't use Vernal Curio collection anymore.") end
-end
-function mmp.setSoullesscurio()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.soullesscurio then mmp.echo("Okay, will see about using Soulless Curio collection whenever it's quicker")
-  else mmp.echo("Won't use Soulless Curio collection anymore.") end
-end
-
-function mmp.setHarness() --PapaGuacamole
-  mmp.clearpathcache() -- clear the cache so it'll use harness or will stop using harness
-
-  if mmp.settings.harness then mmp.echo("Okay, will use Stratospheric Harness when on appropriate islands")
-  else mmp.echo("Won't use Stratospheric Harness anymore.") end
-end
-
-function mmp.setMantle()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.mantle then mmp.echo("Okay, will see about using Mantle of Starlight whenever it's quicker")
-  else mmp.echo("Won't use Mantle of Starlight anymore.") end
-end
-
-function mmp.setKey()
-  mmp.clearpathcache() -- clear the cache so it'll use wings or will stop using wings
-
-  if mmp.settings.key then mmp.echo("Okay, will see about using your Infernal Key whenever it's quicker")
-  else mmp.echo("Won't use the Infernal Key anymore.") end
-end</script>
+</script>
 					<eventHandlerList />
 				</Script>
 				<Script isActive="yes" isFolder="no">
@@ -9992,7 +10123,7 @@ function mmp_mapping_newroom(_, num)
                       s ..
                       (#s &gt; 0 and " " or "") ..
                       string.format(
-                        "Failed to link %d withh %d via %s exit for some reason :/", num, id, exit
+                        "Failed to link %d with %d via %s exit for some reason :/", num, id, exit
                       )
                   end
                 end
@@ -10045,7 +10176,7 @@ function mmp_mapping_newroom(_, num)
                       s ..
                       (#s &gt; 0 and " " or "") ..
                       string.format(
-                        "Failed to link %d withh %d via %s exit for some reason :/", num, id, exit
+                        "Failed to link %d with %d via %s exit for some reason :/", num, id, exit
                       )
                   end
                   local exit = mmp.anytoshort(mmp.ranytolong(exit))
@@ -10065,7 +10196,7 @@ function mmp_mapping_newroom(_, num)
                       s ..
                       (#s &gt; 0 and " " or "") ..
                       string.format(
-                        "Failed to link %d withh %d via %s exit for some reason :/", num, id, exit
+                        "Failed to link %d with %d via %s exit for some reason :/", num, id, exit
                       )
                   end
                 end
@@ -10101,14 +10232,19 @@ function mmp_mapping_newroom(_, num)
               "."
           end
           -- check indoors status
-          local indoors = table.contains(gmcp.Room.Info.details, "indoors")
-          if indoors and getRoomUserData(num, "indoors") == '' then
+          if mmp.game ~= "asteria" then
+            local indoors = table.contains(gmcp.Room.Info.details, "indoors")
+            if indoors and (getRoomUserData(num, "indoors") == '' or getRoomUserData(num,"outdoors") ~= '') then
             setRoomUserData(num, "indoors", "y")
+            clearRoomUserDataItem(num, "outdoors")
             s = s .. (#s &gt; 0 and " " or "") .. "Updated room to be indoors."
-          elseif not indoors and getRoomUserData(num, "indoors") ~= '' then
-            setRoomUserData(num, "indoors", "")
+          elseif not indoors and (getRoomUserData(num, "indoors") ~= '' or getRoomUserData(num, "outdoors") == '') then
+            clearRoomUserDataItem(num, "indoors")
+            setRoomUserData(num, "outdoors", "y")
             s = s .. (#s &gt; 0 and " " or "") .. "Updated room to be outdoors."
           end
+        end
+
           -- check server area name (Achaea only for now)
           if mmp.game == "achaea" then
             local serverArea = gmcp.Room.Info.area
@@ -10296,43 +10432,6 @@ end</script>
 						</eventHandlerList>
 					</Script>
 					<Script isActive="yes" isFolder="no">
-						<name>mmapper_achaea_went_outside</name>
-						<packageName></packageName>
-						<script>-- track whenever we need to use wings or aero soar when we get outside!
-function mmapper_achaea_went_outside()
-  if not mmp.autowalking or not (mmp.settings.duanathar or mmp.settings.duanatharan or mmp.settings.duantahar or mmp.settings.duanatharic or mmp.settings.soar) or mmp.game ~= "achaea" or
-    (mmp.currentroom == mmp.speedWalkPath[#mmp.speedWalkPath]) or
-    table.contains(gmcp.Room.Info.details, "indoors")
-  then return end
-
-  -- repath, maybe that'll allow us to use wings now.
-  raiseEvent("mmp link externals")
-	local previousDirection = mmp.speedWalkDir[speedWalkCounter]
-	if mmp.speedWalk.type == "room" then
-	  mmp.getPath(mmp.currentroom, mmp.speedWalkPath[#mmp.speedWalkPath]) -- don't need to check return value since that fact shouldnt've changed
-	else
-		mmp.gotoAreaID(getRoomArea(mmp.speedWalkPath[#mmp.speedWalkPath]))
-	end
-
-  -- if our path didn't change, re-instate it as it was (since the new path starts from this room that we checked at)
-  if speedWalkDir[1]~=previousDirection then
-    speedWalkCounter = 0
-    mmp.echo("We got outside - going to shortcut with wings.")
-		if mmp.speedWalk.type == "room" then
-			mmp.gotoRoom(mmp.speedWalkPath[#mmp.speedWalkPath])
-		else
-			mmp.gotoAreaID(getRoomArea(mmp.speedWalkPath[#mmp.speedWalkPath]))
-		end
-    mmp.ignore_speedwalking = true
-  end
-	raiseEvent("mmp clear externals")
-end</script>
-						<eventHandlerList>
-							<string>mmapper went outside</string>
-							<string>mmapper changed continent</string>
-						</eventHandlerList>
-					</Script>
-					<Script isActive="yes" isFolder="no">
 						<name>achaea_gaia_whirlpool_reset</name>
 						<packageName></packageName>
 						<script>function achaea_gaia_whirlpool_reset(event, game)
@@ -10345,63 +10444,6 @@ end</script>
 end</script>
 						<eventHandlerList>
 							<string>mmp logged in</string>
-						</eventHandlerList>
-					</Script>
-					<Script isActive="yes" isFolder="no">
-						<name>mmapper_achaea_went_outside_harness</name>
-						<packageName></packageName>
-						<script>-- use Stratospheric Harness in Achaea -- PapaGuacamole
-	
-function mmapper_achaea_went_outside_harness()
-
-	local area = mmp.getAreaName(mmp.currentroom)
-	local areaid = getRoomArea(mmp.currentroom)
-  if not mmp.autowalking or not mmp.settings.harness or not (mmp.game == "achaea") or
-    (mmp.currentroom == mmp.speedWalkPath[#mmp.speedWalkPath]) or
-    table.contains(gmcp.Room.Info.details, "indoors") or
-    (not mmp.oncontinent(areaid, "Eastern_Isles") and not mmp.oncontinent(areaid, "Northern_Isles") and not mmp.oncontinent(areaid, "Western_Isles"))
-		then return end
-
-	local madeEast, madeNorth, madeWest
-
- 	-- eastern isles
- 	if mmp.oncontinent(areaid, "Eastern_Isles") then
- 		addSpecialExit(mmp.currentroom, 54231, [[script:send("shake harness")]])
- 		mmp.clearpathcache() -- clear cache so mmp.getPath accounts for the new way
- 		madeEast = true
- 	-- northern isles
- 	elseif mmp.oncontinent(areaid, "Northern_Isles") then
- 		addSpecialExit(mmp.currentroom, 48719, [[script:send("shake harness")]])
- 		mmp.clearpathcache() -- clear cache so mmp.getPath accounts for the new way
- 		madeNorth = true
- 	-- western isles
- 	elseif mmp.oncontinent(areaid, "Western_Isles") then
- 		addSpecialExit(mmp.currentroom, 54632, [[script:send("shake harness")]])
- 		mmp.clearpathcache() -- clear cache so mmp.getPath accounts for the new way
- 		madeWest = true
- 	end
-
-	mmp.getPath(mmp.currentroom, mmp.speedWalkPath[#mmp.speedWalkPath]) -- don't need to check return value since that fact shouldnt've changed
-	-- if our path didn't change, re-instate it as it was (since the new path starts from this room that we checked at)
-	if speedWalkDir[1]:find("harness", 1, true) then
-	speedWalkCounter = 0
-		mmp.echo("We got outside - going to shortcut with harness.")
-		if mmp.speedWalk.type == "room" then
-			mmp.gotoRoom(mmp.speedWalkPath[#mmp.speedWalkPath])
-		else
-			mmp.gotoAreaID(getRoomArea(mmp.speedWalkPath[#mmp.speedWalkPath]))
-		end
-		mmp.ignore_speedwalking = true
- 	end
-	
-  if madeEast then mmp.clearspecials{54231}
-  elseif madeNorth then mmp.clearspecials{48719}
-  elseif madeWest then mmp.clearspecials{54632} end
-
-end</script>
-						<eventHandlerList>
-							<string>mmapper went outside</string>
-							<string>mmapper changed continent</string>
 						</eventHandlerList>
 					</Script>
 					<Script isActive="yes" isFolder="no">
@@ -10435,139 +10477,45 @@ registerAnonymousEventHandler("started speedwalk", "mmp.UnwearShackle")</script>
 					<Script isActive="yes" isFolder="no">
 						<name>mmapper_achaea_orb_of_confinement</name>
 						<packageName></packageName>
-						<script>function mmp.setOrb(city)
-  mmp.clearpathcache()
-  if mmp.settings["orb"..city:lower()] then
-    mmp.echo("Orb of Confinement set as &lt;green&gt;ACTIVE&lt;reset&gt; for " .. city:title())
-  else
-    mmp.echo("Orb of Confinement set as &lt;red&gt;INACTIVE&lt;reset&gt; for " .. city:title())
-  end
+						<script>--returns a table depending on current crowdmap settings. Functionized so that these tables will only have to be stored in one location.
+function mmp.getAchaeaOrbTable()
+  return
+  --first table is areas in each org for the crowdmap, second is for the game provided map.
+    mmp.settings.crowdmap and
+    {
+      ashtan = {49, 53},
+      cyrene = {57, 59, 62, 63, 68, 70},
+      eleusis = {51},
+      hashan = {55, 56, 267},
+      mhaldor = {44, 40, 48},
+      targossas = {368},
+    } or
+    {
+      ashtan = {49, 53, 54, 60},
+      cyrene = {57, 62, 67, 174, 189, 292, 293, 294},
+      eleusis = {51},
+      hashan = {55, 56},
+      mhaldor = {44, 48, 295, 296, 297},
+      targossas = {271, 277, 298, 299, 300},
+    }
 end
 
-function mmapper_achaea_orb_of_confinement()
-
-  if
-    not mmp.autowalking or
-    not (
-      mmp.settings.duanathar or
-      mmp.settings.duanatharan or
-      mmp.settings.duantahar or
-      mmp.settings.duanatharic or
-      mmp.settings.soar
-    ) or
-    not (mmp.game == "achaea") or
-    (mmp.currentroom == mmp.speedWalkPath[#mmp.speedWalkPath]) or
-    table.contains(gmcp.Room.Info.details, "indoors") or
-    not mmp.orbed()
-  then
-    return
+--roomID is optional, if not it will default to current room. Returns true if you're in an area covered by the orb of confinement.
+function mmp.orbed(roomID)
+  if mmp.game ~= "achaea" then
+    return false
   end
-  -- repath, just in case we were going to use wings here
-  raiseEvent("mmp link externals")
-  local previousDirection = mmp.speedWalkDir[speedWalkCounter+1]
-  if mmp.speedWalk.type == "room" then
-    mmp.getPath(mmp.currentroom, mmp.speedWalkPath[#mmp.speedWalkPath])
-    -- don't need to check return value since that fact shouldnt've changed
-  else
-    mmp.gotoAreaID(getRoomArea(mmp.speedWalkPath[#mmp.speedWalkPath]))
-  end
-  -- if our path didn't change, re-instate it as it was (since the new path starts from this room that we checked at)
-  if speedWalkDir[1] ~= previousDirection then
-    speedWalkCounter = 0
-    mmp.echo("We're inside, remapping path to not use wings here.")
-    if mmp.speedWalk.type == "room" then
-      mmp.gotoRoom(mmp.speedWalkPath[#mmp.speedWalkPath])
-    else
-      mmp.gotoAreaID(getRoomArea(mmp.speedWalkPath[#mmp.speedWalkPath]))
+  local orbTable = mmp.getAchaeaOrbTable()
+  --first table is the areas in the city for the crowdmap, second is for the game provided map.
+  local areaID = getRoomArea(roomID or mmp.currentroom)
+  for city, areaTable in pairs(orbTable) do
+    if table.contains(areaTable, areaID) then
+      return mmp.settings["orb" .. city]
     end
-    mmp.ignore_speedwalking = true
   end
-  raiseEvent("mmp clear externals")
+  return false
 end</script>
-						<eventHandlerList>
-							<string>mmapper went inside</string>
-						</eventHandlerList>
-					</Script>
-					<Script isActive="yes" isFolder="no">
-						<name>mmapper_achaea_harness_add_exits</name>
-						<packageName></packageName>
-						<script>function mmapper_achaea_harness_add_exits()
-  if not (mmp.game == "achaea" and mmp.settings.harness) then
-    return
-  end
-	local cmd = [[script:send("shake harness",false)]]
-  local areaID = getRoomArea(mmp.currentroom) or 0
-  if mmp.oncontinent(areaID, "Eastern_Isles") then
-    if not mmp.inside then
-      -- make it here
-      addSpecialExit(mmp.currentroom, 54231, cmd)
-    elseif areaID == 192 then
-      -- Zanzibaar
-      addSpecialExit(31215, 54231, cmd)
-    elseif areaID == 191 then
-      -- Clockwork Isle
-      addSpecialExit(23351, 54231, cmd)
-    elseif areaID == 180 then
-      -- Colchis, the Isle of
-      addSpecialExit(19786, 54231, cmd)
-    else
-      --if areaID == 181 then -- Umbrin, the Port of
-      addSpecialExit(18443, 54231, cmd)
-    end
-    --madeEast = true
-  elseif mmp.oncontinent(areaID, "Northern_Isles") then
-    if not mmp.inside then
-      -- make it here
-      addSpecialExit(mmp.currentroom, 48719, cmd)
-    elseif areaID == 194 then
-      -- Ilyrean
-      addSpecialExit(13373, 48719, cmd)
-    elseif areaID == 351 then
-      -- Karbaz
-      addSpecialExit(19740, 48719, cmd)
-    else
-      --if areaID == 206 or getRoomArea(mmp.currentroom) = 294 then -- Suliel Island / Suliel Island (Barricades)
-      addSpecialExit(17768, 48719, cmd)
-    end
-  elseif mmp.oncontinent(areaID, "Western_Isles") then
-    if not mmp.inside then
-      -- make it here
-      addSpecialExit(mmp.currentroom, 54632, cmd)
-    elseif areaID == 162 then
-      --Tapoa
-      addSpecialExit(21184, 54632, cmd)
-    elseif areaID == 207 then
-      --Tuar
-      addSpecialExit(19219, 54632, cmd)
-    else
-      --if areaID == 209 then --Ageiro
-      addSpecialExit(30222, 54632, cmd)
-    end
-  end
-end</script>
-						<eventHandlerList>
-							<string>mmp link externals</string>
-						</eventHandlerList>
-					</Script>
-					<Script isActive="yes" isFolder="no">
-						<name>mmapper_achaea_harness_remove_exits</name>
-						<packageName></packageName>
-						<script>function mmapper_achaea_harness_remove_exits()
-  local areaID = getRoomArea(mmp.currentroom) or 0
-  if not (mmp.game == "achaea" and mmp.settings.harness) then
-    return
-  end
-  if mmp.oncontinent(areaID, "Eastern_Isles") then
-    mmp.clearspecials({54231})
-  elseif mmp.oncontinent(areaID, "Northern_Isles") then
-    mmp.clearspecials({48719})
-  elseif mmp.oncontinent(areaID, "Western_Isles") then
-    mmp.clearspecials({54632})
-  end
-end</script>
-						<eventHandlerList>
-							<string>mmp clear externals</string>
-						</eventHandlerList>
+						<eventHandlerList />
 					</Script>
 				</Script>
 				<Script isActive="yes" isFolder="no">
@@ -10649,6 +10597,205 @@ end</script>
 					</Script>
 				</Script>
 				<Script isActive="yes" isFolder="no">
+					<name>Asteria</name>
+					<packageName></packageName>
+					<script></script>
+					<eventHandlerList />
+					<Script isActive="yes" isFolder="no">
+						<name>asteria_stop_speedwalk_for_wrong_dir</name>
+						<packageName></packageName>
+						<script>function asteria_stop_speedwalk_for_wrong_dir()
+  if mmp.game and mmp.game ~= "asteria" then
+    return
+  end
+  if #mmp.speedWalkPath &gt; 0 then
+    echo("Can't go \"" .. gmcp.Room.WrongDir .. "\". Stopping speedwalk.")
+    mmp.stop()
+  end
+end</script>
+						<eventHandlerList>
+							<string>gmcp.Room.WrongDir</string>
+						</eventHandlerList>
+					</Script>
+					<Script isActive="yes" isFolder="no">
+						<name>register_asterias_envdata</name>
+						<packageName></packageName>
+						<script>function register_asterias_envdata(_, game)
+  if game ~= "Asteria" then
+    return
+  end
+  mmp.envids =
+    {
+      Air = 20,
+      Airship = 21,
+      Badland = 22,
+      Beach = 23,
+      Carriage = 24,
+      Cave = 25,
+      City = 26,
+      Coast = 27,
+      Default = 28,
+      Desert = 29,
+      Field = 30,
+      Forest = 31,
+      Ghetto = 32,
+      Hills = 33,
+      Home = 34,
+      Inn = 35,
+      Inside = 36,
+      Marsh = 37,
+      Mountain = 38,
+      Road = 39,
+      Ship = 40,
+      Shop = 41,
+      Temple = 42,
+      Tundra = 43,
+      Underwater = 44,
+      Vehicle = 45,
+      Water = 46,
+    }
+  mmp.waterenvs = {}
+  mmp.envidsr = {}
+  for name, id in pairs(mmp.envids) do
+    mmp.envidsr[id] = name
+  end
+
+
+mmp.colorcodes = {}
+mmp.colorcodes[20] = {176, 224, 230, 255}
+mmp.colorcodes[21] = {160, 82, 45, 255}
+mmp.colorcodes[22] = {205, 133, 63, 255}
+mmp.colorcodes[23] = {218, 165, 32, 255}
+mmp.colorcodes[24] = {132, 112, 255, 255}
+mmp.colorcodes[25] = {47, 79, 79, 255}
+mmp.colorcodes[26] = {190, 190, 190, 255}
+mmp.colorcodes[27] = {210, 180, 140, 255}
+mmp.colorcodes[28] = {255, 69, 0, 255}
+mmp.colorcodes[29] = {255, 215, 0, 255}
+mmp.colorcodes[30] = {127, 255, 0, 255}
+mmp.colorcodes[31] = {0, 100, 0, 255}
+mmp.colorcodes[32] = {184, 134, 11, 255}
+mmp.colorcodes[33] = {50, 205, 50, 255}
+mmp.colorcodes[34] = {102, 205, 170, 255}
+mmp.colorcodes[35] = {0, 128, 128, 255}
+mmp.colorcodes[36] = {255, 250, 205, 255}
+mmp.colorcodes[37] = {107, 142, 35, 255}
+mmp.colorcodes[38] = {139, 69, 19, 255}
+mmp.colorcodes[39] = {112, 128, 144, 255}
+mmp.colorcodes[40] = {265, 42, 42, 255}
+mmp.colorcodes[41] = {0, 190, 255, 255}
+mmp.colorcodes[42] = {138, 43, 226, 255}
+mmp.colorcodes[43] = {255, 250, 250, 255}
+mmp.colorcodes[44] = {65, 105, 225, 255}
+mmp.colorcodes[45] = {90, 158, 160, 255}
+mmp.colorcodes[46] = {30, 144, 255, 255}
+
+function set_asteria_colorcodes()
+  for id, rgba in pairs(mmp.colorcodes) do
+    setCustomEnvColor(id, rgba[1], rgba[2], rgba[3], rgba[4])
+  end
+ end
+end</script>
+						<eventHandlerList>
+							<string>mmp logged in</string>
+						</eventHandlerList>
+					</Script>
+					<Script isActive="yes" isFolder="no">
+						<name>asteria_can_move</name>
+						<packageName></packageName>
+						<script>-- Asteria's GMCP butts heads with existing GMCP 'able' checks in the speedwalking script. This works around it.
+
+function asteria_can_move(_, game)
+  if game ~= "Asteria" then
+    return
+  end
+
+  function mapper_can_move()
+    return gmcp.Char and gmcp.Char.Balance and gmcp.Char.Balance.balance == 0
+  end
+end</script>
+						<eventHandlerList>
+							<string>mmp logged in</string>
+						</eventHandlerList>
+					</Script>
+				</Script>
+				<Script isActive="yes" isFolder="no">
+					<name>Dragonswords</name>
+					<packageName></packageName>
+					<script></script>
+					<eventHandlerList />
+					<Script isActive="yes" isFolder="no">
+						<name>dragonswords_stop_speedwalk_for_wrong_dir</name>
+						<packageName></packageName>
+						<script>function dragonswords_stop_speedwalk_for_wrong_dir()
+  if mmp.game and mmp.game ~= "dragonswords" then
+    return
+  end
+  if #mmp.speedWalkPath &gt; 0 then
+    echo("The way \"" .. gmcp.Room.WrongDir .. "\" is blocked. Stopping speedwalk.")
+    mmp.stop()
+  end
+end</script>
+						<eventHandlerList>
+							<string>gmcp.Room.WrongDir</string>
+						</eventHandlerList>
+					</Script>
+					<Script isActive="yes" isFolder="no">
+						<name>register_dragonswords_envdata</name>
+						<packageName></packageName>
+						<script>function register_dragonswords_envdata(_, game)
+  if game ~= "dragonswords" then
+    return
+  end
+  mmp.envids =
+    {
+      ["inside"] = 1,
+        ["city"] = 2,
+        ["field"] = 3,
+        ["forest"] = 4,
+        ["hills"] = 5,
+        ["mountain"] = 6,
+        ["swim"] = 7,
+        ["noswim"] = 8,
+        ["underwater"] = 9,
+        ["air"] = 10,
+        ["desert"] = 11,
+        ["river"] = 12,
+        ["oceanfloor"] = 13,
+        ["underground"] = 14,
+        ["jungle"] = 15,
+        ["swamp"] = 16,
+        ["tundra"] = 17,
+        ["ice"] = 18,
+        ["ocean"] = 19,
+        ["lava"] = 20,
+        ["shore"] = 21,
+        ["tree"] = 22,
+        ["stone"] = 23,
+        ["quicksand"] = 24,
+        ["wall"] = 25,
+        ["glacier"] = 26,
+        ["exit"] = 27,
+        ["trail"] = 28,
+        ["badlands"] = 29,
+        ["grassland"] = 30,
+        ["scrub"] = 31,
+        ["barren"] = 32,
+        ["bridge"] = 33,
+        ["road"] = 34,
+    }
+  mmp.waterenvs = {}
+  mmp.envidsr = {}
+  for name, id in pairs(mmp.envids) do
+    mmp.envidsr[id] = name
+  end
+end</script>
+						<eventHandlerList>
+							<string>mmp logged in</string>
+						</eventHandlerList>
+					</Script>
+				</Script>
+				<Script isActive="yes" isFolder="no">
 					<name>Lusternia</name>
 					<packageName></packageName>
 					<script>-------------------------------------------------
@@ -10669,6 +10816,7 @@ end</script>
     ["constructed underground"] = 2,
     ["deep ocean"]              = 24,
     ["natural underground"]     = 3,
+    ["constructed underwater"]  = 41,
     aether                      = 36,
     astral                      = 35,
     beach                       = 5,
@@ -10703,6 +10851,8 @@ end</script>
     valley                      = 13,
     volcanic                    = 32,
     wasteland                   = 29,
+    badlands                    = 40,
+    wetlands                    = 31,
   }
 
   mmp.waterenvs = {}
@@ -10717,105 +10867,91 @@ end</script>
 						</eventHandlerList>
 					</Script>
 					<Script isActive="yes" isFolder="no">
-						<name>mmapper_lusternia_went_outside</name>
-						<packageName></packageName>
-						<script>function mmapper_lusternia_went_outside()
-  -- track whenever we need to use items when we get outside!
-  if
-    not mmp.autowalking or
-    mmp.game ~= "lusternia" or
-    (mmp.currentroom == mmp.speedWalkPath[#mmp.speedWalkPath])
-  then
-    return
-  end
-  -- repath, maybe that'll allow us to use wings now.
-  raiseEvent("mmp link externals")
-	local previousDirection = mmp.speedWalkDir[speedWalkCounter]
-  mmp.getPath(mmp.currentroom, mmp.speedWalkPath[#mmp.speedWalkPath])
-  -- don't need to check return value since that fact shouldnt've changed
-  -- if our path didn't change, re-instate it as it was (since the new path starts from this room that we checked at)
-  if
-    speedWalkDir[1]~=previousDirection
-  then
-    speedWalkCounter = 0
-    mmp.echo("We got outside - going to shortcut with 'bix device.")
-		if mmp.speedWalk.type == "room" then
-			mmp.gotoRoom(mmp.speedWalkPath[#mmp.speedWalkPath])
-		else
-			mmp.gotoAreaID(getRoomArea(mmp.speedWalkPath[#mmp.speedWalkPath]))
-		end
-    mmp.ignore_speedwalking = true
-  end
-  raiseEvent("mmp clear externals")
-end</script>
-						<eventHandlerList>
-							<string>mmapper went outside</string>
-						</eventHandlerList>
-					</Script>
-					<Script isActive="yes" isFolder="no">
 						<name>Astral utilities</name>
 						<packageName></packageName>
-						<script>local astralExits = {
-	{5079,5175,"n"},
-	{4072,5065,"w"},
-	{5088, 5132, "e"},
-	{5145, 5176, "s"},
-	{5138, 5146, "e"},
-	{5158, 5192, "s"},
-	{5152, 5041, "e"},
-	{5031, 5042, "e"},
-	{5022, 5131, "n"},
-	{5116, 5198, "w"},
-	{5130, 5096, "e"},
-	{5089, 5058, "n"},
-	{5102, 5115, "e"},
-	{5111, 5159, "e"},	
-	{5103, 5071, "n"},
-	{5059, 5053, "w"},
-	{5187, 5169, "w"},
-	{5190, 5204, "e"},
-	{5065,5072,"e"},
-}
-local mirrorExits = {
-	n="s",
-	ne="sw",
-	e="w",
-	se="nw",
-	s="n",
-	sw="ne",
-	w="e",
-	nw="se",
-	u="d",
-	d="u",
-	out="in",
-	["in"]="out",
-}
-function mmp.astroboots(create)
-	if mmp.game ~= "lusternia" then return end
-	for k, v in pairs(astralExits) do
-		if create then
-			addSpecialExit(v[1],v[2],"astrojump")
-			setExitWeight(v[1],"astrojump",5)
-			addSpecialExit(v[2],v[1],"astrojump")
-			setExitWeight(v[2],"astrojump",5)
-		else
-			removeSpecialExit(v[1],"astrojump")
-			removeSpecialExit(v[2],"astrojump")
-		end
-	end
+						<script>local astralExits =
+  {
+    {5079, 5175, "n"},
+    {5072, 5065, "w"},
+    {5088, 5132, "e"},
+    {5145, 5176, "s"},
+    {5138, 5146, "e"},
+    {5158, 5192, "s"},
+    {5152, 5041, "e"},
+    {5031, 5042, "e"},
+    {5022, 5131, "n"},
+    {5116, 5198, "w"},
+    {5130, 5096, "e"},
+    {5089, 5058, "n"},
+    {5102, 5115, "e"},
+    {5111, 5159, "e"},
+    {5103, 5071, "n"},
+    {5059, 5053, "w"},
+    {5187, 5169, "w"},
+    {5190, 5204, "e"},
+    {5065, 5072, "e"},
+    {45333, 5093, "u"},
+    {45334, 5113, "u"},
+    {45356, 5075, "u"},
+    {45335, 5171, "u"},
+    {45357, 5066, "u"},
+    {45329, 5156, "u"},
+    {45330, 5201, "u"},
+    {45331, 5121, "u"},
+    {45324, 5055, "u"},
+    {45354, 5177, "u"},
+    {45325, 5024, "u"},
+    {45355, 5133, "u"},
+  }
+local mirror =
+  {
+    n = "s",
+    ne = "sw",
+    e = "w",
+    se = "nw",
+    s = "n",
+    sw = "ne",
+    w = "e",
+    nw = "se",
+    u = "d",
+    d = "u",
+    out = "in",
+    ["in"] = "out",
+  }
+
+function mmp.astroboots()
+  if mmp.game ~= "lusternia" then
+    return
+  end
+  local option = mmp.settings.astrojump
+  mmp.echo("&lt;green&gt;" .. (option and "Set up" or "Removed") .. " &lt;white&gt;Astrojump &lt;green&gt;exits")
+  local exitString = [[script:if gmcp.Room.Info.exits.%s then send("%s", false) else send("astrojump", false) end]]
+  for k, v in pairs(astralExits) do
+    if option then
+      addSpecialExit(v[1], v[2], string.format(exitString, v[3], v[3]))
+      addSpecialExit(v[2], v[1], string.format(exitString, mirror[v[3]], mirror[v[3]]))
+    else
+      removeSpecialExit(v[1], "astrojump")
+      removeSpecialExit(v[2], "astrojump")
+      removeSpecialExit(v[1], string.format(exitString, v[3], v[3]))
+      removeSpecialExit(v[2], string.format(exitString, mirror[v[3]], mirror[v[3]]))
+    end
+  end
 end
 
 function mmp.wildnodes(create)
-	if mmp.game ~= "lusternia" then return end
-	for k, v in pairs(astralExits) do
-		if create then
-			setExit(v[1],v[2],v[3])
-			setExit(v[2],v[1],mirrorExits[v[3]])
-		else
-			setExit(v[1],-1,v[3])
-			setExit(v[2],-1,mirrorExits[v[3]])
-		end
-	end
+  if mmp.game ~= "lusternia" then
+    return
+  end
+  for k, v in pairs(astralExits) do
+    if create then
+      setExit(v[1], v[2], v[3])
+      setExit(v[2], v[1], mirrorExits[v[3]])
+    else
+      setExit(v[1], -1, v[3])
+      setExit(v[2], -1, mirrorExits[v[3]])
+    end
+  end
 end</script>
 						<eventHandlerList />
 					</Script>
@@ -10925,6 +11061,126 @@ function mmp.lockpaths(lock)
 end</script>
 						<eventHandlerList />
 					</Script>
+					<Script isActive="yes" isFolder="no">
+						<name>Lusternia basin areas</name>
+						<packageName></packageName>
+						<script>local basinAreas =
+  {
+    ["Ackleberry Highway"] = true,
+    ["Alabaster Road"] = true,
+    ["Avechna's Peak"] = true,
+    ["Avechna's Teeth"] = true,
+    ["Balach Swamp"] = true,
+    ["Bondero Bay"] = true,
+    ["Caoimhe Dell"] = true,
+    ["Cay of Cloadahi"] = true,
+    ["Emerald Road"] = true,
+    ["Epicure's Alley"] = true,
+    ["Glomdoring Forest"] = true,
+    ["Great Southern Highway"] = true,
+    ["Highwater Keep"] = true,
+    ["Irshaw Heights"] = true,
+    ["Mornhai Sanctuary"] = true,
+    ["Mount Krog"] = true,
+    ["Mount Wend"] = true,
+    ["Mount Zoaka"] = true,
+    ["Old Imperial Road"] = true,
+    ["Snow Valley"] = true,
+    ["Spectre Isle"] = true,
+    ["St. Gathlyn's Orphanage for the Dispossessed"] = true,
+    ["The Emerald Enclave"] = true,
+    ["Tolborolla Valley"] = true,
+    ["Verasavir Valley"] = true,
+    ["Waste Storage Facility"] = true,
+    ["Wyrden Isle"] = true,
+    ["the Base of Operations"] = true,
+    ["the Blasted Land"] = true,
+    ["the Carai Caroo"] = true,
+    ["the Caverns of Muhanlesh"] = true,
+    ["the Caves of Hhuhur"] = true,
+    ["the Chancel of Clangoran Mysteries"] = true,
+    ["the City of Gaudiguch"] = true,
+    ["the City of Hallifax"] = true,
+    ["the City of Magnagora"] = true,
+    ["the City of New Celest"] = true,
+    ["the Clarramore Cloud Gardens"] = true,
+    ["the Crimson Lady"] = true,
+    ["the Divine Luck Club"] = true,
+    ["the Dracnari Nomad Camp"] = true,
+    ["the Empress' Last Breath"] = true,
+    ["the Estengare River"] = true,
+    ["the Feyranti Estate"] = true,
+    ["the Floating Island of the Forgotten"] = true,
+    ["the Gloriana River"] = true,
+    ["the Grand Junction Bazaar"] = true,
+    ["the Grey Moors"] = true,
+    ["the Hifarae Hills"] = true,
+    ["the Inner Sea"] = true,
+    ["the Isle of Itecia"] = true,
+    ["the Isle of Nyalia"] = true,
+    ["the Isle of Olimsito"] = true,
+    ["the Isle of Vesucia"] = true,
+    ["the Kelpie Maiden"] = true,
+    ["the Kiakodan Nature Reserve"] = true,
+    ["the Lucidian Mesa Compound"] = true,
+    ["the Meliashmora of Imperial Secrets"] = true,
+    ["the New Celest sewer system"] = true,
+    ["the Northern Mountains"] = true,
+    ["the Oleanvir Valley"] = true,
+    ["the Presidio of the Damned"] = true,
+    ["the Razine Mountain Range"] = true,
+    ["the Rhizoda Mangrove"] = true,
+    ["the Ruins of Shallach"] = true,
+    ["the Scorpion Caverns"] = true,
+    ["the Sea of Despair"] = true,
+    ["the Serenwilde Forest"] = true,
+    ["the Shallach River"] = true,
+    ["the Shallamurine Cathedral"] = true,
+    ["the Skarch Desert"] = true,
+    ["the Southern Mountains"] = true,
+    ["the Tainted Broadcast Centre"] = true,
+    ["the Tar Pits"] = true,
+    ["the Tosha Monastery"] = true,
+    ["the Transcendental Fulcrux"] = true,
+    ["the Triple Junction Inn"] = true,
+    ["the Upper Peaks of the Razines"] = true,
+    ["the Upper Peaks of the Southern Mountains"] = true,
+    ["the Village of Acknor"] = true,
+    ["the Village of Angkrag"] = true,
+    ["the Village of Dairuchi"] = true,
+    ["the Village of Delport"] = true,
+    ["the Village of Duum"] = true,
+    ["the Village of Estelbar"] = true,
+    ["the Village of Paavik"] = true,
+    ["the Village of Rikenfriez"] = true,
+    ["the Village of Rockholm"] = true,
+    ["the Village of Shanthmark"] = true,
+    ["the Village of Southgard"] = true,
+    ["the Village of Stewartsville"] = true,
+    ["the Village of Talthos"] = true,
+    ["the i'Xiia Asylum"] = true,
+    ["the sewers of Magnagora"] = true,
+  }
+
+function mmp.lusterniaInBasin()
+  return basinAreas[gmcp.Room.Info.area] or false
+end</script>
+						<eventHandlerList />
+					</Script>
+					<Script isActive="yes" isFolder="no">
+						<name>mmp.lusterniaMapUpdated</name>
+						<packageName></packageName>
+						<script>function mmp.lusterniaMapUpdated()
+  if mmp.game == "lusternia" then
+    mmp.lockPathways()
+    mmp.astroboots()
+  end
+end</script>
+						<eventHandlerList>
+							<string>mmapper updated map</string>
+							<string>sysMapDownloadEvent</string>
+						</eventHandlerList>
+					</Script>
 				</Script>
 				<Script isActive="yes" isFolder="no">
 					<name>Imperian</name>
@@ -11024,40 +11280,6 @@ end</script>
 end</script>
 						<eventHandlerList>
 							<string>mmp logged in</string>
-						</eventHandlerList>
-					</Script>
-					<Script isActive="yes" isFolder="no">
-						<name>mmapper_imperian_went_outside</name>
-						<packageName></packageName>
-						<script>function mmapper_imperian_went_outside()
-  if
-    not mmp.autowalking or
-    not (mmp.settings.shekinah or mmp.settings.suriel) or
-    mmp.game ~= "imperian" or
-    (mmp.currentroom == mmp.speedWalkPath[#mmp.speedWalkPath]) or
-    table.contains(gmcp.Room.Info.details, "indoors") or
-    table.contains(gmcp.Room.Info.details, "considered indoors") or
-    not table.contains(mmp.imperian.wingAbleAreas, getRoomArea(mmp.currentroom))
-  then
-    return
-  end
-  -- repath, maybe that'll allow us to use wings now.
-  raiseEvent("mmp link externals")
-  local previousDirection = mmp.speedWalkDir[speedWalkCounter]
-  mmp.getPath(mmp.currentroom, mmp.speedWalkPath[#mmp.speedWalkPath])
-  -- don't need to check return value since that fact shouldnt've changed
-  -- if our path didn't change, re-instate it as it was (since the new path starts from this room that we checked at)
-  if speedWalkDir[1] ~= previousDirection then
-    speedWalkCounter = 0
-    mmp.echo("We got outside - going to shortcut with wings.")
-    mmp.gotoRoom(mmp.speedWalkPath[#mmp.speedWalkPath])
-    mmp.ignore_speedwalking = true
-  end
-  raiseEvent("mmp clear externals")
-end</script>
-						<eventHandlerList>
-							<string>mmapper went outside</string>
-							<string>mmapper changed continent</string>
 						</eventHandlerList>
 					</Script>
 				</Script>
@@ -11584,6 +11806,14 @@ function mmp.checkforupdate()
         downloadFile(
           mmp.mapfile, "http://ire-mudlet-mapping.github.io/LusterniaCrowdmap/Map/version.txt"
         )
+      elseif game == "imperian" then
+        downloadFile(
+          mmp.mapfile, "http://ire-mudlet-mapping.github.io/ImperianCrowdmap/Map/version.txt"
+        )
+      elseif game == "asteria" then
+        downloadFile(
+          mmp.mapfile, "http://asteria-ui.github.io/AsteriaCrowdmap/Map/version.txt"
+        )
       elseif game == "stickmud" then
         downloadFile(
           mmp.mapfile, "http://stickmud.github.io/StickMUDCrowdmap/Map/version.txt"
@@ -11637,6 +11867,16 @@ function mmp.retrievecrowdchangelog()
     downloadFile(
       mmp.crowdchangelogfile,
       "http://ire-mudlet-mapping.github.io/LusterniaCrowdmap/Map/changelog.txt"
+    )
+  elseif mmp.game == "imperian" then
+    downloadFile(
+      mmp.crowdchangelogfile,
+      "http://ire-mudlet-mapping.github.io/ImperianCrowdmap/Map/changelog.txt"
+    )
+  elseif mmp.game == "asteria" then
+    downloadFile(
+      mmp.crowdchangelogfile,
+      "http://asteria-ui.github.io/AsteriaCrowdmap/Map/changelog.txt"
     )
   elseif mmp.game == "stickmud" then
     downloadFile(
@@ -11700,6 +11940,10 @@ function mmp.downloadcrowdmap(newversion)
     downloadFile(mmp.crowdmapfile, "http://ire-mudlet-mapping.github.io/StarmournCrowdmap/Map/map")
   elseif mmp.game == "lusternia" then
     downloadFile(mmp.crowdmapfile, "http://ire-mudlet-mapping.github.io/LusterniaCrowdmap/Map/map")
+  elseif mmp.game == "imperian" then
+    downloadFile(mmp.crowdmapfile, "http://ire-mudlet-mapping.github.io/ImperianCrowdmap/Map/map")
+  elseif mmp.game == "asteria" then
+    downloadFile(mmp.crowdmapfile, "http://asteria-ui.github.io/AsteriaCrowdmap/Map/map")
   elseif mmp.game == "stickmud" then
     downloadFile(mmp.crowdmapfile, "http://stickmud.github.io/StickMUDCrowdmap/Map/map")
   end

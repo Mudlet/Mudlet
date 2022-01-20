@@ -108,24 +108,22 @@ function Geyser.MiniConsole:calcFontSize()
   return calcFontSize(self.name)
 end
 
--- Enables the scroll bar for this window
--- @param isVisible boolean to set visibility.
+--- Enables the scroll bar for this window
 function Geyser.MiniConsole:enableScrollBar()
   enableScrollBar(self.name)
 end
 
--- Disables the scroll bar for this window
--- @param isVisible boolean to set visibility.
+--- Disables the scroll bar for this window
 function Geyser.MiniConsole:disableScrollBar()
   disableScrollBar(self.name)
 end
 
--- Enables the horizontal scroll bar for this window
+--- Enables the horizontal scroll bar for this window
 function Geyser.MiniConsole:enableHorizontalScrollBar()
   enableHorizontalScrollBar(self.name)
 end
 
--- Disables the horizontal scroll bar for this window
+--- Disables the horizontal scroll bar for this window
 function Geyser.MiniConsole:disableHorizontalScrollBar()
   disableHorizontalScrollBar(self.name)
 end
@@ -217,8 +215,10 @@ function Geyser.MiniConsole:setFontSize(size)
   if size then
     self.parent.setFontSize(self, size)
   end
-
   setMiniConsoleFontSize(self.name, size)
+  if self.autoWrap then
+    self:resetAutoWrap()
+  end
 end
 
 --- Appends copied selection to this miniconsole.
@@ -292,7 +292,7 @@ function Geyser.MiniConsole:dechoLink(...)
   dechoLink(self.name, ...)
 end
 
---- inserts hexidecimal color formatted clickable text into the miniconsole at the end of the current line.
+--- inserts hexadecimal color formatted clickable text into the miniconsole at the end of the current line.
 -- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hechoLink
 function Geyser.MiniConsole:hechoLink(...)
   hechoLink(self.name, ...)
@@ -310,7 +310,7 @@ function Geyser.MiniConsole:dinsertLink(...)
   dinsertLink(self.name, ...)
 end
 
---- inserts hexidecimal color formatted clickable text into the miniconsole at the end of the current cursor position.
+--- inserts hexadecimal color formatted clickable text into the miniconsole at the end of the current cursor position.
 -- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hinsertLink
 function Geyser.MiniConsole:hinsertLink(...)
   hinsertLink(self.name, ...)
@@ -328,7 +328,7 @@ function Geyser.MiniConsole:dechoLink(...)
   dechoLink(self.name, ...)
 end
 
---- inserts hexidecimal color formatted clickable text into the miniconsole at the end of the current line.
+--- inserts hexadecimal color formatted clickable text into the miniconsole at the end of the current line.
 -- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hechoLink
 function Geyser.MiniConsole:hechoLink(...)
   hechoLink(self.name, ...)
@@ -346,7 +346,7 @@ function Geyser.MiniConsole:dechoPopup(...)
   dechoPopup(self.name, ...)
 end
 
---- inserts hexidecimal color formatted clickable text with right-click menu into the miniconsole at the end of the current line.
+--- inserts hexadecimal color formatted clickable text with right-click menu into the miniconsole at the end of the current line.
 -- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hechoPopup
 function Geyser.MiniConsole:hechoPopup(...)
   hechoPopup(self.name, ...)
@@ -364,7 +364,7 @@ function Geyser.MiniConsole:dinsertPopup(...)
   dinsertPopup(self.name, ...)
 end
 
---- inserts hexidecimal color formatted clickable text with right-click menu into the miniconsole at the end of the current current cursor position.
+--- inserts hexadecimal color formatted clickable text with right-click menu into the miniconsole at the end of the current current cursor position.
 -- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hinsertPopup
 function Geyser.MiniConsole:hinsertPopup(...)
   hinsertPopup(self.name, ...)
@@ -418,6 +418,123 @@ function Geyser.MiniConsole:display(...)
   else
     self:echo((inspect(arg[1]) or 'nil') .. '\n')
   end
+end
+
+--- gets the font size for the miniconsole
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#getFontSize
+function Geyser.MiniConsole:getFontSize()
+  return getFontSize(self.name)
+end
+
+--- Moves the virtual cursor within the miniconsole
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#moveCursor
+-- @param x the horizontal position for the cursor
+-- @param y the vertical position (line) for the cursor
+function Geyser.MiniConsole:moveCursor(x, y)
+  moveCursor(self.name, x, y)
+end
+
+--- Moves the virtual cursor up 1 or more lines
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#moveCursorUp
+-- @param lines the number of lines up to move the cursor. Defaults to 1 if not provided
+-- @param keepColumn if true, will maintain the x/horizontal/columnar position of the cursor as well. Otherwise moves the cursor to the front of the line
+function Geyser.MiniConsole:moveCursorUp(lines, keepColumn)
+  moveCursorUp(self.name, lines, keepColumn)
+end
+
+--- Moves the virtual cursor down 1 or more lines
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#moveCursorDown
+-- @param lines the number of lines down to move the cursor. Defaults to 1 if not provided
+-- @param keepColumn if true, will maintain the x/horizontal/columnar position of the cursor as well. Otherwise moves the cursor to the front of the line
+function Geyser.MiniConsole:moveCursorDown(lines, keepColumn)
+  moveCursorDown(self.name, lines, keepColumn)
+end
+
+--- Moves the virtual cursor to the end of the miniconsole
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#moveCursorEnd
+function Geyser.MiniConsole:moveCursorEnd()
+  moveCursorEnd(self.name)
+end
+
+--- Returns the absolute line number the cursor is on in the miniconsole.
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#getLineNumber
+function Geyser.MiniConsole:getLineNumber()
+  return getLineNumber(self.name)
+end
+
+--- Returns the number of lines in the miniconsole
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#getLineCount
+function Geyser.MiniConsole:getLineCount()
+  return getLineCount(self.name)
+end
+
+--- Returns the absolute column number the virtual cursor is on
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#getColumnNumber
+function Geyser.MiniConsole:getColumnNumber()
+  return getColumnNumber(self.name)
+end
+
+--- Returns the latest line's number in the miniconsole
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#getLastLineNumber
+function Geyser.MiniConsole:getLastLineNumber()
+  return getLastLineNumber(self.name)
+end
+
+--- returns a section of the content of the miniconsole text buffer. Returns a Lua table with the content of the lines on a per line basis. The form value is result = {relative_linenumber = line}.
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#getLines
+-- @param fromLine the absolute line number to start getting lines at
+-- @param toLine the absolute line number to stop getting lines at
+function Geyser.MiniConsole:getLines(fromLine, toLine)
+  return getLines(self.name, fromLine, toLine)
+end
+
+--- returns the content of the current line under the virtual cursor
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#getCurrentLine
+function Geyser.MiniConsole:getCurrentLine()
+  return getCurrentLine(self.name)
+end
+
+--- select the text within the miniconsole's command line
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#selectCmdLineText
+function Geyser.MiniConsole:selectCmdLinetext()
+  return selectCmdLineText(self.name)
+end
+
+--- Select the current line the cursor is on in the miniconsole
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#selectCurrentLine
+function Geyser.MiniConsole:selectCurrentLine()
+  return selectCurrentLine(self.name)
+end
+
+--- Selects the specified parts of the line starting from the left and extending to the right for however how long. The line starts from 0.
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#selectSection
+-- @param fromPosition the column to start selecting from
+-- @param length the number of columns to select
+function Geyser.MiniConsole:selectSection(fromPosition, length)
+  return selectSection(self.name, fromPosition, length)
+end
+
+--- Selects a substring from the line where the user cursor is currently positioned - allowing you to edit selected text (apply colour, make it be a link, copy to other windows or other things).
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#selectString
+function Geyser.MiniConsole:selectString(text, number_of_match)
+  return selectString(self.name, text, number_of_match)
+end
+
+--- Returns the text currently selected by the virtual cursor using :selectString, :selectSection, etc (not selected by the mouse)
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#getSelection
+function Geyser.MiniConsole:getSelection()
+  return getSelection(self.name)
+end
+
+--- Gets the current text format of the currently selected text.
+-- see https://wiki.mudlet.org/w/Manual:UI_Functions#getTextFormat
+function Geyser.MiniConsole:getTextFormat()
+  return getTextFormat(self.name)
+end
+
+--- Gets the number of columns the window is configured to wrap at
+function Geyser.MiniConsole:getWindowWrap()
+  return getWindowWrap(self.name)
 end
 
 -- Save a reference to our parent constructor

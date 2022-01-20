@@ -293,6 +293,12 @@ private slots:
     void slot_clearSearchResults();
     void slot_clearSoundFile();
     void slot_editorContextMenu();
+    void slot_visibilityChangedEditorActionsToolbar();
+    void slot_visibilityChangedEditorItemsToolbar();
+    void slot_floatingChangedEditorActionsToolbar();
+    void slot_floatingChangedEditorItemsToolbar();
+    void slot_restoreEditorActionsToolbar();
+    void slot_restoreEditorItemsToolbar();
 
 public:
     TConsole* mpErrorConsole;
@@ -328,6 +334,14 @@ private:
     void selectScriptByID(int id);
     void selectActionByID(int id);
     void selectKeyByID(int id);
+
+    void clearTriggerForm();
+    void clearTimerForm();
+    void clearAliasForm();
+    void clearScriptForm();
+    void clearActionForm();
+    void clearKeyForm();
+    void clearVarForm();
 
     void expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pItem);
     void expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem* pWidgetItemParent);
@@ -416,6 +430,10 @@ private:
     void autoSave();
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
     void key_grab_callback(const Qt::Key, const Qt::KeyboardModifiers);
+    void setShortcuts(const bool setNotUnset = true);
+
+    void showOrHideRestoreEditorActionsToolbarAction();
+    void showOrHideRestoreEditorItemsToolbarAction();
 
 
     QToolBar* toolBar;
@@ -483,6 +501,10 @@ private:
 
     QAction* mProfileSaveAction;
     QAction* mProfileSaveAsAction;
+
+    // Enables the toolbars to be unhidden if they get hid:
+    QAction* mpAction_restoreEditorActionsToolbar = nullptr;
+    QAction* mpAction_restoreEditorItemsToolbar = nullptr;
 
     // We need to keep a record of this button as we have to disable it
     // for the "Variables" view:

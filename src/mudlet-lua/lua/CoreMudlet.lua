@@ -37,7 +37,7 @@ if false then
 
   --- Clears the user window or a mini console with the name given as argument.
   ---
-  --- @param windowName optinal
+  --- @param windowName optional
   function closeUserWindow(windowName)
   end
 
@@ -356,7 +356,7 @@ if false then
 
 
 
-  --- Returns the time without stoping stop watch (milliseconds based) in form of 0.058
+  --- Returns the time without stopping stop watch (milliseconds based) in form of 0.058
   --- (= clock ran for 58 milliseconds before it was stopped).
   --- @see createStopWatch
   function getStopWatchTime(watchID)
@@ -785,7 +785,7 @@ if false then
 
 
   --- Pastes the previously copied text including all format codes like color, font etc. at the current user
-  --- cursor position. The copy() and paste() functions can be used to copy formated text from the main window
+  --- cursor position. The copy() and paste() functions can be used to copy formatted text from the main window
   --- to a user window without losing colors e. g. for chat windows, map windows etc.
   ---
   --- @see copy
@@ -1137,7 +1137,7 @@ if false then
   ---   send("kill rat")
   ---   </pre>
   --- @usage This example is demonstrating transition from Nexus/Zmud wait.
-  ---   You can simply rewrote following nexus/zmud code bellow with <b>tempTimers</b>.
+  ---   You can simply rewrote following nexus/zmud code below with <b>tempTimers</b>.
   ---   <pre>
   ---   #send jerk fish
   ---   #wait 1500

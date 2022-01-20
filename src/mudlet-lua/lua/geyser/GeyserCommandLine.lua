@@ -33,6 +33,12 @@ function Geyser.CommandLine:append(text)
   appendCmdLine(self.name, text)
 end
 
+--- selects the text in the commandline
+function Geyser.CommandLine:selectText()
+  return selectCmdLineText(self.name)
+end
+
+
 --- returns the text in the commandline
 -- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLine
 function Geyser.CommandLine:getText()
@@ -80,10 +86,14 @@ function Geyser.CommandLine:new (cons, container)
   self.__index = self
   
   createCommandLine(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
-  
   if me.stylesheet then 
     me:setStyleSheet()
   end
+  -- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
+  if me.hidden or me.auto_hidden then
+    hideWindow(me.name)
+  end
+
   
   return me
 end

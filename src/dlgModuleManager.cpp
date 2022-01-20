@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *   Copyright (C) 2011 by Chris Mitchell                                  *
+ *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia..com        *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -96,22 +97,6 @@ void dlgModuleManager::layoutModules()
             auto itemLocation = new QTableWidgetItem();
             auto itemPriority = new QTableWidgetItem();
             QStringList moduleInfo = mpHost->mInstalledModules[pModules[i]];
-            QFileInfo moduleFile = moduleInfo[0];
-            QStringList accepted_suffix;
-            accepted_suffix << "xml" << "trigger";
-            if (accepted_suffix.contains(moduleFile.suffix().trimmed(), Qt::CaseInsensitive)) {
-                masterModule->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-                masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                                                 .arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
-                                                         "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
-                                                         "is saved at the end of the session.")));
-            } else {
-                masterModule->setFlags(Qt::NoItemFlags);
-                masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                                                 .arg(tr("<b>Note:</b> <i>.zip</i> and <i>.mpackage</i> modules are currently unable to be synced<br> "
-                                                         "only <i>.xml</i> packages are able to be synchronized across profiles at the moment. ")));
-            }
-
 
             if (moduleInfo.at(1).toInt()) {
                 masterModule->setCheckState(Qt::Checked);
@@ -119,6 +104,9 @@ void dlgModuleManager::layoutModules()
                 masterModule->setCheckState(Qt::Unchecked);
             }
             masterModule->setText(QString());
+            masterModule->setToolTip(utils::richText(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
+                                                        "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
+                                                        "is saved at the end of the session.")));
 
             // Although there is now no text used here this may help to make the
             // checkbox more central in the column
@@ -128,7 +116,7 @@ void dlgModuleManager::layoutModules()
             itemEntry->setText(moduleName);
             itemEntry->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
             itemLocation->setText(moduleInfo[0]);
-            itemLocation->setToolTip(moduleInfo[0]);                          // show the full path in a tooltip, in case it doesn't fit in the table
+            itemLocation->setToolTip(utils::richText(moduleInfo[0]));     // show the full path in a tooltip, in case it doesn't fit in the table
             itemLocation->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled); // disallow editing of module path, because that is not saved
             itemPriority->setData(Qt::EditRole, mpHost->mModulePriorities[moduleName]);
             mModuleTable->setItem(row, 0, itemEntry);
@@ -193,7 +181,7 @@ void dlgModuleManager::slot_module_clicked(QTableWidgetItem* pItem)
     QTableWidgetItem* entry = mModuleTable->item(i, 0);
     QTableWidgetItem* checkStatus = mModuleTable->item(i, 2);
     QTableWidgetItem* itemPriority = mModuleTable->item(i, 1);
-    //  Not used programatically now: QTableWidgetItem* itemPath = moduleTable->item(i, 3);
+    //  Not used programmatically now: QTableWidgetItem* itemPath = moduleTable->item(i, 3);
     if (!entry || !checkStatus || !itemPriority || !mpHost->mInstalledModules.contains(entry->text())) {
         mModuleHelpButton->setDisabled(true);
         if (checkStatus) {
@@ -204,8 +192,8 @@ void dlgModuleManager::slot_module_clicked(QTableWidgetItem* pItem)
     }
 
     if (mpHost->moduleHelp.contains(entry->text())) {
-        mModuleHelpButton->setDisabled((!mpHost->moduleHelp.value(entry->text()).contains(QStringLiteral("helpURL"))
-                                       || mpHost->moduleHelp.value(entry->text()).value(QStringLiteral("helpURL")).isEmpty()));
+        mModuleHelpButton->setDisabled((!mpHost->moduleHelp.value(entry->text()).contains(qsl("helpURL"))
+                                       || mpHost->moduleHelp.value(entry->text()).value(qsl("helpURL")).isEmpty()));
     } else {
         mModuleHelpButton->setDisabled(true);
     }
