@@ -28,4 +28,3 @@ jobs:
             --url ${{ github.event.pull_request.issue_url }} \
             --header 'authorization: token ${TOKEN}' \
             --data '{"milestone": "${{ steps.next-milestone.outputs.result }}"}'
-      
