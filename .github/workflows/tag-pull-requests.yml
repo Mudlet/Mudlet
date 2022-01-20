@@ -16,7 +16,7 @@ jobs:
       id: next-milestone
       uses: mikefarah/yq@master
       with:
-        cmd: yq eval '.milestoned.next-milestone' '.github/repo-metadata.yml'
+        cmd: yq eval '.milestones.next-milestone' '.github/repo-metadata.yml'
 
     - name: Assign PR to milestone
       uses: zoispag/action-assign-milestone@v1
