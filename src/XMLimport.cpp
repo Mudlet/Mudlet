@@ -654,7 +654,7 @@ void XMLimport::readUnknownTimerElement()
 {
     while (!atEnd()) {
         skipCurrentElement();
-        qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
+        qDebug().nospace() << "XMLimport::readUnknownTimerElement() ERROR: UNKNOWN "
                               "Timer Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
 
@@ -668,7 +668,7 @@ void XMLimport::readUnknownAliasElement()
 {
     while (!atEnd()) {
         skipCurrentElement();
-        qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
+        qDebug().nospace() << "XMLimport::readUnknownAliasElement() ERROR: UNKNOWN "
                               "Alias Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
 
@@ -682,7 +682,7 @@ void XMLimport::readUnknownActionElement()
 {
     while (!atEnd()) {
         skipCurrentElement();
-        qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
+        qDebug().nospace() << "XMLimport::readUnknownActionElement() ERROR: UNKNOWN "
                               "Action Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
 
@@ -696,7 +696,7 @@ void XMLimport::readUnknownScriptElement()
 {
     while (!atEnd()) {
         skipCurrentElement();
-        qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
+        qDebug().nospace() << "XMLimport::readUnknownScriptElement() ERROR: UNKNOWN "
                               "Script Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
 
@@ -710,7 +710,7 @@ void XMLimport::readUnknownKeyElement()
 {
     while (!atEnd()) {
         skipCurrentElement();
-        qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
+        qDebug().nospace() << "XMLimport::readUnknownKeyElement() ERROR: UNKNOWN "
                               "Key Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
 
