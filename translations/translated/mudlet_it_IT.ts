@@ -1698,31 +1698,31 @@ Percorsi analizzati:
       <location filename="../src/TMainConsole.cpp" line="1460"/>
       <source>GMCP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Eventi GMCP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1464"/>
       <source>ATCP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Eventi ATCP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1468"/>
       <source>Channel102 events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Eventi Channel102:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1472"/>
       <source>MSSP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Eventi MSSP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1477"/>
       <source>MSDP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Eventi MSDP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1488"/>
@@ -2897,7 +2897,12 @@ here (or created in the future) will automatically be assigned the name &quot;%1
 Duplicated area names will cause all but the first encountered one to gain a
 &quot;_###&quot; style suffix.
 %2</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Mudlet permetteva alla mappa di avere più di un'area con lo stesso nome
+o senza nome. Per risolvere questi casi, ad un'area senza nome attualmente presente
+(o creata in futuro) verrà automaticamente assegnato il nome &quot;%1&quot;.
+I nomi di aree duplicate faranno sì che tutti i nomi tranne il primo incontrino un suffisso di stile
+&quot;_###&quot; .
+%2</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1244"/>
@@ -5967,7 +5972,10 @@ Utilizzi</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="1459"/>
       <source>Select what to export (%n item(s))</source>
       <comment>This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Seleziona cosa esportare (%n elemento))</numerusform>
+        <numerusform>Seleziona cosa esportare (%n elementi))</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="347"/>
@@ -11505,17 +11513,17 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1214"/>
       <source>nothing</source>
-      <translation type="unfinished"/>
+      <translation>nessuna</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1219"/>
       <source>Unicode Control Pictures</source>
-      <translation type="unfinished"/>
+      <translation>Immagini di controllo Unicode</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1224"/>
       <source>CP437 (OEM Font)- like</source>
-      <translation type="unfinished"/>
+      <translation>CP437 (carattere OEM)- simile</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1339"/>
@@ -12639,17 +12647,17 @@ Uscita</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2006"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Il simbolo della porta Verde (Aperto) è disegnato su 2D Map.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2015"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Il simbolo della porta Orange (Chiuso) è disegnato su 2D Map.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2024"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Il simbolo della porta Rossa (Bloccata) è disegnato su 2D Mappa.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2033"/>
