@@ -5756,7 +5756,7 @@ Count</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="1464"/>
       <source>Select what to export</source>
       <comment>This is the text shown at the top of a groupbox initially and when there is NO items to export in the Package exporter dialogue.</comment>
-      <translation type="unfinished"/>
+      <translation>Select what to export</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="216"/>
@@ -6023,7 +6023,7 @@ Count</translation>
       <location filename="../src/dlgPackageManager.cpp" line="249"/>
       <source>Remove package</source>
       <comment>Message on button in package manager initially and when there is no packages to remove.</comment>
-      <translation type="unfinished"/>
+      <translation>Remove package</translation>
     </message>
   </context>
   <context>
@@ -10708,7 +10708,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/package_manager.ui" line="219"/>
       <source>Remove package</source>
       <comment>Message on button in package manager initially and when there is no packages to remove.</comment>
-      <translation type="unfinished"/>
+      <translation>Remove package</translation>
     </message>
   </context>
   <context>
