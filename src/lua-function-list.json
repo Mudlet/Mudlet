@@ -170,7 +170,7 @@
     "getIrcNick": "getIrcNick()",
     "getIrcServer": "getIrcServer()",
     "getLastLineNumber": "getLastLineNumber(windowName)",
-    "getLineCount": "getLineCount()",
+    "getLineCount": "getLineCount([windowName])",
     "getLineNumber": "getLineNumber([windowName])",
     "getLines": "getLines([windowName,] from_line_number, to_line_number)",
     "getMainConsoleWidth": "getMainConsoleWidth()",
