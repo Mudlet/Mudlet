@@ -5892,7 +5892,10 @@ Count</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="1459"/>
       <source>Select what to export (%n item(s))</source>
       <comment>This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Select what to export (%n item(s))</numerusform>
+        <numerusform>Select what to export (%n item(s))</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="347"/>
@@ -6017,7 +6020,10 @@ Count</translation>
       <location filename="../src/dlgPackageManager.cpp" line="244"/>
       <source>Remove %n package(s)</source>
       <comment>Message on button in package manager to remove one or more (%n is the count of) selected package(s).</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Remove %n package(s)</numerusform>
+        <numerusform>Remove %n package(s)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="249"/>
@@ -7163,13 +7169,13 @@ for the selected room:</numerusform>
       <location filename="../src/dlgTriggerEditor.cpp" line="631"/>
       <source>Restore Actions toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Restore Actions toolbar</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="634"/>
       <source>Restore Items toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Restore Items toolbar</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="721"/>
@@ -11396,22 +11402,22 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1200"/>
       <source>Display control characters as:</source>
-      <translation type="unfinished"/>
+      <translation>Display control characters as:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1214"/>
       <source>nothing</source>
-      <translation type="unfinished"/>
+      <translation>nothing</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1219"/>
       <source>Unicode Control Pictures</source>
-      <translation type="unfinished"/>
+      <translation>Unicode Control Pictures</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1224"/>
       <source>CP437 (OEM Font)- like</source>
-      <translation type="unfinished"/>
+      <translation>CP437 (OEM Font)- like</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1339"/>
