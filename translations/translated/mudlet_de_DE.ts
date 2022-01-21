@@ -5935,7 +5935,10 @@ Nutzungen</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="1459"/>
       <source>Select what to export (%n item(s))</source>
       <comment>This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Wähle, was exportiert werden soll (1 Element)</numerusform>
+        <numerusform>Wähle, was exportiert werden soll (%n Elemente)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="347"/>
@@ -6060,7 +6063,10 @@ Nutzungen</translation>
       <location filename="../src/dlgPackageManager.cpp" line="244"/>
       <source>Remove %n package(s)</source>
       <comment>Message on button in package manager to remove one or more (%n is the count of) selected package(s).</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>1 Paket entfernen</numerusform>
+        <numerusform>%n Pakete entfernen</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="249"/>
@@ -11475,22 +11481,22 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1200"/>
       <source>Display control characters as:</source>
-      <translation type="unfinished"/>
+      <translation>Steuerzeichen anzeigen als:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1214"/>
       <source>nothing</source>
-      <translation type="unfinished"/>
+      <translation>gar nicht</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1219"/>
       <source>Unicode Control Pictures</source>
-      <translation type="unfinished"/>
+      <translation>Unicode-Kontrollbilder</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1224"/>
       <source>CP437 (OEM Font)- like</source>
-      <translation type="unfinished"/>
+      <translation>CP437-ähnlich (OEM-Schriftart)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1339"/>
