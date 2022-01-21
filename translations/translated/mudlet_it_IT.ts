@@ -6128,7 +6128,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="145"/>
       <source>Select a directory where logs will be saved.</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona una directory dove verranno salvati i log.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="146"/>
@@ -7259,7 +7259,7 @@ per tutte le %n stanze selezionate:</numerusform>
       <location filename="../src/dlgTriggerEditor.cpp" line="634"/>
       <source>Restore Items toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ripristino Barra degli Strumenti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="721"/>
