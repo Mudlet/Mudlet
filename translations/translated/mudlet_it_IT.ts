@@ -6100,7 +6100,10 @@ Utilizzi</translation>
       <location filename="../src/dlgPackageManager.cpp" line="244"/>
       <source>Remove %n package(s)</source>
       <comment>Message on button in package manager to remove one or more (%n is the count of) selected package(s).</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Rimuovi %n package</numerusform>
+        <numerusform>Rimuovi %n package</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="249"/>
