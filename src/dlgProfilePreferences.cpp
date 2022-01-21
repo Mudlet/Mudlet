@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018, 2020-2021 by Stephen Lyons             *
+ *   Copyright (C) 2014, 2016-2018, 2020-2022 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -56,10 +56,7 @@ using namespace std::chrono_literals;
 
 dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 : QDialog(pF)
-, mFontSize(10)
 , mpHost(pHost)
-, mpMenu(nullptr)
-, mUseSharedDictionary(false)
 {
     // init generated dialog
     setupUi(this);

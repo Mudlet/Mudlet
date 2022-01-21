@@ -2,7 +2,7 @@
 #define DISCORD_H
 /***************************************************************************
  *   Copyright (C) 2018 by Vadim Peretokin - vperetokin@gmail.com          *
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -71,13 +71,16 @@ class localDiscordPresence {
 
 public:
     localDiscordPresence()
-    : mState(), mDetails()
-    , mStartTimestamp(0), mEndTimestamp(0)
-    , mLargeImageKey(), mLargeImageText()
-    , mSmallImageKey(), mSmallImageText()
-    , mPartyId(), mPartySize(0), mPartyMax(0)
-    , mMatchSecret(), mJoinSecret(), mSpectateSecret()
-    , mInstance(1)
+    : mState()
+    , mDetails()
+    , mLargeImageKey()
+    , mLargeImageText()
+    , mSmallImageKey()
+    , mSmallImageText()
+    , mPartyId()
+    , mMatchSecret()
+    , mJoinSecret()
+    , mSpectateSecret()
     {
     }
 
@@ -114,19 +117,19 @@ public:
 private:
     char mState[128];
     char mDetails[128];
-    int64_t mStartTimestamp;
-    int64_t mEndTimestamp;
+    int64_t mStartTimestamp = 0;
+    int64_t mEndTimestamp = 0;
     char mLargeImageKey[32];
     char mLargeImageText[128];
     char mSmallImageKey[32];
     char mSmallImageText[128];
     char mPartyId[128];
-    int mPartySize;
-    int mPartyMax;
+    int mPartySize = 0;
+    int mPartyMax = 0;
     char mMatchSecret[128];
     char mJoinSecret[128];
     char mSpectateSecret[128];
-    int8_t mInstance;
+    int8_t mInstance = 1;
 };
 
 #ifndef QT_NO_DEBUG_STREAM
@@ -217,7 +220,7 @@ private:
 
     void timerEvent(QTimerEvent *event) override;
 
-    DiscordEventHandlers* mpHandlers;
+    DiscordEventHandlers* mpHandlers = nullptr;
 
     // These are function pointers to functions located in the Discord RPC library:
     std::function<void(const char*, DiscordEventHandlers*, int, const char*)> Discord_Initialize;
@@ -232,7 +235,7 @@ private:
     // std::function<void(const char*, int)> Discord_Respond;
     // std::function<void(DiscordEventHandlers*)> Discord_UpdateHandlers;
 
-    bool mLoaded;
+    bool mLoaded = false;
 
     // Key is a Application Id, Value is a pointer to a local copy of the data
     // currently held for that presence:

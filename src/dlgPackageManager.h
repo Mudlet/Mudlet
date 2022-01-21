@@ -2,8 +2,9 @@
 #define MUDLET_DLGPACKAGEMANAGER_H
 
 /***************************************************************************
- *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *   Copyright (C) 2011 by Heiko Koehn - KoehnHeiko@googlemail.com         *
+ *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -52,14 +53,15 @@ private slots:
     void slot_toggle_remove_button();
 
 private:
-    Ui::package_manager* ui;
-    Host* mpHost;
-    QTableWidget* mPackageTable;
-    QTableWidget* mDetailsTable;
-    QTextBrowser* mDescription;
-    QPushButton* mInstallButton;
-    QPushButton* mRemoveButton;
     void fillAdditionalDetails(const QMap<QString, QString>&);
+
+    Ui::package_manager* ui = nullptr;
+    Host* mpHost = nullptr;
+    QTableWidget* mPackageTable = nullptr;
+    QTableWidget* mDetailsTable = nullptr;
+    QTextBrowser* mDescription = nullptr;
+    QPushButton* mInstallButton = nullptr;
+    QPushButton* mRemoveButton = nullptr;
 };
 
 #endif

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2016, 2019-2020 by Stephen Lyons                   *
+ *   Copyright (C) 2015-2016, 2019-2020, 2022 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -42,12 +42,10 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 : QWidget(parent)
 , mpMap(pM)
 , mpHost(pH)
-, mShowDefaultArea(true)
 {
     setupUi(this);
 
 #if defined(INCLUDE_3DMAPPER)
-    glWidget = nullptr;
     QSurfaceFormat fmt;
     fmt.setSamples(10);
     QSurfaceFormat::setDefaultFormat(fmt);

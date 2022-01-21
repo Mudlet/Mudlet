@@ -125,24 +125,24 @@ private:
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
     // to be valid, but other properties don't have to be
-    bool validName;
-    bool validUrl;
-    bool validPort;
+    bool validName = false;
+    bool validUrl = false;
+    bool validPort = false;
 
     QStringList mProfileList;
     QPalette mRegularPalette;
     QPalette mOKPalette;
     QPalette mErrorPalette;
     QPalette mReadOnlyPalette;
-    QPushButton* offline_button;
-    QPushButton* connect_button;
-    QLineEdit* delete_profile_lineedit;
-    QPushButton* delete_button;
+    QPushButton* offline_button = nullptr;
+    QPushButton* connect_button = nullptr;
+    QLineEdit* delete_profile_lineedit = nullptr;
+    QPushButton* delete_button  = nullptr;
     QString mDiscordApplicationId;
     QString mDiscordInviteURL;
     QAction* mpAction_revealPassword;
     // true for the duration of the 'Copy profile' action
-    bool mCopyingProfile{};
+    bool mCopyingProfile = false;
     QString mDateTimeFormat;
     QVector<QColor> mCustomIconColors;
     QTimer mSearchTextTimer;

@@ -51,7 +51,7 @@ private:
     void restoreFile(const QString&, const bool);
 
     QPointer<Host> mpHost;
-    bool mNeedToSave{};
+    bool mNeedToSave = false;
 };
 
 #endif // MUDLET_DLGNOTEPAD_H

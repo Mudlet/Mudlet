@@ -3,7 +3,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
- *   Copyright (C) 2017-2018, 2020 by Stephen Lyons                        *
+ *   Copyright (C) 2017-2018, 2020, 2022 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -34,33 +34,12 @@
 #include <QScrollBar>
 #include <QShortcut>
 #include "post_guard.h"
-#include "utils.h"
 
-
-QString dlgIRC::HostNameCfgItem = qsl("irc_host");
-QString dlgIRC::HostPortCfgItem = qsl("irc_port");
-QString dlgIRC::HostSecureCfgItem = qsl("irc_secure");
-QString dlgIRC::NickNameCfgItem = qsl("irc_nick");
-QString dlgIRC::PasswordCfgItem = qsl("irc_password");
-QString dlgIRC::ChannelsCfgItem = qsl("irc_channels");
-QString dlgIRC::DefaultHostName = qsl("irc.libera.chat");
-int dlgIRC::DefaultHostPort = 6667;
-bool dlgIRC::DefaultHostSecure = false;
-QString dlgIRC::DefaultNickName = qsl("Mudlet");
-QStringList dlgIRC::DefaultChannels = QStringList() << qsl("#mudlet");
-int dlgIRC::DefaultMessageBufferLimit = 5000;
 
 dlgIRC::dlgIRC(Host* pHost)
-: mReadyForSending(false)
-, mpHost(pHost)
-, mIrcStarted(false)
-, mInputHistoryMax(8)
-, mConnectedHostName()
+: mpHost(pHost)
+, mRealName(mudlet::self()->version)
 {
-    mInputHistoryMax = 8;
-    mInputHistoryIdxNext = 0;
-    mInputHistoryIdxCurrent = 0;
-
     setupUi(this);
     setWindowIcon(QIcon(qsl(":/icons/mudlet_irc.png")));
 
@@ -99,8 +78,6 @@ dlgIRC::dlgIRC(Host* pHost)
     connect(connection, &IrcConnection::numericMessageReceived, this, &dlgIRC::slot_receiveNumericMessage);
 
     mPassword = readIrcPassword(mpHost);
-    mUserName = qsl("mudlet");
-    mRealName = mudlet::self()->version;
     mHostName = readIrcHostName(mpHost);
     mHostPort = readIrcHostPort(mpHost);
     mHostSecure = readIrcHostSecure(mpHost);
