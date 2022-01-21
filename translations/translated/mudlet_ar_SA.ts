@@ -661,17 +661,24 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="1266"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>ليس لديك خريطة حتى الآن - قم بتحميل واحدة، أو ابدأ الرسم من البداية.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="1263"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>لديك خريطة محملة (%n غرف)، لكن Mudlet لا يعرف أين أنت في الوقت الحالي.</numerusform>
+        <numerusform>لديك خريطة محملة (%n غرف)، لكن Mudlet لا يعرف أين أنت في الوقت الحالي.</numerusform>
+        <numerusform>لديك خريطة محملة (%n غرف)، لكن Mudlet لا يعرف أين أنت في الوقت الحالي.</numerusform>
+        <numerusform>لديك خريطة محملة (%n غرف)، لكن Mudlet لا يعرف أين أنت في الوقت الحالي.</numerusform>
+        <numerusform>لديك خريطة محملة (%n غرف)، لكن Mudlet لا يعرف أين أنت في الوقت الحالي.</numerusform>
+        <numerusform>لديك خريطة محملة (%n غرف)، لكن Mudlet لا يعرف أين أنت في الوقت الحالي.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1261"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>لا توجد غرف في الخريطة - قم بتحميل واحدة أخرى، أو ابدأ في رسم الخرائط من البداية.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2405"/>
@@ -1556,7 +1563,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="712"/>
       <source>Loading map(2) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>جاري تحميل الخريطة(2) في %1 تقرير</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1126"/>
@@ -1583,7 +1590,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1296"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>جاري تحميل الخريطة(1) في %1 تقرير</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1298"/>
