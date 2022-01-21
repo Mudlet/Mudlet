@@ -1982,7 +1982,32 @@ do
 end
 
 
+-- function for converting a color formatted string to 'plaintext' string
+local function x2string(text, style)
+  local ttbl = _Echos.Process(text, style)
+  local result = ""
+  for _, val in ipairs(ttbl) do
+    if type(val) == "string" and not val:starts("\27") then
+      result = result .. val
+    end
+  end
+  return result
+end
 
+-- function to convert a cecho formatted string to a nonformatted string
+function cecho2string(text)
+  return x2string(text, "Color")
+end
+
+-- function to convert a decho formatted string to a nonformatted string
+function decho2string(text)
+  return x2string(text, "Decimal")
+end
+
+-- function to convert a hecho formatted string to a nonformatted string
+function hecho2string(text)
+  return x2string(text, "Hex")
+end
 
 local ansiPattern = rex.new("\\e\\[([0-9:;]+?)m")
 
