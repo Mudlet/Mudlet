@@ -2487,8 +2487,8 @@ void T2DMap::createLabel(QRectF labelRectangle)
             text = tr("no text", "Default text if a label is created in mapper with no text");
         }
         label.text = text;
-        label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, tr("Background color", "2D Mapper create label color dialog title"));
-        label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, tr("Foreground color", "2D Mapper create label color dialog title"));
+        label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, tr("Background color", "2D Mapper create label color dialog title"), QColorDialog::ShowAlphaChannel);
+        label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, tr("Foreground color", "2D Mapper create label color dialog title"), QColorDialog::ShowAlphaChannel);
     } else if (textOrImageDialog.clickedButton() == imageButton) {
         label.bgColor = QColor(50, 50, 150, 100);
         label.text.clear();
@@ -2514,9 +2514,9 @@ void T2DMap::createLabel(QRectF labelRectangle)
 
     label.showOnTop = showOnTop;
     QPixmap pixmap(fabs(labelRectangle.width()), fabs(labelRectangle.height()));
+    pixmap.fill(Qt::transparent);
     QRect drawRectangle = labelRectangle.normalized().toRect();
     drawRectangle.moveTo(0, 0);
-    //pixmap.fill(QColor(0, 255, 0, 0));
     QPainter labelPainter(&pixmap);
     QPen labelPen;
     labelPainter.setFont(font);
