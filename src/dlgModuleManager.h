@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *   Copyright (C) 2011 by Chris Mitchell                                  *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -53,11 +54,11 @@ private slots:
     void slot_module_changed(QTableWidgetItem*);
 
 private:
-    Ui::module_manager* ui;
-    Host* mpHost;
-    QPushButton* mModuleUninstallButton;
-    QPushButton* mModuleInstallButton;
-    QPushButton* mModuleHelpButton;
+    Ui::module_manager* ui = nullptr;
+    Host* mpHost = nullptr;
+    QPushButton* mModuleUninstallButton = nullptr;
+    QPushButton* mModuleInstallButton = nullptr;
+    QPushButton* mModuleHelpButton = nullptr;
 };
 
 #endif

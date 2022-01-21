@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016-2020 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
@@ -60,43 +60,8 @@ using namespace std::chrono_literals;
 static const char* cButtonBaseColor = "baseColor";
 
 dlgTriggerEditor::dlgTriggerEditor(Host* pH)
-: mpAliasBaseItem(nullptr)
-, mpTriggerBaseItem(nullptr)
-, mpScriptsBaseItem(nullptr)
-, mpTimerBaseItem(nullptr)
-, mpActionBaseItem(nullptr)
-, mpKeyBaseItem(nullptr)
-, mpVarBaseItem(nullptr)
-, mpCurrentActionItem(nullptr)
-, mpCurrentKeyItem(nullptr)
-, mpCurrentTimerItem(nullptr)
-, mpCurrentScriptItem(nullptr)
-, mpCurrentTriggerItem(nullptr)
-, mpCurrentAliasItem(nullptr)
-, mpCurrentVarItem(nullptr)
-, mIsGrabKey(false)
-, mpHost(pH)
-, mpSourceEditorDocument(nullptr)
-, mpSourceEditorEdbee(nullptr)
-, mpSourceEditorEdbeeDocument(nullptr)
+: mpHost(pH)
 , mSearchOptions(pH->mSearchOptions)
-, mpAction_searchOptions(nullptr)
-, mIcon_searchOptions(QIcon())
-, mpAction_searchCaseSensitive(nullptr)
-, mpAction_searchIncludeVariables(nullptr)
-// TODO: Implement other searchOptions:
-//, mpAction_searchWholeWords(nullptr)
-//, mpAction_searchRegExp(nullptr)
-, mSavingAs(false)
-, mCleanResetQueued(false)
-, mAutosaveInterval{}
-, mTriggerEditorSplitterState{}
-, mAliasEditorSplitterState{}
-, mScriptEditorSplitterState{}
-, mActionEditorSplitterState{}
-, mKeyEditorSplitterState{}
-, mTimerEditorSplitterState{}
-, mVarEditorSplitterState{}
 {
     // init generated dialog
     setupUi(this);
@@ -223,8 +188,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpScriptsMainArea = new dlgScriptsMainArea(this);
     layoutColumn->addWidget(mpScriptsMainArea, 1);
 
-    mIsScriptsMainAreaEditHandler = false;
-    mpScriptsMainAreaEditHandlerItem = nullptr;
     connect(mpScriptsMainArea->lineEdit_script_event_handler_entry, &QLineEdit::returnPressed, this, &dlgTriggerEditor::slot_script_main_area_add_handler);
     connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemClicked, this, &dlgTriggerEditor::slot_script_main_area_edit_handler);
 
@@ -240,7 +203,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // Update the status bar on changes
     connect(mpSourceEditorEdbee->controller(), &edbee::TextEditorController::updateStatusTextSignal, this, &dlgTriggerEditor::slot_updateStatusBar);
-    simplifyEdbeeStatusBarRegex = new QRegularExpression(R"(^(?:\[\*\] )?(.+?) \|)");
+    simplifyEdbeeStatusBarRegex = new QRegularExpression(qsl(R"(^(?:\[\*\] )?(.+?) \|)"));
     mpSourceEditorEdbee->controller()->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
 
     // Update the editor preferences
@@ -867,7 +830,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     int triggerWidgetItemMinHeight = qRound(mTriggerPatternEdit.at(0)->minimumSizeHint().height() * 1.5);
     mpScrollArea->setMinimumHeight(triggerWidgetItemMinHeight);
 
-    showHiddenVars = false;
     widget_searchTerm->updateGeometry();
 
     if (mAutosaveInterval > 0) {
