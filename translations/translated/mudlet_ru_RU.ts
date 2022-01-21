@@ -5973,7 +5973,12 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="1459"/>
       <source>Select what to export (%n item(s))</source>
       <comment>This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Выберите, что экспортировать (%n элемент)</numerusform>
+        <numerusform>Выберите, что экспортировать (%n элементов)</numerusform>
+        <numerusform>Выберите, что экспортировать (%n элементов)</numerusform>
+        <numerusform>Выберите, что экспортировать (%n элементов)</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="347"/>
@@ -6098,7 +6103,12 @@ Count</source>
       <location filename="../src/dlgPackageManager.cpp" line="244"/>
       <source>Remove %n package(s)</source>
       <comment>Message on button in package manager to remove one or more (%n is the count of) selected package(s).</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Удалить %n пакет</numerusform>
+        <numerusform>Удалить %n пакетов</numerusform>
+        <numerusform>Удалить %n пакетов</numerusform>
+        <numerusform>Удалить %n пакетов</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="249"/>
@@ -7262,13 +7272,13 @@ for all of the %n selected room(s):</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="631"/>
       <source>Restore Actions toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Восстановить панель действий</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="634"/>
       <source>Restore Items toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Восстановить панель инструментов</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="721"/>
@@ -11515,22 +11525,22 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1200"/>
       <source>Display control characters as:</source>
-      <translation type="unfinished"/>
+      <translation>Показывать управляющие символы как:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1214"/>
       <source>nothing</source>
-      <translation type="unfinished"/>
+      <translation>ничего</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1219"/>
       <source>Unicode Control Pictures</source>
-      <translation type="unfinished"/>
+      <translation>Контрольные картинки Unicode</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1224"/>
       <source>CP437 (OEM Font)- like</source>
-      <translation type="unfinished"/>
+      <translation>CP437 (OEM Font)- похожый</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1339"/>
