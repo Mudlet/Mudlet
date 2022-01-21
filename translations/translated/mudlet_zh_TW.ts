@@ -5736,7 +5736,7 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="1464"/>
       <source>Select what to export</source>
       <comment>This is the text shown at the top of a groupbox initially and when there is NO items to export in the Package exporter dialogue.</comment>
-      <translation type="unfinished"/>
+      <translation>選擇要匯出的内容</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="216"/>
