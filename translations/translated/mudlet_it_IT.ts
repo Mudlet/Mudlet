@@ -1692,7 +1692,10 @@ Percorsi analizzati:
 +--------------------------------------------------------------+
 </source>
       <comment>Header for the system&apos;s statistics information displayed in the console, it is 64 &apos;narrow&apos; characters wide</comment>
-      <translation type="unfinished"/>
+      <translation>+ -------------------------------------------------------------- +
+|                    statistiche di sistema                      |
++ -------------------------------------------------------------- +
+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1460"/>
@@ -1728,31 +1731,31 @@ Percorsi analizzati:
       <location filename="../src/TMainConsole.cpp" line="1488"/>
       <source>Trigger Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Report Trigger:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1492"/>
       <source>Timer Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Report Timer:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1496"/>
       <source>Alias Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Rapporto Alias:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1500"/>
       <source>Keybinding Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Rapporto Tasti:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1504"/>
       <source>Script Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>Rapporto Script:</translation>
     </message>
   </context>
   <context>
@@ -4148,12 +4151,12 @@ non sarà variata nuovamente.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="2630"/>
       <source>Cannot replay file &quot;%1&quot;, error message was: &quot;replay file seems to be corrupt&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile riprodurre il file &quot;%1&quot;, il messaggio di errore era: &quot;il file di replay sembra corrotto&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2632"/>
       <source>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - Il replay è stato interrotto perché il file sembra corrotto.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2641"/>
@@ -6123,7 +6126,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="144"/>
       <source>Location which will be used to store log files - matching logs will be appended to.</source>
-      <translation type="unfinished"/>
+      <translation>Percorso in cui memorizzare i file di log - i log di file con lo stesso nome saranno accodati.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="145"/>
@@ -7253,7 +7256,7 @@ per tutte le %n stanze selezionate:</numerusform>
       <location filename="../src/dlgTriggerEditor.cpp" line="631"/>
       <source>Restore Actions toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ripristino Barra delle Azioni</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="634"/>
@@ -10232,12 +10235,12 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/mudlet.cpp" line="3078"/>
       <source>Replay each step with a shorter time interval between steps.</source>
-      <translation type="unfinished"/>
+      <translation>Riproduci ogni passaggio con un intervallo di esecuzione più corto.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3084"/>
       <source>Replay each step with a longer time interval between steps.</source>
-      <translation type="unfinished"/>
+      <translation>Riproduci ogni passaggio con un intervallo di esecuzione più lungo.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="3761"/>
@@ -11511,7 +11514,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1200"/>
       <source>Display control characters as:</source>
-      <translation type="unfinished"/>
+      <translation>Visualizza caratteri di controllo come:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1214"/>
