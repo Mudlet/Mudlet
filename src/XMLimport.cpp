@@ -611,7 +611,7 @@ void XMLimport::readHelpPackage()
 void XMLimport::readUnknownPackage()
 {
     while (!atEnd()) {
-        readNext();
+        skipCurrentElement();
         qDebug().nospace() << "XMLimport::readUnknownPackage(): ERROR: UNKNOWN "
                               "Package Element name: "
                            << name().toString() << " and content: " << text().toString();
@@ -619,17 +619,13 @@ void XMLimport::readUnknownPackage()
         if (isEndElement()) {
             break;
         }
-
-        if (isStartElement()) {
-            readUnknownPackage();
-        }
     }
 }
 
 void XMLimport::readUnknownHostElement()
 {
     while (!atEnd()) {
-        readNext();
+        skipCurrentElement();
         qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
                               "Host Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
@@ -637,27 +633,19 @@ void XMLimport::readUnknownHostElement()
         if (isEndElement()) {
             break;
         }
-
-        if (isStartElement()) {
-            readUnknownHostElement();
-        }
     }
 }
 
 void XMLimport::readUnknownTriggerElement()
 {
     while (!atEnd()) {
-        readNext();
-        qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
+        skipCurrentElement();
+        qDebug().nospace() << "XMLimport::readUnknownTriggerElement() ERROR: UNKNOWN "
                               "Trigger Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
 
         if (isEndElement()) {
             break;
-        }
-
-        if (isStartElement()) {
-            readUnknownTriggerElement();
         }
     }
 }
@@ -665,7 +653,7 @@ void XMLimport::readUnknownTriggerElement()
 void XMLimport::readUnknownTimerElement()
 {
     while (!atEnd()) {
-        readNext();
+        skipCurrentElement();
         qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
                               "Timer Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
@@ -673,17 +661,13 @@ void XMLimport::readUnknownTimerElement()
         if (isEndElement()) {
             break;
         }
-
-        if (isStartElement()) {
-            readUnknownTimerElement();
-        }
     }
 }
 
 void XMLimport::readUnknownAliasElement()
 {
     while (!atEnd()) {
-        readNext();
+        skipCurrentElement();
         qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
                               "Alias Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
@@ -691,17 +675,13 @@ void XMLimport::readUnknownAliasElement()
         if (isEndElement()) {
             break;
         }
-
-        if (isStartElement()) {
-            readUnknownAliasElement();
-        }
     }
 }
 
 void XMLimport::readUnknownActionElement()
 {
     while (!atEnd()) {
-        readNext();
+        skipCurrentElement();
         qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
                               "Action Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
@@ -709,17 +689,13 @@ void XMLimport::readUnknownActionElement()
         if (isEndElement()) {
             break;
         }
-
-        if (isStartElement()) {
-            readUnknownActionElement();
-        }
     }
 }
 
 void XMLimport::readUnknownScriptElement()
 {
     while (!atEnd()) {
-        readNext();
+        skipCurrentElement();
         qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
                               "Script Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
@@ -727,27 +703,19 @@ void XMLimport::readUnknownScriptElement()
         if (isEndElement()) {
             break;
         }
-
-        if (isStartElement()) {
-            readUnknownScriptElement();
-        }
     }
 }
 
 void XMLimport::readUnknownKeyElement()
 {
     while (!atEnd()) {
-        readNext();
+        skipCurrentElement();
         qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
                               "Key Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
 
         if (isEndElement()) {
             break;
-        }
-
-        if (isStartElement()) {
-            readUnknownKeyElement();
         }
     }
 }
