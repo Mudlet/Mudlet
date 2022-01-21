@@ -5831,7 +5831,7 @@ Utilizzi</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="1464"/>
       <source>Select what to export</source>
       <comment>This is the text shown at the top of a groupbox initially and when there is NO items to export in the Package exporter dialogue.</comment>
-      <translation type="unfinished"/>
+      <translation>Seleziona cosa esportare</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="216"/>
@@ -6098,7 +6098,7 @@ Utilizzi</translation>
       <location filename="../src/dlgPackageManager.cpp" line="249"/>
       <source>Remove package</source>
       <comment>Message on button in package manager initially and when there is no packages to remove.</comment>
-      <translation type="unfinished"/>
+      <translation>Rimuovi package</translation>
     </message>
   </context>
   <context>
@@ -6132,7 +6132,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="171"/>
       <source>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>Gli aggiornamenti automatici sono disattivati nelle versioni di sviluppo per evitare che un aggiornamento sovrascriva Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="198"/>
@@ -10812,7 +10812,7 @@ tenta di nuovo quando sarà terminato.</translation>
       <location filename="../src/ui/package_manager.ui" line="219"/>
       <source>Remove package</source>
       <comment>Message on button in package manager initially and when there is no packages to remove.</comment>
-      <translation type="unfinished"/>
+      <translation>Rimuovi package</translation>
     </message>
   </context>
   <context>
