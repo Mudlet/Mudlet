@@ -177,8 +177,7 @@ jobs:
 
   update-widecharwidth-source:
     runs-on: ubuntu-latest
-    # Disabled for the time being due to https://github.com/Mudlet/Mudlet/pull/4299
-    if: ${{ github.repository_owner == 'Mudlet' && false }}
+    if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
       - uses: actions/checkout@v2
         with:
