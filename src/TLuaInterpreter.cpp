@@ -4339,8 +4339,18 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
     } else if (funcName == qsl("setMovieSpeed")) {
         int speed = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie playback speed in %");
         movie->setSpeed(speed);
-    } else if (funcName == qsl("setMovieScale")) {
+    } else if (funcName == qsl("scaleMovie")) {
+        bool autoScale{true};
+        int n = lua_gettop(L);
+        if (n > 1) {
+            autoScale = getVerifiedBool(L, funcName.toUtf8().constData(), 2, "activate/deactivate scaling movie", true);
+        }
         movie->setScaledSize(pN->size());
+        if (autoScale) {
+            connect(pN, &TLabel::resized, [=] {movie->setScaledSize(pN->size());} );
+        } else {
+            pN->disconnect(SIGNAL(resized()));
+        }
     } else {
         return warnArgumentValue(L, __func__, qsl("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));
     }
@@ -4374,9 +4384,9 @@ int TLuaInterpreter::setMovieSpeed(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieSpeed
-int TLuaInterpreter::setMovieScale(lua_State* L)
+int TLuaInterpreter::scaleMovie(lua_State* L)
 {
-    return movieFunc(L, qsl("setMovieScale"));
+    return movieFunc(L, qsl("scaleMovie"));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextFormat
@@ -14859,7 +14869,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMovie", TLuaInterpreter::setMovie);
     lua_register(pGlobalLua, "setMovieStart", TLuaInterpreter::setMovieStart);
     lua_register(pGlobalLua, "setMovieSpeed", TLuaInterpreter::setMovieSpeed);
-    lua_register(pGlobalLua, "setMovieScale", TLuaInterpreter::setMovieScale);
+    lua_register(pGlobalLua, "scaleMovie", TLuaInterpreter::scaleMovie);
     lua_register(pGlobalLua, "setMovieFrame", TLuaInterpreter::setMovieFrame);
     lua_register(pGlobalLua, "setMoviePaused", TLuaInterpreter::setMoviePaused);
     lua_register(pGlobalLua, "getImageSize", TLuaInterpreter::getImageSize);
