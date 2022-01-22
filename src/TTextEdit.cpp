@@ -650,11 +650,11 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
 
 int TTextEdit::getGraphemeWidth(uint unicode) const
 {
-    // Markus Kuhn's mk_wcwidth()/mk_wcwidth_cjk():
-    // https://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c have not been updated since
-    // Unicode 5 and we have replaced them by wide_wcwidth:
-    // https://github.com/ridiculousfish/widecharwidth
-    // which returns 1 or 2 or a number of (negative) special values:
+    // https://github.com/ridiculousfish/widecharwidth/issues/11
+    if (unicode == 0x1F6E1) {
+        return 2;
+    }
+
     switch (widechar_wcwidth(unicode)) {
     case 1: // Draw as normal/narrow
         return 1;
