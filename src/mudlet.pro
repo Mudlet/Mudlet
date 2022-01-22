@@ -912,6 +912,7 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/GeyserScrollBox.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserSetConstraints.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserTests.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserStyleSheet.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserUserWindow.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserUtil.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserVBox.lua \
