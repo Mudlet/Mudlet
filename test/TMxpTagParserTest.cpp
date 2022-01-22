@@ -367,6 +367,32 @@ private slots:
         QCOMPARE(tag->asStartTag()->getAttribute("back").getValue(), "blue");
     }
 
+    void testUnquotedUrl() {
+        auto node = parseNode("<sound FName=\"cow.wav\" U=https://raw.githubusercontent.com/StickMUD/StickMUDSounds/master/sounds/>");
+
+        QVERIFY(node);
+        QVERIFY(node->isStartTag());
+
+        MxpStartTag* tag = node->asStartTag();
+        QCOMPARE(tag->getName(), "sound");
+        QCOMPARE(tag->getAttributeValue("FName"), "cow.wav");
+        QCOMPARE(tag->getAttributeValue("U"), "https://raw.githubusercontent.com/StickMUD/StickMUDSounds/master/sounds/");
+
+    }
+
+    void testEmptyTagWithSlash() {
+        auto node = parseNode("<send url=http://www.gogle.com/ />");
+
+        QVERIFY(node);
+        QVERIFY(node->isStartTag());
+
+        MxpStartTag* tag = node->asStartTag();
+        QVERIFY(tag->isEmpty());
+        QCOMPARE(tag->getName(), "send");
+        QCOMPARE(tag->getAttributeValue("url"), "http://www.gogle.com/");
+    }
+
+
     void cleanupTestCase() {}
 };
 
