@@ -2153,14 +2153,6 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
 
                 if (mspVAR == "V") {
                     mediaData.setMediaVolume(mspVAL.toInt());
-
-                    if (mediaData.getMediaVolume() == TMediaData::MediaVolumePreload) {
-                        continue; // Support preloading
-                    } else if (mediaData.getMediaVolume() > TMediaData::MediaVolumeMax) {
-                        mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
-                    } else if (mediaData.getMediaVolume() < TMediaData::MediaVolumeMin) {
-                        mediaData.setMediaVolume(TMediaData::MediaVolumeMin);
-                    }
                 } else if (mspVAR == "L") {
                     mediaData.setMediaLoops(mspVAL.toInt());
 
