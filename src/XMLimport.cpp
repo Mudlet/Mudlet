@@ -966,7 +966,7 @@ void XMLimport::readHostPackage(Host* pHost)
         readNext();
 
         if (isEndElement()) {
-            continue;
+            break;
         }
         if (isStartElement()) {
             if (name() == "name") {
