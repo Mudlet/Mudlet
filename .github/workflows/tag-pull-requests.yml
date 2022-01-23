@@ -2,6 +2,9 @@ name: Pull request
 
 on:
   pull_request_target:
+  # TODO: remove me
+  pull_request:
+  push:
 
 jobs:
   add-milestone:
