@@ -397,7 +397,7 @@ public:
     static int setMovieSpeed(lua_State*);
     static int scaleMovie(lua_State*);
     static int setMovieFrame(lua_State*);
-    static int pauseMovied(lua_State*);
+    static int pauseMovie(lua_State*);
     static int setCmdLineAction(lua_State*);
     static int resetCmdLineAction(lua_State*);
     static int setCmdLineStyleSheet(lua_State*);
