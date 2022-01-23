@@ -34,6 +34,7 @@ jobs:
         TOKEN: ${{ secrets.GH_PAT_UPDATE_PULL_REQUESTS }}
       run: |
         curl -s --request PATCH \
-            --url ${{ github.event.pull_request.issue_url }} \
+            # --url ${{ github.event.pull_request.issue_url }} \
+            --url 'https://api.github.com/repos/Mudlet/Mudlet/issues/5923' \
             --header 'authorization: token "$TOKEN"' \
             --data '{"milestone": "$MILESTONE_NUMBER"}'
