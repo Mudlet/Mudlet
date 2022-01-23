@@ -170,6 +170,12 @@ void TLabel::enterEvent(QEvent* event)
     }
 }
 
+void TLabel::resizeEvent(QResizeEvent* event)
+{
+    emit resized();
+    QWidget::resizeEvent(event);
+}
+
 
 // This function deferences previous functions in the Lua registry.
 // This allows the functions to be safely overwritten.

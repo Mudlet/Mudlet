@@ -30,3 +30,4 @@ cmake-build-debug
 #Docker
 docker/docker-compose.override.yml
 docker/.env
+*.lua

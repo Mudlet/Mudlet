@@ -60,6 +60,7 @@ public:
     void mouseMoveEvent(QMouseEvent*) override;
     void leaveEvent(QEvent*) override;
     void enterEvent(QEvent*) override;
+    void resizeEvent(QResizeEvent* event) override;
     void setClickThrough(bool clickthrough);
 
     QPointer<Host> mpHost;
@@ -74,6 +75,9 @@ public:
 
 private:
     void releaseFunc(const int existingFunction, const int newFunction);
+
+signals:
+    void resized();
 };
 
 #endif // MUDLET_TLABEL_H
