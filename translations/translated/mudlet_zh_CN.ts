@@ -6344,12 +6344,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3464"/>
       <source>How many rooms in the whole map have this symbol.</source>
-      <translation type="unfinished"/>
+      <translation>整个地图中有多少房间具有此符号.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3482"/>
       <source>The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.</source>
-      <translation type="unfinished"/>
+      <translation>具有此符号的房间，最多可达三十二个，如果有超过三十二个，它们依然会被提示，但不会显示出来。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3490"/>
@@ -6560,7 +6560,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4185"/>
       <source>Deleting map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>正在删除地图，请稍候…</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4197"/>
@@ -6642,7 +6642,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="984"/>
       <source>Set the number of the room that this special exit leads to.</source>
-      <translation type="unfinished"/>
+      <translation>设置此特殊出口通向的房间的编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="992"/>
@@ -6804,7 +6804,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1357"/>
       <location filename="../src/dlgRoomExits.cpp" line="1518"/>
       <source>Set the number of the room in from this one.</source>
-      <translation type="unfinished"/>
+      <translation>设置此房间向 in 方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1267"/>
@@ -6816,7 +6816,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1365"/>
       <location filename="../src/dlgRoomExits.cpp" line="1520"/>
       <source>Set the number of the room out from this one.</source>
-      <translation type="unfinished"/>
+      <translation>设置此房间向 out 方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1058"/>
@@ -7150,13 +7150,13 @@ for all of the %n selected room(s):</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="631"/>
       <source>Restore Actions toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
-      <translation type="unfinished"/>
+      <translation>还原操作工具栏</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="634"/>
       <source>Restore Items toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
-      <translation type="unfinished"/>
+      <translation>还原项目工具栏</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="721"/>
@@ -7701,7 +7701,7 @@ for all of the %n selected room(s):</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9036"/>
       <source>Sound file to play when the trigger fires.</source>
-      <translation type="unfinished"/>
+      <translation>触发器触发时要播放的声音文件。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="827"/>
@@ -8499,7 +8499,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="336"/>
       <source>&lt;p&gt;Open a link to Discord.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;打开至 Discord 的链接.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="344"/>
@@ -8525,7 +8525,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="363"/>
       <source>Close profile</source>
-      <translation type="unfinished"/>
+      <translation>关闭配置文件</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="161"/>
@@ -9100,7 +9100,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="366"/>
       <location filename="../src/mudlet.cpp" line="689"/>
       <source>Close profile</source>
-      <translation type="unfinished"/>
+      <translation>关闭配置文件</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="431"/>
@@ -11299,7 +11299,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3417"/>
       <source>To disable shortcut input &apos;Esc&apos; key.</source>
-      <translation type="unfinished"/>
+      <translation>要禁用快捷方式输入 'Esc' 键。</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3436"/>
@@ -11365,7 +11365,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="294"/>
       <source>Set dark theme in &lt;a href=&quot;dark-code-editor&quot;&gt;code editor&lt;/a&gt; as well?</source>
-      <translation type="unfinished"/>
+      <translation>也要在 &lt;a href=&quot;dark-code-editor&quot;&gt;代码编辑器&lt;/a&gt; 中设置暗色主题吗？</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="346"/>
