@@ -10116,23 +10116,25 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="3059"/>
       <source>Cannot load a replay as one is already in progress in this or another profile.</source>
-      <translation type="unfinished"/>
+      <translation>无法加载回放，因为此配置文件或另一个配置文件中已有一个回放进程正在进行中。</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3078"/>
       <source>Replay each step with a shorter time interval between steps.</source>
-      <translation type="unfinished"/>
+      <translation>以较短的时间间隔重放每一步。</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3084"/>
       <source>Replay each step with a longer time interval between steps.</source>
-      <translation type="unfinished"/>
+      <translation>以较长的时间间隔重放每一步。</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="3761"/>
       <source>Review the update(s) available...</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>查看可用的更新...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4648"/>
@@ -10566,7 +10568,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="1699"/>
       <location filename="../src/mudlet.cpp" line="3155"/>
       <source>Load a Mudlet replay.</source>
-      <translation type="unfinished"/>
+      <translation>加载 Mudlet 回放.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2759"/>
@@ -10637,7 +10639,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="2999"/>
       <source>[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.</source>
       <comment>Here %1 will be replaced with the keyboard shortcut, default is ALT+L.</comment>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ] - 简洁的输入行模式。单击 %1 以再次显示右下角的按钮。</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3076"/>
@@ -10707,7 +10709,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/package_manager.ui" line="219"/>
       <source>Remove package</source>
       <comment>Message on button in package manager initially and when there is no packages to remove.</comment>
-      <translation type="unfinished"/>
+      <translation>移除软件包</translation>
     </message>
   </context>
   <context>
@@ -11257,27 +11259,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1944"/>
       <source>Delete map:</source>
-      <translation type="unfinished"/>
+      <translation>删除地图:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1957"/>
       <source>Press to delete map</source>
-      <translation type="unfinished"/>
+      <translation>点击删除地图</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1964"/>
       <source>Enable &apos;Delete map&apos; button</source>
-      <translation type="unfinished"/>
+      <translation>启用 '删除地图' 按钮</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2752"/>
       <source>Server password: </source>
-      <translation type="unfinished"/>
+      <translation>服务器密码： </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2769"/>
       <source>&lt;p&gt;TLS/SSL is usually on port 6697. IRC networks often use a &lt;b&gt;+&lt;/b&gt; when listing secure ports offered.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;TLS/SSL 通常位于端口 6697 上。IRC 网络在列出提供的安全端口时通常使用 &lt;b&gt;+&lt;/b&gt; 。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2772"/>
@@ -11287,12 +11289,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3390"/>
       <source>Shortcuts</source>
-      <translation type="unfinished"/>
+      <translation>快捷键</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3405"/>
       <source>Main window shortcuts</source>
-      <translation type="unfinished"/>
+      <translation>主窗口快捷键</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3417"/>
@@ -11302,7 +11304,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3436"/>
       <source>Reset to defaults</source>
-      <translation type="unfinished"/>
+      <translation>恢复默认设置</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3692"/>
@@ -11343,22 +11345,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="230"/>
       <source>System setting</source>
-      <translation type="unfinished"/>
+      <translation>系统设置</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="235"/>
       <source>Light</source>
-      <translation type="unfinished"/>
+      <translation>亮色主题</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="240"/>
       <source>Dark</source>
-      <translation type="unfinished"/>
+      <translation>深色主题</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="265"/>
       <source>Appearance</source>
-      <translation type="unfinished"/>
+      <translation>外观</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="294"/>
@@ -11395,22 +11397,22 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1200"/>
       <source>Display control characters as:</source>
-      <translation type="unfinished"/>
+      <translation>将控制字符显示为:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1214"/>
       <source>nothing</source>
-      <translation type="unfinished"/>
+      <translation>无</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1219"/>
       <source>Unicode Control Pictures</source>
-      <translation type="unfinished"/>
+      <translation>Unicode 控制图像</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1224"/>
       <source>CP437 (OEM Font)- like</source>
-      <translation type="unfinished"/>
+      <translation>CP437 (OEM 字体) - 类似</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1339"/>
@@ -11420,7 +11422,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1349"/>
       <source>Advanced</source>
-      <translation type="unfinished"/>
+      <translation>高级选项</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1355"/>
@@ -11430,7 +11432,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1358"/>
       <source>Show invisible Unicode control characters</source>
-      <translation type="unfinished"/>
+      <translation>显示不可见的 Unicode 控制字符</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1401"/>
