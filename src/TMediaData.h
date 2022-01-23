@@ -54,7 +54,14 @@ public:
     QString getMediaFileName() const { return mMediaFileName; }
     void setMediaFileName(QString mediaFileName) { mMediaFileName = mediaFileName; }
     int getMediaVolume() const { return mMediaVolume; }
-    void setMediaVolume(int mediaVolume) { mMediaVolume = mediaVolume; }
+    void setMediaVolume(int mediaVolume) {
+        if (mediaVolume == TMediaData::MediaVolumePreload) {
+            // Support preloading
+            mMediaVolume = TMediaData::MediaVolumePreload;
+        } else {
+            mMediaVolume =  qBound(static_cast<int>(TMediaData::MediaVolumeMin), mediaVolume, static_cast<int>(TMediaData::MediaVolumeMax));
+        }
+    }
     int getMediaLoops() const { return mMediaLoops; }
     void setMediaLoops(int mediaLoops) { mMediaLoops = mediaLoops; }
     int getMediaPriority() const { return mMediaPriority; }

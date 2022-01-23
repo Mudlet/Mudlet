@@ -26,7 +26,7 @@ Geyser.Label.scrollH = {}
 function Geyser.Label:echo(message, color, format)
   message = message or self.message
   self.message = message
-  message = message:gsub("\n", "<br>")
+  message = utf8.gsub(message, "\n", "<br>")
   color = color or self.fgColor
   self.fgColor = color
   if format then self:processFormatString(format) end
@@ -220,6 +220,15 @@ end
 --@param frameNr is the number of the frame to jump
 function Geyser.Label:setMovieFrame(frameNr)
   return setMovieFrame(self.name, frameNr)
+end
+
+---scaleMovie resizes the movie to the label size
+--@param autoScale optional parameter to stop scaling movie if false
+function Geyser.Label:scaleMovie(autoScale)
+  if autoScale ~= false then
+    autoScale = true
+  end
+  return scaleMovie(self.name, autoScale)
 end
 
 

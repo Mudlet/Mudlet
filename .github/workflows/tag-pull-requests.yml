@@ -1,0 +1,26 @@
+name: Pull request
+
+on:
+  pull_request_target:
+
+jobs:
+  add-milestone:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Get next milestone
+      id: next-milestone
+      uses: mikefarah/yq@master
+      with:
+        cmd: yq eval '.milestones.next-milestone' '.github/repo-metadata.yml'
+
+    - name: Assign PR to milestone
+      env:
+        TOKEN: ${{ secrets.GH_PAT_UPDATE_PULL_REQUESTS }}
+      run: |
+        curl -s --request PATCH \
+            --url ${{ github.event.pull_request.issue_url }} \
+            --header 'authorization: token ${TOKEN}' \
+            --data '{"milestone": "${{ steps.next-milestone.outputs.result }}"}'
