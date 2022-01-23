@@ -6768,36 +6768,36 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1333"/>
       <location filename="../src/dlgRoomExits.cpp" line="1512"/>
       <source>Set the number of the room southwest of this one.</source>
-      <translation type="unfinished"/>
+      <translation>设置此房间西南方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1240"/>
       <source>Entered number is invalid, set the number of the room south of this one.</source>
-      <translation type="unfinished"/>
+      <translation>输入的编号无效，请设置在这个房间南边的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1241"/>
       <location filename="../src/dlgRoomExits.cpp" line="1341"/>
       <location filename="../src/dlgRoomExits.cpp" line="1514"/>
       <source>Set the number of the room south of this one.</source>
-      <translation type="unfinished"/>
+      <translation>设置此房间南边方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1249"/>
       <source>Entered number is invalid, set the number of the room southeast of this one.</source>
-      <translation type="unfinished"/>
+      <translation>输入的编号无效，请设置在这个房间东南方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1250"/>
       <location filename="../src/dlgRoomExits.cpp" line="1349"/>
       <location filename="../src/dlgRoomExits.cpp" line="1516"/>
       <source>Set the number of the room southeast of this one.</source>
-      <translation type="unfinished"/>
+      <translation>设置此房间东南方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1258"/>
       <source>Entered number is invalid, set the number of the room in from this one.</source>
-      <translation type="unfinished"/>
+      <translation>输入的编号无效，请设置在这个房间in方向出口的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1259"/>
@@ -9110,7 +9110,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="432"/>
       <source>Open a link to the Mudlet server on Discord</source>
-      <translation type="unfinished"/>
+      <translation>在 Discord 上打开至 Mudlet 服务器的链接。</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="474"/>
@@ -9148,7 +9148,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="679"/>
       <source>Show Map</source>
-      <translation type="unfinished"/>
+      <translation>显示地图</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="680"/>
