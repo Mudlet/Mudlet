@@ -1671,61 +1671,61 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1460"/>
       <source>GMCP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>GMCP 事件:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1464"/>
       <source>ATCP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>ATCP 事件:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1468"/>
       <source>Channel102 events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>频道102 事件：</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1472"/>
       <source>MSSP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>MSSP 事件:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1477"/>
       <source>MSDP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>MSDP 事件:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1488"/>
       <source>Trigger Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>触发器报告:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1492"/>
       <source>Timer Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>计时器报告:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1496"/>
       <source>Alias Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>别名报告：</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1500"/>
       <source>Keybinding Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>按键绑定报告：</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1504"/>
       <source>Script Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
-      <translation type="unfinished"/>
+      <translation>脚本报告：</translation>
     </message>
   </context>
   <context>
@@ -5502,7 +5502,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1818"/>
       <source>Load profile without connecting.</source>
-      <translation type="unfinished"/>
+      <translation>在不连接的情况下加载配置文件。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1834"/>
@@ -6427,33 +6427,33 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="2137"/>
       <source>Any map file (*.dat *.json *.xml)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>任意地图文件 (*.dat *.json *.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2138"/>
       <location filename="../src/dlgProfilePreferences.cpp" line="2194"/>
       <source>Mudlet binary map (*.dat)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet 二进制地图 (*.dat)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2139"/>
       <location filename="../src/dlgProfilePreferences.cpp" line="2195"/>
       <source>Mudlet JSON map (*.json)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet JSON 地图 (*.json)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2140"/>
       <source>Mudlet XML map (*.xml)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet XML 地图 (*.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2141"/>
       <source>Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>任意文件 (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3452"/>
@@ -6565,7 +6565,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4197"/>
       <source>Deleted map.</source>
-      <translation type="unfinished"/>
+      <translation>删除地图.</translation>
     </message>
   </context>
   <context>
