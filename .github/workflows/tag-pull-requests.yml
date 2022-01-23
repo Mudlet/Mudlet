@@ -22,10 +22,12 @@ jobs:
     - name: 'Convert milestone to Github #'
       id: next-milestone-number
       run: |
-        curl --silent --request GET \
+        MILESTONE_NUMBER = $(curl --silent --request GET \
           --url https://api.github.com/repos/Mudlet/Mudlet/milestones \
           -H "Accept: application/vnd.github.v3+json" | \
-          jq '.[] | select(.title == "${{ steps.next-milestone-string.outputs.result }}").number'
+          jq '.[] | select(.title == "${{ steps.next-milestone-string.outputs.result }}").number')
+
+        echo "MILESTONE_NUMBER=$MILESTONE_NUMBER" >> "$GITHUB_ENV"
 
     - name: Assign PR to milestone
       env:
@@ -34,4 +36,4 @@ jobs:
         curl -s --request PATCH \
             --url ${{ github.event.pull_request.issue_url }} \
             --header 'authorization: token "${TOKEN}"' \
-            --data '{"milestone": "${{ steps.next-milestone-number.outputs.result }}"}'
+            --data '{"milestone": "$MILESTONE_NUMBER"}'
