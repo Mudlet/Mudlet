@@ -9976,7 +9976,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="512"/>
       <source>Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.</source>
       <comment>Same text is used in 2 places.</comment>
-      <translation type="unfinished"/>
+      <translation>分割 Mudlet 屏幕以同时显示多个配置文件；加载的配置文件少于两个时禁用。</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1002"/>
