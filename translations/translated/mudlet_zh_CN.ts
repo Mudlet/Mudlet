@@ -6677,7 +6677,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1168"/>
       <source>Entered number is invalid, set the number of the room northwest of this one.</source>
-      <translation type="unfinished"/>
+      <translation>输入的编号无效，请设置在这个房间西北方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1169"/>
@@ -6809,7 +6809,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1267"/>
       <source>Entered number is invalid, set the number of the room out from this one.</source>
-      <translation type="unfinished"/>
+      <translation>输入的编号无效，请设置在这个房间向 out 出口的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1268"/>
