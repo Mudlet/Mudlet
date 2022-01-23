@@ -22,9 +22,9 @@ jobs:
     - name: 'Convert milestone to Github #'
       id: next-milestone-number
       run: |
-        MILESTONE_NUMBER=$(curl --silent --request GET \
+        MILESTONE_NUMBER=$(curl --silent --request GET                \
           --url https://api.github.com/repos/Mudlet/Mudlet/milestones \
-          -H "Accept: application/vnd.github.v3+json" | \
+          -H "Accept: application/vnd.github.v3+json" |               \
           jq '.[] | select(.title == "${{ steps.next-milestone-string.outputs.result }}").number')
 
         echo "MILESTONE_NUMBER=$MILESTONE_NUMBER" >> "$GITHUB_ENV"
@@ -34,6 +34,7 @@ jobs:
         TOKEN: ${{ secrets.GH_PAT_UPDATE_PULL_REQUESTS }}
       run: |
         curl -s --request PATCH \
-            --url 'https://api.github.com/repos/Mudlet/Mudlet/issues/5923' \
-            --header 'authorization: token "$TOKEN"' \
-            --data '{"milestone": "$MILESTONE_NUMBER"}'
+          -H "Accept: application/vnd.github.v3+json"      \
+          --url ${{ github.event.pull_request.issue_url }} \
+          --header "authorization: token $TOKEN"           \
+          --data '{"milestone": '"$MILESTONE_NUMBER"'}'
