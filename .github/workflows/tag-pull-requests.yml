@@ -22,7 +22,7 @@ jobs:
     - name: 'Convert milestone to Github #'
       id: next-milestone-number
       run: |
-        MILESTONE_NUMBER = $(curl --silent --request GET \
+        MILESTONE_NUMBER=$(curl --silent --request GET \
           --url https://api.github.com/repos/Mudlet/Mudlet/milestones \
           -H "Accept: application/vnd.github.v3+json" | \
           jq '.[] | select(.title == "${{ steps.next-milestone-string.outputs.result }}").number')
