@@ -35,5 +35,5 @@ jobs:
       run: |
         curl -s --request PATCH \
             --url ${{ github.event.pull_request.issue_url }} \
-            --header 'authorization: token "${TOKEN}"' \
+            --header 'authorization: token "$TOKEN"' \
             --data '{"milestone": "$MILESTONE_NUMBER"}'
