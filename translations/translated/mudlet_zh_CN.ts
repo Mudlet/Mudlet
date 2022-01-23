@@ -6684,84 +6684,84 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1277"/>
       <location filename="../src/dlgRoomExits.cpp" line="1498"/>
       <source>Set the number of the room northwest of this one.</source>
-      <translation type="unfinished"/>
+      <translation>设置此房间西北方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1177"/>
       <source>Entered number is invalid, set the number of the room north of this one.</source>
-      <translation type="unfinished"/>
+      <translation>输入的编号无效，请设置在这个房间北边的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1178"/>
       <location filename="../src/dlgRoomExits.cpp" line="1285"/>
       <location filename="../src/dlgRoomExits.cpp" line="1500"/>
       <source>Set the number of the room north of this one.</source>
-      <translation type="unfinished"/>
+      <translation>设置此房间北边方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1186"/>
       <source>Entered number is invalid, set the number of the room northeast of this one.</source>
-      <translation type="unfinished"/>
+      <translation>输入的编号无效，请设置在这个房间东北方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1187"/>
       <location filename="../src/dlgRoomExits.cpp" line="1293"/>
       <location filename="../src/dlgRoomExits.cpp" line="1502"/>
       <source>Set the number of the room northeast of this one.</source>
-      <translation type="unfinished"/>
+      <translation>设置此房间东北方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1195"/>
       <source>Entered number is invalid, set the number of the room up from this one.</source>
-      <translation type="unfinished"/>
+      <translation>输入的编号无效，请设置在这个房间向上出口的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1196"/>
       <location filename="../src/dlgRoomExits.cpp" line="1301"/>
       <location filename="../src/dlgRoomExits.cpp" line="1504"/>
       <source>Set the number of the room up from this one.</source>
-      <translation type="unfinished"/>
+      <translation>设置此房间向上方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1204"/>
       <source>Entered number is invalid, set the number of the room west of this one.</source>
-      <translation type="unfinished"/>
+      <translation>输入的编号无效，请设置在这个房间西边的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1205"/>
       <location filename="../src/dlgRoomExits.cpp" line="1309"/>
       <location filename="../src/dlgRoomExits.cpp" line="1506"/>
       <source>Set the number of the room west of this one.</source>
-      <translation type="unfinished"/>
+      <translation>设置此房间西边方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1213"/>
       <source>Entered number is invalid, set the number of the room east of this one.</source>
-      <translation type="unfinished"/>
+      <translation>输入的编号无效，请设置在这个房间东边的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1214"/>
       <location filename="../src/dlgRoomExits.cpp" line="1317"/>
       <location filename="../src/dlgRoomExits.cpp" line="1508"/>
       <source>Set the number of the room east of this one.</source>
-      <translation type="unfinished"/>
+      <translation>设置此房间东边方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1222"/>
       <source>Entered number is invalid, set the number of the room down from this one.</source>
-      <translation type="unfinished"/>
+      <translation>输入的编号无效，请设置在这个房间向下出口的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1223"/>
       <location filename="../src/dlgRoomExits.cpp" line="1325"/>
       <location filename="../src/dlgRoomExits.cpp" line="1510"/>
       <source>Set the number of the room down from this one.</source>
-      <translation type="unfinished"/>
+      <translation>设置此房间向下方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1231"/>
       <source>Entered number is invalid, set the number of the room southwest of this one.</source>
-      <translation type="unfinished"/>
+      <translation>输入的编号无效，请设置在这个房间西南方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1232"/>
