@@ -6016,7 +6016,9 @@ Count</source>
       <location filename="../src/dlgPackageManager.cpp" line="244"/>
       <source>Remove %n package(s)</source>
       <comment>Message on button in package manager to remove one or more (%n is the count of) selected package(s).</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>移除 %n 个软件包</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="249"/>
@@ -6041,7 +6043,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="145"/>
       <source>Select a directory where logs will be saved.</source>
-      <translation type="unfinished"/>
+      <translation>选择保存日志的目录。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="146"/>
