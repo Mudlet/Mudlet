@@ -1,12 +1,16 @@
 {
-    "cmake.configureOnOpen": true,
-    "cmake.configureSettings": {
-        "CMAKE_TOOLCHAIN_FILE": "${workspaceFolder}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake"
-      },
-    "Lua.runtime.version": "Lua 5.1",
-    // files to exclude from clang-tidy code analysis
-    "C_Cpp.files.exclude": {
-      "**/3rdparty": true,
-      "**/ui_*.h": true
+  "cmake.configureOnOpen": true,
+  "cmake.configureSettings": {
+      "CMAKE_TOOLCHAIN_FILE": "${workspaceFolder}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake"
     },
+  "Lua.runtime.version": "Lua 5.1",
+  // files to exclude from clang-tidy code analysis
+  "C_Cpp.files.exclude": {
+    "**/3rdparty": true,
+    "**/ui_*.h": true
+  },
+  // don't show 3rdparty files in explorer nor search
+  "files.exclude": {
+    "3rdparty/": true
+  }
 }

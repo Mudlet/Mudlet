@@ -4331,7 +4331,7 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
     if (funcName == qsl("startMovie")) {
         movie->start();
     } else if (funcName == qsl("pauseMovie")) {
-        movie->setPaused(movie->state() != QMovie::Paused);
+        movie->setPaused(true);
     } else if (funcName == qsl("setMovieFrame")) {
         int frame = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie frame number");
         lua_pushboolean(L, movie->jumpToFrame(frame));

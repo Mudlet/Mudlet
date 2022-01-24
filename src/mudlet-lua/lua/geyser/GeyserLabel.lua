@@ -200,12 +200,12 @@ function Geyser.Label:setMovie(fileName)
   return result, error
 end
 
----startMovie starts animation on label
+---startMovie starts animation on a label
 function Geyser.Label:startMovie()
   return startMovie(self.name)
 end
 
----pauseMovie pauses or resumes animation on label
+---pauseMovie pauses animation on a label
 function Geyser.Label:pauseMovie()
   return pauseMovie(self.name)
 end
