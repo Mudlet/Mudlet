@@ -251,12 +251,12 @@ jobs:
             Latest version of the Qt utility feature that allows singleshot connections.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-widechar-width-${{ github.sha }}
+          branch: update-singleshot-connect-${{ github.sha }}
           path: src/
           commit-message: (autocommit) Update singleshot_connect.h to latest upstream
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
 
-  update-cmakes-scripts-source:
+  update-cmake-scripts-source:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
@@ -291,7 +291,7 @@ jobs:
             Latest version of the CMake utility feature that allows use to use various CMake sanitizers via the `USE_SANITIZER` CMake variable.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-widechar-width-${{ github.sha }}
+          branch: update-cmake-scripts-${{ github.sha }}
           path: src/
           commit-message: (autocommit) Update sanitizers.cmake to latest upstream
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
