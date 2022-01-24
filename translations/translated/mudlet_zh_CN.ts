@@ -4072,12 +4072,12 @@ changed.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="2630"/>
       <source>Cannot replay file &quot;%1&quot;, error message was: &quot;replay file seems to be corrupt&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>无法重放文件 &quot;%1&quot;，错误消息为: &quot;重放文件似乎已损坏&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2632"/>
       <source>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</source>
-      <translation type="unfinished"/>
+      <translation>[ 警告 ] - 重播已中止, 因为文件似乎已损坏。</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2641"/>
@@ -5524,7 +5524,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1896"/>
       <source>Click to reveal the password for this profile.</source>
-      <translation type="unfinished"/>
+      <translation>点击以显示此配置文件的密码。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1757"/>
@@ -6022,7 +6022,7 @@ Count</source>
       <location filename="../src/dlgPackageManager.cpp" line="249"/>
       <source>Remove package</source>
       <comment>Message on button in package manager initially and when there is no packages to remove.</comment>
-      <translation type="unfinished"/>
+      <translation>移除软件包</translation>
     </message>
   </context>
   <context>
