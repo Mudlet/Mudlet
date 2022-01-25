@@ -17,6 +17,8 @@ SetQtBaseDir "C:\src\verbose_output.log"
 SetMingwBaseDir "C:\src\verbose_output.log"
 SetLuarocksPath "C:\src\verbose_output.log"
 
+[Environment]::SetEnvironmentVariable("QT_QPA_PLATFORM_PLUGIN_PATH", "$Env:QT_BASE_DIR\plugins\platforms", "User")
+
 if(-NOT (Test-Path "$sourceDir\build")){
     New-Item -ItemType Directory "$sourceDir\build"
 }
@@ -25,7 +27,6 @@ cd "$sourceDir\build"
 
 Write-Output "Running qmake"
 $Env:PATH="C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;$Env:QT_BASE_DIR\bin;$Env:MINGW_BASE_DIR\bin;" + (($Env:PATH.Split(';') | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';')
-[Environment]::SetEnvironmentVariable("QT_QPA_PLATFORM_PLUGIN_PATH", "$Env:QT_BASE_DIR\plugins\platforms", "User")
 qmake CONFIG+=debug ../src/mudlet.pro
 if("$LastExitCode" -ne "0"){
   exit 1

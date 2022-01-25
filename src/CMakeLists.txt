@@ -462,24 +462,23 @@ if(WIN32)
   set_target_properties(mudlet PROPERTIES WIN32_EXECUTABLE ON)
   if(USE_MAIN_BUILD_SYSTEM)
     target_compile_definitions(mudlet PRIVATE INCLUDE_MAIN_BUILD_SYSTEM)
+    add_custom_command(TARGET mudlet POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:mudlet> $<TARGET_FILE_DIR:mudlet>
+            COMMAND_EXPAND_LISTS
+            )
+
+    file(COPY ${MINGW_BASE_DIR}/bin/libyajl.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
+    file(COPY ${MINGW_BASE_DIR}/bin/lua51.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
+    file(COPY ${MINGW_BASE_DIR}/bin/libcrypto-1_1.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
+    file(COPY ${MINGW_BASE_DIR}/bin/libssl-1_1.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
+    file(COPY ${MINGW_BASE_DIR}/bin/libzip.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
+    file(COPY ${MINGW_BASE_DIR}/bin/libhunspell-1.6-0.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
+    file(COPY ${MINGW_BASE_DIR}/bin/libpcre-1.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
+    file(COPY ${MINGW_BASE_DIR}/bin/zlib1.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
   endif()
   # The UNICODE and _UNICODE definitions are needed to make
   # (QString) mudlet::getShortPathName(const QString& name) work in Windows:
   target_compile_definitions(mudlet PRIVATE UNICODE _UNICODE)
-
-  add_custom_command(TARGET mudlet POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:mudlet> $<TARGET_FILE_DIR:mudlet>
-          COMMAND_EXPAND_LISTS
-          )
-
-  file(COPY ${MINGW_BASE_DIR}/bin/libyajl.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
-  file(COPY ${MINGW_BASE_DIR}/bin/lua51.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
-  file(COPY ${MINGW_BASE_DIR}/bin/libcrypto-1_1.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
-  file(COPY ${MINGW_BASE_DIR}/bin/libssl-1_1.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
-  file(COPY ${MINGW_BASE_DIR}/bin/libzip.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
-  file(COPY ${MINGW_BASE_DIR}/bin/libhunspell-1.6-0.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
-  file(COPY ${MINGW_BASE_DIR}/bin/libpcre-1.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
-  file(COPY ${MINGW_BASE_DIR}/bin/zlib1.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
 endif()
 
 if(APPLE)

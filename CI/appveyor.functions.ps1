@@ -185,7 +185,7 @@ function InstallSevenZ() {
 }
 
 function InstallCmake() {
-  DownloadFile "https://github.com/Kitware/CMake/releases/download/v3.14.4/cmake-3.14.4-win32-x86.msi" "cmake-installer.msi"
+  DownloadFile "https://github.com/Kitware/CMake/releases/download/v3.22.1/cmake-3.22.1-windows-i386.msi" "cmake-installer.msi"
   Step "installing cmake"
   exec "msiexec.exe" @("/q", "/li", "$workingBaseDir\cmake-installer.log", "/i", "cmake-installer.msi")
   if(Test-Path -Path "$workingBaseDir\cmake-installer.log" -PathType Leaf){
