@@ -44,19 +44,20 @@
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
-#include "TTrigger.h"
 #include "dlgComposer.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
 #include "dlgTriggerEditor.h"
+#include "mapInfoContributorManager.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
 #endif
-#include "mapInfoContributorManager.h"
 
-#include "math.h"
+#include <limits>
+#include <math.h>
+
 #include "pre_guard.h"
 #include <QtConcurrent>
 #include <QCollator>
@@ -73,23 +74,7 @@
 #endif // QT_TEXTTOSPEECH_LIB
 #include "post_guard.h"
 
-#include <limits>
 using namespace std::chrono_literals;
-
-const QMap<Qt::MouseButton, QString> TLuaInterpreter::mMouseButtons = {
-        {Qt::NoButton, qsl("NoButton")},           {Qt::LeftButton, qsl("LeftButton")},       {Qt::RightButton, qsl("RightButton")},
-        {Qt::MiddleButton, qsl("MidButton")},      {Qt::BackButton, qsl("BackButton")},       {Qt::ForwardButton, qsl("ForwardButton")},
-        {Qt::TaskButton, qsl("TaskButton")},       {Qt::ExtraButton4, qsl("ExtraButton4")},   {Qt::ExtraButton5, qsl("ExtraButton5")},
-        {Qt::ExtraButton6, qsl("ExtraButton6")},   {Qt::ExtraButton7, qsl("ExtraButton7")},   {Qt::ExtraButton8, qsl("ExtraButton8")},
-        {Qt::ExtraButton9, qsl("ExtraButton9")},   {Qt::ExtraButton10, qsl("ExtraButton10")}, {Qt::ExtraButton11, qsl("ExtraButton11")},
-        {Qt::ExtraButton12, qsl("ExtraButton12")}, {Qt::ExtraButton13, qsl("ExtraButton13")}, {Qt::ExtraButton14, qsl("ExtraButton14")},
-        {Qt::ExtraButton15, qsl("ExtraButton15")}, {Qt::ExtraButton16, qsl("ExtraButton16")}, {Qt::ExtraButton17, qsl("ExtraButton17")},
-        {Qt::ExtraButton18, qsl("ExtraButton18")}, {Qt::ExtraButton19, qsl("ExtraButton19")}, {Qt::ExtraButton20, qsl("ExtraButton20")},
-        {Qt::ExtraButton21, qsl("ExtraButton21")}, {Qt::ExtraButton22, qsl("ExtraButton22")}, {Qt::ExtraButton23, qsl("ExtraButton23")},
-        {Qt::ExtraButton24, qsl("ExtraButton24")},
-
-};
-
 
 extern "C" {
 int luaopen_yajl(lua_State*);
@@ -198,16 +183,16 @@ static const char *bad_label_value = "label \"%s\" not found";
 // GCC, leading to a crash.
 
 
-TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id) : mpHost(pH), hostName(hostName), mHostID(id), purgeTimer(this)
+TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id)
+: mpHost(pH)
+, hostName(hostName)
+, mHostID(id)
+, purgeTimer(this)
+, mpFileDownloader(new QNetworkAccessManager(this))
+, mpFileSystemWatcher(new QFileSystemWatcher(this))
 {
-    pGlobalLua = nullptr;
-
     connect(&purgeTimer, &QTimer::timeout, this, &TLuaInterpreter::slotPurge);
-
-    mpFileDownloader = new QNetworkAccessManager(this);
     connect(mpFileDownloader, &QNetworkAccessManager::finished, this, &TLuaInterpreter::slot_httpRequestFinished);
-
-    mpFileSystemWatcher = new QFileSystemWatcher(this);
     connect(mpFileSystemWatcher, &QFileSystemWatcher::fileChanged, this, &TLuaInterpreter::slot_pathChanged);
     connect(mpFileSystemWatcher, &QFileSystemWatcher::directoryChanged, this, &TLuaInterpreter::slot_pathChanged);
 
@@ -14038,14 +14023,14 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             lua_newtable(L);
 
             // push button()
-            lua_pushstring(L, mMouseButtons.value(qME->button()).toUtf8().constData());
+            lua_pushstring(L, csmMouseButtons.value(qME->button()).toUtf8().constData());
             lua_setfield(L, -2, qsl("button").toUtf8().constData());
 
             // push buttons()
             lua_newtable(L);
-            QMap<Qt::MouseButton, QString>::const_iterator iter = mMouseButtons.constBegin();
+            QMap<Qt::MouseButton, QString>::const_iterator iter = csmMouseButtons.constBegin();
             int counter = 1;
-            while (iter != mMouseButtons.constEnd()) {
+            while (iter != csmMouseButtons.constEnd()) {
                 if (iter.key() & qME->buttons()) {
                     lua_pushnumber(L, counter);
                     lua_pushstring(L, iter.value().toUtf8().constData());
@@ -14107,9 +14092,9 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
 
             // push buttons()
             lua_newtable(L);
-            QMap<Qt::MouseButton, QString>::const_iterator iter = mMouseButtons.constBegin();
+            QMap<Qt::MouseButton, QString>::const_iterator iter = csmMouseButtons.constBegin();
             int counter = 1;
-            while (iter != mMouseButtons.constEnd()) {
+            while (iter != csmMouseButtons.constEnd()) {
                 if (iter.key() & qME->buttons()) {
                     lua_pushnumber(L, counter);
                     lua_pushstring(L, iter.value().toUtf8().constData());

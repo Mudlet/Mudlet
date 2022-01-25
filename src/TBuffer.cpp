@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018, 2020 by Stephen Lyons                        *
+ *   Copyright (C) 2014-2018, 2020, 2022 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -56,23 +56,20 @@ TChar::TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags fla
 : mFgColor(fg)
 , mBgColor(bg)
 , mFlags(flags)
-, mIsSelected(false)
 , mLinkIndex(linkIndex)
 {
 }
 
 TChar::TChar(Host* pH)
 : mFlags(None)
-, mIsSelected(false)
-, mLinkIndex(0)
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+, mFgColor(pH ? pH->mFgColor : QColorConstants::White)
+, mBgColor(pH ? pH->mBgColor : QColorConstants::Black)
+#else
+, mFgColor(pH ? pH->mFgColor : Qt::white)
+, mBgColor(pH ? pH->mBgColor : Qt::black)
+#endif
 {
-    if (pH) {
-        mFgColor = pH->mFgColor;
-        mBgColor = pH->mBgColor;
-    } else {
-        mFgColor = Qt::white;
-        mBgColor = Qt::black;
-    }
 }
 
 // Note: this operator compares ALL aspects of 'this' against 'other' which may
@@ -112,17 +109,7 @@ const QString timeStampFormat = qsl("hh:mm:ss.zzz ");
 const QString blankTimeStamp  = qsl("------------ ");
 
 TBuffer::TBuffer(Host* pH)
-: mLinesLimit(10000)
-, mBatchDeleteSize(1000)
-, mWrapAt(99999999)
-, mWrapIndent(0)
-, mCursorY(0)
-, mEchoingText(false)
-, mGotESC(false)
-, mGotCSI(false)
-, mGotOSC(false)
-, mIsDefaultColor(true)
-, mBlack(pH->mBlack)
+: mBlack(pH->mBlack)
 , mLightBlack(pH->mLightBlack)
 , mRed(pH->mRed)
 , mLightRed(pH->mLightRed)
@@ -142,17 +129,6 @@ TBuffer::TBuffer(Host* pH)
 , mForeGroundColorLight(pH->mFgColor)
 , mBackGroundColor(pH->mBgColor)
 , mpHost(pH)
-, mBold(false)
-, mItalics(false)
-, mOverline(false)
-, mReverse(false)
-, mStrikeOut(false)
-, mUnderline(false)
-, mItalicBeforeBlink(false)
-, lastLoggedFromLine(0)
-, lastloggedToLine(0)
-, mEncoding()
-, mMainIncomingCodec(nullptr)
 {
     clear();
 

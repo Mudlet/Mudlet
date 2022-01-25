@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
- *   Copyright (C) 2019-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2019-2020, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,9 +24,7 @@
 TDockWidget::TDockWidget(Host* pH, const QString& consoleName)
 : QDockWidget()
 , widgetConsoleName(consoleName)
-, hasLayoutAlready(false)
 , mpHost(pH)
-, mpConsole(nullptr)
 {
 }
 

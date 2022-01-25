@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020-2021 by Stephen Lyons        #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2022 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -622,11 +622,13 @@ SOURCES += \
     XMLimport.cpp
 
 HEADERS += \
+    ../3rdparty/discord/rpc/include/discord_register.h \
+    ../3rdparty/discord/rpc/include/discord_rpc.h \
     ActionUnit.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
-    DarkTheme.h \
     ctelnet.h \
+    DarkTheme.h \
     discord.h \
     dlgAboutDialog.h \
     dlgActionMainArea.h \
@@ -688,7 +690,6 @@ HEADERS += \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
-    TScrollBox.h \
     TLinkStore.h \
     TLuaInterpreter.h \
     TMainConsole.h \
@@ -696,6 +697,7 @@ HEADERS += \
     TMapLabel.h \
     TMatchState.h \
     TMedia.h \
+    TMediaData.h \
     TMxpBRTagHandler.h \
     TMxpClient.h \
     TMxpColorTagHandler.h \
@@ -724,6 +726,7 @@ HEADERS += \
     TRoom.h \
     TRoomDB.h \
     TScript.h \
+    TScrollBox.h \
     TSplitter.h \
     TSplitterHandle.h \
     TStringUtils.h \
@@ -739,10 +742,7 @@ HEADERS += \
     utils.h \
     XMLexport.h \
     XMLimport.h \
-    widechar_width.h \
-    ../3rdparty/discord/rpc/include/discord_register.h \
-    ../3rdparty/discord/rpc/include/discord_rpc.h
-
+    widechar_width.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \

@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2021 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2022 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -28,6 +28,7 @@
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
 #endif
+#include "utils.h"
 
 #include "pre_guard.h"
 #include <QApplication>
@@ -46,6 +47,19 @@
 #include <optional>
 #include "post_guard.h"
 
+#define DIR_NORTH 1
+#define DIR_NORTHEAST 2
+#define DIR_NORTHWEST 3
+#define DIR_EAST 4
+#define DIR_WEST 5
+#define DIR_SOUTH 6
+#define DIR_SOUTHEAST 7
+#define DIR_SOUTHWEST 8
+#define DIR_UP 9
+#define DIR_DOWN 10
+#define DIR_IN 11
+#define DIR_OUT 12
+#define DIR_OTHER 13
 
 class dlgMapper;
 class Host;
@@ -168,9 +182,10 @@ public:
 
     static void writeJsonColor(QJsonObject&, const QColor&);
     static QColor readJsonColor(const QJsonObject&);
+    void restore16ColorSet();
 
 
-    TRoomDB* mpRoomDB;
+    TRoomDB* mpRoomDB = nullptr;
     QMap<int, int> mEnvColors;
     QPointer<Host> mpHost;
     QString mProfileName;
@@ -188,13 +203,35 @@ public:
     QList<QString> mDirList;
     QList<int> mWeightList;
     QMap<int, QColor> mCustomEnvColors;
-    QMap<int, QVector3D> unitVectors;
+    inline const static QMap<int, QVector3D> scmUnitVectors = {
+        {DIR_NORTH, {0, -1, 0}},
+        {DIR_NORTHEAST, {1, -1, 0}},
+        {DIR_NORTHWEST, {-1, -1, 0}},
+        {DIR_EAST, {1, 0, 0}},
+        {DIR_WEST, {-1, 0, 0}},
+        {DIR_SOUTH, {0, 1, 0}},
+        {DIR_SOUTHEAST, {1, 1, 0}},
+        {DIR_SOUTHWEST, {-1, 1, 0}},
+        {DIR_UP, {0, 0, 1}},
+        {DIR_DOWN, {0, 0, -1}}};
 
-    // contains complementary directions of dirs on TRoom.h
-    QMap<int, int> reverseDirections;
+    // contains complementary directions of DIR_XXXX
+    inline const static QMap<int, int> scmReverseDirections = {
+        {DIR_NORTH, DIR_SOUTH},
+        {DIR_NORTHEAST, DIR_SOUTHWEST},
+        {DIR_NORTHWEST, DIR_SOUTHEAST},
+        {DIR_EAST, DIR_WEST},
+        {DIR_WEST, DIR_EAST},
+        {DIR_SOUTH, DIR_NORTH},
+        {DIR_SOUTHEAST, DIR_NORTHWEST},
+        {DIR_SOUTHWEST, DIR_NORTHEAST},
+        {DIR_UP, DIR_DOWN},
+        {DIR_DOWN, DIR_UP},
+        {DIR_IN, DIR_OUT},
+        {DIR_OUT, DIR_IN}};
 
 #if defined(INCLUDE_3DMAPPER)
-    QPointer<GLWidget> mpM = nullptr;
+    QPointer<GLWidget> mpM;
 #endif
     QPointer<dlgMapper> mpMapper;
     QMap<int, int> roomidToIndex;
@@ -209,35 +246,46 @@ public:
     bool mMapGraphNeedsUpdate = true;
     bool mNewMove = true;
 
-    // loaded map file format version
-    int mVersion;
 
-    // replaces CURRENT_MAP_VERSION
-    const int mDefaultVersion;
+    // Replaced CURRENT_MAP_VERSION, default map version that new maps will get:
+    const int mDefaultVersion = 20;
 
-    // normally the same as mDefaultVersion but can be
-    // higher for development builds and is the maximum
-    // version the development build can parse.
-    const int mMaxVersion;
+    // Normally the same as mDefaultVersion but can be higher for development
+    // builds and is the maximum version the development build can parse, it is
+    // thus the maximum version of the map format that this Mudlet can
+    // understand and will allow the user to load:
+    /*
+     * WARNING: There is new code that will be activated when this is incremented
+     * above 20:
+     * * The room special exits (QMap<QString, int>) and special exit locks data
+     *   QSet<QString> will be stored directly in those new container elements
+     *   replacing the backwards compatible combination (a QMultiMap<int, QString>)
+     *   that prefixed a '1' for a locked exit or '0' for an unlocked one onto the
+     *   special exit name (stored in the VALUE) in the old format.
+     * It has been tested and *seems* to work. SlySven - 2020/12
+     */
+    const int mMaxVersion = 20;
 
-    // normally the same as mDefaultVersion but can be
-    // lower for release builds and is the minimum
-    // version recommended for saving , which might
-    // perhaps be one less than mDefault to permit sharing
-    // of a map with users of an older version "in the field"!
-    const int mMinVersion;
+    // Ideally would be the same as mDefaultVersion but we have it lower,
+    // particularly for release builds and is the minimum version allowed for
+    // saving, which would perhaps be one less than mDefaultVersion to permit
+    // sharing of a map with users of an older version "in the field"!
+    const int mMinVersion = 17;
 
-    // what to use when saving the map, defaults to mDefaultVersion
-    // but can be override by control in special options (last)
-    // tab on profile preference dialog using the limits set
-    // by mMinVersion and mMaxVersion.
-    int mSaveVersion;
+    // what to use when saving the map, defaults to mDefaultVersion but can be
+    // overridden by control in mapper tab on profile preference dialog using
+    // the limits set by mMinVersion and mMaxVersion:
+    int mSaveVersion = mDefaultVersion;
+
+    // Loaded map file format version - overwritten during a map load to the
+    // value for that file:
+    int mVersion = mDefaultVersion;
 
     QMap<QString, QString> mUserData;
 
     // This is the font that the map file or user *wants* to use - what actually
     // gets used may be different, and will be stored in the T2DMap class.
-    QFont mMapSymbolFont;
+    QFont mMapSymbolFont = QFont(qsl("Bitstream Vera Sans Mono"), 12, QFont::Normal);
     // For 2D mapper: the symbol text is scaled to fill a rectangle based upone
     // the room symbol with this scaling factor. This may be needed because
     // different users could have differing requirement for symbol sizing
@@ -266,7 +314,6 @@ public:
     // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
     // one):
     quint8 mPlayerRoomInnerDiameterPercentage = 70;
-
 
     MapInfoContributorManager* mMapInfoContributorManager;
 
