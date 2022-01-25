@@ -4328,9 +4328,9 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
         return warnArgumentValue(L, __func__, qsl("no movie found at label '%1'").arg(labelName));
     }
 
-    if (funcName == qsl("setMovieStart")) {
+    if (funcName == qsl("startMovie")) {
         movie->start();
-    } else if (funcName == qsl("setMoviePaused")) {
+    } else if (funcName == qsl("pauseMovie")) {
         movie->setPaused(true);
     } else if (funcName == qsl("setMovieFrame")) {
         int frame = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie frame number");
@@ -4359,16 +4359,16 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieStart
-int TLuaInterpreter::setMovieStart(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#startMovie
+int TLuaInterpreter::startMovie(lua_State* L)
 {
-    return movieFunc(L, qsl("setMovieStart"));
+    return movieFunc(L, qsl("startMovie"));
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMoviePaused
-int TLuaInterpreter::setMoviePaused(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#pauseMovie
+int TLuaInterpreter::pauseMovie(lua_State* L)
 {
-    return movieFunc(L, qsl("setMoviePaused"));
+    return movieFunc(L, qsl("pauseMovie"));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieFrame
@@ -14867,11 +14867,11 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setLabelOnEnter", TLuaInterpreter::setLabelOnEnter);
     lua_register(pGlobalLua, "setLabelOnLeave", TLuaInterpreter::setLabelOnLeave);
     lua_register(pGlobalLua, "setMovie", TLuaInterpreter::setMovie);
-    lua_register(pGlobalLua, "setMovieStart", TLuaInterpreter::setMovieStart);
+    lua_register(pGlobalLua, "startMovie", TLuaInterpreter::startMovie);
     lua_register(pGlobalLua, "setMovieSpeed", TLuaInterpreter::setMovieSpeed);
     lua_register(pGlobalLua, "scaleMovie", TLuaInterpreter::scaleMovie);
     lua_register(pGlobalLua, "setMovieFrame", TLuaInterpreter::setMovieFrame);
-    lua_register(pGlobalLua, "setMoviePaused", TLuaInterpreter::setMoviePaused);
+    lua_register(pGlobalLua, "pauseMovie", TLuaInterpreter::pauseMovie);
     lua_register(pGlobalLua, "getImageSize", TLuaInterpreter::getImageSize);
     lua_register(pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow);
     lua_register(pGlobalLua, "setWindow", TLuaInterpreter::setWindow);
