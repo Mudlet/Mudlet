@@ -574,19 +574,17 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mRoomSize").text().set(QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData());
     }
     {
-        auto mapInfoContributors = host.append_child("mMapInfoContributors");
         QSetIterator<QString> iterator(pHost->mMapInfoContributors);
         while (iterator.hasNext()) {
-            auto mapInfoContributor = mapInfoContributors.append_child("mapInfoContributor");
+            auto mapInfoContributor = host.append_child("mapInfoContributor");
             mapInfoContributor.text().set(iterator.next().toUtf8().constData());
         }
     }
     {
-        auto shortcuts = host.append_child("profileShortcuts");
         auto iterator = mudlet::self()->mShortcutsManager->iterator();
         while (iterator.hasNext()) {
             auto key = iterator.next();
-            auto shortcut = shortcuts.append_child("profileShortcut");
+            auto shortcut = host.append_child("profileShortcut");
             shortcut.append_attribute("key") = key.toUtf8().constData();
             shortcut.text().set(pHost->profileShortcuts.value(key)->toString().toUtf8().constData());
         }

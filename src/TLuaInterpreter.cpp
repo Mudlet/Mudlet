@@ -4328,10 +4328,10 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
         return warnArgumentValue(L, __func__, qsl("no movie found at label '%1'").arg(labelName));
     }
 
-    if (funcName == qsl("setMovieStart")) {
+    if (funcName == qsl("startMovie")) {
         movie->start();
-    } else if (funcName == qsl("setMoviePaused")) {
-        movie->setPaused(movie->state() != QMovie::Paused);
+    } else if (funcName == qsl("pauseMovie")) {
+        movie->setPaused(true);
     } else if (funcName == qsl("setMovieFrame")) {
         int frame = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie frame number");
         lua_pushboolean(L, movie->jumpToFrame(frame));
@@ -4339,6 +4339,18 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
     } else if (funcName == qsl("setMovieSpeed")) {
         int speed = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie playback speed in %");
         movie->setSpeed(speed);
+    } else if (funcName == qsl("scaleMovie")) {
+        bool autoScale{true};
+        int n = lua_gettop(L);
+        if (n > 1) {
+            autoScale = getVerifiedBool(L, funcName.toUtf8().constData(), 2, "activate/deactivate scaling movie", true);
+        }
+        movie->setScaledSize(pN->size());
+        if (autoScale) {
+            connect(pN, &TLabel::resized, [=] {movie->setScaledSize(pN->size());} );
+        } else {
+            pN->disconnect(SIGNAL(resized()));
+        }
     } else {
         return warnArgumentValue(L, __func__, qsl("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));
     }
@@ -4347,16 +4359,16 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieStart
-int TLuaInterpreter::setMovieStart(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#startMovie
+int TLuaInterpreter::startMovie(lua_State* L)
 {
-    return movieFunc(L, qsl("setMovieStart"));
+    return movieFunc(L, qsl("startMovie"));
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMoviePaused
-int TLuaInterpreter::setMoviePaused(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#pauseMovie
+int TLuaInterpreter::pauseMovie(lua_State* L)
 {
-    return movieFunc(L, qsl("setMoviePaused"));
+    return movieFunc(L, qsl("pauseMovie"));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieFrame
@@ -4369,6 +4381,12 @@ int TLuaInterpreter::setMovieFrame(lua_State* L)
 int TLuaInterpreter::setMovieSpeed(lua_State* L)
 {
     return movieFunc(L, qsl("setMovieSpeed"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieSpeed
+int TLuaInterpreter::scaleMovie(lua_State* L)
+{
+    return movieFunc(L, qsl("scaleMovie"));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextFormat
@@ -14849,10 +14867,11 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setLabelOnEnter", TLuaInterpreter::setLabelOnEnter);
     lua_register(pGlobalLua, "setLabelOnLeave", TLuaInterpreter::setLabelOnLeave);
     lua_register(pGlobalLua, "setMovie", TLuaInterpreter::setMovie);
-    lua_register(pGlobalLua, "setMovieStart", TLuaInterpreter::setMovieStart);
+    lua_register(pGlobalLua, "startMovie", TLuaInterpreter::startMovie);
     lua_register(pGlobalLua, "setMovieSpeed", TLuaInterpreter::setMovieSpeed);
+    lua_register(pGlobalLua, "scaleMovie", TLuaInterpreter::scaleMovie);
     lua_register(pGlobalLua, "setMovieFrame", TLuaInterpreter::setMovieFrame);
-    lua_register(pGlobalLua, "setMoviePaused", TLuaInterpreter::setMoviePaused);
+    lua_register(pGlobalLua, "pauseMovie", TLuaInterpreter::pauseMovie);
     lua_register(pGlobalLua, "getImageSize", TLuaInterpreter::getImageSize);
     lua_register(pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow);
     lua_register(pGlobalLua, "setWindow", TLuaInterpreter::setWindow);
