@@ -1066,7 +1066,7 @@ function getLabelFormat(win)
     strikeout = false,
     underline = false,
   }
-  local stylesheet = getLabelStylesheet(win)
+  local stylesheet = getLabelStyleSheet(win)
   if stylesheet ~= "" then
     if stylesheet:find(";") then
       local styleTable = {}

@@ -10847,8 +10847,8 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelStylesheet
-int TLuaInterpreter::getLabelStylesheet(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelStyleSheet
+int TLuaInterpreter::getLabelStyleSheet(lua_State* L)
 {
     QString label = getVerifiedString(L, __func__, 1, "label");
     Host& host = getHostFromLua(L);
@@ -15238,7 +15238,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "windowType", TLuaInterpreter::windowType);
     lua_register(pGlobalLua, "getProfileStats", TLuaInterpreter::getProfileStats);
     lua_register(pGlobalLua, "getBackgroundColor", TLuaInterpreter::getBackgroundColor);
-    lua_register(pGlobalLua, "getLabelStylesheet", TLuaInterpreter::getLabelStylesheet);
+    lua_register(pGlobalLua, "getLabelStyleSheet", TLuaInterpreter::getLabelStyleSheet);
     lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
