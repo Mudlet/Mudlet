@@ -1556,7 +1556,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="330"/>
       <source>Stop logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>停止向日志文件继续写入游戏记录.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="346"/>
@@ -5509,17 +5509,17 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1834"/>
       <source>Please set a valid profile name, game server address and the game port before loading.</source>
-      <translation type="unfinished"/>
+      <translation>请在加载前设置有效的配置文件名称、游戏服务器地址和游戏端口。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1839"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
-      <translation type="unfinished"/>
+      <translation>请在连接前设置有效的配置文件名称、游戏服务器地址和游戏端口。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1892"/>
       <source>Click to hide the password; it will also hide if another profile is selected.</source>
-      <translation type="unfinished"/>
+      <translation>单击以隐藏密码；如果选择了其他配置文件，密码也会隐藏。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1896"/>
@@ -5891,7 +5891,9 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="1459"/>
       <source>Select what to export (%n item(s))</source>
       <comment>This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>选择要导出的内容 (%n 项 )</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="347"/>
