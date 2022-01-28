@@ -475,6 +475,17 @@ if(WIN32)
     file(COPY ${MINGW_BASE_DIR}/bin/libhunspell-1.6-0.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
     file(COPY ${MINGW_BASE_DIR}/bin/libpcre-1.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
     file(COPY ${MINGW_BASE_DIR}/bin/zlib1.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
+    file(COPY ${MINGW_BASE_DIR}/bin/libgcc_s_dw2-1.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
+    file(COPY ${MINGW_BASE_DIR}/bin/libstdc++-6.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
+    file(COPY ${MINGW_BASE_DIR}/bin/libwinpthread-1.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
+    file(COPY ../3rdparty/discord/rpc/lib/discord-rpc32.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
+    file(COPY ../3rdparty/lcf DESTINATION ${RUNTIME_OUTPUT_DIRECTORY} PATTERN .)
+    file(COPY ${MINGW_BASE_DIR}/lib/lua/5.1/ DESTINATION ${RUNTIME_OUTPUT_DIRECTORY} PATTERN .)
+    file(COPY mudlet-lua DESTINATION ${RUNTIME_OUTPUT_DIRECTORY} PATTERN .)
+    file(COPY ../translations DESTINATION ${RUNTIME_OUTPUT_DIRECTORY} PATTERN .)
+    file(COPY . DESTINATION ${RUNTIME_OUTPUT_DIRECTORY} FILES_MATCHING PATTERN "*.dic")
+    file(COPY . DESTINATION ${RUNTIME_OUTPUT_DIRECTORY} FILES_MATCHING PATTERN "*.aff")
+
   endif()
   # The UNICODE and _UNICODE definitions are needed to make
   # (QString) mudlet::getShortPathName(const QString& name) work in Windows:
