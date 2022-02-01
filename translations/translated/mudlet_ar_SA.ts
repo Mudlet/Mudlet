@@ -331,12 +331,12 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="380"/>
       <source>! %1 has quit (%2)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 خرج من (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="388"/>
       <source>! no topic</source>
-      <translation type="unfinished"/>
+      <translation>! بدون موضوع</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="397"/>
@@ -346,12 +346,12 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="401"/>
       <source>! %2 cleared topic</source>
-      <translation type="unfinished"/>
+      <translation>! %2 حذف الموضوع</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="404"/>
       <source>! %2 changed topic</source>
-      <translation type="unfinished"/>
+      <translation>! %2 غير الموضوع</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="410"/>
