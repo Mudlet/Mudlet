@@ -188,37 +188,37 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="144"/>
       <source>! %1 is away (%2)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 بالخارج (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="146"/>
       <source>! %1 is back</source>
-      <translation type="unfinished"/>
+      <translation>! %1 قد عاد</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="153"/>
       <source>! invited %1 to %2</source>
-      <translation type="unfinished"/>
+      <translation>! دعى %1 إلى %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="156"/>
       <source>! %2 invited to %3</source>
-      <translation type="unfinished"/>
+      <translation>! %2 تم دعوته إلى %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="163"/>
       <source>! You have joined %1 as %2</source>
-      <translation type="unfinished"/>
+      <translation>! أنت انضمت إلى %1 ك %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="165"/>
       <source>! %1 has joined %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 انّضم ألى %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="172"/>
       <source>! %1 kicked %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 طرد %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="180"/>
@@ -248,12 +248,12 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
       <source>! %1 has changed nick to %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 غير اسمه إلى %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="234"/>
       <source>! %1 replied in %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 رد في %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="237"/>
