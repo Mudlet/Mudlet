@@ -7599,16 +7599,15 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     QStringList patterns;
     QList<int> propertyList;
     TTrigger* pP = host.getTriggerUnit()->findTrigger(triggerName);
-    if (!pP) {
-        patterns << pattern;
-        if (colorTrigger) {
-            propertyList << REGEX_COLOR_PATTERN;
-        } else {
-            propertyList << REGEX_PERL;
-        }
-    } else {
+    if (pP) {
         patterns = pP->getPatternsList();
         propertyList = pP->getRegexCodePropertyList();
+    }
+    patterns << pattern;
+    if (colorTrigger) {
+        propertyList << REGEX_COLOR_PATTERN;
+    } else {
+        propertyList << REGEX_PERL;
     }
 
     auto pT = new TTrigger("a", patterns, propertyList, multiLine, &host);
@@ -7616,7 +7615,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     pT->setIsActive(true);
     pT->setTemporary(true);
     pT->registerTrigger();
-    pT->setName(pattern);
+    pT->setName(triggerName);
     pT->mPerlSlashGOption = matchAll; //match all
     pT->mFilterTrigger = filter;
     pT->setConditionLineDelta(lineDelta); //line delta
@@ -7643,7 +7642,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         lua_settable(L, LUA_REGISTRYINDEX);
     }
 
-    lua_pushstring(L, pattern.toUtf8().constData());
+    lua_pushnumber(L, pT->getID());
     return 1;
 }
 
