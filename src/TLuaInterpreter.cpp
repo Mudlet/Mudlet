@@ -7575,7 +7575,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 
     QString soundFile;
     bool playSound;
-    if (lua_isstring(L, 11)) {
+    if (lua_type(L, 11) == LUA_TSTRING) {
         playSound = true;
         soundFile = lua_tostring(L, 11);
     } else {
