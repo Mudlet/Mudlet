@@ -1314,7 +1314,7 @@ if rex then
       _G[func](...)
     end
 
-    if windowType(win) == "label" then
+    if windowType(win) == "label" and win ~= "main" then
       str = str:gsub("\n", "<br>")
       local t = _Echos.Process(str, style)
       if func ~= "echo" then
