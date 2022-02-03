@@ -568,7 +568,7 @@ please wait...</source>
       <location filename="../src/dlgRoomExits.cpp" line="146"/>
       <location filename="../src/dlgRoomExits.cpp" line="221"/>
       <source>A positive roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>预计这里会有一个正向的房间ID，这个房间是这个特殊的出口所导致的。 如果就此离开，当 &lt;tt&gt;保存&lt;/tt&gt; 被点击时，此出口将被删除。</translation>
     </message>
   </context>
   <context>
@@ -937,7 +937,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3043"/>
       <source>Move selected room or group of rooms to the given coordinates in this area</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>将选定的房间或房间组移动到该区域中的给定坐标</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3049"/>
