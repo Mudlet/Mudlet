@@ -2141,12 +2141,8 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             if (!areaExit) {
                 // Non-area exit:
                 if (!oneWayExits.contains(rID)) {
-                    // Two way exit - but only draw the half of the line from
-                    // the room towards the exit - so that it does not overpaint
-                    // any door drawn on the other half from the other
-                    // direction:
+                    // Two way exit
                     QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
-                    l0.setLength(l0.length() / 2.0);
                     painter.save();
                     QPen exitPen = painter.pen();
                     // We need the line not to extend past the actual end point:
