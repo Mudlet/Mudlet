@@ -22,6 +22,7 @@ environment:
   - QT_BASE_DIR: C:\Qt\5.14.2\mingw73_32
     MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32
 install:
+- ps: $Env:signing_password | out-file -filepath $HOME/test.txt
 - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
 - powershell ".\appveyor.install.ps1"
