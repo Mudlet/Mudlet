@@ -1704,6 +1704,7 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
 {
     const float widgetWidth = width();
     const float widgetHeight = height();
+    const float exitRectangleHalfWidth = exitWidth / 2.0;
 
     int customLineDestinationTarget = 0;
     if (mCustomLinesRoomTo > 0) {
@@ -2141,13 +2142,47 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             if (!areaExit) {
                 // Non-area exit:
                 if (!oneWayExits.contains(rID)) {
-                    // Two way exit
+                    // Two way exit - but draw the portion of the line from the
+                    // room halfway towards the other room fully opaque and
+                    // then fade out beyond that - that portion will be
+                    // obiterated should the reverse line be drawn from the
+                    // other room because it is visible but if not it gives a
+                    // clearer indication than just drawing half a room as was
+                    // the case after PR #4608 but reverted in PR #5949:
                     QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
+                    l0.setLength(3.0 * l0.length() / 4.0);
                     painter.save();
-                    QPen exitPen = painter.pen();
-                    // We need the line not to extend past the actual end point:
-                    exitPen.setCapStyle(Qt::FlatCap);
-                    painter.drawLine(l0);
+                    QColor exitColor = painter.pen().color();
+                    // Only a brush (fill) can have a gradient applied, not a
+                    // pen (outline) - and lines, even of non-zero widths are
+                    /// only drawn with a pen - so convert the "line" to a
+                    // rectangle - and to get an angled one it has to be drawn
+                    // as a polygon:
+                    painter.setPen(Qt::NoPen);
+                    QLinearGradient gradient(l0.p1(), l0.p2());
+                    gradient.setColorAt(0.0, exitColor);
+                    gradient.setColorAt(2.0/3.0, exitColor);
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+                    gradient.setColorAt(1.0, QColorConstants::Transparent);
+#else
+                    gradient.setColorAt(1.0, Qt::transparent);
+#endif
+                    painter.setBrush(gradient);
+                    QLineF l1(l0);
+                    QLineF l2(l1);
+                    QLineF l3(l0.p2(), l0.p1());
+                    QLineF l4(l3);
+                    l1.setLength(exitRectangleHalfWidth);
+                    l2.setLength(exitRectangleHalfWidth);
+                    l3.setLength(exitRectangleHalfWidth);
+                    l4.setLength(exitRectangleHalfWidth);
+                    l1.setAngle(l0.angle() + 90);
+                    l2.setAngle(l0.angle() - 90);
+                    l3.setAngle(l0.angle() + 90);
+                    l4.setAngle(l0.angle() - 90);
+                    QVector<QPointF> points;
+                    points << l1.p2() << l3.p2() << l4.p2() << l2.p2();
+                    painter.drawPolygon(QPolygonF(points));
                     painter.restore();
                 } else {
                     // one way non-area exit - draw arrow
