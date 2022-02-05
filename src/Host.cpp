@@ -3945,12 +3945,12 @@ void Host::setControlCharacterMode(const TConsole::ControlCharacterMode mode)
 
 std::optional<QString> Host::windowType(const QString& name) const
 {
-    if (mpConsole->mLabelMap.contains(name)) {
-        return {qsl("label")};
+    if (Q_UNLIKELY(name == QLatin1String("main"))) {
+        return {QLatin1String("main")};
     }
 
-    if (name == QLatin1String("main")) {
-        return {QLatin1String("main")};
+    if (mpConsole->mLabelMap.contains(name)) {
+        return {qsl("label")};
     }
 
     auto pWindow = mpConsole->mSubConsoleMap.value(name);
