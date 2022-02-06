@@ -172,6 +172,10 @@ public:
     QColor mOpenDoorColor = QColor(10, 155, 10);
     QColor mClosedDoorColor = QColor(155, 155, 10);
     QColor mLockedDoorColor = QColor(155, 10, 10);
+    // Introduced as a side effect of #4608 the larger area exit arrows don't
+    // always work well on existing maps - so allow for them to be reverted
+    // almost back to how they were before that PR:
+    bool mLargeAreaExitArrows = true;
 
 public slots:
     void slot_roomSelectionChanged();
@@ -233,7 +237,7 @@ private:
     void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const QMap<int, QPointF>&);
     void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const int displayAreaId, QColor& infoColor);
     int paintMapInfoContributor(QPainter&, int xOffset, int yOffset, const MapInfoProperties& properties);
-    void paintAreaExits(QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int, float, QMap<int, QPointF>&);
+    void paintRoomExits(QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int, float, QMap<int, QPointF>&);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
 

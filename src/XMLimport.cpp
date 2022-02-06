@@ -961,6 +961,12 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->setControlCharacterMode(TConsole::NoControlCharacterReplacement);
     }
 
+    if (attributes().hasAttribute(qsl("Large2DMapAreaExitArrows"))) {
+        pHost->setLargeAreaExitArrows(attributes().value(qsl("Large2DMapAreaExitArrows")) == YES);
+    } else {
+        pHost->setLargeAreaExitArrows(true);
+    }
+
     while (!atEnd()) {
         readNext();
 

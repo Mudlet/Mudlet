@@ -3982,3 +3982,14 @@ std::optional<QString> Host::windowType(const QString& name) const
 
     return {};
 }
+
+void Host::setLargeAreaExitArrows(const bool state)
+{
+    if (mLargeAreaExitArrows != state) {
+        mLargeAreaExitArrows = state;
+        if (mpMap && mpMap->mpMapper && mpMap->mpMapper->mp2dMap) {
+            mpMap->mpMapper->mp2dMap->mLargeAreaExitArrows = state;
+            mpMap->mpMapper->mp2dMap->update();
+        }
+    }
+}

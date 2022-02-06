@@ -203,6 +203,8 @@ public:
                         useShared = mUseSharedDictionary; }
     void            setControlCharacterMode(const TConsole::ControlCharacterMode mode);
     TConsole::ControlCharacterMode  getControlCharacterMode() const { return mControlCharacterMode; }
+    bool            getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
+    void            setLargeAreaExitArrows(const bool);
 
     void closingDown();
     bool isClosingDown();
@@ -808,6 +810,7 @@ private:
     //   RU: https://ru.wikipedia.org/wiki/CP437
     TConsole::ControlCharacterMode mControlCharacterMode = TConsole::ControlCharacterMode::NoControlCharacterReplacement;
 
+    bool mLargeAreaExitArrows = true;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)
