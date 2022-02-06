@@ -964,7 +964,8 @@ void XMLimport::readHostPackage(Host* pHost)
     if (attributes().hasAttribute(qsl("Large2DMapAreaExitArrows"))) {
         pHost->setLargeAreaExitArrows(attributes().value(qsl("Large2DMapAreaExitArrows")) == YES);
     } else {
-        pHost->setLargeAreaExitArrows(true);
+        // The default (and for map/profile files from before 4.15.0):
+        pHost->setLargeAreaExitArrows(false);
     }
 
     while (!atEnd()) {

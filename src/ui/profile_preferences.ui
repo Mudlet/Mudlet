@@ -2139,14 +2139,11 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="1" column="1">
            <widget class="QCheckBox" name="checkBox_largeAreaExitArrows">
-            <property name="toolTip">
-             <string>&lt;p&gt;In &lt;B&gt;Mudlet 4.15.0&lt;/b&gt; the arrows used to show an &lt;i&gt;area&lt;/i&gt; exit were made larger so that they are easier to see; however this does not always work well on existing maps that were not laid out to accommodate them. Clearing this checkbox will revert them to be more like they were before this change.&lt;/p&gt;</string>
-            </property>
             <property name="text">
              <string>Use large area exit arrows in 2D view</string>
             </property>
             <property name="checked">
-             <bool>true</bool>
+             <bool>false</bool>
             </property>
            </widget>
           </item>

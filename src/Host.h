@@ -810,7 +810,7 @@ private:
     //   RU: https://ru.wikipedia.org/wiki/CP437
     TConsole::ControlCharacterMode mControlCharacterMode = TConsole::ControlCharacterMode::NoControlCharacterReplacement;
 
-    bool mLargeAreaExitArrows = true;
+    bool mLargeAreaExitArrows = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

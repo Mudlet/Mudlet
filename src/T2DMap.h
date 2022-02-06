@@ -175,7 +175,7 @@ public:
     // Introduced as a side effect of #4608 the larger area exit arrows don't
     // always work well on existing maps - so allow for them to be reverted
     // almost back to how they were before that PR:
-    bool mLargeAreaExitArrows = true;
+    bool mLargeAreaExitArrows = false;
 
 public slots:
     void slot_roomSelectionChanged();

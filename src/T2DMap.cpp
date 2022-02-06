@@ -1703,6 +1703,7 @@ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKe
 
 void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPointF>& areaExitsMap)
 {
+    const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
     const float widgetWidth = width();
     const float widgetHeight = height();
 
@@ -2207,35 +2208,35 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 pen.setColor(mpMap->getColor(k));
                 painter.setPen(pen);
                 if (room->getSouth() == rID) {
-                    line = QLineF(p2.x(), p2.y() + (mLargeAreaExitArrows ? 2.0 : 1.0) * mRoomHeight,
+                    line = QLineF(p2.x(), p2.y() + exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x(), p2.y() + mRoomHeight);
                 } else if (room->getNorth() == rID) {
-                    line = QLineF(p2.x(), p2.y() - (mLargeAreaExitArrows ? 2.0 : 1.0) * mRoomHeight,
+                    line = QLineF(p2.x(), p2.y() - exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x(), p2.y() - mRoomHeight);
                 } else if (room->getWest() == rID) {
-                    line = QLineF(p2.x() - (mLargeAreaExitArrows ? 2.0 : 1.0) * mRoomWidth, p2.y(),
+                    line = QLineF(p2.x() - exitArrowScale * mRoomWidth, p2.y(),
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() - mRoomWidth, p2.y());
                 } else if (room->getEast() == rID) {
-                    line = QLineF(p2.x() + (mLargeAreaExitArrows ? 2.0 : 1.0) * mRoomWidth, p2.y(),
+                    line = QLineF(p2.x() + exitArrowScale * mRoomWidth, p2.y(),
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() + mRoomWidth, p2.y());
                 } else if (room->getNorthwest() == rID) {
-                    line = QLineF(p2.x() - (mLargeAreaExitArrows ? 2.0 : 1.0) * mRoomWidth, p2.y() - (mLargeAreaExitArrows ? 2.0 : 1.0) * mRoomHeight,
+                    line = QLineF(p2.x() - exitArrowScale * mRoomWidth, p2.y() - exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() - mRoomWidth, p2.y() - mRoomHeight);
                 } else if (room->getNortheast() == rID) {
-                    line = QLineF(p2.x() + (mLargeAreaExitArrows ? 2.0 : 1.0) * mRoomWidth, p2.y() - (mLargeAreaExitArrows ? 2.0 : 1.0) * mRoomHeight,
+                    line = QLineF(p2.x() + exitArrowScale * mRoomWidth, p2.y() - exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() + mRoomWidth, p2.y() - mRoomHeight);
                 } else if (room->getSoutheast() == rID) {
-                    line = QLineF(p2.x() + (mLargeAreaExitArrows ? 2.0 : 1.0) * mRoomWidth, p2.y() + (mLargeAreaExitArrows ? 2.0 : 1.0) * mRoomHeight,
+                    line = QLineF(p2.x() + exitArrowScale * mRoomWidth, p2.y() + exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() + mRoomWidth, p2.y() + mRoomHeight);
                 } else if (room->getSouthwest() == rID) {
-                    line = QLineF(p2.x() - (mLargeAreaExitArrows ? 2.0 : 1.0) * mRoomWidth, p2.y() + (mLargeAreaExitArrows ? 2.0 : 1.0) * mRoomHeight,
+                    line = QLineF(p2.x() - exitArrowScale * mRoomWidth, p2.y() + exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() - mRoomWidth, p2.y() + mRoomHeight);
                 }
