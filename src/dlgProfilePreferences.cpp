@@ -1438,7 +1438,7 @@ void dlgProfilePreferences::loadEditorTab()
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setFont(pHost->getDisplayFont());
     config->setAutocompleteAutoShow(pHost->mEditorAutoComplete);
-    config->setRenderBidiContolCharacters(pHost->mEditorShowBidi);
+    config->setRenderBidiContolCharacters(pHost->getEditorShowBidi());
     config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
     edbeePreviewWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(qsl("Buck.lua")));
@@ -1471,7 +1471,7 @@ void dlgProfilePreferences::loadEditorTab()
     theme_download_label->hide();
 
     checkBox_autocompleteLuaCode->setChecked(pHost->mEditorAutoComplete);
-    checkBox_showBidi->setChecked(pHost->mEditorShowBidi);
+    checkBox_showBidi->setChecked(pHost->getEditorShowBidi());
 
     // changes the theme being previewed
     connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_theme_selected);
@@ -2766,7 +2766,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
-        pHost->mEditorShowBidi = checkBox_showBidi->isChecked();
+        pHost->setEditorShowBidi(checkBox_showBidi->isChecked());
         if (pHost->mpEditorDialog) {
             pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
         }
