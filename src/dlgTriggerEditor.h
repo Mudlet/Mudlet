@@ -217,6 +217,7 @@ public:
     void delete_trigger();
     void delete_variable();
     void setSearchOptions(const SearchOptions);
+    void setEditorShowBidi(const bool);
 
 public slots:
     void slot_toggleHiddenVariables(bool);

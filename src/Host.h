@@ -391,6 +391,8 @@ public:
     bool commitLayoutUpdates(bool flush = false);
     void setScreenDimensions(const int width, const int height) { mScreenWidth = width; mScreenHeight = height; }
     std::optional<QString> windowType(const QString& name) const;
+    bool getEditorShowBidi() const { return mEditorShowBidi; }
+    void setEditorShowBidi(const bool);
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -514,7 +516,6 @@ public:
     int mWrapIndentCount;
 
     bool mEditorAutoComplete;
-    bool mEditorShowBidi = true;
 
     // code editor theme (human-friendly name)
     QString mEditorTheme;
@@ -808,6 +809,7 @@ private:
     //   RU: https://ru.wikipedia.org/wiki/CP437
     TConsole::ControlCharacterMode mControlCharacterMode = TConsole::ControlCharacterMode::NoControlCharacterReplacement;
 
+    bool mEditorShowBidi = true;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

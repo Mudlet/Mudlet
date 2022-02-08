@@ -3982,3 +3982,13 @@ std::optional<QString> Host::windowType(const QString& name) const
 
     return {};
 }
+
+void Host::setEditorShowBidi(const bool state)
+{
+    if (mEditorShowBidi != state) {
+        mEditorShowBidi = state;
+        if (mpEditorDialog) {
+            mpEditorDialog->setEditorShowBidi(state);
+        }
+    }
+}
