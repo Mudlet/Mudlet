@@ -71,6 +71,10 @@
     "message": "套件 '%s' 安裝成功",
     "description": "Success message after drag&drop of package file onto Mudlet - %s is the file name"
   },
+  "Mudlet.packageInstallFail": {
+    "message": "安裝「%s」失敗: %s",
+    "description": "Failure message after drag&drop of package file onto Mudlet - %s is the file name"
+  },
   "Mudlet.packageDownloading": {
     "message": "從 %s 下載套件",
     "description": "Download package from Url for installation - %s is source url"

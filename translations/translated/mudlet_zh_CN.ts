@@ -568,7 +568,7 @@ please wait...</source>
       <location filename="../src/dlgRoomExits.cpp" line="146"/>
       <location filename="../src/dlgRoomExits.cpp" line="221"/>
       <source>A positive roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>预计这里会有一个正向的房间ID，这个房间是这个特殊的出口所导致的。 如果就此离开，当 &lt;tt&gt;保存&lt;/tt&gt; 被点击时，此出口将被删除。</translation>
     </message>
   </context>
   <context>
@@ -937,7 +937,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3043"/>
       <source>Move selected room or group of rooms to the given coordinates in this area</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>将选定的房间或房间组移动到该区域中的给定坐标</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3049"/>
@@ -2683,7 +2683,11 @@ out what new id numbers to use.</source>
  Look for further messages related to the rooms that are supposed
  to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ 警告 ] - 检测到 %n 个区域已丢失, 正在增加它们.
+ 请留意更多这些区域里和这些房间相关联的信息..
+</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="731"/>
@@ -2934,7 +2938,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1448"/>
       <source>Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;</source>
-      <translation type="unfinished"/>
+      <translation>将鼠标悬浮在此项上以显示 &lt;i&gt; Unicode 编码(仅第一行!)&lt;/i&gt; 的选项</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1457"/>
@@ -5118,12 +5122,12 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="892"/>
       <source>&lt;h4&gt;bspatch.c and bsdiff.c, from bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c and sais.c, from sais-lite (2010/08/07) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h4&gt;bspatch.c and bsdiff.c, from bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c and sais.c, from sais-lite (2010/08/07) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;All rights reserved.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="900"/>
       <source>&lt;h2&gt;&lt;u&gt;sparkle-glue&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008 Remko Troncon&lt;br&gt;Copyright © 2017 Vadim Peretokin&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;sparkle-glue&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008 Remko Troncon&lt;br&gt;Copyright © 2017 Vadim Peretokin&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="906"/>
@@ -5133,17 +5137,17 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="909"/>
       <source>&lt;h2&gt;&lt;u&gt;QtKeyChain - Platform-independent Qt API for storing passwords securely&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2011-2019 Frank Osterfeld &amp;lt;frank.osterfeld@gmail.com&amp;gt;.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;QtKeyChain - Platform-independent Qt API 用于安全的存储密码&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2011-2019 Frank Osterfeld &amp;lt;frank.osterfeld@gmail.com&amp;gt;.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="912"/>
       <source>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - part of KDToolBox&lt;/u&gt;&lt;br&gt;(https://github.com/KDAB/KDToolBox).&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - part of KDToolBox&lt;/u&gt;&lt;br&gt;(https://github.com/KDAB/KDToolBox).&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="915"/>
       <source>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff &lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff &lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1072"/>
@@ -5195,12 +5199,12 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>Click to make the color trigger ignore the text&apos;s background color - however choosing this for both foreground and background is an error.</source>
-      <translation type="unfinished"/>
+      <translation>点击新增一个忽略文本背景色的颜色触发器 -- 但是, 当它同时作用于背景色和前景色时将引发错误。</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
       <source>Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both foreground and background is an error.</source>
-      <translation type="unfinished"/>
+      <translation>点击新增一个忽略文本前景色的颜色触发器 -- 但是, 当它同时作用于背景色和前景色时将引发错误。</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
@@ -5324,7 +5328,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="203"/>
       <source>Characters password. Note that the password is not encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>字符密码。请注意，密码未在存储中加密</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="253"/>
