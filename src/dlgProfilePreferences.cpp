@@ -1097,6 +1097,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
     doubleSpinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout() / 1000.0);
+    checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -1179,6 +1180,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_logFileNameFormatChange);
     connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml);
     connect(doubleSpinBox_networkPacketTimeout, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPostingTimeout);
+    connect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeLargeAreaExitArrows);
 
     //Shortcuts tab
     auto shortcutKeys = mudlet::self()->mShortcutsManager->iterator();
@@ -1299,6 +1301,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
+    disconnect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, nullptr, nullptr);
 }
 
 void dlgProfilePreferences::clearHostDetails()
@@ -4195,4 +4198,14 @@ void dlgProfilePreferences::slot_deleteMap()
     qApp->processEvents(); // Allow the above message to show up when erasing big maps
 
     QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+}
+
+void dlgProfilePreferences::slot_changeLargeAreaExitArrows(const bool state)
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    pHost->setLargeAreaExitArrows(state);
 }

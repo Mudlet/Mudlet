@@ -2137,6 +2137,16 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="checkBox_largeAreaExitArrows">
+            <property name="text">
+             <string>Use large area exit arrows in 2D view</string>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
           <item row="2" column="0" alignment="Qt::AlignRight">
            <widget class="QLabel" name="label_mapSymbolsFont">
             <property name="text">
@@ -3909,6 +3919,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_isOnlyMapSymbolFontToBeUsed</tabstop>
   <tabstop>comboBox_playerRoomStyle</tabstop>
   <tabstop>checkBox_showDefaultArea</tabstop>
+  <tabstop>checkBox_largeAreaExitArrows</tabstop>
   <tabstop>fontComboBox_mapSymbols</tabstop>
   <tabstop>pushButton_showGlyphUsage</tabstop>
   <tabstop>pushButton_playerRoomPrimaryColor</tabstop>
