@@ -475,6 +475,10 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_attribute("ControlCharacterHandling") = QString::number(mode).toLatin1().constData();
     }
 
+    if (pHost->getLargeAreaExitArrows()) {
+        host.append_attribute("Large2DMapAreaExitArrows") = "yes";
+    }
+
     { // Blocked so that indentation reflects that of the XML file
         host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());
 

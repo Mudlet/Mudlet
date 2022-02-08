@@ -181,6 +181,7 @@ void T2DMap::init()
         slot_toggleMapViewOnly();
     }
     flushSymbolPixmapCache();
+    mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
 }
 
 void T2DMap::slot_shiftDown()
@@ -1427,7 +1428,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
 
     if (!pArea->gridMode) {
-        paintAreaExits(painter, pen, exitList, oneWayExits, pArea, zLevel, exitWidth, areaExitsMap);
+        paintRoomExits(painter, pen, exitList, oneWayExits, pArea, zLevel, exitWidth, areaExitsMap);
     }
 
     // Draw label sizing or group selection box
@@ -1700,8 +1701,9 @@ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKe
     painter.restore();
 }
 
-void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPointF>& areaExitsMap)
+void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPointF>& areaExitsMap)
 {
+    const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
     const float widgetWidth = width();
     const float widgetHeight = height();
 
@@ -2206,35 +2208,35 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 pen.setColor(mpMap->getColor(k));
                 painter.setPen(pen);
                 if (room->getSouth() == rID) {
-                    line = QLineF(p2.x(), p2.y() + 2.0 * mRoomHeight,
+                    line = QLineF(p2.x(), p2.y() + exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x(), p2.y() + mRoomHeight);
                 } else if (room->getNorth() == rID) {
-                    line = QLineF(p2.x(), p2.y() - 2.0 * mRoomHeight,
+                    line = QLineF(p2.x(), p2.y() - exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x(), p2.y() - mRoomHeight);
                 } else if (room->getWest() == rID) {
-                    line = QLineF(p2.x() - 2.0 * mRoomWidth, p2.y(),
+                    line = QLineF(p2.x() - exitArrowScale * mRoomWidth, p2.y(),
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() - mRoomWidth, p2.y());
                 } else if (room->getEast() == rID) {
-                    line = QLineF(p2.x() + 2.0 * mRoomWidth, p2.y(),
+                    line = QLineF(p2.x() + exitArrowScale * mRoomWidth, p2.y(),
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() + mRoomWidth, p2.y());
                 } else if (room->getNorthwest() == rID) {
-                    line = QLineF(p2.x() - 2.0 * mRoomWidth, p2.y() - 2.0 * mRoomHeight,
+                    line = QLineF(p2.x() - exitArrowScale * mRoomWidth, p2.y() - exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() - mRoomWidth, p2.y() - mRoomHeight);
                 } else if (room->getNortheast() == rID) {
-                    line = QLineF(p2.x() + 2.0 * mRoomWidth, p2.y() - 2.0 * mRoomHeight,
+                    line = QLineF(p2.x() + exitArrowScale * mRoomWidth, p2.y() - exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() + mRoomWidth, p2.y() - mRoomHeight);
                 } else if (room->getSoutheast() == rID) {
-                    line = QLineF(p2.x() + 2.0 * mRoomWidth, p2.y() + 2.0 * mRoomHeight,
+                    line = QLineF(p2.x() + exitArrowScale * mRoomWidth, p2.y() + exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() + mRoomWidth, p2.y() + mRoomHeight);
                 } else if (room->getSouthwest() == rID) {
-                    line = QLineF(p2.x() - 2.0 * mRoomWidth, p2.y() + 2.0 * mRoomHeight,
+                    line = QLineF(p2.x() - exitArrowScale * mRoomWidth, p2.y() + exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() - mRoomWidth, p2.y() + mRoomHeight);
                 }
@@ -2243,22 +2245,30 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 // in the appropriate direction
                 painter.drawLine(line);
                 QLineF l0 = QLineF(line);
-                l0.setLength((mRoomWidth + mRoomHeight) * 0.4);
-                QPointF _p1 = l0.p1();
-                QPointF _p2 = l0.p2();
+                if (mLargeAreaExitArrows) {
+                    l0.setLength((mRoomWidth + mRoomHeight) * 0.4);
+                } else {
+                    l0.setLength(exitWidth * 5.0);
+                }
+                QPointF p1 = l0.p1();
+                QPointF p2 = l0.p2();
                 QLineF l1 = QLineF(l0);
                 qreal w1 = l1.angle() - 90.0;
                 QLineF l2;
-                l2.setP1(_p2);
+                l2.setP1(p2);
                 l2.setAngle(w1);
-                l2.setLength((mRoomWidth + mRoomHeight) * 0.15);
-                QPointF _p3 = l2.p2();
+                if (mLargeAreaExitArrows) {
+                    l2.setLength((mRoomWidth + mRoomHeight) * 0.15);
+                } else {
+                    l2.setLength(exitWidth * 2.0);
+                }
+                QPointF p3 = l2.p2();
                 l2.setAngle(l2.angle() + 180.0);
-                QPointF _p4 = l2.p2();
-                QPolygonF _poly;
-                _poly.append(_p1);
-                _poly.append(_p3);
-                _poly.append(_p4);
+                QPointF p4 = l2.p2();
+                QPolygonF polygon;
+                polygon.append(p1);
+                polygon.append(p3);
+                polygon.append(p4);
                 QBrush brush = painter.brush();
                 brush.setColor(mpMap->getColor(k));
                 brush.setStyle(Qt::SolidPattern);
@@ -2268,7 +2278,7 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 arrowPen.setCosmetic(mMapperUseAntiAlias);
                 painter.setPen(arrowPen);
                 painter.setBrush(brush);
-                painter.drawPolygon(_poly);
+                painter.drawPolygon(polygon);
                 painter.restore();
             }
 
