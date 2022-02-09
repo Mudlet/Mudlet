@@ -115,7 +115,7 @@ jobs:
           --target autogen
 
     - name: Check C++ changes against style guide
-      uses: ZedThree/clang-tidy-review@v0.8.0
+      uses: ZedThree/clang-tidy-review@fix-for-no-comments
       id: static_analysis
       with:
         build_dir: 'b/ninja' # path is relative to checkout directory
