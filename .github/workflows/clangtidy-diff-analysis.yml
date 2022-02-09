@@ -7,7 +7,7 @@ on:
     - '**.h'
     - '.github/workflows/clangtidy-diff-analysis.yml'
   pull_request: # temporary
-
+  push: # temporary
 
 jobs:
   compile-mudlet:
