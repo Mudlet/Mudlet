@@ -166,7 +166,7 @@ class Discord : public QObject
 
 public:
     explicit Discord(QObject *parent = nullptr);
-    ~Discord();
+    ~Discord() override;
 
     bool libraryLoaded();
     bool usingMudletsDiscordID(Host*) const;
