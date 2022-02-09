@@ -568,10 +568,10 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
                 itSpecialExit.next();
                 QPair<QString, int> exitData;
                 exitData.first = itSpecialExit.key();
+                exitData.second = itSpecialExit.value();
                 TRoom* pToRoom = mpRoomDB->getRoom(exitData.second);
                 if (pToRoom && mpRoomDB->getArea(pToRoom->getArea()) != this) {
                     // Note that pToRoom->getArea() is misnamed, should be getAreaId() !
-                    exitData.second = itSpecialExit.value();
                     if (!exitData.first.isEmpty()) {
                         results.insert(fromRoomId, exitData);
                     }
