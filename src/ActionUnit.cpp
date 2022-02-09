@@ -187,11 +187,11 @@ void ActionUnit::removeActionRootNode(TAction* pT)
 
 TAction* ActionUnit::getAction(int id)
 {
-    if (mActionMap.contains(id)) {
-        return mActionMap.value(id);
-    } else {
-        return nullptr; // test
-    }
+        if (mActionMap.contains(id)) {
+            return mActionMap.value(id);
+        } else {
+            return nullptr;
+        }
 }
 
 TAction* ActionUnit::getActionPrivate(int id)
