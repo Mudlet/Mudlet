@@ -11401,7 +11401,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2143"/>
       <source>Use large area exit arrows in 2D view</source>
-      <translation type="unfinished"/>
+      <translation>Использовать большие стрелки выхода области в 2D режиме</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2762"/>
