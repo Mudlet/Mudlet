@@ -6657,7 +6657,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="992"/>
       <source>A positive roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>预计这里会有一个正向的房间ID，这个房间是这个特殊的出口所导致的。 如果就此离开，当 &lt;tt&gt;保存&lt;/tt&gt; 被点击时，此出口将被删除。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="997"/>
