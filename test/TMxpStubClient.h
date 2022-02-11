@@ -56,6 +56,8 @@ public:
 
     QStringList mHrefs, mHints;
 
+    QString mPublishedEntityName, mPublishedEntityValue;
+
     QString getVersion() override
     {
         return version;
@@ -109,7 +111,7 @@ public:
 
     int setLink(const QStringList& hrefs, const QStringList& hints) override
     {
-        qDebug() << QString("setLink([%1], [%2])").arg(hrefs.join(", ")).arg(hints.join(", "));
+        qDebug() << qsl("setLink([%1], [%2])").arg(hrefs.join(", ")).arg(hints.join(", "));
         mHrefs = hrefs;
         mHints = hints;
 
@@ -133,7 +135,12 @@ public:
 
     }
 
-    void publishEntity(const QString& name, const QString& value) override {}
+    void publishEntity(const QString& name, const QString& value) override
+    {
+        qDebug() << qsl("publishEntity([%1], [%2])").arg(name, value);
+        mPublishedEntityName = name;
+        mPublishedEntityValue = value;
+    }
 
     void setVariable(const QString& name, const QString& value) override {}
 };

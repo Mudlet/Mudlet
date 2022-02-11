@@ -17,6 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "TMxpEntityTagHandler.h"
+#include "TStringUtils.h"
+
 TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
     if (tag->getAttributesCount() < 2) {
@@ -26,25 +28,27 @@ TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxp
     static const QStringList boolOptions({"PRIVATE", "PUBLISH", "DELETE", "ADD", "REMOVE"});
     TEntityResolver& resolver = ctx.getEntityResolver();
 
-    const QString& name = tag->getAttrName(1);
+    const QString& name = tag->getAttrName(0);
+    const QString& entity = qsl("&%1;").arg(name);
 
     if (tag->hasAttribute("DELETE")) {
-        resolver.unregisterEntity(name);
-    } else if (!boolOptions.contains(tag->getAttribute(1).getName(), Qt::CaseInsensitive)) { // 2nd attribute is actually the value
+        resolver.unregisterEntity(entity);
+    } else if (!boolOptions.contains(tag->getAttrName(1), Qt::CaseInsensitive)) { // 2nd attribute is actually the value
         const QString& value = tag->getAttrName(1);
         if (tag->hasAttribute("ADD")) {
-            QString newDefinition = resolver.getResolution(name);
-            newDefinition.append("|");
-            newDefinition.append(value);
-
-            resolver.registerEntity(name, newDefinition);
+            QString newDefinition = resolver.getResolution(entity);
+            TStringUtils::listAddItem(newDefinition, value);
+            resolver.registerEntity(entity, newDefinition);
         } else if (tag->hasAttribute("REMOVE")) {
-            QString currentValue = resolver.getResolution(name);
-            QString toDelete = currentValue.contains("|") ? "|" + value : value;
-            resolver.registerEntity(name, currentValue.replace(toDelete, ""));
-        } else { // PUBLISH
-            resolver.registerEntity(name, value);
-            client.publishEntity(name, value);
+            QString newDefinition = resolver.getResolution(entity);
+            TStringUtils::listRemoveItem(newDefinition, value);
+            resolver.registerEntity(entity, newDefinition);
+        } else {
+            resolver.registerEntity(entity, value);
+        }
+
+        if (tag->hasAttribute("PUBLISH")) {
+            client.publishEntity(entity, value);
         }
     }
 

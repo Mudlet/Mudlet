@@ -54,6 +54,27 @@ public:
             func(ptr);
         }
     }
+
+    static void listAddItem(QString &list, const QString &item)
+    {
+        if (!list.isEmpty()) {
+            list.append("|");
+        }
+        list.append(item);
+    }
+
+    static void listRemoveItem(QString &list, const QString &item)
+    {
+        int start = list.indexOf(item);
+
+        if (start != -1) {
+            if (start == 0 && (item.size() == list.size() || list[item.size()] == '|')) { // in the start of string
+                list.remove(start, std::min(item.size() + 1, list.size()));
+            } else if (list[start - 1] == '|') { // in the middle/end of string
+                list.remove(start - 1, item.size() + 1);
+            }
+        }
+    }
 };
 
 #endif //MUDLET_TSTRINGUTILS_H
