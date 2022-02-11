@@ -2602,7 +2602,7 @@ local function setActionCallback(callbackFunc, funcName, name, func, ...)
   return callbackFunc(name, func)
 end
 
-local callBackFunc ={"setLabelClickCallback", "setLabelDoubleClickCallback", "setLabelReleaseCallback", "setLabelMoveCallback", "setLabelWheelCallback", "setLabelOnEnter", "setLabelOnLeave", "setCmdLineAction"}
+local callBackFunc = {"setLabelClickCallback", "setLabelDoubleClickCallback", "setLabelReleaseCallback", "setLabelMoveCallback", "setLabelWheelCallback", "setLabelOnEnter", "setLabelOnLeave", "setCmdLineAction"}
 
 for i = 1, #callBackFunc do
   local funcName = callBackFunc[i]
