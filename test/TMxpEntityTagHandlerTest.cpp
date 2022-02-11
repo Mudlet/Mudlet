@@ -85,6 +85,30 @@ private slots:
         QCOMPARE(processor.getEntityResolver().getResolution("&entity;"), "v1");
     }
 
+    void testAddRemovePartOfItemValue()
+    {
+        TMxpStubClient stub;
+        TMxpTagProcessor processor;
+
+        processor.getEntityResolver().registerEntity("&entity;", "my text example");
+        QCOMPARE(processor.getEntityResolver().getResolution("&entity;"), "my text example");
+
+        processor.handleNode(processor, stub, parseNode("<!EN entity \"my value\" add>").get());
+        QCOMPARE(processor.getEntityResolver().getResolution("&entity;"), "my text example|my value");
+
+        processor.handleNode(processor, stub, parseNode("<!EN entity \"my text\" remove>").get());
+        QCOMPARE(processor.getEntityResolver().getResolution("&entity;"), "my text example|my value");
+
+        processor.handleNode(processor, stub, parseNode("<!EN entity \"example\" remove>").get());
+        QCOMPARE(processor.getEntityResolver().getResolution("&entity;"), "my text example|my value");
+
+        processor.handleNode(processor, stub, parseNode("<!EN entity \"value\" remove>").get());
+        QCOMPARE(processor.getEntityResolver().getResolution("&entity;"), "my text example|my value");
+
+        processor.handleNode(processor, stub, parseNode("<!EN entity \"my\" remove>").get());
+        QCOMPARE(processor.getEntityResolver().getResolution("&entity;"), "my text example|my value");
+    }
+
     void testInterpolation()
     {
         TMxpStubClient stub;
