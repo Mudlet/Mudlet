@@ -714,13 +714,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2496"/>
       <source>Background color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>لون الخلفية</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2497"/>
       <source>Foreground color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>لون الواجهة الأمامية</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2501"/>
@@ -768,55 +768,55 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2872"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>الخصائص</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2874"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)</comment>
-      <translation type="unfinished"/>
+      <translation>الخصائص ...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2875"/>
       <source>Change the properties of this line</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>تغيير خصائص هذا الخط</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2878"/>
       <source>Finish</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>إنهاء</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2879"/>
       <source>Finish drawing this line</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>الانتهاء من رسم هذا الخط</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2945"/>
       <source>Create new map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>إنشاء خريطة جديدة</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2948"/>
       <source>Load map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>تحميل خريطة</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2970"/>
       <source>Move</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>نقل</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3042"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>حذف</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3009"/>
