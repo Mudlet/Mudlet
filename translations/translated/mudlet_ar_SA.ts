@@ -291,7 +291,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="315"/>
       <source>[Channel URL] %1</source>
-      <translation type="unfinished"/>
+      <translation>[رابط القناة] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="324"/>
@@ -301,7 +301,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="338"/>
       <source>! %1 has left %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 غادر %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="340"/>
@@ -421,12 +421,12 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="455"/>
       <source> - away</source>
-      <translation type="unfinished"/>
+      <translation>بالخارج</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="458"/>
       <source> - server operator</source>
-      <translation type="unfinished"/>
+      <translation>مديرالخادم</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="466"/>
@@ -476,7 +476,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="82"/>
       <source>No data found!</source>
-      <translation type="unfinished"/>
+      <translation>لم يتم العثور على بيانات!</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
@@ -555,7 +555,7 @@ please wait...</source>
       <location filename="../src/dlgRoomExits.cpp" line="213"/>
       <location filename="../src/dlgRoomExits.cpp" line="217"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation type="unfinished"/>
+      <translation>ضع رقم الغرفة التي سيؤدي إليها هذا المخرج الخاص.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="146"/>
@@ -656,7 +656,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="602"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished"/>
+      <translation>محدد الخرائط: لا يسطتيع أيجاد ممر من %1 إلى %2 باستخدام المخارج المعروفة.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1267"/>
