@@ -425,7 +425,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
     host.append_attribute("mEditorAutoComplete") = pHost->mEditorAutoComplete ? "yes" : "no";
-    host.append_attribute("mEditorShowBidi") = pHost->mEditorShowBidi ? "yes" : "no";
+    host.append_attribute("mEditorShowBidi") = pHost->getEditorShowBidi() ? "yes" : "no";
     host.append_attribute("mEditorTheme") = pHost->mEditorTheme.toUtf8().constData();
     host.append_attribute("mEditorThemeFile") = pHost->mEditorThemeFile.toUtf8().constData();
     host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toUtf8().constData();
@@ -473,6 +473,10 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         // value - and as it is an ASCII digit it only needs
         // QString::toLatin1() encoding:
         host.append_attribute("ControlCharacterHandling") = QString::number(mode).toLatin1().constData();
+    }
+
+    if (pHost->getLargeAreaExitArrows()) {
+        host.append_attribute("Large2DMapAreaExitArrows") = "yes";
     }
 
     { // Blocked so that indentation reflects that of the XML file

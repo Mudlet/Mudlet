@@ -824,8 +824,10 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mMapperUseAntiAlias = attributes().value(qsl("mMapperUseAntiAlias")) == YES;
     pHost->mMapperShowRoomBorders = readDefaultTrueBool(qsl("mMapperShowRoomBorders"));
     pHost->mEditorAutoComplete = (attributes().value(qsl("mEditorAutoComplete")) == YES);
-    if (!attributes().hasAttribute("mEditorShowBidi") || (attributes().value(qsl("mEditorShowBidi")) == YES)) {
-        pHost->mEditorShowBidi = true;
+    if (attributes().hasAttribute("mEditorShowBidi")) {
+        pHost->setEditorShowBidi(attributes().value(qsl("mEditorShowBidi")) == YES);
+    } else {
+        pHost->setEditorShowBidi(true);
     }
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
@@ -959,6 +961,13 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         // The default value, also used up to Mudlet 4.14.1:
         pHost->setControlCharacterMode(TConsole::NoControlCharacterReplacement);
+    }
+
+    if (attributes().hasAttribute(qsl("Large2DMapAreaExitArrows"))) {
+        pHost->setLargeAreaExitArrows(attributes().value(qsl("Large2DMapAreaExitArrows")) == YES);
+    } else {
+        // The default (and for map/profile files from before 4.15.0):
+        pHost->setLargeAreaExitArrows(false);
     }
 
     while (!atEnd()) {
