@@ -947,13 +947,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3060"/>
       <source>Create label...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>إنشاء عنوان...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3061"/>
       <source>Create label to show text or an image</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>إنشاء عنوان لعرض صورة أو نلص</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3067"/>
@@ -971,19 +971,19 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3077"/>
       <source>Switch to editing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>الانتقال لوضع التحرير</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3078"/>
       <source>Switch to viewing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>الانتقال لوضع العرض</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3085"/>
       <source>Move</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>نقل</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3086"/>
