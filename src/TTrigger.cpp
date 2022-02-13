@@ -26,11 +26,12 @@
 
 
 #include "Host.h"
-#include <QRegularExpression>
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TMatchState.h"
+#include "TMedia.h"
 #include "mudlet.h"
+#include <QRegularExpression>
 
 #include <cassert>
 #include <sstream>
@@ -1372,7 +1373,20 @@ bool TTrigger::compileScript()
 void TTrigger::execute()
 {
     if (mSoundTrigger) { /* eventually something should be added to the gui to change sound volumes. 100=full volume */
-        mudlet::self()->playSound(mSoundFile, 100);
+        QString mediaFileName = mSoundFile;
+
+        if (QDir::homePath().contains('\\')) {
+            mediaFileName.replace('/', R"(\)");
+        } else {
+            mediaFileName.replace('\\', "/");
+        }
+
+        TMediaData mediaData{};
+        mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+        mediaData.setMediaType(TMediaData::MediaTypeSound);
+        mediaData.setMediaFileName(mediaFileName);
+        mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
+        mpHost->mpMedia->playMedia(mediaData);
     }
     if (mCommand.size() > 0) {
         mpHost->send(mCommand);
