@@ -526,6 +526,7 @@ SOURCES += \
     dlgIRC.cpp \
     dlgKeysMainArea.cpp \
     dlgModuleManager.cpp \
+    dlgMapLabel.cpp \
     dlgMapper.cpp \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
@@ -636,6 +637,7 @@ HEADERS += \
     dlgConnectionProfiles.h \
     dlgIRC.h \
     dlgKeysMainArea.h \
+    dlgMapLabel.h \
     dlgMapper.h \
     dlgModuleManager.h \
     dlgNotepad.h \
@@ -758,6 +760,7 @@ FORMS += \
     ui/keybindings_main_area.ui \
     ui/main_window.ui \
     ui/module_manager.ui \
+    ui/map_label.ui \
     ui/mapper.ui \
     ui/notes_editor.ui \
     ui/package_manager.ui \

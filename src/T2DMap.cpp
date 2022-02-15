@@ -2471,83 +2471,57 @@ void T2DMap::createLabel(QRectF labelRectangle)
     QString text = tr("no text", "Default text if a label is created in mapper with no text");
     QString imagePath;
 
+    mpDlgMapLabel = new dlgMapLabel(this);
     mHelpMsg.clear();
 
-    QMessageBox textOrImageDialog;
-    textOrImageDialog.setText(tr("Text label or image label?", "2D Mapper create label dialog text"));
-    QPushButton* textButton = textOrImageDialog.addButton(tr("Text Label", "2D Mapper create label dialog button"), QMessageBox::ActionRole);
-    QPushButton* imageButton = textOrImageDialog.addButton(tr("Image Label", "2D Mapper create label dialog button"), QMessageBox::ActionRole);
-    textOrImageDialog.setStandardButtons(QMessageBox::Cancel);
-    textOrImageDialog.exec();
-    if (textOrImageDialog.clickedButton() == textButton) {
-        QString title = tr("Enter label text.", "2D Mapper create label dialog title/text");
-        font = QFontDialog::getFont(nullptr);
-        text = QInputDialog::getText(nullptr, title, title);
-        if (text.length() < 1) {
-            text = tr("no text", "Default text if a label is created in mapper with no text");
-        }
-        label.text = text;
-        label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, tr("Background color", "2D Mapper create label color dialog title"));
-        label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, tr("Foreground color", "2D Mapper create label color dialog title"));
-    } else if (textOrImageDialog.clickedButton() == imageButton) {
-        label.bgColor = QColor(50, 50, 150, 100);
-        label.text.clear();
-        imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image", "2D Mapper create label file dialog title"));
-    } else {
-        return;
-    }
-
-    QMessageBox backgroundOrForegroundDialog;
-    backgroundOrForegroundDialog.setStandardButtons(QMessageBox::Cancel);
-    backgroundOrForegroundDialog.setText(tr("Draw label as background or on top of everything?", "2D Mapper create label dialog text"));
-    QPushButton* backgroundButton = backgroundOrForegroundDialog.addButton(tr("Background", "2D Mapper create label dialog button"), QMessageBox::ActionRole);
-    QPushButton* foregroundButton = backgroundOrForegroundDialog.addButton(tr("Foreground", "2D Mapper create label dialog button"), QMessageBox::ActionRole);
-    backgroundOrForegroundDialog.exec();
-    bool showOnTop = false;
-    if (backgroundOrForegroundDialog.clickedButton() == backgroundButton) {
-        showOnTop = false;
-    } else if (backgroundOrForegroundDialog.clickedButton() == foregroundButton) {
-        showOnTop = true;
-    } else {
-        return;
-    }
-
-    label.showOnTop = showOnTop;
-    QPixmap pixmap(fabs(labelRectangle.width()), fabs(labelRectangle.height()));
-    QRect drawRectangle = labelRectangle.normalized().toRect();
-    drawRectangle.moveTo(0, 0);
-    //pixmap.fill(QColor(0, 255, 0, 0));
-    QPainter labelPainter(&pixmap);
-    QPen labelPen;
-    labelPainter.setFont(font);
-    labelPen.setColor(label.fgColor);
-    labelPainter.setPen(labelPen);
-    labelPainter.fillRect(drawRectangle, label.bgColor);
-    if (textOrImageDialog.clickedButton() == textButton) {
-        labelPainter.drawText(drawRectangle, Qt::AlignHCenter | Qt::AlignCenter, text, nullptr);
-    } else {
-        QPixmap imagePixmap = QPixmap(imagePath);
-        labelPainter.drawPixmap(QPoint(0, 0), imagePixmap.scaled(drawRectangle.size()));
-    }
-    label.pix = pixmap.copy(drawRectangle);
-    labelRectangle = labelRectangle.normalized();
-    float mx = (labelRectangle.topLeft().x() / mRoomWidth) + mOx - (xspan / 2.0);
-    float my = (yspan / 2.0) - (labelRectangle.topLeft().y() / mRoomHeight) - mOy;
-
-    float mx2 = (labelRectangle.bottomRight().x() / mRoomWidth) + mOx - (xspan / 2.0);
-    float my2 = (yspan / 2.0) - (labelRectangle.bottomRight().y() / mRoomHeight) - mOy;
-    label.pos = QVector3D(mx, my, mOz);
-    label.size = QRectF(QPointF(mx, my), QPointF(mx2, my2)).normalized().size();
     auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
     if (!pArea) {
         return;
     }
-
     int labelId = pArea->createLabelId();
-    if (Q_LIKELY(labelId >= 0)) {
-        pArea->mMapLabels.insert(labelId, label);
+
+    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [=]() mutable {
+        label.text = mpDlgMapLabel->getText();
+        label.bgColor = mpDlgMapLabel->getBgColor();
+        label.fgColor = mpDlgMapLabel->getFgColor();
+        label.showOnTop = mpDlgMapLabel->isOnTop();
+        font = mpDlgMapLabel->getFont();
+        QPixmap pixmap(fabs(labelRectangle.width()), fabs(labelRectangle.height()));
+        pixmap.fill(Qt::transparent);
+        QRect drawRectangle = labelRectangle.normalized().toRect();
+        drawRectangle.moveTo(0, 0);
+        QPainter labelPainter(&pixmap);
+        QPen labelPen;
+        labelPainter.setFont(font);
+        labelPen.setColor(label.fgColor);
+        labelPainter.setPen(labelPen);
+        labelPainter.fillRect(drawRectangle, label.bgColor);
+        labelPainter.drawText(drawRectangle, Qt::AlignHCenter | Qt::AlignCenter, label.text, nullptr);
+        label.pix = pixmap.copy(drawRectangle);
+        labelRectangle = labelRectangle.normalized();
+        float mx = (labelRectangle.topLeft().x() / mRoomWidth) + mOx - (xspan / 2.0);
+        float my = (yspan / 2.0) - (labelRectangle.topLeft().y() / mRoomHeight) - mOy;
+
+        float mx2 = (labelRectangle.bottomRight().x() / mRoomWidth) + mOx - (xspan / 2.0);
+        float my2 = (yspan / 2.0) - (labelRectangle.bottomRight().y() / mRoomHeight) - mOy;
+        label.pos = QVector3D(mx, my, mOz);
+        label.size = QRectF(QPointF(mx, my), QPointF(mx2, my2)).normalized().size();
+
+        if (Q_LIKELY(labelId >= 0)) {
+            pArea->mMapLabels.insert(labelId, label);
+            update();
+        }
+    });
+
+    connect(mpDlgMapLabel, &dlgMapLabel::rejected, this, [=]() mutable {
+        pArea->mMapLabels.remove(labelId);
         update();
-    }
+    });
+
+    mpDlgMapLabel->show();
+    mpDlgMapLabel->raise();
+    mpDlgMapLabel->updated();
+
 }
 
 void T2DMap::mouseReleaseEvent(QMouseEvent* e)

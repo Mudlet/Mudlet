@@ -166,6 +166,7 @@ set(mudlet_UIS
     ui/keybindings_main_area.ui
     ui/main_window.ui
     ui/module_manager.ui
+    ui/map_label.ui
     ui/mapper.ui
     ui/notes_editor.ui
     ui/package_manager.ui
@@ -197,6 +198,7 @@ set(mudlet_HDRS
     dlgConnectionProfiles.h
     dlgIRC.h
     dlgKeysMainArea.h
+    dlgMapLabel.h
     dlgMapper.h
     dlgModuleManager.h
     dlgNotepad.h
@@ -380,7 +382,7 @@ endif()
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS}
-                      ${mudlet_UIS})
+                      ${mudlet_UIS} dlgMapLabel.cpp dlgMapLabel.h)
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
 set_target_properties(mudlet PROPERTIES
