@@ -257,7 +257,7 @@ function InstallYajl() {
   $Env:Path = $NoShPath
   DownloadFile "https://github.com/lloyd/yajl/archive/refs/tags/2.1.0.tar.gz" "yajl-2.1.0.tar.gz"
   ExtractTar "yajl-2.1.0.tar.gz" "yajl-2.1.0"
-  Set-Location "yajl-2.1.0\lloyd-yajl-66cb08c"
+  Set-Location "yajl-2.1.0"
   Step "changing CMakeLists.txt"
   (Get-Content CMakeLists.txt -Raw) -replace '\/W4' -replace '(?<=SET\(linkFlags)[^\)]+' -replace '\/wd4996 \/wd4255 \/wd4130 \/wd4100 \/wd4711' -replace '(?<=SET\(CMAKE_C_FLAGS_DEBUG .)\/D \DEBUG \/Od \/Z7', '-g' -replace '(?<=SET\(CMAKE_C_FLAGS_RELEASE .)\/D NDEBUG \/O2', '-O2' | Out-File -encoding ASCII CMakeLists.txt >> "$logFile" 2>&1
   if (!(Test-Path -Path "build" -PathType Container)) {
