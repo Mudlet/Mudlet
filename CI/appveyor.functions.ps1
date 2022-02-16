@@ -255,7 +255,7 @@ function InstallHunspell() {
 
 function InstallYajl() {
   $Env:Path = $NoShPath
-  DownloadFile "https://github.com/lloyd/yajl/tarball/2.1.0" "yajl-2.1.0.tar.gz"
+  DownloadFile "https://github.com/lloyd/yajl/archive/refs/tags/2.1.0.tar.gz" "yajl-2.1.0.tar.gz"
   ExtractTar "yajl-2.1.0.tar.gz" "yajl-2.1.0"
   Set-Location "yajl-2.1.0\lloyd-yajl-66cb08c"
   Step "changing CMakeLists.txt"
