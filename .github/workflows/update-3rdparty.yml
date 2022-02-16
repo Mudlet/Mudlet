@@ -15,7 +15,7 @@ jobs:
           ref: development
 
       - name: Download latest IRE mapper
-        uses: carlosperate/download-file-action@v1.1.0
+        uses: carlosperate/download-file-action@v1.1.1
         with:
           file-url: https://raw.githubusercontent.com/IRE-Mudlet-Mapping/ire-mapping-script/gh-pages/downloads/mudlet-mapper.xml
           file-name: mudlet-mapper.xml
@@ -48,7 +48,6 @@ jobs:
           path: src/
           commit-message: (autocommit) Updated IRE mapping script to latest upstream
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
-
 
   update-sparkle-glue-fork:
     runs-on: ubuntu-latest
@@ -252,7 +251,47 @@ jobs:
             Latest version of the Qt utility feature that allows singleshot connections.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-widechar-width-${{ github.sha }}
+          branch: update-singleshot-connect-${{ github.sha }}
           path: src/
           commit-message: (autocommit) Update singleshot_connect.h to latest upstream
+          author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
+
+  update-cmake-scripts-source:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: development
+
+      - name: download latest from source repo
+        run: |
+          curl -o 3rdparty/cmake-scripts/sanitizers.cmake https://raw.githubusercontent.com/StableCoder/cmake-scripts/main/sanitizers.cmake
+
+      # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
+      # to see in github UI's if PR creation was skipped when we have an explicit pre-check
+      - name: check if we have any updates
+        id: getdiff
+        run: |
+          lines_changed=$(git diff --patch --unified=0 3rdparty/cmake-scripts/sanitizers.cmake | wc --lines)
+          echo "$lines_changed lines changed."
+          echo ::set-output name=lines_changed::$lines_changed
+
+      - name: send in a pull request
+        uses: gr2m/create-or-update-pull-request-action@v1.x
+        if: steps.getdiff.outputs.lines_changed > 0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
+        with:
+          title: "Infrastructure: Update sanitizers.cmake to latest upstream"
+          body: |
+            #### Brief overview of PR changes/additions
+            :crown: An automated PR to update the built-in `3rdparty/cmake-scripts/sanitizers.cmake` to its latest version in upstream. We don't include it as a submodule as we need just this one file from the entire repo.
+            #### Motivation for adding to Mudlet
+            Latest version of the CMake utility feature that allows use to use various CMake sanitizers via the `USE_SANITIZER` CMake variable.
+            #### Other info (issues closed, discussion etc)
+            _update triggered by ${{ github.ref }} ${{ github.sha }}_
+          branch: update-cmake-scripts-${{ github.sha }}
+          path: src/
+          commit-message: (autocommit) Update sanitizers.cmake to latest upstream
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"

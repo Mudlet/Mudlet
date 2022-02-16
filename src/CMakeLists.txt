@@ -334,6 +334,8 @@ if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
   set_alternate_linker(${USE_ALTERNATE_LINKER})
 endif()
 
+include(../3rdparty/cmake-scripts/sanitizers.cmake)
+
 find_package(
   Qt5 5.11 REQUIRED
   COMPONENTS Core

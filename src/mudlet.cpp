@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -184,7 +184,6 @@ mudlet::mudlet()
 , mpMainToolBar(nullptr)
 , version(qsl("Mudlet " APP_VERSION APP_BUILD))
 , mpCurrentActiveHost(nullptr)
-, mAutolog(false)
 , mpTabBar(nullptr)
 , mIsLoadingLayout(false)
 , mHasSavedLayout(false)
@@ -345,13 +344,6 @@ mudlet::mudlet()
     mpSplitter_profileContainer->setChildrenCollapsible(false);
 
     mpHBoxLayout_profileContainer->addWidget(mpSplitter_profileContainer);
-
-    QFile file_autolog(getMudletPath(mainDataItemPath, qsl("autolog")));
-    if (file_autolog.exists()) {
-        mAutolog = true;
-    } else {
-        mAutolog = false;
-    }
 
     mpButtonConnect = new QToolButton(this);
     mpButtonConnect->setText(tr("Connect"));
@@ -1540,7 +1532,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     if (pH->mpConsole) {
         return;
     }
-    pH->mLogStatus = mAutolog;
     auto pConsole = new TMainConsole(pH);
     if (!pConsole) {
         return;
@@ -1577,6 +1568,9 @@ void mudlet::addConsoleForNewHost(Host* pH)
     mpCurrentActiveHost = pH;
 
     if (pH->mLogStatus) {
+        // The above flag is set/reset at the start of the TMainConsole
+        // constructor - and if it is set we now need to "click" the button
+        // to immediately start logging the game output as text/HTML:
         pConsole->logButton->click();
     }
 
@@ -3000,8 +2994,7 @@ void mudlet::slot_compact_input_line(const bool state)
     if (mpCurrentActiveHost) {
         mpCurrentActiveHost->setCompactInputLine(state);
         // Make sure players don't get confused when accidentally hiding buttons.
-        if (state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown) {
-            QKeySequence* shortcut = mShortcutsManager->getSequence(tr("Compact input line"));
+        if (QKeySequence* shortcut = mShortcutsManager->getSequence(qsl("Compact input line")); state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
             QString infoMsg = tr("[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.",
                                  "Here %1 will be replaced with the keyboard shortcut, default is ALT+L.").arg(shortcut->toString());
             mpCurrentActiveHost->postMessage(infoMsg);

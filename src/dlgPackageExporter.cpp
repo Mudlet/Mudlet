@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2021 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2022 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -1455,10 +1455,15 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem *item)
         debounce = true;
         QTimer::singleShot(0, this, [this]() {
             int itemsToExport = countCheckedItems();
-            if (itemsToExport == 0) {
-                mpSelectionText->setTitle(tr("Select what to export"));
+            if (itemsToExport) {
+                mpSelectionText->setTitle(tr("Select what to export (%n item(s))",
+                                             // Intentional comment to separate arguments
+                                             "This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.",
+                                             itemsToExport));
             } else {
-                mpSelectionText->setTitle(tr("Select what to export (%1 items)", "Package exporter selection", itemsToExport).arg(itemsToExport));
+                mpSelectionText->setTitle(tr("Select what to export",
+                                             // Intentional comment to separate arguments
+                                             "This is the text shown at the top of a groupbox initially and when there is NO items to export in the Package exporter dialogue."));
             }
             debounce = false;
         });
