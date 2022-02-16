@@ -23,6 +23,7 @@
 #include "pre_guard.h"
 #include <QDialog>
 #include <QFontDialog>
+#include <QColorDialog>
 #include "ui_map_label.h"
 #include "post_guard.h"
 
@@ -47,6 +48,8 @@ signals:
 
 private:
     QFontDialog* fontDialog = nullptr;
+    QColorDialog* bgColorDialog = nullptr;
+    QColorDialog* fgColorDialog = nullptr;
     QString text;
     QColor bgColor;
     QColor fgColor;

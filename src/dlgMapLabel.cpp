@@ -46,33 +46,63 @@ dlgMapLabel::dlgMapLabel(QWidget* pF) : QDialog(pF)
         emit updated();
     });
     connect(this, &dlgMapLabel::updated, this, &dlgMapLabel::updateControls);
+
     font = QApplication::font();
     fontDialog = new QFontDialog(font, this);
+    connect(fontDialog, &QFontDialog::currentFontChanged, this, [=](QFont pFont) {
+        font = pFont;
+        emit updated();
+    });
+
+    bgColorDialog = new QColorDialog(this);
+    bgColorDialog->setWindowTitle(tr("Background color", "2D Mapper create label color dialog title"));
+    bgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
+    connect(bgColorDialog, &QColorDialog::currentColorChanged, this, [=](QColor color) {
+       bgColor = color;
+       emit updated();
+    });
+    fgColorDialog = new QColorDialog(this);
+    fgColorDialog->setWindowTitle(tr("Foreground color", "2D Mapper create label color dialog title"));
+    fgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
+    connect(fgColorDialog, &QColorDialog::currentColorChanged, this, [=](QColor color) {
+        fgColor = color;
+        emit updated();
+    });
     text = lineEdit_text->placeholderText();
     updateControls();
 }
 
-dlgMapLabel::~dlgMapLabel() {}
+dlgMapLabel::~dlgMapLabel() {
+    delete fontDialog;
+    delete fgColorDialog;
+    delete bgColorDialog;
+}
 
 void dlgMapLabel::pickFgColor()
 {
-    fgColor = QColorDialog::getColor(fgColor, this, tr("Foreground color", "2D Mapper create label color dialog title"), QColorDialog::ShowAlphaChannel);
-    emit updated();
+    auto originalColor = QColor(fgColor);
+    connect(fgColorDialog, &QColorDialog::rejected, this, [=]() {
+        fgColor = originalColor;
+        emit updated();
+    });
+    fgColorDialog->show();
+    fgColorDialog->raise();
 }
 
 void dlgMapLabel::pickBgColor()
 {
-    bgColor = QColorDialog::getColor(bgColor, this, tr("Background color", "2D Mapper create label color dialog title"), QColorDialog::ShowAlphaChannel);
-    emit updated();
+    auto originalColor = QColor(bgColor);
+    connect(bgColorDialog, &QColorDialog::rejected, this, [=]() {
+        bgColor = originalColor;
+        emit updated();
+    });
+    bgColorDialog->show();
+    bgColorDialog->raise();
 }
 
 void dlgMapLabel::pickFont()
 {
     auto originalFont = QFont(font);
-    connect(fontDialog, &QFontDialog::currentFontChanged, this, [=](QFont pFont) {
-       font = pFont;
-        emit updated();
-    });
     connect(fontDialog, &QFontDialog::rejected, this, [=]() {
         font = originalFont;
         emit updated();
