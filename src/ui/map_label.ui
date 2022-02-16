@@ -38,14 +38,14 @@
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
-      <item row="5" column="2">
+      <item row="4" column="2">
        <widget class="QToolButton" name="toolButton_fontPick">
         <property name="text">
          <string>...</string>
         </property>
        </widget>
       </item>
-      <item row="8" column="1" colspan="2">
+      <item row="7" column="1" colspan="2">
        <widget class="QPushButton" name="pushButton_bgColor">
         <property name="text">
          <string/>
@@ -59,14 +59,21 @@
         </property>
        </widget>
       </item>
-      <item row="8" column="0">
+      <item row="7" column="0">
        <widget class="QLabel" name="label_bg">
         <property name="text">
          <string>Background</string>
         </property>
        </widget>
       </item>
-      <item row="5" column="0">
+      <item row="2" column="1">
+       <widget class="QCheckBox" name="checkBox_stretchImage">
+        <property name="text">
+         <string>Stretch image</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
        <widget class="QLabel" name="label_font">
         <property name="text">
          <string>Font</string>
@@ -87,13 +94,6 @@
         </item>
        </widget>
       </item>
-      <item row="2" column="1">
-       <widget class="QCheckBox" name="checkBox_centerImage">
-        <property name="text">
-         <string>Center image</string>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="0">
        <widget class="QLabel" name="label_type">
         <property name="text">
@@ -101,7 +101,7 @@
         </property>
        </widget>
       </item>
-      <item row="11" column="1">
+      <item row="10" column="1">
        <widget class="QCheckBox" name="checkBox_scaling">
         <property name="toolTip">
          <string>If deselected the label will have the same size when you zoom in and out in the mapper. If it is selected the label will scale when you zoom the mapper.</string>
@@ -114,14 +114,14 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
+      <item row="3" column="0">
        <widget class="QLabel" name="label_text">
         <property name="text">
          <string>Label text</string>
         </property>
        </widget>
       </item>
-      <item row="4" column="1" colspan="2">
+      <item row="3" column="1" colspan="2">
        <widget class="QLineEdit" name="lineEdit_text">
         <property name="placeholderText">
          <string>My Label</string>
@@ -142,7 +142,7 @@
         </property>
        </widget>
       </item>
-      <item row="10" column="1" colspan="2">
+      <item row="9" column="1" colspan="2">
        <widget class="QComboBox" name="comboBox_position">
         <item>
          <property name="text">
@@ -156,38 +156,31 @@
         </item>
        </widget>
       </item>
-      <item row="5" column="1">
+      <item row="4" column="1">
        <widget class="QLineEdit" name="lineEdit_font">
         <property name="readOnly">
          <bool>true</bool>
         </property>
        </widget>
       </item>
-      <item row="10" column="0">
+      <item row="9" column="0">
        <widget class="QLabel" name="label_position">
         <property name="text">
          <string>Position</string>
         </property>
        </widget>
       </item>
-      <item row="7" column="1" colspan="2">
+      <item row="6" column="1" colspan="2">
        <widget class="QPushButton" name="pushButton_fgColor">
         <property name="text">
          <string/>
         </property>
        </widget>
       </item>
-      <item row="7" column="0">
+      <item row="6" column="0">
        <widget class="QLabel" name="label_fg">
         <property name="text">
          <string>Foreground</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="1">
-       <widget class="QCheckBox" name="checkBox_keepAspect">
-        <property name="text">
-         <string>Keep image aspect ratio</string>
         </property>
        </widget>
       </item>

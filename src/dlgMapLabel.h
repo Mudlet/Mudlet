@@ -40,8 +40,7 @@ public:
 
     bool isTextLabel();
     QString getImagePath();
-    bool centerImage();
-    bool keepImageAspectRatio();
+    bool stretchImage();
     QString getText();
     QColor& getBgColor();
     QColor& getFgColor();

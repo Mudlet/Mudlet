@@ -2508,8 +2508,12 @@ void T2DMap::createLabel(QRectF labelRectangle)
         if (mpDlgMapLabel->isTextLabel()) {
             labelPainter.drawText(drawRectangle, Qt::AlignHCenter | Qt::AlignCenter, label.text, nullptr);
         } else {
-            QPixmap imagePixmap = QPixmap(imagePath);
-            labelPainter.drawPixmap(QPoint(0, 0), imagePixmap.scaled(drawRectangle.size()));
+            QPixmap imagePixmap = QPixmap(imagePath).scaled(drawRectangle.size(),
+                                                            mpDlgMapLabel->stretchImage() ? Qt::IgnoreAspectRatio
+                                                                                          : Qt::KeepAspectRatio);
+            auto point = mpDlgMapLabel->stretchImage() ? QPoint(0, 0) : pixmap.rect().center() -
+                                                                       imagePixmap.rect().center();
+            labelPainter.drawPixmap(point, imagePixmap);
         }
 
         label.pix = pixmap.copy(drawRectangle);

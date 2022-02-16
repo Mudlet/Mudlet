@@ -36,8 +36,7 @@ dlgMapLabel::dlgMapLabel(QWidget *pF) : QDialog(pF), fgColor(QColor(255, 255, 50
             &dlgMapLabel::updateControlsVisibility);
     connect(comboBox_type, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgMapLabel::updated);
     connect(toolButton_imagePick, &QToolButton::released, this, &dlgMapLabel::pickFile);
-    connect(checkBox_keepAspect, &QCheckBox::stateChanged, this, &dlgMapLabel::updated);
-    connect(checkBox_centerImage, &QCheckBox::stateChanged, this, &dlgMapLabel::updated);
+    connect(checkBox_stretchImage, &QCheckBox::stateChanged, this, &dlgMapLabel::updated);
     connect(lineEdit_text, &QLineEdit::textChanged, this, [=](QString pText) {
         text = pText;
         emit updated();
@@ -160,12 +159,8 @@ bool dlgMapLabel::noScale() {
     return !checkBox_scaling->isChecked();
 }
 
-bool dlgMapLabel::keepImageAspectRatio() {
-    return checkBox_keepAspect->isChecked();
-}
-
-bool dlgMapLabel::centerImage() {
-    return checkBox_centerImage->isChecked();
+bool dlgMapLabel::stretchImage() {
+    return checkBox_stretchImage->isChecked();
 }
 
 void dlgMapLabel::updateControls() {
@@ -184,8 +179,7 @@ void dlgMapLabel::updateControlsVisibility() {
     bool isText = isTextLabel();
     label_image->setVisible(!isText);
     lineEdit_image->setVisible(!isText);
-    checkBox_keepAspect->setVisible(!isText);
-    checkBox_centerImage->setVisible(!isText);
+    checkBox_stretchImage->setVisible(!isText);
     toolButton_imagePick->setVisible(!isText);
     label_text->setVisible(isText);
     lineEdit_text->setVisible(isText);
