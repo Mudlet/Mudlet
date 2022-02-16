@@ -21,11 +21,11 @@
  ***************************************************************************/
 
 #include "pre_guard.h"
-#include <QDialog>
-#include <QFontDialog>
-#include <QColorDialog>
-#include <QFileDialog>
 #include "ui_map_label.h"
+#include <QColorDialog>
+#include <QDialog>
+#include <QFileDialog>
+#include <QFontDialog>
 #include "post_guard.h"
 
 
@@ -35,7 +35,7 @@ class dlgMapLabel : public QDialog, public Ui::map_label
 
 public:
     Q_DISABLE_COPY(dlgMapLabel)
-    dlgMapLabel(QWidget*);
+    explicit dlgMapLabel(QWidget*);
     ~dlgMapLabel();
 
     bool isTextLabel();
@@ -69,8 +69,6 @@ private slots:
     void pickFile();
     void updateControls();
     void updateControlsVisibility();
-
-
 };
 
 #endif //MUDLET_DLGMAPLABEL_H
