@@ -58,6 +58,7 @@ set(mudlet_SRCS
     dlgIRC.cpp
     dlgKeysMainArea.cpp
     dlgMapper.cpp
+    dlgMapLabel.cpp
     dlgModuleManager.cpp
     dlgNotepad.cpp
     dlgPackageExporter.cpp
@@ -381,8 +382,7 @@ endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS}
-                      ${mudlet_UIS} dlgMapLabel.cpp dlgMapLabel.h)
+add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS})
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
 set_target_properties(mudlet PROPERTIES

@@ -24,6 +24,7 @@
 #include <QDialog>
 #include <QFontDialog>
 #include <QColorDialog>
+#include <QFileDialog>
 #include "ui_map_label.h"
 #include "post_guard.h"
 
@@ -37,11 +38,14 @@ public:
     dlgMapLabel(QWidget*);
     ~dlgMapLabel();
 
+    bool isTextLabel();
+    QString getImagePath();
     QString getText();
     QColor& getBgColor();
     QColor& getFgColor();
     QFont& getFont();
     bool isOnTop();
+    bool noScale();
 
 signals:
     void updated();
@@ -50,18 +54,20 @@ private:
     QFontDialog* fontDialog = nullptr;
     QColorDialog* bgColorDialog = nullptr;
     QColorDialog* fgColorDialog = nullptr;
+    QString imagePath;
     QString text;
     QColor bgColor;
     QColor fgColor;
     QFont font;
-    bool onTop;
 
 private slots:
     void save();
     void pickFgColor();
     void pickBgColor();
     void pickFont();
+    void pickFile();
     void updateControls();
+    void updateControlsVisibility();
 
 
 };

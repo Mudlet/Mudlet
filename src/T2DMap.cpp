@@ -2481,11 +2481,19 @@ void T2DMap::createLabel(QRectF labelRectangle)
     int labelId = pArea->createLabelId();
 
     connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [=]() mutable {
-        label.text = mpDlgMapLabel->getText();
+        QString imagePath;
+        if (mpDlgMapLabel->isTextLabel()) {
+            label.text = mpDlgMapLabel->getText();
+            label.fgColor = mpDlgMapLabel->getFgColor();
+            font = mpDlgMapLabel->getFont();
+        } else {
+            label.text.clear();
+            imagePath = mpDlgMapLabel->getImagePath();
+        }
         label.bgColor = mpDlgMapLabel->getBgColor();
-        label.fgColor = mpDlgMapLabel->getFgColor();
         label.showOnTop = mpDlgMapLabel->isOnTop();
-        font = mpDlgMapLabel->getFont();
+        label.noScaling = mpDlgMapLabel->noScale();
+
         QPixmap pixmap(fabs(labelRectangle.width()), fabs(labelRectangle.height()));
         pixmap.fill(Qt::transparent);
         QRect drawRectangle = labelRectangle.normalized().toRect();
@@ -2496,7 +2504,14 @@ void T2DMap::createLabel(QRectF labelRectangle)
         labelPen.setColor(label.fgColor);
         labelPainter.setPen(labelPen);
         labelPainter.fillRect(drawRectangle, label.bgColor);
-        labelPainter.drawText(drawRectangle, Qt::AlignHCenter | Qt::AlignCenter, label.text, nullptr);
+
+        if (mpDlgMapLabel->isTextLabel()) {
+            labelPainter.drawText(drawRectangle, Qt::AlignHCenter | Qt::AlignCenter, label.text, nullptr);
+        } else {
+            QPixmap imagePixmap = QPixmap(imagePath);
+            labelPainter.drawPixmap(QPoint(0, 0), imagePixmap.scaled(drawRectangle.size()));
+        }
+
         label.pix = pixmap.copy(drawRectangle);
         labelRectangle = labelRectangle.normalized();
         float mx = (labelRectangle.topLeft().x() / mRoomWidth) + mOx - (xspan / 2.0);
