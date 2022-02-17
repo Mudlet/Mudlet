@@ -235,6 +235,7 @@ function InstallPython() {
 }
 
 function InstallOpenssl() {
+  # needs to be from http://wiki.overbyte.eu/wiki/index.php/ICS_Download as it includes extra binaries not available on openssl.org
   DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.1.1l-win32.zip" "openssl-win32.zip"
   ExtractZip "openssl-win32.zip" "openssl"
   Step "installing"
