@@ -2473,9 +2473,6 @@ void T2DMap::mouseDoubleClickEvent(QMouseEvent* event)
 void T2DMap::createLabel(QRectF labelRectangle)
 {
     TMapLabel label;
-    QFont font;
-    QString text = tr("no text", "Default text if a label is created in mapper with no text");
-    QString imagePath;
 
     mpDlgMapLabel = new dlgMapLabel(this);
     mHelpMsg.clear();
@@ -2487,6 +2484,7 @@ void T2DMap::createLabel(QRectF labelRectangle)
     int labelId = pArea->createLabelId();
 
     connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [=]() mutable {
+        QFont font;
         QString imagePath;
         if (mpDlgMapLabel->isTextLabel()) {
             label.text = mpDlgMapLabel->getText();

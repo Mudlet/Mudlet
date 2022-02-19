@@ -75,7 +75,7 @@ void dlgMapLabel::pickFgColor()
     fgColorDialog->setWindowTitle(tr("Foreground color", "2D mapper create label color dialog title"));
     fgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
     connect(fgColorDialog, &QColorDialog::currentColorChanged, this, [=](QColor color) {
-        fgColor = color;
+        fgColor = std::move(color);
         emit updated();
     });
     auto originalColor = QColor(fgColor);
@@ -95,7 +95,7 @@ void dlgMapLabel::pickBgColor()
     bgColorDialog->setWindowTitle(tr("Background color", "2D mapper create label color dialog title"));
     bgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
     connect(bgColorDialog, &QColorDialog::currentColorChanged, this, [=](QColor color) {
-        bgColor = color;
+        bgColor = std::move(color);
         emit updated();
     });
     connect(bgColorDialog, &QColorDialog::rejected, this, [=]() {
@@ -113,7 +113,7 @@ void dlgMapLabel::pickFont()
     fontDialog->setAttribute(Qt::WA_DeleteOnClose);
     fontDialog->setWindowTitle(tr("Label font", "2D mapper create label font dialog title"));
     connect(fontDialog, &QFontDialog::currentFontChanged, this, [=](QFont pFont) {
-        font = pFont;
+        font = std::move(pFont);
         emit updated();
     });
     connect(fontDialog, &QFontDialog::rejected, this, [=]() {
