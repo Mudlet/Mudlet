@@ -5,6 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -40,8 +41,6 @@ public:
     explicit TAccessibleConsole(QWidget* w) : QAccessibleWidget(w, QAccessible::EditableText)
     {
         Q_ASSERT(isValid());
-
-        qDebug() << QStringLiteral("TAccessibleConsole instantiated");
     }
 
     static QAccessibleInterface* consoleFactory(const QString &classname, QObject *object)
@@ -49,8 +48,6 @@ public:
         QAccessibleInterface *interface = 0;
 
         if (classname == QLatin1String("TConsole") && object && object->isWidgetType()) {
-            qDebug() << "TConsole::consoleFactory function called with classname: TConsole";
-
             interface = new TAccessibleConsole(static_cast<QWidget *>(object));
         }
 
@@ -59,8 +56,6 @@ public:
 
     void* interface_cast(QAccessible::InterfaceType t) override
     {
-        qDebug() << QStringLiteral("TAccessibleConsole::interface_cast");
-
         if (t == QAccessible::ActionInterface) {
             return static_cast<QAccessibleActionInterface*>(this);
         }

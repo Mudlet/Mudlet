@@ -2,6 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -29,36 +30,26 @@ TConsole* TAccessibleConsole::display() const
 
 QAccessibleInterface* TAccessibleConsole::childAt(int x, int y) const
 {
-    qDebug() << QStringLiteral("QAccessibleTextInterface::childAt(int x, int y)");
-
     return 0;
 }
 
 int TAccessibleConsole::childCount() const
 {
-    qDebug() << QStringLiteral("QAccessibleTextInterface::childCount()");
-
     return 0;
 }
 
 int TAccessibleConsole::indexOfChild(const QAccessibleInterface *child) const
 {
-    qDebug() << QStringLiteral("QAccessibleTextInterface::indexOfChild(const QAccessibleInterface *child)");
-
     return -1;
 }
 
 QAccessible::Role TAccessibleConsole::role() const
 {
-    qDebug() << QStringLiteral("QAccessibleTextInterface::role()");
-
     return QAccessible::StaticText;
 }
 
 QAccessible::State TAccessibleConsole::state() const
 {
-    qDebug() << QStringLiteral("QAccessibleTextInterface::state()");
-
     QAccessible::State s = QAccessibleWidget::state();
     s.selectableText = true;
     s.multiLine = true;
@@ -86,8 +77,6 @@ int TAccessibleConsole::columnForOffset(int offset) const
  */
 void TAccessibleConsole::selection(int selectionIndex, int *startOffset, int *endOffset) const
 {
-    qDebug() << QStringLiteral("QAccessibleTextInterface::selection(int selectionIndex, int *startOffset, int *endOffset)");
-
     int startLine = display()->P_begin.y();
     int startColumn = display()->P_begin.x();
     int endLine = display()->P_end.y();
@@ -99,8 +88,6 @@ void TAccessibleConsole::selection(int selectionIndex, int *startOffset, int *en
 
     *startOffset = startLine * display()->mLowerPane->getColumnCount() + startColumn;
     *endOffset = endLine * display()->mLowerPane->getColumnCount() + endColumn;
-
-    qDebug() << QStringLiteral("QAccessibleTextInterface::selection:  startOffset ") << startOffset << QStringLiteral(" endOffset ") << endOffset;
 }
 
 /*
@@ -108,20 +95,12 @@ void TAccessibleConsole::selection(int selectionIndex, int *startOffset, int *en
  */
 int TAccessibleConsole::selectionCount() const
 {
-    qDebug() << QStringLiteral("QAccessibleTextInterface::selectionCount()");
-
     int startLine = display()->P_begin.y();
-    qDebug() << QStringLiteral("QAccessibleTextInterface::selectionCount->startLine:  ") << startLine;
     int startColumn = display()->P_begin.x();
-    qDebug() << QStringLiteral("QAccessibleTextInterface::selectionCount->startColumn:  ") << startColumn;
     int endLine = display()->P_end.y();
-    qDebug() << QStringLiteral("QAccessibleTextInterface::selectionCount->endLine:  ") << endLine;
     int endColumn = display()->P_end.x();
-    qDebug() << QStringLiteral("QAccessibleTextInterface::selectionCount->endColumn:  ") << endColumn;
 
     int ret = ((startLine == endLine) && (startColumn == endColumn)) ? 0 : 1;
-
-    qDebug() << QStringLiteral("QAccessibleTextInterface::selectionCount:  ") << ret;
 
     return ret;
 }
@@ -169,8 +148,6 @@ int TAccessibleConsole::cursorPosition() const
     int offset = display()->mLowerPane->getColumnCount() * display()->mUserCursor.y();
     int ret = offset + display()->mUserCursor.x();
 
-    qDebug() << QStringLiteral("QAccessibleTextInterface::cursorPosition:  ") << ret;
-
     return ret;
 }
 
@@ -194,8 +171,6 @@ QString TAccessibleConsole::text(int startOffset, int endOffset) const
     QString line(display()->buffer.line(display()->mUserCursor.y()));
     QString ret(line.mid(startOffset, endOffset - startOffset));
 
-    qDebug() << QStringLiteral("QAccessibleTextInterface::text") << ret;
-
     return ret;
 }
 
@@ -205,8 +180,6 @@ QString TAccessibleConsole::text(int startOffset, int endOffset) const
 int TAccessibleConsole::characterCount() const
 {
     int ret = display()->getLineCount() * display()->mLowerPane->getColumnCount();
-
-    qDebug() << QStringLiteral("QAccessibleTextInterface::characterCount:  ") << ret;
 
     return ret;
 }
@@ -223,8 +196,6 @@ QRect TAccessibleConsole::characterRect(int offset) const
     int fontHeight = QFontMetrics(display()->mDisplayFont).height();
     QPoint position = QPoint(col * fontWidth , row * fontHeight);
     position = display()->mapToGlobal(position);
-
-    qDebug() << QStringLiteral("QAccessibleTextInterface::characterRect calculated");
 
     return QRect(position, QSize(fontWidth, fontHeight));
 }
