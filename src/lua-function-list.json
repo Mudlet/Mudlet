@@ -133,6 +133,7 @@
     "getAreaTableSwap": "areaTable = getAreaTableSwap()",
     "getAreaUserData": "dataValue = getAreaUserData(areaID, key)",
     "getAvailableFonts": "getAvailableFonts()",
+    "getBackgroundColor": "getBackgroundColor([windowName])",
     "getBgColor": "getBgColor(windowName)",
     "getBorderBottom": "getBorderBottom()",
     "getBorderLeft": "getBorderLeft()",
