@@ -5508,7 +5508,15 @@ int TLuaInterpreter::receiveMSP(lua_State* L)
     std::string msg;
 
     if (!host.mTelnet.isMSPEnabled()) {
-        return warnArgumentValue(L, __func__, "MSP is not currently enabled");
+        if (lua_gettop(L) > 1 && lua_isboolean(L, 2)) { // MSP spec does not require negotiation
+            bool boolValue = getVerifiedBool(L, __func__, 2, "forceMSPEnabled");
+
+            if (boolValue) { // 2nd arg == true enables MSP
+                host.mTelnet.setMSPEnabled(boolValue);
+            }
+        } else {
+            return warnArgumentValue(L, __func__, "MSP is not currently enabled");
+        }
     }
 
     if (!lua_isstring(L, 1)) {
