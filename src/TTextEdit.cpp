@@ -38,6 +38,7 @@
 #include <QtGlobal>
 #include <QAccessible>
 #include <QAccessibleTextCursorEvent>
+#include <QAccessibleTextInsertEvent>
 #include <QApplication>
 #include <QChar>
 #include <QClipboard>
@@ -67,6 +68,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mLastRenderedOffset(0)
 , mMouseTracking(false)
 , mMouseTrackLevel(0)
+, mOldScrollPos(0)
 , mpBuffer(pB)
 , mpConsole(pC)
 , mpHost(pH)
@@ -318,6 +320,8 @@ void TTextEdit::showNewLines()
         mpBuffer->mCursorY = mpBuffer->size();
     }
 
+    const int previousOldScrollPos = mOldScrollPos;
+
     mOldScrollPos = mpBuffer->getLastLineNumber();
 
     if (!mIsLowerPane) {
@@ -328,8 +332,27 @@ void TTextEdit::showNewLines()
     }
     update();
 
-    QAccessibleEvent event(this, QAccessible::DocumentContentChanged);
-    QAccessible::updateAccessibility(&event);
+
+    if (QAccessible::isActive()) {
+        QString newLines;
+
+        for (int i = previousOldScrollPos; i < mOldScrollPos; i++) {
+            newLines.append(mpBuffer->line(i));
+            newLines.append('\n');
+        }
+
+        QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(this)->textInterface();
+
+        /*
+         * By default, it is assumed that the cursor has moved to the end of the selection.
+         * So let's make this assumption true.
+         */
+        ti->setCursorPosition(ti->characterCount());
+
+        QAccessible::updateAccessibility(new QAccessibleTextInsertEvent(this,
+                                                                        ti->characterCount() - newLines.length(),
+                                                                        newLines));
+    }
 }
 
 void TTextEdit::scrollTo(int line)

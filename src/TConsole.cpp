@@ -1707,9 +1707,6 @@ void TConsole::print(const QString& msg)
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    QAccessibleEvent event(this, QAccessible::DocumentContentChanged);
-    QAccessible::updateAccessibility(&event);
-
     if (Q_UNLIKELY(mudlet::self()->mMirrorToStdOut)) {
         qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, msg);
     }
@@ -1722,9 +1719,6 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
     buffer.append(msg, 0, msg.size(), fgColor, bgColor);
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
-
-    QAccessibleEvent event(this, QAccessible::DocumentContentChanged);
-    QAccessible::updateAccessibility(&event);
 
     if (Q_UNLIKELY(mudlet::self()->mMirrorToStdOut)) {
         qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, msg);
