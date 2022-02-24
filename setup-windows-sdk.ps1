@@ -17,7 +17,7 @@ SetQtBaseDir "C:\src\verbose_output.log"
 SetMingwBaseDir "C:\src\verbose_output.log"
 SetLuarocksPath "C:\src\verbose_output.log"
 
-[Environment]::SetEnvironmentVariable("QT_QPA_PLATFORM_PLUGIN_PATH", "$Env:QT_BASE_DIR\plugins\platforms", "User")
+[Environment]::SetEnvironmentVariable("QT_PLUGIN_PATH", "$Env:QT_BASE_DIR\plugins", "User")
 
 if(-NOT (Test-Path "$sourceDir\build")){
     New-Item -ItemType Directory "$sourceDir\build"

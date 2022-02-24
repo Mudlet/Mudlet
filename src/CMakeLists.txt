@@ -464,6 +464,10 @@ if(WIN32)
   set_target_properties(mudlet PROPERTIES WIN32_EXECUTABLE ON)
   if(USE_MAIN_BUILD_SYSTEM)
     target_compile_definitions(mudlet PRIVATE INCLUDE_MAIN_BUILD_SYSTEM)
+
+    set_target_properties( mudlet PROPERTIES LIBRARY_OUTPUT_DIRECTORY
+            ${MINGW_BASE_DIR}/bin )
+
     add_custom_command(TARGET mudlet POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:mudlet> $<TARGET_FILE_DIR:mudlet>
             COMMAND_EXPAND_LISTS
@@ -477,9 +481,6 @@ if(WIN32)
     file(COPY ${MINGW_BASE_DIR}/bin/libhunspell-1.6-0.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
     file(COPY ${MINGW_BASE_DIR}/bin/libpcre-1.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
     file(COPY ${MINGW_BASE_DIR}/bin/zlib1.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
-    file(COPY ${MINGW_BASE_DIR}/bin/libgcc_s_dw2-1.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
-    file(COPY ${MINGW_BASE_DIR}/bin/libstdc++-6.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
-    file(COPY ${MINGW_BASE_DIR}/bin/libwinpthread-1.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
     file(COPY ../3rdparty/discord/rpc/lib/discord-rpc32.dll DESTINATION ${RUNTIME_OUTPUT_DIRECTORY})
     file(COPY ../3rdparty/lcf DESTINATION ${RUNTIME_OUTPUT_DIRECTORY} PATTERN .)
     file(COPY ${MINGW_BASE_DIR}/lib/lua/5.1/ DESTINATION ${RUNTIME_OUTPUT_DIRECTORY} PATTERN .)
