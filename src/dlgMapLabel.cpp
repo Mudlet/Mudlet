@@ -36,7 +36,7 @@ dlgMapLabel::dlgMapLabel(QWidget* pF) : QDialog(pF), fgColor(QColor(255, 255, 50
     connect(comboBox_type, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgMapLabel::updated);
     connect(toolButton_imagePick, &QToolButton::released, this, &dlgMapLabel::pickFile);
     connect(checkBox_stretchImage, &QCheckBox::stateChanged, this, &dlgMapLabel::updated);
-    connect(lineEdit_text, &QLineEdit::textChanged, this, [=](QString pText) {
+    connect(lineEdit_text, &QLineEdit::textChanged, this, [&](const QString& pText) {
         text = pText;
         emit updated();
     });
@@ -74,8 +74,8 @@ void dlgMapLabel::pickFgColor()
     fgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
     fgColorDialog->setWindowTitle(tr("Foreground color", "2D mapper create label color dialog title"));
     fgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
-    connect(fgColorDialog, &QColorDialog::currentColorChanged, this, [=](QColor color) {
-        fgColor = std::move(color);
+    connect(fgColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
+        fgColor = color;
         emit updated();
     });
     auto originalColor = QColor(fgColor);
@@ -94,8 +94,8 @@ void dlgMapLabel::pickBgColor()
     bgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
     bgColorDialog->setWindowTitle(tr("Background color", "2D mapper create label color dialog title"));
     bgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
-    connect(bgColorDialog, &QColorDialog::currentColorChanged, this, [=](QColor color) {
-        bgColor = std::move(color);
+    connect(bgColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
+        bgColor = color;
         emit updated();
     });
     connect(bgColorDialog, &QColorDialog::rejected, this, [=]() {
@@ -112,8 +112,8 @@ void dlgMapLabel::pickFont()
     fontDialog = new QFontDialog(font, this);
     fontDialog->setAttribute(Qt::WA_DeleteOnClose);
     fontDialog->setWindowTitle(tr("Label font", "2D mapper create label font dialog title"));
-    connect(fontDialog, &QFontDialog::currentFontChanged, this, [=](QFont pFont) {
-        font = std::move(pFont);
+    connect(fontDialog, &QFontDialog::currentFontChanged, this, [&](const QFont& pFont) {
+        font = pFont;
         emit updated();
     });
     connect(fontDialog, &QFontDialog::rejected, this, [=]() {

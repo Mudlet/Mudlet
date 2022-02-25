@@ -241,6 +241,7 @@ private:
     void paintRoomExits(QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int, float, QMap<int, QPointF>&);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
+    void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
 
 
     bool mDialogLock;
