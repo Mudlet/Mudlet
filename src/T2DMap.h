@@ -125,7 +125,7 @@ public:
     bool mPopupMenu;
     QSet<int> mMultiSelectionSet;
     bool mNewMoveAction;
-    QRectF mMapInfoRect;
+    QRect mMapInfoRect;
     int mFontHeight;
     bool mShowRoomID;
     QMap<int, QPixmap> mPixMap;
