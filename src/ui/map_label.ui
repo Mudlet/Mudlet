@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>309</height>
+    <height>345</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -32,7 +32,7 @@
       </sizepolicy>
      </property>
      <property name="title">
-      <string>Label</string>
+      <string>Map label</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -55,14 +55,14 @@
       <item row="1" column="0">
        <widget class="QLabel" name="label_image">
         <property name="text">
-         <string>Image</string>
+         <string>Image:</string>
         </property>
        </widget>
       </item>
       <item row="7" column="0">
        <widget class="QLabel" name="label_bg">
         <property name="text">
-         <string>Background</string>
+         <string>Background:</string>
         </property>
        </widget>
       </item>
@@ -76,7 +76,7 @@
       <item row="4" column="0">
        <widget class="QLabel" name="label_font">
         <property name="text">
-         <string>Font</string>
+         <string>Font:</string>
         </property>
        </widget>
       </item>
@@ -97,7 +97,7 @@
       <item row="0" column="0">
        <widget class="QLabel" name="label_type">
         <property name="text">
-         <string>Type</string>
+         <string>Type:</string>
         </property>
        </widget>
       </item>
@@ -107,7 +107,7 @@
          <string>If deselected the label will have the same size when you zoom in and out in the mapper. If it is selected the label will scale when you zoom the mapper.</string>
         </property>
         <property name="text">
-         <string>Scaling</string>
+         <string>Scale with zoom</string>
         </property>
         <property name="checked">
          <bool>true</bool>
@@ -117,7 +117,7 @@
       <item row="3" column="0">
        <widget class="QLabel" name="label_text">
         <property name="text">
-         <string>Label text</string>
+         <string>Label text:</string>
         </property>
        </widget>
       </item>
@@ -166,7 +166,7 @@
       <item row="9" column="0">
        <widget class="QLabel" name="label_position">
         <property name="text">
-         <string>Position</string>
+         <string>Position:</string>
         </property>
        </widget>
       </item>
@@ -180,7 +180,7 @@
       <item row="6" column="0">
        <widget class="QLabel" name="label_fg">
         <property name="text">
-         <string>Foreground</string>
+         <string>Foreground:</string>
         </property>
        </widget>
       </item>
