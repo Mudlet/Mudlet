@@ -30,8 +30,8 @@
 
 TAlias::TAlias(TAlias* parent, Host* pHost)
 : Tree<TAlias>( parent )
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
+, mpHost(pHost)
+, mNeedsToBeCompiled(true)
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
@@ -41,9 +41,9 @@ TAlias::TAlias(TAlias* parent, Host* pHost)
 
 TAlias::TAlias(const QString& name, Host* pHost)
 : Tree<TAlias>(nullptr)
-, mName( name )
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
+, mName(name)
+, mpHost(pHost)
+, mNeedsToBeCompiled(true)
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
@@ -103,7 +103,7 @@ bool TAlias::match(const QString& toMatch)
 
 #if defined(Q_OS_WIN32)
     // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
-    char* subject = (char*)malloc(strlen(toMatch.toUtf8().constData()) + 1);
+    char* subject = static_cast<char*>(malloc(strlen(toMatch.toUtf8().constData()) + 1));
     strcpy(subject, toMatch.toUtf8().constData());
 #else
     char* subject = strndup(toMatch.toUtf8().constData(), strlen(toMatch.toUtf8().constData()));
@@ -266,7 +266,7 @@ void TAlias::compileRegex()
             TDebug(Qt::white, Qt::red) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
             TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in: ")" << mRegexCode << "\"\n" >> mpHost;
         }
-        setError(QStringLiteral("<b><font color='blue'>%1</font></b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)", error)));
+        setError(qsl("<b><font color='blue'>%1</font></b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)").arg(error)));
     } else {
         mOK_init = true;
     }
@@ -323,9 +323,9 @@ bool TAlias::setScript(const QString& script)
 
 bool TAlias::compileScript()
 {
-    QString code = QStringLiteral("function Alias%1() %2\nend").arg(QString::number(mID), mScript);
-    QString aliasName = QStringLiteral("Alias: %1").arg(getName());
-    mFuncName = QStringLiteral("Alias%1").arg(QString::number(mID));
+    QString code = qsl("function Alias%1() %2\nend").arg(QString::number(mID), mScript);
+    QString aliasName = qsl("Alias: %1").arg(getName());
+    mFuncName = qsl("Alias%1").arg(QString::number(mID));
     QString error;
 
     if (mpHost->mLuaInterpreter.compile(code, error, aliasName)) {

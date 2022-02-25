@@ -15,7 +15,7 @@ jobs:
     - uses: leafo/gh-actions-lua@v8
       with:
         luaVersion: "5.1.5"
-    - uses: actions/setup-node@v2.4.0
+    - uses: actions/setup-node@v3
     - uses: leafo/gh-actions-luarocks@v4
 
     - name: install Lua dependencies
@@ -52,9 +52,9 @@ jobs:
       uses: gr2m/create-or-update-pull-request-action@v1.x
       if: steps.getdiff.outputs.lines_changed > 0
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
       with:
-        title: "Update autocompletion data in Mudlet"
+        title: "Infrastructure: Update autocompletion data in Mudlet"
         body: |
           #### Brief overview of PR changes/additions
           :crown: An automated PR to update autocompletion data in Mudlet from ${{ github.ref }} (${{ github.sha }}).

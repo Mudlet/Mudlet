@@ -59,32 +59,28 @@ local function adjust_Info(self, label, event)
     adjustInfo = {name = adjustInfo.name, top = top, bottom = bottom, left = left, right = right, x = x, y = y, move = adjustInfo.move}
 end
 
--- Internal function: hides the window title if the window gets smaller
--- @param lbl the Label which allows the Container to be adjustable and where the title text is on
-local function shrink_title(lbl)
-    if lbl.locked and lbl.connectedContainers then
-        return
-    end
-    local  w  =  lbl:get_width()
-    local titleText = lbl.titleText
-    if #titleText <= 15 then titleText = titleText.."   " end
-    if w < (#titleText-10)*6.6+20 then
-        titleText = string.sub(lbl.titleText, 0, math.floor(w/6)).."..."
-    end
-    if #titleText <= 15 then titleText = "" end
-    lbl.adjLabel:echo(titleText, lbl.titleTxtColor, "l")
-end
-
 --- function to give your adjustable container a new title
 -- @param text new title text
 -- @param color title text color
-function Adjustable.Container:setTitle(text, color)
-    text = text or self.name.." - Adjustable Container"
-    self.titleTxtColor = color or "green"
-    self.titleText = "&nbsp;&nbsp;"..text
-    shrink_title(self)
+-- @param format title format
+function Adjustable.Container:setTitle(text, color, format)
+    self.titleFormat = format or self.titleFormat or "l"
+    self.titleText = text or self.titleText or string.format("%s - Adjustable Container")
+    self.titleTxtColor = color or self.titleTxtColor or "green"
+    if self.locked and self.connectedContainers then
+        return
+    end
+    self.adjLabel:echo(string.format("&nbsp;&nbsp;%s", self.titleText), self.titleTxtColor, self.titleFormat)
 end
 
+
+--- function to reset your adjustable containers title to default
+function Adjustable.Container:resetTitle()
+    self.titleText = nil
+    self.titleTxtColor = nil
+    self.titleFormat = nil
+    self:setTitle()
+end
 
 -- internal function to handle the onClick event of main Adjustable.Container Label
 -- @param label the main Adjustable.Container Label
@@ -176,10 +172,14 @@ function Adjustable.Container:onMove (label, event)
         end
         local dx, dy = adjustInfo.x - x, adjustInfo.y - y
         local max, min = math.max, math.min
+        local hasScrollBox = self.windowname and Geyser.parentWindows and Geyser.parentWindows[self.windowname] and Geyser.parentWindows[self.windowname].type == "scrollBox"
         if adjustInfo.move and not self.connectedContainers then
             label:setCursor("ClosedHand")
             local tx, ty = max(0,x1-dx), max(0,y1-dy)
-            tx, ty = min(tx, winw - w), min(ty, winh - h)
+            -- get rid of move/size limits when in scrollbox (as it is scrollable)
+            if not(hasScrollBox) then
+                tx, ty = min(tx, winw - w), min(ty, winh - h)
+            end
             tx = make_percent(tx/winw)
             ty = make_percent(ty/winh)
             self:move(tx, ty)
@@ -203,8 +203,10 @@ function Adjustable.Container:onMove (label, event)
                 tw = w2
             end
             tx, ty, tw, th = max(0,tx), max(0,ty), max(10,tw), max(10,th)
-            tw, th = min(tw, winw), min(th, winh)
-            tx, ty = min(tx, winw-tw), min(ty, winh-th)
+            if not(hasScrollBox) then
+                tw, th = min(tw, winw), min(th, winh)
+                tx, ty = min(tx, winw-tw), min(ty, winh-th)
+            end
             tx = make_percent(tx/winw)
             ty = make_percent(ty/winh)
             self:move(tx, ty)
@@ -213,7 +215,6 @@ function Adjustable.Container:onMove (label, event)
             tw,th = max(minw,tw), max(minh,th)
             tw,th = make_percent(tw/winw), make_percent(th/winh)
             self:resize(tw, th)
-            shrink_title(self)
             if self.connectedContainers then
                 self:adjustConnectedContainers()
             end
@@ -520,7 +521,7 @@ function Adjustable.Container:unlockContainer()
     self.exitLabel:show()
     self.minimizeLabel:show()
     self.locked = false
-    shrink_title(self)
+    self:setTitle()
 end
 
 --- sets the padding of your container
@@ -787,12 +788,12 @@ function Adjustable.Container:load(slot, dir)
 
     mytable.windowname = mytable.windowname or "main"
     
-    -- send Adjustable Container to a UserWindow if saved there
+    -- send Adjustable Container to a UserWindow/ScrollBox if saved there
     if mytable.windowname ~= self.windowname then
         if mytable.windowname == "main" then
             self:changeContainer(Geyser)
         else
-            self:changeContainer(Geyser.windowList[mytable.windowname.."Container"].windowList[mytable.windowname])
+            self:changeContainer(Geyser.parentWindows[mytable.windowname])
         end
     end
 
@@ -811,6 +812,17 @@ function Adjustable.Container:load(slot, dir)
         if self.minimized == true then self.Inside:hide() self:resize(nil, self.buttonsize + 10) else self.Inside:show() end
         self.origh = mytable.origh
     end
+
+    if mytable.auto_hidden or mytable.hidden then
+        self:hide()
+        if not mytable.hidden then
+            self.hidden = false
+            self.auto_hidden = true
+        end
+    else
+        self:show()
+    end
+
     self:detach()
     if mytable.attached then
         self:attachToBorder(mytable.attached) 
@@ -825,17 +837,11 @@ function Adjustable.Container:load(slot, dir)
             self:connectToBorder(k)
         end
     end
-    if mytable.auto_hidden or mytable.hidden then
-        self:hide()
-        if not mytable.hidden then self.hidden = false self.auto_hidden = true end
-    else
-        self:show()
-    end
     self:adjustConnectedContainers()
     return true
 end
 
---- overridden reposition function to raise an "AdjustableContainerReposition" event and call the shrink_title function
+--- overridden reposition function to raise an "AdjustableContainerReposition" event
 --- Event: "AdjustableContainerReposition" passed values (name, width, height, x, y, isMouseAction)
 --- (the isMouseAction property is true if the reposition is an effect of user dragging/resizing the window,
 --- and false if the reposition event comes as effect of external action, such as resizing of main window)
@@ -850,9 +856,6 @@ function Adjustable.Container:reposition()
       self.get_y(),
       adjustInfo.name == self.adjLabel.name and (adjustInfo.move or adjustInfo.right or adjustInfo.left or adjustInfo.top or adjustInfo.bottom)
     )
-    if self.titleText and not(self.locked) then
-        shrink_title(self)
-    end
 end
 
 --- deletes the file where your saved settings are stored
@@ -967,7 +970,7 @@ function Adjustable.Container:globalLockStyles()
     end)
 
     self:newLockStyle("light", function (s)
-        shrink_title(s)
+        s:setTitle()
         s.Inside:resize("-"..s.padding,"-"..s.padding)
         s.Inside:move(s.padding, s.padding*2)
         s.adjLabel:setStyleSheet(s.adjLabelstyle)
@@ -1110,8 +1113,7 @@ function Adjustable.Container:new(cons,container)
     me.goInside = true
     me.titleTxtColor = me.titleTxtColor or "green"
     me.titleText = me.titleText or me.name.." - Adjustable Container"
-    me.titleText = "&nbsp;&nbsp; "..me.titleText
-    shrink_title(me)
+    me:setTitle()
     me.lockStyle = me.lockStyle or "standard"
     me.noLimit = me.noLimit or false
     if not(me.raiseOnClick == false) then

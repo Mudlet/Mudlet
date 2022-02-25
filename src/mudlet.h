@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2015-2016, 2018-2019, 2021 by Stephen Lyons             *
+ *   Copyright (C) 2015-2016, 2018-2019, 2021-2022 by Stephen Lyons        *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
@@ -25,7 +25,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
+#include "utils.h"
 #include "HostManager.h"
 #include "FontManager.h"
 
@@ -36,6 +36,7 @@
 #endif
 
 #include "discord.h"
+#include "ShortcutsManager.h"
 
 #include "pre_guard.h"
 #include <QDir>
@@ -99,6 +100,7 @@ class QLabel;
 class QListWidget;
 class QPushButton;
 class QShortcut;
+class QSplitter;
 class QTableWidget;
 class QTableWidgetItem;
 class QTextEdit;
@@ -110,6 +112,7 @@ class TConsole;
 class TDockWidget;
 class TEvent;
 class TLabel;
+class TScrollBox;
 class TTabBar;
 class TTimer;
 class TToolBar;
@@ -117,6 +120,7 @@ class dlgIRC;
 class dlgAboutDialog;
 class dlgConnectionProfiles;
 class dlgProfilePreferences;
+class ShortcutManager;
 
 class translation;
 
@@ -258,8 +262,6 @@ public:
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     void doAutoLogin(const QString&);
-    void stopSounds();
-    void playSound(const QString &s, int);
     QStringList getAvailableFonts();
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     std::pair<bool, QString> resetProfileIcon(const QString& profile);
@@ -283,11 +285,6 @@ public:
     void setGlobalStyleSheet(const QString& styleSheet);
     void setupPreInstallPackages(const QString& gameUrl);
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
-
-    // This construct will be very useful for formatting tooltips and by
-    // defining a static function/method here we can save using the same
-    // QStringLiteral all over the place:
-    static QString htmlWrapper(const QString& text) { return QStringLiteral("<html><head/><body>%1</body></html>").arg(text); }
 
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
     // "How to find and replace string?" by "Czarek Tomczak":
@@ -327,6 +324,9 @@ public:
     int64_t getPhysicalMemoryTotal();
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     void refreshTabBar();
+    void updateDiscordNamedIcon();
+    // Has to be public as it needs to be called from dlgConnectionProfiles class:
+    void updateMultiViewControls();
 
     bool firstLaunch = false;
     // Needed to work around a (likely only Windows) issue:
@@ -343,6 +343,8 @@ public:
     int mToolbarIconSize;
     int mEditorTreeWidgetIconSize;
     bool mWindowMinimized;
+
+    QPointer<ShortcutsManager> mShortcutsManager;
 
     // used by developers in everyday coding
     static const bool scmIsDevelopmentVersion;
@@ -362,8 +364,6 @@ public:
     QToolBar* mpMainToolBar;
     QString version;
     QPointer<Host> mpCurrentActiveHost;
-    bool mAutolog;
-    QList<QMediaPlayer*> mMusicBoxList;
     TTabBar* mpTabBar;
     QStringList packagesToInstallList;
     bool mIsLoadingLayout;
@@ -433,6 +433,18 @@ public:
     // Options dialog when there's no active host
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
 
+    enum Appearance {
+        system = 0,
+        light = 1,
+        dark = 2
+    };
+    Appearance mAppearance = Appearance::system;
+    void setAppearance(Appearance, const bool& loading = false);
+    bool inDarkMode() const { return mDarkMode; }
+
+    // mirror everything shown in any console to stdout. Helpful for CI environments
+    inline static bool mMirrorToStdOut;
+
     struct GameDetails {
         QString hostUrl;
         int port;
@@ -442,6 +454,7 @@ public:
     };
 
     // clang-format off
+    // games are to be added here in alphabetical order
     inline static const OrderedMap<QString, GameDetails> scmDefaultGames = {
         {"Avalon.de", {"avalon.mud.de", 23, false,
                         "<center><a href='http://avalon.mud.de'>http://avalon.mud.de</a></center>",
@@ -469,7 +482,7 @@ public:
                         "<center><a href='http://www.materiamagica.com'>http://www.materiamagica.com</a></center>",
                         ":/materiaMagicaIcon"}},
         {"Realms of Despair", {"realmsofdespair.com", 4000, false, "<center><a href='http://www.realmsofdespair.com/'>http://www.realmsofdespair.com</a></center>", ":/icons/120x30RoDLogo.png"}},
-        {"ZombieMUD", {"zombiemud.org", 23, false, "<center><a href='http://www.zombiemud.org/'>http://www.zombiemud.org</a></center>", ":/icons/zombiemud.png"}},
+        {"ZombieMUD", {"zombiemud.org", 3000, false, "<center><a href='http://www.zombiemud.org/'>http://www.zombiemud.org</a></center>", ":/icons/zombiemud.png"}},
         {"Aetolia", {"aetolia.com", 23, false, "<center><a href='http://www.aetolia.com/'>http://www.aetolia.com</a></center>", ":/icons/aetolia_120_30.png"}},
         {"Imperian", {"imperian.com", 23, false, "<center><a href='http://www.imperian.com/'>http://www.imperian.com</a></center>", ":/icons/imperian_120_30.png"}},
         {"WoTMUD", {"game.wotmud.org", 2224, false, "<center><a href='http://www.wotmud.org/'>Main website</a></center>\n"
@@ -482,11 +495,12 @@ public:
                                  "<center><a href='https://www.reinosdeleyenda.es/foro/'>Forums</a></center>\n"
                                  "<center><a href='https://wiki.reinosdeleyenda.es/'>Wiki</a></center>\n", ":/icons/reinosdeleyenda_mud.png"}},
         {"Fierymud", {"fierymud.org", 4000, false, "<center><a href='https://www.fierymud.org/'>https://www.fierymud.org</a></center>", ":/icons/fiery_mud.png"}},
-        // {"Mudlet self-test", {"mudlet.org", 23, false,}},
+        {"Mudlet self-test", {"mudlet.org", 23, false, "", ""}},
         {"Carrion Fields", {"carrionfields.net", 4449, false, "<center><a href='http://www.carrionfields.net'>www.carrionfields.net</a></center>", ":/icons/carrionfields.png"}},
         {"Cleft of Dimensions", {"cleftofdimensions.net", 4354, false, "<center><a href='https://www.cleftofdimensions.net/'>cleftofdimensions.net</a></center>", ":/icons/cleftofdimensions.png"}},
         {"Legends of the Jedi", {"legendsofthejedi.com", 5656, false, "<center><a href='https://www.legendsofthejedi.com/'>legendsofthejedi.com</a></center>", ":/icons/legendsofthejedi_120x30.png"}},
         {"CoreMUD", {"coremud.org", 4020, true, "<center><a href='https://coremud.org/'>coremud.org</a></center>", ":/icons/coremud_icon.jpg"}},
+        {"Multi-Users in Middle-earth", {"mume.org", 4242, true, "<center><a href='https://mume.org/'>mume.org</a></center>", ":/icons/mume.png"}},
     };
     // clang-format on
 
@@ -510,9 +524,11 @@ public slots:
     void slot_disconnect();
     void slot_notes();
     void slot_reconnect();
+    void slot_close_current_profile();
     void slot_close_profile_requested(int);
     void slot_irc();
     void slot_discord();
+    void slot_mudlet_discord();
     void slot_package_manager();
     void slot_package_exporter();
     void slot_module_manager();
@@ -536,6 +552,8 @@ signals:
     void signal_setTreeIconSize(int);
     void signal_hostCreated(Host*, quint8);
     void signal_hostDestroyed(Host*, quint8);
+    void signal_profileActivated(Host *, quint8);
+    void signal_appearanceChanged(Appearance);
     void signal_enableFulScreenModeChanged(bool);
     void signal_showMapAuditErrorsChanged(bool);
     void signal_menuBarVisibilityChanged(const controlsVisibility);
@@ -545,6 +563,7 @@ signals:
     void signal_passwordsMigratedToSecure();
     void signal_passwordMigratedToSecure(const QString&);
     void signal_passwordsMigratedToProfiles();
+    void signal_shortcutsChanged();
 
 
 private slots:
@@ -561,6 +580,7 @@ private slots:
     void show_variable_dialog();
     void slot_update_shortcuts();
     void slot_show_options_dialog();
+    void slot_assign_shortcuts_from_profile(Host* pHost = nullptr);
 #ifdef QT_GAMEPAD_LIB
     void slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value);
     void slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button);
@@ -595,9 +615,14 @@ private:
     QString autodetectPreferredLanguage();
     void installModulesList(Host*, QStringList);
     void setupTrayIcon();
+    static bool desktopInDarkMode();
+    void assignKeySequences();
+    void closeHost(const QString& name);
+    void reshowRequiredMainConsoles();
 
     QWidget* mpWidget_profileContainer;
     QHBoxLayout* mpHBoxLayout_profileContainer;
+    QSplitter* mpSplitter_profileContainer;
 
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
@@ -626,6 +651,7 @@ private:
     QPointer<QShortcut> connectShortcut;
     QPointer<QShortcut> disconnectShortcut;
     QPointer<QShortcut> reconnectShortcut;
+    QPointer<QShortcut> closeProfileShortcut;
     QKeySequence triggersKeySequence;
     QKeySequence showMapKeySequence;
     QKeySequence inputLineKeySequence;
@@ -637,6 +663,7 @@ private:
     QKeySequence connectKeySequence;
     QKeySequence disconnectKeySequence;
     QKeySequence reconnectKeySequence;
+    QKeySequence closeProfileKeySequence;
 
     QPointer<QAction> mpActionReplay;
 
@@ -651,6 +678,7 @@ private:
     QPointer<QAction> mpActionFullScreenView;
     QPointer<QAction> mpActionHelp;
     QPointer<QAction> mpActionDiscord;
+    QPointer<QAction> mpActionMudletDiscord;
     QPointer<QAction> mpActionIRC;
     QPointer<QToolButton> mpButtonDiscord;
     QPointer<QAction> mpActionKeys;
@@ -664,6 +692,7 @@ private:
     QPointer<QAction> mpActionModuleManager;
     QPointer<QAction> mpActionPackageExporter;
     QPointer<QAction> mpActionReconnect;
+    QPointer<QAction> mpActionCloseProfile;
     QPointer<QAction> mpActionScripts;
     QPointer<QAction> mpActionTimers;
     QPointer<QAction> mpActionTriggers;
@@ -676,6 +705,8 @@ private:
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
+
+    QString mDefaultStyle;
 
     // Has default form of "en_US" but can be just an ISO language code e.g. "fr" for french,
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
@@ -698,7 +729,7 @@ private:
     // The collection of words in the above:
     QSet<QString> mWordSet_shared;
 
-    QString mMudletDiscordInvite = QStringLiteral("https://www.mudlet.org/chat");
+    QString mMudletDiscordInvite = qsl("https://www.mudlet.org/chat");
 
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate {};
@@ -710,6 +741,15 @@ private:
 
     // Whether multi-view is in effect:
     bool mMultiView;
+
+    // read-only value to see if the interface is light or dark. To set the value,
+    // use setAppearance instead
+    bool mDarkMode = false;
+
+    // Used to ensure that mudlet::slot_update_shortcuts() only runs once each
+    // time the main if () logic changes state - will be true if the menu is
+    // supposed to be visible, false if not and not have a value initially:
+    std::optional<bool> mMenuVisibleState;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
@@ -720,7 +760,7 @@ class TConsoleMonitor : public QObject
 
 public:
     Q_DISABLE_COPY(TConsoleMonitor)
-    TConsoleMonitor(QObject* parent) : QObject(parent) {}
+    explicit TConsoleMonitor(QObject* parent) : QObject(parent) {}
 protected:
     bool eventFilter(QObject* obj, QEvent* event) override;
 };
@@ -736,7 +776,7 @@ class translation
     friend void mudlet::scanForQtTranslations(const QString&);
 
 public:
-    translation(const int translationPercent = -1) : mTranslatedPercentage(translationPercent) {}
+    explicit translation(const int translationPercent = -1) : mTranslatedPercentage(translationPercent) {}
 
     const QString& getNativeName() const { return mNativeName; }
     const QString& getMudletTranslationFileName() const { return mMudletTranslationFileName; }

@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2021 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2016, 2021-2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -45,7 +46,7 @@ public:
     Q_DISABLE_COPY(dlgMapper)
     dlgMapper(QWidget*, Host*, TMap*);
 #if defined(INCLUDE_3DMAPPER)
-    GLWidget* glWidget;
+    GLWidget* glWidget = nullptr;
 #endif
     void updateAreaComboBox();
     void setDefaultAreaShown(bool);
@@ -73,9 +74,9 @@ public slots:
 #endif
 
 private:
-    TMap* mpMap;
+    TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
-    bool mShowDefaultArea;
+    bool mShowDefaultArea = true;
 };
 
 #endif // MUDLET_DLGMAPPER_H
