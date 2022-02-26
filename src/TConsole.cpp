@@ -105,7 +105,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
             } else if (mType & SubConsole) {
                 setAccessibleName(tr("Sub Console"));
                 setAccessibleDescription(tr("Sub console messages are shown here."));
-            } else if (mType & UserWindow) {
+            } else {
                 setAccessibleName(tr("User Window"));
                 setAccessibleDescription(tr("User window messages are shown here."));
             }
