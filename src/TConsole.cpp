@@ -121,7 +121,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
             mCommandFgColor = mpHost->mCommandFgColor;
 
             setAccessibleName(tr("Main Window"));
-            setAccessibleDescription(tr("Game messages are shown here"));
+            setAccessibleDescription(tr("Game content is shown here. It may contain subconsoles and a mapper window."));
         } else {
             Q_ASSERT_X(false, "TConsole::TConsole(...)", "invalid TConsole type detected");
         }
