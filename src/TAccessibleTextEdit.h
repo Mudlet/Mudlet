@@ -43,7 +43,7 @@ public:
 
     static QAccessibleInterface* textEditFactory(const QString &classname, QObject *object)
     {
-        QAccessibleInterface *interface = 0;
+        QAccessibleInterface *interface = nullptr;
 
         if (classname == QLatin1String("TTextEdit") && object && object->isWidgetType()) {
             interface = new TAccessibleTextEdit(static_cast<QWidget *>(object));

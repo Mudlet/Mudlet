@@ -40,7 +40,7 @@ public:
 
     static QAccessibleInterface* consoleFactory(const QString &classname, QObject *object)
     {
-        QAccessibleInterface *interface = 0;
+        QAccessibleInterface *interface = nullptr;
 
         if (classname == QLatin1String("TConsole") && object && object->isWidgetType()) {
             interface = new TAccessibleConsole(static_cast<QWidget *>(object));
