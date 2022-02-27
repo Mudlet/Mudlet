@@ -439,6 +439,8 @@ public:
     static int isAnsiFgColor(lua_State*);
     static int isAnsiBgColor(lua_State*);
     static int receiveMSP(lua_State*);
+    static int enableProtocolMSP(lua_State*);
+    static int disableProtocolMSP(lua_State*);
     static int loadMusicFile(lua_State*);
     static int loadSoundFile(lua_State*);
     static int playMusicFile(lua_State*);

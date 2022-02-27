@@ -5508,15 +5508,7 @@ int TLuaInterpreter::receiveMSP(lua_State* L)
     std::string msg;
 
     if (!host.mTelnet.isMSPEnabled()) {
-        if (lua_gettop(L) > 1 && lua_isboolean(L, 2)) { // MSP spec does not require negotiation
-            bool boolValue = getVerifiedBool(L, __func__, 2, "forceMSPEnabled");
-
-            if (boolValue) { // 2nd arg == true enables MSP
-                host.mTelnet.setMSPEnabled(boolValue);
-            }
-        } else {
-            return warnArgumentValue(L, __func__, "MSP is not currently enabled");
-        }
+        return warnArgumentValue(L, __func__, "MSP is not currently enabled");
     }
 
     if (!lua_isstring(L, 1)) {
@@ -5526,6 +5518,46 @@ int TLuaInterpreter::receiveMSP(lua_State* L)
 
     msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
     host.mTelnet.setMSPVariables(QByteArray(msg.c_str(), msg.length()));
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableProtocolMSP
+int TLuaInterpreter::enableProtocolMSP(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    if (!host.mTelnet.isMSPEnabled()) {
+        host.mTelnet.setMSPEnabled(true);
+
+        TEvent event{};
+        event.mArgumentList.append("sysProtocolEnabled");
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append("MSP");
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        host.raiseEvent(event);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableProtocolMSP
+int TLuaInterpreter::disableProtocolMSP(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    if (host.mTelnet.isMSPEnabled()) {
+        host.mTelnet.setMSPEnabled(false);
+
+        TEvent event{};
+        event.mArgumentList.append("sysProtocolDisabled");
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append("MSP");
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        host.raiseEvent(event);
+    }
 
     lua_pushboolean(L, true);
     return 1;
@@ -14920,6 +14952,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "isAnsiFgColor", TLuaInterpreter::isAnsiFgColor);
     lua_register(pGlobalLua, "isAnsiBgColor", TLuaInterpreter::isAnsiBgColor);
     lua_register(pGlobalLua, "receiveMSP", TLuaInterpreter::receiveMSP);
+    lua_register(pGlobalLua, "enableProtocolMSP", TLuaInterpreter::enableProtocolMSP);
+    lua_register(pGlobalLua, "disableProtocolMSP", TLuaInterpreter::disableProtocolMSP);
     lua_register(pGlobalLua, "loadSoundFile", TLuaInterpreter::loadSoundFile);
     lua_register(pGlobalLua, "loadMusicFile", TLuaInterpreter::loadMusicFile);
     lua_register(pGlobalLua, "playSoundFile", TLuaInterpreter::playSoundFile);
