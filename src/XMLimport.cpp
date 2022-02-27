@@ -970,6 +970,10 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->setLargeAreaExitArrows(false);
     }
 
+    if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
+        mpHost->mMapInfoContributors.clear();
+    }
+
     while (!atEnd()) {
         readNext();
 
@@ -1133,7 +1137,7 @@ void XMLimport::readHostPackage(Host* pHost)
                 Q_UNUSED(readElementText());
             } else if (name() == "mMapInfoContributors") {
                 readLegacyMapInfoContributors();
-            } else if (name() == "mMapInfoContributor") {
+            } else if (name() == "mapInfoContributor") {
                 readMapInfoContributor();
             } else if (name() == "profileShortcut") {
                 readProfileShortcut();
