@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020-2021 by Stephen Lyons        #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2022 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -111,6 +111,18 @@ isEmpty( BUILD ) {
 WITH_VS_SCREEN_TEST = $$upper($$(WITH_VARIABLE_SPLASH_SCREEN))
 isEmpty( WITH_VS_SCREEN_TEST ) | !equals(WITH_VS_SCREEN_TEST, "NO" ) {
     DEFINES += INCLUDE_VARIABLE_SPLASH_SCREEN
+}
+
+# When we make an installable or distributable builds we include some files from
+# various Luarocks and as they are under the same license as Lua (MIT) we MUST
+# mention them and their license in the 3rd party components tab in the "About
+# Mudlet" dialog. However users building Mudlet for themselves are more likely
+# to source the luarocks themselves and as such it is not relevant to mention
+# these things. Setting the environmental variable WITH_BUNDLED_LUA_FILES to NO
+# will suppress mention of them from the 3rd party component tab:
+WITH_BUNDLED_LUA_FILES_TEST = $$upper($$(WITH_BUNDLED_LUA_FILES))
+isEmpty( WITH_BUNDLED_LUA_FILES_TEST ) | !equals(WITH_BUNDLED_LUA_FILES_TEST, "NO" ) {
+    DEFINES += INCLUDE_BUNDLED_LUA_FILES
 }
 
 # Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp

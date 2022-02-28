@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015-2018, 2020 by Stephen Lyons                        #
+#    Copyright (C) 2015-2018, 2020, 2022 by Stephen Lyons                  #
 #                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -105,7 +105,6 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_UPDATER
                         SUPPORTED_SYSTEMS "Linux"
                                           "Windows"
                                           "Darwin")
-
 include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS
                         OPTION_VARIABLE USE_FONTS
                         READABLE_NAME "fonts")
@@ -122,6 +121,9 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_MAIN_BUILD_SYSTEM
                         OPTION_VARIABLE USE_MAIN_BUILD_SYSTEM
                         READABLE_NAME "original CI (setup-windows-sdk.ps1) windows build system"
                         SUPPORTED_SYSTEMS "Windows")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_BUNDLED_LUA_FILES
+                        OPTION_VARIABLE USE_BUNDLED_LUA_FILES
+                        READABLE_NAME "license details for bundled Lua files in 'About Mudlet' dialog")
 
 include(InitGitSubmodule)
 
