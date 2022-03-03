@@ -184,7 +184,6 @@ public:
     bool isMSSPEnabled() const { return enableMSSP; }
     bool isMSPEnabled() const { return enableMSP; }
     bool isChannel102Enabled() const { return enableChannel102; }
-    void setMSPEnabled(bool status) { enableMSP = status; }
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
     QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }

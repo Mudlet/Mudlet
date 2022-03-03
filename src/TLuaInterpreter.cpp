@@ -5523,46 +5523,6 @@ int TLuaInterpreter::receiveMSP(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableProtocolMSP
-int TLuaInterpreter::enableProtocolMSP(lua_State* L)
-{
-    Host& host = getHostFromLua(L);
-
-    if (!host.mTelnet.isMSPEnabled()) {
-        host.mTelnet.setMSPEnabled(true);
-
-        TEvent event{};
-        event.mArgumentList.append("sysProtocolEnabled");
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        event.mArgumentList.append("MSP");
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        host.raiseEvent(event);
-    }
-
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableProtocolMSP
-int TLuaInterpreter::disableProtocolMSP(lua_State* L)
-{
-    Host& host = getHostFromLua(L);
-
-    if (host.mTelnet.isMSPEnabled()) {
-        host.mTelnet.setMSPEnabled(false);
-
-        TEvent event{};
-        event.mArgumentList.append("sysProtocolDisabled");
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        event.mArgumentList.append("MSP");
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        host.raiseEvent(event);
-    }
-
-    lua_pushboolean(L, true);
-    return 1;
-}
-
 // Private
 int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L)
 {
@@ -14952,8 +14912,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "isAnsiFgColor", TLuaInterpreter::isAnsiFgColor);
     lua_register(pGlobalLua, "isAnsiBgColor", TLuaInterpreter::isAnsiBgColor);
     lua_register(pGlobalLua, "receiveMSP", TLuaInterpreter::receiveMSP);
-    lua_register(pGlobalLua, "enableProtocolMSP", TLuaInterpreter::enableProtocolMSP);
-    lua_register(pGlobalLua, "disableProtocolMSP", TLuaInterpreter::disableProtocolMSP);
     lua_register(pGlobalLua, "loadSoundFile", TLuaInterpreter::loadSoundFile);
     lua_register(pGlobalLua, "loadMusicFile", TLuaInterpreter::loadMusicFile);
     lua_register(pGlobalLua, "playSoundFile", TLuaInterpreter::playSoundFile);
