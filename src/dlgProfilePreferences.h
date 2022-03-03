@@ -175,7 +175,7 @@ signals:
 private:
     void setColors();
     void setColors2();
-    void setColor(QPushButton*, QColor&, bool allowAlpha);
+    void setColor(QPushButton*, QColor&, bool allowAlpha = false);
     void setPlayerRoomColor(QPushButton*, QColor&);
     void setButtonColor(QPushButton*, const QColor&);
     void loadEditorTab();

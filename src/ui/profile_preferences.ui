@@ -2330,6 +2330,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Link color</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_foreground_color_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="0" column="1">
@@ -2350,6 +2353,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Background color:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_background_color_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="0" column="3">
@@ -2367,6 +2373,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Room border color:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_roomBorderColor</cstring>
+            </property>
            </widget>
           </item>
           <item row="1" column="1">
@@ -2374,6 +2383,23 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="label_mapInfoBg">
+            <property name="text">
+             <string>Map info background:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_mapInfoBg</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QPushButton" name="pushButton_mapInfoBg">
             <property name="text">
              <string/>
             </property>
@@ -2390,6 +2416,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="label_17">
             <property name="text">
              <string>Black:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_black_2</cstring>
             </property>
            </widget>
           </item>
@@ -2408,6 +2437,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Light black:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_Lblack_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="3" column="3">
@@ -2424,6 +2456,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="label_42">
             <property name="text">
              <string>Red:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_red_2</cstring>
             </property>
            </widget>
           </item>
@@ -2442,6 +2477,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Light red:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_Lred_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="4" column="3">
@@ -2458,6 +2496,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="label_43">
             <property name="text">
              <string>Green:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_green_2</cstring>
             </property>
            </widget>
           </item>
@@ -2476,6 +2517,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Light green:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_Lgreen_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="5" column="3">
@@ -2492,6 +2536,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="label_48">
             <property name="text">
              <string>Yellow:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_yellow_2</cstring>
             </property>
            </widget>
           </item>
@@ -2510,6 +2557,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Light yellow:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_Lyellow_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="6" column="3">
@@ -2526,6 +2576,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="label_44">
             <property name="text">
              <string>Blue:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_blue_2</cstring>
             </property>
            </widget>
           </item>
@@ -2544,6 +2597,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Light blue:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_Lblue_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="7" column="3">
@@ -2560,6 +2616,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="label_45">
             <property name="text">
              <string>Magenta:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_magenta_2</cstring>
             </property>
            </widget>
           </item>
@@ -2578,6 +2637,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Light magenta:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_Lmagenta_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="8" column="3">
@@ -2594,6 +2656,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="label_46">
             <property name="text">
              <string>Cyan:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_cyan_2</cstring>
             </property>
            </widget>
           </item>
@@ -2612,6 +2677,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Light cyan:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_Lcyan_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="9" column="3">
@@ -2628,6 +2696,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="label_47">
             <property name="text">
              <string>White:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_white_2</cstring>
             </property>
            </widget>
           </item>
@@ -2646,6 +2717,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Light white:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_Lwhite_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="10" column="3">
@@ -2662,20 +2736,6 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QPushButton" name="reset_colors_button_2">
             <property name="text">
              <string>Reset all colors to default</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QLabel" name="label_6">
-            <property name="text">
-             <string>Map info background:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="3">
-           <widget class="QPushButton" name="pushButton_mapInfoBg">
-            <property name="text">
-             <string/>
             </property>
            </widget>
           </item>
@@ -3943,6 +4003,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_foreground_color_2</tabstop>
   <tabstop>pushButton_roomBorderColor</tabstop>
   <tabstop>pushButton_background_color_2</tabstop>
+  <tabstop>pushButton_mapInfoBg</tabstop>
   <tabstop>pushButton_black_2</tabstop>
   <tabstop>pushButton_red_2</tabstop>
   <tabstop>pushButton_green_2</tabstop>

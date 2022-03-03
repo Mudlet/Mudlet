@@ -302,7 +302,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mFgColor_2(QColorConstants::LightGray)
 , mBgColor_2(QColorConstants::Black)
 , mRoomBorderColor(QColorConstants::LightGray)
-, mMapInfoBg(QColor(150, 150, 150, 120))
 #else
 , mBlack(Qt::black)
 , mLightBlack(Qt::darkGray)

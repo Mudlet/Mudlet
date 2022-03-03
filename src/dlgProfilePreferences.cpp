@@ -1675,17 +1675,17 @@ void dlgProfilePreferences::resetColors2()
     setColors2();
 }
 
-void dlgProfilePreferences::setColor(QPushButton* b, QColor& c, bool allowAlpha = false)
+void dlgProfilePreferences::setColor(QPushButton* button, QColor& presentColor, bool allowAlpha)
 {
     Host* pHost = mpHost;
     if (!pHost) {
         return;
     }
 
-    auto color = QColorDialog::getColor(c, this, tr("Pick color", "Generic pick color dialog title"),
+    auto color = QColorDialog::getColor(presentColor, this, tr("Pick color", "Generic pick color dialog title"),
                                         allowAlpha ? QColorDialog::ShowAlphaChannel : QColorDialog::ColorDialogOptions());
     if (color.isValid()) {
-        c = color;
+        presentColor = color;
 
         auto console = pHost->mpConsole;
         if (console) {
@@ -1700,14 +1700,14 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c, bool allowAlpha 
             }
         }
 
-        if (b == pushButton_black || b == pushButton_lBlack
-                || b == pushButton_red || b == pushButton_lRed
-                || b == pushButton_green || b == pushButton_lGreen
-                || b == pushButton_yellow || b == pushButton_lYellow
-                || b == pushButton_blue || b == pushButton_lBlue
-                || b == pushButton_magenta || b == pushButton_lMagenta
-                || b == pushButton_cyan || b == pushButton_lCyan
-                || b == pushButton_white || b == pushButton_lWhite) {
+        if (button == pushButton_black || button == pushButton_lBlack
+            || button == pushButton_red || button == pushButton_lRed
+            || button == pushButton_green || button == pushButton_lGreen
+            || button == pushButton_yellow || button == pushButton_lYellow
+            || button == pushButton_blue || button == pushButton_lBlue
+            || button == pushButton_magenta || button == pushButton_lMagenta
+            || button == pushButton_cyan || button == pushButton_lCyan
+            || button == pushButton_white || button == pushButton_lWhite) {
 
             pHost->updateAnsi16ColorsInTable();
         }
@@ -1715,7 +1715,7 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c, bool allowAlpha 
         // Also set a contrasting foreground color so text will always be
         // visible - if the button is disabled the colors will be somewhat
         // "greyed-out":
-        setButtonColor(b, color);
+        setButtonColor(button, color);
     }
 }
 
