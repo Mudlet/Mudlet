@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: development
 
@@ -53,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: development
           submodules: true
@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: development
           submodules: true
@@ -135,7 +135,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: development
           submodules: true
@@ -180,7 +180,7 @@ jobs:
     # Disabled for the time being due to https://github.com/Mudlet/Mudlet/pull/4299
     if: ${{ github.repository_owner == 'Mudlet' && false }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: development
 
@@ -220,7 +220,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: development
 
@@ -260,7 +260,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: development
 

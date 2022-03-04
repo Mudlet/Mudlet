@@ -13,7 +13,7 @@ jobs:
     env:
       PLURAL_TRANSLATIONS_FILE: ./translations/translated/mudlet_en_US.ts
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         ref: development
         submodules: true
