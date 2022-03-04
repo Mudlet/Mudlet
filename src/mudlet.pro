@@ -1579,6 +1579,19 @@ unix:!macx {
 
 
 DISTFILES += \
+    ../.github/CODEOWNERS \
+    ../.github/codeql/codeql-config.yml \
+    ../.github/codespell-wordlist.txt \
+    ../.github/dependabot.yml \
+    ../.github/repo-metadata.yml \
+    ../.github/workflows/clangtidy-diff-analysis.yml \
+    ../.github/workflows/codeql-analysis.yml \
+    ../.github/workflows/codespell-analysis.yml \
+    ../.github/workflows/dangerjs.yml \
+    ../.github/workflows/link-ptbs-to-dblsqd.yml \
+    ../.github/workflows/tag-pull-requests.yml \
+    ../.github/workflows/update-en-us-plural.yml \
+    ../.github/workflows/update-geyser-docs.yml \
     ../docker/Dockerfile \
     ../docker/docker-compose.override.linux.yml \
     ../docker/docker-compose.yml \

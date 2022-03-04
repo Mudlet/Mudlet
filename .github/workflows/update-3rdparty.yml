@@ -141,10 +141,10 @@ jobs:
           submodules: true
           fetch-depth: 0
 
-      - name: update submodule to latest in 5.1 branch
+      - name: update submodule to latest in 5.1-syntax_5.1 (i.e. only valid for Lua 5.1 scripts) branch
         run: |
           cd 3rdparty/lcf/
-          git checkout 5.1
+          git checkout 5.1-syntax_5.1
           git pull
 
       # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
@@ -162,17 +162,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
         with:
-          title: "Infrastructure: Update Lua code formatter to latest upstream 5.1 branch"
+          title: "Infrastructure: Update Lua code formatter to latest upstream 5.1-syntax_5.1 branch"
           body: |
             #### Brief overview of PR changes/additions
-            :crown: An automated PR to update the built-in Lua code formatter to its latest version in upstream `5.1` branch.
+            :crown: An automated PR to update the built-in Lua code formatter to its latest version in upstream `5.1-syntax_5.1` branch.
             #### Motivation for adding to Mudlet
             Get new features, bugfixes, improvements! Stay modern.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
           branch: update-lcf-${{ github.sha }}
           path: 3rdparty/lcf
-          commit-message: (autocommit) Updated lcf submodule to latest upstream 5.1 branch
+          commit-message: (autocommit) Updated lcf submodule to latest upstream 5.1-syntax_5.1 branch
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
 
   update-widecharwidth-source:
