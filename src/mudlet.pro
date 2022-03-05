@@ -1602,11 +1602,7 @@ INSTALLS += \
 # leaves those empty sub-directories behind and that prevents their parents
 # from being deleted as well
 
-# This is the files that are needed to perform a `make dist` given a makefile
-# I.e. it is used to "Create a distribution tar file for this program. The tar
-# file should be set up so that the file names in the tar file start with a
-# subdirectory name which is the name of the package it is a distribution for.
-# This name can include the version number. "
+# This is the extra files that are needed to do a `make dist` given a makefile
 DISTFILES += \
     ../docker/Dockerfile \
     ../docker/docker-compose.override.linux.yml \
