@@ -1098,7 +1098,7 @@ LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SYNTAX.files = \
 LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SYNTAX.path = $${LUA_LCF_L3_WORKSHOP_FORMATS_LUA.path}/syntax
 
 LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_QUALIFIERS.files = $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/qualifiers/var_or_call.lua
-LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_QUALIFIERS.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SYNTAX.path}/syntax
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_QUALIFIERS.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SYNTAX.path}/syntax/qualifiers
 
 LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_STATEMENTS.files = \
     $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/assign_or_call.lua \
@@ -1107,7 +1107,9 @@ LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_STATEMENTS.files = \
     $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/empty_statement.lua \
     $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/function_body.lua \
     $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/generic_for_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/goto_statement.lua \
     $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/if_block.lua \
+    $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/label_statement.lua \
     $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/local_statement.lua \
     $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/named_function.lua \
     $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/statements/numeric_for_block.lua \
@@ -1125,8 +1127,8 @@ LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_WORDS.files = \
     $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/words/word.lua
 LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_WORDS.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SYNTAX.path}/words
 
-LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SYNTAX_WORDS_PARTICLES.files = $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/words/particles/long_bracket.lua.lua
-LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SYNTAX_WORDS_PARTICLES.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_WORDS.path}/partcles
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SYNTAX_WORDS_PARTICLES.files = $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/words/particles/long_bracket.lua
+LUA_LCF_L6_WORKSHOP_FORMATS_LUA_SYNTAX_WORDS_PARTICLES.path = $${LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_WORDS.path}/particles
 
 LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_WRAPPERS.files = \
     $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/wrappers/bracket_expr.lua \
@@ -1135,7 +1137,7 @@ LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_WRAPPERS.files = \
     $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/wrappers/expr_list.lua \
     $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/wrappers/name_list.lua \
     $${PWD}/../3rdparty/lcf/workshop/formats/lua/syntax/wrappers/par_expr.lua
-LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_WRAPPERS.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SYNTAX.path}/words
+LUA_LCF_L5_WORKSHOP_FORMATS_LUA_SYNTAX_WRAPPERS.path = $${LUA_LCF_L4_WORKSHOP_FORMATS_LUA_SYNTAX.path}/wrappers
 
 LUA_LCF_L3_WORKSHOP_FORMATS_LUA__TABLE.files = $${PWD}/../3rdparty/lcf/workshop/formats/lua_table/save.lua
 LUA_LCF_L3_WORKSHOP_FORMATS_LUA__TABLE.path = $${LUA_LCF_L1_WORKSHOP.path}/formats/lua_table
