@@ -24,7 +24,7 @@ end
 local parser = argparse("generate-ptb-changelog.lua", "Generate a changelog from the HEAD until the most recent published commit.")
 -- see https://argparse.readthedocs.io/en/stable/index.html
 parser:option("-r --releasefile", "downloaded DBLSQD release feed file")
-parser:option("-m --mode", 'mode to run in'):choices {"ptb", "release"}:count "1"
+parser:option("-m --mode", 'mode to run in'):choices({"ptb", "release"}):count("1")
 local args = parser:parse()
 
 local MAX_COMMITS_PER_CHANGELOG = 100
