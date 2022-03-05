@@ -23,9 +23,17 @@ end
 
 local parser = argparse("generate-ptb-changelog.lua", "Generate a changelog from the HEAD until the most recent published commit.")
 -- see https://argparse.readthedocs.io/en/stable/index.html
-parser:option("-r --releasefile", "downloaded DBLSQD release feed file")
 parser:option("-m --mode", 'mode to run in'):choices({"ptb", "release"}):count("1")
+parser:option("-r --releasefile", "downloaded DBLSQD release feed file")
+parser:option("-s --start-commit", "start commit to generate changelog from")
+parser:option("-e --end-commit", "end commit to generate changelog to")
 local args = parser:parse()
+
+if (args.mode == "ptb" and not args.releasefile) then
+  error("-r or --releasefile is required for ptb mode")
+elseif (args.mode == "release" and not (args.start_commit and args.end_commit)) then
+  error("--start-commit and --end-commit are required for release mode")
+end
 
 local MAX_COMMITS_PER_CHANGELOG = 100
 
@@ -197,14 +205,18 @@ function lines_to_html(lines)
   return convert_to_html(lines)
 end
 
+local start_commit, end_commit
 if (args.mode == "ptb") then
   local historical_commits = extract_historical_sha1s()
   local released_commits = extract_released_sha1s(get_releases(args.releasefile))
   local unpublished_commits = scan_commits(historical_commits, released_commits)
 
   if table.is_empty(unpublished_commits) then print("(changelog couldn't be generated)") os.exit() end
+  start_commit, end_commit = unpublished_commits[#unpublished_commits], unpublished_commits[1]
+else
+  start_commit, end_commit = args.start_commit, args.end_commit
 end
 
-local changelog = get_changelog(unpublished_commits[#unpublished_commits], unpublished_commits[1])
+local changelog = get_changelog(start_commit, end_commit)
 
 print_sorted_changelog(changelog)
