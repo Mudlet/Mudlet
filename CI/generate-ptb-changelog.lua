@@ -37,7 +37,7 @@ end
 
 local MAX_COMMITS_PER_CHANGELOG = 100
 
--- Basic algorithm is as follows:
+-- Basic algorithm for the PTB mode is as follows:
 --   retrieve last MAX_COMMITS_PER_CHANGELOG commit hashes from current branch
 --   retrieve list of PTB releases and the hashes at the end of them (ie 4.14.1-ptb-2022-01-29-e8084)
 --   go through the list of commits, collecting hashes not present in releases
