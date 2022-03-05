@@ -22,15 +22,17 @@ else
 end
 
 local parser = argparse("generate-ptb-changelog.lua", "Generate a changelog from the HEAD until the most recent published commit.")
-parser:option("-r --releasefile", "Downloaded DBLSQD release feed file")
+-- see https://argparse.readthedocs.io/en/stable/index.html
+parser:option("-r --releasefile", "downloaded DBLSQD release feed file")
+parser:option("-m --mode", 'mode to run in'):choices {"ptb", "release"}:count "1"
 local args = parser:parse()
 
 local MAX_COMMITS_PER_CHANGELOG = 100
 
 -- Basic algorithm is as follows:
---   retrieve last X commit hashes from current branch
---   retrieve list of releases and their hashes
---   go through the list collect hashes not present in releases
+--   retrieve last MAX_COMMITS_PER_CHANGELOG commit hashes from current branch
+--   retrieve list of PTB releases and the hashes at the end of them (ie 4.14.1-ptb-2022-01-29-e8084)
+--   go through the list of commits, collecting hashes not present in releases
 --   then get the changelog for the range of hashes
 --   then sort the changelog into categories
 --   html-ize and print the results.
@@ -195,11 +197,13 @@ function lines_to_html(lines)
   return convert_to_html(lines)
 end
 
-local historical_commits = extract_historical_sha1s()
-local released_commits = extract_released_sha1s(get_releases(args.releasefile))
-local unpublished_commits = scan_commits(historical_commits, released_commits)
+if (args.mode == "ptb") then
+  local historical_commits = extract_historical_sha1s()
+  local released_commits = extract_released_sha1s(get_releases(args.releasefile))
+  local unpublished_commits = scan_commits(historical_commits, released_commits)
 
-if table.is_empty(unpublished_commits) then print("(changelog couldn't be generated)") os.exit() end
+  if table.is_empty(unpublished_commits) then print("(changelog couldn't be generated)") os.exit() end
+end
 
 local changelog = get_changelog(unpublished_commits[#unpublished_commits], unpublished_commits[1])
 

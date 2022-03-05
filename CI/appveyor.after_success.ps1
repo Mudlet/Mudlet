@@ -177,7 +177,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     Invoke-WebRequest "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86" -OutFile $Script:DownloadedFeed
     Write-Output "=== Generating a changelog ==="
     Push-Location "$Env:APPVEYOR_BUILD_FOLDER\CI\"
-    $Script:Changelog = lua "$Env:APPVEYOR_BUILD_FOLDER\CI\generate-ptb-changelog.lua" --releasefile $Script:DownloadedFeed
+    $Script:Changelog = lua "$Env:APPVEYOR_BUILD_FOLDER\CI\generate-ptb-changelog.lua" --mode ptb --releasefile $Script:DownloadedFeed
     Pop-Location
     Write-Output $Script:Changelog
     Write-Output "=== Creating release in Dblsqd ==="
