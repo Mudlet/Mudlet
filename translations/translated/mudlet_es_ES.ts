@@ -1506,7 +1506,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="185"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>archivo_de_registro</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="226"/>
@@ -3375,7 +3375,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2476"/>
       <source>Visual</source>
       <comment>3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a &apos;{&apos;...&apos;}&apos; wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Visual</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2419"/>
@@ -4053,7 +4053,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="382"/>
       <source>232 + Gr =</source>
-      <translation type="unfinished"/>
+      <translation>232 + Gr =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="414"/>
@@ -5022,7 +5022,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1084"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>Versión</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1085"/>
@@ -5050,7 +5050,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="64"/>
       <source>Default</source>
-      <translation type="unfinished"/>
+      <translation>Por defecto</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
@@ -5225,7 +5225,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="100"/>
       <source>Offline</source>
-      <translation type="unfinished"/>
+      <translation>Desconectado</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="123"/>
@@ -5635,7 +5635,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="295"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>Versión</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="312"/>
@@ -7183,7 +7183,7 @@ for all of the %n selected room(s):</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="3542"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4815"/>
       <source>New key</source>
-      <translation type="unfinished"/>
+      <translation>Nueva clave</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3624"/>
@@ -7586,43 +7586,43 @@ for all of the %n selected room(s):</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="381"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8377"/>
       <source>Ctrl+1</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="386"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8379"/>
       <source>Ctrl+2</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+2</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="391"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8381"/>
       <source>Ctrl+3</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+3</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="396"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8383"/>
       <source>Ctrl+4</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+4</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="401"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8385"/>
       <source>Ctrl+5</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+5</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="406"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8387"/>
       <source>Ctrl+6</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+6</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="411"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8389"/>
       <source>Ctrl+7</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+7</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="415"/>
@@ -7644,7 +7644,7 @@ for all of the %n selected room(s):</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="417"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8391"/>
       <source>Ctrl+8</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+8</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="421"/>
@@ -7660,7 +7660,7 @@ for all of the %n selected room(s):</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="422"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8393"/>
       <source>Ctrl+9</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+9</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="426"/>
@@ -8115,7 +8115,7 @@ for all of the %n selected room(s):</source>
     <message>
       <location filename="../src/main.cpp" line="196"/>
       <source>profile</source>
-      <translation type="unfinished"/>
+      <translation>perfil</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="199"/>
@@ -8262,7 +8262,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="193"/>
       <source>Show errors</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar errores</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="196"/>
@@ -8509,7 +8509,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/mapper.ui" line="618"/>
       <source>Names</source>
-      <translation type="unfinished"/>
+      <translation>Nombres</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="771"/>
@@ -8534,7 +8534,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/mapper.ui" line="732"/>
       <source>1 level</source>
-      <translation type="unfinished"/>
+      <translation>1 nivel</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="427"/>
@@ -8544,7 +8544,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/mapper.ui" line="680"/>
       <source>default</source>
-      <translation type="unfinished"/>
+      <translation>por defecto</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="693"/>
@@ -8616,7 +8616,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="780"/>
       <source>Arabic</source>
-      <translation type="unfinished"/>
+      <translation>Árabe</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="781"/>
@@ -8821,7 +8821,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="822"/>
       <source>Danish</source>
-      <translation type="unfinished"/>
+      <translation>Danés</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="823"/>
@@ -8831,7 +8831,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="824"/>
       <source>German</source>
-      <translation type="unfinished"/>
+      <translation>Alemán</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="825"/>
@@ -8891,7 +8891,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="838"/>
       <source>English</source>
-      <translation type="unfinished"/>
+      <translation>Inglés</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="839"/>
@@ -9131,7 +9131,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="866"/>
       <source>Spanish</source>
-      <translation type="unfinished"/>
+      <translation>Español</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="867"/>
@@ -9251,7 +9251,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="890"/>
       <source>Basque</source>
-      <translation type="unfinished"/>
+      <translation>Vasco</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="891"/>
@@ -9272,7 +9272,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="895"/>
       <source>French</source>
-      <translation type="unfinished"/>
+      <translation>Francés</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="896"/>
@@ -9307,7 +9307,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="902"/>
       <source>Gaelic</source>
-      <translation type="unfinished"/>
+      <translation>Gaélico</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="903"/>
@@ -9349,7 +9349,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="913"/>
       <source>Hebrew</source>
-      <translation type="unfinished"/>
+      <translation>Hebreo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="914"/>
@@ -9399,7 +9399,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="923"/>
       <source>Indonesian</source>
-      <translation type="unfinished"/>
+      <translation>Indonesio</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="924"/>
@@ -9425,7 +9425,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="928"/>
       <source>Italian</source>
-      <translation type="unfinished"/>
+      <translation>Italiano</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="929"/>
@@ -9440,7 +9440,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="931"/>
       <source>Kazakh</source>
-      <translation type="unfinished"/>
+      <translation>Kazajo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="932"/>
@@ -9460,7 +9460,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="935"/>
       <source>Korean</source>
-      <translation type="unfinished"/>
+      <translation>Coreano</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="936"/>
@@ -9470,7 +9470,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="937"/>
       <source>Kurdish</source>
-      <translation type="unfinished"/>
+      <translation>Kurdo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="938"/>
@@ -9535,7 +9535,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="950"/>
       <source>Nepali</source>
-      <translation type="unfinished"/>
+      <translation>Nepalí</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="951"/>
@@ -9585,7 +9585,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="960"/>
       <source>Occitan</source>
-      <translation type="unfinished"/>
+      <translation>Occitano</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="961"/>
@@ -9595,7 +9595,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="962"/>
       <source>Polish</source>
-      <translation type="unfinished"/>
+      <translation>Polaco</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="963"/>
@@ -9605,7 +9605,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="964"/>
       <source>Portuguese</source>
-      <translation type="unfinished"/>
+      <translation>Portugués</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="965"/>
@@ -9630,7 +9630,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="969"/>
       <source>Russian</source>
-      <translation type="unfinished"/>
+      <translation>Ruso</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="970"/>
@@ -9672,7 +9672,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="977"/>
       <source>Sinhala</source>
-      <translation type="unfinished"/>
+      <translation>Cingalés</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="978"/>
@@ -9682,7 +9682,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="979"/>
       <source>Slovak</source>
-      <translation type="unfinished"/>
+      <translation>Eslovaco</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="980"/>
@@ -9702,7 +9702,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="983"/>
       <source>Somali</source>
-      <translation type="unfinished"/>
+      <translation>Somalí</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="984"/>
@@ -9722,7 +9722,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="987"/>
       <source>Serbian</source>
-      <translation type="unfinished"/>
+      <translation>Serbio</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="988"/>
@@ -9762,7 +9762,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="995"/>
       <source>Swedish</source>
-      <translation type="unfinished"/>
+      <translation>Sueco</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="996"/>
@@ -9777,7 +9777,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="998"/>
       <source>Swahili</source>
-      <translation type="unfinished"/>
+      <translation>Swahili</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="999"/>
@@ -9792,7 +9792,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="1013"/>
       <source>Turkish</source>
-      <translation type="unfinished"/>
+      <translation>Turco</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1001"/>
@@ -9838,7 +9838,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="1008"/>
       <source>Turkmen</source>
-      <translation type="unfinished"/>
+      <translation>Turcomano</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1009"/>
@@ -9898,7 +9898,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="1022"/>
       <source>Vietnamese</source>
-      <translation type="unfinished"/>
+      <translation>Vietnamita</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1023"/>
@@ -9908,7 +9908,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="1026"/>
       <source>Walloon</source>
-      <translation type="unfinished"/>
+      <translation>Valón</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1027"/>
@@ -9918,12 +9918,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="1028"/>
       <source>Yiddish</source>
-      <translation type="unfinished"/>
+      <translation>Yídish</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1029"/>
       <source>Chinese</source>
-      <translation type="unfinished"/>
+      <translation>Chino</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1030"/>
@@ -10469,12 +10469,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="3075"/>
       <source>Faster</source>
-      <translation type="unfinished"/>
+      <translation>Más rápida</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3081"/>
       <source>Slower</source>
-      <translation type="unfinished"/>
+      <translation>Más despacio</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3093"/>
@@ -11000,7 +11000,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="661"/>
       <source>Profile</source>
-      <translation type="unfinished"/>
+      <translation>Perfil</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="668"/>
@@ -11079,7 +11079,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1944"/>
       <source>Delete map:</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar mapa:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1957"/>
@@ -11175,7 +11175,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="235"/>
       <source>Light</source>
-      <translation type="unfinished"/>
+      <translation>Claro</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="240"/>
@@ -11185,7 +11185,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="265"/>
       <source>Appearance</source>
-      <translation type="unfinished"/>
+      <translation>Apariencia</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="294"/>
@@ -12031,7 +12031,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3321"/>
       <source>Address</source>
-      <translation type="unfinished"/>
+      <translation>Dirección</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3341"/>
