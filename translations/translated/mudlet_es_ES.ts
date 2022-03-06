@@ -3389,7 +3389,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2484"/>
       <source>Byte</source>
       <comment>5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Byte</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2427"/>
@@ -3914,13 +3914,13 @@ changed.</source>
       <location filename="../src/ctelnet.cpp" line="2322"/>
       <source>LUA</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>LUA</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2333"/>
       <source>WARN</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ADVERTENCIA</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2344"/>
@@ -4033,7 +4033,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="343"/>
       <source>[16]</source>
-      <translation type="unfinished"/>
+      <translation>[16]</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="353"/>
@@ -4477,7 +4477,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="422"/>
       <source>DOWN</source>
-      <translation type="unfinished"/>
+      <translation>ABAJO</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="444"/>
@@ -4700,7 +4700,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15400"/>
       <source>i</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>i</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15402"/>
@@ -4712,7 +4712,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15404"/>
       <source>o</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>o</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15406"/>
@@ -4724,7 +4724,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15408"/>
       <source>u</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>u</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15410"/>
@@ -4736,7 +4736,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15412"/>
       <source>d</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>d</translation>
     </message>
   </context>
   <context>
@@ -5027,12 +5027,12 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1085"/>
       <source>OS</source>
-      <translation type="unfinished"/>
+      <translation>SO</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1086"/>
       <source>CPU</source>
-      <translation type="unfinished"/>
+      <translation>UPC</translation>
     </message>
   </context>
   <context>
@@ -5502,7 +5502,7 @@ Count</source>
       <location filename="../src/dlgMapper.cpp" line="377"/>
       <source>None</source>
       <comment>Don&apos;t show the map overlay, &apos;none&apos; meaning no map overlay styled are enabled</comment>
-      <translation type="unfinished"/>
+      <translation>Ninguno</translation>
     </message>
   </context>
   <context>
@@ -5565,7 +5565,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="36"/>
       <source>or</source>
-      <translation type="unfinished"/>
+      <translation>o</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="82"/>
@@ -5580,7 +5580,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="156"/>
       <source>Author</source>
-      <translation type="unfinished"/>
+      <translation>Autor</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="175"/>
@@ -5608,7 +5608,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="182"/>
       <source>Icon</source>
-      <translation type="unfinished"/>
+      <translation>Icono</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="66"/>
@@ -5855,7 +5855,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="176"/>
       <source>Author</source>
-      <translation type="unfinished"/>
+      <translation>Autor</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="176"/>
@@ -7040,7 +7040,7 @@ for all of the %n selected room(s):</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="745"/>
       <source>What</source>
       <comment>Heading for the fourth column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>Qué</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="792"/>
@@ -7313,7 +7313,7 @@ for all of the %n selected room(s):</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="8982"/>
       <source>keep</source>
       <comment>Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button</comment>
-      <translation type="unfinished"/>
+      <translation>conservar</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5621"/>
@@ -7471,7 +7471,7 @@ for all of the %n selected room(s):</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8395"/>
       <source>Ctrl+0</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+0</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8422"/>
@@ -7628,7 +7628,7 @@ for all of the %n selected room(s):</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="415"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8390"/>
       <source>Errors</source>
-      <translation type="unfinished"/>
+      <translation>Errores</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="416"/>
@@ -8504,7 +8504,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/mapper.ui" line="602"/>
       <source>IDs</source>
-      <translation type="unfinished"/>
+      <translation>IDs</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="618"/>
@@ -8539,7 +8539,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/mapper.ui" line="427"/>
       <source>3D</source>
-      <translation type="unfinished"/>
+      <translation>3D</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="680"/>
@@ -9485,7 +9485,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="940"/>
       <source>Lao</source>
-      <translation type="unfinished"/>
+      <translation>Lao</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="941"/>
@@ -11180,7 +11180,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="240"/>
       <source>Dark</source>
-      <translation type="unfinished"/>
+      <translation>Oscuro</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="265"/>
@@ -11585,7 +11585,7 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/profile_preferences.ui" line="2255"/>
       <location filename="../src/ui/profile_preferences.ui" line="2283"/>
       <source>%</source>
-      <translation type="unfinished"/>
+      <translation>%</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2258"/>
@@ -11620,7 +11620,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2688"/>
       <source>Chat</source>
-      <translation type="unfinished"/>
+      <translation>Chat</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3351"/>
@@ -12570,7 +12570,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/source_editor_area.ui" line="26"/>
       <source>Form</source>
-      <translation type="unfinished"/>
+      <translation>Formulario</translation>
     </message>
   </context>
   <context>
@@ -12782,7 +12782,7 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="692"/>
       <source>keep</source>
       <comment>Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button</comment>
-      <translation type="unfinished"/>
+      <translation>conservar</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="653"/>
