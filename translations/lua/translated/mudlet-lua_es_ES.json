@@ -7,6 +7,10 @@
     "message": "izquierda",
     "description": "one of the borders the container can be attached to"
   },
+  "AdjustableContainer.custom": {
+    "message": "Personalizado:",
+    "description": "a menu item in the right click menu. it contains user/package made custom items"
+  },
   "AdjustableContainer.lock": {
     "message": "Bloquear",
     "description": "locks your container. Which means it's not movable/resizable anymore and changes some other properties depending on the Lockstyle (like hiding the borders)"
