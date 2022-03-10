@@ -579,6 +579,7 @@ public:
     QColor mFgColor_2;
     QColor mBgColor_2;
     QColor mRoomBorderColor;
+    QColor mMapInfoBg = QColor(150, 150, 150, 120);
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
     bool mLogStatus = false;

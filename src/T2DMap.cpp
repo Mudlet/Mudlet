@@ -2390,7 +2390,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
         xOffset += mMultiSelectionListWidget.x() + mMultiSelectionListWidget.rect().width();
     }
 
-    painter.fillRect(xOffset, 10, width() - 10 - xOffset, 10, QColor(150, 150, 150, 120));
+    painter.fillRect(xOffset, 10, width() - 10 - xOffset, 10, mpHost->mMapInfoBg);
 
     for (const auto& key : mpMap->mMapInfoContributorManager->getContributorKeys()) {
         if (mpHost->mMapInfoContributors.contains(key)) {
@@ -2443,7 +2443,7 @@ int T2DMap::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset,
     mMapInfoRect.setHeight(testRect.height() + 10);
 
     // Restore Grey translucent background, was useful for debugging!
-    painter.fillRect(mMapInfoRect, QColor(150, 150, 150, 120));
+    painter.fillRect(mMapInfoRect, mpHost->mMapInfoBg);
     painter.setPen(properties.color);
     painter.setFont(font);
     painter.drawText(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 10, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
