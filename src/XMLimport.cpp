@@ -1090,6 +1090,8 @@ void XMLimport::readHostPackage(Host* pHost)
                 pHost->mBgColor_2.setNamedColor(readElementText());
             } else if (name() == "mRoomBorderColor") {
                 pHost->mRoomBorderColor.setNamedColor(readElementText());
+            } else if (name() == "mMapInfoBg") {
+                pHost->mMapInfoBg.setNamedColor(readElementText());
             } else if (name() == "mBlack2") {
                 pHost->mBlack_2.setNamedColor(readElementText());
             } else if (name() == "mLightBlack2") {
