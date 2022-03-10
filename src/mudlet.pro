@@ -4,6 +4,7 @@
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
+#    Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -526,6 +527,7 @@ SOURCES += \
     dlgIRC.cpp \
     dlgKeysMainArea.cpp \
     dlgModuleManager.cpp \
+    dlgMapLabel.cpp \
     dlgMapper.cpp \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
@@ -636,6 +638,7 @@ HEADERS += \
     dlgConnectionProfiles.h \
     dlgIRC.h \
     dlgKeysMainArea.h \
+    dlgMapLabel.h \
     dlgMapper.h \
     dlgModuleManager.h \
     dlgNotepad.h \
@@ -758,6 +761,7 @@ FORMS += \
     ui/keybindings_main_area.ui \
     ui/main_window.ui \
     ui/module_manager.ui \
+    ui/map_label.ui \
     ui/mapper.ui \
     ui/notes_editor.ui \
     ui/package_manager.ui \
