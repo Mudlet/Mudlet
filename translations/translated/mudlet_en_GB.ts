@@ -5593,13 +5593,13 @@ Count</translation>
       <location filename="../src/dlgMapLabel.cpp" line="95"/>
       <source>Background color</source>
       <comment>2D mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Background colour</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="114"/>
       <source>Label font</source>
       <comment>2D mapper create label font dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Label font</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="131"/>
@@ -8621,7 +8621,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="20"/>
       <source>Map label</source>
-      <translation type="unfinished"/>
+      <translation>Map label</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="38"/>
@@ -8631,53 +8631,53 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="49"/>
       <source>Text</source>
-      <translation type="unfinished"/>
+      <translation>Text</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="54"/>
       <source>Image</source>
-      <translation type="unfinished"/>
+      <translation>Image</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="62"/>
       <source>Image:</source>
-      <translation type="unfinished"/>
+      <translation>Image:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="79"/>
       <location filename="../src/ui/map_label.ui" line="127"/>
       <source>...</source>
-      <translation type="unfinished"/>
+      <translation>...</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="86"/>
       <source>Stretch image</source>
-      <translation type="unfinished"/>
+      <translation>Stretch image</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="93"/>
       <source>Label text:</source>
-      <translation type="unfinished"/>
+      <translation>Label text:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="103"/>
       <source>My Label</source>
-      <translation type="unfinished"/>
+      <translation>My Label</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="110"/>
       <source>Font:</source>
-      <translation type="unfinished"/>
+      <translation>Font:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="134"/>
       <source>Foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Foreground:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="151"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>Background:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="169"/>
@@ -8692,17 +8692,17 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="182"/>
       <source>Position:</source>
-      <translation type="unfinished"/>
+      <translation>Position:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="192"/>
       <source>If deselected the label will have the same size when you zoom in and out in the mapper. If it is selected the label will scale when you zoom the mapper.</source>
-      <translation type="unfinished"/>
+      <translation>If deselected the label will have the same size when you zoom in and out in the mapper. If it is selected the label will scale when you zoom the mapper.</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="195"/>
       <source>Scale with zoom</source>
-      <translation type="unfinished"/>
+      <translation>Scale with zoom</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="243"/>
@@ -11359,7 +11359,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2394"/>
       <source>Map info background:</source>
-      <translation type="unfinished"/>
+      <translation>Map info background:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2836"/>
