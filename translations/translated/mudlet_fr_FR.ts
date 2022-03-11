@@ -5436,13 +5436,13 @@ Count</source>
       <location filename="../src/dlgMapLabel.cpp" line="75"/>
       <source>Foreground color</source>
       <comment>2D mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Couleur du premier plan</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="95"/>
       <source>Background color</source>
       <comment>2D mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Couleur d'arrière-plan</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="114"/>
@@ -5454,7 +5454,7 @@ Count</source>
       <location filename="../src/dlgMapLabel.cpp" line="131"/>
       <source>Select image</source>
       <comment>2D Mapper create label file dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Sélectionner l'image</translation>
     </message>
   </context>
   <context>
@@ -8499,12 +8499,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="169"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Arrière-plan</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="174"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Premier plan</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="182"/>
@@ -8524,12 +8524,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="243"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Enregistrer</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="250"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Annuler</translation>
     </message>
   </context>
   <context>
