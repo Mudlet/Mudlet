@@ -5664,7 +5664,7 @@ Utilizzi</translation>
       <location filename="../src/dlgMapLabel.cpp" line="33"/>
       <source>Create label</source>
       <comment>Create label dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Crea etichetta</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="75"/>
@@ -5676,13 +5676,13 @@ Utilizzi</translation>
       <location filename="../src/dlgMapLabel.cpp" line="95"/>
       <source>Background color</source>
       <comment>2D mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Colore di sfondo</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="114"/>
       <source>Label font</source>
       <comment>2D mapper create label font dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Carattere delle etichette</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="131"/>
@@ -8732,7 +8732,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/ui/map_label.ui" line="20"/>
       <source>Map label</source>
-      <translation type="unfinished"/>
+      <translation>Etichetta mappa</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="38"/>
@@ -8742,38 +8742,38 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/ui/map_label.ui" line="49"/>
       <source>Text</source>
-      <translation type="unfinished"/>
+      <translation>Testo</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="54"/>
       <source>Image</source>
-      <translation type="unfinished"/>
+      <translation>Immagine</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="62"/>
       <source>Image:</source>
-      <translation type="unfinished"/>
+      <translation>Immagine:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="79"/>
       <location filename="../src/ui/map_label.ui" line="127"/>
       <source>...</source>
-      <translation type="unfinished"/>
+      <translation>...</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="86"/>
       <source>Stretch image</source>
-      <translation type="unfinished"/>
+      <translation>Allarga immagine</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="93"/>
       <source>Label text:</source>
-      <translation type="unfinished"/>
+      <translation>Testo etichetta:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="103"/>
       <source>My Label</source>
-      <translation type="unfinished"/>
+      <translation>La mia etichetta</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="110"/>
@@ -8788,7 +8788,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/ui/map_label.ui" line="151"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>Sfondo:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="169"/>
@@ -8803,7 +8803,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/ui/map_label.ui" line="182"/>
       <source>Position:</source>
-      <translation type="unfinished"/>
+      <translation>Posizione:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="192"/>
@@ -8813,7 +8813,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/ui/map_label.ui" line="195"/>
       <source>Scale with zoom</source>
-      <translation type="unfinished"/>
+      <translation>Ridimensiona con zoom</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="243"/>
@@ -11471,7 +11471,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2394"/>
       <source>Map info background:</source>
-      <translation type="unfinished"/>
+      <translation>Sfondo info mappa:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2836"/>
