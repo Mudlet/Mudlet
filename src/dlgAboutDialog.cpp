@@ -838,7 +838,6 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                             "Copyright © 2006-2008 Eike Hein &lt;hein@kde.org&gt;<br>"
                                             "Copyright © 2004-2009 Eli Mackenzie &lt;argonel@gmail.com&gt;</p>"));
 
-#if defined(INCLUDE_BUNDLED_LUA_FILES) || defined(DEBUG_SHOWALL)
     QString luaHeader(tr("<h2><u>Lua - Lua 5.1</u></h2>"
                          "<h3>Copyright © 1994–2017 Lua.org, PUC-Rio.</h3>"));
 
@@ -864,7 +863,6 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                             "<h3>Author: Danilo Tuler<br>"
                             "Copyright © 2003-2007 Kepler Project</h3>"));
 #endif // defined(Q_OS_MACOS)
-#endif // defined(INCLUDE_BUNDLED_LUA_FILES)
 
 
     QString edbeeHeader(tr("<h2><u>Edbee - multi-feature editor widget</u></h2>"
@@ -947,7 +945,6 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                                             qsl("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
                                                communiKonverstionSuppliment)); //  5 - Communi supplimentary about Konversation - translatable
 
-#if defined(INCLUDE_BUNDLED_LUA_FILES)
     license_3rdParty_texts.append(qsl("%6%12<hr>%7%12<hr>%8%12<hr>%9%12<hr>%10%12<hr>%11%12<hr>")
                                           .arg(luaHeader,                      //  6 - lua header - translatable
                                                luaFileSystemHeader,            //  7 - luaFileSystem header - translatable
@@ -955,14 +952,13 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                                luaUTF8Header,                  //  9 - luautf8 header - translatable
                                                luaSql_Sqlite3Header,           // 10 - luaSql_Sqlite3 header - translatable
                                                lrexlib_pcreHeader,             // 11 - lrexlib_pcre header - translatable
-                                               MIT_Body));                     // 12 - body MIT for multiple - not translatable
+                                               MIT_Body));                     // 12 - six copies of the body MIT for all of the above - not translatable
 
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     license_3rdParty_texts.append(qsl("%13%14<hr>")
                                           .arg(luaZipHeader,                   // 13 - macOS luazip header - translatable
                                                MIT_Body));                     // 14 - macOS luazip body MIT - not translatable
 #endif // defined(Q_OS_MACOS)
-#endif // defined(INCLUDE_BUNDLED_LUA_FILES)
 
     license_3rdParty_texts.append(qsl("%15%16")
                                           .arg(edbeeHeader,                    // 15 - edbee header - translatable
