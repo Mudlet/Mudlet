@@ -5642,7 +5642,7 @@ Nutzungen</translation>
       <location filename="../src/dlgMapLabel.cpp" line="114"/>
       <source>Label font</source>
       <comment>2D mapper create label font dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Schriftart der Markierung</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="131"/>
@@ -8699,7 +8699,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/ui/map_label.ui" line="20"/>
       <source>Map label</source>
-      <translation type="unfinished"/>
+      <translation>Markierung</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="38"/>
@@ -8709,17 +8709,17 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/ui/map_label.ui" line="49"/>
       <source>Text</source>
-      <translation type="unfinished"/>
+      <translation>Text</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="54"/>
       <source>Image</source>
-      <translation type="unfinished"/>
+      <translation>Bild</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="62"/>
       <source>Image:</source>
-      <translation type="unfinished"/>
+      <translation>Bild:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="79"/>
@@ -8730,17 +8730,17 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/ui/map_label.ui" line="86"/>
       <source>Stretch image</source>
-      <translation type="unfinished"/>
+      <translation>Bild strecken</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="93"/>
       <source>Label text:</source>
-      <translation type="unfinished"/>
+      <translation>Aufschrift:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="103"/>
       <source>My Label</source>
-      <translation type="unfinished"/>
+      <translation>Meine Markierung</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="110"/>
@@ -8770,17 +8770,17 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/ui/map_label.ui" line="182"/>
       <source>Position:</source>
-      <translation type="unfinished"/>
+      <translation>Position:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="192"/>
       <source>If deselected the label will have the same size when you zoom in and out in the mapper. If it is selected the label will scale when you zoom the mapper.</source>
-      <translation type="unfinished"/>
+      <translation>Wenn diese Option deaktiviert ist, hat die Markierung beim Vergrößern und Verkleinern im Mapper die gleiche Größe. Wenn sie aktiviert ist, wird die Beschriftung beim Zoomen des Mappers skaliert.</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="195"/>
       <source>Scale with zoom</source>
-      <translation type="unfinished"/>
+      <translation>Mit Zoom skalieren</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="243"/>
@@ -11437,7 +11437,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2394"/>
       <source>Map info background:</source>
-      <translation type="unfinished"/>
+      <translation>Hintergrund der Karteninfos:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2836"/>
