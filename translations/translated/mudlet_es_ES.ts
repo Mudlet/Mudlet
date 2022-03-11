@@ -5440,19 +5440,19 @@ Count</source>
       <location filename="../src/dlgMapLabel.cpp" line="33"/>
       <source>Create label</source>
       <comment>Create label dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Crear etiqueta</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="75"/>
       <source>Foreground color</source>
       <comment>2D mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Color de primer plano</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="95"/>
       <source>Background color</source>
       <comment>2D mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Color del fondo</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="114"/>
@@ -5464,7 +5464,7 @@ Count</source>
       <location filename="../src/dlgMapLabel.cpp" line="131"/>
       <source>Select image</source>
       <comment>2D Mapper create label file dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Seleccionar imagen</translation>
     </message>
   </context>
   <context>
@@ -5831,12 +5831,12 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="176"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>Versión</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="176"/>
       <source>Created</source>
-      <translation type="unfinished"/>
+      <translation>Creado</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="176"/>
@@ -8456,7 +8456,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="38"/>
       <source>Type:</source>
-      <translation type="unfinished"/>
+      <translation>Tipo:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="49"/>
@@ -8477,7 +8477,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/ui/map_label.ui" line="79"/>
       <location filename="../src/ui/map_label.ui" line="127"/>
       <source>...</source>
-      <translation type="unfinished"/>
+      <translation>...</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="86"/>
@@ -8497,7 +8497,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="110"/>
       <source>Font:</source>
-      <translation type="unfinished"/>
+      <translation>Fuente:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="134"/>
@@ -8512,12 +8512,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="169"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Fondo</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="174"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Primer plano</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="182"/>
@@ -8537,12 +8537,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="243"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Guardar</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="250"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Cancelar</translation>
     </message>
   </context>
   <context>
