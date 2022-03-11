@@ -5584,13 +5584,13 @@ Count</source>
       <location filename="../src/dlgMapLabel.cpp" line="75"/>
       <source>Foreground color</source>
       <comment>2D mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Kolor pierwszego planu</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="95"/>
       <source>Background color</source>
       <comment>2D mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Kolor tła</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="114"/>
@@ -5602,7 +5602,7 @@ Count</source>
       <location filename="../src/dlgMapLabel.cpp" line="131"/>
       <source>Select image</source>
       <comment>2D Mapper create label file dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Wybierz obraz</translation>
     </message>
   </context>
   <context>
@@ -6150,7 +6150,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="1685"/>
       <source>Pick color</source>
       <comment>Generic pick color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Wybierz kolor</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2159"/>
@@ -8644,7 +8644,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/ui/map_label.ui" line="38"/>
       <source>Type:</source>
-      <translation type="unfinished"/>
+      <translation>Typ:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="49"/>
@@ -8685,7 +8685,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/ui/map_label.ui" line="110"/>
       <source>Font:</source>
-      <translation type="unfinished"/>
+      <translation>Czcionka:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="134"/>
@@ -8700,12 +8700,12 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/ui/map_label.ui" line="169"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Tło</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="174"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Pierwszy plan</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="182"/>
@@ -8725,12 +8725,12 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/ui/map_label.ui" line="243"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Zapisz</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="250"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Anuluj</translation>
     </message>
   </context>
   <context>
