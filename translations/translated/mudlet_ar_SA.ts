@@ -933,7 +933,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3080"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>حذف</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3081"/>
@@ -993,13 +993,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3135"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>الخصائص</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3139"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</comment>
-      <translation type="unfinished"/>
+      <translation>الخصائص ...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3143"/>
@@ -5442,13 +5442,13 @@ Count</source>
       <location filename="../src/dlgMapLabel.cpp" line="75"/>
       <source>Foreground color</source>
       <comment>2D mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>لون الواجهة الأمامية</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="95"/>
       <source>Background color</source>
       <comment>2D mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>لون الخلفية</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="114"/>
@@ -6426,7 +6426,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="451"/>
       <location filename="../src/dlgRoomExits.cpp" line="988"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation type="unfinished"/>
+      <translation>ضع رقم الغرفة التي سيؤدي إليها هذا المخرج الخاص.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="453"/>
