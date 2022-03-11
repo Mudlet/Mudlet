@@ -356,7 +356,7 @@ QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir& dir)
         QStringList fileNames(dir.entryList(QDir::Files | QDir::Readable, QDir::Name));
 
         for (auto& fileName : qAsConst(fileNames)) {
-            fileNameList << qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), fileName);
+            fileNameList << qsl("%1/%2").arg(dir.path(), fileName);
         }
     } else {
         if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mediaData.getMediaFileName().contains('.')) {
