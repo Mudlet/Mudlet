@@ -5624,19 +5624,19 @@ Nutzungen</translation>
       <location filename="../src/dlgMapLabel.cpp" line="33"/>
       <source>Create label</source>
       <comment>Create label dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Markierung erstellen</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="75"/>
       <source>Foreground color</source>
       <comment>2D mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Vordergrundfarbe</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="95"/>
       <source>Background color</source>
       <comment>2D mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Hintergrundfarbe</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="114"/>
@@ -5648,7 +5648,7 @@ Nutzungen</translation>
       <location filename="../src/dlgMapLabel.cpp" line="131"/>
       <source>Select image</source>
       <comment>2D Mapper create label file dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Bild auswählen</translation>
     </message>
   </context>
   <context>
@@ -6202,7 +6202,7 @@ Nutzungen</translation>
       <location filename="../src/dlgProfilePreferences.cpp" line="1685"/>
       <source>Pick color</source>
       <comment>Generic pick color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Farbe wählen</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2159"/>
@@ -8704,7 +8704,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/ui/map_label.ui" line="38"/>
       <source>Type:</source>
-      <translation type="unfinished"/>
+      <translation>Art:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="49"/>
@@ -8725,7 +8725,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <location filename="../src/ui/map_label.ui" line="79"/>
       <location filename="../src/ui/map_label.ui" line="127"/>
       <source>...</source>
-      <translation type="unfinished"/>
+      <translation>...</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="86"/>
@@ -8745,27 +8745,27 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/ui/map_label.ui" line="110"/>
       <source>Font:</source>
-      <translation type="unfinished"/>
+      <translation>Schriftart:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="134"/>
       <source>Foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Vordergrund:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="151"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>Hintergrund:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="169"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Hintergrund</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="174"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Vordergrund</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="182"/>
@@ -8785,12 +8785,12 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/ui/map_label.ui" line="243"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Speichern</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="250"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Abbrechen</translation>
     </message>
   </context>
   <context>
