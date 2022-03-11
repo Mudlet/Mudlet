@@ -8524,7 +8524,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="243"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Spara</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="250"/>
