@@ -6413,7 +6413,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3478"/>
       <source>How many rooms in the whole map have this symbol.</source>
-      <translation type="unfinished"/>
+      <translation>Quante stanze nella mappa utilizzano questo simbolo.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3496"/>
@@ -6423,12 +6423,12 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3504"/>
       <source>The symbol can be made entirely from glyphs in the specified font.</source>
-      <translation type="unfinished"/>
+      <translation>Il simbolo può essere creato interamente da glifi nel carattere specificato.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3522"/>
       <source>The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different systems with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.</source>
-      <translation type="unfinished"/>
+      <translation>Non è possibile disegnare il simbolo utilizzando i caratteri installati nel sistema oppure un carattere non valido è stato inserito come simbolo per la stanza o il file di mappa è stato creato su un sistema differente con un differente gruppo di caratteri disponibili. Puoi correggere questa situazione installando caratteri addizionali nel sistema oppure modificando il file di mappa per utilizzare un altro simbolo. E'possibile eseguire questa operazione anche utilizzando le funzioni Lua &lt;i&gt;getRoomChar&lt;/i&gt; e &lt;i&gt;setRoomChar&lt;/i&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4113"/>
@@ -8808,7 +8808,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/ui/map_label.ui" line="192"/>
       <source>If deselected the label will have the same size when you zoom in and out in the mapper. If it is selected the label will scale when you zoom the mapper.</source>
-      <translation type="unfinished"/>
+      <translation>Se è deselezionato, l'etichetta avrà la medesima dimensione al variare dello zoom della mappa. Se è selezionata l'etichetta si ridimensiona mantenendo la stessa scala della mappa.</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="195"/>
@@ -11466,7 +11466,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2143"/>
       <source>Use large area exit arrows in 2D view</source>
-      <translation type="unfinished"/>
+      <translation>Utilizza delle frecce grandi per le uscite nella vista 2D</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2394"/>
