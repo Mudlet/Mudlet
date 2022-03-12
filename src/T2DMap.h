@@ -6,6 +6,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016, 2018-2019 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,6 +24,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "dlgMapLabel.h"
 #include "dlgRoomSymbol.h"
 
 #include "pre_guard.h"
@@ -240,6 +242,7 @@ private:
     void paintRoomExits(QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int, float, QMap<int, QPointF>&);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
+    void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
 
 
     bool mDialogLock;
@@ -280,6 +283,7 @@ private:
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;
     dlgRoomSymbol* mpDlgRoomSymbol = nullptr;
+    dlgMapLabel* mpDlgMapLabel = nullptr;
 
 private slots:
     void slot_createRoom();
