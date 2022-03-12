@@ -82,7 +82,7 @@ int TAccessibleTextEdit::lineForOffset(int offset, int *lengthSoFar = nullptr) c
 
 int TAccessibleTextEdit::columnForOffset(int offset) const
 {
-    int lengthSoFar;
+    int lengthSoFar = 0;
 
     // If the offset is just past the end of the contents, consider it to be on
     // the last character.
@@ -451,7 +451,7 @@ QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp op, in
         QTextBoundaryFinder::BoundaryType type = boundaryType == QAccessible::TextBoundaryType::WordBoundary ?
             QTextBoundaryFinder::BoundaryType::Word : QTextBoundaryFinder::BoundaryType::Sentence;
         QTextBoundaryFinder finder = QTextBoundaryFinder(type, contents);
-        int start, end;
+        int start = 0, end = 0;
 
         finder.setPosition(offset);
 
