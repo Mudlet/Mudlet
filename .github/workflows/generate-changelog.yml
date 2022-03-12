@@ -58,7 +58,7 @@ jobs:
         changelog=$(lua CI/generate-changelog.lua -m release --start-commit $FROM_RELEASE --end-commit $TO_RELEASE)
         echo "$changelog" >> changelog.html
         
-        echo "[INFO] Changelog generated (from $FROM_RELEASE to $TO_RELEASE). If it's too big, Github won't show it, so it's available as an artifact as well"
+        echo "[INFO] Changelog generated (from $FROM_RELEASE to $TO_RELEASE). If it's too big, Github won't show it, so it's available as an artifact as well at: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}##artifacts"
         echo "[INFO] Changelog is:"
         echo $changelog
 
