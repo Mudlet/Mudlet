@@ -5,6 +5,7 @@
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
 #    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
+#    Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -527,6 +528,7 @@ SOURCES += \
     dlgIRC.cpp \
     dlgKeysMainArea.cpp \
     dlgModuleManager.cpp \
+    dlgMapLabel.cpp \
     dlgMapper.cpp \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
@@ -638,6 +640,7 @@ HEADERS += \
     dlgConnectionProfiles.h \
     dlgIRC.h \
     dlgKeysMainArea.h \
+    dlgMapLabel.h \
     dlgMapper.h \
     dlgModuleManager.h \
     dlgNotepad.h \
@@ -762,6 +765,7 @@ FORMS += \
     ui/keybindings_main_area.ui \
     ui/main_window.ui \
     ui/module_manager.ui \
+    ui/map_label.ui \
     ui/mapper.ui \
     ui/notes_editor.ui \
     ui/package_manager.ui \
@@ -1494,13 +1498,38 @@ win32 {
     }
 }
 
-# Pull the docs and lua files into the project so they show up in the Qt Creator project files list
+# This is a list of files that we want to show up in the Qt Creator IDE that are
+# not otherwise used by the project:
 OTHER_FILES += \
     $${LUA.files} \
     $${LUA_GEYSER.files} \
     $${LUA_TRANSLATIONS.files} \
     $${LUA_TESTS.files} \
-    $${DISTFILES} \
+    ../.github/CODE_OF_CONDUCT.md \
+    ../.github/CODEOWNERS \
+    ../.github/codeql/codeql-config.yml \
+    ../.github/codespell-wordlist.txt \
+    ../.github/CONTRIBUTING.md \
+    ../.github/dependabot.yml \
+    ../.github/FUNDING.yml \
+    ../.github/ISSUE_TEMPLATE.md \
+    ../.github/pr-labeler.yml \
+    ../.github/PULL_REQUEST_TEMPLATE.md \
+    ../.github/repo-metadata.yml \
+    ../.github/SUPPORT.md \
+    ../.github/workflows/build-mudlet.yml \
+    ../.github/workflows/clangtidy-diff-analysis.yml \
+    ../.github/workflows/codeql-analysis.yml \
+    ../.github/workflows/codespell-analysis.yml \
+    ../.github/workflows/dangerjs.yml \
+    ../.github/workflows/link-ptbs-to-dblsqd.yml \
+    ../.github/workflows/tag-pull-requests.yml \
+    ../.github/workflows/update-3rdparty.yml \
+    ../.github/workflows/update-autocompletion.yml \
+    ../.github/workflows/update-en-us-plural.yml \
+    ../.github/workflows/update-geyser-docs.yml \
+    ../.github/workflows/update-translations.yml \
+    ../.github/workflows/whitespace-linter.yml \
     ../README \
     ../COMPILE \
     ../COPYING \
@@ -1513,7 +1542,7 @@ OTHER_FILES += \
 # to provide a graphic password requestor needed to install software
 unix:!macx {
 # say what we want to get installed by "make install" (executed by 'deployment' step):
-    INSTALLS += \
+INSTALLS += \
         target \
         LUA \
         LUA_GEYSER \
@@ -1581,7 +1610,7 @@ unix:!macx {
 # leaves those empty sub-directories behind and that prevents their parents
 # from being deleted as well
 
-
+# This is the extra files that are needed to do a `make dist` given a makefile
 DISTFILES += \
     ../docker/Dockerfile \
     ../docker/docker-compose.override.linux.yml \
@@ -1589,19 +1618,6 @@ DISTFILES += \
     CF-loader.xml \
     CMakeLists.txt \
     .clang-format \
-    ../.github/pr-labeler.yml \
-    ../.github/CODEOWNERS.md \
-    ../.github/CODE_OF_CONDUCT.md \
-    ../.github/CONTRIBUTING.md \
-    ../.github/FUNDING.yml \
-    ../.github/ISSUE_TEMPLATE.md \
-    ../.github/PULL_REQUEST_TEMPLATE.md \
-    ../.github/SUPPORT.md \
-    ../.github/workflows/build-mudlet.yml \
-    ../.github/workflows/update-3rdparty.yml \
-    ../.github/workflows/update-autocompletion.yml \
-    ../.github/workflows/update-translations.yml \
-    ../.github/workflows/whitespace-linter.yml \
     ../CMakeLists.txt \
     ../cmake/FindHUNSPELL.cmake \
     ../cmake/FindPCRE.cmake \

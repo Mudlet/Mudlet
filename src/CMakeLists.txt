@@ -4,6 +4,7 @@
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
 #    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
+#    Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -59,6 +60,7 @@ set(mudlet_SRCS
     dlgIRC.cpp
     dlgKeysMainArea.cpp
     dlgMapper.cpp
+    dlgMapLabel.cpp
     dlgModuleManager.cpp
     dlgNotepad.cpp
     dlgPackageExporter.cpp
@@ -168,6 +170,7 @@ set(mudlet_UIS
     ui/keybindings_main_area.ui
     ui/main_window.ui
     ui/module_manager.ui
+    ui/map_label.ui
     ui/mapper.ui
     ui/notes_editor.ui
     ui/package_manager.ui
@@ -199,6 +202,7 @@ set(mudlet_HDRS
     dlgConnectionProfiles.h
     dlgIRC.h
     dlgKeysMainArea.h
+    dlgMapLabel.h
     dlgMapper.h
     dlgModuleManager.h
     dlgNotepad.h
@@ -385,8 +389,7 @@ endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS}
-                      ${mudlet_UIS})
+add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS})
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
 set_target_properties(mudlet PROPERTIES
