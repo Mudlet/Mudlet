@@ -1,7 +1,6 @@
 name: Generate a changelog
 
 on:
-  push:
   workflow_dispatch:
     inputs:
       from:
