@@ -1,7 +1,8 @@
 name: Generate a changelog
 
 on:
-  push:
+  schedule:
+    - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
       from:
