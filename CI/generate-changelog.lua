@@ -21,7 +21,7 @@ else
   loadfile("../src/mudlet-lua/lua/TableUtils.lua")()
 end
 
-local parser = argparse("generate-ptb-changelog.lua", "Generate a changelog from the HEAD until the most recent published commit.")
+local parser = argparse("generate-changelog.lua", "Generate a changelog from the HEAD until the most recent published commit.")
 -- see https://argparse.readthedocs.io/en/stable/index.html
 parser:option("-m --mode", 'mode to run in'):choices({"ptb", "release"}):count("1")
 parser:option("-r --releasefile", "downloaded DBLSQD release feed file")
