@@ -1,0 +1,45 @@
+name: Generate a changelog
+
+on:
+  workflow_dispatch:
+    inputs:
+      from:
+        description: 'Generate from this release/commit (defaults to the latest release)'     
+        required: false
+        # default is calculated dynamically
+      to:
+        description: 'Generate until this release/commit (defaults to latest development)'
+        required: false
+        default: 'HEAD'
+
+jobs:
+  generate-changelog:
+    runs-on: ubuntu-latest
+    # TODO: uncomment
+    # if: ${{ github.repository_owner == 'Mudlet' }}
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: leafo/gh-actions-lua@v8
+      with:
+        luaVersion: "5.1.5"
+    - uses: actions/setup-node@v3
+    - uses: leafo/gh-actions-luarocks@v4
+
+    - name: install Lua dependencies
+      run: |
+        luarocks install argparse
+        luarocks install lunajson
+
+    - name: determine latest release
+      if: !github.event.inputs.from
+      run: |
+        LATEST_RELEASE=$(git tag --sort=committerdate | tail -1)
+        echo "Latest release is $LATEST_RELEASE"
+        
+        echo "LATEST_RELEASE=$LATEST_RELEASE" >> $GITHUB_ENV
+
+    - name: update autocompletion data
+      run: |
+        changelog=$(lua generate-ptb-changelog.lua -m release --start-commit ${{ github.event.inputs.from }} --end-commit ${{ github.event.inputs.to }})
+        echo $changelog
