@@ -42,5 +42,5 @@ jobs:
 
     - name: update autocompletion data
       run: |
-        changelog=$(lua generate-changelog.lua -m release --start-commit ${{ github.event.inputs.from }} --end-commit ${{ github.event.inputs.to }})
+        changelog=$(lua CI/generate-changelog.lua -m release --start-commit ${{ github.event.inputs.from }} --end-commit ${{ github.event.inputs.to }})
         echo $changelog
