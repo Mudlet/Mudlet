@@ -35,6 +35,7 @@ jobs:
     - name: determine latest release
       if: ${{ github.event.inputs.from == '' }}
       run: |
+        cd "$GITHUB_WORKSPACE"
         LATEST_RELEASE=$(git tag --sort=committerdate | tail -1)
         echo "Latest release is $LATEST_RELEASE"
         
