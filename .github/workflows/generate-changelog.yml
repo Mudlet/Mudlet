@@ -34,23 +34,26 @@ jobs:
         luarocks install argparse
         luarocks install lunajson
 
-    - name: determine latest release
-      if: ${{ github.event.inputs.from == '' }}
+    - name: set from and to releases
       run: |
-        cd "$GITHUB_WORKSPACE"
-        LATEST_RELEASE=$(git tag --sort=committerdate | tail -1)
-        echo "Latest release is $LATEST_RELEASE"
+        if [[ -z "${{ github.event.inputs.from }}" ]] ; then
+            FROM_RELEASE=$(git tag --sort=committerdate | tail -1)
+        else
+            FROM_RELEASE=${{ github.event.inputs.from }}
+        fi
         
-        echo "LATEST_RELEASE=$LATEST_RELEASE" >> $GITHUB_ENV
+        if [[ -z "${{ github.event.inputs.to }}" ]] ; then
+            TO_RELEASE="HEAD"
+        else
+            TO_RELEASE=${{ github.event.inputs.to }}
+        fi
+        
+        echo "Generating a changelog from $FROM_RELEASE until $TO_RELEASE"
+        
+        echo "FROM_RELEASE=$FROM_RELEASE" >> $GITHUB_ENV
+        echo "TO_RELEASE=$TO_RELEASE" >> $GITHUB_ENV
 
     - name: generate changelog
-      run: |
-        if [[ -z "$LATEST_RELEASE" ]] ; then
-            export LATEST_RELEASE=${{ github.event.inputs.from }}
-        fi
-        if [[ -z "${{ github.event.inputs.to }}" ]] ; then
-            export TO_RELEASE="HEAD"
-        fi
-       
-        changelog=$(lua CI/generate-changelog.lua -m release --start-commit $LATEST_RELEASE --end-commit $TO_RELEASE)
+      run: |       
+        changelog=$(lua CI/generate-changelog.lua -m release --start-commit $FROM_RELEASE --end-commit $TO_RELEASE)
         echo $changelog
