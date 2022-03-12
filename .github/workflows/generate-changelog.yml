@@ -48,6 +48,9 @@ jobs:
         if [[ -z "$LATEST_RELEASE" ]] ; then
             export LATEST_RELEASE=${{ github.event.inputs.from }}
         fi
+        if [[ -z "${{ github.event.inputs.to }}" ]] ; then
+            export TO_RELEASE="HEAD"
+        fi
        
-        changelog=$(lua CI/generate-changelog.lua -m release --start-commit $LATEST_RELEASE --end-commit ${{ github.event.inputs.to }})
+        changelog=$(lua CI/generate-changelog.lua -m release --start-commit $LATEST_RELEASE --end-commit $TO_RELEASE)
         echo $changelog
