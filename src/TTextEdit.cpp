@@ -500,8 +500,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
 
     // If caret mode is enabled and the line is empty, still draw the caret.
     if (mudlet::self()->isCaretModeEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
-        int charWidth = getGraphemeWidth(getGraphemeBaseCharacter("a"));
-        auto textRect = QRect(0, mFontHeight * lineOfScreen, mFontWidth * charWidth, mFontHeight);
+        auto textRect = QRect(0, mFontHeight * lineOfScreen, mFontWidth, mFontHeight);
         painter.fillRect(textRect, mFgColor);
     }
 }
