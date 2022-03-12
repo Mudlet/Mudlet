@@ -34,9 +34,6 @@ jobs:
         luarocks install argparse
         luarocks install lunajson
 
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-
     - name: determine latest release
       if: ${{ github.event.inputs.from == '' }}
       run: |
