@@ -33,7 +33,7 @@ jobs:
         luarocks install lunajson
 
     - name: determine latest release
-      if: ${{ github.event.inputs.from != '' }}
+      if: ${{ github.event.inputs.from == '' }}
       run: |
         LATEST_RELEASE=$(git tag --sort=committerdate | tail -1)
         echo "Latest release is $LATEST_RELEASE"
