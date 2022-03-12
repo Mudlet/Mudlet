@@ -371,7 +371,7 @@ QString TAccessibleTextEdit::attributes(int offset, int *startOffset, int *endOf
         ret += "font-family:" + QLatin1Char('"') + family + QLatin1Char('"') + ";";
     }
 
-    const int fontSize = int(font.pointSize());
+    const int fontSize = static_cast<int>(font.pointSize());
     if (fontSize) {
         ret += "font-size:" + QString::fromLatin1("%1pt").arg(fontSize) + ";";
     }
@@ -522,7 +522,8 @@ QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp op, in
 
         QString line(buffer->line(lineNum));
 
-        ret = line + "\n";	// Materialize the implicit '\n' at the end of every line.
+        // Materialize the implicit '\n' at the end of every line.
+        ret = line + "\n";
 
         const QStringList& lineBuffer = buffer->lineBuffer;
         *startOffset = 0;
