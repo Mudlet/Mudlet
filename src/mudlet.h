@@ -521,7 +521,7 @@ public slots:
     void slot_show_help_dialog_irc();
     void slot_open_mappingscripts_page();
     void slot_multi_view(const bool);
-    void slot_caret_mode(bool);
+    void slot_caret_mode(bool) const;
     void slot_toggle_multi_view();
     void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
     void slot_timer_fires();

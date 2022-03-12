@@ -2978,7 +2978,7 @@ void mudlet::slot_multi_view(const bool state)
     }
 }
 
-void mudlet::slot_caret_mode(bool state)
+void mudlet::slot_caret_mode(bool state) const
 {
     // FIXME: Support multiple hosts.
     mpCurrentActiveHost->mpConsole->setCaretMode(state);
