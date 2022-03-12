@@ -1,0 +1,50 @@
+name: Update plural american english translations
+
+on:
+  schedule:
+    - cron: 0 0 * * FRI
+
+  workflow_dispatch:
+
+jobs:
+  update_and_commit_plural_english:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    env:
+      PLURAL_TRANSLATIONS_FILE: ./translations/translated/mudlet_en_US.ts
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: development
+        submodules: true
+
+    - name: update plural american english file
+      uses: Mudlet/lupdate-action@master
+      with:
+        args: -locations absolute -pluralonly ./src ./3rdparty/dblsqd/dblsqd ./3rdparty/edbee-lib/edbee-lib -ts ${{ env.PLURAL_TRANSLATIONS_FILE }}
+
+    - name: count the number of unfinished translations
+      id: count_unfinished
+      uses: Mudlet/xmlstarlet-action@v1.2
+      with:
+        args: sel -t -v count(.//translation[@type='unfinished']) ${{ env.PLURAL_TRANSLATIONS_FILE }}
+
+    - name: commit and create draft pull request
+      if: steps.count_unfinished.outputs.xmlstarlet_result > 0
+      uses: peter-evans/create-pull-request@v3.12.1
+      with:
+        token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
+        add-paths: ${{ env.PLURAL_TRANSLATIONS_FILE }}
+        branch: update-en-us-plural
+        commit-message: (autocommit) Updated american english file to add plural forms
+        title: "Infrastructure: update plural american english translations"
+        body: |
+          #### Brief overview of PR changes/additions
+          :crown: An automated PR to add plural american english forms (based on ${{ github.ref }} - ${{ github.sha }}).
+          This PR is first marked as a draft because someone needs to add the plural forms using Qt Linguist on the `translations/translated/mudlet_en_US.ts` file and commit the changes to that branch.
+          #### Motivation for adding to Mudlet
+          So developers can pluralize the added american english text before the upcoming release.
+        author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
+        committer: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
+        assignees: SlySven
+        draft: true

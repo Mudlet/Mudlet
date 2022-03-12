@@ -70,48 +70,9 @@ QFile replayFile;
 
 
 cTelnet::cTelnet(Host* pH, const QString& profileName)
-: mResponseProcessed(true)
-, networkLatencyTime(0.0)
-, mAlertOnNewData(true)
-, mGA_Driver(false)
-, mFORCE_GA_OFF(false)
-, mpComposer(nullptr)
-, mpDownloader()
-, mpProgressDialog()
-, mProfileName(profileName)
+: mProfileName(profileName)
 , mpHost(pH)
-, mpOutOfBandDataIncomingCodec()
-, outgoingDataCodec()
-, outgoingDataEncoder()
-, hostPort()
-, mWaitingForResponse()
-, mZstream()
-, mNeedDecompression()
-, iac()
-, iac2()
-, insb()
-, recvdGA()
-, mEncoding()
 , mpPostingTimer(new QTimer(this))
-, mUSE_IRE_DRIVER_BUGFIX(false)
-, mCommands(0)
-, mMCCP_version_1(false)
-, mMCCP_version_2(false)
-, mIsTimerPosting()
-, enableCHARSET(false)
-, enableATCP(false)
-, enableGMCP(false)
-, enableMSSP(false)
-, enableMSP(false)
-, enableChannel102(false)
-, mDontReconnect(false)
-, mAutoReconnect(false)
-, loadingReplay(false)
-, mIsReplayRunFromLua(false)
-, mEncodingWarningIssued(false)
-, mEncoderFailureNoticeIssued(false)
-, mConnectViaProxy(false)
-, mIncompleteSB(false)
 {
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
@@ -2192,14 +2153,6 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
 
                 if (mspVAR == "V") {
                     mediaData.setMediaVolume(mspVAL.toInt());
-
-                    if (mediaData.getMediaVolume() == TMediaData::MediaVolumePreload) {
-                        continue; // Support preloading
-                    } else if (mediaData.getMediaVolume() > TMediaData::MediaVolumeMax) {
-                        mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
-                    } else if (mediaData.getMediaVolume() < TMediaData::MediaVolumeMin) {
-                        mediaData.setMediaVolume(TMediaData::MediaVolumeMin);
-                    }
                 } else if (mspVAR == "L") {
                     mediaData.setMediaLoops(mspVAL.toInt());
 

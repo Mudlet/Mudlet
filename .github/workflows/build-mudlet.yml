@@ -53,7 +53,7 @@ jobs:
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
         fetch-depth: 0
@@ -135,8 +135,6 @@ jobs:
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
-        # add new tap to brew for installing gon
-        brew tap mitchellh/gon
         # these aren't available or don't work well in vcpkg
         brew install pkg-config libzzip libzip ccache luarocks expect mitchellh/gon/gon
 

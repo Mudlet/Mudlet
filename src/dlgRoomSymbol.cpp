@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,7 +28,9 @@
 #include <QPainter>
 #include "post_guard.h"
 
-dlgRoomSymbol::dlgRoomSymbol(Host* pHost, QWidget* pParentWidget) : QDialog(pParentWidget), mpHost(pHost)
+dlgRoomSymbol::dlgRoomSymbol(Host* pHost, QWidget* pParentWidget)
+: QDialog(pParentWidget)
+, mpHost(pHost)
 {
     // init generated dialog
     setupUi(this);
@@ -225,8 +228,8 @@ void dlgRoomSymbol::colorRejected()
 
 void dlgRoomSymbol::resetColor()
 {
-    selectedColor = nullptr;
-    previewColor = nullptr;
+    selectedColor = QColor();
+    previewColor = QColor();
     updatePreview();
 }
 

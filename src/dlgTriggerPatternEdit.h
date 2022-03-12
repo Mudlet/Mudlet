@@ -37,7 +37,7 @@ public:
     Q_DISABLE_COPY(dlgTriggerPatternEdit)
     explicit dlgTriggerPatternEdit(QWidget*);
 
-    int mRow;
+    int mRow = 0;
 
 
 public slots:
