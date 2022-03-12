@@ -43,7 +43,7 @@ jobs:
         
         echo "LATEST_RELEASE=$LATEST_RELEASE" >> $GITHUB_ENV
 
-    - name: update autocompletion data
+    - name: generate changelog
       run: |
         if [[ -z "$LATEST_RELEASE" ]] ; then
             export LATEST_RELEASE=${{ github.event.inputs.from }}
