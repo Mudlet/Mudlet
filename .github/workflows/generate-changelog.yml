@@ -44,5 +44,9 @@ jobs:
 
     - name: update autocompletion data
       run: |
-        changelog=$(lua CI/generate-changelog.lua -m release --start-commit ${{ github.event.inputs.from }} --end-commit ${{ github.event.inputs.to }})
+        if [[ -z "$LATEST_RELEASE" ]] ; then
+            export LATEST_RELEASE=${{ github.event.inputs.from }}
+        fi
+       
+        changelog=$(lua CI/generate-changelog.lua -m release --start-commit $LATEST_RELEASE --end-commit ${{ github.event.inputs.to }})
         echo $changelog
