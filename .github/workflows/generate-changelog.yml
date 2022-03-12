@@ -56,5 +56,12 @@ jobs:
     - name: generate changelog
       run: |       
         changelog=$(lua CI/generate-changelog.lua -m release --start-commit $FROM_RELEASE --end-commit $TO_RELEASE)
+        echo "$changelog" >> changelog.html
+        
         echo "Changelog generated. If it's too big, Github won't show it, so it's available as an artifact as well"
         echo $changelog
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: changelog.html
+        path: changelog.html
