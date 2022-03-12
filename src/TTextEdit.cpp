@@ -349,9 +349,8 @@ void TTextEdit::showNewLines()
          */
         ti->setCursorPosition(ti->characterCount());
 
-        QAccessible::updateAccessibility(new QAccessibleTextInsertEvent(this,
-                                                                        ti->characterCount() - newLines.length(),
-                                                                        newLines));
+        QAccessibleTextInsertEvent event(this, ti->characterCount() - newLines.length(), newLines);
+        QAccessible::updateAccessibility(&event);
     }
 }
 
@@ -2656,7 +2655,9 @@ void TTextEdit::updateCaret()
 
     if (QAccessible::isActive()) {
         const QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(this)->textInterface();
-        QAccessible::updateAccessibility(new QAccessibleTextCursorEvent(this, ti->cursorPosition()));
+        QAccessibleTextCursorEvent event(this, ti->cursorPosition());
+
+        QAccessible::updateAccessibility(&event);
     }
 }
 
