@@ -375,7 +375,7 @@
     <string>Move through the MUD text with the keyboard.</string>
    </property>
    <property name="shortcut">
-    <string>F7</string>
+    <string>Ctrl+Tab</string>
    </property>
    <property name="shortcutContext">
     <enum>Qt::WindowShortcut</enum>
