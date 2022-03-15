@@ -15239,6 +15239,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getBackgroundColor", TLuaInterpreter::getBackgroundColor);
     lua_register(pGlobalLua, "getLabelStyleSheet", TLuaInterpreter::getLabelStyleSheet);
     lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
+    lua_register(pGlobalLua, "moveRoom", TLuaInterpreter::moveRoom);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -17255,3 +17256,112 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#moveRoom
+int TLuaInterpreter::moveRoom(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+
+    int roomId = getVerifiedInt(L, __func__, 1, "room id");
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, qsl("number %1 is not a valid room id.").arg(roomId));
+    }
+
+    int n = lua_gettop(L);
+    int z  = 0;
+    bool absoluteMove = false;
+    switch (n) {
+    case 3: // areaId, roomId, x, y - relative movement
+        z = 0;
+        break;
+    case 4:
+        if (lua_type(L, 4) == LUA_TNUMBER) { // roomId, x, y, z - relative movement
+            z = lua_tonumber(L, 4);
+        } else if (lua_type(L, 4) == LUA_TBOOLEAN ) { // roomId, x, y, absoluteMove
+            absoluteMove = lua_toboolean(L, 4);
+            if (absoluteMove) { // roomId, x, y, true - absoluteMove in xy plane
+                z = pR->z;
+            } else {  // roomId, x, y, false - relativeMove in xy plane
+                z = 0;
+            }
+        } else {
+            return warnArgumentValue(L, __func__, qsl("bad argument #4 type (z coordinate for relative movement in space as number or absolute (true) / relative (false) movement in xy-plane as boolean is optional, got %s")
+                                                     .arg(lua_typename(L, 4)));
+        }
+        break;
+    default:
+        if (n > 4) {
+            if (lua_type(L, 5) == LUA_TBOOLEAN ) { // areaId, roomId, x, y, z, absoluteMove
+                absoluteMove = lua_toboolean(L, 5);
+                z = getVerifiedInt(L, __func__, 4, (absoluteMove ? "z coordinate" : "z delta"));
+            } else {
+                return warnArgumentValue(L, __func__, qsl("bad argument #5 type (absolute (true) / relative (false) movement in xyz-space as boolean is optional, got %s")
+                                                         .arg(lua_typename(L, 5)));
+            }
+            break;
+        }
+    }
+
+    int x = getVerifiedInt(L, __func__, 2, (absoluteMove ? "x coordinate" : "x delta"));
+    int y = getVerifiedInt(L, __func__, 3, (absoluteMove ? "y coordinate" : "y delta"));
+    if (absoluteMove) {
+        int oldX = pR->x;
+        int oldY = pR->y;
+        pR->x = x;
+        pR->y = y;
+        pR->z = z;
+
+        QMutableMapIterator<QString, QList<QPointF>> itCustomLine(pR->customLines);
+        QList<QPointF> newPoints;
+        while (itCustomLine.hasNext()) {
+            itCustomLine.next();
+            QMutableListIterator<QPointF> itCustomLinePoint(itCustomLine.value());
+            while (itCustomLinePoint.hasNext()){
+                QPointF point = itCustomLinePoint.next();
+                point.setX(static_cast<float>(point.x() - oldX + x));
+                point.setY(static_cast<float>(point.y() - oldY + y));
+                itCustomLinePoint.setValue(point);
+            }
+        }
+
+    } else {
+        pR->x += x;
+        pR->y += y;
+        pR->z += z;
+
+        QMutableMapIterator<QString, QList<QPointF>> itCustomLine(pR->customLines);
+        QList<QPointF> newPoints;
+        while (itCustomLine.hasNext()) {
+            itCustomLine.next();
+            QMutableListIterator<QPointF> itCustomLinePoint(itCustomLine.value());
+            while (itCustomLinePoint.hasNext()){
+                QPointF point = itCustomLinePoint.next();
+                point.setX(static_cast<float>(point.x() + x));
+                point.setY(static_cast<float>(point.y() + y));
+                itCustomLinePoint.setValue(point);
+            }
+        }
+    }
+
+    /*
+     * If we are moving multiple rooms the remaining code is not optimum (it
+     * could be left to do just on the last room in each area) but extending
+     * this function to handle multiple rooms would mess with the option to
+     * do either relative or absolute moves in the same function...
+     * SlySven 2022/03
+     */
+
+    // We need to update the record of the area extremes otherwise the 3D
+    // mapper may not show the moved room if it goes beyond the existing
+    // extremes (well at least in the z-axis):
+    auto pA = host.mpMap->mpRoomDB->getArea(pR->getArea());
+    if (Q_LIKELY(pA)) {
+        pA->calcSpan();
+    }
+    host.mpMap->update();
+    lua_pushboolean(L, true);
+    return 1;
+}
