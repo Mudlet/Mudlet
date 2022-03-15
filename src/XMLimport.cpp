@@ -970,6 +970,10 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->setLargeAreaExitArrows(false);
     }
 
+    if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
+        mpHost->mMapInfoContributors.clear();
+    }
+
     while (!atEnd()) {
         readNext();
 
@@ -1086,6 +1090,8 @@ void XMLimport::readHostPackage(Host* pHost)
                 pHost->mBgColor_2.setNamedColor(readElementText());
             } else if (name() == "mRoomBorderColor") {
                 pHost->mRoomBorderColor.setNamedColor(readElementText());
+            } else if (name() == "mMapInfoBg") {
+                pHost->mMapInfoBg.setNamedColor(readElementText());
             } else if (name() == "mBlack2") {
                 pHost->mBlack_2.setNamedColor(readElementText());
             } else if (name() == "mLightBlack2") {
@@ -1133,7 +1139,7 @@ void XMLimport::readHostPackage(Host* pHost)
                 Q_UNUSED(readElementText());
             } else if (name() == "mMapInfoContributors") {
                 readLegacyMapInfoContributors();
-            } else if (name() == "mMapInfoContributor") {
+            } else if (name() == "mapInfoContributor") {
                 readMapInfoContributor();
             } else if (name() == "profileShortcut") {
                 readProfileShortcut();
