@@ -9237,7 +9237,7 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         lua_pushstring(L, exits.at(i).toUtf8().constData());
         lua_newtable(L); //customLines[direction]
         lua_pushstring(L, "attributes");
-        lua_newtable(L); //customLines[attributes]
+        lua_newtable(L); //customLines[direction]["attributes"]
         lua_pushstring(L, "style");
         switch (pR->customLinesStyle.value(exits.at(i))) {
         case Qt::DotLine:
@@ -9257,10 +9257,10 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         default:
             lua_pushstring(L, "solid line");
         }
-        lua_settable(L, -3);
+        lua_settable(L, -3); //customLines[direction]["attributes"]["style"]
         lua_pushstring(L, "arrow");
         lua_pushboolean(L, pR->customLinesArrow.value(exits.at(i)));
-        lua_settable(L, -3);
+        lua_settable(L, -3); //customLines[direction]["attributes"]["arrow"]
         lua_pushstring(L, "color");
         lua_newtable(L);
         lua_pushstring(L, "r");
@@ -9272,13 +9272,17 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         lua_pushstring(L, "b");
         lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).blue());
         lua_settable(L, -3);
-        lua_settable(L, -3); //color
-        lua_settable(L, -3); //attributes
+        lua_settable(L, -3); //customLines[direction]["attributes"]["color"]
+        lua_settable(L, -3); //customLines[direction]["attributes"]
         lua_pushstring(L, "points");
-        lua_newtable(L); //customLines[points]
+        lua_newtable(L); //customLines[direction][points]
         QList<QPointF> pointL = pR->customLines.value(exits.at(i));
         for (int k = 0, kTotal = pointL.size(); k < kTotal; ++k) {
-            lua_pushnumber(L, k);
+            // To allow the output from here to be fed back into addCustomLine
+            // we need to start the numbering from the Lua standard of 1 and
+            // NOT the C/C++ standard of 0 - otherwise the end-user has to
+            // fiddle with the zero-th entry to keep the points in order:
+            lua_pushnumber(L, k + 1);
             lua_newtable(L);
             lua_pushstring(L, "x");
             lua_pushnumber(L, pointL.at(k).x());
@@ -9288,7 +9292,7 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
             lua_settable(L, -3);
             lua_settable(L, -3);
         }
-        lua_settable(L, -3); //customLines[direction][points]
+        lua_settable(L, -3); //customLines[direction]["points"]
         lua_settable(L, -3); //customLines[direction]
     }
     return 1;
