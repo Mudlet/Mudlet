@@ -17,6 +17,8 @@ jobs:
         luaVersion: "5.1.5"
     - uses: actions/setup-node@v3
     - uses: leafo/gh-actions-luarocks@v4
+      with:
+        luaRocksVersion: 3.8.0
 
     - name: install Lua dependencies
       run: |
