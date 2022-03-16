@@ -696,6 +696,7 @@ private:
     static int stopMusicAsTableArgument(lua_State* L);
     static int stopSoundsAsOrderedArguments(lua_State* L);
     static int stopSoundsAsTableArgument(lua_State* L);
+    static int moveMapLabel(lua_State*);
 
     const int LUA_FUNCTION_MAX_ARGS = 50;
 
