@@ -17303,7 +17303,7 @@ int TLuaInterpreter::moveRoom(lua_State* L)
             z = getVerifiedInt(L, __func__, 4, (absoluteMove ? "z coordinate" : "z delta"));
             break;
         }
-        // If we get to here we do not have enough arguements but that will be
+        // If we get to here we do not have enough arguments but that will be
         // detected and handled in the next bit - in the getVerifiedInt(...) calls
     }
 
