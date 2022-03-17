@@ -165,6 +165,7 @@ jobs:
       uses: leafo/gh-actions-luarocks@v4
       with:
         luaRocksVersion: 3.8.0
+        withLuaPath: "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua"
       if: runner.os == 'Linux'
 
     - name: (Linux) Install non-vcpkg dependencies (2/2)
