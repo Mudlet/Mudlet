@@ -17275,8 +17275,7 @@ int TLuaInterpreter::moveRoom(lua_State* L)
     bool absoluteMove = false;
     switch (n) {
     case 3: // areaId, roomId, x, y - relative movement
-        z = 0;
-        break;
+        {break;} // nothing to do
     case 4:
         if (lua_type(L, 4) == LUA_TNUMBER) { // roomId, x, y, z - relative movement
             z = lua_tonumber(L, 4);
@@ -17284,65 +17283,55 @@ int TLuaInterpreter::moveRoom(lua_State* L)
             absoluteMove = lua_toboolean(L, 4);
             if (absoluteMove) { // roomId, x, y, true - absoluteMove in xy plane
                 z = pR->z;
-            } else {  // roomId, x, y, false - relativeMove in xy plane
-                z = 0;
             }
+            // else this is: roomId, x, y, false - relativeMove in xy plane
+            // and nothing to do
+
         } else {
-            return warnArgumentValue(L, __func__, qsl("bad argument #4 type (z coordinate for relative movement in space as number or absolute (true) / relative (false) movement in xy-plane as boolean is optional, got %s")
-                                                     .arg(lua_typename(L, 4)));
+            lua_pushfstring(L, "moveRoom: bad argument #4 type (z coordinate for relative movement in space as number or absolute (true) / relative (false) movement in xy-plane as boolean is optional, got %s", lua_typename(L, 4));
+            return lua_error(L);
         }
         break;
     default:
         if (n > 4) {
-            if (lua_type(L, 5) == LUA_TBOOLEAN ) { // areaId, roomId, x, y, z, absoluteMove
-                absoluteMove = lua_toboolean(L, 5);
-                z = getVerifiedInt(L, __func__, 4, (absoluteMove ? "z coordinate" : "z delta"));
-            } else {
-                return warnArgumentValue(L, __func__, qsl("bad argument #5 type (absolute (true) / relative (false) movement in xyz-space as boolean is optional, got %s")
-                                                         .arg(lua_typename(L, 5)));
+            if (lua_type(L, 5) != LUA_TBOOLEAN ) { // areaId, roomId, x, y, z, absoluteMove
+                lua_pushfstring(L, "moveRoom: bad argument #5 type (absolute (true) / relative (false) movement in xyz-space as boolean is optional, got %s", lua_typename(L, 5));
+                return lua_error(L);
             }
+
+            absoluteMove = lua_toboolean(L, 5);
+            z = getVerifiedInt(L, __func__, 4, (absoluteMove ? "z coordinate" : "z delta"));
             break;
         }
+        // If we get to here we do not have enough arguements but that will be
+        // detected and handled in the next bit - in the getVerifiedInt(...) calls
     }
 
     int x = getVerifiedInt(L, __func__, 2, (absoluteMove ? "x coordinate" : "x delta"));
     int y = getVerifiedInt(L, __func__, 3, (absoluteMove ? "y coordinate" : "y delta"));
+    // These two are only used for an absolute move but to avoid repeating some
+    // code if they are left at zero the same code can be used for both cases
+    int oldX = (absoluteMove ? pR->x : 0);
+    int oldY = (absoluteMove ? pR->y : 0);
     if (absoluteMove) {
-        int oldX = pR->x;
-        int oldY = pR->y;
         pR->x = x;
         pR->y = y;
         pR->z = z;
-
-        QMutableMapIterator<QString, QList<QPointF>> itCustomLine(pR->customLines);
-        QList<QPointF> newPoints;
-        while (itCustomLine.hasNext()) {
-            itCustomLine.next();
-            QMutableListIterator<QPointF> itCustomLinePoint(itCustomLine.value());
-            while (itCustomLinePoint.hasNext()){
-                QPointF point = itCustomLinePoint.next();
-                point.setX(static_cast<float>(point.x() - oldX + x));
-                point.setY(static_cast<float>(point.y() - oldY + y));
-                itCustomLinePoint.setValue(point);
-            }
-        }
-
     } else {
         pR->x += x;
         pR->y += y;
         pR->z += z;
+    }
 
-        QMutableMapIterator<QString, QList<QPointF>> itCustomLine(pR->customLines);
-        QList<QPointF> newPoints;
-        while (itCustomLine.hasNext()) {
-            itCustomLine.next();
-            QMutableListIterator<QPointF> itCustomLinePoint(itCustomLine.value());
-            while (itCustomLinePoint.hasNext()){
-                QPointF point = itCustomLinePoint.next();
-                point.setX(static_cast<float>(point.x() + x));
-                point.setY(static_cast<float>(point.y() + y));
-                itCustomLinePoint.setValue(point);
-            }
+    QMutableMapIterator<QString, QList<QPointF>> itCustomLine(pR->customLines);
+    while (itCustomLine.hasNext()) {
+        itCustomLine.next();
+        QMutableListIterator<QPointF> itCustomLinePoint(itCustomLine.value());
+        while (itCustomLinePoint.hasNext()){
+            QPointF point = itCustomLinePoint.next();
+            point.setX(static_cast<float>(point.x() - oldX + x));
+            point.setY(static_cast<float>(point.y() - oldY + y));
+            itCustomLinePoint.setValue(point);
         }
     }
 
