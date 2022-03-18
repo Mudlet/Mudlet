@@ -11009,12 +11009,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="716"/>
       <source>Font</source>
-      <translation type="unfinished"/>
+      <translation>Font</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="722"/>
       <source>Font:</source>
-      <translation type="unfinished"/>
+      <translation>Font:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="745"/>
