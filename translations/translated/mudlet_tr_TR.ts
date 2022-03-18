@@ -4851,113 +4851,133 @@ Count</source>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="841"/>
-      <source>&lt;h2&gt;&lt;u&gt;lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</source>
+      <source>&lt;h2&gt;&lt;u&gt;Lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="844"/>
-      <source>&lt;h2&gt;&lt;u&gt;lua_yajl - Lua 5.1 interface to yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Brian Maher &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;</source>
+      <source>&lt;h2&gt;&lt;u&gt;LuaFileSystem&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2020, Kepler Project&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="849"/>
-      <source>&lt;h2&gt;&lt;u&gt;LuaZip - Reading files inside zip files&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;</source>
+      <location filename="../src/dlgAboutDialog.cpp" line="847"/>
+      <source>&lt;h2&gt;&lt;u&gt;Lua_yajl - Lua 5.1 interface to yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Brian Maher &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgAboutDialog.cpp" line="851"/>
+      <source>&lt;h2&gt;&lt;u&gt;Luautf8 - A UTF-8 support module for Lua.&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2018 Xavier Wang&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="854"/>
-      <source>&lt;h2&gt;&lt;u&gt;edbee - multi-feature editor widget&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2014 by Reliable Bits Software by Blommers IT&lt;/h3&gt;</source>
+      <source>&lt;h2&gt;&lt;u&gt;LuaSql-Sqlite3 - Database connectivity for the Lua programming language (Sqlite3 component).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2019, The Kepler Project&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="857"/>
-      <source>The &lt;b&gt;edbee-lib&lt;/b&gt; widget itself incorporates other components with licences that must be noted as well, they are:</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="859"/>
-      <source>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-mod) LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="864"/>
-      <source>&lt;h2&gt;&lt;u&gt;Oniguruma LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
+      <source>&lt;h2&gt;&lt;u&gt;Lrexlib-pcre -  Regular expression library binding (PCRE flavour).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © Reuben Thomas 2000-2020&lt;br&gt;Copyright © Shmuel Zeigerman 2004-2020 &lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="868"/>
-      <source>&lt;h2&gt;&lt;u&gt;Ruby BSDL&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1993-2013 Yukihiro Matsumoto.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
+      <source>&lt;h2&gt;&lt;u&gt;Edbee - multi-feature editor widget&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2014 by Reliable Bits Software by Blommers IT&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="872"/>
-      <source>&lt;h2&gt;&lt;u&gt;Qt-Components, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [broken link]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {&amp;quot;Wayback Machine&amp;quot; archived version}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Copyright © 2013, Razvan Petru&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
+      <location filename="../src/dlgAboutDialog.cpp" line="886"/>
+      <source>&lt;h2&gt;&lt;u&gt;Qt-Components, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [broken link]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {&amp;quot;Wayback Machine&amp;quot; archived version}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Copyright © 2013, Razvan Petru&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="879"/>
-      <source>&lt;h2&gt;&lt;u&gt;dblsqd&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;</source>
+      <location filename="../src/dlgAboutDialog.cpp" line="893"/>
+      <source>&lt;h2&gt;&lt;u&gt;Dblsqd&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgAboutDialog.cpp" line="914"/>
+      <source>&lt;h2&gt;&lt;u&gt;Sparkle-glue&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008 Remko Troncon&lt;br&gt;Copyright © 2017 Vadim Peretokin&lt;/h3&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgAboutDialog.cpp" line="926"/>
+      <source>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - part of KDToolBox&lt;/u&gt;&lt;br&gt;Github: &lt;a href=&quot;https://github.com/KDAB/KDToolBox&quot;&gt;KDToolBox&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgAboutDialog.cpp" line="930"/>
+      <source>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows&lt;/u&gt;&lt;br&gt;&lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff&lt;/h3&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgAboutDialog.cpp" line="862"/>
+      <source>&lt;h2&gt;&lt;u&gt;LuaZip - Reading files inside zip files&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgAboutDialog.cpp" line="871"/>
+      <source>The &lt;b&gt;edbee-lib&lt;/b&gt; widget itself incorporates other components with licences that must be noted as well, they are:</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgAboutDialog.cpp" line="873"/>
+      <source>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-mod) LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgAboutDialog.cpp" line="878"/>
+      <source>&lt;h2&gt;&lt;u&gt;Oniguruma LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="882"/>
+      <source>&lt;h2&gt;&lt;u&gt;Ruby BSDL&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1993-2013 Yukihiro Matsumoto.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgAboutDialog.cpp" line="896"/>
       <source>&lt;h2&gt;&lt;u&gt;Sparkle - macOS updater&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2006-2013 Andy Matuschak.&lt;br&gt;Copyright © 2009-2013 Elgato Systems GmbH.&lt;br&gt;Copyright © 2011-2014 Kornel Lesiński.&lt;br&gt;Copyright © 2015-2017 Mayur Pawashe.&lt;br&gt;Copyright © 2014 C.W. Betts.&lt;br&gt;Copyright © 2014 Petroules Corporation.&lt;br&gt;Copyright © 2014 Big Nerd Ranch.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="892"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="906"/>
       <source>&lt;h4&gt;bspatch.c and bsdiff.c, from bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c and sais.c, from sais-lite (2010/08/07) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="900"/>
-      <source>&lt;h2&gt;&lt;u&gt;sparkle-glue&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008 Remko Troncon&lt;br&gt;Copyright © 2017 Vadim Peretokin&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="906"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="920"/>
       <source>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Discord, Inc.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="909"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="923"/>
       <source>&lt;h2&gt;&lt;u&gt;QtKeyChain - Platform-independent Qt API for storing passwords securely&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2011-2019 Frank Osterfeld &amp;lt;frank.osterfeld@gmail.com&amp;gt;.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="912"/>
-      <source>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - part of KDToolBox&lt;/u&gt;&lt;br&gt;(https://github.com/KDAB/KDToolBox).&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="915"/>
-      <source>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff &lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1072"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1090"/>
       <source>
                           These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patreon&lt;/a&gt;:
                           </source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1083"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1101"/>
       <source>Technical information:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1084"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1102"/>
       <source>Version</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1085"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1103"/>
       <source>OS</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1086"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1104"/>
       <source>CPU</source>
       <translation type="unfinished"/>
     </message>
