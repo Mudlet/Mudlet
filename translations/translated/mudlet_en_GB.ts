@@ -43,8 +43,8 @@
       <location filename="../src/glwidget.cpp" line="290"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
       <translation>
-        <numerusform>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</numerusform>
-        <numerusform>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</numerusform>
+        <numerusform>You have a map loaded (%n room), but Mudlet does not know where you are at the moment.</numerusform>
+        <numerusform>You have a map loaded (%n rooms), but Mudlet does not know where you are at the moment.</numerusform>
       </translation>
     </message>
   </context>
@@ -675,8 +675,8 @@ please wait...</translation>
       <location filename="../src/T2DMap.cpp" line="1265"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
       <translation>
-        <numerusform>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</numerusform>
-        <numerusform>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</numerusform>
+        <numerusform>You have a map loaded (%n room), but Mudlet does not know where you are at the moment.</numerusform>
+        <numerusform>You have a map loaded (%n rooms), but Mudlet does not know where you are at the moment.</numerusform>
       </translation>
     </message>
     <message>
@@ -2629,9 +2629,9 @@ out what new id numbers to use.</source>
  to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
+        <numerusform>[ ALERT ] - %n area detected as missing in map: adding it in.
  Look for further messages related to the rooms that are supposed
- to be in this/these area(s)...</numerusform>
+ to be in this area...</numerusform>
         <numerusform>[ ALERT ] - %n areas detected as missing in map: adding them in.
  Look for further messages related to the rooms that are supposed
  to be in these areas...</numerusform>
@@ -2645,11 +2645,11 @@ out what new id numbers to use.</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
         <numerusform>[ ALERT ] - %n area detected as missing in map: adding it in.
- Look for further messages related to the rooms that is supposed to
+ Look for further messages related to the rooms that are supposed to
  be in this area...</numerusform>
-        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
- Look for further messages related to the rooms that is/are supposed to
- be in this/these area(s)...</numerusform>
+        <numerusform>[ ALERT ] - %n areas detected as missing in map: adding them in.
+ Look for further messages related to the rooms that are supposed to
+ be in these areas...</numerusform>
       </translation>
     </message>
     <message>
@@ -5884,7 +5884,7 @@ Count</translation>
       <source>Select what to export (%n item(s))</source>
       <comment>This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.</comment>
       <translation>
-        <numerusform>Select what to export (%n item(s))</numerusform>
+        <numerusform>Select what to export (%n item)</numerusform>
         <numerusform>Select what to export (%n items)</numerusform>
       </translation>
     </message>
@@ -6012,7 +6012,7 @@ Count</translation>
       <source>Remove %n package(s)</source>
       <comment>Message on button in package manager to remove one or more (%n is the count of) selected package(s).</comment>
       <translation>
-        <numerusform>Remove %n package(s)</numerusform>
+        <numerusform>Remove %n package</numerusform>
         <numerusform>Remove %n packages</numerusform>
       </translation>
     </message>
@@ -6891,7 +6891,7 @@ for the selected room:</numerusform>
 • an existing symbol from the list below (sorted by most commonly used first)
 • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
 • enter a space to clear any existing symbol
-for the selected room:</numerusform>
+for all the %n selected rooms:</numerusform>
       </translation>
     </message>
     <message>
