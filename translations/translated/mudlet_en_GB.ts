@@ -3481,7 +3481,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <source>Trigger name=%1 will fire %n more time(s).
 </source>
       <translation>
-        <numerusform>Trigger name=%1 will fire %n more times.
+        <numerusform>Trigger name=%1 will fire %n more time.
 </numerusform>
         <numerusform>Trigger name=%1 will fire %n more times.
 </numerusform>
@@ -5072,12 +5072,12 @@ Count</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="873"/>
       <source>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-mod) LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-mod) LICENCE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="878"/>
       <source>&lt;h2&gt;&lt;u&gt;Oniguruma LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Oniguruma LICENCE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="882"/>
@@ -10231,8 +10231,8 @@ There is NO WARRANTY, to the extent permitted by law.
       <source>Review the update(s) available...</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
       <translation>
-        <numerusform>Review the update(s) available...</numerusform>
-        <numerusform>Review the update(s) available...</numerusform>
+        <numerusform>Review the update available...</numerusform>
+        <numerusform>Review the updates available...</numerusform>
       </translation>
     </message>
     <message>
@@ -10768,7 +10768,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
       <translation>
-        <numerusform>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n updates are now available!&lt;/i&gt;&lt;p&gt;</numerusform>
+        <numerusform>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update is now available!&lt;/i&gt;&lt;p&gt;</numerusform>
         <numerusform>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n updates are now available!&lt;/i&gt;&lt;p&gt;</numerusform>
       </translation>
     </message>
