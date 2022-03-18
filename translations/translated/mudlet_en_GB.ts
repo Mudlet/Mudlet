@@ -2632,9 +2632,9 @@ out what new id numbers to use.</source>
         <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
  Look for further messages related to the rooms that are supposed
  to be in this/these area(s)...</numerusform>
-        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
+        <numerusform>[ ALERT ] - %n areas detected as missing in map: adding them in.
  Look for further messages related to the rooms that are supposed
- to be in this/these area(s)...</numerusform>
+ to be in these areas...</numerusform>
       </translation>
     </message>
     <message numerus="yes">
@@ -2644,9 +2644,9 @@ out what new id numbers to use.</source>
  be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
- Look for further messages related to the rooms that is/are supposed to
- be in this/these area(s)...</numerusform>
+        <numerusform>[ ALERT ] - %n area detected as missing in map: adding it in.
+ Look for further messages related to the rooms that is supposed to
+ be in this area...</numerusform>
         <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
  Look for further messages related to the rooms that is/are supposed to
  be in this/these area(s)...</numerusform>
@@ -5885,7 +5885,7 @@ Count</translation>
       <comment>This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.</comment>
       <translation>
         <numerusform>Select what to export (%n item(s))</numerusform>
-        <numerusform>Select what to export (%n item(s))</numerusform>
+        <numerusform>Select what to export (%n items)</numerusform>
       </translation>
     </message>
     <message>
@@ -6013,7 +6013,7 @@ Count</translation>
       <comment>Message on button in package manager to remove one or more (%n is the count of) selected package(s).</comment>
       <translation>
         <numerusform>Remove %n package(s)</numerusform>
-        <numerusform>Remove %n package(s)</numerusform>
+        <numerusform>Remove %n packages</numerusform>
       </translation>
     </message>
     <message>
@@ -10777,7 +10777,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
       <translation>
-        <numerusform>Review %n updates...</numerusform>
+        <numerusform>Review %n update...</numerusform>
         <numerusform>Review %n updates...</numerusform>
       </translation>
     </message>
