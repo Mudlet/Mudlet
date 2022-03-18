@@ -14,7 +14,7 @@ jobs:
     - uses: actions/checkout@v3
       name: Checkout source code
 
-    - uses: leafo/gh-actions-lua@v8
+    - uses: leafo/gh-actions-lua@v9.1.0
       name: Install Lua
       with:
         luaVersion: "5.1.5"

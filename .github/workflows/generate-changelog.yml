@@ -26,7 +26,7 @@ jobs:
         fetch-depth: 0
 
     - name: Install Lua 5.1.5
-      uses: leafo/gh-actions-lua@v8
+      uses: leafo/gh-actions-lua@v9.1.0
       with:
         luaVersion: "5.1.5"
         
