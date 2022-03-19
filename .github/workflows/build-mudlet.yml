@@ -179,8 +179,6 @@ jobs:
     - name: (Linux) Install latest Luarocks
       uses: leafo/gh-actions-luarocks@v4
       if: runner.os == 'Linux'
-      with:
-        luaRocksVersion: 3.8.0
 
     - name: (Linux) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'Linux'
