@@ -127,12 +127,6 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
 
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      if: runner.os == 'Linux'
-      with:
-        limit-access-to-actor: true
-
     - name: (macOS) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'macOS'
       env:
@@ -173,6 +167,14 @@ jobs:
 
         # Use latest available XCode
         echo "DEVELOPER_DIR=/Applications/Xcode_12.4.app/Contents/Developer" >> $GITHUB_ENV
+
+      # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
+      # so install it in a format that works
+    - name: (Linux) install Lua
+      uses: leafo/gh-actions-lua@v9
+      if: runner.os == 'Linux'
+      with:
+        luaVersion: "5.1.5"
 
     - name: (Linux) Install latest Luarocks
       uses: leafo/gh-actions-luarocks@v4
