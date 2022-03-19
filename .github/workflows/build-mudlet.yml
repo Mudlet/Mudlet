@@ -127,6 +127,12 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
 
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      if: runner.os == 'Linux'
+      with:
+        limit-access-to-actor: true
+
     - name: (macOS) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'macOS'
       env:
@@ -170,10 +176,10 @@ jobs:
 
     - name: (Linux) Install latest Luarocks
       uses: leafo/gh-actions-luarocks@v4
+      if: runner.os == 'Linux'
       with:
         luaRocksVersion: 3.8.0
         withLuaPath: "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua"
-      if: runner.os == 'Linux'
 
     - name: (Linux) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'Linux'
