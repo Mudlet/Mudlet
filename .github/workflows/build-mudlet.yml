@@ -172,13 +172,13 @@ jobs:
       # so install it in a format that works
     - name: (Linux) install Lua
       uses: leafo/gh-actions-lua@v9
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux' && (matrix.deploy == 'deploy' || matrix.run_tests == 'true')
       with:
         luaVersion: "5.1.5"
 
     - name: (Linux) Install latest Luarocks
       uses: leafo/gh-actions-luarocks@v4
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux' && (matrix.deploy == 'deploy' || matrix.run_tests == 'true')
       with:
         luaRocksVersion: 3.8.0
 
