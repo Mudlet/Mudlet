@@ -78,12 +78,12 @@ public:
     };
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
 
-    enum ControlCharacterMode {
-        NoControlCharacterReplacement = 0x0,
-        PictureControlCharacterReplacement = 0x1,
-        OEMFontControlCharacterReplacement = 0x2
+    enum ControlCharacter {
+        NoReplacement = 0x0,
+        Picture = 0x1,
+        OEMFont = 0x2
     };
-    Q_ENUM(ControlCharacterMode)
+    Q_ENUM(ControlCharacter)
 
     Q_DISABLE_COPY(TConsole)
     explicit TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
@@ -283,7 +283,7 @@ public:
     int mBgImageMode = 0;
     QString mBgImagePath;
     bool mHScrollBarEnabled = false;
-    ControlCharacterMode mControlCharacterMode = NoControlCharacterReplacement;
+    ControlCharacter mControlCharacter = NoReplacement;
 
 
 public slots:
@@ -292,7 +292,7 @@ public slots:
     void slot_toggleReplayRecording();
     void slot_stop_all_triggers(bool);
     void slot_toggleLogging();
-    void slot_changeControlCharacterHandling(const TConsole::ControlCharacterMode);
+    void slot_changeControlCharacterHandling(const TConsole::ControlCharacter);
 
 
 protected:
