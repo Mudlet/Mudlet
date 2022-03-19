@@ -74,7 +74,6 @@ jobs:
         cached: ${{steps.cache-qt.outputs.cache-hit}}
         aqtversion: '==1.1.2'
 
-
     - name: Restore Boost cache
       uses: actions/cache@v2.1.7
       id: cache-boost
@@ -115,8 +114,9 @@ jobs:
     - name: (Linux) Install non-vcpkg dependencies (1/2)
       if: runner.os == 'Linux'
       run: |
-        # dependencies needed for vcpkg specifically
-        sudo apt-get install gettext -y
+        # gettext is needed for vcpkg
+        # readline is needed for luarocks down the road
+        sudo apt-get install gettext libreadline-dev -y
 
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v7
