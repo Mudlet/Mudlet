@@ -2085,7 +2085,7 @@ it but it will try! The file is: &quot;%2&quot;.</source>
       <source>[ INFO ]  - Reading map. Format version: %1. File:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[ 信息 ] - 读取地图文件中. 格式版本: %1.  文件:
+      <translation>[ 信息 ]  - 正在读取地图文件. 格式版本: %1.  文件:
 &quot;%2&quot;,
 请稍等...</translation>
     </message>
