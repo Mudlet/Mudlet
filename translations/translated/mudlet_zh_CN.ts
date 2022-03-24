@@ -3866,7 +3866,7 @@ or your nameservers are not working properly.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="441"/>
       <source>[ INFO ]  - A connection has been established successfully.</source>
-      <translation>[ 信息 ] -已成功建立连接。</translation>
+      <translation>[ 信息 ]  - 已成功建立连接。</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="477"/>
@@ -5604,7 +5604,7 @@ Count</source>
       <location filename="../src/dlgMapLabel.cpp" line="33"/>
       <source>Create label</source>
       <comment>Create label dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>创建标签</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="75"/>
@@ -5622,7 +5622,7 @@ Count</source>
       <location filename="../src/dlgMapLabel.cpp" line="114"/>
       <source>Label font</source>
       <comment>2D mapper create label font dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>标签字体</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="131"/>
@@ -5738,7 +5738,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="288"/>
       <source>optional. Markdown supported, and you can add images with drag and drop</source>
-      <translation type="unfinished"/>
+      <translation>(可选)支持Markdown，你可以用拖放方式添加图片</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="182"/>
