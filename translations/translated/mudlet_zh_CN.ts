@@ -2092,7 +2092,7 @@ please wait...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1618"/>
       <source>[ INFO ]  - Reading map. Format version: %1. File: &quot;%2&quot;.</source>
-      <translation>[ 信息 ]  - 读取地图文件中. 版本: %1. 文件: &quot;%2&quot;.</translation>
+      <translation>[ 信息 ]  - 正在读取地图文件. 版本: %1. 文件: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2015"/>
