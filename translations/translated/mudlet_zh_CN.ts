@@ -5177,7 +5177,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="71"/>
       <source>Click a color to make the trigger fire only when the text&apos;s background color matches the color number indicated.</source>
-      <translation type="unfinished"/>
+      <translation>单击颜色以使触发器仅在文本的背景色与指示的颜色匹配时触发。</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="72"/>
