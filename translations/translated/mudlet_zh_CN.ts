@@ -5172,7 +5172,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="67"/>
       <source>Click to make the color trigger when the text&apos;s foreground color has not been modified from its normal value.</source>
-      <translation type="unfinished"/>
+      <translation>当文本的前景色未从其正常值修改时，单击以进行颜色触发器。</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="71"/>
