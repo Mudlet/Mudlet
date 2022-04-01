@@ -15204,6 +15204,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "spellSuggestWord", TLuaInterpreter::spellSuggestWord);
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
+    lua_register(pGlobalLua, "getCharacterName", TLuaInterpreter::getCharacterName);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
     lua_register(pGlobalLua, "getHTTP", TLuaInterpreter::getHTTP);
     lua_register(pGlobalLua, "customHTTP", TLuaInterpreter::customHTTP);
@@ -16447,6 +16448,22 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
         lua_settable(L, -3);
     }
 
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#getCharacterName
+int TLuaInterpreter::getCharacterName(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    const QString name{host.getLogin()};
+    if (name.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no character name set");
+        return 2;
+    }
+
+    lua_pushstring(L, name.toUtf8().constData());
     return 1;
 }
 
