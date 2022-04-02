@@ -355,9 +355,9 @@ function InstallZziplib() {
 }
 
 function InstallLuarocks() {
-  DownloadFile "http://luarocks.github.io/luarocks/releases/luarocks-3.1.2-win32.zip" "luarocks.zip"
+  DownloadFile "http://luarocks.github.io/luarocks/releases/luarocks-3.8.0-win32.zip" "luarocks.zip"
   ExtractZip "luarocks.zip" "luarocks"
-  Set-Location luarocks\luarocks-3.1.2-win32
+  Set-Location luarocks\luarocks-3.8.0-win32
   Step "installing luarocks"
   exec ".\install.bat" @("/P", "C:\LuaRocks", "/MW", "/Q")
   Set-Location \LuaRocks\lua\luarocks\core
