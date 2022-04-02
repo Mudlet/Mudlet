@@ -59,7 +59,7 @@ jobs:
         fetch-depth: 0
 
     - name: Restore Qt cache
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
@@ -74,9 +74,8 @@ jobs:
         cached: ${{steps.cache-qt.outputs.cache-hit}}
         aqtversion: '==1.1.2'
 
-
     - name: Restore Boost cache
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
@@ -115,7 +114,7 @@ jobs:
     - name: (Linux) Install non-vcpkg dependencies (1/2)
       if: runner.os == 'Linux'
       run: |
-        # dependencies needed for vcpkg specifically
+        # gettext is needed for vcpkg
         sudo apt-get install gettext -y
 
     - name: Restore from cache and run vcpkg
@@ -168,6 +167,19 @@ jobs:
         # Use latest available XCode
         echo "DEVELOPER_DIR=/Applications/Xcode_12.4.app/Contents/Developer" >> $GITHUB_ENV
 
+      # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
+      # so install it in a format that works
+    - name: (Linux) Install Lua
+      uses: leafo/gh-actions-lua@v9
+      if: runner.os == 'Linux'
+      with:
+        luaVersion: "5.1.5"
+        buildCache: false
+
+    - name: (Linux) Install latest Luarocks
+      uses: leafo/gh-actions-luarocks@v4
+      if: runner.os == 'Linux'
+
     - name: (Linux) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'Linux'
       run: |
@@ -176,7 +188,7 @@ jobs:
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
         # imagemagick is for the desktop screenshot
-        sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 \
+        sudo apt-get install ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 \
           libxkbcommon-x11-0 imagemagick -y
 
         # switch to GCC that supports C++17 while retaining support for older OS's
@@ -287,7 +299,7 @@ jobs:
       run: ctest --output-on-failure
 
     - name: (Linux/macOS) restore Luarocks for packaging
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       with:
         path: $HOME/.luarocks
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}

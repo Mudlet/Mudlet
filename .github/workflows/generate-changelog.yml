@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       from:
-        description: 'Generate from this release/commit (defaults to the latest release)'     
+        description: 'Generate from this release/commit (defaults to the latest release)'
         required: false
         # default is calculated dynamically
       to:
@@ -29,7 +29,7 @@ jobs:
       uses: leafo/gh-actions-lua@v8
       with:
         luaVersion: "5.1.5"
-        
+
     - name: Install Luarocks
       uses: leafo/gh-actions-luarocks@v4
 
@@ -45,24 +45,24 @@ jobs:
         else
             FROM_RELEASE=${{ github.event.inputs.from }}
         fi
-        
+
         if [[ -z "${{ github.event.inputs.to }}" ]] ; then
             TO_RELEASE="HEAD"
         else
             TO_RELEASE=${{ github.event.inputs.to }}
         fi
-        
+
         echo "Generating a changelog from $FROM_RELEASE until $TO_RELEASE"
-        
+
         echo "FROM_RELEASE=$FROM_RELEASE" >> $GITHUB_ENV
         echo "TO_RELEASE=$TO_RELEASE" >> $GITHUB_ENV
 
     - name: Generate changelog
-      run: |       
+      run: |
         changelog=$(lua CI/generate-changelog.lua -m release --start-commit $FROM_RELEASE --end-commit $TO_RELEASE)
         echo "$changelog" >> changelog.html
-        
-        echo "[INFO] Changelog generated (from $FROM_RELEASE to $TO_RELEASE). If it's too big, Github won't show it, so it's available as an artifact as well at: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}##artifacts"
+
+        echo "[INFO] Changelog generated (from $FROM_RELEASE to $TO_RELEASE). If it's too big, Github won't show it, so it's available as an artifact as well at: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}#artifacts"
         echo "[INFO] Changelog is:"
         echo $changelog
 
