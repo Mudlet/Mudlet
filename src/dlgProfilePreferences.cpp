@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018, 2020-2021 by Stephen Lyons             *
+ *   Copyright (C) 2014, 2016-2018, 2020-2022 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -56,10 +56,7 @@ using namespace std::chrono_literals;
 
 dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 : QDialog(pF)
-, mFontSize(10)
 , mpHost(pHost)
-, mpMenu(nullptr)
-, mUseSharedDictionary(false)
 {
     // init generated dialog
     setupUi(this);
@@ -1100,6 +1097,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
     doubleSpinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout() / 1000.0);
+    checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -1162,6 +1160,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_foreground_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setFgColor2);
     connect(pushButton_background_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setBgColor2);
     connect(pushButton_roomBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::setRoomBorderColor);
+    connect(pushButton_mapInfoBg, &QAbstractButton::clicked, this, &dlgProfilePreferences::setMapInfoBackground);
 
     connect(mEnableGMCP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSDP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
@@ -1182,6 +1181,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_logFileNameFormatChange);
     connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml);
     connect(doubleSpinBox_networkPacketTimeout, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPostingTimeout);
+    connect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeLargeAreaExitArrows);
 
     //Shortcuts tab
     auto shortcutKeys = mudlet::self()->mShortcutsManager->iterator();
@@ -1276,6 +1276,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_foreground_color_2, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_background_color_2, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_roomBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_mapInfoBg, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(mEnableGMCP, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mEnableMSSP, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1302,6 +1303,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
+    disconnect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, nullptr, nullptr);
 }
 
 void dlgProfilePreferences::clearHostDetails()
@@ -1441,7 +1443,7 @@ void dlgProfilePreferences::loadEditorTab()
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setFont(pHost->getDisplayFont());
     config->setAutocompleteAutoShow(pHost->mEditorAutoComplete);
-    config->setRenderBidiContolCharacters(pHost->mEditorShowBidi);
+    config->setRenderBidiContolCharacters(pHost->getEditorShowBidi());
     config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
     edbeePreviewWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(qsl("Buck.lua")));
@@ -1474,7 +1476,7 @@ void dlgProfilePreferences::loadEditorTab()
     theme_download_label->hide();
 
     checkBox_autocompleteLuaCode->setChecked(pHost->mEditorAutoComplete);
-    checkBox_showBidi->setChecked(pHost->mEditorShowBidi);
+    checkBox_showBidi->setChecked(pHost->getEditorShowBidi());
 
     // changes the theme being previewed
     connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_theme_selected);
@@ -1564,6 +1566,7 @@ void dlgProfilePreferences::setColors2()
         pushButton_foreground_color_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mFgColor_2.name()));
         pushButton_background_color_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mBgColor_2.name()));
         pushButton_roomBorderColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mRoomBorderColor.name()));
+        pushButton_mapInfoBg->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mMapInfoBg.name()));
     } else {
         pushButton_black_2->setStyleSheet(QString());
         pushButton_Lblack_2->setStyleSheet(QString());
@@ -1585,6 +1588,7 @@ void dlgProfilePreferences::setColors2()
         pushButton_foreground_color_2->setStyleSheet(QString());
         pushButton_background_color_2->setStyleSheet(QString());
         pushButton_roomBorderColor->setStyleSheet(QString());
+        pushButton_mapInfoBg->setStyleSheet(QString());
     }
 }
 
@@ -1666,20 +1670,22 @@ void dlgProfilePreferences::resetColors2()
     pHost->mLightMagenta_2 = Qt::magenta;
     pHost->mWhite_2 = Qt::lightGray;
     pHost->mLightWhite_2 = Qt::white;
+    pHost->mMapInfoBg = QColor(150, 150, 150, 120);
 
     setColors2();
 }
 
-void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
+void dlgProfilePreferences::setColor(QPushButton* button, QColor& presentColor, bool allowAlpha)
 {
     Host* pHost = mpHost;
     if (!pHost) {
         return;
     }
 
-    auto color = QColorDialog::getColor(c, this);
+    auto color = QColorDialog::getColor(presentColor, this, tr("Pick color", "Generic pick color dialog title"),
+                                        allowAlpha ? QColorDialog::ShowAlphaChannel : QColorDialog::ColorDialogOptions());
     if (color.isValid()) {
-        c = color;
+        presentColor = color;
 
         auto console = pHost->mpConsole;
         if (console) {
@@ -1694,14 +1700,14 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
             }
         }
 
-        if (b == pushButton_black || b == pushButton_lBlack
-                || b == pushButton_red || b == pushButton_lRed
-                || b == pushButton_green || b == pushButton_lGreen
-                || b == pushButton_yellow || b == pushButton_lYellow
-                || b == pushButton_blue || b == pushButton_lBlue
-                || b == pushButton_magenta || b == pushButton_lMagenta
-                || b == pushButton_cyan || b == pushButton_lCyan
-                || b == pushButton_white || b == pushButton_lWhite) {
+        if (button == pushButton_black || button == pushButton_lBlack
+            || button == pushButton_red || button == pushButton_lRed
+            || button == pushButton_green || button == pushButton_lGreen
+            || button == pushButton_yellow || button == pushButton_lYellow
+            || button == pushButton_blue || button == pushButton_lBlue
+            || button == pushButton_magenta || button == pushButton_lMagenta
+            || button == pushButton_cyan || button == pushButton_lCyan
+            || button == pushButton_white || button == pushButton_lWhite) {
 
             pHost->updateAnsi16ColorsInTable();
         }
@@ -1709,7 +1715,7 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
         // Also set a contrasting foreground color so text will always be
         // visible - if the button is disabled the colors will be somewhat
         // "greyed-out":
-        setButtonColor(b, color);
+        setButtonColor(button, color);
     }
 }
 
@@ -1981,6 +1987,14 @@ void dlgProfilePreferences::setRoomBorderColor()
     Host* pHost = mpHost;
     if (pHost) {
         setColor(pushButton_roomBorderColor, pHost->mRoomBorderColor);
+    }
+}
+
+void dlgProfilePreferences::setMapInfoBackground()
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setColor(pushButton_mapInfoBg, pHost->mMapInfoBg, true);
     }
 }
 
@@ -2769,7 +2783,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
-        pHost->mEditorShowBidi = checkBox_showBidi->isChecked();
+        pHost->setEditorShowBidi(checkBox_showBidi->isChecked());
         if (pHost->mpEditorDialog) {
             pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
         }
@@ -4198,4 +4212,14 @@ void dlgProfilePreferences::slot_deleteMap()
     qApp->processEvents(); // Allow the above message to show up when erasing big maps
 
     QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+}
+
+void dlgProfilePreferences::slot_changeLargeAreaExitArrows(const bool state)
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    pHost->setLargeAreaExitArrows(state);
 }

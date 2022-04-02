@@ -4328,10 +4328,10 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
         return warnArgumentValue(L, __func__, qsl("no movie found at label '%1'").arg(labelName));
     }
 
-    if (funcName == qsl("setMovieStart")) {
+    if (funcName == qsl("startMovie")) {
         movie->start();
-    } else if (funcName == qsl("setMoviePaused")) {
-        movie->setPaused(movie->state() != QMovie::Paused);
+    } else if (funcName == qsl("pauseMovie")) {
+        movie->setPaused(true);
     } else if (funcName == qsl("setMovieFrame")) {
         int frame = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie frame number");
         lua_pushboolean(L, movie->jumpToFrame(frame));
@@ -4339,6 +4339,18 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
     } else if (funcName == qsl("setMovieSpeed")) {
         int speed = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie playback speed in %");
         movie->setSpeed(speed);
+    } else if (funcName == qsl("scaleMovie")) {
+        bool autoScale{true};
+        int n = lua_gettop(L);
+        if (n > 1) {
+            autoScale = getVerifiedBool(L, funcName.toUtf8().constData(), 2, "activate/deactivate scaling movie", true);
+        }
+        movie->setScaledSize(pN->size());
+        if (autoScale) {
+            connect(pN, &TLabel::resized, [=] {movie->setScaledSize(pN->size());} );
+        } else {
+            pN->disconnect(SIGNAL(resized()));
+        }
     } else {
         return warnArgumentValue(L, __func__, qsl("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));
     }
@@ -4347,16 +4359,16 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieStart
-int TLuaInterpreter::setMovieStart(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#startMovie
+int TLuaInterpreter::startMovie(lua_State* L)
 {
-    return movieFunc(L, qsl("setMovieStart"));
+    return movieFunc(L, qsl("startMovie"));
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMoviePaused
-int TLuaInterpreter::setMoviePaused(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#pauseMovie
+int TLuaInterpreter::pauseMovie(lua_State* L)
 {
-    return movieFunc(L, qsl("setMoviePaused"));
+    return movieFunc(L, qsl("pauseMovie"));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieFrame
@@ -4369,6 +4381,12 @@ int TLuaInterpreter::setMovieFrame(lua_State* L)
 int TLuaInterpreter::setMovieSpeed(lua_State* L)
 {
     return movieFunc(L, qsl("setMovieSpeed"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieSpeed
+int TLuaInterpreter::scaleMovie(lua_State* L)
+{
+    return movieFunc(L, qsl("scaleMovie"));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextFormat
@@ -7557,7 +7575,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 
     QString soundFile;
     bool playSound;
-    if (lua_isstring(L, 11)) {
+    if (lua_type(L, 11) == LUA_TSTRING) {
         playSound = true;
         soundFile = lua_tostring(L, 11);
     } else {
@@ -7581,16 +7599,15 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     QStringList patterns;
     QList<int> propertyList;
     TTrigger* pP = host.getTriggerUnit()->findTrigger(triggerName);
-    if (!pP) {
-        patterns << pattern;
-        if (colorTrigger) {
-            propertyList << REGEX_COLOR_PATTERN;
-        } else {
-            propertyList << REGEX_PERL;
-        }
-    } else {
+    if (pP) {
         patterns = pP->getPatternsList();
         propertyList = pP->getRegexCodePropertyList();
+    }
+    patterns << pattern;
+    if (colorTrigger) {
+        propertyList << REGEX_COLOR_PATTERN;
+    } else {
+        propertyList << REGEX_PERL;
     }
 
     auto pT = new TTrigger("a", patterns, propertyList, multiLine, &host);
@@ -7598,7 +7615,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     pT->setIsActive(true);
     pT->setTemporary(true);
     pT->registerTrigger();
-    pT->setName(pattern);
+    pT->setName(triggerName);
     pT->mPerlSlashGOption = matchAll; //match all
     pT->mFilterTrigger = filter;
     pT->setConditionLineDelta(lineDelta); //line delta
@@ -7625,7 +7642,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         lua_settable(L, LUA_REGISTRYINDEX);
     }
 
-    lua_pushstring(L, pattern.toUtf8().constData());
+    lua_pushnumber(L, pT->getID());
     return 1;
 }
 
@@ -10829,8 +10846,8 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelStylesheet
-int TLuaInterpreter::getLabelStylesheet(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelStyleSheet
+int TLuaInterpreter::getLabelStyleSheet(lua_State* L)
 {
     QString label = getVerifiedString(L, __func__, 1, "label");
     Host& host = getHostFromLua(L);
@@ -13778,8 +13795,11 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
 
     // Log error to Profile's Main TConsole:
     if (mpHost->mEchoLuaErrors) {
-        // ensure the Lua error is on a line of its own and is not prepended to the previous line
-        if (mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+        // ensure the Lua error is on a line of its own and is not prepended to
+        // the previous line, however there is a nasty gotcha in that during
+        // profile loading the (TMainConsole*) Host::mpConsole pointer is
+        // null - but then the buffer must itself be empty:
+        if (mpHost->mpConsole && mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
             mpHost->postMessage(qsl("\n"));
         }
 
@@ -14846,10 +14866,11 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setLabelOnEnter", TLuaInterpreter::setLabelOnEnter);
     lua_register(pGlobalLua, "setLabelOnLeave", TLuaInterpreter::setLabelOnLeave);
     lua_register(pGlobalLua, "setMovie", TLuaInterpreter::setMovie);
-    lua_register(pGlobalLua, "setMovieStart", TLuaInterpreter::setMovieStart);
+    lua_register(pGlobalLua, "startMovie", TLuaInterpreter::startMovie);
     lua_register(pGlobalLua, "setMovieSpeed", TLuaInterpreter::setMovieSpeed);
+    lua_register(pGlobalLua, "scaleMovie", TLuaInterpreter::scaleMovie);
     lua_register(pGlobalLua, "setMovieFrame", TLuaInterpreter::setMovieFrame);
-    lua_register(pGlobalLua, "setMoviePaused", TLuaInterpreter::setMoviePaused);
+    lua_register(pGlobalLua, "pauseMovie", TLuaInterpreter::pauseMovie);
     lua_register(pGlobalLua, "getImageSize", TLuaInterpreter::getImageSize);
     lua_register(pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow);
     lua_register(pGlobalLua, "setWindow", TLuaInterpreter::setWindow);
@@ -15183,6 +15204,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "spellSuggestWord", TLuaInterpreter::spellSuggestWord);
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
+    lua_register(pGlobalLua, "getCharacterName", TLuaInterpreter::getCharacterName);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
     lua_register(pGlobalLua, "getHTTP", TLuaInterpreter::getHTTP);
     lua_register(pGlobalLua, "customHTTP", TLuaInterpreter::customHTTP);
@@ -15216,7 +15238,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "windowType", TLuaInterpreter::windowType);
     lua_register(pGlobalLua, "getProfileStats", TLuaInterpreter::getProfileStats);
     lua_register(pGlobalLua, "getBackgroundColor", TLuaInterpreter::getBackgroundColor);
-    lua_register(pGlobalLua, "getLabelStylesheet", TLuaInterpreter::getLabelStylesheet);
+    lua_register(pGlobalLua, "getLabelStyleSheet", TLuaInterpreter::getLabelStyleSheet);
     lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
@@ -16426,6 +16448,22 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
         lua_settable(L, -3);
     }
 
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#getCharacterName
+int TLuaInterpreter::getCharacterName(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    const QString name{host.getLogin()};
+    if (name.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no character name set");
+        return 2;
+    }
+
+    lua_pushstring(L, name.toUtf8().constData());
     return 1;
 }
 

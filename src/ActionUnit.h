@@ -44,7 +44,9 @@ class ActionUnit
     friend class XMLimport;
 
 public:
-    explicit ActionUnit(Host* pHost) : mpHost(pHost), mMaxID(0), mpToolBar(), mpEasyButtonBar(), mModuleMember() {}
+    explicit ActionUnit(Host* pHost)
+    : mpHost(pHost)
+    {}
 
     std::list<TAction*> getActionRootNodeList()
     {
@@ -89,10 +91,10 @@ private:
     QPointer<Host> mpHost;
     QMap<int, TAction*> mActionMap;
     std::list<TAction*> mActionRootNodeList;
-    int mMaxID;
+    int mMaxID = 0;
     QPointer<TToolBar> mpToolBar;
     QPointer<TEasyButtonBar> mpEasyButtonBar;
-    bool mModuleMember;
+    bool mModuleMember = false;
     std::list<QPointer<TToolBar>> mToolBarList;
     std::list<QPointer<TEasyButtonBar>> mEasyButtonBarList;
 };

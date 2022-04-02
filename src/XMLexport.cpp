@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2017-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -401,7 +401,6 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mEnableMSP") = pHost->mEnableMSP ? "yes" : "no";
     host.append_attribute("mEnableMSDP") = pHost->mEnableMSDP ? "yes" : "no";
     host.append_attribute("mMapStrongHighlight") = pHost->mMapStrongHighlight ? "yes" : "no";
-    host.append_attribute("mLogStatus") = pHost->mLogStatus ? "yes" : "no";
     host.append_attribute("mEnableSpellCheck") = pHost->mEnableSpellCheck ? "yes" : "no";
     bool enableUserDictionary;
     bool useSharedDictionary;
@@ -426,7 +425,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
     host.append_attribute("mEditorAutoComplete") = pHost->mEditorAutoComplete ? "yes" : "no";
-    host.append_attribute("mEditorShowBidi") = pHost->mEditorShowBidi ? "yes" : "no";
+    host.append_attribute("mEditorShowBidi") = pHost->getEditorShowBidi() ? "yes" : "no";
     host.append_attribute("mEditorTheme") = pHost->mEditorTheme.toUtf8().constData();
     host.append_attribute("mEditorThemeFile") = pHost->mEditorThemeFile.toUtf8().constData();
     host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toUtf8().constData();
@@ -474,6 +473,10 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         // value - and as it is an ASCII digit it only needs
         // QString::toLatin1() encoding:
         host.append_attribute("ControlCharacterHandling") = QString::number(mode).toLatin1().constData();
+    }
+
+    if (pHost->getLargeAreaExitArrows()) {
+        host.append_attribute("Large2DMapAreaExitArrows") = "yes";
     }
 
     { // Blocked so that indentation reflects that of the XML file
@@ -549,6 +552,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mFgColor2").text().set(pHost->mFgColor_2.name().toUtf8().constData());
         host.append_child("mBgColor2").text().set(pHost->mBgColor_2.name().toUtf8().constData());
         host.append_child("mRoomBorderColor").text().set(pHost->mRoomBorderColor.name().toUtf8().constData());
+        host.append_child("mMapInfoBg").text().set(pHost->mMapInfoBg.name().toUtf8().constData());
         host.append_child("mBlack2").text().set(pHost->mBlack_2.name().toUtf8().constData());
         host.append_child("mLightBlack2").text().set(pHost->mLightBlack_2.name().toUtf8().constData());
         host.append_child("mRed2").text().set(pHost->mRed_2.name().toUtf8().constData());
@@ -575,19 +579,17 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mRoomSize").text().set(QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData());
     }
     {
-        auto mapInfoContributors = host.append_child("mMapInfoContributors");
         QSetIterator<QString> iterator(pHost->mMapInfoContributors);
         while (iterator.hasNext()) {
-            auto mapInfoContributor = mapInfoContributors.append_child("mapInfoContributor");
+            auto mapInfoContributor = host.append_child("mapInfoContributor");
             mapInfoContributor.text().set(iterator.next().toUtf8().constData());
         }
     }
     {
-        auto shortcuts = host.append_child("profileShortcuts");
         auto iterator = mudlet::self()->mShortcutsManager->iterator();
         while (iterator.hasNext()) {
             auto key = iterator.next();
-            auto shortcut = shortcuts.append_child("profileShortcut");
+            auto shortcut = host.append_child("profileShortcut");
             shortcut.append_attribute("key") = key.toUtf8().constData();
             shortcut.text().set(pHost->profileShortcuts.value(key)->toString().toUtf8().constData());
         }

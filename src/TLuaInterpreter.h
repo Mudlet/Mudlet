@@ -393,10 +393,11 @@ public:
     static int setBackgroundColor(lua_State*);
     static int setLabelClickCallback(lua_State*);
     static int setMovie(lua_State*);
-    static int setMovieStart(lua_State*);
+    static int startMovie(lua_State*);
     static int setMovieSpeed(lua_State*);
+    static int scaleMovie(lua_State*);
     static int setMovieFrame(lua_State*);
-    static int setMoviePaused(lua_State*);
+    static int pauseMovie(lua_State*);
     static int setCmdLineAction(lua_State*);
     static int resetCmdLineAction(lua_State*);
     static int setCmdLineStyleSheet(lua_State*);
@@ -601,6 +602,7 @@ public:
     static int spellSuggestWord(lua_State*);
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
+    static int getCharacterName(lua_State*);
     static int getWindowsCodepage(lua_State*);
     static int getHTTP(lua_State* L);
     static int customHTTP(lua_State* L);
@@ -634,7 +636,7 @@ public:
     static int windowType(lua_State*);
     static int getProfileStats(lua_State* L);
     static int getBackgroundColor(lua_State* L);
-    static int getLabelStylesheet(lua_State* L);
+    static int getLabelStyleSheet(lua_State* L);
     static int getLabelSizeHint(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
