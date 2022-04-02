@@ -196,11 +196,11 @@ TAction* ActionUnit::getAction(int id)
 
 TAction* ActionUnit::getActionPrivate(int id)
 {
-        if (mActionMap.find(id) != mActionMap.end()) {
-            return mActionMap.value(id);
-        } else {
-            return nullptr;
-        }
+    if (mActionMap.find(id) != mActionMap.end()) {
+        return mActionMap.value(id);
+    } else {
+        return nullptr;
+    }
 }
 
 bool ActionUnit::registerAction(TAction* pT)
