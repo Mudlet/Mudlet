@@ -184,9 +184,9 @@ public:
     void            setWideAmbiguousEAsianGlyphs(Qt::CheckState state);
     // Is used to set preference dialog control directly:
     Qt::CheckState  getWideAmbiguousEAsianGlyphsControlState() {
-                        return mAutoAmbigousWidthGlyphsSetting
-                               ? Qt::PartiallyChecked
-                               : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
+                           return mAutoAmbigousWidthGlyphsSetting
+                                  ? Qt::PartiallyChecked
+                                  : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
     void            setHaveColorSpaceId(const bool state) { mSGRCodeHasColSpaceId = state; }
     bool            getHaveColorSpaceId() { return mSGRCodeHasColSpaceId; }
     void            setMayRedefineColors(const bool state) { mServerMayRedefineColors = state; }
@@ -203,6 +203,8 @@ public:
                         useShared = mUseSharedDictionary; }
     void            setControlCharacterMode(const TConsole::ControlCharacterMode mode);
     TConsole::ControlCharacterMode  getControlCharacterMode() const { return mControlCharacterMode; }
+    bool            getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
+    void            setLargeAreaExitArrows(const bool);
     void            setCustomLoginId(const int value);
     int             getCustomLoginId() const { return mCustomLoginId; }
 
@@ -393,6 +395,8 @@ public:
     bool commitLayoutUpdates(bool flush = false);
     void setScreenDimensions(const int width, const int height) { mScreenWidth = width; mScreenHeight = height; }
     std::optional<QString> windowType(const QString& name) const;
+    bool getEditorShowBidi() const { return mEditorShowBidi; }
+    void setEditorShowBidi(const bool);
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -516,7 +520,6 @@ public:
     int mWrapIndentCount;
 
     bool mEditorAutoComplete;
-    bool mEditorShowBidi = true;
 
     // code editor theme (human-friendly name)
     QString mEditorTheme;
@@ -578,9 +581,10 @@ public:
     QColor mFgColor_2;
     QColor mBgColor_2;
     QColor mRoomBorderColor;
+    QColor mMapInfoBg = QColor(150, 150, 150, 120);
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
-    bool mLogStatus;
+    bool mLogStatus = false;
     bool mEnableSpellCheck;
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
@@ -813,8 +817,10 @@ private:
     //   EN: https://en.wikipedia.org/wiki/Code_page_437
     //   DE: https://de.wikipedia.org/wiki/Codepage_437
     //   RU: https://ru.wikipedia.org/wiki/CP437
-    TConsole::ControlCharacterMode mControlCharacterMode;
+    TConsole::ControlCharacterMode mControlCharacterMode = TConsole::ControlCharacterMode::NoControlCharacterReplacement;
 
+    bool mLargeAreaExitArrows = false;
+    bool mEditorShowBidi = true;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -198,7 +198,6 @@ mudlet::mudlet()
 , mpMainToolBar(nullptr)
 , version(qsl("Mudlet " APP_VERSION APP_BUILD))
 , mpCurrentActiveHost(nullptr)
-, mAutolog(false)
 , mpTabBar(nullptr)
 , mIsLoadingLayout(false)
 , mHasSavedLayout(false)
@@ -359,13 +358,6 @@ mudlet::mudlet()
     mpSplitter_profileContainer->setChildrenCollapsible(false);
 
     mpHBoxLayout_profileContainer->addWidget(mpSplitter_profileContainer);
-
-    QFile file_autolog(getMudletPath(mainDataItemPath, qsl("autolog")));
-    if (file_autolog.exists()) {
-        mAutolog = true;
-    } else {
-        mAutolog = false;
-    }
 
     mpButtonConnect = new QToolButton(this);
     mpButtonConnect->setText(tr("Connect"));
@@ -1561,7 +1553,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     if (pH->mpConsole) {
         return;
     }
-    pH->mLogStatus = mAutolog;
     auto pConsole = new TMainConsole(pH);
     if (!pConsole) {
         return;
@@ -1598,6 +1589,9 @@ void mudlet::addConsoleForNewHost(Host* pH)
     mpCurrentActiveHost = pH;
 
     if (pH->mLogStatus) {
+        // The above flag is set/reset at the start of the TMainConsole
+        // constructor - and if it is set we now need to "click" the button
+        // to immediately start logging the game output as text/HTML:
         pConsole->logButton->click();
     }
 
@@ -3021,8 +3015,7 @@ void mudlet::slot_compact_input_line(const bool state)
     if (mpCurrentActiveHost) {
         mpCurrentActiveHost->setCompactInputLine(state);
         // Make sure players don't get confused when accidentally hiding buttons.
-        if (state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown) {
-            QKeySequence* shortcut = mShortcutsManager->getSequence(tr("Compact input line"));
+        if (QKeySequence* shortcut = mShortcutsManager->getSequence(qsl("Compact input line")); state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
             QString infoMsg = tr("[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.",
                                  "Here %1 will be replaced with the keyboard shortcut, default is ALT+L.").arg(shortcut->toString());
             mpCurrentActiveHost->postMessage(infoMsg);
@@ -3203,84 +3196,6 @@ void mudlet::slot_replaySpeedDown()
         mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
         mpLabelReplaySpeedDisplay->show();
     }
-}
-
-/* loop through and stop all sounds */
-void mudlet::stopSounds()
-{
-    QListIterator<QMediaPlayer*> itMusicBox(mMusicBoxList);
-
-    while (itMusicBox.hasNext()) {
-        itMusicBox.next()->stop();
-    }
-}
-
-void mudlet::playSound(const QString& s, int soundVolume)
-{
-    QPointer<Host> pHost = getActiveHost();
-    if (!pHost) {
-        return;
-    }
-
-    QListIterator<QMediaPlayer*> itMusicBox(mMusicBoxList);
-    QMediaPlayer* pPlayer = nullptr;
-
-    /* find first available inactive QMediaPlayer */
-    while (itMusicBox.hasNext()) {
-        QMediaPlayer* pTestPlayer = itMusicBox.next();
-
-        if (pTestPlayer->state() != QMediaPlayer::PlayingState && pTestPlayer->mediaStatus() != QMediaPlayer::LoadingMedia) {
-            pPlayer = pTestPlayer;
-            break;
-        }
-    }
-
-    /* no available QMediaPlayer, create a new one */
-    if (!pPlayer) {
-        pPlayer = new QMediaPlayer(this);
-
-
-        if (!pPlayer) {
-            /* It (should) be impossible to ever reach this */
-            TDebug(Qt::white, Qt::red) << qsl("Play sound: unable to create new QMediaPlayer object\n") >> pHost;
-            return;
-        }
-
-        mMusicBoxList.append(pPlayer);
-    }
-
-    // Remove any previous connection to the signal of this QMediaPlayer,
-    // theoretically this might be movable to be within the lambda function of
-    // the following connect(...) but that does seem a bit twisty and this works
-    // well enough!
-    disconnect(pPlayer, &QMediaPlayer::stateChanged, nullptr, nullptr);
-
-    connect(pPlayer, &QMediaPlayer::stateChanged, [=](QMediaPlayer::State state) {
-        if (state == QMediaPlayer::StoppedState) {
-            TEvent soundFinished {};
-            soundFinished.mArgumentList.append("sysSoundFinished");
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-            soundFinished.mArgumentList.append(pPlayer->media().request().url().fileName());
-            soundFinished.mArgumentList.append(pPlayer->media().request().url().path());
-#else
-            soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().fileName());
-            soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().path());
-#endif
-            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            if (pHost) {
-                // The host may have gone away if the sound was a long one
-                // and we are multi-playing so we ought to test it...
-                pHost->raiseEvent(soundFinished);
-            }
-        }
-    });
-
-    /* set volume and play sound */
-    pPlayer->setMedia(QUrl::fromLocalFile(s));
-    pPlayer->setVolume(soundVolume);
-    pPlayer->play();
 }
 
 void mudlet::setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown)

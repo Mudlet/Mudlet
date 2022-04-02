@@ -27,7 +27,7 @@ jobs:
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
         fetch-depth: 0
@@ -37,7 +37,7 @@ jobs:
         repository: ${{github.event.pull_request.head.repo.full_name}}
 
     - name: Restore Qt cache
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       id: cache-qt
       with:
         path: ${{github.workspace}}/Qt/${{matrix.qt}}
@@ -52,7 +52,7 @@ jobs:
         aqtversion: '==1.1.2'
 
     - name: Restore Boost cache
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
@@ -114,7 +114,7 @@ jobs:
           --target autogen
 
     - name: Check C++ changes against style guide
-      uses: ZedThree/clang-tidy-review@v0.7.1
+      uses: ZedThree/clang-tidy-review@v0.8.2
       id: static_analysis
       with:
         build_dir: 'b/ninja' # path is relative to checkout directory
