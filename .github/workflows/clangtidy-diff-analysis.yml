@@ -6,7 +6,6 @@ on:
     - '**.cpp'
     - '**.h'
     - '.github/workflows/clangtidy-diff-analysis.yml'
-  pull_request: # temporary
 
 jobs:
   compile-mudlet:
