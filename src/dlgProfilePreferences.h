@@ -104,6 +104,7 @@ public slots:
     void setFgColor2();
     void setBgColor2();
     void setRoomBorderColor();
+    void setMapInfoBackground();
     void resetColors2();
 
     // Map.
@@ -164,6 +165,7 @@ private slots:
     void slot_enableDarkEditor(const QString&);
     void slot_toggleMapDeleteButton(const bool);
     void slot_deleteMap();
+    void slot_changeLargeAreaExitArrows(const bool);
 
 signals:
     void signal_themeUpdateCompleted();
@@ -173,7 +175,7 @@ signals:
 private:
     void setColors();
     void setColors2();
-    void setColor(QPushButton*, QColor&);
+    void setColor(QPushButton*, QColor&, bool allowAlpha = false);
     void setPlayerRoomColor(QPushButton*, QColor&);
     void setButtonColor(QPushButton*, const QColor&);
     void loadEditorTab();

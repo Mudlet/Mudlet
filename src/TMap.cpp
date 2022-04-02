@@ -2803,6 +2803,11 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     QString destination{dest};
 
     if (destination.isEmpty()) {
+        QString destFolder = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+        QDir destDir(destFolder);
+        if (!destDir.exists()) {
+            destDir.mkdir(destFolder);
+        }
         destination = mudlet::getMudletPath(mudlet::profileDateTimeStampedJsonMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
     }
 
@@ -2851,7 +2856,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
         mpProgressDialog->close();
         mpProgressDialog = nullptr;
-        return {false, qsl("could not open save file \"%1\"").arg(destination)};
+        return {false, qsl("could not open save file \"%1\", reason: %2").arg(destination, file.errorString())};
     }
 
     QJsonObject mapObj;

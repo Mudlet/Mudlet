@@ -1314,7 +1314,7 @@ if rex then
       _G[func](...)
     end
 
-    if windowType(win) == "label" then
+    if windowType(win) == "label" and win ~= "main" then
       str = str:gsub("\n", "<br>")
       local t = _Echos.Process(str, style)
       if func ~= "echo" then
@@ -2602,7 +2602,7 @@ local function setActionCallback(callbackFunc, funcName, name, func, ...)
   return callbackFunc(name, func)
 end
 
-local callBackFunc ={"setLabelClickCallback", "setLabelReleaseCallback", "setLabelMoveCallback", "setLabelWheelCallback", "setLabelOnEnter", "setLabelOnLeave", "setCmdLineAction"}
+local callBackFunc = {"setLabelClickCallback", "setLabelDoubleClickCallback", "setLabelReleaseCallback", "setLabelMoveCallback", "setLabelWheelCallback", "setLabelOnEnter", "setLabelOnLeave", "setCmdLineAction"}
 
 for i = 1, #callBackFunc do
   local funcName = callBackFunc[i]

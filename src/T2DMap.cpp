@@ -3,6 +3,7 @@
  *   Copyright (C) 2013-2016, 2018-2022 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -125,6 +126,7 @@ void T2DMap::init()
         slot_toggleMapViewOnly();
     }
     flushSymbolPixmapCache();
+    mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
 }
 
 void T2DMap::slot_shiftDown()
@@ -1371,7 +1373,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
 
     if (!pArea->gridMode) {
-        paintAreaExits(painter, pen, exitList, oneWayExits, pArea, zLevel, exitWidth, areaExitsMap);
+        paintRoomExits(painter, pen, exitList, oneWayExits, pArea, zLevel, exitWidth, areaExitsMap);
     }
 
     // Draw label sizing or group selection box
@@ -1644,8 +1646,9 @@ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKe
     painter.restore();
 }
 
-void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPointF>& areaExitsMap)
+void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPointF>& areaExitsMap)
 {
+    const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
     const float widgetWidth = width();
     const float widgetHeight = height();
 
@@ -2084,12 +2087,8 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             if (!areaExit) {
                 // Non-area exit:
                 if (!oneWayExits.contains(rID)) {
-                    // Two way exit - but only draw the half of the line from
-                    // the room towards the exit - so that it does not overpaint
-                    // any door drawn on the other half from the other
-                    // direction:
+                    // Two way exit
                     QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
-                    l0.setLength(l0.length() / 2.0);
                     painter.save();
                     QPen exitPen = painter.pen();
                     // We need the line not to extend past the actual end point:
@@ -2153,35 +2152,35 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 pen.setColor(mpMap->getColor(k));
                 painter.setPen(pen);
                 if (room->getSouth() == rID) {
-                    line = QLineF(p2.x(), p2.y() + 2.0 * mRoomHeight,
+                    line = QLineF(p2.x(), p2.y() + exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x(), p2.y() + mRoomHeight);
                 } else if (room->getNorth() == rID) {
-                    line = QLineF(p2.x(), p2.y() - 2.0 * mRoomHeight,
+                    line = QLineF(p2.x(), p2.y() - exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x(), p2.y() - mRoomHeight);
                 } else if (room->getWest() == rID) {
-                    line = QLineF(p2.x() - 2.0 * mRoomWidth, p2.y(),
+                    line = QLineF(p2.x() - exitArrowScale * mRoomWidth, p2.y(),
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() - mRoomWidth, p2.y());
                 } else if (room->getEast() == rID) {
-                    line = QLineF(p2.x() + 2.0 * mRoomWidth, p2.y(),
+                    line = QLineF(p2.x() + exitArrowScale * mRoomWidth, p2.y(),
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() + mRoomWidth, p2.y());
                 } else if (room->getNorthwest() == rID) {
-                    line = QLineF(p2.x() - 2.0 * mRoomWidth, p2.y() - 2.0 * mRoomHeight,
+                    line = QLineF(p2.x() - exitArrowScale * mRoomWidth, p2.y() - exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() - mRoomWidth, p2.y() - mRoomHeight);
                 } else if (room->getNortheast() == rID) {
-                    line = QLineF(p2.x() + 2.0 * mRoomWidth, p2.y() - 2.0 * mRoomHeight,
+                    line = QLineF(p2.x() + exitArrowScale * mRoomWidth, p2.y() - exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() + mRoomWidth, p2.y() - mRoomHeight);
                 } else if (room->getSoutheast() == rID) {
-                    line = QLineF(p2.x() + 2.0 * mRoomWidth, p2.y() + 2.0 * mRoomHeight,
+                    line = QLineF(p2.x() + exitArrowScale * mRoomWidth, p2.y() + exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() + mRoomWidth, p2.y() + mRoomHeight);
                 } else if (room->getSouthwest() == rID) {
-                    line = QLineF(p2.x() - 2.0 * mRoomWidth, p2.y() + 2.0 * mRoomHeight,
+                    line = QLineF(p2.x() - exitArrowScale * mRoomWidth, p2.y() + exitArrowScale * mRoomHeight,
                                   p2.x(), p2.y());
                     clickPoint = QPointF(p2.x() - mRoomWidth, p2.y() + mRoomHeight);
                 }
@@ -2190,22 +2189,30 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 // in the appropriate direction
                 painter.drawLine(line);
                 QLineF l0 = QLineF(line);
-                l0.setLength((mRoomWidth + mRoomHeight) * 0.4);
-                QPointF _p1 = l0.p1();
-                QPointF _p2 = l0.p2();
+                if (mLargeAreaExitArrows) {
+                    l0.setLength((mRoomWidth + mRoomHeight) * 0.4);
+                } else {
+                    l0.setLength(exitWidth * 5.0);
+                }
+                QPointF p1 = l0.p1();
+                QPointF p2 = l0.p2();
                 QLineF l1 = QLineF(l0);
                 qreal w1 = l1.angle() - 90.0;
                 QLineF l2;
-                l2.setP1(_p2);
+                l2.setP1(p2);
                 l2.setAngle(w1);
-                l2.setLength((mRoomWidth + mRoomHeight) * 0.15);
-                QPointF _p3 = l2.p2();
+                if (mLargeAreaExitArrows) {
+                    l2.setLength((mRoomWidth + mRoomHeight) * 0.15);
+                } else {
+                    l2.setLength(exitWidth * 2.0);
+                }
+                QPointF p3 = l2.p2();
                 l2.setAngle(l2.angle() + 180.0);
-                QPointF _p4 = l2.p2();
-                QPolygonF _poly;
-                _poly.append(_p1);
-                _poly.append(_p3);
-                _poly.append(_p4);
+                QPointF p4 = l2.p2();
+                QPolygonF polygon;
+                polygon.append(p1);
+                polygon.append(p3);
+                polygon.append(p4);
                 QBrush brush = painter.brush();
                 brush.setColor(mpMap->getColor(k));
                 brush.setStyle(Qt::SolidPattern);
@@ -2215,7 +2222,7 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 arrowPen.setCosmetic(mMapperUseAntiAlias);
                 painter.setPen(arrowPen);
                 painter.setBrush(brush);
-                painter.drawPolygon(_poly);
+                painter.drawPolygon(polygon);
                 painter.restore();
             }
 
@@ -2327,7 +2334,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
         xOffset += mMultiSelectionListWidget.x() + mMultiSelectionListWidget.rect().width();
     }
 
-    painter.fillRect(xOffset, 10, width() - 10 - xOffset, 10, QColor(150, 150, 150, 120));
+    painter.fillRect(xOffset, 10, width() - 10 - xOffset, 10, mpHost->mMapInfoBg);
 
     for (const auto& key : mpMap->mMapInfoContributorManager->getContributorKeys()) {
         if (mpHost->mMapInfoContributors.contains(key)) {
@@ -2371,19 +2378,19 @@ int T2DMap::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset,
     auto font = painter.font();
     font.setBold(properties.isBold);
     font.setItalic(properties.isItalic);
+    painter.setFont(font);
 
     int infoHeight = mFontHeight; // Account for first iteration
     QRect testRect;
     // infoRect has a 10 margin on either side and on top to widget frame.
     mMapInfoRect = QRect(xOffset, yOffset, width() - 10 - xOffset, infoHeight);
-    testRect = painter.boundingRect(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
+    testRect = painter.boundingRect(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop | Qt::TextIncludeTrailingSpaces, infoText);
     mMapInfoRect.setHeight(testRect.height() + 10);
 
     // Restore Grey translucent background, was useful for debugging!
-    painter.fillRect(mMapInfoRect, QColor(150, 150, 150, 120));
+    painter.fillRect(mMapInfoRect, mpHost->mMapInfoBg);
     painter.setPen(properties.color);
-    painter.setFont(font);
-    painter.drawText(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 10, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
+    painter.drawText(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 10, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop | Qt::TextIncludeTrailingSpaces, infoText);
     //forget about font size changing and bolding/italicisation:
     painter.restore();
 
@@ -2409,53 +2416,46 @@ void T2DMap::mouseDoubleClickEvent(QMouseEvent* event)
 
 void T2DMap::createLabel(QRectF labelRectangle)
 {
-    TMapLabel label;
-    QFont font;
-    QString text = tr("no text", "Default text if a label is created in mapper with no text");
-    QString imagePath;
-
+    mpDlgMapLabel = new dlgMapLabel(this);
     mHelpMsg.clear();
 
-    QMessageBox textOrImageDialog;
-    textOrImageDialog.setText(tr("Text label or image label?", "2D Mapper create label dialog text"));
-    QPushButton* textButton = textOrImageDialog.addButton(tr("Text Label", "2D Mapper create label dialog button"), QMessageBox::ActionRole);
-    QPushButton* imageButton = textOrImageDialog.addButton(tr("Image Label", "2D Mapper create label dialog button"), QMessageBox::ActionRole);
-    textOrImageDialog.setStandardButtons(QMessageBox::Cancel);
-    textOrImageDialog.exec();
-    if (textOrImageDialog.clickedButton() == textButton) {
-        QString title = tr("Enter label text.", "2D Mapper create label dialog title/text");
-        font = QFontDialog::getFont(nullptr);
-        text = QInputDialog::getText(nullptr, title, title);
-        if (text.length() < 1) {
-            text = tr("no text", "Default text if a label is created in mapper with no text");
-        }
-        label.text = text;
-        label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, tr("Background color", "2D Mapper create label color dialog title"), QColorDialog::ShowAlphaChannel);
-        label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, tr("Foreground color", "2D Mapper create label color dialog title"), QColorDialog::ShowAlphaChannel);
-    } else if (textOrImageDialog.clickedButton() == imageButton) {
-        label.bgColor = QColor(50, 50, 150, 100);
+    auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
+    if (!pArea) {
+        return;
+    }
+    int labelId = pArea->createLabelId();
+
+    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [=]() {
+        updateMapLabel(labelRectangle, labelId, pArea);
+    });
+
+    connect(mpDlgMapLabel, &dlgMapLabel::rejected, this, [=]() mutable {
+        pArea->mMapLabels.remove(labelId);
+        update();
+    });
+
+    mpDlgMapLabel->show();
+    mpDlgMapLabel->raise();
+    mpDlgMapLabel->updated();
+}
+
+void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
+{
+    TMapLabel label;
+    QFont font;
+    QString imagePath;
+    if (mpDlgMapLabel->isTextLabel()) {
+        label.text = mpDlgMapLabel->getText();
+        label.fgColor = mpDlgMapLabel->getFgColor();
+        font = mpDlgMapLabel->getFont();
+    } else {
         label.text.clear();
-        imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image", "2D Mapper create label file dialog title"));
-    } else {
-        return;
+        imagePath = mpDlgMapLabel->getImagePath();
     }
+    label.bgColor = mpDlgMapLabel->getBgColor();
+    label.showOnTop = mpDlgMapLabel->isOnTop();
+    label.noScaling = mpDlgMapLabel->noScale();
 
-    QMessageBox backgroundOrForegroundDialog;
-    backgroundOrForegroundDialog.setStandardButtons(QMessageBox::Cancel);
-    backgroundOrForegroundDialog.setText(tr("Draw label as background or on top of everything?", "2D Mapper create label dialog text"));
-    QPushButton* backgroundButton = backgroundOrForegroundDialog.addButton(tr("Background", "2D Mapper create label dialog button"), QMessageBox::ActionRole);
-    QPushButton* foregroundButton = backgroundOrForegroundDialog.addButton(tr("Foreground", "2D Mapper create label dialog button"), QMessageBox::ActionRole);
-    backgroundOrForegroundDialog.exec();
-    bool showOnTop = false;
-    if (backgroundOrForegroundDialog.clickedButton() == backgroundButton) {
-        showOnTop = false;
-    } else if (backgroundOrForegroundDialog.clickedButton() == foregroundButton) {
-        showOnTop = true;
-    } else {
-        return;
-    }
-
-    label.showOnTop = showOnTop;
     QPixmap pixmap(fabs(labelRectangle.width()), fabs(labelRectangle.height()));
     pixmap.fill(Qt::transparent);
     QRect drawRectangle = labelRectangle.normalized().toRect();
@@ -2466,27 +2466,25 @@ void T2DMap::createLabel(QRectF labelRectangle)
     labelPen.setColor(label.fgColor);
     labelPainter.setPen(labelPen);
     labelPainter.fillRect(drawRectangle, label.bgColor);
-    if (textOrImageDialog.clickedButton() == textButton) {
-        labelPainter.drawText(drawRectangle, Qt::AlignHCenter | Qt::AlignCenter, text, nullptr);
+
+    if (mpDlgMapLabel->isTextLabel()) {
+        labelPainter.drawText(drawRectangle, Qt::AlignHCenter | Qt::AlignCenter, label.text, nullptr);
     } else {
-        QPixmap imagePixmap = QPixmap(imagePath);
-        labelPainter.drawPixmap(QPoint(0, 0), imagePixmap.scaled(drawRectangle.size()));
+        QPixmap imagePixmap = QPixmap(imagePath).scaled(drawRectangle.size(), mpDlgMapLabel->stretchImage() ? Qt::IgnoreAspectRatio : Qt::KeepAspectRatio);
+        auto point = mpDlgMapLabel->stretchImage() ? QPoint(0, 0) : pixmap.rect().center() - imagePixmap.rect().center();
+        labelPainter.drawPixmap(point, imagePixmap);
     }
+
     label.pix = pixmap.copy(drawRectangle);
-    labelRectangle = labelRectangle.normalized();
-    float mx = (labelRectangle.topLeft().x() / mRoomWidth) + mOx - (xspan / 2.0);
+    auto normalizedLabelRectangle = labelRectangle.normalized();
+    float mx = (normalizedLabelRectangle.topLeft().x() / mRoomWidth) + mOx - (xspan / 2.0);
     float my = (yspan / 2.0) - (labelRectangle.topLeft().y() / mRoomHeight) - mOy;
 
-    float mx2 = (labelRectangle.bottomRight().x() / mRoomWidth) + mOx - (xspan / 2.0);
+    float mx2 = (normalizedLabelRectangle.bottomRight().x() / mRoomWidth) + mOx - (xspan / 2.0);
     float my2 = (yspan / 2.0) - (labelRectangle.bottomRight().y() / mRoomHeight) - mOy;
     label.pos = QVector3D(mx, my, mOz);
     label.size = QRectF(QPointF(mx, my), QPointF(mx2, my2)).normalized().size();
-    auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
-    if (!pArea) {
-        return;
-    }
 
-    int labelId = pArea->createLabelId();
     if (Q_LIKELY(labelId >= 0)) {
         pArea->mMapLabels.insert(labelId, label);
         update();

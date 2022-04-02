@@ -6,6 +6,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016, 2018-2019, 2022 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,6 +24,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "dlgMapLabel.h"
 #include "dlgRoomSymbol.h"
 
 #include "pre_guard.h"
@@ -125,7 +127,7 @@ public:
     bool mPopupMenu = false;
     QSet<int> mMultiSelectionSet;
     bool mNewMoveAction = false;
-    QRectF mMapInfoRect;
+    QRect mMapInfoRect;
     int mFontHeight = 20;
     bool mShowRoomID = false;
     QMap<int, QPixmap> mPixMap;
@@ -180,6 +182,10 @@ public:
     QColor mOpenDoorColor = QColor(10, 155, 10);
     QColor mClosedDoorColor = QColor(155, 155, 10);
     QColor mLockedDoorColor = QColor(155, 10, 10);
+    // Introduced as a side effect of #4608 the larger area exit arrows don't
+    // always work well on existing maps - so allow for them to be reverted
+    // almost back to how they were before that PR:
+    bool mLargeAreaExitArrows = false;
 
 public slots:
     void slot_roomSelectionChanged();
@@ -241,9 +247,10 @@ private:
     void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const QMap<int, QPointF>&);
     void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const int displayAreaId, QColor& infoColor);
     int paintMapInfoContributor(QPainter&, int xOffset, int yOffset, const MapInfoProperties& properties);
-    void paintAreaExits(QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int, float, QMap<int, QPointF>&);
+    void paintRoomExits(QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int, float, QMap<int, QPointF>&);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
+    void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
 
 
     bool mDialogLock = false;
@@ -284,6 +291,7 @@ private:
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;
     dlgRoomSymbol* mpDlgRoomSymbol = nullptr;
+    dlgMapLabel* mpDlgMapLabel = nullptr;
 
 private slots:
     void slot_createRoom();

@@ -10,12 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: development
 
       - name: Download latest IRE mapper
-        uses: carlosperate/download-file-action@v1.1.0
+        uses: carlosperate/download-file-action@v1.1.1
         with:
           file-url: https://raw.githubusercontent.com/IRE-Mudlet-Mapping/ire-mapping-script/gh-pages/downloads/mudlet-mapper.xml
           file-name: mudlet-mapper.xml
@@ -53,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: development
           submodules: true
@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: development
           submodules: true
@@ -135,16 +135,16 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: development
           submodules: true
           fetch-depth: 0
 
-      - name: update submodule to latest in 5.1 branch
+      - name: update submodule to latest in branch
         run: |
           cd 3rdparty/lcf/
-          git checkout 5.1
+          git checkout 5.1-syntax_5.1
           git pull
 
       # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
@@ -162,17 +162,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
         with:
-          title: "Infrastructure: Update Lua code formatter to latest upstream 5.1 branch"
+          title: "Infrastructure: Update Lua code formatter to latest upstream branch"
           body: |
             #### Brief overview of PR changes/additions
-            :crown: An automated PR to update the built-in Lua code formatter to its latest version in upstream `5.1` branch.
+            :crown: An automated PR to update the built-in Lua code formatter to its latest version in upstream `5.1-syntax_5.1` (parses code only as Lua version 5.1) branch.
             #### Motivation for adding to Mudlet
             Get new features, bugfixes, improvements! Stay modern.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
           branch: update-lcf-${{ github.sha }}
           path: 3rdparty/lcf
-          commit-message: (autocommit) Updated lcf submodule to latest upstream 5.1 branch
+          commit-message: (autocommit) Updated lcf submodule to latest upstream branch
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
 
   update-widecharwidth-source:
@@ -180,7 +180,7 @@ jobs:
     # Disabled for the time being due to https://github.com/Mudlet/Mudlet/pull/4299
     if: ${{ github.repository_owner == 'Mudlet' && false }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: development
 
@@ -220,7 +220,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: development
 
@@ -260,7 +260,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: development
 
