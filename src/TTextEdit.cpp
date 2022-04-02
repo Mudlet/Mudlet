@@ -589,7 +589,7 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     case TConsole::Picture:
         replaceControlCharacterWith_Picture(unicode, grapheme, column, graphemes, charWidth);
         break;
-    case TConsole::OEMFont:
+    case TConsole::OEM:
         replaceControlCharacterWith_OEMFont(unicode, grapheme, column, graphemes, charWidth);
         break;
     } // End of switch

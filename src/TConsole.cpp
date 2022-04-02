@@ -1986,7 +1986,7 @@ void TConsole::mouseReleaseEvent(QMouseEvent* event)
     raiseMudletMousePressOrReleaseEvent(event, false);
 }
 
-void TConsole::TConsole::slot_changeControlCharacterHandling(const ControlCharacter mode)
+void TConsole::TConsole::slot_changeControlCharacterHandling(const ControlCharacterMode mode)
 {
     if (mControlCharacter != mode) {
         mControlCharacter = mode;

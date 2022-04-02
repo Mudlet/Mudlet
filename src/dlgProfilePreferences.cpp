@@ -1003,9 +1003,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         }
     }
 
-    comboBox_controlCharacterHandling->setItemData(0, TConsole::NoReplacement);
+    comboBox_controlCharacterHandling->setItemData(0, TConsole::AsIs);
     comboBox_controlCharacterHandling->setItemData(1, TConsole::Picture);
-    comboBox_controlCharacterHandling->setItemData(2, TConsole::OEMFont);
+    comboBox_controlCharacterHandling->setItemData(2, TConsole::OEM);
     auto cch_index = comboBox_controlCharacterHandling->findData(pHost->getControlCharacterMode());
     comboBox_controlCharacterHandling->setCurrentIndex((cch_index > 0) ? cch_index : 0);
     connect(comboBox_controlCharacterHandling, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeControlCharacterHandling);
@@ -4139,7 +4139,7 @@ void dlgProfilePreferences::slot_changeControlCharacterHandling()
         return;
     }
 
-    pHost->setControlCharacterMode(comboBox_controlCharacterHandling->currentData().value<TConsole::ControlCharacter>());
+    pHost->setControlCharacterMode(comboBox_controlCharacterHandling->currentData().value<TConsole::ControlCharacterMode>());
 }
 
 void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)

@@ -950,17 +950,17 @@ void XMLimport::readHostPackage(Host* pHost)
             pHost->setControlCharacterMode(TConsole::Picture);
             break;
         case 2:
-            pHost->setControlCharacterMode(TConsole::OEMFont);
+            pHost->setControlCharacterMode(TConsole::OEM);
             break;
         case 0:
             [[fallthrough]];
         default:
-            pHost->setControlCharacterMode(TConsole::NoReplacement);
+            pHost->setControlCharacterMode(TConsole::AsIs);
         }
 
     } else {
         // The default value, also used up to Mudlet 4.14.1:
-        pHost->setControlCharacterMode(TConsole::NoReplacement);
+        pHost->setControlCharacterMode(TConsole::AsIs);
     }
 
     if (attributes().hasAttribute(qsl("Large2DMapAreaExitArrows"))) {
