@@ -7575,7 +7575,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 
     QString soundFile;
     bool playSound;
-    if (lua_isstring(L, 11)) {
+    if (lua_type(L, 11) == LUA_TSTRING) {
         playSound = true;
         soundFile = lua_tostring(L, 11);
     } else {
@@ -7599,16 +7599,15 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     QStringList patterns;
     QList<int> propertyList;
     TTrigger* pP = host.getTriggerUnit()->findTrigger(triggerName);
-    if (!pP) {
-        patterns << pattern;
-        if (colorTrigger) {
-            propertyList << REGEX_COLOR_PATTERN;
-        } else {
-            propertyList << REGEX_PERL;
-        }
-    } else {
+    if (pP) {
         patterns = pP->getPatternsList();
         propertyList = pP->getRegexCodePropertyList();
+    }
+    patterns << pattern;
+    if (colorTrigger) {
+        propertyList << REGEX_COLOR_PATTERN;
+    } else {
+        propertyList << REGEX_PERL;
     }
 
     auto pT = new TTrigger("a", patterns, propertyList, multiLine, &host);
@@ -7616,7 +7615,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     pT->setIsActive(true);
     pT->setTemporary(true);
     pT->registerTrigger();
-    pT->setName(pattern);
+    pT->setName(triggerName);
     pT->mPerlSlashGOption = matchAll; //match all
     pT->mFilterTrigger = filter;
     pT->setConditionLineDelta(lineDelta); //line delta
@@ -7643,7 +7642,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         lua_settable(L, LUA_REGISTRYINDEX);
     }
 
-    lua_pushstring(L, pattern.toUtf8().constData());
+    lua_pushnumber(L, pT->getID());
     return 1;
 }
 
@@ -15205,6 +15204,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "spellSuggestWord", TLuaInterpreter::spellSuggestWord);
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
+    lua_register(pGlobalLua, "getCharacterName", TLuaInterpreter::getCharacterName);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
     lua_register(pGlobalLua, "getHTTP", TLuaInterpreter::getHTTP);
     lua_register(pGlobalLua, "customHTTP", TLuaInterpreter::customHTTP);
@@ -16448,6 +16448,22 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
         lua_settable(L, -3);
     }
 
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#getCharacterName
+int TLuaInterpreter::getCharacterName(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    const QString name{host.getLogin()};
+    if (name.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no character name set");
+        return 2;
+    }
+
+    lua_pushstring(L, name.toUtf8().constData());
     return 1;
 }
 
