@@ -824,8 +824,10 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mMapperUseAntiAlias = attributes().value(qsl("mMapperUseAntiAlias")) == YES;
     pHost->mMapperShowRoomBorders = readDefaultTrueBool(qsl("mMapperShowRoomBorders"));
     pHost->mEditorAutoComplete = (attributes().value(qsl("mEditorAutoComplete")) == YES);
-    if (!attributes().hasAttribute("mEditorShowBidi") || (attributes().value(qsl("mEditorShowBidi")) == YES)) {
-        pHost->mEditorShowBidi = true;
+    if (attributes().hasAttribute("mEditorShowBidi")) {
+        pHost->setEditorShowBidi(attributes().value(qsl("mEditorShowBidi")) == YES);
+    } else {
+        pHost->setEditorShowBidi(true);
     }
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
@@ -961,12 +963,24 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->setControlCharacterMode(TConsole::NoControlCharacterReplacement);
     }
 
+    if (attributes().hasAttribute(qsl("Large2DMapAreaExitArrows"))) {
+        pHost->setLargeAreaExitArrows(attributes().value(qsl("Large2DMapAreaExitArrows")) == YES);
+    } else {
+        // The default (and for map/profile files from before 4.15.0):
+        pHost->setLargeAreaExitArrows(false);
+    }
+
+    if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
+        mpHost->mMapInfoContributors.clear();
+    }
+
     while (!atEnd()) {
         readNext();
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == "name") {
                 pHost->mHostName = readElementText();
             } else if (name() == "mInstalledModules") {
@@ -1076,6 +1090,8 @@ void XMLimport::readHostPackage(Host* pHost)
                 pHost->mBgColor_2.setNamedColor(readElementText());
             } else if (name() == "mRoomBorderColor") {
                 pHost->mRoomBorderColor.setNamedColor(readElementText());
+            } else if (name() == "mMapInfoBg") {
+                pHost->mMapInfoBg.setNamedColor(readElementText());
             } else if (name() == "mBlack2") {
                 pHost->mBlack_2.setNamedColor(readElementText());
             } else if (name() == "mLightBlack2") {
@@ -1122,9 +1138,11 @@ void XMLimport::readHostPackage(Host* pHost)
                 // readUnknownHostElement() for "anything not otherwise parsed"
                 Q_UNUSED(readElementText());
             } else if (name() == "mMapInfoContributors") {
-                readMapInfoContributors();
-            } else if (name() == "profileShortcuts") {
-                readProfileShortcuts();
+                readLegacyMapInfoContributors();
+            } else if (name() == "mapInfoContributor") {
+                readMapInfoContributor();
+            } else if (name() == "profileShortcut") {
+                readProfileShortcut();
             } else if (name() == "stopwatches") {
                 readStopWatchMap();
             } else {
@@ -1871,9 +1889,13 @@ void XMLimport::readStopWatchMap()
 
 }
 
-void XMLimport::readMapInfoContributors()
+void XMLimport::readMapInfoContributor()
 {
-    mpHost->mMapInfoContributors.clear();
+    mpHost->mMapInfoContributors.insert(readElementText());
+}
+
+void XMLimport::readLegacyMapInfoContributors()
+{
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1887,23 +1909,13 @@ void XMLimport::readMapInfoContributors()
     }
 }
 
-void XMLimport::readProfileShortcuts() {
-    while (!atEnd()) {
-        readNext();
-        if (isEndElement()) {
-            break;
-        }
-        if (isStartElement()) {
-            if (name() == "profileShortcut") {
-                auto key = attributes().value(qsl("key"));
-                auto sequenceString = readElementText();
-                if (mpHost->profileShortcuts.value(key.toString())) {
-                    QKeySequence *sequence = !sequenceString.isEmpty() ? new QKeySequence(sequenceString)
-                                                                       : new QKeySequence();
-                    mpHost->profileShortcuts.value(key.toString())->swap(*sequence);
-                    delete sequence;
-                }
-            }
-        }
+void XMLimport::readProfileShortcut()
+{
+    auto key = attributes().value(qsl("key"));
+    auto sequenceString = readElementText();
+    if (mpHost->profileShortcuts.value(key.toString())) {
+        QKeySequence* sequence = !sequenceString.isEmpty() ? new QKeySequence(sequenceString) : new QKeySequence();
+        mpHost->profileShortcuts.value(key.toString())->swap(*sequence);
+        delete sequence;
     }
 }

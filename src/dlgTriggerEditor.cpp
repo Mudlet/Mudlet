@@ -633,7 +633,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                   : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
-    config->setRenderBidiContolCharacters(mpHost->mEditorShowBidi);
+    config->setRenderBidiContolCharacters(mpHost->getEditorShowBidi());
     config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
 
@@ -8685,14 +8685,12 @@ void dlgTriggerEditor::slot_changeEditorTextOptions(QTextOption::Flags state)
     config->endChanges();
 }
 
-//
 // clearDocument( edbee::TextEditorWidget* ew)
 //
 // A temporary measure for dealing with the undo spanning over multiple documents bug,
 // in place until we create a proper multi-document solution. This gets called whenever
 // the editor needs to be "cleared", usually when a different alias/trigger/etc is
 // made or selected.
-
 void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString& initialText)
 {
     mpSourceEditorFindArea->hide();
@@ -8716,7 +8714,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     config->setIndentSize(2);
     config->setCaretWidth(1);
     config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
-    config->setRenderBidiContolCharacters(mpHost->mEditorShowBidi);
+    config->setRenderBidiContolCharacters(mpHost->getEditorShowBidi());
     config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
 
@@ -8742,7 +8740,7 @@ void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
                                                : edbee::TextEditorConfig::HideWhitespaces);
     localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     localConfig->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
-    localConfig->setRenderBidiContolCharacters(mpHost->mEditorShowBidi);
+    localConfig->setRenderBidiContolCharacters(mpHost->getEditorShowBidi());
     localConfig->setAutocompleteMinimalCharacters(3);
     localConfig->endChanges();
 }
@@ -9203,4 +9201,13 @@ void dlgTriggerEditor::clearVarForm()
     mpVarsMainArea->hide();
     mpSourceEditorArea->hide();
     showInfo(msgInfoAddVar);
+}
+
+void dlgTriggerEditor::setEditorShowBidi(const bool state)
+{
+    auto config = mpSourceEditorEdbee->config();
+    config->beginChanges();
+    config->setRenderBidiContolCharacters(state);
+    config->endChanges();
+    mpSourceEditorEdbee->controller()->update();
 }

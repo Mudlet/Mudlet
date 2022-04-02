@@ -568,10 +568,10 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
                 itSpecialExit.next();
                 QPair<QString, int> exitData;
                 exitData.first = itSpecialExit.key();
+                exitData.second = itSpecialExit.value();
                 TRoom* pToRoom = mpRoomDB->getRoom(exitData.second);
                 if (pToRoom && mpRoomDB->getArea(pToRoom->getArea()) != this) {
                     // Note that pToRoom->getArea() is misnamed, should be getAreaId() !
-                    exitData.second = itSpecialExit.value();
                     if (!exitData.first.isEmpty()) {
                         results.insert(fromRoomId, exitData);
                     }
@@ -771,9 +771,11 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
     if (!(pLabel->fgColor.red() == defaultLabelForeground.red()
           && pLabel->fgColor.green() == defaultLabelForeground.green()
           && pLabel->fgColor.blue() == defaultLabelForeground.blue()
+          && pLabel->fgColor.alpha() == defaultLabelForeground.alpha()
           && pLabel->bgColor.red() == defaultLabelBackground.red()
-          && pLabel->bgColor.red() == defaultLabelBackground.green()
-          && pLabel->bgColor.red() == defaultLabelBackground.blue())) {
+          && pLabel->bgColor.green() == defaultLabelBackground.green()
+          && pLabel->bgColor.blue() == defaultLabelBackground.blue()
+          && pLabel->bgColor.alpha() == defaultLabelBackground.alpha())) {
 
         // For an image the colors are not used and tend to be set to black, if
         // so skip them. Unfortunately because of the way QColour s are
