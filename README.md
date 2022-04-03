@@ -67,7 +67,7 @@ It’s a modern breed of a client on the gaming scene – with an intuitive user
 
 <details>
   <summary>Explain?</summary>
-
+  
 ### Easy to use client
 
 We’re big on usability, and as such, creating an easy to use client and interface is one of the defining goals of the project. This applies to both the power users and usual gamers – everyone will feel at home with Mudlet, without having to waste too much time figuring out how to do something.
@@ -119,7 +119,7 @@ This software wouldnt've been possible without these open source packages:
 - [edbee](http://www.edbee.net/)
 - [DBLSQD](https://www.dblsqd.com/)
 - [argparse](https://github.com/luarocks/argparse)
-- [Boost Graph Library](https://www.boost.org/doc/libs/1_77_0/libs/graph/doc/)
+- [Boost Graph Library](https://www.boost.org/doc/libs/1_75_0/libs/graph/doc/)
 - [Busted](http://olivinelabs.com/busted/)
 - [Ccache](https://ccache.dev/)
 - [Communi](https://communi.github.io/)
