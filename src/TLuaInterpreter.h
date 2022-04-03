@@ -158,6 +158,7 @@ public:
     std::pair<int, QString> startPermKey(QString&, QString&, int&, int&, QString&);
 
     static int getCustomLines(lua_State*);
+    static int getCustomLines1(lua_State*);
     static int addCustomLine(lua_State*);
     static int removeCustomLine(lua_State*);
     static int noop(lua_State*);

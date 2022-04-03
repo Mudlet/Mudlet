@@ -9237,7 +9237,7 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         lua_pushstring(L, exits.at(i).toUtf8().constData());
         lua_newtable(L); //customLines[direction]
         lua_pushstring(L, "attributes");
-        lua_newtable(L); //customLines[attributes]
+        lua_newtable(L); //customLines[direction]["attributes"]
         lua_pushstring(L, "style");
         switch (pR->customLinesStyle.value(exits.at(i))) {
         case Qt::DotLine:
@@ -9257,10 +9257,10 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         default:
             lua_pushstring(L, "solid line");
         }
-        lua_settable(L, -3);
+        lua_settable(L, -3); //customLines[direction]["attributes"]["style"]
         lua_pushstring(L, "arrow");
         lua_pushboolean(L, pR->customLinesArrow.value(exits.at(i)));
-        lua_settable(L, -3);
+        lua_settable(L, -3); //customLines[direction]["attributes"]["arrow"]
         lua_pushstring(L, "color");
         lua_newtable(L);
         lua_pushstring(L, "r");
@@ -9272,10 +9272,10 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         lua_pushstring(L, "b");
         lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).blue());
         lua_settable(L, -3);
-        lua_settable(L, -3); //color
-        lua_settable(L, -3); //attributes
+        lua_settable(L, -3); //customLines[direction]["attributes"]["color"]
+        lua_settable(L, -3); //customLines[direction]["attributes"]
         lua_pushstring(L, "points");
-        lua_newtable(L); //customLines[points]
+        lua_newtable(L); //customLines[direction][points]
         QList<QPointF> pointL = pR->customLines.value(exits.at(i));
         for (int k = 0, kTotal = pointL.size(); k < kTotal; ++k) {
             lua_pushnumber(L, k);
@@ -9288,12 +9288,90 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
             lua_settable(L, -3);
             lua_settable(L, -3);
         }
-        lua_settable(L, -3); //customLines[direction][points]
+        lua_settable(L, -3); //customLines[direction]["points"]
         lua_settable(L, -3); //customLines[direction]
     }
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCustomLines1
+int TLuaInterpreter::getCustomLines1(lua_State* L)
+{
+    int roomID = getVerifiedInt(L, __func__, 1, "room id");
+    Host& host = getHostFromLua(L);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
+    if (!pR) { //if the room doesn't exist return nil
+        return warnArgumentValue(L, __func__, qsl("room %1 doesn't exist").arg(roomID));
+    }
+    lua_newtable(L); //return table customLines[]
+    QStringList exits = pR->customLines.keys();
+    for (int i = 0, iTotal = exits.size(); i < iTotal; ++i) {
+        lua_pushstring(L, exits.at(i).toUtf8().constData());
+        lua_newtable(L); //customLines[direction]
+        lua_pushstring(L, "attributes");
+        lua_newtable(L); //customLines[direction]["attributes"]
+        lua_pushstring(L, "style");
+        switch (pR->customLinesStyle.value(exits.at(i))) {
+        case Qt::DotLine:
+            lua_pushstring(L, "dot line");
+            break;
+        case Qt::DashLine:
+            lua_pushstring(L, "dash line");
+            break;
+        case Qt::DashDotLine:
+            lua_pushstring(L, "dash dot line");
+            break;
+        case Qt::DashDotDotLine:
+            lua_pushstring(L, "dash dot dot line");
+            break;
+        case Qt::SolidLine:
+            [[fallthrough]];
+        default:
+            lua_pushstring(L, "solid line");
+        }
+        lua_settable(L, -3); //customLines[direction]["attributes"]["style"]
+        lua_pushstring(L, "arrow");
+        lua_pushboolean(L, pR->customLinesArrow.value(exits.at(i)));
+        lua_settable(L, -3); //customLines[direction]["attributes"]["arrow"]
+        lua_pushstring(L, "color");
+        lua_newtable(L);
+        lua_pushinteger(L, 1);
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).red());
+        lua_settable(L, -3);
+        lua_pushinteger(L, 2);
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).green());
+        lua_settable(L, -3);
+        lua_pushinteger(L, 3);
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).blue());
+        lua_settable(L, -3);
+        lua_settable(L, -3); //customLines[direction]["attributes"]["color"]
+        lua_settable(L, -3); //customLines[direction]["attributes"]
+        lua_pushstring(L, "points");
+        lua_newtable(L); //customLines[direction]["points"]
+        QList<QPointF> pointL = pR->customLines.value(exits.at(i));
+        for (int k = 0, kTotal = pointL.size(); k < kTotal; ++k) {
+            // To allow the output from here to be fed back into addCustomLine
+            // we need to start the numbering from the Lua standard of 1 and
+            // NOT the C/C++ standard of 0 - otherwise the end-user has to
+            // fiddle with the zero-th entry to keep the points in order:
+            lua_pushinteger(L, k+1);
+            lua_newtable(L); //customLines[direction]["points"][3 x coordinates]
+            lua_pushinteger(L, 1);
+            lua_pushnumber(L, pointL.at(k).x());
+            lua_settable(L, -3);
+            lua_pushinteger(L, 2);
+            lua_pushnumber(L, pointL.at(k).y());
+            lua_settable(L, -3);
+            lua_pushinteger(L, 3);
+            lua_pushnumber(L, pR->z);
+            lua_settable(L, -3);
+            lua_settable(L, -3); //customLines[direction]["points"][3 x coordinates]
+        }
+        lua_settable(L, -3); //customLines[direction]["points"]
+        lua_settable(L, -3); //customLines[direction]
+    }
+    return 1;
+}
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitWeights
 int TLuaInterpreter::getExitWeights(lua_State* L)
 {
@@ -15116,6 +15194,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addCustomLine", TLuaInterpreter::addCustomLine);
     lua_register(pGlobalLua, "removeCustomLine", TLuaInterpreter::removeCustomLine);
     lua_register(pGlobalLua, "getCustomLines", TLuaInterpreter::getCustomLines);
+    lua_register(pGlobalLua, "getCustomLines1", TLuaInterpreter::getCustomLines1);
     lua_register(pGlobalLua, "getMudletVersion", TLuaInterpreter::getMudletVersion);
     lua_register(pGlobalLua, "openWebPage", TLuaInterpreter::openWebPage);
     lua_register(pGlobalLua, "getAllRoomEntrances", TLuaInterpreter::getAllRoomEntrances);
