@@ -221,9 +221,15 @@ function InstallBoost([string] $outputLocation = "C:\Libraries\") {
 }
 
 function InstallQt() {
-  DownloadFile "http://download.qt.io/official_releases/online_installers/qt-unified-windows-x86-online.exe" "qt-installer.exe"
-  Step "Installing"
-  exec ".\qt-installer.exe" @("--script=`"$(split-path -parent $script:MyInvocation.MyCommand.Path)\qt-silent-install.qs`"")
+  Step "Installing aqtinstall"
+  exec "pip" @("install", "aqtinstall")
+  New-Item -Path $Env:QT_BASE_DIR -ItemType Directory
+  cd $Env:QT_BASE_DIR
+  # go up to the root of Qt folder to start installation
+  cd ..
+  cd ..
+  Step "Installing Qt"
+  exec "aqt" @("install-qt", "windows", "desktop", "5.14.2", "win32_mingw73")
 }
 
 function InstallPython() {
