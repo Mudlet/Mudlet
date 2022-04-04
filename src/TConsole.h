@@ -46,6 +46,16 @@
 #include <list>
 #include <map>
 
+
+enum ControlCharacterMode {
+    AsIs = 0x0,
+    Picture = 0x1,
+    OEM = 0x2
+};
+
+// Needed so it can be handled as a QVariant
+Q_DECLARE_METATYPE(ControlCharacterMode)
+
 class QCloseEvent;
 class QLineEdit;
 class QScrollBar;
@@ -77,13 +87,6 @@ public:
         Buffer = 0x20 // Non-visible store for data that can be copied to/from other per profile TConsoles, should be uniquely named in pool of SubConsole/UserWindow/Buffers AND Labels
     };
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
-
-    enum ControlCharacterMode {
-        AsIs = 0x0,
-        Picture = 0x1,
-        OEM = 0x2
-    };
-    Q_ENUM(ControlCharacterMode)
 
     Q_DISABLE_COPY(TConsole)
     explicit TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
@@ -292,7 +295,7 @@ public slots:
     void slot_toggleReplayRecording();
     void slot_stop_all_triggers(bool);
     void slot_toggleLogging();
-    void slot_changeControlCharacterHandling(const TConsole::ControlCharacterMode);
+    void slot_changeControlCharacterHandling(const ControlCharacterMode);
 
 
 protected:

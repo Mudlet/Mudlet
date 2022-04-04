@@ -3929,11 +3929,11 @@ void Host::setupIreDriverBugfix()
     }
 }
 
-void Host::setControlCharacterMode(const TConsole::ControlCharacterMode mode)
+void Host::setControlCharacterMode(const ControlCharacterMode mode)
 {
-    if (Q_UNLIKELY(!(mode == TConsole::AsIs
-                     || mode == TConsole::Picture
-                     || mode == TConsole::OEM))) {
+    if (Q_UNLIKELY(!(mode == ControlCharacterMode::AsIs
+                     || mode == ControlCharacterMode::Picture
+                     || mode == ControlCharacterMode::OEM))) {
         return;
     }
 
