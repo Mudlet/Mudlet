@@ -1497,10 +1497,8 @@ win32 {
 # This is a list of files that we want to show up in the Qt Creator IDE that are
 # not otherwise used by the project:
 OTHER_FILES += \
-    $${LUA.files} \
-    $${LUA_GEYSER.files} \
-    $${LUA_TESTS.files} \
-    $${LUA_TRANSLATIONS.files} \
+    ../.appveyor.yml \
+    ../.crowdin.yml \
     ../.github/CODE_OF_CONDUCT.md \
     ../.github/CODEOWNERS \
     ../.github/codeql/codeql-config.yml \
@@ -1526,11 +1524,35 @@ OTHER_FILES += \
     ../.github/workflows/update-geyser-docs.yml \
     ../.github/workflows/update-translations.yml \
     ../.github/workflows/whitespace-linter.yml \
-    ../COMPILE \
-    ../COPYING \
-    ../INSTALL \
+    ../.gitignore \
+    ../.travis.yml \
+    ../CI/appveyor.after_success.ps1 \
+    ../CI/appveyor.build.ps1 \
+    ../CI/appveyor.functions.ps1 \
+    ../CI/appveyor.install.ps1 \
+    ../CI/appveyor.set-build-info.ps1 \
+    ../CI/copy-non-qt-win-dependencies.ps1 \
+    ../CI/mudlet-deploy-key.enc \
+    ../CI/mudlet-deploy-key-windows.ppk \
+    ../CI/qt-silent-install.qs \
+    ../CI/travis.after_success.sh \
+    ../CI/travis.before_install.sh \
+    ../CI/travis.compile.sh \
+    ../CI/travis.install.sh \
+    ../CI/travis.linux.after_success.sh \
+    ../CI/travis.linux.before_install.sh \
+    ../CI/travis.linux.install.sh \
+    ../CI/travis.osx.after_success.sh \
+    ../CI/travis.osx.before_install.sh \
+    ../CI/travis.osx.install.sh \
+    ../CI/travis.set-build-info.sh \
+    ../docker/docker-compose.override.linux.yml \
+    ../docker/docker-compose.yml \
+    ../docker/Dockerfile \
     ../README \
-    mac-deploy.sh
+    mac-deploy.sh \
+    mudlet-lua/genDoc.sh \
+    mudlet-lua/lua/ldoc.css
 
 # Unix Makefile installer:
 # lua file installation, needs install, sudo, and a setting in /etc/sudo.conf
@@ -1608,31 +1630,11 @@ INSTALLS += \
 
 # This is the extra files that are needed to do a `make dist` given a makefile
 DISTFILES += \
-    ../.appveyor.yml \
-    ../.crowdin.yml \
-    ../.gitignore \
+    $${LUA.files} \
+    $${LUA_GEYSER.files} \
+    $${LUA_TESTS.files} \
+    $${LUA_TRANSLATIONS.files} \
     ../.gitmodules \
-    ../.travis.yml \
-    ../CI/appveyor.after_success.ps1 \
-    ../CI/appveyor.build.ps1 \
-    ../CI/appveyor.functions.ps1 \
-    ../CI/appveyor.install.ps1 \
-    ../CI/appveyor.set-build-info.ps1 \
-    ../CI/copy-non-qt-win-dependencies.ps1 \
-    ../CI/mudlet-deploy-key.enc \
-    ../CI/mudlet-deploy-key-windows.ppk \
-    ../CI/qt-silent-install.qs \
-    ../CI/travis.after_success.sh \
-    ../CI/travis.before_install.sh \
-    ../CI/travis.compile.sh \
-    ../CI/travis.install.sh \
-    ../CI/travis.linux.after_success.sh \
-    ../CI/travis.linux.before_install.sh \
-    ../CI/travis.linux.install.sh \
-    ../CI/travis.osx.after_success.sh \
-    ../CI/travis.osx.before_install.sh \
-    ../CI/travis.osx.install.sh \
-    ../CI/travis.set-build-info.sh \
     ../cmake/FindHUNSPELL.cmake \
     ../cmake/FindPCRE.cmake \
     ../cmake/FindPUGIXML.cmake \
@@ -1640,9 +1642,9 @@ DISTFILES += \
     ../cmake/FindZIP.cmake \
     ../CMakeLists.txt \
     ../COMMITMENT \
-    ../docker/docker-compose.override.linux.yml \
-    ../docker/docker-compose.yml \
-    ../docker/Dockerfile \
+    ../COMPILE \
+    ../COPYING \
+    ../INSTALL \
     ../mudlet.desktop \
     ../mudlet.png \
     ../mudlet.svg \
@@ -1653,10 +1655,8 @@ DISTFILES += \
     .clang-format \
     CF-loader.xml \
     CMakeLists.txt \
-    mudlet-lua/genDoc.sh \
     mudlet-lua/lua/generic-mapper/generic_mapper.xml \
     mudlet-lua/lua/generic-mapper/versions.lua \
-    mudlet-lua/lua/ldoc.css \
     mudlet-lua/tests/DB.lua \
     mudlet-lua/tests/GUIUtils.lua \
     mudlet-lua/tests/Other.lua \
