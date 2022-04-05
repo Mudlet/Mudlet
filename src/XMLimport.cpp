@@ -952,20 +952,20 @@ void XMLimport::readHostPackage(Host* pHost)
     if (attributes().hasAttribute(QLatin1String("ControlCharacterHandling"))) {
         switch (attributes().value(QLatin1String("ControlCharacterHandling")).toInt()) {
         case 1:
-            pHost->setControlCharacterMode(TConsole::PictureControlCharacterReplacement);
+            pHost->setControlCharacterMode(ControlCharacterMode::Picture);
             break;
         case 2:
-            pHost->setControlCharacterMode(TConsole::OEMFontControlCharacterReplacement);
+            pHost->setControlCharacterMode(ControlCharacterMode::OEM);
             break;
         case 0:
             [[fallthrough]];
         default:
-            pHost->setControlCharacterMode(TConsole::NoControlCharacterReplacement);
+            pHost->setControlCharacterMode(ControlCharacterMode::AsIs);
         }
 
     } else {
         // The default value, also used up to Mudlet 4.14.1:
-        pHost->setControlCharacterMode(TConsole::NoControlCharacterReplacement);
+        pHost->setControlCharacterMode(ControlCharacterMode::AsIs);
     }
 
     if (attributes().hasAttribute(qsl("Large2DMapAreaExitArrows"))) {

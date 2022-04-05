@@ -6,7 +6,8 @@ branches:
   - /^Mudlet-.+/   # build release tags (yes, the option also applies to tags)
 init:
 - cmd: mkdir C:\src\
-image: Visual Studio 2019
+
+image: Previous Visual Studio 2019
 environment:
   signing_password:
     secure: JJDxNdreMgNn/IOcY+UVmlaqgDT4a7vcxsY3nfcgWY4=
