@@ -1499,6 +1499,9 @@ win32 {
 OTHER_FILES += \
     ../.appveyor.yml \
     ../.crowdin.yml \
+    ../.devcontainer/Dockerfile \
+    ../.devcontainer/devcontainer.json \
+    ../.devcontainer/library-scripts/desktop-lite-debian.sh \
     ../.github/CODE_OF_CONDUCT.md \
     ../.github/CODEOWNERS \
     ../.github/codeql/codeql-config.yml \
@@ -1516,6 +1519,7 @@ OTHER_FILES += \
     ../.github/workflows/codeql-analysis.yml \
     ../.github/workflows/codespell-analysis.yml \
     ../.github/workflows/dangerjs.yml \
+    ../.github/workflows/generate-changelog.yml \
     ../.github/workflows/link-ptbs-to-dblsqd.yml \
     ../.github/workflows/tag-pull-requests.yml \
     ../.github/workflows/update-3rdparty.yml \
@@ -1523,15 +1527,15 @@ OTHER_FILES += \
     ../.github/workflows/update-en-us-plural.yml \
     ../.github/workflows/update-geyser-docs.yml \
     ../.github/workflows/update-translations.yml \
-    ../.github/workflows/whitespace-linter.yml \
     ../.gitignore \
-    ../.travis.yml \
     ../CI/appveyor.after_success.ps1 \
     ../CI/appveyor.build.ps1 \
     ../CI/appveyor.functions.ps1 \
     ../CI/appveyor.install.ps1 \
     ../CI/appveyor.set-build-info.ps1 \
+    ../CI/appveyor.validate_deployment.ps1 \
     ../CI/copy-non-qt-win-dependencies.ps1 \
+    ../CI/generate-changelog.lua \
     ../CI/mudlet-deploy-key.enc \
     ../CI/mudlet-deploy-key-windows.ppk \
     ../CI/qt-silent-install.qs \
@@ -1546,10 +1550,13 @@ OTHER_FILES += \
     ../CI/travis.osx.before_install.sh \
     ../CI/travis.osx.install.sh \
     ../CI/travis.set-build-info.sh \
+    ../CI/travis.validate_deployment.sh \
+    ../CI/update-autocompletion.lua \
+    ../dangerfile.js \
+    ../docker/.env.template \
     ../docker/docker-compose.override.linux.yml \
     ../docker/docker-compose.yml \
     ../docker/Dockerfile \
-    ../README \
     mac-deploy.sh \
     mudlet-lua/genDoc.sh \
     mudlet-lua/lua/ldoc.css
@@ -1634,12 +1641,18 @@ DISTFILES += \
     $${LUA_GEYSER.files} \
     $${LUA_TESTS.files} \
     $${LUA_TRANSLATIONS.files} \
+    ../.clang-tidy \
     ../.gitmodules \
     ../cmake/FindHUNSPELL.cmake \
+    ../cmake/FindLua51.cmake \
     ../cmake/FindPCRE.cmake \
     ../cmake/FindPUGIXML.cmake \
+    ../cmake/FindSparkle.cmake \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
+    ../cmake/FindZZIPLIB.cmake \
+    ../cmake/IncludeOptionalModule.cmake \
+    ../cmake/InitGitSubmodule.cmake \
     ../CMakeLists.txt \
     ../COMMITMENT \
     ../COMPILE \
