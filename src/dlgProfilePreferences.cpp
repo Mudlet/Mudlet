@@ -1003,9 +1003,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         }
     }
 
-    comboBox_controlCharacterHandling->setItemData(0, TConsole::NoControlCharacterReplacement);
-    comboBox_controlCharacterHandling->setItemData(1, TConsole::PictureControlCharacterReplacement);
-    comboBox_controlCharacterHandling->setItemData(2, TConsole::OEMFontControlCharacterReplacement);
+    comboBox_controlCharacterHandling->setItemData(0, ControlCharacterMode::AsIs);
+    comboBox_controlCharacterHandling->setItemData(1, ControlCharacterMode::Picture);
+    comboBox_controlCharacterHandling->setItemData(2, ControlCharacterMode::OEM);
     auto cch_index = comboBox_controlCharacterHandling->findData(pHost->getControlCharacterMode());
     comboBox_controlCharacterHandling->setCurrentIndex((cch_index > 0) ? cch_index : 0);
     connect(comboBox_controlCharacterHandling, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeControlCharacterHandling);
@@ -1160,6 +1160,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_foreground_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setFgColor2);
     connect(pushButton_background_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setBgColor2);
     connect(pushButton_roomBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::setRoomBorderColor);
+    connect(pushButton_mapInfoBg, &QAbstractButton::clicked, this, &dlgProfilePreferences::setMapInfoBackground);
 
     connect(mEnableGMCP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSDP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
@@ -1275,6 +1276,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_foreground_color_2, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_background_color_2, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_roomBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_mapInfoBg, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(mEnableGMCP, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mEnableMSSP, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1564,6 +1566,7 @@ void dlgProfilePreferences::setColors2()
         pushButton_foreground_color_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mFgColor_2.name()));
         pushButton_background_color_2->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mBgColor_2.name()));
         pushButton_roomBorderColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mRoomBorderColor.name()));
+        pushButton_mapInfoBg->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(pHost->mMapInfoBg.name()));
     } else {
         pushButton_black_2->setStyleSheet(QString());
         pushButton_Lblack_2->setStyleSheet(QString());
@@ -1585,6 +1588,7 @@ void dlgProfilePreferences::setColors2()
         pushButton_foreground_color_2->setStyleSheet(QString());
         pushButton_background_color_2->setStyleSheet(QString());
         pushButton_roomBorderColor->setStyleSheet(QString());
+        pushButton_mapInfoBg->setStyleSheet(QString());
     }
 }
 
@@ -1666,20 +1670,22 @@ void dlgProfilePreferences::resetColors2()
     pHost->mLightMagenta_2 = Qt::magenta;
     pHost->mWhite_2 = Qt::lightGray;
     pHost->mLightWhite_2 = Qt::white;
+    pHost->mMapInfoBg = QColor(150, 150, 150, 120);
 
     setColors2();
 }
 
-void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
+void dlgProfilePreferences::setColor(QPushButton* button, QColor& presentColor, bool allowAlpha)
 {
     Host* pHost = mpHost;
     if (!pHost) {
         return;
     }
 
-    auto color = QColorDialog::getColor(c, this);
+    auto color = QColorDialog::getColor(presentColor, this, tr("Pick color", "Generic pick color dialog title"),
+                                        allowAlpha ? QColorDialog::ShowAlphaChannel : QColorDialog::ColorDialogOptions());
     if (color.isValid()) {
-        c = color;
+        presentColor = color;
 
         auto console = pHost->mpConsole;
         if (console) {
@@ -1694,14 +1700,14 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
             }
         }
 
-        if (b == pushButton_black || b == pushButton_lBlack
-                || b == pushButton_red || b == pushButton_lRed
-                || b == pushButton_green || b == pushButton_lGreen
-                || b == pushButton_yellow || b == pushButton_lYellow
-                || b == pushButton_blue || b == pushButton_lBlue
-                || b == pushButton_magenta || b == pushButton_lMagenta
-                || b == pushButton_cyan || b == pushButton_lCyan
-                || b == pushButton_white || b == pushButton_lWhite) {
+        if (button == pushButton_black || button == pushButton_lBlack
+            || button == pushButton_red || button == pushButton_lRed
+            || button == pushButton_green || button == pushButton_lGreen
+            || button == pushButton_yellow || button == pushButton_lYellow
+            || button == pushButton_blue || button == pushButton_lBlue
+            || button == pushButton_magenta || button == pushButton_lMagenta
+            || button == pushButton_cyan || button == pushButton_lCyan
+            || button == pushButton_white || button == pushButton_lWhite) {
 
             pHost->updateAnsi16ColorsInTable();
         }
@@ -1709,7 +1715,7 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
         // Also set a contrasting foreground color so text will always be
         // visible - if the button is disabled the colors will be somewhat
         // "greyed-out":
-        setButtonColor(b, color);
+        setButtonColor(button, color);
     }
 }
 
@@ -1981,6 +1987,14 @@ void dlgProfilePreferences::setRoomBorderColor()
     Host* pHost = mpHost;
     if (pHost) {
         setColor(pushButton_roomBorderColor, pHost->mRoomBorderColor);
+    }
+}
+
+void dlgProfilePreferences::setMapInfoBackground()
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setColor(pushButton_mapInfoBg, pHost->mMapInfoBg, true);
     }
 }
 
@@ -4125,7 +4139,7 @@ void dlgProfilePreferences::slot_changeControlCharacterHandling()
         return;
     }
 
-    pHost->setControlCharacterMode(comboBox_controlCharacterHandling->currentData().value<TConsole::ControlCharacterMode>());
+    pHost->setControlCharacterMode(comboBox_controlCharacterHandling->currentData().value<ControlCharacterMode>());
 }
 
 void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)

@@ -1,0 +1,73 @@
+name: Generate a changelog
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      from:
+        description: 'Generate from this release/commit (defaults to the latest release)'
+        required: false
+        # default is calculated dynamically
+      to:
+        description: 'Generate until this release/commit (defaults to latest development)'
+        required: false
+        default: 'HEAD'
+
+jobs:
+  generate-changelog:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Mudlet' }}
+
+    steps:
+    - name: Checkout Mudlet repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Install Lua 5.1.5
+      uses: leafo/gh-actions-lua@v8
+      with:
+        luaVersion: "5.1.5"
+
+    - name: Install Luarocks
+      uses: leafo/gh-actions-luarocks@v4
+
+    - name: Install Lua dependencies
+      run: |
+        luarocks install argparse
+        luarocks install lunajson
+
+    - name: Calculate from and to releases
+      run: |
+        if [[ -z "${{ github.event.inputs.from }}" ]] ; then
+            FROM_RELEASE=$(git tag --sort=committerdate | tail -1)
+        else
+            FROM_RELEASE=${{ github.event.inputs.from }}
+        fi
+
+        if [[ -z "${{ github.event.inputs.to }}" ]] ; then
+            TO_RELEASE="HEAD"
+        else
+            TO_RELEASE=${{ github.event.inputs.to }}
+        fi
+
+        echo "Generating a changelog from $FROM_RELEASE until $TO_RELEASE"
+
+        echo "FROM_RELEASE=$FROM_RELEASE" >> $GITHUB_ENV
+        echo "TO_RELEASE=$TO_RELEASE" >> $GITHUB_ENV
+
+    - name: Generate changelog
+      run: |
+        changelog=$(lua CI/generate-changelog.lua -m release --start-commit $FROM_RELEASE --end-commit $TO_RELEASE)
+        echo "$changelog" >> changelog.html
+
+        echo "[INFO] Changelog generated (from $FROM_RELEASE to $TO_RELEASE). If it's too big, Github won't show it, so it's available as an artifact as well at: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}#artifacts"
+        echo "[INFO] Changelog is:"
+        echo $changelog
+
+    - name: Upload changelog as html
+      uses: actions/upload-artifact@v3
+      with:
+        name: changelog.html
+        path: changelog.html
