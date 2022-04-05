@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2021 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2022 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -586,10 +586,10 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
             graphemes.append((charWidth < 1) ? QChar() : grapheme);
         }
         break;
-    case TConsole::Picture:
+    case ControlCharacterMode::Picture:
         replaceControlCharacterWith_Picture(unicode, grapheme, column, graphemes, charWidth);
         break;
-    case TConsole::OEM:
+    case ControlCharacterMode::OEM:
         replaceControlCharacterWith_OEMFont(unicode, grapheme, column, graphemes, charWidth);
         break;
     } // End of switch
