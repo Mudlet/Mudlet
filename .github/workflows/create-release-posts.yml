@@ -1,0 +1,14 @@
+name: Create release posts
+on:
+  release:
+    types: [published]
+
+jobs:
+  release-post:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Call release Webhook
+      uses: fjogeleit/http-request-action@v1
+      with:
+        url: ${{ secrets.RELEASE_POST_WEBHOOK }}
+        method: 'GET'
