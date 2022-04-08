@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2014, 2017-2019, 2022 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
@@ -658,7 +658,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                            "WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the "
                            "License for the specific language governing permissions and limitations under "
                            "the License.</p>"));
-#endif
+#endif // defined(INCLUDE_UPDATER)
 
     QString MIT_Body(
             qsl("<h4>The MIT License</h4>"
@@ -827,7 +827,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                "ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR "
                                "INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT "
                                "SOFTWARE.</p>"));
-#endif
+#endif // defined(INCLUDE_FONTS)
 
     QString communiHeader(tr("<h2><u>Communi IRC Library</u></h2>"
                              "<h3>Copyright © 2008-2020 The Communi Project</h3>"));
@@ -838,20 +838,34 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                             "Copyright © 2006-2008 Eike Hein &lt;hein@kde.org&gt;<br>"
                                             "Copyright © 2004-2009 Eli Mackenzie &lt;argonel@gmail.com&gt;</p>"));
 
-    QString luaHeader(tr("<h2><u>lua - Lua 5.1</u></h2>"
+    QString luaHeader(tr("<h2><u>Lua - Lua 5.1</u></h2>"
                          "<h3>Copyright © 1994–2017 Lua.org, PUC-Rio.</h3>"));
 
-    QString luaYajlHeader(tr("<h2><u>lua_yajl - Lua 5.1 interface to yajl</u></h2>"
+    QString luaFileSystemHeader(tr("<h2><u>LuaFileSystem</u></h2>"
+                                   "<h3>Copyright © 2003-2020, Kepler Project</h3>"));
+
+    QString luaYajlHeader(tr("<h2><u>Lua_yajl - Lua 5.1 interface to yajl</u></h2>"
                              "<h3>Author: Brian Maher &lt;maherb at brimworks dot com&gt;<br>"
                              "Copyright © 2009 Brian Maher</h3>"));
+
+    QString luaUTF8Header(tr("<h2><u>Luautf8 - A UTF-8 support module for Lua.</u></h2>"
+                             "<h3>Copyright © 2018 Xavier Wang</h3>"));
+
+    QString luaSql_Sqlite3Header(tr("<h2><u>LuaSql-Sqlite3 - Database connectivity for the Lua programming language (Sqlite3 component).</u></h2>"
+                                    "<h3>Copyright © 2003-2019, The Kepler Project</h3>"));
+
+    QString lrexlib_pcreHeader(tr("<h2><u>Lrexlib-pcre -  Regular expression library binding (PCRE flavour).</u></h2>"
+                                  "<h3>Copyright © Reuben Thomas 2000-2020<br>"
+                                  "Copyright © Shmuel Zeigerman 2004-2020 </h3>"));
 
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     QString luaZipHeader(tr("<h2><u>LuaZip - Reading files inside zip files</u></h2>"
                             "<h3>Author: Danilo Tuler<br>"
                             "Copyright © 2003-2007 Kepler Project</h3>"));
-#endif
+#endif // defined(Q_OS_MACOS)
 
-    QString edbeeHeader(tr("<h2><u>edbee - multi-feature editor widget</u></h2>"
+
+    QString edbeeHeader(tr("<h2><u>Edbee - multi-feature editor widget</u></h2>"
                            "<h3>Copyright © 2012-2014 by Reliable Bits Software by Blommers IT</h3>"));
 
     QString edbeeSuppliment(tr("The <b>edbee-lib</b> widget itself incorporates other components with licences that must be noted as well, they are:"));
@@ -871,12 +885,12 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 
     QString QsLogHeader(tr("<h2><u>Qt-Components, QsLog</u></h2>"
                            "<h3>(<span style=\"color:red\"><u>https://bitbucket.org/razvapetru/qt-components [broken link]</u></span></h3>"
-                           "<small><a href=\"https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components\"> {&quot;Wayback Machine&quot; archived version}</a></small>)<br>"
+                           "<h3><small><a href=\"https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components\"> {&quot;Wayback Machine&quot; archived version}</a></small>)<br>"
                            "Copyright © 2013, Razvan Petru<br>"
                            "All rights reserved.</h3>"));
 
 #if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
-    QString DblsqdHeader(tr("<h2><u>dblsqd</u></h2>"
+    QString DblsqdHeader(tr("<h2><u>Dblsqd</u></h2>"
                             "<h3>Copyright © 2017 Philipp Medien</h3>"));
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     QString SparkleHeader(tr("<h2><u>Sparkle - macOS updater</u></h2>"
@@ -897,7 +911,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                      "<h3>Copyright © 2011 Mark Hamlin.<br>"
                                      "All rights reserved.</h3>"));
 
-    QString SparkleGlueHeader(tr("<h2><u>sparkle-glue</u></h2>"
+    QString SparkleGlueHeader(tr("<h2><u>Sparkle-glue</u></h2>"
                                  "<h3>Copyright © 2008 Remko Troncon<br>"
                                  "Copyright © 2017 Vadim Peretokin</h3>"));
 #endif // defined(Q_OS_MACOS)
@@ -909,9 +923,13 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     QString QtKeyChainHeader(tr("<h2><u>QtKeyChain - Platform-independent Qt API for storing passwords securely</u></h2>"
                                  "<h3>Copyright © 2011-2019 Frank Osterfeld &lt;frank.osterfeld@gmail.com&gt;.</h3>"));
 
-    QString SingleConnectHeader(tr("<h2><u>singleshot_connect.h - part of KDToolBox</u><br>(https://github.com/KDAB/KDToolBox).</h2>"
+    QString SingleConnectHeader(tr("<h2><u>singleshot_connect.h - part of KDToolBox</u><br>"
+                                   "Github: <a href=\"https://github.com/KDAB/KDToolBox\">KDToolBox</a></h2>"
                                    "<h3>Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &lt;info@kdab.comF&gt;.</h3>"));
 
+    QString Utf8_filenamesHeader(tr("<h2><u>utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows</u><br>"
+                                    "<a href=\"https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0\">Github GIST</a></h2>"
+                                    "<h3>Copyright © 2019 Egor-Skriptunoff</h3>"));
 
     // Now start to assemble the fragments above:
     QStringList license_3rdParty_texts;
@@ -927,85 +945,92 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                                             qsl("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
                                                communiKonverstionSuppliment)); //  5 - Communi supplimentary about Konversation - translatable
 
-    license_3rdParty_texts.append(qsl("%6%7<hr>%8%9<hr>")
+    license_3rdParty_texts.append(qsl("%6%12<hr>%7%12<hr>%8%12<hr>%9%12<hr>%10%12<hr>%11%12<hr>")
                                           .arg(luaHeader,                      //  6 - lua header - translatable
-                                               MIT_Body,                       //  7 - lua body MIT - not translatable
+                                               luaFileSystemHeader,            //  7 - luaFileSystem header - translatable
                                                luaYajlHeader,                  //  8 - lua_yajl header - translatable
-                                               MIT_Body));                     //  9 - lua_yajl body MIT - not translatable
+                                               luaUTF8Header,                  //  9 - luautf8 header - translatable
+                                               luaSql_Sqlite3Header,           // 10 - luaSql_Sqlite3 header - translatable
+                                               lrexlib_pcreHeader,             // 11 - lrexlib_pcre header - translatable
+                                               MIT_Body));                     // 12 - six copies of the body MIT for all of the above - not translatable
+
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(qsl("%10%11<hr>")
-                                          .arg(luaZipHeader,                   // 10 - macOS luazip header - translatable
-                                               MIT_Body));                     // 11 - macOS luazip body MIT - not translatable
-#endif
+    license_3rdParty_texts.append(qsl("%13%14<hr>")
+                                          .arg(luaZipHeader,                   // 13 - macOS luazip header - translatable
+                                               MIT_Body));                     // 14 - macOS luazip body MIT - not translatable
+#endif // defined(Q_OS_MACOS)
 
-    license_3rdParty_texts.append(qsl("%12%13")
-                                          .arg(edbeeHeader,                    // 12 - edbee header - translatable
-                                               MIT_Body));                     // 13 - edbee body MIT - not translatable
+    license_3rdParty_texts.append(qsl("%15%16")
+                                          .arg(edbeeHeader,                    // 15 - edbee header - translatable
+                                               MIT_Body));                     // 16 - edbee body MIT - not translatable
 
-    license_3rdParty_texts.append(qsl("<hr width=\"50%\">%14"
-                                                 "%15%16<hr width=\"33%\">"
-                                                 "%17%18<hr width=\"33%\">"
-                                                 "%19%20<hr width=\"33%\">"
-                                                 "%21%22")
-                                          .arg(edbeeSuppliment,                // 14 - edbee other components:
-                                               OnigmoHeader,                   // 15 - Onigmo (Oniguruma-mod) header - translatable
-                                               BSD2Clause_Body                 // 16 - Onigmo (Oniguruma-mod) body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
+    license_3rdParty_texts.append(qsl("<hr width=\"50%\">%17"
+                                                 "%18%19<hr width=\"33%\">"
+                                                 "%20%21<hr width=\"33%\">"
+                                                 "%22%23<hr width=\"33%\">"
+                                                 "%24%25")
+                                          .arg(edbeeSuppliment,                // 17 - edbee other components:
+                                               OnigmoHeader,                   // 18 - Onigmo (Oniguruma-mod) header - translatable
+                                               BSD2Clause_Body                 // 19 - Onigmo (Oniguruma-mod) body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
                                                        .arg(qsl("AUTHOR AND CONTRIBUTORS"),
                                                             qsl("AUTHOR OR CONTRIBUTORS")),
-                                               OnigurumaHeader,                // 17 - Oniguruma header - translatable
-                                               BSD2Clause_Body                 // 18 - Oniguruma body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
+                                               OnigurumaHeader,                // 20 - Oniguruma header - translatable
+                                               BSD2Clause_Body                 // 21 - Oniguruma body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
                                                        .arg(qsl("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
                                                             qsl("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
-                                               RubyHeader,                     // 19 - Ruby Header - translatable
-                                               BSD2Clause_Body                 // 20 - Ruby body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
+                                               RubyHeader,                     // 21 - Ruby Header - translatable
+                                               BSD2Clause_Body                 // 22 - Ruby body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
                                                        .arg(qsl("AUTHOR AND CONTRIBUTORS"),
                                                             qsl("AUTHOR OR CONTRIBUTORS")),
-                                               QsLogHeader,                    // 21 - QsLog header - translatable
-                                               BSD3Clause_Body                 // 22 - QsLog body BSD3 ("The name of the contributors may not" / "COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
+                                               QsLogHeader,                    // 23 - QsLog header - translatable
+                                               BSD3Clause_Body                 // 24 - QsLog body BSD3 ("The name of the contributors may not" / "COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
                                                        .arg(qsl("The name of the contributors may not"),
                                                             qsl("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
                                                             qsl("COPYRIGHT HOLDERS OR CONTRIBUTORS"))));
 
 #if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(qsl("<hr>%23%24")
-                                          .arg(DblsqdHeader,                   // 23 - dblsqd Header - translatable
-                                               APACHE2_Body));                 // 24 - dblsqd body APACHE2 - not translatable
+    license_3rdParty_texts.append(qsl("<hr>%25%26")
+                                          .arg(DblsqdHeader,                   // 25 - dblsqd Header - translatable
+                                               APACHE2_Body));                 // 26 - dblsqd body APACHE2 - not translatable
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(qsl("<hr width=\"50%\">%25%26<hr width=\"33%\">%27%28<hr width=\"33%\">%29%30")
-                                          .arg(SparkleHeader,                  // 25 - Sparkle header - translatable
-                                               MIT_Body,                       // 26 - Sparkle body MIT - not translatable
-                                               Sparkle3rdPartyHeader,          // 27 - Sparkle 3rd Party headers - translatable
-                                               BSD2Clause_Body                 // 28 - Sparkle 3rd Party body BSD2 ("AUTHOR") - not translatable
+    license_3rdParty_texts.append(qsl("<hr width=\"50%\">%27%28<hr width=\"33%\">%29%30<hr width=\"33%\">%31%32")
+                                          .arg(SparkleHeader,                  // 27 - Sparkle header - translatable
+                                               MIT_Body,                       // 28 - Sparkle body MIT - not translatable
+                                               Sparkle3rdPartyHeader,          // 29 - Sparkle 3rd Party headers - translatable
+                                               BSD2Clause_Body                 // 30 - Sparkle 3rd Party body BSD2 ("AUTHOR") - not translatable
                                                        .arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR")),
-                                               SparkleGlueHeader, // 29 - Sparkle glue header - translatable
-                                               BSD2Clause_Body    // 30 - Sparkle glue body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
+                                               SparkleGlueHeader, // 31 - Sparkle glue header - translatable
+                                               BSD2Clause_Body    // 32 - Sparkle glue body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
                                                        .arg(QLatin1String("AUTHOR AND CONTRIBUTORS"), QLatin1String("AUTHOR OR CONTRIBUTORS"))));
 #endif // defined(Q_OS_MACOS))
 #endif // defined(INCLUDE_UPDATER)
 
 #if defined(INCLUDE_FONTS) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(qsl("<hr>%31")
-                                  .arg(UbuntuFontText));                       // 31 - Ubuntu Font Text - not translatable
-    license_3rdParty_texts.append(qsl("<hr>%32")
-                                  .arg(SILOpenFontText));                      // 32 - SIL Open Font Text - not translatable
+    license_3rdParty_texts.append(qsl("<hr>%33")
+                                  .arg(UbuntuFontText));                       // 33 - Ubuntu Font Text - not translatable
+    license_3rdParty_texts.append(qsl("<hr>%34")
+                                  .arg(SILOpenFontText));                      // 34 - SIL Open Font Text - not translatable
 
-#endif
+#endif // defined(INCLUDE_FONTS)
 
-    license_3rdParty_texts.append(qsl("<hr><br>"
-                                                 "<center><img src=\":/icons/Discord-Logo+Wordmark-Color_438x120px.png\"/></center><br>"
-                                                 "%33%34")
-                                  .arg(DiscordHeader,                          // 33 - Discord header - translatable
-                                       MIT_Body));                             // 34 - Discord body MIT - not translatable
-
-    license_3rdParty_texts.append(qsl("<hr><br>"
-                                                 "%35%36")
-                                  .arg(QtKeyChainHeader,                       // 35 - QtKeyChain header - translatable
-                                       BSD2Clause_Body                         // 36 - QtKeyChain body BSD2 ("AUTHOR") - not translatable
-                                       .arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR"))));
+    license_3rdParty_texts.append(qsl("<hr><center><img src=\":/icons/Discord-Logo+Wordmark-Color_438x120px.png\"/></center><br>"
+                                      "%35%36")
+                                  .arg(DiscordHeader,                          // 35 - Discord header - translatable
+                                       MIT_Body));                             // 36 - Discord body MIT - not translatable
 
     license_3rdParty_texts.append(qsl("<hr>%37%38")
-                                  .arg(SingleConnectHeader,                    // 37 - singleshot_connect header - translatable
-                                       MIT_Body));                             // 38 - singleshot_connect body MIT - not translatable
+                                  .arg(QtKeyChainHeader,                       // 37 - QtKeyChain header - translatable
+                                       BSD2Clause_Body                         // 38 - QtKeyChain body BSD2 ("AUTHOR") - not translatable
+                                       .arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR"))));
+
+    license_3rdParty_texts.append(qsl("<hr>%39%40")
+                                  .arg(SingleConnectHeader,                    // 39 - singleshot_connect header - translatable
+                                       MIT_Body));                             // 40 - singleshot_connect body MIT - not translatable
+
+    // Although this is only effective on Windows it is bundled in ALL builds
+    license_3rdParty_texts.append(qsl("<hr>%41%42")
+                                  .arg(Utf8_filenamesHeader,                   // 41 - utf8_filename header - translatable
+                                       MIT_Body));                             // 42 - utf8_filename body MIT - not translatable
 
     license_3rdParty_texts.append(qsl("</body></html>"));
 

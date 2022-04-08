@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016-2020 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
@@ -60,43 +60,8 @@ using namespace std::chrono_literals;
 static const char* cButtonBaseColor = "baseColor";
 
 dlgTriggerEditor::dlgTriggerEditor(Host* pH)
-: mpAliasBaseItem(nullptr)
-, mpTriggerBaseItem(nullptr)
-, mpScriptsBaseItem(nullptr)
-, mpTimerBaseItem(nullptr)
-, mpActionBaseItem(nullptr)
-, mpKeyBaseItem(nullptr)
-, mpVarBaseItem(nullptr)
-, mpCurrentActionItem(nullptr)
-, mpCurrentKeyItem(nullptr)
-, mpCurrentTimerItem(nullptr)
-, mpCurrentScriptItem(nullptr)
-, mpCurrentTriggerItem(nullptr)
-, mpCurrentAliasItem(nullptr)
-, mpCurrentVarItem(nullptr)
-, mIsGrabKey(false)
-, mpHost(pH)
-, mpSourceEditorDocument(nullptr)
-, mpSourceEditorEdbee(nullptr)
-, mpSourceEditorEdbeeDocument(nullptr)
+: mpHost(pH)
 , mSearchOptions(pH->mSearchOptions)
-, mpAction_searchOptions(nullptr)
-, mIcon_searchOptions(QIcon())
-, mpAction_searchCaseSensitive(nullptr)
-, mpAction_searchIncludeVariables(nullptr)
-// TODO: Implement other searchOptions:
-//, mpAction_searchWholeWords(nullptr)
-//, mpAction_searchRegExp(nullptr)
-, mSavingAs(false)
-, mCleanResetQueued(false)
-, mAutosaveInterval{}
-, mTriggerEditorSplitterState{}
-, mAliasEditorSplitterState{}
-, mScriptEditorSplitterState{}
-, mActionEditorSplitterState{}
-, mKeyEditorSplitterState{}
-, mTimerEditorSplitterState{}
-, mVarEditorSplitterState{}
 {
     // init generated dialog
     setupUi(this);
@@ -223,8 +188,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpScriptsMainArea = new dlgScriptsMainArea(this);
     layoutColumn->addWidget(mpScriptsMainArea, 1);
 
-    mIsScriptsMainAreaEditHandler = false;
-    mpScriptsMainAreaEditHandlerItem = nullptr;
     connect(mpScriptsMainArea->lineEdit_script_event_handler_entry, &QLineEdit::returnPressed, this, &dlgTriggerEditor::slot_script_main_area_add_handler);
     connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemClicked, this, &dlgTriggerEditor::slot_script_main_area_edit_handler);
 
@@ -240,7 +203,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // Update the status bar on changes
     connect(mpSourceEditorEdbee->controller(), &edbee::TextEditorController::updateStatusTextSignal, this, &dlgTriggerEditor::slot_updateStatusBar);
-    simplifyEdbeeStatusBarRegex = new QRegularExpression(R"(^(?:\[\*\] )?(.+?) \|)");
+    simplifyEdbeeStatusBarRegex = new QRegularExpression(qsl(R"(^(?:\[\*\] )?(.+?) \|)"));
     mpSourceEditorEdbee->controller()->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
 
     // Update the editor preferences
@@ -621,8 +584,44 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                              .arg(hostName));
     toolBar2->setOrientation(Qt::Vertical);
 
-    QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
+    // Inserting them in this order also causes the first one (the top toolbar)
+    // to be listed first in the QMainWindows's default context menu:
     QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar);
+    QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
+
+    // (Top) "Actions" toolbar:
+    //: This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.
+    mpAction_restoreEditorActionsToolbar = new QAction(tr("Restore Actions toolbar"), this);
+    // (Left) "Items" toolbar:
+    //: This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.
+    mpAction_restoreEditorItemsToolbar = new QAction(tr("Restore Items toolbar"), this);
+
+    connect(mpAction_restoreEditorActionsToolbar, &QAction::triggered, this, &dlgTriggerEditor::slot_restoreEditorActionsToolbar);
+    connect(mpAction_restoreEditorItemsToolbar, &QAction::triggered, this, &dlgTriggerEditor::slot_restoreEditorItemsToolbar);
+    connect(toolBar, &QToolBar::visibilityChanged, this, &dlgTriggerEditor::slot_visibilityChangedEditorActionsToolbar);
+    connect(toolBar2, &QToolBar::visibilityChanged, this, &dlgTriggerEditor::slot_visibilityChangedEditorItemsToolbar);
+    connect(toolBar, &QToolBar::topLevelChanged, this, &dlgTriggerEditor::slot_floatingChangedEditorActionsToolbar);
+    connect(toolBar2, &QToolBar::topLevelChanged, this, &dlgTriggerEditor::slot_floatingChangedEditorItemsToolbar);
+
+    treeWidget_triggers->addAction(mpAction_restoreEditorActionsToolbar);
+    treeWidget_aliases->addAction(mpAction_restoreEditorActionsToolbar);
+    treeWidget_timers->addAction(mpAction_restoreEditorActionsToolbar);
+    treeWidget_scripts->addAction(mpAction_restoreEditorActionsToolbar);
+    treeWidget_actions->addAction(mpAction_restoreEditorActionsToolbar);
+    treeWidget_keys->addAction(mpAction_restoreEditorActionsToolbar);
+
+    treeWidget_triggers->addAction(mpAction_restoreEditorItemsToolbar);
+    treeWidget_aliases->addAction(mpAction_restoreEditorItemsToolbar);
+    treeWidget_timers->addAction(mpAction_restoreEditorItemsToolbar);
+    treeWidget_scripts->addAction(mpAction_restoreEditorItemsToolbar);
+    treeWidget_actions->addAction(mpAction_restoreEditorItemsToolbar);
+    treeWidget_keys->addAction(mpAction_restoreEditorItemsToolbar);
+
+    // These only have to be shown should the associated toolbar get hidden
+    // and by default the starting state for those is a visible one so these
+    // need to be hidden at the start:
+    mpAction_restoreEditorActionsToolbar->setVisible(false);
+    mpAction_restoreEditorItemsToolbar->setVisible(false);
     setShortcuts();
 
     auto config = mpSourceEditorEdbee->config();
@@ -634,7 +633,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                   : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
-    config->setRenderBidiContolCharacters(mpHost->mEditorShowBidi);
+    config->setRenderBidiContolCharacters(mpHost->getEditorShowBidi());
     config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
 
@@ -831,7 +830,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     int triggerWidgetItemMinHeight = qRound(mTriggerPatternEdit.at(0)->minimumSizeHint().height() * 1.5);
     mpScrollArea->setMinimumHeight(triggerWidgetItemMinHeight);
 
-    showHiddenVars = false;
     widget_searchTerm->updateGeometry();
 
     if (mAutosaveInterval > 0) {
@@ -1948,7 +1946,7 @@ void dlgTriggerEditor::searchTriggers(const QString& s)
         }
 
         // Trigger patterns
-        QStringList textList = trigger->getRegexCodeList();
+        QStringList textList = trigger->getPatternsList();
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
@@ -2050,7 +2048,7 @@ void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const Q
         }
 
         // Trigger patterns
-        QStringList textList = trigger->getRegexCodeList();
+        QStringList textList = trigger->getPatternsList();
         int total = textList.count();
         for (int index = 0; index < total; ++index) {
             if (textList.at(index).isEmpty() || !textList.at(index).contains(s, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
@@ -3286,8 +3284,8 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     } else {
         name = tr("New trigger");
     }
-    QStringList regexList;
-    QList<int> regexPropertyList;
+    QStringList patterns;
+    QList<int> patternKinds;
     QString script = "";
     QStringList nameL;
     nameL << name;
@@ -3325,7 +3323,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     } else {
     //insert a new root item
     ROOT_TRIGGER:
-        pT = new TTrigger(name, regexList, regexPropertyList, false, mpHost);
+        pT = new TTrigger(name, patterns, patternKinds, false, mpHost);
         pNewItem = new QTreeWidgetItem(mpTriggerBaseItem, nameL);
         treeWidget_triggers->insertTopLevelItem(0, pNewItem);
     }
@@ -3336,7 +3334,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
 
 
     pT->setName(name);
-    pT->setRegexCodeList(regexList, regexPropertyList);
+    pT->setRegexCodeList(patterns, patternKinds);
     pT->setScript(script);
     pT->setIsFolder(isFolder);
     pT->setIsActive(false);
@@ -3987,8 +3985,8 @@ void dlgTriggerEditor::saveTrigger()
     QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
     QString command = mpTriggersMainArea->lineEdit_trigger_command->text();
     bool isMultiline = mpTriggersMainArea->groupBox_multiLineTrigger->isChecked();
-    QStringList regexList;
-    QList<int> regexPropertyList;
+    QStringList patterns;
+    QList<int> patternKinds;
     for (int i = 0; i < 50; i++) {
         QString pattern = mTriggerPatternEdit.at(i)->lineEdit_pattern->text();
         int patternType = mTriggerPatternEdit.at(i)->comboBox_patternType->currentIndex();
@@ -3998,32 +3996,32 @@ void dlgTriggerEditor::saveTrigger()
 
         switch (patternType) {
         case 0:
-            regexPropertyList << REGEX_SUBSTRING;
+            patternKinds << REGEX_SUBSTRING;
             break;
         case 1:
-            regexPropertyList << REGEX_PERL;
+            patternKinds << REGEX_PERL;
             break;
         case 2:
-            regexPropertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
+            patternKinds << REGEX_BEGIN_OF_LINE_SUBSTRING;
             break;
         case 3:
-            regexPropertyList << REGEX_EXACT_MATCH;
+            patternKinds << REGEX_EXACT_MATCH;
             break;
         case 4:
-            regexPropertyList << REGEX_LUA_CODE;
+            patternKinds << REGEX_LUA_CODE;
             break;
         case 5:
-            regexPropertyList << REGEX_LINE_SPACER;
+            patternKinds << REGEX_LINE_SPACER;
             pattern = mTriggerPatternEdit.at(i)->spinBox_lineSpacer->text();
             break;
         case 6:
-            regexPropertyList << REGEX_COLOR_PATTERN;
+            patternKinds << REGEX_COLOR_PATTERN;
             break;
         case 7:
-            regexPropertyList << REGEX_PROMPT;
+            patternKinds << REGEX_PROMPT;
             break;
         }
-        regexList << pattern;
+        patterns << pattern;
     }
 
     QString script = mpSourceEditorEdbeeDocument->text();
@@ -4034,7 +4032,7 @@ void dlgTriggerEditor::saveTrigger()
         QString old_name = pT->getName();
         pT->setName(name);
         pT->setCommand(command);
-        pT->setRegexCodeList(regexList, regexPropertyList);
+        pT->setRegexCodeList(patterns, patternKinds);
 
         pT->setScript(script);
         pT->setIsMultiline(isMultiline);
@@ -5044,7 +5042,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
     int ID = pItem->data(0, Qt::UserRole).toInt();
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(ID);
     if (pT) {
-        QStringList patternList = pT->getRegexCodeList();
+        QStringList patternList = pT->getPatternsList();
         QList<int> propertyList = pT->getRegexCodePropertyList();
 
         if (patternList.size() != propertyList.size()) {
@@ -8687,14 +8685,12 @@ void dlgTriggerEditor::slot_changeEditorTextOptions(QTextOption::Flags state)
     config->endChanges();
 }
 
-//
 // clearDocument( edbee::TextEditorWidget* ew)
 //
 // A temporary measure for dealing with the undo spanning over multiple documents bug,
 // in place until we create a proper multi-document solution. This gets called whenever
 // the editor needs to be "cleared", usually when a different alias/trigger/etc is
 // made or selected.
-
 void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString& initialText)
 {
     mpSourceEditorFindArea->hide();
@@ -8718,7 +8714,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     config->setIndentSize(2);
     config->setCaretWidth(1);
     config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
-    config->setRenderBidiContolCharacters(mpHost->mEditorShowBidi);
+    config->setRenderBidiContolCharacters(mpHost->getEditorShowBidi());
     config->setAutocompleteMinimalCharacters(3);
     config->endChanges();
 
@@ -8744,7 +8740,7 @@ void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
                                                : edbee::TextEditorConfig::HideWhitespaces);
     localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     localConfig->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
-    localConfig->setRenderBidiContolCharacters(mpHost->mEditorShowBidi);
+    localConfig->setRenderBidiContolCharacters(mpHost->getEditorShowBidi());
     localConfig->setAutocompleteMinimalCharacters(3);
     localConfig->endChanges();
 }
@@ -9085,6 +9081,79 @@ void dlgTriggerEditor::setSearchOptions(const SearchOptions optionsState)
     createSearchOptionIcon();
 }
 
+void dlgTriggerEditor::showOrHideRestoreEditorActionsToolbarAction()
+{
+    if ((!toolBar->isVisible())
+        || toolBar->isFloating()
+        || (QMainWindow::toolBarArea(toolBar) & (Qt::ToolBarArea::LeftToolBarArea|Qt::ToolBarArea::RightToolBarArea|Qt::ToolBarArea::BottomToolBarArea))) {
+        // If it is NOT visible
+        // OR If the toolbar is floating
+        // OR it is docked in an area other than the top one
+        // then show the restore action
+        mpAction_restoreEditorActionsToolbar->setVisible(true);
+    } else {
+        // Otherwise - i.e. it is visible AND docked AND docked to the original
+        // area:
+        mpAction_restoreEditorActionsToolbar->setVisible(false);
+    }
+}
+
+void dlgTriggerEditor::showOrHideRestoreEditorItemsToolbarAction()
+{
+    if ((!toolBar2->isVisible())
+        || toolBar2->isFloating()
+        || (QMainWindow::toolBarArea(toolBar2) & (Qt::ToolBarArea::TopToolBarArea|Qt::ToolBarArea::RightToolBarArea|Qt::ToolBarArea::BottomToolBarArea))) {
+
+        mpAction_restoreEditorItemsToolbar->setVisible(true);
+    } else {
+        mpAction_restoreEditorItemsToolbar->setVisible(false);
+    }
+}
+
+// These two slots show/hide the restore option for the relevant toolbar
+// as the toolbar itself is hidden/shown:
+void dlgTriggerEditor::slot_visibilityChangedEditorActionsToolbar()
+{
+    showOrHideRestoreEditorActionsToolbarAction();
+}
+
+void dlgTriggerEditor::slot_visibilityChangedEditorItemsToolbar()
+{
+    showOrHideRestoreEditorItemsToolbarAction();
+}
+
+// These two get triggered twice during the dragging of a toolbar from one
+// docking area to another - as it briefly floats during the drag:
+void dlgTriggerEditor::slot_floatingChangedEditorActionsToolbar()
+{
+    showOrHideRestoreEditorActionsToolbarAction();
+}
+
+void dlgTriggerEditor::slot_floatingChangedEditorItemsToolbar()
+{
+    showOrHideRestoreEditorItemsToolbarAction();
+}
+
+// These two also triggers the corresponding signal that is connected to:
+// the showOrHideRestoreEditorXxxxxToolbarAction() SLOT:
+void dlgTriggerEditor::slot_restoreEditorActionsToolbar()
+{
+    if (!toolBar->isVisible()) {
+        // Reshow it
+        toolBar->show();
+    }
+    // Forces it to redock in the starting area:
+    QMainWindow::addToolBar(Qt::TopToolBarArea, toolBar);
+}
+
+void dlgTriggerEditor::slot_restoreEditorItemsToolbar()
+{
+    if (!toolBar2->isVisible()) {
+        toolBar2->show();
+    }
+    QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
+}
+
 void dlgTriggerEditor::clearTriggerForm()
 {
     mpTriggersMainArea->hide();
@@ -9132,4 +9201,13 @@ void dlgTriggerEditor::clearVarForm()
     mpVarsMainArea->hide();
     mpSourceEditorArea->hide();
     showInfo(msgInfoAddVar);
+}
+
+void dlgTriggerEditor::setEditorShowBidi(const bool state)
+{
+    auto config = mpSourceEditorEdbee->config();
+    config->beginChanges();
+    config->setRenderBidiContolCharacters(state);
+    config->endChanges();
+    mpSourceEditorEdbee->controller()->update();
 }

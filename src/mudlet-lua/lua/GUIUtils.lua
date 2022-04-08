@@ -698,6 +698,9 @@ end
 --- @see showColors
 function bg(console, colorName)
   local colorName = colorName or console
+  if colorName == nil then
+    error("bg: bad argument #1 type (color name as string expected, got nil)!")
+  end
   if not color_table[colorName] then
     error(string.format("bg: '%s' color doesn't exist - see showColors()", colorName))
   end
@@ -723,6 +726,9 @@ end
 --- @see showColors
 function fg(console, colorName)
   local colorName = colorName or console
+  if colorName == nil then
+    error("fg: bad argument #1 type (color name as string expected, got nil)!")
+  end
   if not color_table[colorName] then
     error(string.format("fg: '%s' color doesn't exist - see showColors()", colorName))
   end
@@ -1060,7 +1066,7 @@ function getLabelFormat(win)
     strikeout = false,
     underline = false,
   }
-  local stylesheet = getLabelStylesheet(win)
+  local stylesheet = getLabelStyleSheet(win)
   if stylesheet ~= "" then
     if stylesheet:find(";") then
       local styleTable = {}
@@ -1308,7 +1314,7 @@ if rex then
       _G[func](...)
     end
 
-    if windowType(win) == "label" then
+    if windowType(win) == "label" and win ~= "main" then
       str = str:gsub("\n", "<br>")
       local t = _Echos.Process(str, style)
       if func ~= "echo" then
@@ -1976,7 +1982,32 @@ do
 end
 
 
+-- function for converting a color formatted string to 'plaintext' string
+local function x2string(text, style)
+  local ttbl = _Echos.Process(text, style)
+  local result = ""
+  for _, val in ipairs(ttbl) do
+    if type(val) == "string" and not val:starts("\27") then
+      result = result .. val
+    end
+  end
+  return result
+end
 
+-- function to convert a cecho formatted string to a nonformatted string
+function cecho2string(text)
+  return x2string(text, "Color")
+end
+
+-- function to convert a decho formatted string to a nonformatted string
+function decho2string(text)
+  return x2string(text, "Decimal")
+end
+
+-- function to convert a hecho formatted string to a nonformatted string
+function hecho2string(text)
+  return x2string(text, "Hex")
+end
 
 local ansiPattern = rex.new("\\e\\[([0-9:;]+?)m")
 
@@ -2571,7 +2602,7 @@ local function setActionCallback(callbackFunc, funcName, name, func, ...)
   return callbackFunc(name, func)
 end
 
-local callBackFunc ={"setLabelClickCallback", "setLabelReleaseCallback", "setLabelMoveCallback", "setLabelWheelCallback", "setLabelOnEnter", "setLabelOnLeave", "setCmdLineAction"}
+local callBackFunc = {"setLabelClickCallback", "setLabelDoubleClickCallback", "setLabelReleaseCallback", "setLabelMoveCallback", "setLabelWheelCallback", "setLabelOnEnter", "setLabelOnLeave", "setCmdLineAction"}
 
 for i = 1, #callBackFunc do
   local funcName = callBackFunc[i]

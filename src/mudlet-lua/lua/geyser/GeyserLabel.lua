@@ -26,7 +26,6 @@ Geyser.Label.scrollH = {}
 function Geyser.Label:echo(message, color, format)
   message = message or self.message
   self.message = message
-  message = message:gsub("\n", "<br>")
   color = color or self.fgColor
   self.fgColor = color
   if format then self:processFormatString(format) end
@@ -64,12 +63,14 @@ function Geyser.Label:echo(message, color, format)
   message = [[<div ]] .. alignment .. color .. fs ..
   [[">]] .. message .. [[</div>]]
   echo(self.name, message)
+  self:autoAdjustSize()
 end
 
 --- raw Echo without formatting/handholding stuff that Geyser.Label:echo() does
 -- @param message The message to print. Can contain html formatting.
 function Geyser.Label:rawEcho(message)
   echo(self.name, message)
+  self:autoAdjustSize()
 end
 
 --- sets the color of the text on the label
@@ -123,6 +124,112 @@ function Geyser.Label:setFont(font)
   self.font = font
   self:echo()
 end
+
+--- return the size hint (the suggested size) of the label
+function Geyser.Label:getSizeHint()
+  return getLabelSizeHint(self.name)
+end
+
+--- adjust size of the Label to the suggested size (probably the content size)
+function Geyser.Label:adjustSize()
+  local width, height = self:getSizeHint()
+  self:resize(width, height)
+  return true
+end
+
+--- adjust size of the Label to the suggested height (probably the content height)
+function Geyser.Label:adjustHeight()
+  local width, height = self:getSizeHint()
+  self:resize(nil, height)
+  return true
+end
+
+--- adjust size of the Label to the suggested width (probably the content width)
+function Geyser.Label:adjustWidth()
+  local width, height = self:getSizeHint()
+  self:resize(width, nil)
+  return true
+end
+
+--internal function to auto adjust label size to content
+function Geyser.Label:autoAdjustSize()
+  local width = self.autoWidth
+  local height = self.autoHeight
+  if not width and not height then
+    return
+  end
+
+  if height then
+    self:adjustHeight()
+  end
+
+  if width then
+    self:adjustWidth()
+  end
+end
+
+---Enable autoAdjustSize
+-- @param set width to false if just autoAdjust height
+-- @param set height to false if just autoAdjust width
+function Geyser.Label:enableAutoAdjustSize(width, height)
+  self.autoHeight = true
+  self.autoWidth = true
+  if width == false then
+    self.autoWidth = false
+  end
+
+  if height == false then
+    self.autoHeight = false
+  end
+  return true
+end
+
+--- Disable autoAdjustSize
+function Geyser.Label:disableAutoAdjustSize()
+  self.autoHeight = false
+  self.autoWidth = false
+  return true
+end
+
+---setMovie allows to set a gif animation on a label
+-- @param filename the path to the gif file
+function Geyser.Label:setMovie(fileName)
+  result, error = setMovie(self.name, fileName)
+  self:autoAdjustSize()
+  return result, error
+end
+
+---startMovie starts animation on a label
+function Geyser.Label:startMovie()
+  return startMovie(self.name)
+end
+
+---pauseMovie pauses animation on a label
+function Geyser.Label:pauseMovie()
+  return pauseMovie(self.name)
+end
+
+---setMovieSpeed change the speed of the animation
+--@param speed is the speed in percent for example 200 for 200% which means double the animation speed
+function Geyser.Label:setMovieSpeed(speed)
+  return setMovieSpeed(self.name, speed)
+end
+
+---setMovieFrame jumps to the given frame of the animation
+--@param frameNr is the number of the frame to jump
+function Geyser.Label:setMovieFrame(frameNr)
+  return setMovieFrame(self.name, frameNr)
+end
+
+---scaleMovie resizes the movie to the label size
+--@param autoScale optional parameter to stop scaling movie if false
+function Geyser.Label:scaleMovie(autoScale)
+  if autoScale ~= false then
+    autoScale = true
+  end
+  return scaleMovie(self.name, autoScale)
+end
+
 
 --- Set whether or not the text in the label should be bold
 -- @param bool True for bold
@@ -229,6 +336,7 @@ end
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setBackgroundImage (imageFileName)
   setBackgroundImage(self.name, imageFileName)
+  self:autoAdjustSize()
 end
 
 --- Sets a tiled background image for this label.
@@ -317,6 +425,7 @@ function Geyser.Label:setStyleSheet(css)
   css = css or self.stylesheet
   setLabelStyleSheet(self.name, css)
   self.stylesheet = css
+  self:autoAdjustSize()
 end
 --- Sets the tooltip of the label
 -- @param txt the tooltip txt
@@ -545,13 +654,13 @@ function Geyser.Label:displayNest()
     local width = v.get_width()
     local height = v.get_height()
     local number = #nestedLabels["V"]
-    
+
     if v.flyDir == "L" then
       v.x = parX + flyMap[v.flyDir][1] * width
     else
       v.x = parX + flyMap[v.flyDir][1] * parW
     end
-    
+
     -- T and B use their own offset values
     if v.flyDir == "T" then
       v.y = parY + flyMap[v.flyDir][2] * height * (number - flyIndex[v.flyDir]) + yOffsetT
@@ -560,17 +669,17 @@ function Geyser.Label:displayNest()
         v.y = 0
       end
     else
-      
+
       local edge = parY + parH + (number * height)
       if edge > maxDim["V"]  and v.flyDir == "B" then
         yOffsetT = edge - maxDim["V"]
       else
         yOffsetT = yOffset
       end
-      
+
       v.y = parY + flyMap[v.flyDir][2] * parH - yOffsetT + height * flyIndex[v.flyDir]
     end
-    
+
     v:show()
     v:raise()
     moveWindow(v.name, v.x, v.y)
@@ -599,13 +708,13 @@ function Geyser.Label:displayNest()
       end
       v.x = parX + flyMap[v.flyDir][1] * parW - xOffsetL + width * flyIndex[v.flyDir]
     end
-    
+
     if v.flyDir == "T" then
       v.y = parY + flyMap[v.flyDir][2] * height
     else
       v.y = parY + flyMap[v.flyDir][2] * parH
     end
-    
+
     v:show()
     v:raise()
     moveWindow(v.name, v.x, v.y)
@@ -657,7 +766,7 @@ function doNestEnter(label)
   if Geyser.Label.closeAllTimer then
     killTimer(Geyser.Label.closeAllTimer)
   end
-  
+
   if not label.nestParent then
     closeAllLevels(label)
   else
@@ -809,7 +918,7 @@ function Geyser.Label:new (cons, container)
   if cons.clickthrough then me:enableClickthrough() end
 
   if me.stylesheet then me:setStyleSheet() end
-
+  me:autoAdjustSize()
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
 end
@@ -868,7 +977,7 @@ function Geyser.Label:addChild(cons, container)
   cons = cons or {}
   cons.type = cons.type or "nestedLabel"
   if self.windowname ~= "main" and not container then
-    container = Geyser.windowList[self.windowname.."Container"].windowList[self.windowname]
+    container = Geyser.parentWindows[self.windowname]
   end
   local flyOut = false
   local flyDir, layoutDir
@@ -967,7 +1076,7 @@ if self.windowname ~= myMenu.MenuLabels[name].windowname then
   if self.windowname == "main" then
     myMenu.MenuLabels[name]:changeContainer(Geyser)
   else
-    myMenu.MenuLabels[name]:changeContainer(Geyser.windowList[self.windowname.."Container"].windowList[self.windowname])
+    myMenu.MenuLabels[name]:changeContainer(Geyser.parentWindows[self.windowname])
   end
 end
 
@@ -983,7 +1092,7 @@ end
 
 -- internal function to create the right click Menu Labels
 function Geyser.Label:createMenuItems(restyle, MenuItems, configLabel, myMenu, depth)
-  
+
   depth = depth or 1
   MenuItems = MenuItems or self.MenuItems
   self.MenuItems = MenuItems
@@ -991,7 +1100,7 @@ function Geyser.Label:createMenuItems(restyle, MenuItems, configLabel, myMenu, d
   configLabel = configLabel or myMenu
   myMenu.MenuLabels = myMenu.MenuLabels or {}
   local index = 1
-  
+
   for i = 1, #MenuItems do
     if type(MenuItems[i]) == "string" and not MenuItems[i].ignore then
       addElement(self, MenuItems[i], configLabel, myMenu, depth, index, restyle)
@@ -1093,8 +1202,8 @@ function Geyser.Label:hideMenuLabel(name)
   local nestTable = menuElement.nestParent.nestedLabels
   local index = table.index_of(menuElement.nestParent.nestedLabels, menuElement)
   -- If it's already hidden do nothing
-  if menuElement.ignore then 
-    return 
+  if menuElement.ignore then
+    return
   end
   menuElement.MenuIndex = index
   menuElement.MenuNestTable = nestTable
@@ -1112,8 +1221,8 @@ function Geyser.Label:showMenuLabel(name)
     error ("showMenuLabel: Couldn't find menu element "..name)
   end
   -- If it's already shown do nothing
-  if not menuElement.ignore then 
-    return 
+  if not menuElement.ignore then
+    return
   end
   menuElement.ignore = false
   table.insert(menuElement.MenuNestTable, menuElement.MenuIndex, menuElement)
@@ -1126,28 +1235,28 @@ end
 -- @param index of the new menu item (optional)
 function Geyser.Label:addMenuLabel(name, parent, index)
   local menuElement, menuParent = self:findMenuElement(parent, self.rightClickMenu, true)
-  
+
   if parent and not menuParent then
     error ("showMenuLabel: Couldn't find menu parent "..parent)
   end
-  
+
   menuElement = menuElement or self.rightClickMenu
   menuParent = menuParent or self.rightClickMenu.MenuItems
-  
+
   if parent then
     parent = parent.."."
   else
     parent = ""
   end
-  
+
   if not menuElement.MenuLabels[name] then
     menuParent[#menuParent + 1] = name
   elseif menuElement.MenuLabels[name].ignore then
     self:showMenuLabel(parent..name)
   end
-  
+
   self:createMenuItems()
-  
+
   if index then
     self:changeMenuIndex(parent..name, index)
   end
@@ -1158,14 +1267,14 @@ end
 -- @param index the new index
 function Geyser.Label:changeMenuIndex(name, index)
   local menuElement, menuTable = self:findMenuElement(name, self.rightClickMenu)
-  
+
   if not menuElement then
     error ("changeMenuIndex: Couldn't find menu element "..name)
   end
-  
+
   local nestTable = menuElement.nestParent.nestedLabels
   local newindex = nestTable[index].tblIndex
-  
+
   -- table index is not the same as index
   -- if element is parent behave differently
   if nestTable[index].isParent then
@@ -1176,9 +1285,9 @@ function Geyser.Label:changeMenuIndex(name, index)
   --nestTable
   table.remove(nestTable, menuElement.index)
   table.insert(nestTable, index, menuElement)
-  
+
   menuElement.index = index
-  
+
   -- MenuItems Table
   -- parents need to bring also their children to their index
   if menuElement.isParent then
@@ -1204,7 +1313,7 @@ end
 --@param[opt="c10"] cons.MenuFormat default font/echo format of your right click menu. different levels can use different formatting. usage MenuFormat1 MenuFormat2
 --@param[opt="light"] cons.Style default styling mode of your right click menu. 2 possible modes "light" and "dark". different levels can also have different styling modes
 --@param cons.MenuStyle default style of your menu. if this is given cons.Style will be ignored. different levels can also have different MenuStyles
---@param cons.MenuItems list of right click menu items/elements. usage example: MenuItems = {"First", "Second", {"First"},"Third"} 
+--@param cons.MenuItems list of right click menu items/elements. usage example: MenuItems = {"First", "Second", {"First"},"Third"}
 function Geyser.Label:createRightClickMenu(cons)
   cons.width = "0"
   cons.height = "0"
@@ -1216,13 +1325,13 @@ function Geyser.Label:createRightClickMenu(cons)
   cons.MenuStyleMode = {}
   cons.MenuStyleMode["light"] = [[QLabel::hover{ background-color: rgba(0,150,255,100%); color: white;} QLabel::!hover{color: black; background-color: rgba(240,240,240,100%);} ]]
   cons.MenuStyleMode["dark"] = [[QLabel::hover{ background-color: #282828;  color: #808080;} QLabel::!hover{color: #707070; background-color:#181818;}]]
-  
+
   cons.Style = cons.Style or "light"
-  
+
   if not(self.rightClickMenu) then
     self:setClickCallback(self.onRightClick, self)
   end
-  
+
   -- create a label with a nestable=true property as base menu
   self.rightClickMenu = Geyser.Label:new(cons, self)
   self:createMenuItems(nil, cons.MenuItems)

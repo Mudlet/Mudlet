@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -37,7 +37,9 @@
 #include "TEvent.h"
 #include "TFlipButton.h"
 #include "TForkedProcess.h"
+#include "TLabel.h"
 #include "TMapLabel.h"
+#include "TMedia.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
@@ -64,6 +66,7 @@
 #include <QTableWidget>
 #include <QToolTip>
 #include <QFileInfo>
+#include <QMovie>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
@@ -117,6 +120,7 @@ static const char *bad_window_type = "%s: bad argument #%d type (window name as 
 static const char *bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
 static const char *bad_window_value = "window \"%s\" not found";
 static const char *bad_cmdline_value = "command line \"%s\" not found";
+static const char *bad_label_value = "label \"%s\" not found";
 
 #define WINDOW_NAME(_L, _pos)                                                                  \
     ({                                                                                         \
@@ -174,6 +178,19 @@ static const char *bad_cmdline_value = "command line \"%s\" not found";
             return 2;                                                                          \
         }                                                                                      \
         cmdLine_;                                                                              \
+    })
+
+#define LABEL(_L, _name)                                                                       \
+    ({                                                                                         \
+        const QString& name_ = (_name);                                                        \
+        auto console_ = getHostFromLua(_L).mpConsole;                                          \
+        auto label_ = console_->mLabelMap.value(name_);                                        \
+        if (!label_) {                                                                         \
+            lua_pushnil(L);                                                                    \
+            lua_pushfstring(L, bad_label_value, name_.toUtf8().constData());                   \
+            return 2;                                                                          \
+        }                                                                                      \
+        label_;                                                                                \
     })
 
 // variable names within these macros have trailing underscores because in
@@ -3307,6 +3324,44 @@ int TLuaInterpreter::createLabel(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createScrollBox
+int TLuaInterpreter::createScrollBox(lua_State* L)
+{
+    QString name = "";
+    int counter = 3;
+    // make the windowname optional by using counter. If windowname "main" - add to main console
+
+    QString windowName = getVerifiedString(L, __func__, 1, "scrollBox name");
+    if (isMain(windowName)) {
+        // createScrollBox only accepts the empty name as the main window
+        windowName.clear();
+    }
+
+    if (!lua_isnumber(L, 2) && lua_gettop(L) >= 2) {
+        name = getVerifiedString(L, __func__, 2, "scrollBox name");
+    } else {
+        name = windowName;
+        windowName.clear();
+        counter = 2;
+    }
+
+    int x = getVerifiedInt(L, __func__, counter, "scrollBox x-coordinate");
+    counter++;
+    int y = getVerifiedInt(L, __func__, counter, "scrollBox y-coordinate");
+    counter++;
+    int width = getVerifiedInt(L, __func__, counter, "scrollBox width");
+    counter++;
+    int height = getVerifiedInt(L, __func__, counter, "scrollBox height");
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.createScrollBox(windowName, name, x, y, width, height); !success) {
+        return warnArgumentValue(L, __func__, message, true);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Internal Function createLabel in an UserWindow
 int TLuaInterpreter::createLabelUserWindow(lua_State* L, const QString& windowName, const QString& labelName)
 {
@@ -4080,6 +4135,24 @@ int TLuaInterpreter::getImageSize(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelSizeHint
+int TLuaInterpreter::getLabelSizeHint(lua_State* L)
+{
+    QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    Host& host = getHostFromLua(L);
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
+    }
+
+    auto size = host.mpConsole->getLabelSizeHint(labelName);
+    if (!size) {
+        return warnArgumentValue(L, __func__, qsl("label '%1' does not exist").arg(labelName));
+    }
+    lua_pushnumber(L, size->width());
+    lua_pushnumber(L, size->height());
+    return 2;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCmdLineAction
 int TLuaInterpreter::setCmdLineAction(lua_State* L)
 {
@@ -4223,6 +4296,97 @@ int TLuaInterpreter::setLabelOnEnter(lua_State* L)
 int TLuaInterpreter::setLabelOnLeave(lua_State* L)
 {
     return setLabelCallback(L, qsl("setLabelOnLeave"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovie
+int TLuaInterpreter::setMovie(lua_State* L)
+{
+    QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
+    }
+    QString moviePath = getVerifiedString(L, __func__, 2, "movie (gif) path");
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.setMovie(labelName, moviePath); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// No documentation available in wiki - internal function
+int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
+{
+    QString labelName = getVerifiedString(L, funcName.toUtf8().constData(), 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
+    }
+    auto pN = LABEL(L, labelName);
+    auto movie = pN->movie();
+    if (!movie) {
+        return warnArgumentValue(L, __func__, qsl("no movie found at label '%1'").arg(labelName));
+    }
+
+    if (funcName == qsl("startMovie")) {
+        movie->start();
+    } else if (funcName == qsl("pauseMovie")) {
+        movie->setPaused(true);
+    } else if (funcName == qsl("setMovieFrame")) {
+        int frame = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie frame number");
+        lua_pushboolean(L, movie->jumpToFrame(frame));
+        return 1;
+    } else if (funcName == qsl("setMovieSpeed")) {
+        int speed = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie playback speed in %");
+        movie->setSpeed(speed);
+    } else if (funcName == qsl("scaleMovie")) {
+        bool autoScale{true};
+        int n = lua_gettop(L);
+        if (n > 1) {
+            autoScale = getVerifiedBool(L, funcName.toUtf8().constData(), 2, "activate/deactivate scaling movie", true);
+        }
+        movie->setScaledSize(pN->size());
+        if (autoScale) {
+            connect(pN, &TLabel::resized, [=] {movie->setScaledSize(pN->size());} );
+        } else {
+            pN->disconnect(SIGNAL(resized()));
+        }
+    } else {
+        return warnArgumentValue(L, __func__, qsl("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#startMovie
+int TLuaInterpreter::startMovie(lua_State* L)
+{
+    return movieFunc(L, qsl("startMovie"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#pauseMovie
+int TLuaInterpreter::pauseMovie(lua_State* L)
+{
+    return movieFunc(L, qsl("pauseMovie"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieFrame
+int TLuaInterpreter::setMovieFrame(lua_State* L)
+{
+    return movieFunc(L, qsl("setMovieFrame"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieSpeed
+int TLuaInterpreter::setMovieSpeed(lua_State* L)
+{
+    return movieFunc(L, qsl("setMovieSpeed"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieSpeed
+int TLuaInterpreter::scaleMovie(lua_State* L)
+{
+    return movieFunc(L, qsl("scaleMovie"));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextFormat
@@ -5337,27 +5501,878 @@ int TLuaInterpreter::showUnzipProgress(lua_State* L)
     return warnArgumentValue(L, __func__, "removed command, this function is now inactive and does nothing");
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#receiveMSP
+int TLuaInterpreter::receiveMSP(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    std::string msg;
+
+    if (!host.mTelnet.isMSPEnabled()) {
+        return warnArgumentValue(L, __func__, "MSP is not currently enabled");
+    }
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "receiveMSP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+
+    msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
+    host.mTelnet.setMSPVariables(QByteArray(msg.c_str(), msg.length()));
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Private
+int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+    int numArgs = lua_gettop(L);
+    QString stringValue;
+
+    // name[,url])
+    for (int i = 1; i <= numArgs; i++) {
+        if (lua_isnil(L, i)) {
+            continue;
+        }
+
+        switch (i) {
+        case 1:
+            stringValue = getVerifiedString(L, __func__, i, "name");
+
+            if (QDir::homePath().contains('\\')) {
+                stringValue.replace('/', R"(\)");
+            } else {
+                stringValue.replace('\\', "/");
+            }
+
+            mediaData.setMediaFileName(stringValue);
+            break;
+        case 2:
+            stringValue = getVerifiedString(L, __func__, i, "url");
+            mediaData.setMediaUrl(stringValue);
+            break;
+        }
+    }
+
+    if (mediaData.getMediaFileName().isEmpty()) {
+        return warnArgumentValue(L, __func__, QLatin1String("missing argument 1 (file to play)"));
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaVolume(TMediaData::MediaVolumePreload);
+
+    host.mpMedia->playMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Private
+int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+
+    lua_pushnil(L);
+    while (lua_next(L, 1) != 0) {
+        // key at index -2 and value at index -1
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
+        key = key.toLower();
+
+        if (key == QLatin1String("name") || key == QLatin1String("url")) {
+            QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : "value for url");
+
+            if (key == QLatin1String("name") && !value.isEmpty()) {
+                if (QDir::homePath().contains('\\')) {
+                    value.replace('/', R"(\)");
+                } else {
+                    value.replace('\\', "/");
+                }
+
+                mediaData.setMediaFileName(value);
+            } else if (key == QLatin1String("url") && !value.isEmpty()) {
+                mediaData.setMediaUrl(value);
+            }
+        }
+
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+
+    if (mediaData.getMediaFileName().isEmpty()) {
+        lua_pushstring(L, R"(loadMusicFile: missing name (add name = "file to play"))");
+        return lua_error(L);
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaVolume(TMediaData::MediaVolumePreload);
+
+    host.mpMedia->playMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadMusicFile
+int TLuaInterpreter::loadMusicFile(lua_State* L)
+{
+    if (!lua_gettop(L)) {
+        lua_pushfstring(L, "%s: need at least one argument", __func__);
+        return lua_error(L);
+    }
+
+    if (lua_istable(L, 1)) {
+        return loadMediaFileAsTableArgument(L);
+    }
+
+    return loadMediaFileAsOrderedArguments(L);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadSoundFile
+int TLuaInterpreter::loadSoundFile(lua_State* L)
+{
+    if (!lua_gettop(L)) {
+        lua_pushfstring(L, "%s: need at least one argument", __func__);
+        return lua_error(L);
+    }
+
+    if (lua_istable(L, 1)) {
+        return loadMediaFileAsTableArgument(L);
+    }
+
+    return loadMediaFileAsOrderedArguments(L);
+}
+
+// Private
+int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+    int numArgs = lua_gettop(L);
+    QString stringValue;
+    int intValue = 0;
+    bool boolValue = 0;
+
+    // name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,continue][,url])
+    for (int i = 1; i <= numArgs; i++) {
+        if (lua_isnil(L, i)) {
+            continue;
+        }
+
+        switch (i) {
+        case 1:
+            stringValue = getVerifiedString(L, __func__, i, "name");
+
+            if (QDir::homePath().contains('\\')) {
+                stringValue.replace('/', R"(\)");
+            } else {
+                stringValue.replace('\\', "/");
+            }
+
+            mediaData.setMediaFileName(stringValue);
+            break;
+        case 2:
+            intValue = getVerifiedInt(L, __func__, i, "volume");
+
+            if (intValue == TMediaData::MediaVolumePreload) {
+                {
+                } // Volume of 0 supports preloading
+            } else if (intValue > TMediaData::MediaVolumeMax) {
+                intValue = TMediaData::MediaVolumeMax;
+            } else if (intValue < TMediaData::MediaVolumeMin) {
+                intValue = TMediaData::MediaVolumeMin;
+            }
+
+            mediaData.setMediaVolume(intValue);
+            break;
+        case 3:
+            intValue = getVerifiedInt(L, __func__, i, "fadein");
+
+            if (intValue < 0) {
+                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadein", intValue);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFadeIn(intValue);
+            break;
+        case 4:
+            intValue = getVerifiedInt(L, __func__, i, "fadeout");
+
+            if (intValue < 0) {
+                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", intValue);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFadeOut(intValue);
+            break;
+        case 5:
+            intValue = getVerifiedInt(L, __func__, i, "start");
+
+            if (intValue < 0) {
+                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "start", intValue);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaStart(intValue);
+            break;
+        case 6:
+            intValue = getVerifiedInt(L, __func__, i, "loops");
+
+            if (intValue < TMediaData::MediaLoopsRepeat || intValue == 0) {
+                intValue = TMediaData::MediaLoopsDefault;
+            }
+
+            mediaData.setMediaLoops(intValue);
+            break;
+        case 7:
+            stringValue = getVerifiedString(L, __func__, i, "key");
+            mediaData.setMediaKey(stringValue);
+            break;
+        case 8:
+            stringValue = getVerifiedString(L, __func__, i, "tag");
+            mediaData.setMediaTag(stringValue);
+            break;
+        case 9:
+            boolValue = getVerifiedBool(L, __func__, i, "continue");
+            mediaData.setMediaContinue(boolValue);
+            break;
+        case 10:
+            stringValue = getVerifiedString(L, __func__, i, "url");
+            mediaData.setMediaUrl(stringValue);
+            break;
+        }
+    }
+
+    if (mediaData.getMediaFileName().isEmpty()) {
+        return warnArgumentValue(L, __func__, QLatin1String("missing argument 1 (file to play)"));
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeMusic);
+    host.mpMedia->playMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Private
+int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+
+    lua_pushnil(L);
+    while (lua_next(L, 1) != 0) {
+        // key at index -2 and value at index -1
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
+        key = key.toLower();
+
+        if (key == QLatin1String("name") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+            QString value = getVerifiedString(L,
+                                              __func__,
+                                              -1,
+                                              key == QLatin1String("name")  ? "value for name"
+                                              : key == QLatin1String("key") ? "value for key"
+                                              : key == QLatin1String("tag") ? "value for tag"
+                                                                            : "value for url");
+
+            if (key == QLatin1String("name") && !value.isEmpty()) {
+                if (QDir::homePath().contains('\\')) {
+                    value.replace('/', R"(\)");
+                } else {
+                    value.replace('\\', "/");
+                }
+
+                mediaData.setMediaFileName(value);
+            } else if (key == QLatin1String("url") && !value.isEmpty()) {
+                mediaData.setMediaUrl(value);
+            } else if (key == QLatin1String("key") && !value.isEmpty()) {
+                mediaData.setMediaKey(value);
+            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
+                mediaData.setMediaTag(value);
+            }
+        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("loops")) {
+            int value = getVerifiedInt(L,
+                                       __func__,
+                                       -1,
+                                       key == QLatin1String("volume")    ? "value for volume"
+                                       : key == QLatin1String("fadein")  ? "value for fadein"
+                                       : key == QLatin1String("fadeout") ? "value for fadeout"
+                                       : key == QLatin1String("start")   ? "value for start"
+                                                                         : "value for loops");
+
+            if (key == QLatin1String("volume")) {
+                if (value == TMediaData::MediaVolumePreload) {
+                    {
+                    } // Volume of 0 supports preloading
+                } else if (value > TMediaData::MediaVolumeMax) {
+                    value = TMediaData::MediaVolumeMax;
+                } else if (value < TMediaData::MediaVolumeMin) {
+                    value = TMediaData::MediaVolumeMin;
+                }
+
+                mediaData.setMediaVolume(value);
+            } else if (key == QLatin1String("fadein")) {
+                if (value < 0) {
+                    lua_pushfstring(L, "playMusicFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadein", value);
+                    return lua_error(L);
+                }
+
+                mediaData.setMediaFadeIn(value);
+            } else if (key == QLatin1String("fadeout")) {
+                if (value < 0) {
+                    lua_pushfstring(L, "playMusicFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", value);
+                    return lua_error(L);
+                }
+
+                mediaData.setMediaFadeOut(value);
+            } else if (key == QLatin1String("start")) {
+                if (value < 0) {
+                    lua_pushfstring(L, "playMusicFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "start", value);
+                    return lua_error(L);
+                }
+
+                mediaData.setMediaStart(value);
+            } else if (key == QLatin1String("loops")) {
+                if (value < TMediaData::MediaLoopsRepeat || value == 0) {
+                    value = TMediaData::MediaLoopsDefault;
+                }
+
+                mediaData.setMediaLoops(value);
+            } else if (key == QLatin1String("continue")) {
+                bool value = getVerifiedBool(L, __func__, -1, "value for continue must be boolean");
+                mediaData.setMediaContinue(value);
+            }
+        }
+
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+
+    if (mediaData.getMediaFileName().isEmpty()) {
+        lua_pushstring(L, R"(playMusicFile: missing name (add name = "file to play"))");
+        return lua_error(L);
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeMusic);
+    host.mpMedia->playMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#playMusicFile
+int TLuaInterpreter::playMusicFile(lua_State* L)
+{
+    if (!lua_gettop(L)) {
+        lua_pushfstring(L, "%s: need at least one argument", __func__);
+        return lua_error(L);
+    }
+
+    if (lua_istable(L, 1)) {
+        return playMusicFileAsTableArgument(L);
+    }
+
+    return playMusicFileAsOrderedArguments(L);
+}
+
+// Private
+int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+    int numArgs = lua_gettop(L);
+    QString stringValue;
+    int intValue = 0;
+
+    // name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,priority][,url])
+    for (int i = 1; i <= numArgs; i++) {
+        if (lua_isnil(L, i)) {
+            continue;
+        }
+
+        switch (i) {
+        case 1:
+            stringValue = getVerifiedString(L, __func__, i, "name");
+
+            if (QDir::homePath().contains('\\')) {
+                stringValue.replace('/', R"(\)");
+            } else {
+                stringValue.replace('\\', "/");
+            }
+
+            mediaData.setMediaFileName(stringValue);
+            break;
+        case 2:
+            intValue = getVerifiedInt(L, __func__, i, "volume");
+
+            if (intValue == TMediaData::MediaVolumePreload) {
+                {
+                } // Volume of 0 supports preloading
+            } else if (intValue > TMediaData::MediaVolumeMax) {
+                intValue = TMediaData::MediaVolumeMax;
+            } else if (intValue < TMediaData::MediaVolumeMin) {
+                intValue = TMediaData::MediaVolumeMin;
+            }
+
+            mediaData.setMediaVolume(intValue);
+            break;
+        case 3:
+            intValue = getVerifiedInt(L, __func__, i, "fadein");
+
+            if (intValue < 0) {
+                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %s)", "fadein", intValue);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFadeIn(intValue);
+            break;
+        case 4:
+            intValue = getVerifiedInt(L, __func__, i, "fadeout");
+
+            if (intValue < 0) {
+                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %s)", "fadeout", intValue);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFadeOut(intValue);
+            break;
+        case 5:
+            intValue = getVerifiedInt(L, __func__, i, "start");
+
+            if (intValue < 0) {
+                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %s)", "start", intValue);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaStart(intValue);
+            break;
+        case 6:
+            intValue = getVerifiedInt(L, __func__, i, "loops");
+
+            if (intValue < TMediaData::MediaLoopsRepeat || intValue == 0) {
+                intValue = TMediaData::MediaLoopsDefault;
+            }
+
+            mediaData.setMediaLoops(intValue);
+            break;
+        case 7:
+            stringValue = getVerifiedString(L, __func__, i, "key");
+            mediaData.setMediaKey(stringValue);
+            break;
+        case 8:
+            stringValue = getVerifiedString(L, __func__, i, "tag");
+            mediaData.setMediaTag(stringValue);
+            break;
+        case 9:
+            intValue = getVerifiedInt(L, __func__, i, "priority");
+
+            if (intValue > TMediaData::MediaPriorityMax) {
+                intValue = TMediaData::MediaPriorityMax;
+            } else if (intValue < TMediaData::MediaPriorityMin) {
+                intValue = TMediaData::MediaPriorityMin;
+            }
+
+            mediaData.setMediaPriority(intValue);
+            break;
+        case 10:
+            stringValue = getVerifiedString(L, __func__, i, "url");
+            mediaData.setMediaUrl(stringValue);
+            break;
+        }
+    }
+
+    if (mediaData.getMediaFileName().isEmpty()) {
+        return warnArgumentValue(L, __func__, QLatin1String("missing argument 1 (file to play)"));
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeSound);
+
+    host.mpMedia->playMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Private
+int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+
+    lua_pushnil(L);
+    while (lua_next(L, 1) != 0) {
+        // key at index -2 and value at index -1
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
+        key = key.toLower();
+
+        if (key == QLatin1String("name") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+            QString value = getVerifiedString(L,
+                                              __func__,
+                                              -1,
+                                              key == QLatin1String("name")  ? "value for name"
+                                              : key == QLatin1String("key") ? "value for key"
+                                              : key == QLatin1String("tag") ? "value for tag"
+                                                                            : "value for url");
+
+            if (key == QLatin1String("name") && !value.isEmpty()) {
+                if (QDir::homePath().contains('\\')) {
+                    value.replace('/', R"(\)");
+                } else {
+                    value.replace('\\', "/");
+                }
+
+                mediaData.setMediaFileName(value);
+            } else if (key == QLatin1String("url") && !value.isEmpty()) {
+                mediaData.setMediaUrl(value);
+            } else if (key == QLatin1String("key") && !value.isEmpty()) {
+                mediaData.setMediaKey(value);
+            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
+                mediaData.setMediaTag(value);
+            }
+        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("loops")
+                   || key == QLatin1String("priority")) {
+            int value = getVerifiedInt(L,
+                                       __func__,
+                                       -1,
+                                       key == QLatin1String("volume")    ? "value for volume"
+                                       : key == QLatin1String("fadein")  ? "value for fadein"
+                                       : key == QLatin1String("fadeout") ? "value for fadeout"
+                                       : key == QLatin1String("start")   ? "value for start"
+                                       : key == QLatin1String("loops")   ? "value for loops"
+                                                                         : "value for priority");
+
+            if (key == QLatin1String("volume")) {
+                if (value == TMediaData::MediaVolumePreload) {
+                    {
+                    } // Volume of 0 supports preloading
+                } else if (value > TMediaData::MediaVolumeMax) {
+                    value = TMediaData::MediaVolumeMax;
+                } else if (value < TMediaData::MediaVolumeMin) {
+                    value = TMediaData::MediaVolumeMin;
+                }
+
+                mediaData.setMediaVolume(value);
+            } else if (key == QLatin1String("fadein")) {
+                if (value < 0) {
+                    lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadein", value);
+                    return lua_error(L);
+                }
+
+                mediaData.setMediaFadeIn(value);
+            } else if (key == QLatin1String("fadeout")) {
+                if (value < 0) {
+                    lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", value);
+                    return lua_error(L);
+                }
+
+                mediaData.setMediaFadeOut(value);
+            } else if (key == QLatin1String("start")) {
+                if (value < 0) {
+                    lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "start", value);
+                    return lua_error(L);
+                }
+
+                mediaData.setMediaStart(value);
+            } else if (key == QLatin1String("loops")) {
+                if (value < TMediaData::MediaLoopsRepeat || value == 0) {
+                    value = TMediaData::MediaLoopsDefault;
+                }
+
+                mediaData.setMediaLoops(value);
+            } else if (key == QLatin1String("priority")) {
+                if (value > TMediaData::MediaPriorityMax) {
+                    value = TMediaData::MediaPriorityMax;
+                } else if (value < TMediaData::MediaPriorityMin) {
+                    value = TMediaData::MediaPriorityMin;
+                }
+
+                mediaData.setMediaPriority(value);
+            }
+        }
+
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+
+    if (mediaData.getMediaFileName().isEmpty()) {
+        lua_pushstring(L, R"(playSoundFile: missing name (add name = "file to play"))");
+        return lua_error(L);
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeSound);
+
+    host.mpMedia->playMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#playSoundFile
 int TLuaInterpreter::playSoundFile(lua_State* L)
 {
-    QString sound = getVerifiedString(L, __func__, 1, "fileName");
-    if (QDir::homePath().contains('\\')) {
-        sound.replace('/', R"(\)");
-    } else {
-        sound.replace('\\', "/");
+    if (!lua_gettop(L)) {
+        lua_pushfstring(L, "%s: need at least one argument", __func__);
+        return lua_error(L);
     }
-    /* if no volume provided, substitute 100 (maximum) */
-    mudlet::self()->playSound(sound, lua_isnumber(L, 2) ? lua_tointeger(L, 2) : 100);
-    return 0;
+
+    if (lua_istable(L, 1)) {
+        return playSoundFileAsTableArgument(L);
+    }
+
+    return playSoundFileAsOrderedArguments(L);
+}
+
+// Private
+int TLuaInterpreter::stopMusicAsOrderedArguments(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+    int numArgs = lua_gettop(L);
+    QString stringValue;
+
+    // values as ordered args: name[,key][,tag])
+    for (int i = 1; i <= numArgs; i++) {
+        if (lua_isnil(L, i)) {
+            continue;
+        }
+
+        switch (i) {
+        case 1:
+            stringValue = getVerifiedString(L, __func__, i, "name");
+
+            if (QDir::homePath().contains('\\')) {
+                stringValue.replace('/', R"(\)");
+            } else {
+                stringValue.replace('\\', "/");
+            }
+
+            mediaData.setMediaFileName(stringValue);
+            break;
+        case 2:
+            stringValue = getVerifiedString(L, __func__, i, "key");
+            mediaData.setMediaKey(stringValue);
+            break;
+        case 3:
+            stringValue = getVerifiedString(L, __func__, i, "tag");
+            mediaData.setMediaTag(stringValue);
+            break;
+        }
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeMusic);
+
+    host.mpMedia->stopMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Private
+int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+
+    lua_pushnil(L);
+    while (lua_next(L, 1) != 0) {
+        // key at index -2 and value at index -1
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
+        key = key.toLower();
+
+        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+            QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
+
+            if (key == QLatin1String("name") && !value.isEmpty()) {
+                if (QDir::homePath().contains('\\')) {
+                    value.replace('/', R"(\)");
+                } else {
+                    value.replace('\\', "/");
+                }
+
+                mediaData.setMediaFileName(value);
+            } else if (key == QLatin1String("key") && !value.isEmpty()) {
+                mediaData.setMediaKey(value);
+            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
+                mediaData.setMediaTag(value);
+            }
+        }
+
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeMusic);
+
+    host.mpMedia->stopMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopMusic
+int TLuaInterpreter::stopMusic(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+
+    if (lua_gettop(L)) {
+        if (lua_istable(L, 1)) {
+            return stopMusicAsTableArgument(L);
+        }
+
+        return stopMusicAsOrderedArguments(L);
+    }
+
+    // no args
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeMusic);
+
+    host.mpMedia->stopMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Private
+int TLuaInterpreter::stopSoundsAsOrderedArguments(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+    int numArgs = lua_gettop(L);
+    QString stringValue;
+    int intValue = 0;
+
+    // values as ordered args: name[,key][,tag][,priority])
+    for (int i = 1; i <= numArgs; i++) {
+        if (lua_isnil(L, i)) {
+            continue;
+        }
+
+        switch (i) {
+        case 1:
+            stringValue = getVerifiedString(L, __func__, i, "name");
+
+            if (QDir::homePath().contains('\\')) {
+                stringValue.replace('/', R"(\)");
+            } else {
+                stringValue.replace('\\', "/");
+            }
+
+            mediaData.setMediaFileName(stringValue);
+            break;
+        case 2:
+            stringValue = getVerifiedString(L, __func__, i, "key");
+            mediaData.setMediaKey(stringValue);
+            break;
+        case 3:
+            stringValue = getVerifiedString(L, __func__, i, "tag");
+            mediaData.setMediaTag(stringValue);
+            break;
+        case 4:
+            intValue = getVerifiedInt(L, __func__, i, "priority");
+
+            if (intValue > TMediaData::MediaPriorityMax) {
+                intValue = TMediaData::MediaPriorityMax;
+            } else if (intValue < TMediaData::MediaPriorityMin) {
+                intValue = TMediaData::MediaPriorityMin;
+            }
+
+            mediaData.setMediaPriority(intValue);
+            break;
+        }
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeSound);
+
+    host.mpMedia->stopMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Private
+int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+
+    lua_pushnil(L);
+    while (lua_next(L, 1) != 0) {
+        // key at index -2 and value at index -1
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
+        key = key.toLower();
+
+        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+            QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
+
+            if (key == QLatin1String("name") && !value.isEmpty()) {
+                if (QDir::homePath().contains('\\')) {
+                    value.replace('/', R"(\)");
+                } else {
+                    value.replace('\\', "/");
+                }
+
+                mediaData.setMediaFileName(value);
+            } else if (key == QLatin1String("key") && !value.isEmpty()) {
+                mediaData.setMediaKey(value);
+            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
+                mediaData.setMediaTag(value);
+            }
+        } else if (key == QLatin1String("priority")) {
+            int value = getVerifiedInt(L, __func__, -1, "value for priority must be integer");
+
+            if (key == QLatin1String("priority")) {
+                if (value > TMediaData::MediaPriorityMax) {
+                    value = TMediaData::MediaPriorityMax;
+                } else if (value < TMediaData::MediaPriorityMin) {
+                    value = TMediaData::MediaPriorityMin;
+                }
+
+                mediaData.setMediaPriority(value);
+            }
+        }
+
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeSound);
+
+    host.mpMedia->stopMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopSounds
 int TLuaInterpreter::stopSounds(lua_State* L)
 {
-    Q_UNUSED(L)
-    //doesn't take an argument
-    mudlet::self()->stopSounds();
-    return 0;
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+
+    if (lua_gettop(L)) {
+        if (lua_istable(L, 1)) {
+            return stopSoundsAsTableArgument(L);
+        }
+
+        return stopSoundsAsOrderedArguments(L);
+    }
+
+    // no args
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeSound);
+
+    host.mpMedia->stopMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#purgeMediaCache
+int TLuaInterpreter::purgeMediaCache(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    host.mTelnet.purgeMediaCache();
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#moveCursorEnd
@@ -5751,37 +6766,6 @@ int TLuaInterpreter::sendATCP(lua_State* L)
         return warnArgumentValue(L, __func__, "unable to send all of the ATCP message");
     }
 
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#receiveMSP
-int TLuaInterpreter::receiveMSP(lua_State* L)
-{
-    Host& host = getHostFromLua(L);
-    std::string msg;
-
-    if (!host.mTelnet.isMSPEnabled()) {
-        return warnArgumentValue(L, __func__, "MSP is not currently enabled");
-    }
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "receiveMSP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-
-    msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
-    host.mTelnet.setMSPVariables(QByteArray(msg.c_str(), msg.length()));
-
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#purgeMediaCache
-int TLuaInterpreter::purgeMediaCache(lua_State* L)
-{
-    Host& host = getHostFromLua(L);
-    host.mTelnet.purgeMediaCache();
     lua_pushboolean(L, true);
     return 1;
 }
@@ -6591,7 +7575,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 
     QString soundFile;
     bool playSound;
-    if (lua_isstring(L, 11)) {
+    if (lua_type(L, 11) == LUA_TSTRING) {
         playSound = true;
         soundFile = lua_tostring(L, 11);
     } else {
@@ -6612,27 +7596,26 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    QStringList regexList;
+    QStringList patterns;
     QList<int> propertyList;
     TTrigger* pP = host.getTriggerUnit()->findTrigger(triggerName);
-    if (!pP) {
-        regexList << pattern;
-        if (colorTrigger) {
-            propertyList << REGEX_COLOR_PATTERN;
-        } else {
-            propertyList << REGEX_PERL;
-        }
-    } else {
-        regexList = pP->getRegexCodeList();
+    if (pP) {
+        patterns = pP->getPatternsList();
         propertyList = pP->getRegexCodePropertyList();
     }
+    patterns << pattern;
+    if (colorTrigger) {
+        propertyList << REGEX_COLOR_PATTERN;
+    } else {
+        propertyList << REGEX_PERL;
+    }
 
-    auto pT = new TTrigger("a", regexList, propertyList, multiLine, &host);
+    auto pT = new TTrigger("a", patterns, propertyList, multiLine, &host);
     pT->setIsFolder(false);
     pT->setIsActive(true);
     pT->setTemporary(true);
     pT->registerTrigger();
-    pT->setName(pattern);
+    pT->setName(triggerName);
     pT->mPerlSlashGOption = matchAll; //match all
     pT->mFilterTrigger = filter;
     pT->setConditionLineDelta(lineDelta); //line delta
@@ -6659,7 +7642,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         lua_settable(L, LUA_REGISTRYINDEX);
     }
 
-    lua_pushstring(L, pattern.toUtf8().constData());
+    lua_pushnumber(L, pT->getID());
     return 1;
 }
 
@@ -8254,7 +9237,7 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         lua_pushstring(L, exits.at(i).toUtf8().constData());
         lua_newtable(L); //customLines[direction]
         lua_pushstring(L, "attributes");
-        lua_newtable(L); //customLines[attributes]
+        lua_newtable(L); //customLines[direction]["attributes"]
         lua_pushstring(L, "style");
         switch (pR->customLinesStyle.value(exits.at(i))) {
         case Qt::DotLine:
@@ -8274,10 +9257,10 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         default:
             lua_pushstring(L, "solid line");
         }
-        lua_settable(L, -3);
+        lua_settable(L, -3); //customLines[direction]["attributes"]["style"]
         lua_pushstring(L, "arrow");
         lua_pushboolean(L, pR->customLinesArrow.value(exits.at(i)));
-        lua_settable(L, -3);
+        lua_settable(L, -3); //customLines[direction]["attributes"]["arrow"]
         lua_pushstring(L, "color");
         lua_newtable(L);
         lua_pushstring(L, "r");
@@ -8289,10 +9272,10 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         lua_pushstring(L, "b");
         lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).blue());
         lua_settable(L, -3);
-        lua_settable(L, -3); //color
-        lua_settable(L, -3); //attributes
+        lua_settable(L, -3); //customLines[direction]["attributes"]["color"]
+        lua_settable(L, -3); //customLines[direction]["attributes"]
         lua_pushstring(L, "points");
-        lua_newtable(L); //customLines[points]
+        lua_newtable(L); //customLines[direction][points]
         QList<QPointF> pointL = pR->customLines.value(exits.at(i));
         for (int k = 0, kTotal = pointL.size(); k < kTotal; ++k) {
             lua_pushnumber(L, k);
@@ -8305,12 +9288,90 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
             lua_settable(L, -3);
             lua_settable(L, -3);
         }
-        lua_settable(L, -3); //customLines[direction][points]
+        lua_settable(L, -3); //customLines[direction]["points"]
         lua_settable(L, -3); //customLines[direction]
     }
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCustomLines1
+int TLuaInterpreter::getCustomLines1(lua_State* L)
+{
+    int roomID = getVerifiedInt(L, __func__, 1, "room id");
+    Host& host = getHostFromLua(L);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
+    if (!pR) { //if the room doesn't exist return nil
+        return warnArgumentValue(L, __func__, qsl("room %1 doesn't exist").arg(roomID));
+    }
+    lua_newtable(L); //return table customLines[]
+    QStringList exits = pR->customLines.keys();
+    for (int i = 0, iTotal = exits.size(); i < iTotal; ++i) {
+        lua_pushstring(L, exits.at(i).toUtf8().constData());
+        lua_newtable(L); //customLines[direction]
+        lua_pushstring(L, "attributes");
+        lua_newtable(L); //customLines[direction]["attributes"]
+        lua_pushstring(L, "style");
+        switch (pR->customLinesStyle.value(exits.at(i))) {
+        case Qt::DotLine:
+            lua_pushstring(L, "dot line");
+            break;
+        case Qt::DashLine:
+            lua_pushstring(L, "dash line");
+            break;
+        case Qt::DashDotLine:
+            lua_pushstring(L, "dash dot line");
+            break;
+        case Qt::DashDotDotLine:
+            lua_pushstring(L, "dash dot dot line");
+            break;
+        case Qt::SolidLine:
+            [[fallthrough]];
+        default:
+            lua_pushstring(L, "solid line");
+        }
+        lua_settable(L, -3); //customLines[direction]["attributes"]["style"]
+        lua_pushstring(L, "arrow");
+        lua_pushboolean(L, pR->customLinesArrow.value(exits.at(i)));
+        lua_settable(L, -3); //customLines[direction]["attributes"]["arrow"]
+        lua_pushstring(L, "color");
+        lua_newtable(L);
+        lua_pushinteger(L, 1);
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).red());
+        lua_settable(L, -3);
+        lua_pushinteger(L, 2);
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).green());
+        lua_settable(L, -3);
+        lua_pushinteger(L, 3);
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).blue());
+        lua_settable(L, -3);
+        lua_settable(L, -3); //customLines[direction]["attributes"]["color"]
+        lua_settable(L, -3); //customLines[direction]["attributes"]
+        lua_pushstring(L, "points");
+        lua_newtable(L); //customLines[direction]["points"]
+        QList<QPointF> pointL = pR->customLines.value(exits.at(i));
+        for (int k = 0, kTotal = pointL.size(); k < kTotal; ++k) {
+            // To allow the output from here to be fed back into addCustomLine
+            // we need to start the numbering from the Lua standard of 1 and
+            // NOT the C/C++ standard of 0 - otherwise the end-user has to
+            // fiddle with the zero-th entry to keep the points in order:
+            lua_pushinteger(L, k+1);
+            lua_newtable(L); //customLines[direction]["points"][3 x coordinates]
+            lua_pushinteger(L, 1);
+            lua_pushnumber(L, pointL.at(k).x());
+            lua_settable(L, -3);
+            lua_pushinteger(L, 2);
+            lua_pushnumber(L, pointL.at(k).y());
+            lua_settable(L, -3);
+            lua_pushinteger(L, 3);
+            lua_pushnumber(L, pR->z);
+            lua_settable(L, -3);
+            lua_settable(L, -3); //customLines[direction]["points"][3 x coordinates]
+        }
+        lua_settable(L, -3); //customLines[direction]["points"]
+        lua_settable(L, -3); //customLines[direction]
+    }
+    return 1;
+}
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitWeights
 int TLuaInterpreter::getExitWeights(lua_State* L)
 {
@@ -9863,8 +10924,8 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelStylesheet
-int TLuaInterpreter::getLabelStylesheet(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelStyleSheet
+int TLuaInterpreter::getLabelStyleSheet(lua_State* L)
 {
     QString label = getVerifiedString(L, __func__, 1, "label");
     Host& host = getHostFromLua(L);
@@ -10665,7 +11726,9 @@ int TLuaInterpreter::installPackage(lua_State* L)
 {
     QString location = getVerifiedString(L, __func__, 1, "package location path and file name");
     Host& host = getHostFromLua(L);
-    lua_pushboolean(L, host.installPackage(location, 0));
+    if (auto [success, message] = host.installPackage(location, 0); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
     return 1;
 }
 
@@ -10685,9 +11748,8 @@ int TLuaInterpreter::installModule(lua_State* L)
     Host& host = getHostFromLua(L);
     QString module = QDir::fromNativeSeparators(modName);
 
-    if (!host.installPackage(module, 3)) {
-        lua_pushboolean(L, false);
-        return 1;
+    if (auto [success, message] = host.installPackage(module, 3); !success) {
+        return warnArgumentValue(L, __func__, message);
     }
     auto moduleManager = host.mpModuleManager;
     if (moduleManager && moduleManager->mModuleTable->isVisible()) {
@@ -12811,8 +13873,11 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
 
     // Log error to Profile's Main TConsole:
     if (mpHost->mEchoLuaErrors) {
-        // ensure the Lua error is on a line of its own and is not prepended to the previous line
-        if (mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+        // ensure the Lua error is on a line of its own and is not prepended to
+        // the previous line, however there is a nasty gotcha in that during
+        // profile loading the (TMainConsole*) Host::mpConsole pointer is
+        // null - but then the buffer must itself be empty:
+        if (mpHost->mpConsole && mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
             mpHost->postMessage(qsl("\n"));
         }
 
@@ -13840,6 +14905,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getLastLineNumber", TLuaInterpreter::getLastLineNumber);
     lua_register(pGlobalLua, "getNetworkLatency", TLuaInterpreter::getNetworkLatency);
     lua_register(pGlobalLua, "createMiniConsole", TLuaInterpreter::createMiniConsole);
+    lua_register(pGlobalLua, "createScrollBox", TLuaInterpreter::createScrollBox);
     lua_register(pGlobalLua, "createLabel", TLuaInterpreter::createLabel);
     lua_register(pGlobalLua, "deleteLabel", TLuaInterpreter::deleteLabel);
     lua_register(pGlobalLua, "setLabelToolTip", TLuaInterpreter::setLabelToolTip);
@@ -13877,6 +14943,12 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setLabelWheelCallback", TLuaInterpreter::setLabelWheelCallback);
     lua_register(pGlobalLua, "setLabelOnEnter", TLuaInterpreter::setLabelOnEnter);
     lua_register(pGlobalLua, "setLabelOnLeave", TLuaInterpreter::setLabelOnLeave);
+    lua_register(pGlobalLua, "setMovie", TLuaInterpreter::setMovie);
+    lua_register(pGlobalLua, "startMovie", TLuaInterpreter::startMovie);
+    lua_register(pGlobalLua, "setMovieSpeed", TLuaInterpreter::setMovieSpeed);
+    lua_register(pGlobalLua, "scaleMovie", TLuaInterpreter::scaleMovie);
+    lua_register(pGlobalLua, "setMovieFrame", TLuaInterpreter::setMovieFrame);
+    lua_register(pGlobalLua, "pauseMovie", TLuaInterpreter::pauseMovie);
     lua_register(pGlobalLua, "getImageSize", TLuaInterpreter::getImageSize);
     lua_register(pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow);
     lua_register(pGlobalLua, "setWindow", TLuaInterpreter::setWindow);
@@ -13917,8 +14989,14 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "tempColorTrigger", TLuaInterpreter::tempColorTrigger);
     lua_register(pGlobalLua, "isAnsiFgColor", TLuaInterpreter::isAnsiFgColor);
     lua_register(pGlobalLua, "isAnsiBgColor", TLuaInterpreter::isAnsiBgColor);
-    lua_register(pGlobalLua, "stopSounds", TLuaInterpreter::stopSounds);
+    lua_register(pGlobalLua, "receiveMSP", TLuaInterpreter::receiveMSP);
+    lua_register(pGlobalLua, "loadSoundFile", TLuaInterpreter::loadSoundFile);
+    lua_register(pGlobalLua, "loadMusicFile", TLuaInterpreter::loadMusicFile);
     lua_register(pGlobalLua, "playSoundFile", TLuaInterpreter::playSoundFile);
+    lua_register(pGlobalLua, "playMusicFile", TLuaInterpreter::playMusicFile);
+    lua_register(pGlobalLua, "stopMusic", TLuaInterpreter::stopMusic);
+    lua_register(pGlobalLua, "stopSounds", TLuaInterpreter::stopSounds);
+    lua_register(pGlobalLua, "purgeMediaCache", TLuaInterpreter::purgeMediaCache);
     lua_register(pGlobalLua, "setBorderSizes", TLuaInterpreter::setBorderSizes);
     lua_register(pGlobalLua, "setBorderTop", TLuaInterpreter::setBorderTop);
     lua_register(pGlobalLua, "setBorderRight", TLuaInterpreter::setBorderRight);
@@ -13994,8 +15072,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "denyCurrentSend", TLuaInterpreter::denyCurrentSend);
     lua_register(pGlobalLua, "tempBeginOfLineTrigger", TLuaInterpreter::tempBeginOfLineTrigger);
     lua_register(pGlobalLua, "tempExactMatchTrigger", TLuaInterpreter::tempExactMatchTrigger);
-    lua_register(pGlobalLua, "receiveMSP", TLuaInterpreter::receiveMSP);
-    lua_register(pGlobalLua, "purgeMediaCache", TLuaInterpreter::purgeMediaCache);
     lua_register(pGlobalLua, "sendGMCP", TLuaInterpreter::sendGMCP);
     lua_register(pGlobalLua, "roomExists", TLuaInterpreter::roomExists);
     lua_register(pGlobalLua, "addRoom", TLuaInterpreter::addRoom);
@@ -14118,6 +15194,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addCustomLine", TLuaInterpreter::addCustomLine);
     lua_register(pGlobalLua, "removeCustomLine", TLuaInterpreter::removeCustomLine);
     lua_register(pGlobalLua, "getCustomLines", TLuaInterpreter::getCustomLines);
+    lua_register(pGlobalLua, "getCustomLines1", TLuaInterpreter::getCustomLines1);
     lua_register(pGlobalLua, "getMudletVersion", TLuaInterpreter::getMudletVersion);
     lua_register(pGlobalLua, "openWebPage", TLuaInterpreter::openWebPage);
     lua_register(pGlobalLua, "getAllRoomEntrances", TLuaInterpreter::getAllRoomEntrances);
@@ -14206,6 +15283,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "spellSuggestWord", TLuaInterpreter::spellSuggestWord);
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
+    lua_register(pGlobalLua, "getCharacterName", TLuaInterpreter::getCharacterName);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
     lua_register(pGlobalLua, "getHTTP", TLuaInterpreter::getHTTP);
     lua_register(pGlobalLua, "customHTTP", TLuaInterpreter::customHTTP);
@@ -14239,7 +15317,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "windowType", TLuaInterpreter::windowType);
     lua_register(pGlobalLua, "getProfileStats", TLuaInterpreter::getProfileStats);
     lua_register(pGlobalLua, "getBackgroundColor", TLuaInterpreter::getBackgroundColor);
-    lua_register(pGlobalLua, "getLabelStylesheet", TLuaInterpreter::getLabelStylesheet);
+    lua_register(pGlobalLua, "getLabelStyleSheet", TLuaInterpreter::getLabelStyleSheet);
+    lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -14900,11 +15979,9 @@ int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& fu
 // No documentation available in wiki - internal function
 int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QString& function, int expiryCount)
 {
-    TTrigger* pT;
-    QStringList sList;
-    sList << regex;
-    QList<int> propertyList;
-    propertyList << REGEX_EXACT_MATCH;
+    TTrigger* pT = nullptr;
+    QStringList sList {regex};
+    QList<int> propertyList {REGEX_EXACT_MATCH};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -14920,11 +15997,9 @@ int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QStr
 // No documentation available in wiki - internal function
 int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QString& function, int expiryCount)
 {
-    TTrigger* pT;
-    QStringList sList;
-    sList << regex;
-    QList<int> propertyList;
-    propertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
+    TTrigger* pT = nullptr;
+    QStringList sList {regex};
+    QList<int> propertyList {REGEX_BEGIN_OF_LINE_SUBSTRING};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -14940,11 +16015,9 @@ int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QSt
 // No documentation available in wiki - internal function
 int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& function, int expiryCount)
 {
-    TTrigger* pT;
-    QStringList sList;
-    sList << regex;
-    QList<int> propertyList;
-    propertyList << REGEX_SUBSTRING; // substring trigger is default
+    TTrigger* pT = nullptr;
+    QStringList sList {regex};
+    QList<int> propertyList {REGEX_SUBSTRING};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -15023,12 +16096,9 @@ int TLuaInterpreter::startTempColorTrigger(int fg, int bg, const QString& functi
 // No documentation available in wiki - internal function
 int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& function, int expiryCount)
 {
-    TTrigger* pT;
-    QStringList sList;
-    sList << regex;
-
-    QList<int> propertyList;
-    propertyList << REGEX_PERL; // substring trigger is default
+    TTrigger* pT = nullptr;
+    QStringList sList {regex};
+    QList<int> propertyList {REGEX_PERL};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -15042,24 +16112,24 @@ int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& 
 }
 
 // No documentation available in wiki - internal function
-std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regexList, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList;
-    for (int i = 0; i < regexList.size(); i++) {
+    for (int i = 0; i < patterns.size(); i++) {
         propertyList << REGEX_PERL;
     }
     if (parent.isEmpty()) {
-        pT = new TTrigger("a", regexList, propertyList, (regexList.size() > 1), mpHost);
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
             return std::pair(-1, qsl("parent '%1' not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList);
+        pT->setRegexCodeList(patterns, propertyList);
     }
-    pT->setIsFolder(regexList.empty());
+    pT->setIsFolder(patterns.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -15070,24 +16140,24 @@ std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& na
 }
 
 // No documentation available in wiki - internal function
-std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regexList, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList;
-    for (int i = 0; i < regexList.size(); i++) {
+    for (int i = 0; i < patterns.size(); i++) {
         propertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
     }
     if (parent.isEmpty()) {
-        pT = new TTrigger("a", regexList, propertyList, (regexList.size() > 1), mpHost);
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
             return {-1, qsl("parent '%1' not found").arg(parent)};
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList);
+        pT->setRegexCodeList(patterns, propertyList);
     }
-    pT->setIsFolder(regexList.empty());
+    pT->setIsFolder(patterns.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -15098,24 +16168,24 @@ std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const
 }
 
 // No documentation available in wiki - internal function
-std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regexList, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList;
-    for (int i = 0; i < regexList.size(); i++) {
+    for (int i = 0; i < patterns.size(); i++) {
         propertyList << REGEX_SUBSTRING;
     }
     if (parent.isEmpty()) {
-        pT = new TTrigger("a", regexList, propertyList, (regexList.size() > 1), mpHost);
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
             return {-1, qsl("parent '%1' not found").arg(parent)};
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList);
+        pT->setRegexCodeList(patterns, propertyList);
     }
-    pT->setIsFolder(regexList.empty());
+    pT->setIsFolder(patterns.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -15130,17 +16200,17 @@ std::pair<int, QString> TLuaInterpreter::startPermPromptTrigger(const QString& n
 {
     TTrigger* pT;
     QList<int> propertyList = {REGEX_PROMPT};
-    QStringList regexList = {QString()};
+    QStringList patterns = {QString()};
 
     if (parent.isEmpty()) {
-        pT = new TTrigger("a", regexList, propertyList, false, mpHost);
+        pT = new TTrigger("a", patterns, propertyList, false, mpHost);
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
             return {-1, qsl("parent '%1' not found").arg(parent)};
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList);
+        pT->setRegexCodeList(patterns, propertyList);
     }
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -15457,6 +16527,22 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
         lua_settable(L, -3);
     }
 
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#getCharacterName
+int TLuaInterpreter::getCharacterName(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    const QString name{host.getLogin()};
+    if (name.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no character name set");
+        return 2;
+    }
+
+    lua_pushstring(L, name.toUtf8().constData());
     return 1;
 }
 
@@ -16156,10 +17242,11 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    auto [_1, triggersTotal, triggerPatterns, tempTriggers, activeTriggers] = host.getTriggerUnit()->assembleReport();
+    auto [_1, triggersTotal, totalPatterns, tempTriggers, activeTriggers, activePatterns] = host.getTriggerUnit()->assembleReport();
     auto [_2, aliasesTotal, tempAliases, activeAliases] = host.getAliasUnit()->assembleReport();
     auto [_3, timersTotal, tempTimers, activeTimers] = host.getTimerUnit()->assembleReport();
     auto [_4, keysTotal, tempKeys, activeKeys] = host.getKeyUnit()->assembleReport();
+    auto [_5, scriptsTotal, tempScripts, activeScripts] = host.getScriptUnit()->assembleReport();
 
     lua_newtable(L);
 
@@ -16171,18 +17258,27 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_pushnumber(L, triggersTotal);
     lua_settable(L, -3);
 
-    lua_pushstring(L, "patterns");
-    lua_pushnumber(L, triggerPatterns);
-    lua_settable(L, -3);
-
     lua_pushstring(L, "temp");
     lua_pushnumber(L, tempTriggers);
     lua_settable(L, -3);
 
     lua_pushstring(L, "active");
     lua_pushnumber(L, activeTriggers);
+    lua_settable(L, -3); // active
+
+    lua_pushstring(L, "patterns");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, totalPatterns);
     lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activePatterns);
     lua_settable(L, -3);
+
+    lua_settable(L, -3); // patterns
+    lua_settable(L, -3); // triggers
 
     // Aliases
     lua_pushstring(L, "aliases");
@@ -16232,6 +17328,23 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 
     lua_pushstring(L, "active");
     lua_pushnumber(L, activeKeys);
+    lua_settable(L, -3);
+    lua_settable(L, -3);
+
+    // Scripts
+    lua_pushstring(L, "scripts");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, scriptsTotal);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "temp");
+    lua_pushnumber(L, tempScripts);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activeScripts);
     lua_settable(L, -3);
     lua_settable(L, -3);
 

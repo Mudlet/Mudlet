@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -184,7 +184,6 @@ mudlet::mudlet()
 , mpMainToolBar(nullptr)
 , version(qsl("Mudlet " APP_VERSION APP_BUILD))
 , mpCurrentActiveHost(nullptr)
-, mAutolog(false)
 , mpTabBar(nullptr)
 , mIsLoadingLayout(false)
 , mHasSavedLayout(false)
@@ -345,13 +344,6 @@ mudlet::mudlet()
     mpSplitter_profileContainer->setChildrenCollapsible(false);
 
     mpHBoxLayout_profileContainer->addWidget(mpSplitter_profileContainer);
-
-    QFile file_autolog(getMudletPath(mainDataItemPath, qsl("autolog")));
-    if (file_autolog.exists()) {
-        mAutolog = true;
-    } else {
-        mAutolog = false;
-    }
 
     mpButtonConnect = new QToolButton(this);
     mpButtonConnect->setText(tr("Connect"));
@@ -1184,6 +1176,8 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 currentTranslation.mNativeName = qsl("Türkçe");
             } else if (!languageCode.compare(QLatin1String("fi_FI"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = qsl("Suomeksi");
+            } else if (!languageCode.compare(QLatin1String("ar_SA"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = qsl("العربية");
             } else {
                 currentTranslation.mNativeName = languageCode;
             }
@@ -1431,6 +1425,29 @@ void mudlet::closeHost(const QString& name)
     int hostCount = mHostManager.getHostCount();
     emit signal_hostDestroyed(pH, --hostCount);
     mHostManager.deleteHost(pH->getName());
+    updateMultiViewControls();
+}
+
+void mudlet::updateMultiViewControls()
+{
+    const bool isEnabled = (mHostManager.getHostCount() - 1);
+    if (mpActionMultiView->isEnabled() != isEnabled){
+        mpActionMultiView->setEnabled(isEnabled);
+    }
+    if (dactionMultiView->isEnabled() != isEnabled) {
+        dactionMultiView->setEnabled(isEnabled);
+    }
+}
+
+void mudlet::reshowRequiredMainConsoles()
+{
+    if (mpTabBar->count() > 1 && mMultiView) {
+        for (auto pHost: mHostManager) {
+            if (pHost->mpConsole) {
+                pHost->mpConsole->show();
+            }
+        }
+    }
 }
 
 void mudlet::slot_tab_changed(int tabID)
@@ -1503,28 +1520,9 @@ void mudlet::slot_tab_changed(int tabID)
 
     updateDiscordNamedIcon();
 
-    // Restore the multi-view mode if it was enabled:
-    if (mpTabBar->count() > 1) {
-        if (!mpActionMultiView->isEnabled() || !dactionMultiView->isEnabled()) {
-            mpActionMultiView->setEnabled(true);
-            dactionMultiView->setEnabled(true);
-        }
-        if (mMultiView) {
-            for (auto pHost: mHostManager) {
-                if (pHost->mpConsole && (pHost != mpCurrentActiveHost.data())) {
-                    // We skip showing the current tab as we have already done
-                    // a more thorough refreshment of that one...
-                    pHost->mpConsole->show();
-                }
-            }
-        }
-
-    } else {
-        if (mpActionMultiView->isEnabled() || dactionMultiView->isEnabled()) {
-            mpActionMultiView->setEnabled(false);
-            dactionMultiView->setEnabled(false);
-        }
-    }
+    updateMultiViewControls();
+    // Regenerate the multi-view mode if it is enabled:
+    reshowRequiredMainConsoles();
 
     emit signal_tabChanged(mpCurrentActiveHost->getName());
 }
@@ -1534,7 +1532,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     if (pH->mpConsole) {
         return;
     }
-    pH->mLogStatus = mAutolog;
     auto pConsole = new TMainConsole(pH);
     if (!pConsole) {
         return;
@@ -1565,12 +1562,15 @@ void mudlet::addConsoleForNewHost(Host* pH)
     setWindowTitle(pH->getName() + " - " + version);
 
     mpSplitter_profileContainer->addWidget(pConsole);
-    if (mpCurrentActiveHost) {
+    if (mpCurrentActiveHost && !mMultiView) {
         mpCurrentActiveHost->mpConsole->hide();
     }
     mpCurrentActiveHost = pH;
 
     if (pH->mLogStatus) {
+        // The above flag is set/reset at the start of the TMainConsole
+        // constructor - and if it is set we now need to "click" the button
+        // to immediately start logging the game output as text/HTML:
         pConsole->logButton->click();
     }
 
@@ -2836,6 +2836,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
     enableToolbarButtons();
+    updateMultiViewControls();
 }
 
 void mudlet::processEventLoopHack()
@@ -2993,8 +2994,7 @@ void mudlet::slot_compact_input_line(const bool state)
     if (mpCurrentActiveHost) {
         mpCurrentActiveHost->setCompactInputLine(state);
         // Make sure players don't get confused when accidentally hiding buttons.
-        if (state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown) {
-            QKeySequence* shortcut = mShortcutsManager->getSequence(tr("Compact input line"));
+        if (QKeySequence* shortcut = mShortcutsManager->getSequence(qsl("Compact input line")); state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
             QString infoMsg = tr("[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.",
                                  "Here %1 will be replaced with the keyboard shortcut, default is ALT+L.").arg(shortcut->toString());
             mpCurrentActiveHost->postMessage(infoMsg);
@@ -3175,84 +3175,6 @@ void mudlet::slot_replaySpeedDown()
         mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
         mpLabelReplaySpeedDisplay->show();
     }
-}
-
-/* loop through and stop all sounds */
-void mudlet::stopSounds()
-{
-    QListIterator<QMediaPlayer*> itMusicBox(mMusicBoxList);
-
-    while (itMusicBox.hasNext()) {
-        itMusicBox.next()->stop();
-    }
-}
-
-void mudlet::playSound(const QString& s, int soundVolume)
-{
-    QPointer<Host> pHost = getActiveHost();
-    if (!pHost) {
-        return;
-    }
-
-    QListIterator<QMediaPlayer*> itMusicBox(mMusicBoxList);
-    QMediaPlayer* pPlayer = nullptr;
-
-    /* find first available inactive QMediaPlayer */
-    while (itMusicBox.hasNext()) {
-        QMediaPlayer* pTestPlayer = itMusicBox.next();
-
-        if (pTestPlayer->state() != QMediaPlayer::PlayingState && pTestPlayer->mediaStatus() != QMediaPlayer::LoadingMedia) {
-            pPlayer = pTestPlayer;
-            break;
-        }
-    }
-
-    /* no available QMediaPlayer, create a new one */
-    if (!pPlayer) {
-        pPlayer = new QMediaPlayer(this);
-
-
-        if (!pPlayer) {
-            /* It (should) be impossible to ever reach this */
-            TDebug(Qt::white, Qt::red) << qsl("Play sound: unable to create new QMediaPlayer object\n") >> pHost;
-            return;
-        }
-
-        mMusicBoxList.append(pPlayer);
-    }
-
-    // Remove any previous connection to the signal of this QMediaPlayer,
-    // theoretically this might be movable to be within the lambda function of
-    // the following connect(...) but that does seem a bit twisty and this works
-    // well enough!
-    disconnect(pPlayer, &QMediaPlayer::stateChanged, nullptr, nullptr);
-
-    connect(pPlayer, &QMediaPlayer::stateChanged, [=](QMediaPlayer::State state) {
-        if (state == QMediaPlayer::StoppedState) {
-            TEvent soundFinished {};
-            soundFinished.mArgumentList.append("sysSoundFinished");
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-            soundFinished.mArgumentList.append(pPlayer->media().request().url().fileName());
-            soundFinished.mArgumentList.append(pPlayer->media().request().url().path());
-#else
-            soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().fileName());
-            soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().path());
-#endif
-            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            if (pHost) {
-                // The host may have gone away if the sound was a long one
-                // and we are multi-playing so we ought to test it...
-                pHost->raiseEvent(soundFinished);
-            }
-        }
-    });
-
-    /* set volume and play sound */
-    pPlayer->setMedia(QUrl::fromLocalFile(s));
-    pPlayer->setVolume(soundVolume);
-    pPlayer->play();
 }
 
 void mudlet::setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown)
@@ -4611,11 +4533,7 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
 
 void mudlet::activateProfile(Host* pHost)
 {
-    if (!mMultiView || !pHost) {
-        // We do not need to update the currently selected tab if we are not in
-        // multi-view mode as that will happen by the user selecting the tab
-        // themself - also, if the supplied argument is a nullptr we do not need
-        // to do anything:
+    if (!pHost) {
         return;
     }
 

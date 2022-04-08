@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -344,7 +344,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mRoomBorderColor(Qt::lightGray)
 #endif
 , mMapStrongHighlight(false)
-, mLogStatus(false)
 , mEnableSpellCheck(true)
 , mDiscordDisableServerSide(true)
 , mDiscordAccessFlags(DiscordLuaAccessEnabled | DiscordSetSubMask)
@@ -406,7 +405,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 {
     TDebug::addHost(this);
 
-    // mLogStatus = mudlet::self()->mAutolog;
+    // The "autolog" sentinel file controls whether logging the game's text as
+    // plain text or HTML is immediately resumed on profile loading. Do not
+    // confuse it with the "autologin" item, which controls whether the profile
+    // is automatically started when the Mudlet application is run!
+    mLogStatus = QFile::exists(mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, qsl("autolog")));
     mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
 
     // Copy across the details needed for the "color_table":
@@ -1661,7 +1664,7 @@ bool Host::isClosingDown()
     return mIsClosingDown;
 }
 
-bool Host::installPackage(const QString& fileName, int module)
+std::pair<bool, QString> Host::installPackage(const QString& fileName, int module)
 {
     // As the pointed to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
@@ -1676,12 +1679,12 @@ bool Host::installPackage(const QString& fileName, int module)
     //     This separation is necessary to be able to reuse code while avoiding infinite loops from script installations.
 
     if (fileName.isEmpty()) {
-        return false;
+        return {false, qsl("no package file was actually given")};
     }
 
     QFile file(fileName);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        return false;
+        return {false, qsl("could not open file '%1").arg(fileName)};
     }
 
     QString packageName = fileName.section(qsl("/"), -1);
@@ -1695,11 +1698,11 @@ bool Host::installPackage(const QString& fileName, int module)
         if ((module == 2) && (mActiveModules.contains(packageName))) {
             uninstallPackage(packageName, 2);
         } else if ((module == 3) && (mActiveModules.contains(packageName))) {
-            return false; //we're already installed
+            return {false, qsl("module %1 is already installed").arg(packageName)}; //we're already installed
         }
     } else {
         if (mInstalledPackages.contains(packageName)) {
-            return false;
+            return {false, qsl("package %1 is already installed").arg(packageName)};
         }
     }
     //the extra module check is needed here to prevent infinite loops from script loaded modules
@@ -1723,7 +1726,7 @@ bool Host::installPackage(const QString& fileName, int module)
         pUnzipDialog = dynamic_cast<QDialog*>(loader.load(&uiFile, nullptr));
         uiFile.close();
         if (!pUnzipDialog) {
-            return false;
+            return {false, qsl("could not load unpacking progress dialog")};
         }
 
         auto * pLabel = pUnzipDialog->findChild<QLabel*>(qsl("label"));
@@ -1747,7 +1750,7 @@ bool Host::installPackage(const QString& fileName, int module)
         pUnzipDialog->deleteLater();
         pUnzipDialog = nullptr;
         if (!successful) {
-            return false;
+            return {false, qsl("could not unzip package")};
         }
 
         // requirements for zip packages:
@@ -1771,7 +1774,7 @@ bool Host::installPackage(const QString& fileName, int module)
                 if (mInstalledPackages.contains(packageName)) {
                     // cleanup and quit if already installed
                     removeDir(_dir.absolutePath(), _dir.absolutePath());
-                    return false;
+                    return {false, qsl("package %1 is already installed").arg(packageName)};
                 }
             }
             // continuing, so update the folder name on disk
@@ -1880,7 +1883,7 @@ bool Host::installPackage(const QString& fileName, int module)
     }
 
 
-    return true;
+    return {true, QString()};
 }
 
 // credit: http://john.nachtimwald.com/2010/06/08/qt-remove-directory-and-its-contents/
@@ -2957,6 +2960,26 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
     return {false, qsl("miniconsole/userwindow '%1' already exists").arg(name)};
 }
 
+std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pS = mpConsole->mScrollBoxMap.value(name);
+    if (!pS) {
+        pS = mpConsole->createScrollBox(windowname, name, x, y, width, height);
+        if (pS) {
+            return {true, QString()};
+        }
+    } else if (pS) {
+        pS->resize(width, height);
+        pS->move(x, y);
+        return {false, qsl("scrollBox '%1' already exists, moving/resizing '%1'").arg(name)};
+    }
+    return {false, qsl("scrollBox '%1' already exists").arg(name)};
+}
+
 std::pair<bool, QString> Host::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
 {
     if (!mpConsole) {
@@ -3095,6 +3118,7 @@ bool Host::showWindow(const QString& name)
     auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pL = mpConsole->mLabelMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
+    auto pS = mpConsole->mScrollBoxMap.value(name);
     // check labels first as they are shown/hidden more often
     if (pL) {
         pL->show();
@@ -3109,6 +3133,11 @@ bool Host::showWindow(const QString& name)
         } else {
             return mpConsole->showWindow(name);
         }
+    }
+
+    if (pS) {
+        pS->show();
+        return true;
     }
 
     if (pN) {
@@ -3128,6 +3157,7 @@ bool Host::hideWindow(const QString& name)
     auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pL = mpConsole->mLabelMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
+    auto pS = mpConsole->mScrollBoxMap.value(name);
 
     // check labels first as they are shown/hidden more often
     if (pL) {
@@ -3140,6 +3170,11 @@ bool Host::hideWindow(const QString& name)
             pD->update();
         }
         return mpConsole->hideWindow(name);
+    }
+
+    if (pS) {
+        pS->hide();
+        return true;
     }
 
     if (pN) {
@@ -3160,6 +3195,7 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
     auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
+    auto pS = mpConsole->mScrollBoxMap.value(name);
 
     if (pL) {
         pL->resize(x1, y1);
@@ -3182,6 +3218,11 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
         return true;
     }
 
+    if (pS) {
+        pS->resize(x1, y1);
+        return true;
+    }
+
     if (pN) {
         pN->resize(x1, y1);
         return true;
@@ -3200,6 +3241,7 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
     auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pD = mpConsole->mDockWidgetMap.value(name);
     auto pN = mpConsole->mSubCommandLineMap.value(name);
+    auto pS = mpConsole->mScrollBoxMap.value(name);
 
     if (pL) {
         pL->move(x1, y1);
@@ -3224,6 +3266,11 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
         return true;
     }
 
+    if (pS) {
+        pS->move(x1, y1);
+        return true;
+    }
+
     if (pN) {
         pN->move(x1, y1);
         return true;
@@ -3237,20 +3284,27 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     if (!mpConsole) {
         return {false, QString()};
     }
-
+    //children
     auto pL = mpConsole->mLabelMap.value(name);
     auto pC = mpConsole->mSubConsoleMap.value(name);
-    auto pD = mpConsole->mDockWidgetMap.value(windowname);
-    auto pW = mpConsole->mpMainFrame;
     auto pM = mpConsole->mpMapper;
     auto pN = mpConsole->mSubCommandLineMap.value(name);
+    auto pS = mpConsole->mScrollBoxMap.value(name);
+    //parents
+    auto pW = mpConsole->mpMainFrame;
+    auto pD = mpConsole->mDockWidgetMap.value(windowname);
+    auto pSW = mpConsole->mScrollBoxMap.value(windowname);
 
-    if (!pD && windowname.toLower() != QLatin1String("main")) {
+    if (!pSW && !pD && windowname.toLower() != QLatin1String("main")) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
     if (pD) {
         pW = pD->widget();
+    }
+
+    if (pSW) {
+        pW = pSW->widget();
     }
 
     if (pL) {
@@ -3267,6 +3321,13 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         pC->mOldY = y1;
         if (show) {
             pC->show();
+        }
+        return {true, QString()};
+    } else if (pS) {
+        pS->setParent(pW);
+        pS->move(x1, y1);
+        if (show) {
+            pS->show();
         }
         return {true, QString()};
     } else if (pN) {
@@ -3535,6 +3596,37 @@ bool Host::setLabelOnLeave(const QString& name, const int func)
         return true;
     }
     return false;
+}
+
+std::pair<bool, QString> Host::setMovie(const QString& name, const QString& moviePath)
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (!pL) {
+        return {false, qsl("label '%1' does not exist").arg(name)};
+    }
+
+    auto myMovie = pL->mpMovie;
+    if (!myMovie) {
+        myMovie = new QMovie();
+        myMovie->setCacheMode(QMovie::CacheAll);
+        pL->mpMovie = myMovie;
+        myMovie->setParent(pL);
+    }
+
+    myMovie->setFileName(moviePath);
+
+    if (!myMovie->isValid()) {
+        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
+    }
+    myMovie->stop();
+    pL->setMovie(myMovie);
+    myMovie->start();
+    return {true, QString()};
+
 }
 
 QSize Host::calcFontSize(const QString& windowName)
@@ -3837,14 +3929,28 @@ void Host::setupIreDriverBugfix()
     }
 }
 
-std::optional<QString> Host::windowType(const QString& name) const
+void Host::setControlCharacterMode(const ControlCharacterMode mode)
 {
-    if (mpConsole->mLabelMap.contains(name)) {
-        return {qsl("label")};
+    if (Q_UNLIKELY(!(mode == ControlCharacterMode::AsIs
+                     || mode == ControlCharacterMode::Picture
+                     || mode == ControlCharacterMode::OEM))) {
+        return;
     }
 
-    if (name == QLatin1String("main")) {
+    if (mControlCharacter != mode) {
+        mControlCharacter = mode;
+        emit signal_controlCharacterHandlingChanged(mode);
+    }
+}
+
+std::optional<QString> Host::windowType(const QString& name) const
+{
+    if (Q_UNLIKELY(name == QLatin1String("main"))) {
         return {QLatin1String("main")};
+    }
+
+    if (mpConsole->mLabelMap.contains(name)) {
+        return {qsl("label")};
     }
 
     auto pWindow = mpConsole->mSubConsoleMap.value(name);
@@ -3875,4 +3981,25 @@ std::optional<QString> Host::windowType(const QString& name) const
     }
 
     return {};
+}
+
+void Host::setLargeAreaExitArrows(const bool state)
+{
+    if (mLargeAreaExitArrows != state) {
+        mLargeAreaExitArrows = state;
+        if (mpMap && mpMap->mpMapper && mpMap->mpMapper->mp2dMap) {
+            mpMap->mpMapper->mp2dMap->mLargeAreaExitArrows = state;
+            mpMap->mpMapper->mp2dMap->update();
+        }
+    }
+}
+
+void Host::setEditorShowBidi(const bool state)
+{
+    if (mEditorShowBidi != state) {
+        mEditorShowBidi = state;
+        if (mpEditorDialog) {
+            mpEditorDialog->setEditorShowBidi(state);
+        }
+    }
 }

@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2020, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -200,6 +201,10 @@ public:
     void            getUserDictionaryOptions(bool& useDictionary, bool& useShared) {
                         useDictionary = mEnableUserDictionary;
                         useShared = mUseSharedDictionary; }
+    void            setControlCharacterMode(const ControlCharacterMode mode);
+    ControlCharacterMode  getControlCharacterMode() const { return mControlCharacter; }
+    bool            getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
+    void            setLargeAreaExitArrows(const bool);
 
     void closingDown();
     bool isClosingDown();
@@ -298,7 +303,7 @@ public:
 
     void updateDisplayDimensions();
 
-    bool installPackage(const QString&, int);
+    std::pair<bool, QString> installPackage(const QString&, int);
     bool uninstallPackage(const QString&, int);
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&, bool);
@@ -346,6 +351,7 @@ public:
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
     std::pair<bool, QString> openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
     std::pair<bool, QString> createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    std::pair<bool, QString> createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const;
     std::pair<bool, QString> createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
     bool setClickthrough(const QString& name, bool clickthrough);
     void hideMudletsVariables();
@@ -372,6 +378,7 @@ public:
     bool setLabelWheelCallback(const QString&, const int);
     bool setLabelOnEnter(const QString&, const int);
     bool setLabelOnLeave(const QString&, const int);
+    std::pair<bool, QString> setMovie(const QString& labelName, const QString& moviePath);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     std::optional<QColor> getBackgroundColor(const QString& name) const;
     bool setBackgroundImage(const QString& name, QString& path, int mode);
@@ -386,6 +393,8 @@ public:
     bool commitLayoutUpdates(bool flush = false);
     void setScreenDimensions(const int width, const int height) { mScreenWidth = width; mScreenHeight = height; }
     std::optional<QString> windowType(const QString& name) const;
+    bool getEditorShowBidi() const { return mEditorShowBidi; }
+    void setEditorShowBidi(const bool);
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -509,7 +518,6 @@ public:
     int mWrapIndentCount;
 
     bool mEditorAutoComplete;
-    bool mEditorShowBidi = true;
 
     // code editor theme (human-friendly name)
     QString mEditorTheme;
@@ -571,9 +579,10 @@ public:
     QColor mFgColor_2;
     QColor mBgColor_2;
     QColor mRoomBorderColor;
+    QColor mMapInfoBg = QColor(150, 150, 150, 120);
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
-    bool mLogStatus;
+    bool mLogStatus = false;
     bool mEnableSpellCheck;
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
@@ -645,6 +654,9 @@ signals:
     // To tell all TConsole's upper TTextEdit panes to report all Codepoint
     // problems as they arrive as well as a summery upon destruction:
     void signal_changeDebugShowAllProblemCodepoints(const bool);
+    // Tells all consoles associated with this Host (but NOT the Central Debug
+    // one) to change the way they show  control characters:
+    void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
 
 private slots:
     void slot_purgeTemps();
@@ -787,6 +799,21 @@ private:
     bool mCompactInputLine;
 
     QTimer purgeTimer;
+
+    // How to display (most) incoming control characters in TConsoles:
+    // ControlCharacterMode::AsIs (0x0) = as is, no replacement
+    // ControlCharacterMode::Picture (0x1) = as Unicode "Control
+    //   Pictures" - use Unicode codepoints in range U+2400 to U+2421
+    // ControlCharacterMode::OEM (0x2) = as "OEM Font"
+    //   characters (most often seen as a part of CP437
+    //   encoding), see the corresponding Wikipedia page, e.g.
+    //   EN: https://en.wikipedia.org/wiki/Code_page_437
+    //   DE: https://de.wikipedia.org/wiki/Codepage_437
+    //   RU: https://ru.wikipedia.org/wiki/CP437
+    ControlCharacterMode mControlCharacter = AsIs;
+
+    bool mLargeAreaExitArrows = false;
+    bool mEditorShowBidi = true;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

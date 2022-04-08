@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2015-2016, 2018-2019, 2021 by Stephen Lyons             *
+ *   Copyright (C) 2015-2016, 2018-2019, 2021-2022 by Stephen Lyons        *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
@@ -112,6 +112,7 @@ class TConsole;
 class TDockWidget;
 class TEvent;
 class TLabel;
+class TScrollBox;
 class TTabBar;
 class TTimer;
 class TToolBar;
@@ -261,8 +262,6 @@ public:
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     void doAutoLogin(const QString&);
-    void stopSounds();
-    void playSound(const QString &s, int);
     QStringList getAvailableFonts();
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     std::pair<bool, QString> resetProfileIcon(const QString& profile);
@@ -326,6 +325,8 @@ public:
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     void refreshTabBar();
     void updateDiscordNamedIcon();
+    // Has to be public as it needs to be called from dlgConnectionProfiles class:
+    void updateMultiViewControls();
 
     bool firstLaunch = false;
     // Needed to work around a (likely only Windows) issue:
@@ -363,8 +364,6 @@ public:
     QToolBar* mpMainToolBar;
     QString version;
     QPointer<Host> mpCurrentActiveHost;
-    bool mAutolog;
-    QList<QMediaPlayer*> mMusicBoxList;
     TTabBar* mpTabBar;
     QStringList packagesToInstallList;
     bool mIsLoadingLayout;
@@ -619,6 +618,7 @@ private:
     static bool desktopInDarkMode();
     void assignKeySequences();
     void closeHost(const QString& name);
+    void reshowRequiredMainConsoles();
 
     QWidget* mpWidget_profileContainer;
     QHBoxLayout* mpHBoxLayout_profileContainer;
@@ -760,7 +760,7 @@ class TConsoleMonitor : public QObject
 
 public:
     Q_DISABLE_COPY(TConsoleMonitor)
-    TConsoleMonitor(QObject* parent) : QObject(parent) {}
+    explicit TConsoleMonitor(QObject* parent) : QObject(parent) {}
 protected:
     bool eventFilter(QObject* obj, QEvent* event) override;
 };
@@ -776,7 +776,7 @@ class translation
     friend void mudlet::scanForQtTranslations(const QString&);
 
 public:
-    translation(const int translationPercent = -1) : mTranslatedPercentage(translationPercent) {}
+    explicit translation(const int translationPercent = -1) : mTranslatedPercentage(translationPercent) {}
 
     const QString& getNativeName() const { return mNativeName; }
     const QString& getMudletTranslationFileName() const { return mMudletTranslationFileName; }

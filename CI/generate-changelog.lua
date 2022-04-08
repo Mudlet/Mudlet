@@ -8,6 +8,9 @@ local argparse = require "argparse"
 local lunajson = require "lunajson"
 
 -- don't load all of LuaGlobal, as that requires yajl installed
+-- mock utf8 as we don't need it here either
+utf8 = utf8 or {}
+
 local github_workspace = os.getenv("GITHUB_WORKSPACE")
 if github_workspace then
   -- the script struggles to load the load files relatively in CI
@@ -18,16 +21,26 @@ else
   loadfile("../src/mudlet-lua/lua/TableUtils.lua")()
 end
 
-local parser = argparse("generate-ptb-changelog.lua", "Generate a changelog from the HEAD until the most recent published commit.")
-parser:option("-r --releasefile", "Downloaded DBLSQD release feed file")
+local parser = argparse("generate-changelog.lua", "Generate a changelog from the HEAD until the most recent published commit.")
+-- see https://argparse.readthedocs.io/en/stable/index.html
+parser:option("-m --mode", 'mode to run in'):choices({"ptb", "release"}):count("1")
+parser:option("-r --releasefile", "downloaded DBLSQD release feed file")
+parser:option("-s --start-commit", "start commit to generate changelog from")
+parser:option("-e --end-commit", "end commit to generate changelog to")
 local args = parser:parse()
+
+if (args.mode == "ptb" and not args.releasefile) then
+  error("-r or --releasefile is required for ptb mode")
+elseif (args.mode == "release" and not (args.start_commit and args.end_commit)) then
+  error("--start-commit and --end-commit are required for release mode")
+end
 
 local MAX_COMMITS_PER_CHANGELOG = 100
 
--- Basic algorithm is as follows:
---   retrieve last X commit hashes from current branch
---   retrieve list of releases and their hashes
---   go through the list collect hashes not present in releases
+-- Basic algorithm for the PTB mode is as follows:
+--   retrieve last MAX_COMMITS_PER_CHANGELOG commit hashes from current branch
+--   retrieve list of PTB releases and the hashes at the end of them (ie 4.14.1-ptb-2022-01-29-e8084)
+--   go through the list of commits, collecting hashes not present in releases
 --   then get the changelog for the range of hashes
 --   then sort the changelog into categories
 --   html-ize and print the results.
@@ -192,12 +205,18 @@ function lines_to_html(lines)
   return convert_to_html(lines)
 end
 
-local historical_commits = extract_historical_sha1s()
-local released_commits = extract_released_sha1s(get_releases(args.releasefile))
-local unpublished_commits = scan_commits(historical_commits, released_commits)
+local start_commit, end_commit
+if (args.mode == "ptb") then
+  local historical_commits = extract_historical_sha1s()
+  local released_commits = extract_released_sha1s(get_releases(args.releasefile))
+  local unpublished_commits = scan_commits(historical_commits, released_commits)
 
-if table.is_empty(unpublished_commits) then print("(changelog couldn't be generated)") os.exit() end
+  if table.is_empty(unpublished_commits) then print("(changelog couldn't be generated)") os.exit() end
+  start_commit, end_commit = unpublished_commits[#unpublished_commits], unpublished_commits[1]
+else
+  start_commit, end_commit = args.start_commit, args.end_commit
+end
 
-local changelog = get_changelog(unpublished_commits[#unpublished_commits], unpublished_commits[1])
+local changelog = get_changelog(start_commit, end_commit)
 
 print_sorted_changelog(changelog)

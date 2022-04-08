@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -44,7 +44,9 @@ class ActionUnit
     friend class XMLimport;
 
 public:
-    ActionUnit(Host* pHost) : mpHost(pHost), mMaxID(0), mpToolBar(), mpEasyButtonBar(), mModuleMember() {}
+    explicit ActionUnit(Host* pHost)
+    : mpHost(pHost)
+    {}
 
     std::list<TAction*> getActionRootNodeList()
     {
@@ -89,10 +91,10 @@ private:
     QPointer<Host> mpHost;
     QMap<int, TAction*> mActionMap;
     std::list<TAction*> mActionRootNodeList;
-    int mMaxID;
+    int mMaxID = 0;
     QPointer<TToolBar> mpToolBar;
     QPointer<TEasyButtonBar> mpEasyButtonBar;
-    bool mModuleMember;
+    bool mModuleMember = false;
     std::list<QPointer<TToolBar>> mToolBarList;
     std::list<QPointer<TEasyButtonBar>> mEasyButtonBarList;
 };

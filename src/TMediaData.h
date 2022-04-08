@@ -28,7 +28,7 @@
 class TMediaData
 {
 public:
-    enum MediaProtocol { MediaProtocolMSP = 90, MediaProtocolGMCP = 201, MediaProtocolNotSet = 0 };
+    enum MediaProtocol { MediaProtocolAPI = -1, MediaProtocolMSP = 90, MediaProtocolGMCP = 201, MediaProtocolNotSet = 0 };
 
     enum MediaType { MediaTypeSound = 1, MediaTypeMusic = 2, MediaTypeNotSet = 0 };
 
@@ -42,6 +42,8 @@ public:
 
     static const int MediaFadeNotSet = 0;
 
+    static const int MediaStartDefault = 0;
+
     TMediaData()
     {}
 
@@ -52,11 +54,33 @@ public:
     QString getMediaFileName() const { return mMediaFileName; }
     void setMediaFileName(QString mediaFileName) { mMediaFileName = mediaFileName; }
     int getMediaVolume() const { return mMediaVolume; }
-    void setMediaVolume(int mediaVolume) { mMediaVolume = mediaVolume; }
+    void setMediaVolume(int mediaVolume)
+    {
+        if (mediaVolume == TMediaData::MediaVolumePreload) {
+            // Support preloading
+            mMediaVolume = TMediaData::MediaVolumePreload;
+        } else {
+            mMediaVolume = qBound(static_cast<int>(TMediaData::MediaVolumeMin), mediaVolume, static_cast<int>(TMediaData::MediaVolumeMax));
+        }
+    }
     int getMediaLoops() const { return mMediaLoops; }
-    void setMediaLoops(int mediaLoops) { mMediaLoops = mediaLoops; }
+    void setMediaLoops(int mediaLoops)
+    {
+        if (mediaLoops < TMediaData::MediaLoopsRepeat || mediaLoops == 0) {
+            mMediaLoops = TMediaData::MediaLoopsDefault;
+        } else {
+            mMediaLoops = mediaLoops;
+        }
+    }
     int getMediaPriority() const { return mMediaPriority; }
-    void setMediaPriority(int mediaPriority) { mMediaPriority = mediaPriority; }
+    void setMediaPriority(int mediaPriority)
+    {
+        if (mediaPriority == TMediaData::MediaPriorityNotSet) {
+            mMediaPriority = TMediaData::MediaPriorityNotSet;
+        } else {
+            mMediaPriority = qBound(static_cast<int>(TMediaData::MediaPriorityMin), mediaPriority, static_cast<int>(TMediaData::MediaPriorityMax));
+        }
+    }
     bool getMediaContinue() const { return mMediaContinue; }
     void setMediaContinue(bool mediaContinue) { mMediaContinue = mediaContinue; }
     QString getMediaTag() const { return mMediaTag; }
@@ -66,9 +90,32 @@ public:
     QString getMediaKey() const { return mMediaKey; }
     void setMediaKey(QString mediaKey) { mMediaKey = mediaKey; }
     int getMediaFadeIn() const { return mMediaFadeIn; }
-    void setMediaFadeIn(int mediaFadeIn) { mMediaFadeIn = mediaFadeIn; }
+    void setMediaFadeIn(int mediaFadeIn)
+    {
+        if (mediaFadeIn < TMediaData::MediaFadeNotSet) {
+            mMediaFadeIn = TMediaData::MediaFadeNotSet;
+        } else {
+            mMediaFadeIn = mediaFadeIn;
+        }
+    }
     int getMediaFadeOut() const { return mMediaFadeOut; }
-    void setMediaFadeOut(int mediaFadeOut) { mMediaFadeOut = mediaFadeOut; }
+    void setMediaFadeOut(int mediaFadeOut)
+    {
+        if (mediaFadeOut < TMediaData::MediaFadeNotSet) {
+            mMediaFadeOut = TMediaData::MediaFadeNotSet;
+        } else {
+            mMediaFadeOut = mediaFadeOut;
+        }
+    }
+    int getMediaStart() const { return mMediaStart; }
+    void setMediaStart(int mediaStart)
+    {
+        if (mediaStart < TMediaData::MediaStartDefault) {
+            mMediaStart = TMediaData::MediaStartDefault;
+        } else {
+            mMediaStart = mediaStart;
+        }
+    }
     QString getMediaAbsolutePathFileName() const { return mMediaAbsolutePathFileName; }
     void setMediaAbsolutePathFileName(QString mediaAbsolutePathFileName) { mMediaAbsolutePathFileName = mediaAbsolutePathFileName; }
 
@@ -79,6 +126,7 @@ private:
     int mMediaVolume = MediaVolumeDefault;
     int mMediaFadeIn = MediaFadeNotSet;
     int mMediaFadeOut = MediaFadeNotSet;
+    int mMediaStart = MediaStartDefault;
     int mMediaLoops = MediaLoopsDefault;
     int mMediaPriority = MediaPriorityNotSet;
     bool mMediaContinue = MediaContinueDefault;

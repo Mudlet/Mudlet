@@ -71,6 +71,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpBufferSearchBox(new QLineEdit)
 , mpBufferSearchUp(new QToolButton)
 , mpBufferSearchDown(new QToolButton)
+, mControlCharacter(pH->getControlCharacterMode())
 , mType(type)
 {
     auto ps = new QShortcut(this);
@@ -497,7 +498,12 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mDisplayFont = mpHost->getDisplayFont();
         mDisplayFontName = mDisplayFont.family();
         mDisplayFontSize = mDisplayFont.pointSize();
+
+        // They always use "Control Pictures" to show control characters:
+        mControlCharacter = Picture;
         refreshView();
+    } else if (mpHost) {
+        connect(mpHost, &Host::signal_controlCharacterHandlingChanged, this, &TConsole::slot_changeControlCharacterHandling);
     }
 
     if (mType & (MainConsole | UserWindow)) {
@@ -546,6 +552,15 @@ void TConsole::resizeEvent(QResizeEvent* event)
     }
     int x = event->size().width();
     int y = event->size().height();
+
+    if (mType == MainConsole && !x) {
+        // When multi-view is NOT active but more than one profile is loaded
+        // switching between tabs causes the deselected profile to resize its
+        // main console to a width of zero - but that is not useful from a NAWS
+        // or event handling system point of view - so abort doing anything
+        // with the event:
+        return;
+    }
 
     if (mType & (MainConsole|Buffer|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
@@ -1971,4 +1986,10 @@ void TConsole::mouseReleaseEvent(QMouseEvent* event)
     raiseMudletMousePressOrReleaseEvent(event, false);
 }
 
-
+void TConsole::TConsole::slot_changeControlCharacterHandling(const ControlCharacterMode mode)
+{
+    if (mControlCharacter != mode) {
+        mControlCharacter = mode;
+        refreshView();
+    }
+}
