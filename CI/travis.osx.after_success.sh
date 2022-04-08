@@ -19,9 +19,8 @@ sign_and_notarize () {
 EOF
 
   for i in {1..3}; do
-    echo "Trying to notarize ${appBundle} (attempt ${i})"
+    echo "Trying to notarize (attempt ${i})"
     if gon gon.json; then
-      echo "Notarization successful"
       break
     fi
   done
