@@ -30,10 +30,10 @@ Q_OBJECT
 private:
 
 private slots:
-    QSharedPointer<MxpNode> parseNode(const QString& tagText) const
+    static QSharedPointer<MxpNode> parseNode(const QString& tagText)
     {
         auto nodes = TMxpTagParser::parseToMxpNodeList(tagText);
-        return nodes.size() > 0 ? nodes.first() : nullptr;
+        return !nodes.empty() ? nodes.first() : nullptr;
     }
 
     void processInput(TMxpProcessor &processor, std::string &input) {
