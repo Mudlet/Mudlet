@@ -17,7 +17,16 @@ sign_and_notarize () {
   }]
 }
 EOF
-  gon gon.json
+
+  for i in {1..3}; do
+    echo "Trying to notarize ${appBundle} (attempt ${i})"
+    gon gon.json
+    if [ $? -eq 0 ]; then
+      echo "Notarization successful"
+      break
+    fi
+  done
+
 }
 
 [ -n "$TRAVIS_REPO_SLUG" ] && BUILD_DIR="${TRAVIS_BUILD_DIR}" || BUILD_DIR="${BUILD_FOLDER}"
