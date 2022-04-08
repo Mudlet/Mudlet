@@ -4,6 +4,7 @@
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
+#    Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -89,7 +90,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.15.0
+VERSION = 4.15.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -287,7 +288,7 @@ unix:!macx {
             -lhunspell-1.6
 
         INCLUDEPATH += \
-             "C:\\Libraries\\boost_1_71_0" \
+             "C:\\Libraries\\boost_1_77_0" \
              "$${MINGW_BASE_DIR_TEST}\\include" \
              "$${MINGW_BASE_DIR_TEST}\\lib\\include"
 
@@ -526,6 +527,7 @@ SOURCES += \
     dlgIRC.cpp \
     dlgKeysMainArea.cpp \
     dlgModuleManager.cpp \
+    dlgMapLabel.cpp \
     dlgMapper.cpp \
     dlgNotepad.cpp \
     dlgPackageExporter.cpp \
@@ -636,6 +638,7 @@ HEADERS += \
     dlgConnectionProfiles.h \
     dlgIRC.h \
     dlgKeysMainArea.h \
+    dlgMapLabel.h \
     dlgMapper.h \
     dlgModuleManager.h \
     dlgNotepad.h \
@@ -758,6 +761,7 @@ FORMS += \
     ui/keybindings_main_area.ui \
     ui/main_window.ui \
     ui/module_manager.ui \
+    ui/map_label.ui \
     ui/mapper.ui \
     ui/notes_editor.ui \
     ui/package_manager.ui \
@@ -1490,18 +1494,72 @@ win32 {
     }
 }
 
-# Pull the docs and lua files into the project so they show up in the Qt Creator project files list
+# This is a list of files that we want to show up in the Qt Creator IDE that are
+# not otherwise used by the project:
 OTHER_FILES += \
-    $${LUA.files} \
-    $${LUA_GEYSER.files} \
-    $${LUA_TRANSLATIONS.files} \
-    $${LUA_TESTS.files} \
-    $${DISTFILES} \
-    ../README \
-    ../COMPILE \
-    ../COPYING \
-    ../INSTALL \
-    mac-deploy.sh
+    ../.appveyor.yml \
+    ../.crowdin.yml \
+    ../.devcontainer/Dockerfile \
+    ../.devcontainer/devcontainer.json \
+    ../.devcontainer/library-scripts/desktop-lite-debian.sh \
+    ../.github/CODE_OF_CONDUCT.md \
+    ../.github/CODEOWNERS \
+    ../.github/codeql/codeql-config.yml \
+    ../.github/codespell-wordlist.txt \
+    ../.github/CONTRIBUTING.md \
+    ../.github/dependabot.yml \
+    ../.github/FUNDING.yml \
+    ../.github/ISSUE_TEMPLATE.md \
+    ../.github/pr-labeler.yml \
+    ../.github/PULL_REQUEST_TEMPLATE.md \
+    ../.github/repo-metadata.yml \
+    ../.github/SUPPORT.md \
+    ../.github/workflows/build-mudlet.yml \
+    ../.github/workflows/clangtidy-diff-analysis.yml \
+    ../.github/workflows/codeql-analysis.yml \
+    ../.github/workflows/codespell-analysis.yml \
+    ../.github/workflows/dangerjs.yml \
+    ../.github/workflows/generate-changelog.yml \
+    ../.github/workflows/link-ptbs-to-dblsqd.yml \
+    ../.github/workflows/tag-pull-requests.yml \
+    ../.github/workflows/update-3rdparty.yml \
+    ../.github/workflows/update-autocompletion.yml \
+    ../.github/workflows/update-en-us-plural.yml \
+    ../.github/workflows/update-geyser-docs.yml \
+    ../.github/workflows/update-translations.yml \
+    ../.gitignore \
+    ../CI/appveyor.after_success.ps1 \
+    ../CI/appveyor.build.ps1 \
+    ../CI/appveyor.functions.ps1 \
+    ../CI/appveyor.install.ps1 \
+    ../CI/appveyor.set-build-info.ps1 \
+    ../CI/appveyor.validate_deployment.ps1 \
+    ../CI/copy-non-qt-win-dependencies.ps1 \
+    ../CI/generate-changelog.lua \
+    ../CI/mudlet-deploy-key.enc \
+    ../CI/mudlet-deploy-key-windows.ppk \
+    ../CI/qt-silent-install.qs \
+    ../CI/travis.after_success.sh \
+    ../CI/travis.before_install.sh \
+    ../CI/travis.compile.sh \
+    ../CI/travis.install.sh \
+    ../CI/travis.linux.after_success.sh \
+    ../CI/travis.linux.before_install.sh \
+    ../CI/travis.linux.install.sh \
+    ../CI/travis.osx.after_success.sh \
+    ../CI/travis.osx.before_install.sh \
+    ../CI/travis.osx.install.sh \
+    ../CI/travis.set-build-info.sh \
+    ../CI/travis.validate_deployment.sh \
+    ../CI/update-autocompletion.lua \
+    ../dangerfile.js \
+    ../docker/.env.template \
+    ../docker/docker-compose.override.linux.yml \
+    ../docker/docker-compose.yml \
+    ../docker/Dockerfile \
+    mac-deploy.sh \
+    mudlet-lua/genDoc.sh \
+    mudlet-lua/lua/ldoc.css
 
 # Unix Makefile installer:
 # lua file installation, needs install, sudo, and a setting in /etc/sudo.conf
@@ -1509,7 +1567,7 @@ OTHER_FILES += \
 # to provide a graphic password requestor needed to install software
 unix:!macx {
 # say what we want to get installed by "make install" (executed by 'deployment' step):
-    INSTALLS += \
+INSTALLS += \
         target \
         LUA \
         LUA_GEYSER \
@@ -1577,71 +1635,42 @@ unix:!macx {
 # leaves those empty sub-directories behind and that prevents their parents
 # from being deleted as well
 
-
+# This is the extra files that are needed to do a `make dist` given a makefile
 DISTFILES += \
-    ../docker/Dockerfile \
-    ../docker/docker-compose.override.linux.yml \
-    ../docker/docker-compose.yml \
-    CF-loader.xml \
-    CMakeLists.txt \
-    .clang-format \
-    ../.github/pr-labeler.yml \
-    ../.github/CODEOWNERS.md \
-    ../.github/CODE_OF_CONDUCT.md \
-    ../.github/CONTRIBUTING.md \
-    ../.github/FUNDING.yml \
-    ../.github/ISSUE_TEMPLATE.md \
-    ../.github/PULL_REQUEST_TEMPLATE.md \
-    ../.github/SUPPORT.md \
-    ../.github/workflows/build-mudlet.yml \
-    ../.github/workflows/update-3rdparty.yml \
-    ../.github/workflows/update-autocompletion.yml \
-    ../.github/workflows/update-translations.yml \
-    ../.github/workflows/whitespace-linter.yml \
-    ../CMakeLists.txt \
+    $${LUA.files} \
+    $${LUA_GEYSER.files} \
+    $${LUA_TESTS.files} \
+    $${LUA_TRANSLATIONS.files} \
+    ../.clang-tidy \
+    ../.gitmodules \
     ../cmake/FindHUNSPELL.cmake \
+    ../cmake/FindLua51.cmake \
     ../cmake/FindPCRE.cmake \
+    ../cmake/FindPUGIXML.cmake \
+    ../cmake/FindSparkle.cmake \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
-    ../cmake/FindPUGIXML.cmake \
-    ../.travis.yml \
-    ../CI/travis.before_install.sh \
-    ../CI/travis.install.sh \
-    ../CI/travis.linux.before_install.sh \
-    ../CI/travis.linux.install.sh \
-    ../CI/travis.osx.before_install.sh \
-    ../CI/travis.osx.install.sh \
-    ../CI/travis.set-build-info.sh \
-    ../CI/travis.after_success.sh \
-    ../CI/travis.linux.after_success.sh \
-    ../CI/travis.osx.after_success.sh \
-    ../.appveyor.yml \
-    ../CI/appveyor.after_success.ps1 \
-    ../CI/appveyor.install.ps1 \
-    ../CI/appveyor.set-build-info.ps1 \
-    ../CI/appveyor.functions.ps1 \
-    ../CI/appveyor.build.ps1 \
-    mudlet-lua/lua/generic-mapper/generic_mapper.xml \
-    mudlet-lua/lua/generic-mapper/versions.lua \
-    mudlet-lua/lua/ldoc.css \
-    mudlet-lua/genDoc.sh \
-    mudlet-lua/tests/README.md \
-    mudlet-lua/tests/DB.lua \
-    mudlet-lua/tests/GUIUtils.lua \
-    mudlet-lua/tests/Other.lua \
+    ../cmake/FindZZIPLIB.cmake \
+    ../cmake/IncludeOptionalModule.cmake \
+    ../cmake/InitGitSubmodule.cmake \
+    ../CMakeLists.txt \
+    ../COMMITMENT \
+    ../COMPILE \
+    ../COPYING \
+    ../INSTALL \
     ../mudlet.desktop \
     ../mudlet.png \
     ../mudlet.svg \
     ../README.md \
     ../translations/translated/CMakeLists.txt \
     ../translations/translated/generate-translation-stats.lua \
-    ../COMMITMENT \
-    ../.crowdin.yml \
-    ../.gitignore \
-    ../.gitmodules \
     ../translations/translated/updateqm.pri \
-    ../CI/mudlet-deploy-key.enc \
-    ../CI/copy-non-qt-win-dependencies.ps1 \
-    ../CI/mudlet-deploy-key-windows.ppk \
-    ../CI/qt-silent-install.qs \
-    ../CI/travis.compile.sh
+    .clang-format \
+    CF-loader.xml \
+    CMakeLists.txt \
+    mudlet-lua/lua/generic-mapper/generic_mapper.xml \
+    mudlet-lua/lua/generic-mapper/versions.lua \
+    mudlet-lua/tests/DB.lua \
+    mudlet-lua/tests/GUIUtils.lua \
+    mudlet-lua/tests/Other.lua \
+    mudlet-lua/tests/README.md
