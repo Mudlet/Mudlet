@@ -1,6 +1,6 @@
 describe("Tests TableUtils.lua functions", function()
 
-  describe("spairs", function()
+  describe("Tests the functionality of spairs", function()
     it("should sort by basic sorted keys by default", function()
       local tbl = { Tom = 40, Mary = 50, Joe = 24 }
       local expected = "Joe has 24 thingies\nMary has 50 thingies\nTom has 40 thingies\n"
@@ -22,7 +22,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("table.is_empty(tbl)", function()
+  describe("Tests the functionality of table.is_empty", function()
     it("Should return false if the table has an entry in it", function()
       assert.is_false(table.is_empty({"one"}))
       assert.is_false(table.is_empty({one = 1}))
@@ -40,7 +40,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("Tests table.n_filter() method", function()
+  describe("Tests the functionality of table.n_filter", function()
     it("Should filter out small values", function()
       local function isBigEnough(value) return value >= 10 end
       local filtered = table.n_filter({12, 5, 8, 130, 44}, isBigEnough)
@@ -83,7 +83,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("Tests table.n_flatten() method", function()
+  describe("Tests the functionality of table.n_flatten", function()
     it("Should flatten nested tables", function()
       local t1 = {1, 2, {3, 4}};
       local t2 = {1, 2, {3, 4, {5, 6}}};
@@ -97,7 +97,7 @@ describe("Tests TableUtils.lua functions", function()
   -- methods skipped here: printTable, _printTable, listPrint, listAdd, listRemove
   -- they are undocumented and unused in our own code.
 
-  describe("table.size(tbl)", function()
+  describe("Tests the functionality of table.size", function()
 
     it("should return the same as #t for lists", function()
       local tbl = { "One", "Two", "Three" }
@@ -120,7 +120,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("table.collect(tbl, func)", function()
+  describe("Tests the functionality of table.collect", function()
     it("should collect all key-value pairs from tbl for which func(key,value) returns true", function()
       local tbl = {
         this = "that",
@@ -187,7 +187,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("table.n_collect(tbl, func)", function()
+  describe("Tests the functionality of table.n_collect", function()
     it("should return a table of unique values for which func(value) returns true", function()
       local tbl = {
         this = "that",
@@ -256,7 +256,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("table.matches(tbl, pattern_1,[pattern_2+], [check_keys])", function()
+  describe("Tests the functionality of table.matches", function()
     it("should return an empty table of no values math", function()
       local tbl = { 
         this = "that",
@@ -341,7 +341,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("table.n_matches(tbl, pattern_1,[pattern_2+])", function()
+  describe("Tests the functionality of table.n_matches", function()
     it("should return a list of values which string.match a given pattern", function()
       local tbl = {
         this = "that",
@@ -398,7 +398,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("table.contains(tbl, item)", function()
+  describe("Tests the functionality of table.contains", function()
 
     it("should return true if the table has a value that matches item", function()
       local tbl = { "One", "Two", "Three" }
@@ -473,7 +473,7 @@ describe("Tests TableUtils.lua functions", function()
 
   end)
 
-  describe("table.index_of(tbl,item)", function()
+  describe("Tests the functionality of table.index_of", function()
     it("should return the index of the item being searched", function()
       local tbl = {
         "one",
@@ -488,7 +488,7 @@ describe("Tests TableUtils.lua functions", function()
       end
     end)
 
-    it("should retrun nil if the item is not found in the table", function()
+    it("should return nil if the item is not found in the table", function()
       local tbl = {
         "one",
         2,
@@ -498,7 +498,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("table.deepcopy(tbl)", function()
+  describe("Tests the functionality of table.deepcopy", function()
     setup(function()
       tblA = { "one", "two", 3, 4 }
     end)
@@ -516,7 +516,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("table.keys(tbl)", function()
+  describe("Tests the functionality of table.keys", function()
     setup(function()
       testtbl = { 
         one = 1,
@@ -548,7 +548,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("table.union(tblA, tblB, ...)", function()
+  describe("Tests the functionality of table.union", function()
     setup(function()
       tblA = {
         [1] = 123,
@@ -609,7 +609,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("table.n_union(tblA, tblB, ...)", function()
+  describe("Tests the functionality of table.n_union", function()
     setup(function()
       tblA = { "bob", "mary" }
       tblB = { "august", "justinian" }
@@ -639,7 +639,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("table.intersection(tblA, tblB, ...)", function()
+  describe("Tests the functionality of table.intersection", function()
     it("should return the relative intersection of key value pairs of two tables", function()
       local t1 = {key = 1,1,2,3}
       local t2 = {key = 1,1,1,1}
@@ -662,7 +662,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("table.n_intersection(tblA, tblB, ...)", function()
+  describe("Tests the functionality of table.n_intersection", function()
     it("should produce a table which is the relative intersection of values of two tables", function()
       local t1 = {1,2,3,4,5,6}
       local t2 = {2,4,6,8}
@@ -681,7 +681,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("table.complement(tblA, tblB)", function()
+  describe("Tests the functionality of table.complement", function()
     it("should return the complement of key value pairs of two maps", function()
       local t1 = {key = 1,1,2,3}
       local t2 = {key = 2,1,1,1}
@@ -691,7 +691,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("table.n_complement(tblA, tblB)", function()
+  describe("Tests the functionality of table.n_complement", function()
     it("should return the complement of values of two lists", function()
       local t1 = {1,2,3,4,5,6}
       local t2 = {2,4,6}
@@ -701,7 +701,7 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
-  describe("table.update(tblA, tblB)", function()
+  describe("Tests the functionality of table.update", function()
     it("should return a table that is tblA but with updated values from tblB", function()
       local tblA = {a = 1, b = 2, c = 3}
       local tblB = {b = 4}

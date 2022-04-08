@@ -1,5 +1,6 @@
 ----------------------------------------------------------------------------------
 --- Mudlet String Utils
+--- Used by both LuaGlobal.lua and generate-changelog.lua
 ----------------------------------------------------------------------------------
 
 
@@ -113,6 +114,56 @@ function string:trim()
   end
 end
 
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.patternEscape
+function string.patternEscape(self)
+  local gsub = string.gsub
+  local selfType = type(self)
+  if selfType ~= "string" then
+    printError(f"string.patternEscape: bad argument #1 type (string to escape as string expected, got {selfType})", true, true)
+  end
+  local replacements = {
+    ["%"] = "%%",
+    ["^"] = "%^",
+    ["$"] = "%$",
+    ["("] = "%(",
+    [")"] = "%)",
+    ["["] = "%[",
+    ["]"] = "%]",
+    ["."] = "%.",
+    ["*"] = "%*",
+    ["+"] = "%+",
+    ["-"] = "%-",
+    ["?"] = "%?",
+  }
+  local escaped = gsub(self, ".", replacements)
+  return escaped
+end
+
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#utf8.patternEscape
+function utf8.patternEscape(self)
+  local gsub = utf8.gsub
+  local selfType = type(self)
+  if selfType ~= "string" then
+    printError(f"utf8.patternEscape: bad argument #1 type (string to escape as string expected, got {selfType})", true, true)
+  end
+  local replacements = {
+    ["%"] = "%%",
+    ["^"] = "%^",
+    ["$"] = "%$",
+    ["("] = "%(",
+    [")"] = "%)",
+    ["["] = "%[",
+    ["]"] = "%]",
+    ["."] = "%.",
+    ["*"] = "%*",
+    ["+"] = "%+",
+    ["-"] = "%-",
+    ["?"] = "%?",
+  }
+  local escaped = gsub(self, ".", replacements)
+  return escaped
+end
+
 -- following functions fiddled with from https://github.com/hishamhm/f-strings/blob/master/F.lua and https://hisham.hm/2016/01/04/string-interpolation-in-lua/
 -- first bit patches load for lua 5.1.
 local load = load
@@ -128,9 +179,11 @@ if _VERSION == "Lua 5.1" then
   end
 end
 
-function f(str)
+-- long and inconvenient variable name is to help avoid collisions
+-- str (what it was before) was causing f("Hello {str}") to return "Hello Hello {str}"
+function f(supersecretstringvariablenocollision)
   local outer_env = _ENV or getfenv(1)
-  return (str:gsub("%b{}", function(block)
+  return (supersecretstringvariablenocollision:gsub("%b{}", function(block)
     local code = block:match("{(.*)}")
     local exp_env = {}
     setmetatable(exp_env, {

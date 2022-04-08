@@ -19,27 +19,29 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QDebug>
 
 #include "LuaInterface.h"
-
-
-#include "Host.h"
 #include "VarUnit.h"
+#include "utils.h"
 
 #include <csetjmp>
 
+extern "C" {
+    #include <lauxlib.h>
+    #include <lua.h>
+    #include <lualib.h>
+}
 
 static jmp_buf buf;
 
-LuaInterface::LuaInterface(Host* pH)
-: mHostID(pH->getHostID())
-, depth()
-, interpreter(pH->getLuaInterpreter())
-, L()
+LuaInterface::LuaInterface(lua_State* L)
+: depth()
+, L(L)
 {
     varUnit.reset(new VarUnit());
     //set our panic function
-    lua_atpanic(interpreter->pGlobalLua, &onPanic);
+    lua_atpanic(L, &onPanic);
 }
 
 LuaInterface::~LuaInterface() = default;
@@ -256,7 +258,7 @@ bool LuaInterface::reparentVariable(QTreeWidgetItem* newP, QTreeWidgetItem* cIte
         return false;
     }
 
-    L = interpreter->pGlobalLua;
+
     TVar* newParent = varUnit->getWVar(newP);
     TVar* oldParent = varUnit->getWVar(oldP);
     TVar* from = oldParent;
@@ -355,7 +357,7 @@ bool LuaInterface::setCValue(QList<TVar*> vars)
 bool LuaInterface::setValue(TVar* var)
 {
     //This function assumes the var has been modified and then called
-    L = interpreter->pGlobalLua;
+
 
     QList<TVar*> vars = varOrder(var);
     QString variableChangeCode = vars[0]->getName();
@@ -364,20 +366,20 @@ bool LuaInterface::setValue(TVar* var)
             return setCValue(vars);
         }
         if (vars[i]->getKeyType() == LUA_TNUMBER) {
-            variableChangeCode.append(QStringLiteral("[%1]").arg(vars.at(i)->getName()));
+            variableChangeCode.append(qsl("[%1]").arg(vars.at(i)->getName()));
         } else {
-            variableChangeCode.append(QStringLiteral(R"(["%1"])").arg(vars.at(i)->getName()));
+            variableChangeCode.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
         }
     }
     switch (var->getValueType()) {
     case LUA_TSTRING:
-        variableChangeCode.append(QStringLiteral(" = [[%1]]").arg(var->getValue()));
+        variableChangeCode.append(qsl(" = [[%1]]").arg(var->getValue()));
         break;
     case LUA_TNUMBER:
-        variableChangeCode.append(QStringLiteral(" = %1").arg(var->getValue()));
+        variableChangeCode.append(qsl(" = %1").arg(var->getValue()));
         break;
     case LUA_TBOOLEAN:
-        variableChangeCode.append(QStringLiteral(" = %1").arg(var->getValue()));
+        variableChangeCode.append(qsl(" = %1").arg(var->getValue()));
         break;
     case LUA_TTABLE:
         variableChangeCode.append(QLatin1String(" = {}"));
@@ -406,18 +408,18 @@ bool LuaInterface::setValue(TVar* var)
 
 void LuaInterface::deleteVar(TVar* var)
 {
-    L = interpreter->pGlobalLua;
+
     QList<TVar*> vars = varOrder(var);
     QString oldName = vars[0]->getName();
     for (int i = 1; i < vars.size(); i++) {
         if (vars[i]->getKeyType() == LUA_TNUMBER) {
-            oldName.append(QStringLiteral("[%1]").arg(vars[i]->getName()));
+            oldName.append(qsl("[%1]").arg(vars[i]->getName()));
         } else {
-            oldName.append(QStringLiteral(R"(["%1"])").arg(vars[i]->getName()));
+            oldName.append(qsl(R"(["%1"])").arg(vars[i]->getName()));
         }
     }
     //delete it
-    oldName.append(QStringLiteral(" = nil"));
+    oldName.append(qsl(" = nil"));
     int error = luaL_loadstring(L, oldName.toUtf8().constData());
     if (error) {
         qWarning().noquote().nospace() << "LuaInterface::deleteVar(...) WARNING - Internal Lua (parsing) error: \""
@@ -440,7 +442,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
     //uses C Api to rename a variable.
     //dangerous function since you can get an api panic
     //and trash the stack
-    L = interpreter->pGlobalLua;
+
     TVar* var = vars.back();
     //make the new stack
     lua_getglobal(L, (vars[0]->getName()).toUtf8().constData());
@@ -554,7 +556,7 @@ bool LuaInterface::loadVar(TVar* var)
 {
     //puts the value of a variable on the -1 position of the stack
     if (setjmp(buf) == 0) {
-        L = interpreter->pGlobalLua;
+
         int kType = var->getKeyType();
         int vType = var->getValueType();
         if (vType == LUA_TTABLE) {
@@ -591,7 +593,7 @@ bool LuaInterface::loadVar(TVar* var)
 void LuaInterface::renameVar(TVar* var)
 {
     //this assumes anything like reparenting has been done
-    L = interpreter->pGlobalLua;
+
     QList<TVar*> vars = varOrder(var);
     QString oldVariable = vars.at(0)->getName();
     QString newName;
@@ -602,9 +604,9 @@ void LuaInterface::renameVar(TVar* var)
     for (int i = 1; i < vars.size(); i++) {
         int kType = vars[i]->getKeyType();
         if (kType == LUA_TNUMBER) {
-            oldVariable.append(QStringLiteral("[%1]").arg(vars.at(i)->getName()));
+            oldVariable.append(qsl("[%1]").arg(vars.at(i)->getName()));
             if (i < vars.size() - 1) {
-                newName.append(QStringLiteral("[%1]").arg(vars[i]->getName()));
+                newName.append(qsl("[%1]").arg(vars[i]->getName()));
             }
 
         } else if (kType == LUA_TTABLE) {
@@ -613,25 +615,25 @@ void LuaInterface::renameVar(TVar* var)
         }
 
         // That leaves LUA_TSTRING:
-        oldVariable.append(QStringLiteral(R"(["%1"])").arg(vars.at(i)->getName()));
+        oldVariable.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
         if (i < vars.size() - 1) {
-            newName.append(QStringLiteral(R"(["%1"])").arg(vars.at(i)->getName()));
+            newName.append(qsl(R"(["%1"])").arg(vars.at(i)->getName()));
         }
     }
 
     if (vars.size() <= 1) {
         // this variable is at root level on _G
-        newName.append(QStringLiteral("_G[\"%1\"]").arg(vars.last()->getNewName()));
+        newName.append(qsl("_G[\"%1\"]").arg(vars.last()->getNewName()));
     } else {
         // this variable is nested in a table
         if (var->getNewKeyType() == LUA_TNUMBER) {
-            newName.append(QStringLiteral("[%1]").arg(vars.last()->getNewName()));
+            newName.append(qsl("[%1]").arg(vars.last()->getNewName()));
         } else {
-            newName.append(QStringLiteral(R"(["%1"])").arg(vars.last()->getNewName()));
+            newName.append(qsl(R"(["%1"])").arg(vars.last()->getNewName()));
         }
     }
 
-    auto renameCode = QStringLiteral("%1 = %2").arg(newName, oldVariable);
+    auto renameCode = qsl("%1 = %2").arg(newName, oldVariable);
     int error = luaL_loadstring(L, renameCode.toUtf8().constData());
     if (error) {
         qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In copying (first) stage, internal Lua (parsing) error: \""
@@ -674,7 +676,7 @@ void LuaInterface::renameVar(TVar* var)
 QString LuaInterface::getValue(TVar* var)
 {
     if (setjmp(buf) == 0) {
-        L = interpreter->pGlobalLua;
+
         QList<TVar*> vars = varOrder(var);
         if (vars.empty()) {
             return QString();
@@ -786,7 +788,6 @@ void LuaInterface::getVars(bool hide)
     //returns the base item
     // QElapsedTimer t;
     // t.start();
-    L = interpreter->pGlobalLua;
     lua_pushnil(L);
     depth = 0;
     auto g = new TVar();

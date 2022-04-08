@@ -1,6 +1,7 @@
 /***************************************************************************
- *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *   Copyright (C) 2011 by Heiko Koehn - KoehnHeiko@googlemail.com         *
+ *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -47,7 +48,7 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     connect(mPackageTable, &QTableWidget::currentItemChanged, this, &dlgPackageManager::slot_item_clicked);
     connect(mPackageTable, &QTableWidget::itemSelectionChanged, this, &dlgPackageManager::slot_toggle_remove_button);
 
-    setWindowTitle(tr("Package Manager - %1").arg(mpHost->getName()));
+    setWindowTitle(tr("Package Manager (experimental) - %1").arg(mpHost->getName()));
     mDetailsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     mDetailsTable->setFocusPolicy(Qt::NoFocus);
     mDetailsTable->setSelectionMode(QAbstractItemView::NoSelection);
@@ -87,11 +88,11 @@ void dlgPackageManager::resetPackageTable()
         shortDescription->setTextAlignment(Qt::AlignCenter);
         packageName->setText(mpHost->mInstalledPackages.at(i));
         auto packageInfo{mpHost->mPackageInfo.value(packageName->text())};
-        auto iconName = packageInfo.value(QStringLiteral("icon"));
-        auto iconDir = iconName.isEmpty() ? QStringLiteral(":/icons/mudlet.png")
-                                          : mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("%1/.mudlet/Icon/%2").arg(packageName->text(), iconName));
+        auto iconName = packageInfo.value(qsl("icon"));
+        auto iconDir = iconName.isEmpty() ? qsl(":/icons/mudlet.png")
+                                          : mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName->text(), iconName));
         packageName->setIcon(QIcon(iconDir));
-        auto title = packageInfo.value(QStringLiteral("title"));
+        auto title = packageInfo.value(qsl("title"));
         shortDescription->setText(title);
         mPackageTable->setItem(i, 0, packageName);
         mPackageTable->setItem(i, 1, shortDescription);
@@ -128,6 +129,10 @@ void dlgPackageManager::slot_remove_packages()
     for (int i = 0; i < removePackages.size(); i++) {
         mpHost->uninstallPackage(removePackages.at(i), 0);
     }
+
+    mDetailsTable->hide();
+    ui->detailsLabel->hide();
+    mDescription->hide();
 }
 
 void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
@@ -149,11 +154,11 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
         mDescription->hide();
         return;
     }
-    packageInfo.remove(QStringLiteral("mpackage"));
-    packageInfo.remove(QStringLiteral("icon"));
-    packageInfo.remove(QStringLiteral("title"));
+    packageInfo.remove(qsl("mpackage"));
+    packageInfo.remove(qsl("icon"));
+    packageInfo.remove(qsl("title"));
 
-    QString description = packageInfo.take(QStringLiteral("description"));
+    QString description = packageInfo.take(qsl("description"));
     if (description.isEmpty()) {
         mDescription->hide();
     } else {
@@ -169,7 +174,7 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
 
     QStringList labelText, details;
     labelText << tr("Author") << tr("Version") << tr("Created") << tr("Dependencies");
-    details << QStringLiteral("author") << QStringLiteral("version") << QStringLiteral("created") << QStringLiteral("dependencies");
+    details << qsl("author") << qsl("version") << qsl("created") << qsl("dependencies");
     int counter = 0;
     for (int i = 0; i < details.size(); i++) {
         QString valueText{packageInfo.take(details.at(i))};
@@ -234,11 +239,15 @@ void dlgPackageManager::slot_toggle_remove_button()
 {
     QModelIndexList selection = mPackageTable->selectionModel()->selectedRows();
     int selectionCount = selection.count();
-    bool haveSelection = selectionCount != 0;
-
-    mRemoveButton->setEnabled(haveSelection);
-    if (selectionCount > 1) {
-        // let the translations decide whenever it should be 'Remove package', 'Remove packages', or whatever is language-appropriate
-        mRemoveButton->setText(tr("Remove packages", "Button in package manager to remove selected package(s)", selectionCount));
+    mRemoveButton->setEnabled(selectionCount);
+    if (selectionCount) {
+        mRemoveButton->setText(tr("Remove %n package(s)",
+                                  // Intentional comment to separate arguments
+                                  "Message on button in package manager to remove one or more (%n is the count of) selected package(s).",
+                                  selectionCount));
+    } else {
+        mRemoveButton->setText(tr("Remove package",
+                                  // Intentional comment to separate arguments
+                                  "Message on button in package manager initially and when there is no packages to remove."));
     }
 }

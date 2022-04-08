@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2018 by Vadim Peretokin - vperetokin@gmail.com          *
- *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2018-2019, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -34,11 +35,10 @@ QString Discord::smUserName;
 QString Discord::smUserId;
 QString Discord::smDiscriminator;
 QString Discord::smAvatar;
-const QString Discord::mMudletApplicationId = QStringLiteral("450571881909583884");
+const QString Discord::mMudletApplicationId = qsl("450571881909583884");
 
 Discord::Discord(QObject* parent)
 : QObject(parent)
-, mLoaded{}
 // For details see https://discord.com/developers/docs/rich-presence/how-to#initialization
 // Initialise with a nullptr one with Mudlet's own ID
 // NB: for testing the following MUDs have registered:
@@ -57,18 +57,20 @@ Discord::Discord(QObject* parent)
               {"lusternia", {"lusternia.com", "iron-lus.ironrealms.com"}},
               {"starmourn", {"starmourn.com"}},
               {"stickmud", {"stickmud.com"}},
-              {"clessidra", {"clessidra.it", "mud.clessidra.it"}}
+              {"clessidra", {"clessidra.it", "mud.clessidra.it"}},
+              {"mume", {"mume.org"}},
+              {"asteria", {"asteriamud.com"}},
             }
 {
 #if defined(Q_OS_WIN64)
     // Only defined on 64 bit Windows
-    mpLibrary.reset(new QLibrary(QStringLiteral("discord-rpc64")));
+    mpLibrary.reset(new QLibrary(qsl("discord-rpc64")));
 #elif defined(Q_OS_WIN32)
     // Defined on both 32 and 64 bit Windows
-    mpLibrary.reset(new QLibrary(QStringLiteral("discord-rpc32")));
+    mpLibrary.reset(new QLibrary(qsl("discord-rpc32")));
 #else
     // All other OSes
-    mpLibrary.reset(new QLibrary(QStringLiteral("discord-rpc")));
+    mpLibrary.reset(new QLibrary(qsl("discord-rpc")));
 #endif
 
     using Discord_InitializePrototype = void (*)(const char*, DiscordEventHandlers*, int, const char*);
@@ -83,7 +85,7 @@ Discord::Discord(QObject* parent)
 
     if (!mpLibrary->isLoaded() || !Discord_Initialize || !Discord_UpdatePresence || !Discord_RunCallbacks || !Discord_Shutdown) {
         const auto msg = mpLibrary->errorString();
-        auto notFound = msg.contains(QStringLiteral("not found")) || msg.contains(QStringLiteral("No such file or directory"));
+        auto notFound = msg.contains(qsl("not found")) || msg.contains(qsl("No such file or directory"));
         qDebug().nospace() << "Could not " << (notFound ? "find" : "load") << " Discord library - searched in:";
         for (const auto& libraryPath : qApp->libraryPaths()) {
             qDebug() << "    " << libraryPath;
@@ -321,8 +323,8 @@ void Discord::UpdatePresence()
     auto pHost = mudlet::self()->getActiveHost();
     if (!pHost) {
         localDiscordPresence tempPresence;
-        tempPresence.setLargeImageKey(QStringLiteral("mudlet"));
-        tempPresence.setDetailText(QStringLiteral("www.mudlet.org"));
+        tempPresence.setLargeImageKey(qsl("mudlet"));
+        tempPresence.setDetailText(qsl("www.mudlet.org"));
 #if defined(DEBUG_DISCORD)
         qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - no current active Host instance, sending update using built-in Mudlet ApplicationID:\n" << tempPresence;
 #endif
@@ -405,7 +407,7 @@ void Discord::UpdatePresence()
     if (pHost->mDiscordAccessFlags & Host::DiscordSetLargeIcon) {
         auto image = mLargeImages.value(pHost);
         if (image.isEmpty() && applicationID == mMudletApplicationId) {
-            image = QStringLiteral("mudlet");
+            image = qsl("mudlet");
         }
         pDiscordPresence->setLargeImageKey(image);
     } else {
@@ -463,7 +465,7 @@ QString Discord::deduceGameName(const QString& address)
 {
     // Handle using localhost as an off-line testing case
     if (address == QLatin1String("localhost") || address == QLatin1String("127.0.0.1") || address == QLatin1String("::1")) {
-        return QStringLiteral("localhost");
+        return qsl("localhost");
     }
 
     // Handle the cases where the server url contains the "well-known" Server
@@ -486,7 +488,7 @@ QString Discord::deduceGameName(const QString& address)
         fragments.removeLast();
         otherName = fragments.join(QLatin1String("."));
         if (otherName.startsWith(QLatin1String("game."))) {
-            // WoTMUD type case - so take remaing term in the middle of original
+            // WoTMUD type case - so take remaining term in the middle of original
             otherName = otherName.split(QChar('.')).last();
             break;
         } else if (otherName.startsWith(QLatin1String("www."))) {
@@ -507,9 +509,9 @@ QString Discord::deduceGameName(const QString& address)
         break;
     }
 
-    if (address.endsWith(QStringLiteral(".com"))) {
+    if (address.endsWith(qsl(".com"))) {
         otherName = address.left(address.length() - 4);
-    } else if (address.endsWith(QStringLiteral(".de"))) {
+    } else if (address.endsWith(qsl(".de"))) {
         // Handle avalon.de case
         otherName = address.left(address.length() - 4);
     }
@@ -585,6 +587,21 @@ bool Discord::setApplicationID(Host* pHost, const QString& text)
     } else {
         return false;
     }
+}
+
+void Discord::resetData(Host* pHost){
+    mStartTimes.remove(pHost);
+    mEndTimes.remove(pHost);
+    mDetailTexts[pHost] = qsl("www.mudlet.org");
+    mStateTexts.remove(pHost);
+    mLargeImages.remove(pHost);
+    mLargeImageTexts.remove(pHost);
+    mSmallImages.remove(pHost);
+    mSmallImageTexts.remove(pHost);
+    mPartySize.remove(pHost);
+    mPartyMax.remove(pHost);
+    mHostApplicationIDs.remove(pHost);
+    UpdatePresence();
 }
 
 // Returns Host set app ID or the default Mudlet one if none set for the

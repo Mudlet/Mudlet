@@ -18,7 +18,13 @@
  ***************************************************************************/
 
 #include "AltFocusMenuBarDisable.h"
-#include <QProxyStyle>
+
+AltFocusMenuBarDisable::AltFocusMenuBarDisable()
+{
+    setObjectName(baseStyle()->objectName());
+}
+
+AltFocusMenuBarDisable::AltFocusMenuBarDisable(const QString &style) : QProxyStyle(QStyleFactory::create(style)) {}
 
 int AltFocusMenuBarDisable::styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const
 {

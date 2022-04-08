@@ -39,6 +39,14 @@ TLabel::TLabel(Host* pH, QWidget* pW)
     setMouseTracking(true);
 }
 
+TLabel::~TLabel()
+{
+    if (mpMovie) {
+        mpMovie->deleteLater();
+        mpMovie = nullptr;
+    }
+}
+
 void TLabel::setClick(const int func)
 {
     releaseFunc(mClickFunction, func);
@@ -86,7 +94,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 
     if (mpHost && mClickFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mClickFunction, event);
-        // The use of accept() here prevents the propogation of the event to
+        // The use of accept() here prevents the propagation of the event to
         // any parent, e.g. the containing TConsole
         event->accept();
         mudlet::self()->activateProfile(mpHost);
@@ -160,6 +168,12 @@ void TLabel::enterEvent(QEvent* event)
     } else {
         QWidget::enterEvent(event);
     }
+}
+
+void TLabel::resizeEvent(QResizeEvent* event)
+{
+    emit resized();
+    QWidget::resizeEvent(event);
 }
 
 

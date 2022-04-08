@@ -28,7 +28,7 @@ function SetQtBaseDir([string] $logFile) {
     }
     catch
     {
-      $Env:QT_BASE_DIR = "C:\Qt\5.12.10\mingw73_32"
+      $Env:QT_BASE_DIR = "C:\Qt\5.14.2\mingw73_32"
     }
   }
   Write-Output "Using $Env:QT_BASE_DIR as QT base directory." | Tee-Object -File "$logFile" -Append
@@ -87,7 +87,7 @@ function script:exec {
 
 # Checks, whether sh.exe is found in the PATH. If so, these parts get filtered out and the remaining PATH gets returned.
 function filterPathForSh {
-    $noShPath = ($Env:PATH.Split(';') | Where-Object { -NOT (Test-Path (Join-Path $_ "sh.exe") -PathType Leaf) }) -join ';'
+    $noShPath = ($Env:PATH.Split(';') | Where-Object { -NOT (Test-Path ([System.IO.Path]::Combine($_, "sh.exe")) -PathType Leaf) }) -join ';'
     return $noShPath
 }
 
@@ -210,20 +210,26 @@ function InstallMsys() {
 }
 
 function InstallBoost([string] $outputLocation = "C:\Libraries\") {
-  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.71.0.beta1/boost_1_71_0_b1.tar.gz/download" "boost.tar.gz" $true
+  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.77.0/boost_1_77_0.tar.gz/download" "boost.tar.gz" $true
   if (!(Test-Path -Path "C:\Libraries\" -PathType Container)) {
     Step "Creating Boost path"
     New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
   }
   ExtractTar "$workingBaseDir\boost.tar.gz" "$workingBaseDir"
   Step "Copying folder"
-  Move-Item "$workingBaseDir\boost_1_71_0" "$outputLocation" >> "$logFile" 2>&1
+  Move-Item "$workingBaseDir\boost_1_77_0" "$outputLocation" >> "$logFile" 2>&1
 }
 
 function InstallQt() {
-  DownloadFile "http://download.qt.io/official_releases/online_installers/qt-unified-windows-x86-online.exe" "qt-installer.exe"
-  Step "Installing"
-  exec ".\qt-installer.exe" @("--script=`"$(split-path -parent $script:MyInvocation.MyCommand.Path)\qt-silent-install.qs`"")
+  Step "Installing aqtinstall"
+  exec "pip" @("install", "aqtinstall")
+  New-Item -Path $Env:QT_BASE_DIR -ItemType Directory
+  cd $Env:QT_BASE_DIR
+  # go up to the root of Qt folder to start installation
+  cd ..
+  cd ..
+  Step "Installing Qt"
+  exec "aqt" @("install-qt", "windows", "desktop", "5.14.2", "win32_mingw73")
 }
 
 function InstallPython() {
@@ -235,7 +241,8 @@ function InstallPython() {
 }
 
 function InstallOpenssl() {
-  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.1.1d-win32.zip" "openssl-win32.zip"
+  # needs to be from http://wiki.overbyte.eu/wiki/index.php/ICS_Download as it includes extra binaries not available on openssl.org
+  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.1.1l-win32.zip" "openssl-win32.zip"
   ExtractZip "openssl-win32.zip" "openssl"
   Step "installing"
   exec "XCOPY" @("/S", "/I", "/Q", "openssl", "$Env:MINGW_BASE_DIR\bin")
@@ -255,9 +262,9 @@ function InstallHunspell() {
 
 function InstallYajl() {
   $Env:Path = $NoShPath
-  DownloadFile "https://github.com/lloyd/yajl/tarball/2.1.0" "yajl-2.1.0.tar.gz"
+  DownloadFile "https://github.com/lloyd/yajl/archive/refs/tags/2.1.0.tar.gz" "yajl-2.1.0.tar.gz"
   ExtractTar "yajl-2.1.0.tar.gz" "yajl-2.1.0"
-  Set-Location "yajl-2.1.0\lloyd-yajl-66cb08c"
+  Set-Location "yajl-2.1.0\yajl-2.1.0"
   Step "changing CMakeLists.txt"
   (Get-Content CMakeLists.txt -Raw) -replace '\/W4' -replace '(?<=SET\(linkFlags)[^\)]+' -replace '\/wd4996 \/wd4255 \/wd4130 \/wd4100 \/wd4711' -replace '(?<=SET\(CMAKE_C_FLAGS_DEBUG .)\/D \DEBUG \/Od \/Z7', '-g' -replace '(?<=SET\(CMAKE_C_FLAGS_RELEASE .)\/D NDEBUG \/O2', '-O2' | Out-File -encoding ASCII CMakeLists.txt >> "$logFile" 2>&1
   if (!(Test-Path -Path "build" -PathType Container)) {
@@ -289,9 +296,9 @@ function InstallLua() {
 }
 
 function InstallPcre() {
-  DownloadFile "https://ftp.pcre.org/pub/pcre/pcre-8.43.zip" "pcre.zip"
+  DownloadFile "https://deac-fra.dl.sourceforge.net/project/pcre/pcre/8.45/pcre-8.45.zip" "pcre.zip"
   ExtractZip "pcre.zip" "pcre"
-  Set-Location pcre\pcre-8.43
+  Set-Location pcre\pcre-8.45
   RunConfigure "--enable-utf --enable-unicode-properties --prefix=$Env:MINGW_BASE_DIR_BASH"
   RunMake
   RunMakeInstall
@@ -310,9 +317,9 @@ function InstallSqlite() {
 }
 
 function InstallZlib() {
-  DownloadFile "http://zlib.net/zlib-1.2.11.tar.gz" "zlib-1.2.11.tar.gz"
-  ExtractTar "$workingBaseDir\zlib-1.2.11.tar.gz" "$workingBaseDir\zlib"
-  Set-Location "$workingBaseDir\zlib\zlib-1.2.11"
+  DownloadFile "http://zlib.net/zlib-1.2.12.tar.gz" "zlib-1.2.12.tar.gz"
+  ExtractTar "$workingBaseDir\zlib-1.2.12.tar.gz" "$workingBaseDir\zlib"
+  Set-Location "$workingBaseDir\zlib\zlib-1.2.12"
   RunMake "win32/Makefile.gcc"
   $Env:INCLUDE_PATH = "$Env:MINGW_BASE_DIR\include"
   $Env:LIBRARY_PATH = "$Env:MINGW_BASE_DIR\lib"
@@ -354,9 +361,9 @@ function InstallZziplib() {
 }
 
 function InstallLuarocks() {
-  DownloadFile "http://luarocks.github.io/luarocks/releases/luarocks-3.1.2-win32.zip" "luarocks.zip"
+  DownloadFile "http://luarocks.github.io/luarocks/releases/luarocks-3.8.0-win32.zip" "luarocks.zip"
   ExtractZip "luarocks.zip" "luarocks"
-  Set-Location luarocks\luarocks-3.1.2-win32
+  Set-Location luarocks\luarocks-3.8.0-win32
   Step "installing luarocks"
   exec ".\install.bat" @("/P", "C:\LuaRocks", "/MW", "/Q")
   Set-Location \LuaRocks\lua\luarocks\core
@@ -462,7 +469,7 @@ function CheckAndInstallMsys(){
 }
 
 function CheckAndInstallBoost(){
-    CheckAndInstall "Boost" "C:\Libraries\boost_1_71_0\bootstrap.bat" { InstallBoost }
+    CheckAndInstall "Boost" "C:\Libraries\boost_1_77_0\bootstrap.bat" { InstallBoost }
 }
 
 function CheckAndInstallQt(){

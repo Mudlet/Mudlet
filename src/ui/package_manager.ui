@@ -216,7 +216,7 @@
             <enum>Qt::TabFocus</enum>
            </property>
            <property name="text">
-            <string>Remove package</string>
+            <string comment="Message on button in package manager initially and when there is no packages to remove.">Remove package</string>
            </property>
           </widget>
          </item>

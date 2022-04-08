@@ -42,6 +42,9 @@ if(APPLE)
   set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "")
 endif()
 
+set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake
+  CACHE STRING "Vcpkg toolchain file")
+
 project(mudlet)
 
 if(CMAKE_CONFIGURATION_TYPES)
@@ -71,6 +74,10 @@ else()
   set(APP_TARGET mudlet)
 endif()
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 # APP_BUILD should only be empty/null in official "release" builds, developers
 # may like to set the MUDLET_VERSION_BUILD environment variable to their user
 # and branch names to make it easier to tell different builds apart!
@@ -83,7 +90,7 @@ endif()
 # IMPORTANT: To insure consistency please ensure the SAME of the first two
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 4.11.2)
+set(APP_VERSION 4.15.1)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
                                          STREQUAL "")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
@@ -136,6 +143,10 @@ endif()
 git_submodule_init(
   CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"
   READABLE_NAME "lua code formatter source code")
+
+git_submodule_init(
+  CHECK_FILE "3rdparty/qt-ordered-map/src/orderedmap.h" SUBMODULE_PATH "3rdparty/qt-ordered-map"
+  READABLE_NAME "Qt ordered map source code")
 
 if(USE_UPDATER)
   git_submodule_init(CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt" SUBMODULE_PATH

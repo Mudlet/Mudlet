@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -33,7 +33,7 @@ class TVar
 {
 public:
     TVar();
-    TVar(TVar*);
+    explicit TVar(TVar*);
     TVar(TVar*, const QString&, int, const QString&, int);
     void addChild(TVar*);
     void setParent(TVar*);

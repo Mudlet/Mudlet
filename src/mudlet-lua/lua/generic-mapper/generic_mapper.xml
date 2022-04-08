@@ -268,7 +268,7 @@ setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 				</regexCodePropertyList>
 			</Trigger>
 			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-				<name>Russion Vision Fail Trigger</name>
+				<name>Russian Vision Fail Trigger</name>
 				<script>raiseEvent("onVisionFail")</script>
 				<triggerType>0</triggerType>
 				<conditonLineDelta>0</conditonLineDelta>
@@ -319,8 +319,12 @@ setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 				<regexCodeList>
 					<string>^\s*这里明显的方向有 (.*)。</string>
 					<string>^\s*这里明显的出口有 (.*)。</string>
+					<string>^\s*这里明显的出口是 (.*)。</string>
+					<string>^\s*这里唯一的出口是 (.*)。</string>
 				</regexCodeList>
 				<regexCodePropertyList>
+					<integer>1</integer>
+					<integer>1</integer>
 					<integer>1</integer>
 					<integer>1</integer>
 				</regexCodePropertyList>
@@ -340,9 +344,13 @@ setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 				<colorTriggerBgColor>#000000</colorTriggerBgColor>
 				<regexCodeList>
 					<string>你又渴又饿，浑身无力，根本就走不动路。</string>
+					<string>这个方向没有出路。</string>
+					<string>^看来(\w+)不打算让你过去。</string>
 				</regexCodeList>
 				<regexCodePropertyList>
 					<integer>0</integer>
+					<integer>0</integer>
+					<integer>1</integer>
 				</regexCodePropertyList>
 			</Trigger>
 		</TriggerGroup>
@@ -513,10 +521,18 @@ end</script>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Map Stop Alias</name>
-				<script>raiseEvent("mapStop")</script>
+				<script>raiseEvent("mapStop")
+raiseEvent("sysSpeedwalkStopped")</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^map stop$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Toggle Speedwalk Alias</name>
+				<script>map.toggleSpeedwalk(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^mpp(?:\s?(on|off))?$</regex>
 			</Alias>
 		</AliasGroup>
 		<AliasGroup isActive="yes" isFolder="yes">
@@ -647,7 +663,7 @@ end</script>
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.0.22"
+local version = "2.0.24"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -766,6 +782,9 @@ map.help = {[[
 
         &lt;yellow&gt;map.prompt.room&lt;reset&gt; - Can be set to specify the room name
         &lt;yellow&gt;map.prompt.exits&lt;reset&gt; - Can be set to specify the room exits
+        &lt;yellow&gt;map.prompt.hash&lt;reset&gt; - Can be set to specify the room hash
+            Notice: if you set this, mapper will only find room by
+            getRoomIDbyHash(hash)
         &lt;yellow&gt;map.character&lt;reset&gt; - Contains the current character name
         &lt;yellow&gt;map.save.recall&lt;reset&gt; - Contains a table of recall roomIDs for all
             characters
@@ -1069,7 +1088,7 @@ map.help.path = [[
 
         This command tries to find a walking path from the current room to the
         named room. If an area name is given, only rooms within that area that
-        is given are checked. Neither the room name nore the area name are case
+        is given are checked. Neither the room name nor the area name are case
         sensitive, but otherwise an exact match is required. Note that a
         semicolon is required between the room name and area name, if an area
         name is given, but spaces before or after the semicolon are optional.
@@ -1137,7 +1156,7 @@ map.help.config = [[
         &lt;yellow&gt;search_on_look&lt;reset&gt; - When this is set, using the "look" command causes
             the map to verify your position using the room name and exits
             seen following using the command. This may be true or false.
-            
+
         &lt;yellow&gt;clear_lines_on_send&lt;reset&gt; - When this is set, any time a command is sent,
             any lines stored from the game used to search for the room name
             are cleared. This may be true or false.
@@ -1145,7 +1164,7 @@ map.help.config = [[
         &lt;yellow&gt;mode&lt;reset&gt; - This is the default mapping mode on startup, and defines how
             new rooms are added to the map. May be "lazy", "simple",
             "normal" or "complex".
-            
+
         &lt;yellow&gt;download_path&lt;reset&gt; - This is the path that updates are downloaded from.
             This may be any web address where the versions.lua and
             generic_mapper.xml files can be downloaded from.
@@ -1167,7 +1186,7 @@ map.help.config = [[
         &lt;yellow&gt;custom_name_search&lt;reset&gt; - When this is set, instead of running the default
             function name_search, a user-defined function called
             'mudlet.custom_name_search' is used instead. This may be true or false.
-            
+
         &lt;yellow&gt;use_translation&lt;reset&gt; - When this is set, the lang_dirs table is used to
             translate movement and status commands in some other language
             into the English used by the script. This may be true or false.
@@ -1272,7 +1291,8 @@ map.defaults = {
     speedwalk_random = true,
     max_search_distance = 1,
     clear_lines_on_send = true,
-    map_window = {x = 0,
+    map_window = {
+        x = 0,
         y = 0,
         w = "30%",
         h = "40%",
@@ -1288,6 +1308,10 @@ map.defaults = {
         u = 'u', d = 'd', ["in"] = 'in', out = 'out', north = 'north', northeast = 'northeast',
         east = 'east', west = 'west', south = 'south', southeast = 'southeast', southwest = 'southwest',
         northwest = 'northwest', up = 'up', down = 'down', l = 'l', look = 'look',
+        ed = 'ed', eu = 'eu', eastdown = 'eastdown', eastup = 'eastup',
+        nd = 'nd', nu = 'nu', northdown = 'northdown', northup = 'northup',
+        sd = 'sd', su = 'su', southdown = 'southdown', southup = 'southup',
+        wd = 'wd', wu = 'wu', westdown = 'westdown', westup = 'westup',
     },
     debug = false,
     download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper",
@@ -1296,6 +1320,54 @@ map.defaults = {
 local move_queue, lines = {}, {}
 local find_portal, vision_fail, room_detected, random_move, force_portal, find_prompt, downloading, walking, help_shown
 local mt = getmetatable(map) or {}
+
+local exitmap = {
+    n = 'north',    ne = 'northeast',   nw = 'northwest',   e = 'east',
+    w = 'west',     s = 'south',        se = 'southeast',   sw = 'southwest',
+    u = 'up',       d = 'down',         ["in"] = 'in',      out = 'out',
+    l = 'look',
+    ed = 'eastdown',    eu = 'eastup',  nd = 'northdown',   nu = 'northup',
+    sd = 'southdown',   su = 'southup', wd = 'westdown',    wu = 'westup',
+}
+
+local short = {}
+for k,v in pairs(exitmap) do
+    short[v] = k
+end
+
+local stubmap = {
+    north = 1,      northeast = 2,      northwest = 3,      east = 4,
+    west = 5,       south = 6,          southeast = 7,      southwest = 8,
+    up = 9,         down = 10,          ["in"] = 11,        out = 12,
+    northup = 13,   southdown = 14,     southup = 15,       northdown = 16,
+    eastup = 17,    westdown = 18,      westup = 19,        eastdown = 20,
+    [1] = "north",  [2] = "northeast",  [3] = "northwest",  [4] = "east",
+    [5] = "west",   [6] = "south",      [7] = "southeast",  [8] = "southwest",
+    [9] = "up",     [10] = "down",      [11] = "in",        [12] = "out",
+    [13] = "northup", [14] = "southdown", [15] = "southup", [16] = "northdown",
+    [17] = "eastup", [18] = "westdown", [19] = "westup",    [20] = "eastdown",
+}
+
+local coordmap = {
+    [1] = {0,1,0},      [2] = {1,1,0},      [3] = {-1,1,0},     [4] = {1,0,0},
+    [5] = {-1,0,0},     [6] = {0,-1,0},     [7] = {1,-1,0},     [8] = {-1,-1,0},
+    [9] = {0,0,1},      [10] = {0,0,-1},    [11] = {0,0,0},     [12] = {0,0,0},
+    [13] = {0,1,1},     [14] = {0,-1,-1},   [15] = {0,-1,1},    [16] = {0,1,-1},
+    [17] = {1,0,1},     [18] = {-1,0,-1},   [19] = {-1,0,1},    [20] = {1,0,-1},
+}
+
+local reverse_dirs = {
+    north = "south", south = "north", west = "east", east = "west", up = "down",
+    down = "up", northwest = "southeast", northeast = "southwest", southwest = "northeast",
+    southeast = "northwest", ["in"] = "out", out = "in",
+    northup = "southdown", southdown = "northup", southup = "northdown", northdown = "southup",
+    eastup = "westdown", westdown = "eastup", westup = "eastdown", eastdown = "westup",
+}
+
+local wait_echo = {}
+local mapper_tag = "&lt;112,229,0&gt;(&lt;73,149,0&gt;mapper&lt;112,229,0&gt;): &lt;255,255,255&gt;"
+local debug_tag = "&lt;255,165,0&gt;(&lt;200,120,0&gt;debug&lt;255,165,0&gt;): &lt;255,255,255&gt;"
+local err_tag = "&lt;255,0,0&gt;(&lt;178,34,34&gt;error&lt;255,0,0&gt;): &lt;255,255,255&gt;"
 
 local function config()
     local defaults = map.defaults
@@ -1318,7 +1390,7 @@ local function config()
         exitmap[k] = v[1]
         reverse_dirs[v[1]] = v[2]
         short[v[1]] = k
-        local count = #coordmap
+        local count = #coordmap + 1
         coordmap[count] = {v[3],v[4],v[5]}
         stubmap[count] = v[1]
         stubmap[v[1]] = count
@@ -1362,45 +1434,6 @@ local function config()
         map.showMap(true)
     end
 end
-
-local exitmap = {
-    n = 'north',    ne = 'northeast',   nw = 'northwest',   e = 'east',
-    w = 'west',     s = 'south',        se = 'southeast',   sw = 'southwest',
-    u = 'up',       d = 'down',         ["in"] = 'in',      out = 'out',
-    l = 'look'
-}
-
-local short = {}
-for k,v in pairs(exitmap) do
-    short[v] = k
-end
-
-local stubmap = {
-    north = 1,      northeast = 2,      northwest = 3,      east = 4,
-    west = 5,       south = 6,          southeast = 7,      southwest = 8,
-    up = 9,         down = 10,          ["in"] = 11,        out = 12,
-    [1] = "north",  [2] = "northeast",  [3] = "northwest",  [4] = "east",
-    [5] = "west",   [6] = "south",      [7] = "southeast",  [8] = "southwest",
-    [9] = "up",     [10] = "down",      [11] = "in",        [12] = "out",
-}
-
-local coordmap = {
-    [1] = {0,1,0},      [2] = {1,1,0},      [3] = {-1,1,0},     [4] = {1,0,0},
-    [5] = {-1,0,0},     [6] = {0,-1,0},     [7] = {1,-1,0},     [8] = {-1,-1,0},
-    [9] = {0,0,1},      [10] = {0,0,-1},    [11] = {0,0,0},     [12] = {0,0,0},
-}
-
-local reverse_dirs = {
-    north = "south", south = "north", west = "east", east = "west", up = "down",
-    down = "up", northwest = "southeast", northeast = "southwest", southwest = "northeast",
-    southeast = "northwest", ["in"] = "out", out = "in",
-}
-
-local wait_echo = {}
-local mapper_tag = "&lt;112,229,0&gt;(&lt;73,149,0&gt;mapper&lt;112,229,0&gt;): &lt;255,255,255&gt;"
-local debug_tag = "&lt;255,165,0&gt;(&lt;200,120,0&gt;debug&lt;255,165,0&gt;): &lt;255,255,255&gt;"
-local err_tag = "&lt;255,0,0&gt;(&lt;178,34,34&gt;error&lt;255,0,0&gt;): &lt;255,255,255&gt;"
-
 
 local function parse_help_text(text)
   text = text:gsub("%$ROOM_NAME_STATUS", (map.currentName and map.currentName ~= "") and '✔️' or '❌')
@@ -1500,7 +1533,7 @@ function map.setConfigs(key, val, sub_key)
         elseif key == "custom_exits" then
             if type(val) == "table" then
                 for k, v in pairs(val) do
-                    map.configs.custom_exit[k] = v
+                    map.configs.custom_exits[k] = v
                     map.echo(string.format("Custom Exit short direction %s, long direction %s",k,v[1]))
                     map.echo(string.format("    set to: x: %s, y: %s, z: %s, reverse: %s",v[3],v[4],v[5],v[2]))
                 end
@@ -1594,7 +1627,7 @@ local function add_door(roomID, dir, status)
     end
     if type(status) ~= "number" then
         status = assert(table.index_of({"none","open","closed","locked"},status),
-            "Add Door: Invald status, must be none, open, closed, or locked") - 1
+            "Add Door: Invalid status, must be none, open, closed, or locked") - 1
     end
     local exits = getRoomExits(roomID)
     -- check handling of custom exits here
@@ -1660,7 +1693,7 @@ local function getRoomStubs(roomID)
     -- check handling of custom exits here
     local tmp
     for i = 13,#stubmap do
-        tmp = tonumber(getRoomUserData(roomID,"stub"..stubmap[i]))
+        tmp = tonumber(getRoomUserData(roomID,"stub "..stubmap[i])) or tonumber(getRoomUserData(roomID,"stub"..stubmap[i])) -- for old version
         if tmp then table.insert(stubs,tmp) end
     end
 
@@ -1683,11 +1716,12 @@ local function connect_rooms(ID1, ID2, dir1, dir2, no_check)
     if stubmap[dir1] &lt;= 12 then
         setExit(ID1,ID2,stubmap[dir1])
     else
+        addSpecialExit(ID1, ID2, dir1)
         setRoomUserData(ID1,"exit " .. dir1,ID2)
     end
-    if stubmap[dir1] &gt; 13 then
+    if stubmap[dir1] &gt; 12 then
         -- check handling of custom exits here
-        setRoomUserData(ID1,"stub"..dir1,"")
+        setRoomUserData(ID1,"stub "..dir1, stubmap[dir1])
     end
     local doors1, doors2 = getDoors(ID1), getDoors(ID2)
     local dstatus1, dstatus2 = doors1[short[dir1]] or doors1[dir1], doors2[short[dir2]] or doors2[dir2]
@@ -1706,11 +1740,12 @@ local function connect_rooms(ID1, ID2, dir1, dir2, no_check)
             if stubmap[dir1] &lt;= 12 then
                 setExit(ID2,ID1,stubmap[dir2])
             else
+                addSpecialExit(ID2, ID1, dir2)
                 setRoomUserData(ID2,"exit " .. dir2,ID1)
             end
-            if stubmap[dir2] &gt; 13 then
+            if stubmap[dir2] &gt; 12 then
                 -- check handling of custom exits here
-                setRoomUserData(ID2,"stub"..dir2,"")
+                setRoomUserData(ID2,"stub "..dir2, stubmap[dir2])
             end
         end
     end
@@ -1721,15 +1756,24 @@ local function check_room(roomID, name, exits, onlyName)
     if not roomID then
         error("Check Room Error: No ID",2)
     end
+    -- check with room hash id
+    if map.prompt.hash then
+        if map.prompt.hash == getRoomHashByID(roomID) then
+            return true
+        else
+            return false
+        end
+    end
+
     if name ~= getRoomName(roomID) then return false end
-    
+
     -- used in mode "lazy" to match only the room name
     if onlyName then return true end
-    
+
     local t_exits = table.union(getRoomExits(roomID),getRoomStubs(roomID))
     -- check handling of custom exits here
     for i = 13,#stubmap do
-        t_exits[stubmap[i]] = tonumber(getRoomUserData(roomID,"exit " .. stubmap[i]))
+        t_exits[stubmap[i]] = tonumber(getRoomUserData(roomID,"exit " .. stubmap[i])) or (tonumber(getRoomUserData(roomID,"stub " .. stubmap[i])) and 0) or (tonumber(getRoomUserData(roomID,"stub" .. stubmap[i])) and 0) -- for old version
     end
     for k,v in ipairs(exits) do
         if short[v] and not table.contains(t_exits,v) then return false end
@@ -1776,13 +1820,20 @@ local function create_room(name, exits, dir, coords)
         addRoom(newID)
         setRoomArea(newID, map.currentArea)
         setRoomName(newID, name)
+        if map.prompt.hash then
+            setRoomIDbyHash(newID, map.prompt.hash)
+        end
         for k,v in ipairs(exits) do
             if stubmap[v] then
                 if stubmap[v] &lt;= 12 then
                     setExitStub(newID, stubmap[v], true)
                 else
+                    -- add special char to prompt special exit
+                    if string.find(v, "up") or string.find(v, "down") then
+                        setRoomChar(newID, "◎")
+                    end
                     -- check handling of custom exits here
-                    setRoomUserData(newID, "stub"..v,stubmap[v])
+                    setRoomUserData(newID, "stub "..v,stubmap[v])
                 end
             end
         end
@@ -1855,17 +1906,25 @@ local function find_link(name, exits, dir, max_distance)
             miny, maxy = y - max_distance, y + max_distance
             minz, maxz = z - max_distance, z + max_distance
         end
-        repeat
-            x, y, z = x + dx, y + dy, z + dz
-            rooms = getRoomsByPosition(map.currentArea,x,y,z)
-        until (x &gt; maxx or x &lt; minx or y &gt; maxy or y &lt; miny or z &gt; maxz or z &lt; minz or not table.is_empty(rooms))
-        for k,v in pairs(rooms) do
-            if check_room(v,name,exits,false) then
-                match = v
-                break            
-            elseif map.mode == "lazy" and check_room(v,name,exits,true) then
-                match = v
-                break
+        -- find link from room hash first
+        if map.prompt.hash then
+            local room = getRoomIDbyHash(map.prompt.hash)
+            if room &gt; 0 then
+                match = room
+            end
+        else
+            repeat
+                x, y, z = x + dx, y + dy, z + dz
+                rooms = getRoomsByPosition(map.currentArea,x,y,z)
+            until (x &gt; maxx or x &lt; minx or y &gt; maxy or y &lt; miny or z &gt; maxz or z &lt; minz or not table.is_empty(rooms))
+            for k,v in pairs(rooms) do
+                if check_room(v,name,exits,false) then
+                    match = v
+                    break
+                elseif map.mode == "lazy" and check_room(v,name,exits,true) then
+                    match = v
+                    break
+                end
             end
         end
         if match then
@@ -1912,12 +1971,12 @@ local function move_map()
             -- this check isn't working as intended, find out why
             map.find_me(map.currentName,map.currentExits)
         else
-        	local onlyName
+            local onlyName
             if map.mode == "lazy" then
               onlyName = true
             else
               onlyName = false
-            end 
+            end
             if exits[move] and (vision_fail or check_room(exits[move], map.currentName, map.currentExits, onlyName)) then
                 set_room(exits[move])
             elseif special[move] and (vision_fail or check_room(special[move], map.currentName, map.currentExits, onlyName)) then
@@ -2008,8 +2067,8 @@ local function capture_room_info(name, exits)
                 table.insert(map.currentExits,w)
             end
         end
-    undupeExits = deduplicate_exits(map.currentExits)
-    map.set("currentExits", undupeExits)
+        undupeExits = deduplicate_exits(map.currentExits)
+        map.set("currentExits", undupeExits)
         map.echo(string.format("Exits Captured: %s (%s)",exits, table.concat(map.currentExits, " ")),true)
         move_map()
     elseif vision_fail then
@@ -2401,6 +2460,18 @@ function map.find_me(name, exits, dir, manual)
     -- tries to locate the player using the current room name and exits, and if provided, direction of movement
     -- if direction of movement is given, narrows down possibilities using previous room info
     if move ~= "recall" then move_queue = {} end
+    -- find from room hash id - map.find_me(nil, nil, nil, false)
+    if map.prompt.hash then
+        local room = getRoomIDbyHash(map.prompt.hash)
+        if room &gt; 0 then
+            set_room(room)
+            map.echo("Room found, ID: " .. room, true)
+            return
+        else
+            map.echo("Room not found in map database!", not manual, true)
+            return
+        end
+    end
     local check = dir and map.currentRoom and table.contains(exitmap,dir)
     name = name or map.currentName
     exits = exits or map.currentExits
@@ -2432,7 +2503,7 @@ function map.find_me(name, exits, dir, manual)
     if table.size(match_IDs) == 0 then
         match_IDs = rooms
     end
-    if table.contains(match_IDs,map.currentRoom) then
+    if table.index_of(match_IDs,map.currentRoom) then
         match_IDs = {map.currentRoom}
     end
     if not table.is_empty(match_IDs) and not find_portal then
@@ -2453,11 +2524,7 @@ function map.find_me(name, exits, dir, manual)
         end
         find_portal = false
     elseif table.is_empty(match_IDs) then
-        if not manual then
-            map.echo("Room not found in map database", true, true)
-        else
-            map.echo("Room not found in map database", false, true)
-        end
+        map.echo("Room not found in map database", not manual, true)
     end
 end
 
@@ -2786,6 +2853,8 @@ continue_walk = function(new_room)
         -- check to see if we are done
         if #map.walkDirs == 0 then
             walking = false
+            speedWalkPath, speedWalkWeight = {}, {}
+            raiseEvent("sysSpeedwalkFinished")
         end
     end
     -- make tempTimer to send next command if necessary
@@ -2843,14 +2912,58 @@ function map.speedwalk(roomID, walkPath, walkDirs)
             send(dir)
         end
         walking = false
+        raiseEvent("sysSpeedwalkFinished")
     end
 end
 
 function doSpeedWalk()
     if #speedWalkPath ~= 0 then
+        raiseEvent("sysSpeedwalkStarted")
         map.speedwalk(nil, speedWalkPath, speedWalkDir)
     else
         map.echo("No path to chosen room found.",false,true)
+    end
+end
+
+function map.pauseSpeedwalk()
+    if #speedWalkDir ~= 0 then
+        walking = false
+        raiseEvent("sysSpeedwalkPaused")
+        map.echo("Speedwalking paused.")
+    else
+        map.echo("Not currently speedwalking.")
+    end
+end
+
+function map.resumeSpeedwalk(delay)
+    if #speedWalkDir ~= 0 then
+        map.find_me(nil, nil, nil, true)
+        raiseEvent("sysSpeedwalkResumed")
+        map.echo("Speedwalking resumed.")
+        tempTimer(delay or 0, function() map.speedwalk(nil, speedWalkPath, speedWalkDir) end)
+    else
+        map.echo("Not currently speedwalking.")
+    end
+end
+
+function map.stopSpeedwalk()
+    if #speedWalkDir ~= 0 then
+        walking = false
+        map.walkDirs, speedWalkDir, speedWalkPath, speedWalkWeight = {}, {}, {}, {}
+        raiseEvent("sysSpeedwalkStopped")
+        map.echo("Speedwalking stopped.")
+    else
+        map.echo("Not currently speedwalking.")
+    end
+end
+
+function map.toggleSpeedwalk(what)
+    assert(what == nil or what == "on" or what == "off", "map.toggleSpeedwalk wants 'on', 'off' or nothing as an argument")
+
+    if what == "on" or (what == nil and walking) then
+        map.pauseSpeedwalk()
+    elseif what == "off" or (what == nil and not walking) then
+        map.resumeSpeedwalk()
     end
 end
 
@@ -2938,11 +3051,11 @@ end
 function map.sanitizeRoomName(roomtitle)
   assert(type(roomtitle) == "string", "map.sanitizeRoomName: bad argument #1 expected room title, got "..type(roomtitle).."!")
   if not roomtitle:match("  ") then return roomtitle end
-  
+
   local parts = roomtitle:split("  ")
   table.sort(parts, function(a,b) return #a &lt; #b end)
   local longestpart = parts[#parts]
-  
+
   local trimmed = utf8.match(longestpart, "[%w ]+"):trim()
   return trimmed
 end
@@ -2995,6 +3108,15 @@ function map.eventHandler(event, ...)
         elseif string.ends(file,"/generic_mapper.xml") then
             update_version()
         end
+    elseif event == "sysDownloadError" and downloading then
+        local file = arg[1]
+        if string.ends(file,"/versions.lua") and mudlet.translations.interfacelanguage == "zh_CN" then
+            -- update to the current download path for chinese user
+            if map.configs.download_path == "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper" then
+                map.configs.download_path = "https://gitee.com/mudlet/Mudlet/raw/development/src/mudlet-lua/lua/generic-mapper"
+                map.checkVersion()
+            end
+        end
     elseif event == "sysLoadEvent" or event == "sysInstall" then
         config()
     elseif event == "mapOpenEvent" then
@@ -3015,9 +3137,10 @@ function map.eventHandler(event, ...)
         end
     end
 end
-				
+
 map.registeredEvents = {
 registerAnonymousEventHandler("sysDownloadDone", "map.eventHandler"),
+registerAnonymousEventHandler("sysDownloadError", "map.eventHandler"),
 registerAnonymousEventHandler("sysLoadEvent", "map.eventHandler"),
 registerAnonymousEventHandler("sysConnectionEvent", "map.eventHandler"),
 registerAnonymousEventHandler("sysInstall", "map.eventHandler"),

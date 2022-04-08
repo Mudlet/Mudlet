@@ -54,11 +54,11 @@ TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 , max_x(0)
 , max_y(0)
 , max_z(0)
-, gridMode( false )
-, isZone( false )
-, zoneAreaRef( 0 )
-, mpRoomDB( pRDB )
-, mIsDirty( false )
+, gridMode(false)
+, isZone(false)
+, zoneAreaRef(0)
+, mpRoomDB(pRDB)
+, mIsDirty(false)
 , mpMap(pMap)
 {
 }
@@ -486,7 +486,7 @@ void TArea::removeRoom(int room, bool isToDeferAreaRelatedRecalculations)
     QElapsedTimer timer;
     timer.start();
 
-    // Will use to flag whether some things have to be recalcuated.
+    // Will use to flag whether some things have to be recalculated.
     bool isOnExtreme = false;
     if (rooms.contains(room) && !isToDeferAreaRelatedRecalculations) {
         // just a check, if the area DOESN'T have the room then it is not wise
@@ -568,10 +568,10 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
                 itSpecialExit.next();
                 QPair<QString, int> exitData;
                 exitData.first = itSpecialExit.key();
+                exitData.second = itSpecialExit.value();
                 TRoom* pToRoom = mpRoomDB->getRoom(exitData.second);
                 if (pToRoom && mpRoomDB->getArea(pToRoom->getArea()) != this) {
                     // Note that pToRoom->getArea() is misnamed, should be getAreaId() !
-                    exitData.second = itSpecialExit.value();
                     if (!exitData.first.isEmpty()) {
                         results.insert(fromRoomId, exitData);
                     }
@@ -771,9 +771,11 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
     if (!(pLabel->fgColor.red() == defaultLabelForeground.red()
           && pLabel->fgColor.green() == defaultLabelForeground.green()
           && pLabel->fgColor.blue() == defaultLabelForeground.blue()
+          && pLabel->fgColor.alpha() == defaultLabelForeground.alpha()
           && pLabel->bgColor.red() == defaultLabelBackground.red()
-          && pLabel->bgColor.red() == defaultLabelBackground.green()
-          && pLabel->bgColor.red() == defaultLabelBackground.blue())) {
+          && pLabel->bgColor.green() == defaultLabelBackground.green()
+          && pLabel->bgColor.blue() == defaultLabelBackground.blue()
+          && pLabel->bgColor.alpha() == defaultLabelBackground.alpha())) {
 
         // For an image the colors are not used and tend to be set to black, if
         // so skip them. Unfortunately because of the way QColour s are
@@ -924,7 +926,7 @@ QList<QByteArray> TArea::convertImageToBase64Data(const QPixmap& pixmap) const
     QBuffer imageInputBuffer;
 
     imageInputBuffer.open(QIODevice::WriteOnly);
-    // Go for maximum compresssion - for the smallest amount of data, the second
+    // Go for maximum compression - for the smallest amount of data, the second
     // argument is a const char[] so does not require a QString wrapper:
     pixmap.save(&imageInputBuffer, "PNG", 0);
     QBuffer imageOutputBuffer;
