@@ -1,4 +1,4 @@
-name: Generate a changelog
+name: Generate coder attribution
 
 on:
   schedule:
@@ -59,7 +59,7 @@ jobs:
 
     - name: Generate changelog
       run: |
-        authors=$(git log $FROM_RELEASE..$TO_RELEASE --format="%aN <%aE>" --reverse | perl -e 'my %dedupe; while (<STDIN>) { print unless $dedupe{$_}++}')
+        authors=$(git log Mudlet-4.1.0..HEAD --format="%aN <%aE>" --reverse | sort -u  | grep -oE ".+ <" | tr -d ' <' | sort -u)
    
     # - name: Upload changelog as html
     #   uses: actions/upload-artifact@v3
