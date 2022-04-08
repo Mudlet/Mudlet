@@ -59,11 +59,21 @@ jobs:
 
     - name: Generate changelog
       run: |
-        authors=$(git log Mudlet-4.1.0..HEAD --format="%aN <%aE>" --reverse | sort -u  | grep -oE ".+ <" | tr -d ' <' | sort -u)
-   
-    # - name: Upload changelog as html
-    #   uses: actions/upload-artifact@v3
-    #   with:
-    #     name: changelog.html
-    #     path: changelog.html
+        # get list of authors
+        authors=$(git log $FROM_RELEASE..$TO_RELEASE --format="%aN" --reverse | sort -u)
+        # trim known bots
+        authors=$(echo "$authors" | grep -v "bot" | grep -v "mudlet-machine-account" | grep -v "ImgBotApp" | grep -v "mudlet-machine-account")
+        # beautify list
+        authors=$(echo "$authors" | tr '\n' ',' | sed 's/,$//' | sed 's/,/, /g')
+        authors=$(echo "$authors" | sed 's/\(.*\), \(.*\)/\1, and \2/')
+
+        echo "$authors" > authors.txt
+        echo "[INFO] Authors from $FROM_RELEASE to $TO_RELEASE are:"
+        echo $authors
+
+    - name: Upload authors as txt
+      uses: actions/upload-artifact@v3
+      with:
+        name: authors.txt
+        path: authors.txt
 
