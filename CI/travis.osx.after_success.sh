@@ -20,8 +20,7 @@ EOF
 
   for i in {1..3}; do
     echo "Trying to notarize ${appBundle} (attempt ${i})"
-    gon gon.json
-    if [ $? -eq 0 ]; then
+    if gon gon.json; then
       echo "Notarization successful"
       break
     fi
