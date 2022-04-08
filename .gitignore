@@ -30,3 +30,8 @@ cmake-build-debug
 #Docker
 docker/docker-compose.override.yml
 docker/.env
+
+#Visual Studio
+.vs
+out
+CMakeSettings.json

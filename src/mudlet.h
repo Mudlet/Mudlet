@@ -262,8 +262,6 @@ public:
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     void doAutoLogin(const QString&);
-    void stopSounds();
-    void playSound(const QString &s, int);
     QStringList getAvailableFonts();
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     std::pair<bool, QString> resetProfileIcon(const QString& profile);
@@ -366,7 +364,6 @@ public:
     QToolBar* mpMainToolBar;
     QString version;
     QPointer<Host> mpCurrentActiveHost;
-    QList<QMediaPlayer*> mMusicBoxList;
     TTabBar* mpTabBar;
     QStringList packagesToInstallList;
     bool mIsLoadingLayout;

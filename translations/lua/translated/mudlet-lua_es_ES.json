@@ -1,11 +1,31 @@
 {
+  "AdjustableContainer.top": {
+    "message": "arriba",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.left": {
+    "message": "izquierda",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.custom": {
+    "message": "Personalizado:",
+    "description": "a menu item in the right click menu. it contains user/package made custom items"
+  },
   "AdjustableContainer.lock": {
     "message": "Bloquear",
     "description": "locks your container. Which means it's not movable/resizable anymore and changes some other properties depending on the Lockstyle (like hiding the borders)"
   },
+  "AdjustableContainer.full": {
+    "message": "completo",
+    "description": "one of the Lockstyles. Can also be translated as complete as it's locking the container without any margin left for the right click menu."
+  },
   "AdjustableContainer.save": {
     "message": "Guardar",
     "description": "saves the containers settings"
+  },
+  "AdjustableContainer.load": {
+    "message": "Cargar",
+    "description": "loads the previously saved settings of the container"
   },
   "AdjustableContainer.disconnect": {
     "message": "Desconectar ",
