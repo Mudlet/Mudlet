@@ -20,6 +20,7 @@
 #ifndef MUDLET_TEST_TMXPSTUBCLIENT_H
 #define MUDLET_TEST_TMXPSTUBCLIENT_H
 
+#include <qdebug.h>
 #include "TMxpContext.h"
 #include "TMxpClient.h"
 #include "TMediaData.h"
