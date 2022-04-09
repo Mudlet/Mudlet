@@ -249,7 +249,7 @@ jobs:
         echo "WITH_FONTS=no" >> $GITHUB_ENV
 
     - name: (Linux/macOS) restore ccache
-      uses: pat-s/always-upload-cache@v2.1.5
+      uses: pat-s/always-upload-cache@v3.0.1
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
@@ -284,7 +284,7 @@ jobs:
 
     - name: Upload GitHub Actions artifact of vcpkg build logs
       if: failure()
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: vcpkg-logs-${{ runner.os }}
         path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
@@ -355,7 +355,7 @@ jobs:
         AC_PASSWORD: ${{secrets.APPLE_PASSWORD}}
 
     - name: Upload packaged Mudlet
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: env.UPLOAD_FILENAME
       with:
         name: ${{env.UPLOAD_FILENAME}}
