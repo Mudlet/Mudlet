@@ -134,6 +134,11 @@ jobs:
         report_path: '${{runner.workspace}}/b/ninja/infer-out'
         reporter: github-pr-review
 
+    - uses: actions/upload-artifact@v3
+      with:
+        name: infer-out
+        path: '${{runner.workspace}}/b/ninja/infer-out'
+
     - name: Setup tmate session
       if: ${{ failure() }}
       uses: mxschmitt/action-tmate@v3
