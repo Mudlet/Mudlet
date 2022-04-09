@@ -371,7 +371,7 @@ describe("Tests DB.lua functions", function()
       assert.are.same(test, res[1])
     end)
 
-    it("should successfully delete columns in a non empty table.",
+    it("should successfully delete columns in a non empty table if force argument is provided.",
     function()
       local test = { name = "foo", id = 500, blubb = "bar" }
       db:add(mydb.sheet, test)
@@ -382,7 +382,25 @@ describe("Tests DB.lua functions", function()
       res[1]._row_id = nil --we get the row id back, which we don't need
       assert.are.same(test, res[1])
     end)
-
+		
+		it("should fail to delete columns in a non empty table if force argument is not provided.",
+    function()
+			local test = { name = "foo", id = 500, blubb = "bar" }
+      db:add(mydb.sheet, test)
+      assert.has_error(function() db:create("mydbt_testingonly", { sheet = { name = "", id = 0 }}) end)
+    end)
+		
+		it("should successfully delete empty columns in a non empty table",
+		function()
+			local test = { name = "foo", id = 500, blubb = db:Null() }
+      db:add(mydb.sheet, test)
+      mydb = db:create("mydbt_testingonly", { sheet = { name = "", id = 0 }}, true)
+      local res = db:fetch(mydb.sheet)
+      test.blubb = nil -- we expect the blubb gets deleted
+      assert.are.equal(1, #res)
+      res[1]._row_id = nil --we get the row id back, which we don't need
+      assert.are.same(test, res[1])
+		end)
   end)
 
 
