@@ -3,6 +3,7 @@
 #    Copyright (C) 2015-2018, 2020 by Stephen Lyons                        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
+#    Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -58,6 +59,7 @@ set(mudlet_SRCS
     dlgIRC.cpp
     dlgKeysMainArea.cpp
     dlgMapper.cpp
+    dlgMapLabel.cpp
     dlgModuleManager.cpp
     dlgNotepad.cpp
     dlgPackageExporter.cpp
@@ -166,6 +168,7 @@ set(mudlet_UIS
     ui/keybindings_main_area.ui
     ui/main_window.ui
     ui/module_manager.ui
+    ui/map_label.ui
     ui/mapper.ui
     ui/notes_editor.ui
     ui/package_manager.ui
@@ -197,6 +200,7 @@ set(mudlet_HDRS
     dlgConnectionProfiles.h
     dlgIRC.h
     dlgKeysMainArea.h
+    dlgMapLabel.h
     dlgMapper.h
     dlgModuleManager.h
     dlgNotepad.h
@@ -331,6 +335,8 @@ if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
   set_alternate_linker(${USE_ALTERNATE_LINKER})
 endif()
 
+include(../3rdparty/cmake-scripts/sanitizers.cmake)
+
 find_package(
   Qt5 5.11 REQUIRED
   COMPONENTS Core
@@ -379,8 +385,7 @@ endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS}
-                      ${mudlet_UIS})
+add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS})
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
 set_target_properties(mudlet PROPERTIES

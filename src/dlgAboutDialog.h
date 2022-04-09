@@ -29,12 +29,12 @@
 #include "post_guard.h"
 
 struct aboutMaker {
-  bool big;
-  QString name;
-  QString discord;
-  QString github;
-  QString email;
-  QString description;
+    bool big = false;
+    QString name;
+    QString discord;
+    QString github;
+    QString email;
+    QString description;
 };
 
 class dlgAboutDialog : public QDialog, public Ui::about_dialog

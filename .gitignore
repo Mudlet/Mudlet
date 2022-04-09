@@ -33,3 +33,8 @@ docker/.env
 
 #Infer
 infer-out
+
+#Visual Studio
+.vs
+out
+CMakeSettings.json

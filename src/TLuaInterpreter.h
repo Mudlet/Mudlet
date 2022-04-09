@@ -147,9 +147,9 @@ public:
     int startTempRegexTrigger(const QString&, const QString&, int expiryCount = -1);
     int startTempColorTrigger(int, int, const QString&, int expiryCount = -1);
     int startTempPromptTrigger(const QString& function, int expiryCount = -1);
-    std::pair<int, QString> startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
-    std::pair<int, QString> startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
-    std::pair<int, QString> startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
+    std::pair<int, QString> startPermRegexTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function);
+    std::pair<int, QString> startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function);
+    std::pair<int, QString> startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function);
     std::pair<int, QString> startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     std::pair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     std::pair<int, QString> createPermScript(const QString& name, const QString& parent, const QString& luaCode);
@@ -158,6 +158,7 @@ public:
     std::pair<int, QString> startPermKey(QString&, QString&, int&, int&, QString&);
 
     static int getCustomLines(lua_State*);
+    static int getCustomLines1(lua_State*);
     static int addCustomLine(lua_State*);
     static int removeCustomLine(lua_State*);
     static int noop(lua_State*);
@@ -392,6 +393,12 @@ public:
     static int resetBackgroundImage(lua_State*);
     static int setBackgroundColor(lua_State*);
     static int setLabelClickCallback(lua_State*);
+    static int setMovie(lua_State*);
+    static int startMovie(lua_State*);
+    static int setMovieSpeed(lua_State*);
+    static int scaleMovie(lua_State*);
+    static int setMovieFrame(lua_State*);
+    static int pauseMovie(lua_State*);
     static int setCmdLineAction(lua_State*);
     static int resetCmdLineAction(lua_State*);
     static int setCmdLineStyleSheet(lua_State*);
@@ -596,6 +603,7 @@ public:
     static int spellSuggestWord(lua_State*);
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
+    static int getCharacterName(lua_State*);
     static int getWindowsCodepage(lua_State*);
     static int getHTTP(lua_State* L);
     static int customHTTP(lua_State* L);
@@ -629,7 +637,7 @@ public:
     static int windowType(lua_State*);
     static int getProfileStats(lua_State* L);
     static int getBackgroundColor(lua_State* L);
-    static int getLabelStylesheet(lua_State* L);
+    static int getLabelStyleSheet(lua_State* L);
     static int getLabelSizeHint(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
@@ -657,6 +665,7 @@ private:
     void logError(std::string& e, const QString&, const QString& function);
     void logEventError(const QString& event, const QString& error);
     static int setLabelCallback(lua_State*, const QString& funcName);
+    static int movieFunc(lua_State*, const QString& funcName);
     std::pair<bool, QString> validLuaCode(const QString &code);
     std::pair<bool, QString> validateLuaCodeParam(int index);
     QByteArray encodeBytes(const char*);

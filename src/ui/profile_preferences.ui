@@ -202,7 +202,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="4">
+          <item row="1" column="0" colspan="2">
            <widget class="QLabel" name="label_languageChangeWarning">
             <property name="font">
              <font>
@@ -1194,6 +1194,38 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_controlCharacterHandling">
+            <property name="text">
+             <string>Display control characters as:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QComboBox" name="comboBox_controlCharacterHandling">
+            <property name="currentIndex">
+             <number>0</number>
+            </property>
+            <property name="sizeAdjustPolicy">
+             <enum>QComboBox::AdjustToMinimumContentsLengthWithIcon</enum>
+            </property>
+            <item>
+             <property name="text">
+              <string>nothing</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Unicode Control Pictures</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>CP437 (OEM Font)- like</string>
+             </property>
+            </item>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -1256,9 +1288,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <item>
               <widget class="edbee::TextEditorWidget" name="edbeePreviewWidget" native="true">
                <property name="font">
-                <font>
-                 <family>Bitstream Vera Sans Mono</family>
-                </font>
+                <font/>
                </property>
               </widget>
              </item>
@@ -2107,6 +2137,16 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="checkBox_largeAreaExitArrows">
+            <property name="text">
+             <string>Use large area exit arrows in 2D view</string>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
           <item row="2" column="0" alignment="Qt::AlignRight">
            <widget class="QLabel" name="label_mapSymbolsFont">
             <property name="text">
@@ -2290,6 +2330,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Link color</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_foreground_color_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="0" column="1">
@@ -2310,6 +2353,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Background color:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_background_color_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="0" column="3">
@@ -2327,6 +2373,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Room border color:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_roomBorderColor</cstring>
+            </property>
            </widget>
           </item>
           <item row="1" column="1">
@@ -2334,6 +2383,23 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="label_mapInfoBg">
+            <property name="text">
+             <string>Map info background:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_mapInfoBg</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QPushButton" name="pushButton_mapInfoBg">
             <property name="text">
              <string/>
             </property>
@@ -2350,6 +2416,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="label_17">
             <property name="text">
              <string>Black:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_black_2</cstring>
             </property>
            </widget>
           </item>
@@ -2368,6 +2437,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Light black:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_Lblack_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="3" column="3">
@@ -2384,6 +2456,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="label_42">
             <property name="text">
              <string>Red:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_red_2</cstring>
             </property>
            </widget>
           </item>
@@ -2402,6 +2477,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Light red:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_Lred_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="4" column="3">
@@ -2418,6 +2496,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="label_43">
             <property name="text">
              <string>Green:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_green_2</cstring>
             </property>
            </widget>
           </item>
@@ -2436,6 +2517,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Light green:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_Lgreen_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="5" column="3">
@@ -2452,6 +2536,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="label_48">
             <property name="text">
              <string>Yellow:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_yellow_2</cstring>
             </property>
            </widget>
           </item>
@@ -2470,6 +2557,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Light yellow:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_Lyellow_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="6" column="3">
@@ -2486,6 +2576,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="label_44">
             <property name="text">
              <string>Blue:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_blue_2</cstring>
             </property>
            </widget>
           </item>
@@ -2504,6 +2597,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Light blue:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_Lblue_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="7" column="3">
@@ -2520,6 +2616,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="label_45">
             <property name="text">
              <string>Magenta:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_magenta_2</cstring>
             </property>
            </widget>
           </item>
@@ -2538,6 +2637,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Light magenta:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_Lmagenta_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="8" column="3">
@@ -2554,6 +2656,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="label_46">
             <property name="text">
              <string>Cyan:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_cyan_2</cstring>
             </property>
            </widget>
           </item>
@@ -2572,6 +2677,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Light cyan:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_Lcyan_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="9" column="3">
@@ -2589,6 +2697,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>White:</string>
             </property>
+            <property name="buddy">
+             <cstring>pushButton_white_2</cstring>
+            </property>
            </widget>
           </item>
           <item row="10" column="1">
@@ -2605,6 +2716,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="label_56">
             <property name="text">
              <string>Light white:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_Lwhite_2</cstring>
             </property>
            </widget>
           </item>
@@ -2653,7 +2767,7 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>IRC client options</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_ircOptions" rowstretch="0,0,0">
+         <layout class="QGridLayout" name="gridLayout_groupBox_ircOptions" rowstretch="0,0,0,0">
           <item row="0" column="0">
            <widget class="QLabel" name="lblIrcHostName">
             <property name="text">
@@ -3077,7 +3191,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
             <property name="font">
              <font>
-              <family>Arial Black</family>
               <pointsize>16</pointsize>
               <stylestrategy>PreferAntialias</stylestrategy>
              </font>
@@ -3228,7 +3341,6 @@ you can use it but there could be issues with aligning columns of text</string>
                </property>
                <property name="font">
                 <font>
-                 <family>Arial</family>
                  <pointsize>8</pointsize>
                  <stylestrategy>PreferAntialias</stylestrategy>
                 </font>
@@ -3361,9 +3473,9 @@ you can use it but there could be issues with aligning columns of text</string>
       <attribute name="title">
        <string>Shortcuts</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_3">
-       <item row="0" column="0">
-        <widget class="QGroupBox" name="verticalLayout_main_window_shortcuts">
+      <layout class="QVBoxLayout" name="vBoxLayout_tab_shortcuts">
+       <item>
+        <widget class="QGroupBox" name="groupBox_main_window_shortcuts">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -3379,7 +3491,7 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="alignment">
           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_2">
+         <layout class="QVBoxLayout" name="verticalLayout_groupBox_mainWindowShortcuts">
           <property name="sizeConstraint">
            <enum>QLayout::SetMinimumSize</enum>
           </property>
@@ -3394,14 +3506,16 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item>
-           <layout class="QGridLayout" name="gridLayout_groupBox_shortcuts">
-            <property name="horizontalSpacing">
-             <number>20</number>
-            </property>
-           </layout>
+           <widget class="QFrame" name="frame_shortcuts">
+            <layout class="QGridLayout" name="gridLayout_groupBox_shortcuts">
+             <property name="horizontalSpacing">
+              <number>20</number>
+             </property>
+            </layout>
+           </widget>
           </item>
           <item alignment="Qt::AlignRight">
-           <widget class="QPushButton" name="pushButton_resetMainWindowShortctus">
+           <widget class="QToolButton" name="toolButton_resetMainWindowShortcuts">
             <property name="text">
              <string>Reset to defaults</string>
             </property>
@@ -3410,8 +3524,8 @@ you can use it but there could be issues with aligning columns of text</string>
          </layout>
         </widget>
        </item>
-       <item row="1" column="0">
-        <spacer name="verticalSpacer">
+       <item>
+        <spacer name="verticalSpacer_shortcuts">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -3794,6 +3908,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>comboBox_encoding</tabstop>
   <tabstop>mAlertOnNewData</tabstop>
   <tabstop>mFORCE_SAVE_ON_EXIT</tabstop>
+  <tabstop>comboBox_appearance</tabstop>
   <tabstop>acceptServerGUI</tabstop>
   <tabstop>acceptServerMedia</tabstop>
   <tabstop>mEnableGMCP</tabstop>
@@ -3835,9 +3950,11 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_showSpacesAndTabs</tabstop>
   <tabstop>checkBox_showLineFeedsAndParagraphs</tabstop>
   <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
+  <tabstop>comboBox_controlCharacterHandling</tabstop>
   <tabstop>code_editor_theme_selection_combobox</tabstop>
   <tabstop>script_preview_combobox</tabstop>
   <tabstop>checkBox_autocompleteLuaCode</tabstop>
+  <tabstop>checkBox_showBidi</tabstop>
   <tabstop>pushButton_foreground_color</tabstop>
   <tabstop>pushButton_command_line_foreground_color</tabstop>
   <tabstop>pushButton_command_foreground_color</tabstop>
@@ -3876,6 +3993,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_isOnlyMapSymbolFontToBeUsed</tabstop>
   <tabstop>comboBox_playerRoomStyle</tabstop>
   <tabstop>checkBox_showDefaultArea</tabstop>
+  <tabstop>checkBox_largeAreaExitArrows</tabstop>
   <tabstop>fontComboBox_mapSymbols</tabstop>
   <tabstop>pushButton_showGlyphUsage</tabstop>
   <tabstop>pushButton_playerRoomPrimaryColor</tabstop>
@@ -3885,6 +4003,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_foreground_color_2</tabstop>
   <tabstop>pushButton_roomBorderColor</tabstop>
   <tabstop>pushButton_background_color_2</tabstop>
+  <tabstop>pushButton_mapInfoBg</tabstop>
   <tabstop>pushButton_black_2</tabstop>
   <tabstop>pushButton_red_2</tabstop>
   <tabstop>pushButton_green_2</tabstop>
@@ -3926,6 +4045,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>lineEdit_proxyPort</tabstop>
   <tabstop>lineEdit_proxyUsername</tabstop>
   <tabstop>lineEdit_proxyPassword</tabstop>
+  <tabstop>toolButton_resetMainWindowShortcuts</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
   <tabstop>mFORCE_CHARSET_NEGOTIATION_OFF</tabstop>

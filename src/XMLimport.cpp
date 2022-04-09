@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -815,7 +815,6 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mEnableMSSP = attributes().value(qsl("mEnableMSSP")) == YES;
     pHost->mEnableMSP = attributes().value(qsl("mEnableMSP")) == YES;
     pHost->mMapStrongHighlight = attributes().value(qsl("mMapStrongHighlight")) == YES;
-    pHost->mLogStatus = attributes().value(qsl("mLogStatus")) == YES;
     pHost->mEnableSpellCheck = attributes().value(qsl("mEnableSpellCheck")) == YES;
     bool enableUserDictionary = attributes().value(qsl("mEnableUserDictionary")) == YES;
     bool useSharedDictionary = attributes().value(qsl("mUseSharedDictionary")) == YES;
@@ -825,8 +824,10 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mMapperUseAntiAlias = attributes().value(qsl("mMapperUseAntiAlias")) == YES;
     pHost->mMapperShowRoomBorders = readDefaultTrueBool(qsl("mMapperShowRoomBorders"));
     pHost->mEditorAutoComplete = (attributes().value(qsl("mEditorAutoComplete")) == YES);
-    if (!attributes().hasAttribute("mEditorShowBidi") || (attributes().value(qsl("mEditorShowBidi")) == YES)) {
-        pHost->mEditorShowBidi = true;
+    if (attributes().hasAttribute("mEditorShowBidi")) {
+        pHost->setEditorShowBidi(attributes().value(qsl("mEditorShowBidi")) == YES);
+    } else {
+        pHost->setEditorShowBidi(true);
     }
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
@@ -943,12 +944,43 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->mTelnet.setPostingTimeout(300);
     }
 
+    if (attributes().hasAttribute(QLatin1String("ControlCharacterHandling"))) {
+        switch (attributes().value(QLatin1String("ControlCharacterHandling")).toInt()) {
+        case 1:
+            pHost->setControlCharacterMode(ControlCharacterMode::Picture);
+            break;
+        case 2:
+            pHost->setControlCharacterMode(ControlCharacterMode::OEM);
+            break;
+        case 0:
+            [[fallthrough]];
+        default:
+            pHost->setControlCharacterMode(ControlCharacterMode::AsIs);
+        }
+
+    } else {
+        // The default value, also used up to Mudlet 4.14.1:
+        pHost->setControlCharacterMode(ControlCharacterMode::AsIs);
+    }
+
+    if (attributes().hasAttribute(qsl("Large2DMapAreaExitArrows"))) {
+        pHost->setLargeAreaExitArrows(attributes().value(qsl("Large2DMapAreaExitArrows")) == YES);
+    } else {
+        // The default (and for map/profile files from before 4.15.0):
+        pHost->setLargeAreaExitArrows(false);
+    }
+
+    if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
+        mpHost->mMapInfoContributors.clear();
+    }
+
     while (!atEnd()) {
         readNext();
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == "name") {
                 pHost->mHostName = readElementText();
             } else if (name() == "mInstalledModules") {
@@ -1058,6 +1090,8 @@ void XMLimport::readHostPackage(Host* pHost)
                 pHost->mBgColor_2.setNamedColor(readElementText());
             } else if (name() == "mRoomBorderColor") {
                 pHost->mRoomBorderColor.setNamedColor(readElementText());
+            } else if (name() == "mMapInfoBg") {
+                pHost->mMapInfoBg.setNamedColor(readElementText());
             } else if (name() == "mBlack2") {
                 pHost->mBlack_2.setNamedColor(readElementText());
             } else if (name() == "mLightBlack2") {
@@ -1104,9 +1138,11 @@ void XMLimport::readHostPackage(Host* pHost)
                 // readUnknownHostElement() for "anything not otherwise parsed"
                 Q_UNUSED(readElementText());
             } else if (name() == "mMapInfoContributors") {
-                readMapInfoContributors();
-            } else if (name() == "profileShortcuts") {
-                readProfileShortcuts();
+                readLegacyMapInfoContributors();
+            } else if (name() == "mapInfoContributor") {
+                readMapInfoContributor();
+            } else if (name() == "profileShortcut") {
+                readProfileShortcut();
             } else if (name() == "stopwatches") {
                 readStopWatchMap();
             } else {
@@ -1204,22 +1240,22 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
             } else if (name() == "regexCodeList") {
                 // This and the next one ought to be combined into a single element
                 // in the next revision - sample code for "RegexCode" elements
-                // inside a "RegexList" container (with a "size" attribute) is
+                // inside a "patterns" container (with a "size" attribute) is
                 // commented out in the XMLexporter class.
-                readStringList(pT->mRegexCodeList);
+                readStringList(pT->mPatterns);
             } else if (name() == "regexCodePropertyList") {
-                readIntegerList(pT->mRegexCodePropertyList, pT->getName());
-                if (Q_UNLIKELY(pT->mRegexCodeList.count() != pT->mRegexCodePropertyList.count())) {
+                readIntegerList(pT->mPatternKinds, pT->getName());
+                if (Q_UNLIKELY(pT->mPatterns.count() != pT->mPatternKinds.count())) {
                     qWarning().nospace() << "XMLimport::readTriggerGroup(...) ERROR: "
                                             "mismatch in regexCode details for Trigger: "
-                                         << pT->getName() << " there were " << pT->mRegexCodeList.count() << " 'regexCodeList' sub-elements and " << pT->mRegexCodePropertyList.count()
+                                         << pT->getName() << " there were " << pT->mPatterns.count() << " 'regexCodeList' sub-elements and " << pT->mPatternKinds.count()
                                          << " 'regexCodePropertyList' sub-elements so "
                                             "something is broken!";
                 }
                 // Fixup the first 16 incorrect ANSI colour numbers from old
                 // code if there are any
-                if (!pT->mRegexCodeList.isEmpty()) {
-                    remapColorsToAnsiNumber(pT->mRegexCodeList, pT->mRegexCodePropertyList);
+                if (!pT->mPatterns.isEmpty()) {
+                    remapColorsToAnsiNumber(pT->mPatterns, pT->mPatternKinds);
                 }
             } else if (name() == "TriggerGroup" || name() == "Trigger") {
                 readTriggerGroup(pT);
@@ -1229,7 +1265,7 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
         }
     }
 
-    if (!pT->setRegexCodeList(pT->mRegexCodeList, pT->mRegexCodePropertyList)) {
+    if (!pT->setRegexCodeList(pT->mPatterns, pT->mPatternKinds)) {
         qDebug().nospace() << "XMLimport::readTriggerGroup(...): ERROR: can not "
                               "initialize pattern list for trigger: "
                            << pT->getName();
@@ -1853,9 +1889,13 @@ void XMLimport::readStopWatchMap()
 
 }
 
-void XMLimport::readMapInfoContributors()
+void XMLimport::readMapInfoContributor()
 {
-    mpHost->mMapInfoContributors.clear();
+    mpHost->mMapInfoContributors.insert(readElementText());
+}
+
+void XMLimport::readLegacyMapInfoContributors()
+{
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1869,23 +1909,13 @@ void XMLimport::readMapInfoContributors()
     }
 }
 
-void XMLimport::readProfileShortcuts() {
-    while (!atEnd()) {
-        readNext();
-        if (isEndElement()) {
-            break;
-        }
-        if (isStartElement()) {
-            if (name() == "profileShortcut") {
-                auto key = attributes().value(qsl("key"));
-                auto sequenceString = readElementText();
-                if (mpHost->profileShortcuts.value(key.toString())) {
-                    QKeySequence *sequence = !sequenceString.isEmpty() ? new QKeySequence(sequenceString)
-                                                                       : new QKeySequence();
-                    mpHost->profileShortcuts.value(key.toString())->swap(*sequence);
-                    delete sequence;
-                }
-            }
-        }
+void XMLimport::readProfileShortcut()
+{
+    auto key = attributes().value(qsl("key"));
+    auto sequenceString = readElementText();
+    if (mpHost->profileShortcuts.value(key.toString())) {
+        QKeySequence* sequence = !sequenceString.isEmpty() ? new QKeySequence(sequenceString) : new QKeySequence();
+        mpHost->profileShortcuts.value(key.toString())->swap(*sequence);
+        delete sequence;
     }
 }

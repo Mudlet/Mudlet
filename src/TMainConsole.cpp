@@ -162,9 +162,7 @@ std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name,
 
 void TMainConsole::toggleLogging(bool isMessageEnabled)
 {
-    // CHECKME: This path seems suspicious, it is shared amongst ALL profiles
-    // but the action is "Per Profile"...!
-    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("autolog")));
+    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("autolog")));
     QDateTime logDateTime = QDateTime::currentDateTime();
     if (!mLogToLogFile) {
         file.open(QIODevice::WriteOnly | QIODevice::Text);
@@ -1431,13 +1429,13 @@ void TMainConsole::slot_reloadMap(QList<QString> profilesList)
 
 void TMainConsole::resizeEvent(QResizeEvent* event)
 {
-    // Process the event like other TConsoles
-    TConsole::resizeEvent(event);
-
     auto pHost = getHost();
     if (!pHost) {
         return;
     }
+
+    // Process the event like other TConsoles
+    TConsole::resizeEvent(event);
 
     // Update the record of the text area size for NAWS purposes:
     pHost->updateDisplayDimensions();

@@ -32,7 +32,8 @@ void TriggerUnit::resetStats()
     statsItemsTotal = 0;
     statsTempItems = 0;
     statsActiveItems = 0;
-    statsPatterns = 0;
+    statsPatternsTotal = 0;
+    statsPatternsActive = 0;
 }
 
 void TriggerUnit::_uninstall(TTrigger* pChild, const QString& packageName)
@@ -232,24 +233,26 @@ int TriggerUnit::getNewID()
 
 void TriggerUnit::processDataStream(const QString& data, int line)
 {
-    if (!data.isEmpty()) {
-#if defined(Q_OS_WIN32)
-        // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
-        char* subject = static_cast<char*>(malloc(strlen(data.toUtf8().data()) + 1));
-        strcpy(subject, data.toUtf8().data());
-#else
-        char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
-#endif
-        for (auto trigger : mTriggerRootNodeList) {
-            trigger->match(subject, data, line);
-        }
-        free(subject);
-
-        for (auto& trigger : mCleanupList) {
-            delete trigger;
-        }
-        mCleanupList.clear();
+    if (data.isEmpty()) {
+        return;
     }
+
+#if defined(Q_OS_WIN32)
+    // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
+    char* subject = static_cast<char*>(malloc(strlen(data.toUtf8().data()) + 1));
+    strcpy(subject, data.toUtf8().data());
+#else
+    char* subject = strndup(data.toUtf8().constData(), strlen(data.toUtf8().constData()));
+#endif
+    for (auto trigger : mTriggerRootNodeList) {
+        trigger->match(subject, data, line);
+    }
+    free(subject);
+
+    for (auto& trigger : mCleanupList) {
+        delete trigger;
+    }
+    mCleanupList.clear();
 }
 
 void TriggerUnit::compileAll()
@@ -344,40 +347,44 @@ void TriggerUnit::assembleReport(TTrigger* pItem)
         ++statsItemsTotal;
         if (pChild->isActive()) {
             ++statsActiveItems;
+            statsPatternsActive += pChild->mPatterns.size();
         }
         if (pChild->isTemporary()) {
             ++statsTempItems;
         }
-        statsPatterns += pChild->mRegexCodeList.size();
+        statsPatternsTotal += pChild->mPatterns.size();
         assembleReport(pChild);
     }
 }
 
-std::tuple<QString, int, int, int, int> TriggerUnit::assembleReport()
+std::tuple<QString, int, int, int, int, int> TriggerUnit::assembleReport()
 {
     resetStats();
     for (auto pItem : mTriggerRootNodeList) {
         ++statsItemsTotal;
         if (pItem->isActive()) {
             ++statsActiveItems;
+            statsPatternsActive += pItem->mPatterns.size();
         }
         if (pItem->isTemporary()) {
             ++statsTempItems;
         }
-        statsPatterns += pItem->mRegexCodeList.size();
+        statsPatternsTotal += pItem->mPatterns.size();
         assembleReport(pItem);
     }
     QStringList msg;
-    msg << QLatin1String("Triggers current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
-        << QLatin1String("Trigger patterns total: ") << QString::number(statsPatterns) << QLatin1String("\n")
+    msg << QLatin1String("triggers current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
         << QLatin1String("tempTriggers current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
-        << QLatin1String("active Triggers: ") << QString::number(statsActiveItems) << QLatin1String("\n");
+        << QLatin1String("active triggers: ") << QString::number(statsActiveItems) << QLatin1String("\n")
+        << QLatin1String("trigger patterns total: ") << QString::number(statsPatternsTotal) << QLatin1String("\n")
+        << QLatin1String("active patterns total: ") << QString::number(statsPatternsActive) << QLatin1String("\n");
     return {
         msg.join(QString()),
         statsItemsTotal,
-        statsPatterns,
+        statsPatternsTotal,
         statsTempItems,
-        statsActiveItems
+        statsActiveItems,
+        statsPatternsActive
     };
 }
 

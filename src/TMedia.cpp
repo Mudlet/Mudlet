@@ -356,7 +356,7 @@ QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir& dir)
         QStringList fileNames(dir.entryList(QDir::Files | QDir::Readable, QDir::Name));
 
         for (auto& fileName : qAsConst(fileNames)) {
-            fileNameList << qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), fileName);
+            fileNameList << qsl("%1/%2").arg(dir.path(), fileName);
         }
     } else {
         if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mediaData.getMediaFileName().contains('.')) {
@@ -1035,26 +1035,8 @@ int TMedia::parseJSONByMediaVolume(QJsonObject& json)
 
     if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.isString() && !mediaVolumeJSON.toString().isEmpty()) {
         mediaVolume = mediaVolumeJSON.toString().toInt();
-
-        if (mediaVolume == TMediaData::MediaVolumePreload) {
-            {
-            } // Volume of 0 supports preloading
-        } else if (mediaVolume > TMediaData::MediaVolumeMax) {
-            mediaVolume = TMediaData::MediaVolumeMax;
-        } else if (mediaVolume < TMediaData::MediaVolumeMin) {
-            mediaVolume = TMediaData::MediaVolumeMin;
-        }
     } else if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.toInt()) {
         mediaVolume = mediaVolumeJSON.toInt();
-
-        if (mediaVolume == TMediaData::MediaVolumePreload) {
-            {
-            } // Volume of 0 supports preloading
-        } else if (mediaVolume > TMediaData::MediaVolumeMax) {
-            mediaVolume = TMediaData::MediaVolumeMax;
-        } else if (mediaVolume < TMediaData::MediaVolumeMin) {
-            mediaVolume = TMediaData::MediaVolumeMin;
-        }
     }
 
     return mediaVolume;
@@ -1069,16 +1051,8 @@ int TMedia::parseJSONByMediaFadeIn(QJsonObject& json)
 
     if (mediaFadeInJSON != QJsonValue::Undefined && mediaFadeInJSON.isString() && !mediaFadeInJSON.toString().isEmpty()) {
         mediaFadeIn = mediaFadeInJSON.toString().toInt();
-
-        if (mediaFadeIn < TMediaData::MediaFadeNotSet) {
-            mediaFadeIn = TMediaData::MediaFadeNotSet;
-        }
     } else if (mediaFadeInJSON != QJsonValue::Undefined && mediaFadeInJSON.toInt()) {
         mediaFadeIn = mediaFadeInJSON.toInt();
-
-        if (mediaFadeIn < TMediaData::MediaFadeNotSet) {
-            mediaFadeIn = TMediaData::MediaFadeNotSet;
-        }
     }
 
     return mediaFadeIn;
@@ -1093,16 +1067,8 @@ int TMedia::parseJSONByMediaFadeOut(QJsonObject& json)
 
     if (mediaFadeOutJSON != QJsonValue::Undefined && mediaFadeOutJSON.isString() && !mediaFadeOutJSON.toString().isEmpty()) {
         mediaFadeOut = mediaFadeOutJSON.toString().toInt();
-
-        if (mediaFadeOut < TMediaData::MediaFadeNotSet) {
-            mediaFadeOut = TMediaData::MediaFadeNotSet;
-        }
     } else if (mediaFadeOutJSON != QJsonValue::Undefined && mediaFadeOutJSON.toInt()) {
         mediaFadeOut = mediaFadeOutJSON.toInt();
-
-        if (mediaFadeOut < TMediaData::MediaFadeNotSet) {
-            mediaFadeOut = TMediaData::MediaFadeNotSet;
-        }
     }
 
     return mediaFadeOut;
@@ -1117,16 +1083,8 @@ int TMedia::parseJSONByMediaStart(QJsonObject& json)
 
     if (mediaStartJSON != QJsonValue::Undefined && mediaStartJSON.isString() && !mediaStartJSON.toString().isEmpty()) {
         mediaStart = mediaStartJSON.toString().toInt();
-
-        if (mediaStart < TMediaData::MediaStartDefault) {
-            mediaStart = TMediaData::MediaStartDefault;
-        }
     } else if (mediaStartJSON != QJsonValue::Undefined && mediaStartJSON.toInt()) {
         mediaStart = mediaStartJSON.toInt();
-
-        if (mediaStart < TMediaData::MediaStartDefault) {
-            mediaStart = TMediaData::MediaStartDefault;
-        }
     }
 
     return mediaStart;
@@ -1141,20 +1099,8 @@ int TMedia::parseJSONByMediaPriority(QJsonObject& json)
 
     if (mediaPriorityJSON != QJsonValue::Undefined && mediaPriorityJSON.isString() && !mediaPriorityJSON.toString().isEmpty()) {
         mediaPriority = mediaPriorityJSON.toString().toInt();
-
-        if (mediaPriority > TMediaData::MediaPriorityMax) {
-            mediaPriority = TMediaData::MediaPriorityMax;
-        } else if (mediaPriority < TMediaData::MediaPriorityMin) {
-            mediaPriority = TMediaData::MediaPriorityMin;
-        }
     } else if (mediaPriorityJSON != QJsonValue::Undefined && mediaPriorityJSON.toInt()) {
         mediaPriority = mediaPriorityJSON.toInt();
-
-        if (mediaPriority > TMediaData::MediaPriorityMax) {
-            mediaPriority = TMediaData::MediaPriorityMax;
-        } else if (mediaPriority < TMediaData::MediaPriorityMin) {
-            mediaPriority = TMediaData::MediaPriorityMin;
-        }
     }
 
     return mediaPriority;
@@ -1169,16 +1115,8 @@ int TMedia::parseJSONByMediaLoops(QJsonObject& json)
 
     if (mediaLoopsJSON != QJsonValue::Undefined && mediaLoopsJSON.isString() && !mediaLoopsJSON.toString().isEmpty()) {
         mediaLoops = mediaLoopsJSON.toString().toInt();
-
-        if (mediaLoops < TMediaData::MediaLoopsRepeat || mediaLoops == 0) {
-            mediaLoops = TMediaData::MediaLoopsDefault;
-        }
     } else if (mediaLoopsJSON != QJsonValue::Undefined && mediaLoopsJSON.toInt()) {
         mediaLoops = mediaLoopsJSON.toInt();
-
-        if (mediaLoops < TMediaData::MediaLoopsRepeat || mediaLoops == 0) {
-            mediaLoops = TMediaData::MediaLoopsDefault;
-        }
     }
 
     return mediaLoops;

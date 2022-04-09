@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018, 2020-2021 by Stephen Lyons                   *
+ *   Copyright (C) 2016-2018, 2020-2022 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -43,7 +43,7 @@
 using namespace std::chrono_literals;
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
-: QDialog(parent), validName(), validUrl(), validPort(), offline_button(nullptr), connect_button(nullptr), delete_profile_lineedit(nullptr), delete_button(nullptr)
+: QDialog(parent)
 {
     setupUi(this);
 
@@ -1689,6 +1689,8 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         pHost->setupIreDriverBugfix();
     }
 
+    mudlet::self()->updateMultiViewControls();
+
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
     emit signal_load_profile(profile_name, alsoConnect);
 }
@@ -1721,7 +1723,7 @@ bool dlgConnectionProfiles::validateProfile()
         }
 
         // see if there is an edit that already uses a similar name
-        if (pItem->data(csmNameRole).toString() != name && mProfileList.contains(name)) {
+        if ((QString::compare(pItem->data(csmNameRole).toString(), name, Qt::CaseInsensitive) != 0) && mProfileList.contains(name, Qt::CaseInsensitive)) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(qsl("%1\n%2").arg(notificationAreaMessageBox->text(), tr("This profile name is already in use.")));
             validName = false;

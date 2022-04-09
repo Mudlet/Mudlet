@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -344,7 +344,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mRoomBorderColor(Qt::lightGray)
 #endif
 , mMapStrongHighlight(false)
-, mLogStatus(false)
 , mEnableSpellCheck(true)
 , mDiscordDisableServerSide(true)
 , mDiscordAccessFlags(DiscordLuaAccessEnabled | DiscordSetSubMask)
@@ -406,7 +405,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 {
     TDebug::addHost(this);
 
-    // mLogStatus = mudlet::self()->mAutolog;
+    // The "autolog" sentinel file controls whether logging the game's text as
+    // plain text or HTML is immediately resumed on profile loading. Do not
+    // confuse it with the "autologin" item, which controls whether the profile
+    // is automatically started when the Mudlet application is run!
+    mLogStatus = QFile::exists(mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, qsl("autolog")));
     mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
 
     // Copy across the details needed for the "color_table":
@@ -3595,6 +3598,37 @@ bool Host::setLabelOnLeave(const QString& name, const int func)
     return false;
 }
 
+std::pair<bool, QString> Host::setMovie(const QString& name, const QString& moviePath)
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (!pL) {
+        return {false, qsl("label '%1' does not exist").arg(name)};
+    }
+
+    auto myMovie = pL->mpMovie;
+    if (!myMovie) {
+        myMovie = new QMovie();
+        myMovie->setCacheMode(QMovie::CacheAll);
+        pL->mpMovie = myMovie;
+        myMovie->setParent(pL);
+    }
+
+    myMovie->setFileName(moviePath);
+
+    if (!myMovie->isValid()) {
+        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
+    }
+    myMovie->stop();
+    pL->setMovie(myMovie);
+    myMovie->start();
+    return {true, QString()};
+
+}
+
 QSize Host::calcFontSize(const QString& windowName)
 {
     if (!mpConsole) {
@@ -3895,14 +3929,28 @@ void Host::setupIreDriverBugfix()
     }
 }
 
-std::optional<QString> Host::windowType(const QString& name) const
+void Host::setControlCharacterMode(const ControlCharacterMode mode)
 {
-    if (mpConsole->mLabelMap.contains(name)) {
-        return {qsl("label")};
+    if (Q_UNLIKELY(!(mode == ControlCharacterMode::AsIs
+                     || mode == ControlCharacterMode::Picture
+                     || mode == ControlCharacterMode::OEM))) {
+        return;
     }
 
-    if (name == QLatin1String("main")) {
+    if (mControlCharacter != mode) {
+        mControlCharacter = mode;
+        emit signal_controlCharacterHandlingChanged(mode);
+    }
+}
+
+std::optional<QString> Host::windowType(const QString& name) const
+{
+    if (Q_UNLIKELY(name == QLatin1String("main"))) {
         return {QLatin1String("main")};
+    }
+
+    if (mpConsole->mLabelMap.contains(name)) {
+        return {qsl("label")};
     }
 
     auto pWindow = mpConsole->mSubConsoleMap.value(name);
@@ -3933,4 +3981,25 @@ std::optional<QString> Host::windowType(const QString& name) const
     }
 
     return {};
+}
+
+void Host::setLargeAreaExitArrows(const bool state)
+{
+    if (mLargeAreaExitArrows != state) {
+        mLargeAreaExitArrows = state;
+        if (mpMap && mpMap->mpMapper && mpMap->mpMapper->mp2dMap) {
+            mpMap->mpMapper->mp2dMap->mLargeAreaExitArrows = state;
+            mpMap->mpMapper->mp2dMap->update();
+        }
+    }
+}
+
+void Host::setEditorShowBidi(const bool state)
+{
+    if (mEditorShowBidi != state) {
+        mEditorShowBidi = state;
+        if (mpEditorDialog) {
+            mpEditorDialog->setEditorShowBidi(state);
+        }
+    }
 }

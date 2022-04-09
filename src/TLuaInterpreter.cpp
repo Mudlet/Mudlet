@@ -37,6 +37,7 @@
 #include "TEvent.h"
 #include "TFlipButton.h"
 #include "TForkedProcess.h"
+#include "TLabel.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
@@ -65,6 +66,7 @@
 #include <QTableWidget>
 #include <QToolTip>
 #include <QFileInfo>
+#include <QMovie>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
@@ -118,6 +120,7 @@ static const char *bad_window_type = "%s: bad argument #%d type (window name as 
 static const char *bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
 static const char *bad_window_value = "window \"%s\" not found";
 static const char *bad_cmdline_value = "command line \"%s\" not found";
+static const char *bad_label_value = "label \"%s\" not found";
 
 #define WINDOW_NAME(_L, _pos)                                                                  \
     ({                                                                                         \
@@ -175,6 +178,19 @@ static const char *bad_cmdline_value = "command line \"%s\" not found";
             return 2;                                                                          \
         }                                                                                      \
         cmdLine_;                                                                              \
+    })
+
+#define LABEL(_L, _name)                                                                       \
+    ({                                                                                         \
+        const QString& name_ = (_name);                                                        \
+        auto console_ = getHostFromLua(_L).mpConsole;                                          \
+        auto label_ = console_->mLabelMap.value(name_);                                        \
+        if (!label_) {                                                                         \
+            lua_pushnil(L);                                                                    \
+            lua_pushfstring(L, bad_label_value, name_.toUtf8().constData());                   \
+            return 2;                                                                          \
+        }                                                                                      \
+        label_;                                                                                \
     })
 
 // variable names within these macros have trailing underscores because in
@@ -4282,6 +4298,97 @@ int TLuaInterpreter::setLabelOnLeave(lua_State* L)
     return setLabelCallback(L, qsl("setLabelOnLeave"));
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovie
+int TLuaInterpreter::setMovie(lua_State* L)
+{
+    QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
+    }
+    QString moviePath = getVerifiedString(L, __func__, 2, "movie (gif) path");
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.setMovie(labelName, moviePath); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// No documentation available in wiki - internal function
+int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
+{
+    QString labelName = getVerifiedString(L, funcName.toUtf8().constData(), 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
+    }
+    auto pN = LABEL(L, labelName);
+    auto movie = pN->movie();
+    if (!movie) {
+        return warnArgumentValue(L, __func__, qsl("no movie found at label '%1'").arg(labelName));
+    }
+
+    if (funcName == qsl("startMovie")) {
+        movie->start();
+    } else if (funcName == qsl("pauseMovie")) {
+        movie->setPaused(true);
+    } else if (funcName == qsl("setMovieFrame")) {
+        int frame = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie frame number");
+        lua_pushboolean(L, movie->jumpToFrame(frame));
+        return 1;
+    } else if (funcName == qsl("setMovieSpeed")) {
+        int speed = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie playback speed in %");
+        movie->setSpeed(speed);
+    } else if (funcName == qsl("scaleMovie")) {
+        bool autoScale{true};
+        int n = lua_gettop(L);
+        if (n > 1) {
+            autoScale = getVerifiedBool(L, funcName.toUtf8().constData(), 2, "activate/deactivate scaling movie", true);
+        }
+        movie->setScaledSize(pN->size());
+        if (autoScale) {
+            connect(pN, &TLabel::resized, [=] {movie->setScaledSize(pN->size());} );
+        } else {
+            pN->disconnect(SIGNAL(resized()));
+        }
+    } else {
+        return warnArgumentValue(L, __func__, qsl("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#startMovie
+int TLuaInterpreter::startMovie(lua_State* L)
+{
+    return movieFunc(L, qsl("startMovie"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#pauseMovie
+int TLuaInterpreter::pauseMovie(lua_State* L)
+{
+    return movieFunc(L, qsl("pauseMovie"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieFrame
+int TLuaInterpreter::setMovieFrame(lua_State* L)
+{
+    return movieFunc(L, qsl("setMovieFrame"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieSpeed
+int TLuaInterpreter::setMovieSpeed(lua_State* L)
+{
+    return movieFunc(L, qsl("setMovieSpeed"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieSpeed
+int TLuaInterpreter::scaleMovie(lua_State* L)
+{
+    return movieFunc(L, qsl("scaleMovie"));
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTextFormat
 int TLuaInterpreter::setTextFormat(lua_State* L)
 {
@@ -7468,7 +7575,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 
     QString soundFile;
     bool playSound;
-    if (lua_isstring(L, 11)) {
+    if (lua_type(L, 11) == LUA_TSTRING) {
         playSound = true;
         soundFile = lua_tostring(L, 11);
     } else {
@@ -7489,27 +7596,26 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    QStringList regexList;
+    QStringList patterns;
     QList<int> propertyList;
     TTrigger* pP = host.getTriggerUnit()->findTrigger(triggerName);
-    if (!pP) {
-        regexList << pattern;
-        if (colorTrigger) {
-            propertyList << REGEX_COLOR_PATTERN;
-        } else {
-            propertyList << REGEX_PERL;
-        }
-    } else {
-        regexList = pP->getRegexCodeList();
+    if (pP) {
+        patterns = pP->getPatternsList();
         propertyList = pP->getRegexCodePropertyList();
     }
+    patterns << pattern;
+    if (colorTrigger) {
+        propertyList << REGEX_COLOR_PATTERN;
+    } else {
+        propertyList << REGEX_PERL;
+    }
 
-    auto pT = new TTrigger("a", regexList, propertyList, multiLine, &host);
+    auto pT = new TTrigger("a", patterns, propertyList, multiLine, &host);
     pT->setIsFolder(false);
     pT->setIsActive(true);
     pT->setTemporary(true);
     pT->registerTrigger();
-    pT->setName(pattern);
+    pT->setName(triggerName);
     pT->mPerlSlashGOption = matchAll; //match all
     pT->mFilterTrigger = filter;
     pT->setConditionLineDelta(lineDelta); //line delta
@@ -7536,7 +7642,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         lua_settable(L, LUA_REGISTRYINDEX);
     }
 
-    lua_pushstring(L, pattern.toUtf8().constData());
+    lua_pushnumber(L, pT->getID());
     return 1;
 }
 
@@ -9131,7 +9237,7 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         lua_pushstring(L, exits.at(i).toUtf8().constData());
         lua_newtable(L); //customLines[direction]
         lua_pushstring(L, "attributes");
-        lua_newtable(L); //customLines[attributes]
+        lua_newtable(L); //customLines[direction]["attributes"]
         lua_pushstring(L, "style");
         switch (pR->customLinesStyle.value(exits.at(i))) {
         case Qt::DotLine:
@@ -9151,10 +9257,10 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         default:
             lua_pushstring(L, "solid line");
         }
-        lua_settable(L, -3);
+        lua_settable(L, -3); //customLines[direction]["attributes"]["style"]
         lua_pushstring(L, "arrow");
         lua_pushboolean(L, pR->customLinesArrow.value(exits.at(i)));
-        lua_settable(L, -3);
+        lua_settable(L, -3); //customLines[direction]["attributes"]["arrow"]
         lua_pushstring(L, "color");
         lua_newtable(L);
         lua_pushstring(L, "r");
@@ -9166,10 +9272,10 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         lua_pushstring(L, "b");
         lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).blue());
         lua_settable(L, -3);
-        lua_settable(L, -3); //color
-        lua_settable(L, -3); //attributes
+        lua_settable(L, -3); //customLines[direction]["attributes"]["color"]
+        lua_settable(L, -3); //customLines[direction]["attributes"]
         lua_pushstring(L, "points");
-        lua_newtable(L); //customLines[points]
+        lua_newtable(L); //customLines[direction][points]
         QList<QPointF> pointL = pR->customLines.value(exits.at(i));
         for (int k = 0, kTotal = pointL.size(); k < kTotal; ++k) {
             lua_pushnumber(L, k);
@@ -9182,12 +9288,90 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
             lua_settable(L, -3);
             lua_settable(L, -3);
         }
-        lua_settable(L, -3); //customLines[direction][points]
+        lua_settable(L, -3); //customLines[direction]["points"]
         lua_settable(L, -3); //customLines[direction]
     }
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCustomLines1
+int TLuaInterpreter::getCustomLines1(lua_State* L)
+{
+    int roomID = getVerifiedInt(L, __func__, 1, "room id");
+    Host& host = getHostFromLua(L);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
+    if (!pR) { //if the room doesn't exist return nil
+        return warnArgumentValue(L, __func__, qsl("room %1 doesn't exist").arg(roomID));
+    }
+    lua_newtable(L); //return table customLines[]
+    QStringList exits = pR->customLines.keys();
+    for (int i = 0, iTotal = exits.size(); i < iTotal; ++i) {
+        lua_pushstring(L, exits.at(i).toUtf8().constData());
+        lua_newtable(L); //customLines[direction]
+        lua_pushstring(L, "attributes");
+        lua_newtable(L); //customLines[direction]["attributes"]
+        lua_pushstring(L, "style");
+        switch (pR->customLinesStyle.value(exits.at(i))) {
+        case Qt::DotLine:
+            lua_pushstring(L, "dot line");
+            break;
+        case Qt::DashLine:
+            lua_pushstring(L, "dash line");
+            break;
+        case Qt::DashDotLine:
+            lua_pushstring(L, "dash dot line");
+            break;
+        case Qt::DashDotDotLine:
+            lua_pushstring(L, "dash dot dot line");
+            break;
+        case Qt::SolidLine:
+            [[fallthrough]];
+        default:
+            lua_pushstring(L, "solid line");
+        }
+        lua_settable(L, -3); //customLines[direction]["attributes"]["style"]
+        lua_pushstring(L, "arrow");
+        lua_pushboolean(L, pR->customLinesArrow.value(exits.at(i)));
+        lua_settable(L, -3); //customLines[direction]["attributes"]["arrow"]
+        lua_pushstring(L, "color");
+        lua_newtable(L);
+        lua_pushinteger(L, 1);
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).red());
+        lua_settable(L, -3);
+        lua_pushinteger(L, 2);
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).green());
+        lua_settable(L, -3);
+        lua_pushinteger(L, 3);
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).blue());
+        lua_settable(L, -3);
+        lua_settable(L, -3); //customLines[direction]["attributes"]["color"]
+        lua_settable(L, -3); //customLines[direction]["attributes"]
+        lua_pushstring(L, "points");
+        lua_newtable(L); //customLines[direction]["points"]
+        QList<QPointF> pointL = pR->customLines.value(exits.at(i));
+        for (int k = 0, kTotal = pointL.size(); k < kTotal; ++k) {
+            // To allow the output from here to be fed back into addCustomLine
+            // we need to start the numbering from the Lua standard of 1 and
+            // NOT the C/C++ standard of 0 - otherwise the end-user has to
+            // fiddle with the zero-th entry to keep the points in order:
+            lua_pushinteger(L, k+1);
+            lua_newtable(L); //customLines[direction]["points"][3 x coordinates]
+            lua_pushinteger(L, 1);
+            lua_pushnumber(L, pointL.at(k).x());
+            lua_settable(L, -3);
+            lua_pushinteger(L, 2);
+            lua_pushnumber(L, pointL.at(k).y());
+            lua_settable(L, -3);
+            lua_pushinteger(L, 3);
+            lua_pushnumber(L, pR->z);
+            lua_settable(L, -3);
+            lua_settable(L, -3); //customLines[direction]["points"][3 x coordinates]
+        }
+        lua_settable(L, -3); //customLines[direction]["points"]
+        lua_settable(L, -3); //customLines[direction]
+    }
+    return 1;
+}
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitWeights
 int TLuaInterpreter::getExitWeights(lua_State* L)
 {
@@ -10740,8 +10924,8 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelStylesheet
-int TLuaInterpreter::getLabelStylesheet(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelStyleSheet
+int TLuaInterpreter::getLabelStyleSheet(lua_State* L)
 {
     QString label = getVerifiedString(L, __func__, 1, "label");
     Host& host = getHostFromLua(L);
@@ -13689,8 +13873,11 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
 
     // Log error to Profile's Main TConsole:
     if (mpHost->mEchoLuaErrors) {
-        // ensure the Lua error is on a line of its own and is not prepended to the previous line
-        if (mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+        // ensure the Lua error is on a line of its own and is not prepended to
+        // the previous line, however there is a nasty gotcha in that during
+        // profile loading the (TMainConsole*) Host::mpConsole pointer is
+        // null - but then the buffer must itself be empty:
+        if (mpHost->mpConsole && mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
             mpHost->postMessage(qsl("\n"));
         }
 
@@ -14756,6 +14943,12 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setLabelWheelCallback", TLuaInterpreter::setLabelWheelCallback);
     lua_register(pGlobalLua, "setLabelOnEnter", TLuaInterpreter::setLabelOnEnter);
     lua_register(pGlobalLua, "setLabelOnLeave", TLuaInterpreter::setLabelOnLeave);
+    lua_register(pGlobalLua, "setMovie", TLuaInterpreter::setMovie);
+    lua_register(pGlobalLua, "startMovie", TLuaInterpreter::startMovie);
+    lua_register(pGlobalLua, "setMovieSpeed", TLuaInterpreter::setMovieSpeed);
+    lua_register(pGlobalLua, "scaleMovie", TLuaInterpreter::scaleMovie);
+    lua_register(pGlobalLua, "setMovieFrame", TLuaInterpreter::setMovieFrame);
+    lua_register(pGlobalLua, "pauseMovie", TLuaInterpreter::pauseMovie);
     lua_register(pGlobalLua, "getImageSize", TLuaInterpreter::getImageSize);
     lua_register(pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow);
     lua_register(pGlobalLua, "setWindow", TLuaInterpreter::setWindow);
@@ -15001,6 +15194,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addCustomLine", TLuaInterpreter::addCustomLine);
     lua_register(pGlobalLua, "removeCustomLine", TLuaInterpreter::removeCustomLine);
     lua_register(pGlobalLua, "getCustomLines", TLuaInterpreter::getCustomLines);
+    lua_register(pGlobalLua, "getCustomLines1", TLuaInterpreter::getCustomLines1);
     lua_register(pGlobalLua, "getMudletVersion", TLuaInterpreter::getMudletVersion);
     lua_register(pGlobalLua, "openWebPage", TLuaInterpreter::openWebPage);
     lua_register(pGlobalLua, "getAllRoomEntrances", TLuaInterpreter::getAllRoomEntrances);
@@ -15089,6 +15283,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "spellSuggestWord", TLuaInterpreter::spellSuggestWord);
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
+    lua_register(pGlobalLua, "getCharacterName", TLuaInterpreter::getCharacterName);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
     lua_register(pGlobalLua, "getHTTP", TLuaInterpreter::getHTTP);
     lua_register(pGlobalLua, "customHTTP", TLuaInterpreter::customHTTP);
@@ -15122,7 +15317,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "windowType", TLuaInterpreter::windowType);
     lua_register(pGlobalLua, "getProfileStats", TLuaInterpreter::getProfileStats);
     lua_register(pGlobalLua, "getBackgroundColor", TLuaInterpreter::getBackgroundColor);
-    lua_register(pGlobalLua, "getLabelStylesheet", TLuaInterpreter::getLabelStylesheet);
+    lua_register(pGlobalLua, "getLabelStyleSheet", TLuaInterpreter::getLabelStyleSheet);
     lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
@@ -15917,24 +16112,24 @@ int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& 
 }
 
 // No documentation available in wiki - internal function
-std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regexList, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList;
-    for (int i = 0; i < regexList.size(); i++) {
+    for (int i = 0; i < patterns.size(); i++) {
         propertyList << REGEX_PERL;
     }
     if (parent.isEmpty()) {
-        pT = new TTrigger("a", regexList, propertyList, (regexList.size() > 1), mpHost);
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
             return std::pair(-1, qsl("parent '%1' not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList);
+        pT->setRegexCodeList(patterns, propertyList);
     }
-    pT->setIsFolder(regexList.empty());
+    pT->setIsFolder(patterns.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -15945,24 +16140,24 @@ std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& na
 }
 
 // No documentation available in wiki - internal function
-std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regexList, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& patterns, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList;
-    for (int i = 0; i < regexList.size(); i++) {
+    for (int i = 0; i < patterns.size(); i++) {
         propertyList << REGEX_BEGIN_OF_LINE_SUBSTRING;
     }
     if (parent.isEmpty()) {
-        pT = new TTrigger("a", regexList, propertyList, (regexList.size() > 1), mpHost);
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
             return {-1, qsl("parent '%1' not found").arg(parent)};
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList);
+        pT->setRegexCodeList(patterns, propertyList);
     }
-    pT->setIsFolder(regexList.empty());
+    pT->setIsFolder(patterns.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -15973,24 +16168,24 @@ std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const
 }
 
 // No documentation available in wiki - internal function
-std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regexList, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& patterns, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList;
-    for (int i = 0; i < regexList.size(); i++) {
+    for (int i = 0; i < patterns.size(); i++) {
         propertyList << REGEX_SUBSTRING;
     }
     if (parent.isEmpty()) {
-        pT = new TTrigger("a", regexList, propertyList, (regexList.size() > 1), mpHost);
+        pT = new TTrigger("a", patterns, propertyList, (patterns.size() > 1), mpHost);
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
             return {-1, qsl("parent '%1' not found").arg(parent)};
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList);
+        pT->setRegexCodeList(patterns, propertyList);
     }
-    pT->setIsFolder(regexList.empty());
+    pT->setIsFolder(patterns.empty());
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerTrigger();
@@ -16005,17 +16200,17 @@ std::pair<int, QString> TLuaInterpreter::startPermPromptTrigger(const QString& n
 {
     TTrigger* pT;
     QList<int> propertyList = {REGEX_PROMPT};
-    QStringList regexList = {QString()};
+    QStringList patterns = {QString()};
 
     if (parent.isEmpty()) {
-        pT = new TTrigger("a", regexList, propertyList, false, mpHost);
+        pT = new TTrigger("a", patterns, propertyList, false, mpHost);
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
             return {-1, qsl("parent '%1' not found").arg(parent)};
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList);
+        pT->setRegexCodeList(patterns, propertyList);
     }
     pT->setIsFolder(false);
     pT->setIsActive(true);
@@ -16332,6 +16527,22 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
         lua_settable(L, -3);
     }
 
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#getCharacterName
+int TLuaInterpreter::getCharacterName(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    const QString name{host.getLogin()};
+    if (name.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no character name set");
+        return 2;
+    }
+
+    lua_pushstring(L, name.toUtf8().constData());
     return 1;
 }
 
@@ -17031,7 +17242,7 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    auto [_1, triggersTotal, triggerPatterns, tempTriggers, activeTriggers] = host.getTriggerUnit()->assembleReport();
+    auto [_1, triggersTotal, totalPatterns, tempTriggers, activeTriggers, activePatterns] = host.getTriggerUnit()->assembleReport();
     auto [_2, aliasesTotal, tempAliases, activeAliases] = host.getAliasUnit()->assembleReport();
     auto [_3, timersTotal, tempTimers, activeTimers] = host.getTimerUnit()->assembleReport();
     auto [_4, keysTotal, tempKeys, activeKeys] = host.getKeyUnit()->assembleReport();
@@ -17047,18 +17258,27 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_pushnumber(L, triggersTotal);
     lua_settable(L, -3);
 
-    lua_pushstring(L, "patterns");
-    lua_pushnumber(L, triggerPatterns);
-    lua_settable(L, -3);
-
     lua_pushstring(L, "temp");
     lua_pushnumber(L, tempTriggers);
     lua_settable(L, -3);
 
     lua_pushstring(L, "active");
     lua_pushnumber(L, activeTriggers);
+    lua_settable(L, -3); // active
+
+    lua_pushstring(L, "patterns");
+    lua_newtable(L);
+
+    lua_pushstring(L, "total");
+    lua_pushnumber(L, totalPatterns);
     lua_settable(L, -3);
+
+    lua_pushstring(L, "active");
+    lua_pushnumber(L, activePatterns);
     lua_settable(L, -3);
+
+    lua_settable(L, -3); // patterns
+    lua_settable(L, -3); // triggers
 
     // Aliases
     lua_pushstring(L, "aliases");

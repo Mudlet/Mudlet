@@ -20,7 +20,7 @@
 
 
 #include "dlgAliasMainArea.h"
-
+#include "mudlet.h"
 
 dlgAliasMainArea::dlgAliasMainArea(QWidget* pF) : QWidget(pF)
 {
@@ -28,6 +28,10 @@ dlgAliasMainArea::dlgAliasMainArea(QWidget* pF) : QWidget(pF)
     setupUi(this);
 
     connect(lineEdit_alias_name, &QLineEdit::editingFinished, this, &dlgAliasMainArea::slot_editing_name_finished);
+
+    if (mudlet::self()->firstLaunch) {
+        lineEdit_alias_pattern->setPlaceholderText("for example, ^myalias$ to match 'myalias'");
+    }
 }
 
 void dlgAliasMainArea::trimName()
