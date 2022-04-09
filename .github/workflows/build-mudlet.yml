@@ -284,7 +284,7 @@ jobs:
 
     - name: Upload GitHub Actions artifact of vcpkg build logs
       if: failure()
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: vcpkg-logs-${{ runner.os }}
         path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
@@ -355,7 +355,7 @@ jobs:
         AC_PASSWORD: ${{secrets.APPLE_PASSWORD}}
 
     - name: Upload packaged Mudlet
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: env.UPLOAD_FILENAME
       with:
         name: ${{env.UPLOAD_FILENAME}}
