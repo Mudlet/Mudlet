@@ -677,6 +677,8 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
             }
         }
         return 0;
+    case widechar_non_character:
+        return 0;
     case widechar_combining:
         // -2 = The character is a zero-width combiner - and should not be
         // present as the FIRST codepoint in a grapheme so this indicates an
