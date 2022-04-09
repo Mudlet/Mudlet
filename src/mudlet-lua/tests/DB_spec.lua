@@ -375,7 +375,7 @@ describe("Tests DB.lua functions", function()
     function()
       local test = { name = "foo", id = 500, blubb = "bar" }
       db:add(mydb.sheet, test)
-      mydb = db:create("mydbt_testingonly", { sheet = { name = "", id = 0 }})
+      mydb = db:create("mydbt_testingonly", { sheet = { name = "", id = 0 }}, true)
       local res = db:fetch(mydb.sheet)
       test.blubb = nil -- we expect the blubb gets deleted
       assert.are.equal(1, #res)

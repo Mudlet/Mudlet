@@ -434,7 +434,7 @@ end
 ---   )
 ---   </pre>
 ---   Note that you have to use double {{ }} if you have composite index/unique constrain.
-function db:create(db_name, sheets)
+function db:create(db_name, sheets, force)
   if not db.__env or db.__env == 'SQLite3 environment (closed)' then
     db.__env = luasql.sqlite3()
   end
@@ -468,7 +468,7 @@ function db:create(db_name, sheets)
       for k, v in pairs(sht) do
         if string.starts(k, "_") then
           options[k] = v
-          sht[v] = nil
+          sht[k] = nil
         end
       end
     end
@@ -478,7 +478,7 @@ function db:create(db_name, sheets)
     end
 
     db.__schema[db_name][s_name] = { columns = sht, options = options }
-    db:_migrate(db_name, s_name)
+    db:_migrate(db_name, s_name, force)
   end
   return db:get_database(db_name)
 end
