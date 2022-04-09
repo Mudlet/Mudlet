@@ -132,6 +132,7 @@ jobs:
       uses: srz-zumix/reviewdog-action-infer@v1
       with:
         report_path: '${{runner.workspace}}/b/ninja/infer-out'
+        reporter: github-pr-review
 
     - name: Setup tmate session
       if: ${{ failure() }}
