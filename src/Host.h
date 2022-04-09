@@ -201,8 +201,10 @@ public:
     void            getUserDictionaryOptions(bool& useDictionary, bool& useShared) {
                         useDictionary = mEnableUserDictionary;
                         useShared = mUseSharedDictionary; }
-    void            setControlCharacterMode(const TConsole::ControlCharacterMode mode);
-    TConsole::ControlCharacterMode  getControlCharacterMode() const { return mControlCharacterMode; }
+    void            setControlCharacterMode(const ControlCharacterMode mode);
+    ControlCharacterMode  getControlCharacterMode() const { return mControlCharacter; }
+    bool            getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
+    void            setLargeAreaExitArrows(const bool);
 
     void closingDown();
     bool isClosingDown();
@@ -391,6 +393,8 @@ public:
     bool commitLayoutUpdates(bool flush = false);
     void setScreenDimensions(const int width, const int height) { mScreenWidth = width; mScreenHeight = height; }
     std::optional<QString> windowType(const QString& name) const;
+    bool getEditorShowBidi() const { return mEditorShowBidi; }
+    void setEditorShowBidi(const bool);
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -514,7 +518,6 @@ public:
     int mWrapIndentCount;
 
     bool mEditorAutoComplete;
-    bool mEditorShowBidi = true;
 
     // code editor theme (human-friendly name)
     QString mEditorTheme;
@@ -576,6 +579,7 @@ public:
     QColor mFgColor_2;
     QColor mBgColor_2;
     QColor mRoomBorderColor;
+    QColor mMapInfoBg = QColor(150, 150, 150, 120);
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
     bool mLogStatus = false;
@@ -652,7 +656,7 @@ signals:
     void signal_changeDebugShowAllProblemCodepoints(const bool);
     // Tells all consoles associated with this Host (but NOT the Central Debug
     // one) to change the way they show  control characters:
-    void signal_controlCharacterHandlingChanged(const TConsole::ControlCharacterMode);
+    void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
 
 private slots:
     void slot_purgeTemps();
@@ -797,17 +801,19 @@ private:
     QTimer purgeTimer;
 
     // How to display (most) incoming control characters in TConsoles:
-    // TConsole::NoControlCharacterReplacement (0x0) = as is, no replacement
-    // TConsole::PictureControlCharacterReplacement (0x1) = as Unicode "Control
+    // ControlCharacterMode::AsIs (0x0) = as is, no replacement
+    // ControlCharacterMode::Picture (0x1) = as Unicode "Control
     //   Pictures" - use Unicode codepoints in range U+2400 to U+2421
-    // TConsole::PictureControlCharacterReplacement (0x2) = as "OEM Font"
+    // ControlCharacterMode::OEM (0x2) = as "OEM Font"
     //   characters (most often seen as a part of CP437
     //   encoding), see the corresponding Wikipedia page, e.g.
     //   EN: https://en.wikipedia.org/wiki/Code_page_437
     //   DE: https://de.wikipedia.org/wiki/Codepage_437
     //   RU: https://ru.wikipedia.org/wiki/CP437
-    TConsole::ControlCharacterMode mControlCharacterMode = TConsole::ControlCharacterMode::NoControlCharacterReplacement;
+    ControlCharacterMode mControlCharacter = AsIs;
 
+    bool mLargeAreaExitArrows = false;
+    bool mEditorShowBidi = true;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

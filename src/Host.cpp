@@ -3929,28 +3929,28 @@ void Host::setupIreDriverBugfix()
     }
 }
 
-void Host::setControlCharacterMode(const TConsole::ControlCharacterMode mode)
+void Host::setControlCharacterMode(const ControlCharacterMode mode)
 {
-    if (Q_UNLIKELY(!(mode == TConsole::NoControlCharacterReplacement
-                     || mode == TConsole::PictureControlCharacterReplacement
-                     || mode == TConsole::OEMFontControlCharacterReplacement))) {
+    if (Q_UNLIKELY(!(mode == ControlCharacterMode::AsIs
+                     || mode == ControlCharacterMode::Picture
+                     || mode == ControlCharacterMode::OEM))) {
         return;
     }
 
-    if (mControlCharacterMode != mode) {
-        mControlCharacterMode = mode;
+    if (mControlCharacter != mode) {
+        mControlCharacter = mode;
         emit signal_controlCharacterHandlingChanged(mode);
     }
 }
 
 std::optional<QString> Host::windowType(const QString& name) const
 {
-    if (mpConsole->mLabelMap.contains(name)) {
-        return {qsl("label")};
+    if (Q_UNLIKELY(name == QLatin1String("main"))) {
+        return {QLatin1String("main")};
     }
 
-    if (name == QLatin1String("main")) {
-        return {QLatin1String("main")};
+    if (mpConsole->mLabelMap.contains(name)) {
+        return {qsl("label")};
     }
 
     auto pWindow = mpConsole->mSubConsoleMap.value(name);
@@ -3981,4 +3981,25 @@ std::optional<QString> Host::windowType(const QString& name) const
     }
 
     return {};
+}
+
+void Host::setLargeAreaExitArrows(const bool state)
+{
+    if (mLargeAreaExitArrows != state) {
+        mLargeAreaExitArrows = state;
+        if (mpMap && mpMap->mpMapper && mpMap->mpMapper->mp2dMap) {
+            mpMap->mpMapper->mp2dMap->mLargeAreaExitArrows = state;
+            mpMap->mpMapper->mp2dMap->update();
+        }
+    }
+}
+
+void Host::setEditorShowBidi(const bool state)
+{
+    if (mEditorShowBidi != state) {
+        mEditorShowBidi = state;
+        if (mpEditorDialog) {
+            mpEditorDialog->setEditorShowBidi(state);
+        }
+    }
 }
