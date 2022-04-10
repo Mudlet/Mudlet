@@ -205,7 +205,7 @@ public:
     bool mMapGraphNeedsUpdate = true;
     bool mNewMove = true;
 
-    bool mDirtyMap = false;
+    bool mUnsavedMap = false;
 
     // loaded map file format version
     int mVersion;

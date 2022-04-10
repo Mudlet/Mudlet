@@ -500,7 +500,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     auto settings = mudlet::self()->getQSettings();
     if (auto interval = settings->value("autosaveIntervalMinutes", 2).toInt(); interval > 0) {
         startTimer(interval * 1min);
-        qDebug() << "autosave interval started for " << interval << "minutes";
     }
 }
 
@@ -525,10 +524,8 @@ void Host::timerEvent(QTimerEvent *event)
 
 void Host::autoSaveMap()
 {
-    qDebug() << "map autosave triggered";
-    if (mpMap->mpMapper && mpMap->mDirtyMap) {
-        mpConsole->saveMap(qsl("autosave"));
-        qDebug() << "map autosaved";
+    if (mpMap->mUnsavedMap) {
+        mpConsole->saveMap(mudlet::getMudletPath(mudlet::profileMapPathFileName, mHostName, qsl("autosave.dat")));
     }
 }
 

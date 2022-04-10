@@ -205,6 +205,7 @@ void TRoom::setExitStub(int direction, bool status)
     } else {
         exitStubs.removeAll(direction);
     }
+    mpRoomDB->mpMap->mUnsavedMap = true;
 }
 
 int TRoom::getExitWeight(const QString& cmd)
@@ -237,6 +238,7 @@ void TRoom::setWeight(int w)
         w = 1;
     }
     weight = w;
+    mpRoomDB->mpMap->mUnsavedMap = true;
 }
 
 // Previous implementations did not allow for REMOVAL of an exit weight (by
@@ -245,6 +247,7 @@ void TRoom::setExitWeight(const QString& cmd, int w)
 {
     if (w > 0) {
         exitWeights[cmd] = w;
+        // FIXME: isn't this check redundant?
         if (mpRoomDB && mpRoomDB->mpMap) {
             mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
         }
@@ -254,6 +257,7 @@ void TRoom::setExitWeight(const QString& cmd, int w)
             mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
         }
     }
+    mpRoomDB->mpMap->mUnsavedMap = true;
 }
 
 // Uses lower case initials: n,ne,e,se,s,sw,w,nw
@@ -266,12 +270,14 @@ bool TRoom::setDoor(const QString& cmd, const int doorStatus)
         if (doors.value(cmd, 0) != doorStatus) {
             // .value will return 0 if there ISN'T a door for this cmd
             doors[cmd] = doorStatus;
+            mpRoomDB->mpMap->mUnsavedMap = true;
             return true; // As we have changed things
         } else {
             return false; // Valid but ineffective
         }
     } else if (doors.contains(cmd) && !doorStatus) {
         doors.remove(cmd);
+        mpRoomDB->mpMap->mUnsavedMap = true;
         return true; // As we have changed things
     } else {
         return false; // As we have not changed things
@@ -350,6 +356,7 @@ bool TRoom::setArea(int areaID, bool isToDeferAreaRelatedRecalculations)
         dirtyAreas.clear();
     }
 
+    mpRoomDB->mpMap->mUnsavedMap = true;
     return true;
 }
 
@@ -373,6 +380,7 @@ bool TRoom::setExit(const int to, const int direction)
         return false;
     }
     mpRoomDB->updateEntranceMap(this);
+    mpRoomDB->mpMap->mUnsavedMap = true;
     return true;
 }
 
@@ -521,6 +529,7 @@ void TRoom::setExitLock(int exit, bool state)
     } else {
         exitLocks.removeAll(exit);
     }
+    mpRoomDB->mpMap->mUnsavedMap = true;
 }
 
 bool TRoom::setSpecialExitLock(const QString& cmd, const bool doLock)
@@ -535,6 +544,7 @@ bool TRoom::setSpecialExitLock(const QString& cmd, const bool doLock)
         mSpecialExitLocks.remove(cmd);
     }
 
+    mpRoomDB->mpMap->mUnsavedMap = true;
     return true;
 }
 
@@ -556,7 +566,7 @@ bool TRoom::hasSpecialExitLock(const QString& cmd) const
 void TRoom::setSpecialExit(const int to, const QString& cmd)
 {
     if (cmd.isEmpty()) {
-        return; // Refuse to create an unnamed special exit!!!
+        return;
     }
 
     if (to > 0) {
@@ -580,12 +590,12 @@ void TRoom::setSpecialExit(const int to, const QString& cmd)
     }
     mpRoomDB->updateEntranceMap(this);
     mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
+    mpRoomDB->mpMap->mUnsavedMap = true;
 }
 
 void TRoom::clearSpecialExits()
 {
     if (mSpecialExits.isEmpty()) {
-        // Nothing to do:
         return;
     }
 
@@ -604,6 +614,7 @@ void TRoom::clearSpecialExits()
     }
     mpRoomDB->updateEntranceMap(this);
     mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
+    mpRoomDB->mpMap->mUnsavedMap = true;
 }
 
 void TRoom::removeAllSpecialExitsToRoom(const int roomId)
@@ -635,6 +646,7 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
         }
         mpRoomDB->updateEntranceMap(this);
         mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
+        mpRoomDB->mpMap->mUnsavedMap = true;
     }
 }
 

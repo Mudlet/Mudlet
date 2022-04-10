@@ -1244,7 +1244,7 @@ bool TMainConsole::saveMap(const QString& location, int saveVersion)
         }
         mpHost->mpMap->serialize(out, saveVersion);
         file_map.close();
-        mpHost->mpMap->mDirtyMap = false;
+        mpHost->mpMap->mUnsavedMap = false;
         return true;
     }
 
