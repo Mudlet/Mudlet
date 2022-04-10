@@ -678,6 +678,22 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         }
         return 0;
     case widechar_non_character:
+        // -7 = The character is a non-character - we might make use of some of them for
+        // internal purposes in the future (in which case we might need additional code here
+        // or elsewhere) but we don't right now:
+        if (!mIsLowerPane) {
+            bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
+            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+                qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is a non-character that Mudlet is not itself using, codepoint number: U+"
+                                             << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
+            }
+            if (Q_UNLIKELY(newCodePointToWarnAbout)) {
+                mProblemCodepoints.insert(unicode, std::tuple{1, std::string{"Non-character"}});
+            } else {
+                auto [count, reason] = mProblemCodepoints.value(unicode);
+                mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
+            }
+     }
         return 0;
     case widechar_combining:
         // -2 = The character is a zero-width combiner - and should not be
