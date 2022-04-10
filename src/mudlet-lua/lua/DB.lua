@@ -362,8 +362,8 @@ function db:_sql_values(values)
       else
         s = "datetime('" .. v._timestamp .. "', 'unixepoch')"
       end
-		elseif t == "table" and v._isNull then
-			s = "NULL"
+    elseif t == "table" and v._isNull then
+      s = "NULL"
     else
       s = tostring(v)
     end
