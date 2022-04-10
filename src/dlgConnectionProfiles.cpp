@@ -122,7 +122,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     auto pWelcome_document = new QTextDocument(this);
 
     mpCopyProfile = new QAction(tr("Copy"), this);
-    mpCopyProfile->setObjectName(qsl("mpCopyProfile"));
+    mpCopyProfile->setObjectName(qsl("copyProfile"));
     auto copyProfileSettings = new QAction(tr("Copy settings only"), this);
     copyProfileSettings->setObjectName(qsl("copyProfileSettingsOnly"));
 
