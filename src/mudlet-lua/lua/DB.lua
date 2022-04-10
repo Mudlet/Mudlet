@@ -603,7 +603,7 @@ function db:_migrate(db_name, s_name, force)
         table.insert(not_blank, k)
       end
       
-      -- if non-empty columns are supposed to be dropped and not force, raise an error
+      -- don't drop non-empty columns unless force flag is provided
       assert(not not_blank[1] or force, "db:_migrate halted due to data present in undefined columns: "..table.concat(not_blank, ","))
       
       local get_create = "SELECT sql FROM sqlite_master " ..
