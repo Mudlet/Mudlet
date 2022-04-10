@@ -241,8 +241,6 @@ void TRoom::setWeight(int w)
     mpRoomDB->mpMap->mUnsavedMap = true;
 }
 
-// Previous implementations did not allow for REMOVAL of an exit weight (by
-// setting it to zero)
 void TRoom::setExitWeight(const QString& cmd, int w)
 {
     if (w > 0) {
