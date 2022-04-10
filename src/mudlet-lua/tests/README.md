@@ -24,9 +24,9 @@ On **Windows**
 	  - Setting `Path` and `PATHEXT` is fine
 2. Install Busted
 	- Open a command prompt and enter `luarocks install busted`
-	- If you get a command not recognized message
+	- If you get a `'luarocks' is not recognized...` message:
 	  - You may need to add the LuaRocks directory to your `Path` system environment variable and restart
-		- Alternatively, navigate the command prompt to the LuaRocks directory to run LuaRocks commands
+	  - Alternatively, navigate the command prompt to the LuaRocks directory to run LuaRocks commands
 
 You're now ready to run the tests.
 
