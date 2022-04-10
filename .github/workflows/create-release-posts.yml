@@ -1,7 +1,7 @@
 name: Create release posts in Wordpress
 on:
   release:
-    types: [published]
+    types: [created, published]
 
 jobs:
   release-post:
