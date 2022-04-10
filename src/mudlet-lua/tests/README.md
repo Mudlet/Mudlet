@@ -14,6 +14,7 @@ On **Windows**
 
 1. Download and unzip [LuaRocks](https://luarocks.org/releases/luarocks-3.8.0-windows-32.zip)
 
+  - Install Visual Studio (the [free community edition](https://visualstudio.microsoft.com/vs/community/) works)
   - Open the x86 Native Tools Command Prompt that comes with Visual Studio in administrator mode (regular command prompt may work but is untested; the x64 Native Tools Command Prompt will *not* work)
 	- Navigate to the folder containing the unzipped files
 	- `install /P <install_path> /SELFCONTAINED /L` (omit angular brackets)
