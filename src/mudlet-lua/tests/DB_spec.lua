@@ -105,7 +105,7 @@ describe("Tests DB.lua functions", function()
         local results = db:fetch(mydb.enemies)
         assert.is_true(#results == 1)
       end)
-      
+
       it("Should replace a db entry if add_unique is used and the unique index matches", function()
         db:add(mydb.enemies, {name="Bob", city="Sacramento"})
         db:add(mydb.enemies, {name="Bob", city="San Francisco"})
@@ -382,14 +382,14 @@ describe("Tests DB.lua functions", function()
       res[1]._row_id = nil --we get the row id back, which we don't need
       assert.are.same(test, res[1])
     end)
-    
+
     it("should fail to delete columns in a non empty table if force argument is not provided.",
     function()
       local test = { name = "foo", id = 500, blubb = "bar" }
       db:add(mydb.sheet, test)
       assert.has_error(function() db:create("mydbt_testingonly", { sheet = { name = "", id = 0 }}) end)
     end)
-    
+
     it("should successfully delete empty columns in a non empty table",
     function()
       local test = { name = "foo", id = 500, blubb = db:Null() }
@@ -907,7 +907,7 @@ describe("Tests DB.lua functions", function()
       assert.is.same(exp_count, count)
     end)
   end)
-  
+
   describe("Tests, if NULL handling works as intended",
   function()
     before_each(function()
@@ -921,14 +921,14 @@ describe("Tests DB.lua functions", function()
           }
         })
     end)
-    
+
     after_each(function()
       db:close()
       local filename = getMudletHomeDir() .. "/Database_mydbtnulltesting.db"
       os.remove(filename)
       mydb = nil
     end)
-    
+
     it("should be able to insert NULL values",
     function()
       local test = {name = "Bellman", level = db:Null(), motto = ""}
@@ -939,7 +939,7 @@ describe("Tests DB.lua functions", function()
       results[1]._row_id = nil
       assert.are.same(results[1], test)
     end)
-    
+
     it("should be able to fetch by NULL conditions",
     function()
       local test1 = {name = "Boots", level = 1, motto = ""}
@@ -955,7 +955,7 @@ describe("Tests DB.lua functions", function()
       results_not_null[1]._row_id = nil
       assert.are.same(results_not_null[1], test1)
     end)
-    
+
     it("should be able to set an existing field to NULL",
     function()
       local test = {name = "Bellman", level = 1, motto = "Four weeks to the month you may mark"}
@@ -968,7 +968,7 @@ describe("Tests DB.lua functions", function()
       assert.are.same(results[1], test)
     end)
   end)
-  
+
   describe("Tests, if default NULL works as intended",
   function()
     after_each(function()
@@ -977,7 +977,7 @@ describe("Tests DB.lua functions", function()
       os.remove(filename)
       mydb = nil
     end)
-      
+
     it("should be able to create a table with default NULL",
     function()
       mydb = db:create("mydbt_nulltesting",
@@ -1001,7 +1001,7 @@ describe("Tests DB.lua functions", function()
       results2[1]._row_id = nil
       assert.are.same(results2[1], test2)
     end)
-    
+
     it("should be able to add a column with default NULL to a table",
     function()
       mydb = db:create("mydbt_nulltesting",
@@ -1012,7 +1012,7 @@ describe("Tests DB.lua functions", function()
           _unique = { "name" },
         }
       })
-      
+
       mydb = db:create("mydbt_nulltesting",
       {
         sheet = {
