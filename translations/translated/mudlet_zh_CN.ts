@@ -6055,12 +6055,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="147"/>
       <source>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</source>
-      <translation type="unfinished"/>
+      <translation>为您的日志设置一个名称。(如果已存在同一个名称的日志文件，新日志将被追加在旧文件的末端)。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="168"/>
       <source>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>自动更新在开发版中被禁用，以防止自动更新覆盖你的Mudelet。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="195"/>
@@ -6674,7 +6674,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1051"/>
       <source>Exit to &quot;%1&quot; in area: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>退出区域内的 &quot;%1&quot; ： &quot;%2&quot;。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1067"/>
@@ -8699,7 +8699,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="103"/>
       <source>My Label</source>
-      <translation type="unfinished"/>
+      <translation>我的标签</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="110"/>
@@ -8729,17 +8729,17 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="182"/>
       <source>Position:</source>
-      <translation type="unfinished"/>
+      <translation>位置:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="192"/>
       <source>If deselected the label will have the same size when you zoom in and out in the mapper. If it is selected the label will scale when you zoom the mapper.</source>
-      <translation type="unfinished"/>
+      <translation>如果不选中，当你放大到地图上时，标签的大小将是相同的。 如果选中此项，当你缩放地图时，标签会缩放。</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="195"/>
       <source>Scale with zoom</source>
-      <translation type="unfinished"/>
+      <translation>缩放比例</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="243"/>
