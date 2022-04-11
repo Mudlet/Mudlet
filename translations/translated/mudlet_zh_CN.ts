@@ -8658,7 +8658,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="20"/>
       <source>Map label</source>
-      <translation type="unfinished"/>
+      <translation>地图标签</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="38"/>
@@ -8673,28 +8673,28 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="54"/>
       <source>Image</source>
-      <translation type="unfinished"/>
+      <translation>图片</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="62"/>
       <source>Image:</source>
-      <translation type="unfinished"/>
+      <translation>图片：</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="79"/>
       <location filename="../src/ui/map_label.ui" line="127"/>
       <source>...</source>
-      <translation type="unfinished"/>
+      <translation>...</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="86"/>
       <source>Stretch image</source>
-      <translation type="unfinished"/>
+      <translation>拉伸图片</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="93"/>
       <source>Label text:</source>
-      <translation type="unfinished"/>
+      <translation>标签文本：</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="103"/>
