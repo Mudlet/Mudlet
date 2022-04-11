@@ -8668,7 +8668,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="49"/>
       <source>Text</source>
-      <translation type="unfinished"/>
+      <translation>文字</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="54"/>
@@ -9249,7 +9249,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="3648"/>
       <source>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation type="unfinished"/>
+      <translation>告知您当前的 Mudlet 版本，制作该版本的人员以及您可以共享的许可证。</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="678"/>
@@ -11384,12 +11384,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2143"/>
       <source>Use large area exit arrows in 2D view</source>
-      <translation type="unfinished"/>
+      <translation>在2D视图中使用大号的区域出口箭头</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2394"/>
       <source>Map info background:</source>
-      <translation type="unfinished"/>
+      <translation>地图信息背景:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2836"/>
