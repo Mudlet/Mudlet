@@ -12254,7 +12254,7 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
 
     result = dlgIRC::writeIrcPassword(pHost, password);
     if (!result.first) {
-        return warnArgumentValue(L, __func__, QStringLiteral("unable to save password, reason: %1").arg(result.second));
+        return warnArgumentValue(L, __func__, qsl("unable to save password, reason: %1").arg(result.second));
     }
 
     lua_pushboolean(L, true);

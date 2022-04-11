@@ -861,7 +861,7 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                               "bustling commercial district and become wealthy as part of a powerful engineering conglomerate.\n\nLOTJ offers full PVP in both ground and space combat, governed by a "
                               "set of rules to minimize griefing and ensure that all kills have sufficient in-character cause.\n\nWhat role will you play? The legend awaits!");
 
-    } else if (hostUrl == QStringLiteral("mume.org")) {
+    } else if (hostUrl == qsl("mume.org")) {
         return qsl("Multi-Users in Middle-earth (MUME) is a highly competitive world PvP DikuMUD, set in J. R. R. Tolkien’s fictional world of Middle-earth, as described in The Hobbit and "
                               "The Lord of the Rings, where players may choose to join the epic war between the forces of Sauron and the armies of the Free peoples. In MUME players can explore, "
                               "role-play, acquire achievements, and complete quests across many challenging locations across Middle-earth such as Lothlórien, the Shire, Bree, Rivendell, Goblin-town,"
@@ -1805,13 +1805,13 @@ bool dlgConnectionProfiles::validateProfile()
 
         if (!check.isValid()) {
             notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QStringLiteral("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server."), check.errorString()));
+            notificationAreaMessageBox->setText(qsl("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server."), check.errorString()));
             host_name_entry->setPalette(mErrorPalette);
             validUrl = false;
             valid = false;
         }
 
-        if (url.indexOf(QRegularExpression(QStringLiteral("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
+        if (url.indexOf(QRegularExpression(qsl("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
             if (port_ssl_tsl->isChecked()) {
                 notificationAreaIconLabelError->show();
                 notificationAreaMessageBox->setText(
