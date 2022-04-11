@@ -1720,7 +1720,7 @@ bool dlgConnectionProfiles::validateProfile()
         }
 
         // see if there is an edit that already uses a similar name
-        if (pItem->data(csmNameRole).toString() != name && mProfileList.contains(name)) {
+        if ((QString::compare(pItem->data(csmNameRole).toString(), name, Qt::CaseInsensitive) != 0) && mProfileList.contains(name, Qt::CaseInsensitive)) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(qsl("%1\n%2").arg(notificationAreaMessageBox->text(), tr("This profile name is already in use.")));
             validName = false;

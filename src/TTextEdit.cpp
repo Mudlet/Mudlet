@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2021 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2022 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -565,7 +565,7 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     uint unicode = getGraphemeBaseCharacter(grapheme);
     int charWidth = 0;
 
-    switch (mpConsole->mControlCharacterMode) {
+    switch (mpConsole->mControlCharacter) {
     default:
         // No special handling, except for these:
         if (Q_UNLIKELY(unicode == '\a' || unicode == '\t')) {
@@ -586,10 +586,10 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
             graphemes.append((charWidth < 1) ? QChar() : grapheme);
         }
         break;
-    case TConsole::PictureControlCharacterReplacement:
+    case ControlCharacterMode::Picture:
         replaceControlCharacterWith_Picture(unicode, grapheme, column, graphemes, charWidth);
         break;
-    case TConsole::OEMFontControlCharacterReplacement:
+    case ControlCharacterMode::OEM:
         replaceControlCharacterWith_OEMFont(unicode, grapheme, column, graphemes, charWidth);
         break;
     } // End of switch
@@ -650,11 +650,11 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
 
 int TTextEdit::getGraphemeWidth(uint unicode) const
 {
-    // Markus Kuhn's mk_wcwidth()/mk_wcwidth_cjk():
-    // https://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c have not been updated since
-    // Unicode 5 and we have replaced them by wide_wcwidth:
-    // https://github.com/ridiculousfish/widecharwidth
-    // which returns 1 or 2 or a number of (negative) special values:
+    // https://github.com/ridiculousfish/widecharwidth/issues/11
+    if (unicode == 0x1F6E1) {
+        return 2;
+    }
+
     switch (widechar_wcwidth(unicode)) {
     case 1: // Draw as normal/narrow
         return 1;
@@ -676,6 +676,24 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
             }
         }
+        return 0;
+    case widechar_non_character:
+        // -7 = The character is a non-character - we might make use of some of them for
+        // internal purposes in the future (in which case we might need additional code here
+        // or elsewhere) but we don't right now:
+        if (!mIsLowerPane) {
+            bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
+            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+                qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is a non-character that Mudlet is not itself using, codepoint number: U+"
+                                             << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
+            }
+            if (Q_UNLIKELY(newCodePointToWarnAbout)) {
+                mProblemCodepoints.insert(unicode, std::tuple{1, std::string{"Non-character"}});
+            } else {
+                auto [count, reason] = mProblemCodepoints.value(unicode);
+                mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
+            }
+     }
         return 0;
     case widechar_combining:
         // -2 = The character is a zero-width combiner - and should not be
