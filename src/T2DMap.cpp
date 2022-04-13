@@ -4756,7 +4756,6 @@ void T2DMap::setMapZoom(qreal zoom)
     if (oldZoom != xyzoom) {
         flushSymbolPixmapCache();
         update();
-        mpMap->mUnsavedMap = true;
     }
 }
 
@@ -5145,7 +5144,6 @@ void T2DMap::slot_setCustomLine2()
 
     mHelpMsg = tr("Left-click to add point, right-click to undo/change/finish...", "2D Mapper big, bottom of screen help message");
     update();
-    mpMap->mUnsavedMap = true;
 }
 
 void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
@@ -5179,7 +5177,6 @@ void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
     //    qDebug("   ARROW: %s", mCurrentLineArrow ? "Yes" : "No");
     mHelpMsg = tr("Left-click to add point, right-click to undo/change/finish...", "2D Mapper big, bottom of screen help message");
     update();
-    mpMap->mUnsavedMap = true;
 }
 
 void T2DMap::slot_createLabel()
@@ -5214,7 +5211,6 @@ void T2DMap::slot_roomSelectionChanged()
         getCenterSelection();
     }
     update();
-    mpMap->mUnsavedMap = true;
 }
 
 void T2DMap::resizeMultiSelectionWidget()
