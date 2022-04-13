@@ -245,12 +245,13 @@ void TRoom::setExitWeight(const QString& cmd, int w)
 {
     if (w > 0) {
         exitWeights[cmd] = w;
+        mpRoomDB->mpMap->mUnsavedMap = true;
         mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
     } else if (exitWeights.contains(cmd)) {
         exitWeights.remove(cmd);
+        mpRoomDB->mpMap->mUnsavedMap = true;
         mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
     }
-    mpRoomDB->mpMap->mUnsavedMap = true;
 }
 
 // Uses lower case initials: n,ne,e,se,s,sw,w,nw

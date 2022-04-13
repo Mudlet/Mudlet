@@ -4741,7 +4741,6 @@ void T2DMap::wheelEvent(QWheelEvent* e)
 
             flushSymbolPixmapCache();
             update();
-            mpMap->mUnsavedMap = true;
         }
         e->accept();
         return;
