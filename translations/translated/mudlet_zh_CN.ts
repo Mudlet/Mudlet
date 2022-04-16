@@ -12665,7 +12665,7 @@ Status</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2024"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;红色（锁定）门的符号被绘制在2D地图上。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2033"/>
