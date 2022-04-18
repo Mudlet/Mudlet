@@ -429,7 +429,7 @@ void dlgRoomExits::slot_addSpecialExit()
 //    pI->setTextAlignment(0, Qt::AlignRight);
 //    pI->setToolTip(1, singleParagraph.arg(tr("Prevent a route being created via this exit, equivalent to an infinite exit weight.")));
 //    pI->setCheckState(1, Qt::Unchecked); //Locked
-//    pI->setText(2, QStringLiteral("0")); //Exit Weight
+//    pI->setText(2, qsl("0")); //Exit Weight
 //    pI->setTextAlignment(2, Qt::AlignRight);
 //    pI->setToolTip(2, singleParagraph.arg(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
 //    pI->setCheckState(3, Qt::Checked); //Doortype: none

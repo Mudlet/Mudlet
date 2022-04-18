@@ -95,7 +95,7 @@ protected:
 
 
 private:
-    void copyFolder(const QString& sourceFolder, const QString& destFolder);
+    static bool copyFolder(const QString& sourceFolder, const QString& destFolder);
     QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name) const;
     bool validateConnect();
     void updateDiscordStatus();
@@ -134,6 +134,7 @@ private:
     QPalette mOKPalette;
     QPalette mErrorPalette;
     QPalette mReadOnlyPalette;
+    QAction* mpCopyProfile = nullptr;
     QPushButton* offline_button = nullptr;
     QPushButton* connect_button = nullptr;
     QLineEdit* delete_profile_lineedit = nullptr;
