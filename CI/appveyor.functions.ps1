@@ -228,8 +228,10 @@ function InstallQt() {
   # go up to the root of Qt folder to start installation
   cd ..
   cd ..
+  Step "Checking available Qt modules"
+  exec "aqt" @("list-qt", "windows", "desktop", "--modules", "5.14.2", "win32_mingw73")
   Step "Installing Qt"
-  exec "aqt" @("install-qt", "windows", "desktop", "5.14.2", "win32_mingw73")
+  exec "aqt" @("install-qt", "windows", "desktop", "5.14.2", "win32_mingw73" , "-m", "qt5texttospeech", "qt5network", "qt5gamepad")
 }
 
 function InstallPython() {

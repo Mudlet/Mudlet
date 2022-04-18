@@ -1662,6 +1662,7 @@ DISTFILES += \
     ../mudlet.png \
     ../mudlet.svg \
     ../README.md \
+    ../setup-windows-sdk.ps1 \
     ../translations/translated/CMakeLists.txt \
     ../translations/translated/generate-translation-stats.lua \
     ../translations/translated/updateqm.pri \
