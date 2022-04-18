@@ -228,11 +228,13 @@ function InstallQt() {
   # go up to the root of Qt folder to start installation
   cd ..
   cd ..
-  Step "Checking available Qt modules"
+  Step "Checking available Qt modules for the win32_mingw73 architectures"
   exec "aqt" @("list-qt", "windows", "desktop", "--modules", "5.14.2", "win32_mingw73")
-  Step "Installing Qt"
-  exec "aqt" @("install-qt", "windows", "desktop", "5.14.2", "win32_mingw73" , "-m", "qt5texttospeech", "qt5network", "qt5gamepad")
-}
+  Step "Checking available Qt base archive for the win32_mingw73 architectures"
+  exec "aqt" @("list-qt", "windows", "desktop", "--archives", "5.14.2", "win32_mingw73")
+  Step "Installing Qt base and some other archives"
+  exec "aqt" @("install-qt", "windows", "desktop", "5.14.2", "win32_mingw73" , "--archives", "qtbase", "icu", "qtimageformats", "qtspeech", "qtmultimedia", "qtsvg", "qttools", "qttranslations", "qtnetwork", "qtgamepad")
+  }
 
 function InstallPython() {
   DownloadFile "https://www.python.org/ftp/python/2.7.14/python-2.7.14.msi" "python-installer.msi" $true
