@@ -64,9 +64,6 @@ class TMap : public QObject
 {
     Q_OBJECT
 
-    // Moved from TRoomDB - but as one is used in the TRoomDB constructor they
-    // must be defined before the TRoomDB instance with this TMap on creation
-    // is created:
     QString mDefaultAreaName;
     QString mUnnamedAreaName;
 
@@ -98,7 +95,6 @@ public:
     bool setRoomCoordinates(int id, int x, int y, int z);
     void update();
 
-    // Was init( Host * ) but host pointer was not used and it does not initialise a map!
     void audit();
 
     QList<int> detectRoomCollisions(int id);
@@ -209,6 +205,8 @@ public:
     bool mMapGraphNeedsUpdate = true;
     bool mNewMove = true;
 
+    bool mUnsavedMap = false;
+
     // loaded map file format version
     int mVersion;
 
@@ -271,7 +269,6 @@ public:
     MapInfoContributorManager* mMapInfoContributorManager;
 
 public slots:
-    // Moved and revised from dlgMapper:
     void slot_setDownloadProgress(qint64, qint64);
     void slot_downloadCancel();
     void slot_downloadError(QNetworkReply::NetworkError);
