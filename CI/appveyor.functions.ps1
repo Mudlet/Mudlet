@@ -232,8 +232,8 @@ function InstallQt() {
   exec "aqt" @("list-qt", "windows", "desktop", "--modules", "5.14.2", "win32_mingw73")
   Step "Checking available Qt base archive for the win32_mingw73 architectures"
   exec "aqt" @("list-qt", "windows", "desktop", "--archives", "5.14.2", "win32_mingw73")
-  Step "Installing Qt base and some other archives"
-  exec "aqt" @("install-qt", "windows", "desktop", "5.14.2", "win32_mingw73" , "--archives", "qtbase", "icu", "qtimageformats", "qtspeech", "qtmultimedia", "qtsvg", "qttools", "qttranslations", "qtnetwork", "qtgamepad")
+  Step "Installing Qt base"
+  exec "aqt" @("install-qt", "windows", "desktop", "5.14.2", "win32_mingw73")
   }
 
 function InstallPython() {
