@@ -4540,6 +4540,7 @@ int TLuaInterpreter::setRoomEnv(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("room %1 doesn't exist").arg(id));
     }
     pR->environment = env;
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4560,6 +4561,7 @@ int TLuaInterpreter::setRoomName(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid room id").arg(id));
     }
     pR->name = name;
+    host.mpMap->mUnsavedMap = true;
     updateMap(L);
     lua_pushboolean(L, true);
     return 1;
@@ -4593,6 +4595,7 @@ int TLuaInterpreter::setRoomWeight(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->setWeight(w);
+        host.mpMap->mUnsavedMap = true;
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
 
@@ -4706,6 +4709,7 @@ int TLuaInterpreter::lockRoom(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->isLocked = b;
+        host.mpMap->mUnsavedMap = true;
         host.mpMap->mMapGraphNeedsUpdate = true;
         lua_pushboolean(L, true);
     } else {
@@ -4731,6 +4735,7 @@ int TLuaInterpreter::lockExit(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->setExitLock(dir, b);
+        host.mpMap->mUnsavedMap = true;
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
@@ -4758,6 +4763,7 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     }
 
     lua_pushboolean(L, true);
+    host.mpMap->mUnsavedMap = true;
     host.mpMap->mMapGraphNeedsUpdate = true;
     return 1;
 }
@@ -8373,6 +8379,7 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
     int alpha = getVerifiedInt(L, __func__, 5, "a");
     Host& host = getHostFromLua(L);
     host.mpMap->mCustomEnvColors[id] = QColor(r, g, b, alpha);
+    host.mpMap->mUnsavedMap = true;
     return 0;
 }
 
@@ -8449,6 +8456,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
 
     bool result = host.mpMap->mpRoomDB->setAreaName(id, newName);
     if (result) {
+        host.mpMap->mUnsavedMap = true;
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->updateAreaComboBox();
             if (isCurrentAreaRenamed) {
@@ -8524,8 +8532,8 @@ int TLuaInterpreter::addAreaName(lua_State* L)
 
     // Note that adding an area name implicitly creates an underlying TArea instance
     lua_pushnumber(L, host.mpMap->mpRoomDB->addArea(name));
+    host.mpMap->mUnsavedMap = true;
 
-    // Update mapper Area names widget, using method designed for it...!
     if (host.mpMap->mpMapper) {
         host.mpMap->mpMapper->updateAreaComboBox();
     }
@@ -8581,6 +8589,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->updateAreaComboBox();
         }
+        host.mpMap->mUnsavedMap = true;
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     lua_pushboolean(L, result);
@@ -8596,6 +8605,7 @@ int TLuaInterpreter::deleteRoom(lua_State* L)
     }
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpMap->mpRoomDB->removeRoom(id));
+    host.mpMap->mUnsavedMap = true;
     return 1;
 }
 
@@ -8673,6 +8683,7 @@ int TLuaInterpreter::addRoom(lua_State* L)
     lua_pushboolean(L, added);
     if (added) {
         host.mpMap->setRoomArea(id, -1, false);
+        host.mpMap->mUnsavedMap = true;
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     return 1;
@@ -8902,6 +8913,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
 
     bool result = pR->setDoor(exitCmd, doorStatus);
     if (result) {
+        host.mpMap->mUnsavedMap = true;
         if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
             host.mpMap->mpMapper->mp2dMap->update();
         }
@@ -9171,6 +9183,8 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     // the painting process - and not doing that here causes the new line to not
     // show up properly:
     pR->calcRoomDimensions();
+
+    host.mpMap->mUnsavedMap = true;
 
     // Better refresh the 2D map to show the new line:
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
@@ -9615,6 +9629,7 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
     }
     if (!pR->userData.isEmpty()) {
         pR->userData.clear();
+        host.mpMap->mUnsavedMap = true;
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9644,6 +9659,7 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
     //        }
     /*      else */ if (pR->userData.contains(key)) {
         pR->userData.remove(key);
+        host.mpMap->mUnsavedMap = true;
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9666,6 +9682,7 @@ int TLuaInterpreter::clearAreaUserData(lua_State* L)
     }
     if (!pA->mUserData.isEmpty()) {
         pA->mUserData.clear();
+        host.mpMap->mUnsavedMap = true;
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9691,6 +9708,7 @@ int TLuaInterpreter::clearAreaUserDataItem(lua_State* L)
         return warnArgumentValue(L, __func__, "key can not be an empty string");
     }
     lua_pushboolean(L, (pA->mUserData.remove(key) > 0));
+    host.mpMap->mUnsavedMap = true;
     return 1;
 }
 
@@ -9704,6 +9722,7 @@ int TLuaInterpreter::clearMapUserData(lua_State* L)
 
     if (!host.mpMap->mUserData.isEmpty()) {
         host.mpMap->mUserData.clear();
+        host.mpMap->mUnsavedMap = true;
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9962,6 +9981,7 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid room id").arg(roomId));
     }
     pR->userData[key] = value;
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -9986,6 +10006,7 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid area id").arg(areaId));
     }
     pA->mUserData[key] = value;
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10005,6 +10026,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
     QString value = getVerifiedString(L, __func__, 2, "value");
 
     host.mpMap->mUserData[key] = value;
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10257,6 +10279,7 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
         // handle/use/allow:
         pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
     }
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10305,6 +10328,7 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
         host.mpMap->mpMapper->mp2dMap->update();
     }
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10325,6 +10349,7 @@ int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
         host.mpMap->mpMapper->mp2dMap->update();
     }
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10412,6 +10437,7 @@ int TLuaInterpreter::setGridMode(lua_State* L)
             }
         }
     }
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -12254,7 +12280,7 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
 
     result = dlgIRC::writeIrcPassword(pHost, password);
     if (!result.first) {
-        return warnArgumentValue(L, __func__, QStringLiteral("unable to save password, reason: %1").arg(result.second));
+        return warnArgumentValue(L, __func__, qsl("unable to save password, reason: %1").arg(result.second));
     }
 
     lua_pushboolean(L, true);
