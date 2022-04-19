@@ -249,9 +249,9 @@ function InstallOpenssl() {
 }
 
 function InstallHunspell() {
-  DownloadFile "https://github.com/hunspell/hunspell/archive/v1.6.2.tar.gz" "hunspell.tar.gz"
+  DownloadFile "https://github.com/hunspell/hunspell/archive/v1.7.0.tar.gz" "hunspell.tar.gz"
   ExtractTar "hunspell.tar.gz" "hunspell"
-  Set-Location "hunspell\hunspell-1.6.2"
+  Set-Location "hunspell\hunspell-1.7.0"
   Step "Changing src\tools\Makefile.am"
   (Get-Content src\tools\Makefile.am -Raw) -replace 'hzip ', '' | Out-File -encoding ASCII src\tools\Makefile.am >> "$logFile" 2>&1
   RunAutoReconfig
@@ -485,7 +485,7 @@ function CheckAndInstallOpenSSL(){
 }
 
 function CheckAndInstallHunspell(){
-    CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.6-0.dll" { InstallHunspell }
+    CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.7-0.dll" { InstallHunspell }
 }
 
 function CheckAndInstallYajl(){

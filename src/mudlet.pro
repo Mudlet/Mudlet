@@ -285,7 +285,7 @@ unix:!macx {
         LIBS +=  \
             -L"$${MINGW_BASE_DIR_TEST}\\bin" \
             -llua51 \
-            -lhunspell-1.6
+            -lhunspell-1.7
 
         INCLUDEPATH += \
              "C:\\Libraries\\boost_1_77_0" \
