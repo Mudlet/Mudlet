@@ -158,6 +158,7 @@ public:
     std::pair<int, QString> startPermKey(QString&, QString&, int&, int&, QString&);
 
     static int getCustomLines(lua_State*);
+    static int getCustomLines1(lua_State*);
     static int addCustomLine(lua_State*);
     static int removeCustomLine(lua_State*);
     static int noop(lua_State*);
@@ -602,6 +603,7 @@ public:
     static int spellSuggestWord(lua_State*);
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
+    static int getCharacterName(lua_State*);
     static int getWindowsCodepage(lua_State*);
     static int getHTTP(lua_State* L);
     static int customHTTP(lua_State* L);

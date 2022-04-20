@@ -4540,6 +4540,7 @@ int TLuaInterpreter::setRoomEnv(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("room %1 doesn't exist").arg(id));
     }
     pR->environment = env;
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4560,6 +4561,7 @@ int TLuaInterpreter::setRoomName(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid room id").arg(id));
     }
     pR->name = name;
+    host.mpMap->mUnsavedMap = true;
     updateMap(L);
     lua_pushboolean(L, true);
     return 1;
@@ -4593,6 +4595,7 @@ int TLuaInterpreter::setRoomWeight(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->setWeight(w);
+        host.mpMap->mUnsavedMap = true;
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
 
@@ -4706,6 +4709,7 @@ int TLuaInterpreter::lockRoom(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->isLocked = b;
+        host.mpMap->mUnsavedMap = true;
         host.mpMap->mMapGraphNeedsUpdate = true;
         lua_pushboolean(L, true);
     } else {
@@ -4731,6 +4735,7 @@ int TLuaInterpreter::lockExit(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->setExitLock(dir, b);
+        host.mpMap->mUnsavedMap = true;
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
@@ -4758,6 +4763,7 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     }
 
     lua_pushboolean(L, true);
+    host.mpMap->mUnsavedMap = true;
     host.mpMap->mMapGraphNeedsUpdate = true;
     return 1;
 }
@@ -8373,6 +8379,7 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
     int alpha = getVerifiedInt(L, __func__, 5, "a");
     Host& host = getHostFromLua(L);
     host.mpMap->mCustomEnvColors[id] = QColor(r, g, b, alpha);
+    host.mpMap->mUnsavedMap = true;
     return 0;
 }
 
@@ -8449,6 +8456,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
 
     bool result = host.mpMap->mpRoomDB->setAreaName(id, newName);
     if (result) {
+        host.mpMap->mUnsavedMap = true;
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->updateAreaComboBox();
             if (isCurrentAreaRenamed) {
@@ -8524,8 +8532,8 @@ int TLuaInterpreter::addAreaName(lua_State* L)
 
     // Note that adding an area name implicitly creates an underlying TArea instance
     lua_pushnumber(L, host.mpMap->mpRoomDB->addArea(name));
+    host.mpMap->mUnsavedMap = true;
 
-    // Update mapper Area names widget, using method designed for it...!
     if (host.mpMap->mpMapper) {
         host.mpMap->mpMapper->updateAreaComboBox();
     }
@@ -8581,6 +8589,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->updateAreaComboBox();
         }
+        host.mpMap->mUnsavedMap = true;
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     lua_pushboolean(L, result);
@@ -8596,6 +8605,7 @@ int TLuaInterpreter::deleteRoom(lua_State* L)
     }
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpMap->mpRoomDB->removeRoom(id));
+    host.mpMap->mUnsavedMap = true;
     return 1;
 }
 
@@ -8673,6 +8683,7 @@ int TLuaInterpreter::addRoom(lua_State* L)
     lua_pushboolean(L, added);
     if (added) {
         host.mpMap->setRoomArea(id, -1, false);
+        host.mpMap->mUnsavedMap = true;
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     return 1;
@@ -8902,6 +8913,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
 
     bool result = pR->setDoor(exitCmd, doorStatus);
     if (result) {
+        host.mpMap->mUnsavedMap = true;
         if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
             host.mpMap->mpMapper->mp2dMap->update();
         }
@@ -9172,6 +9184,8 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     // show up properly:
     pR->calcRoomDimensions();
 
+    host.mpMap->mUnsavedMap = true;
+
     // Better refresh the 2D map to show the new line:
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
         host.mpMap->mpMapper->mp2dMap->mNewMoveAction = true;
@@ -9237,7 +9251,7 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         lua_pushstring(L, exits.at(i).toUtf8().constData());
         lua_newtable(L); //customLines[direction]
         lua_pushstring(L, "attributes");
-        lua_newtable(L); //customLines[attributes]
+        lua_newtable(L); //customLines[direction]["attributes"]
         lua_pushstring(L, "style");
         switch (pR->customLinesStyle.value(exits.at(i))) {
         case Qt::DotLine:
@@ -9257,10 +9271,10 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         default:
             lua_pushstring(L, "solid line");
         }
-        lua_settable(L, -3);
+        lua_settable(L, -3); //customLines[direction]["attributes"]["style"]
         lua_pushstring(L, "arrow");
         lua_pushboolean(L, pR->customLinesArrow.value(exits.at(i)));
-        lua_settable(L, -3);
+        lua_settable(L, -3); //customLines[direction]["attributes"]["arrow"]
         lua_pushstring(L, "color");
         lua_newtable(L);
         lua_pushstring(L, "r");
@@ -9272,10 +9286,10 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         lua_pushstring(L, "b");
         lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).blue());
         lua_settable(L, -3);
-        lua_settable(L, -3); //color
-        lua_settable(L, -3); //attributes
+        lua_settable(L, -3); //customLines[direction]["attributes"]["color"]
+        lua_settable(L, -3); //customLines[direction]["attributes"]
         lua_pushstring(L, "points");
-        lua_newtable(L); //customLines[points]
+        lua_newtable(L); //customLines[direction][points]
         QList<QPointF> pointL = pR->customLines.value(exits.at(i));
         for (int k = 0, kTotal = pointL.size(); k < kTotal; ++k) {
             lua_pushnumber(L, k);
@@ -9288,12 +9302,90 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
             lua_settable(L, -3);
             lua_settable(L, -3);
         }
-        lua_settable(L, -3); //customLines[direction][points]
+        lua_settable(L, -3); //customLines[direction]["points"]
         lua_settable(L, -3); //customLines[direction]
     }
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCustomLines1
+int TLuaInterpreter::getCustomLines1(lua_State* L)
+{
+    int roomID = getVerifiedInt(L, __func__, 1, "room id");
+    Host& host = getHostFromLua(L);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
+    if (!pR) { //if the room doesn't exist return nil
+        return warnArgumentValue(L, __func__, qsl("room %1 doesn't exist").arg(roomID));
+    }
+    lua_newtable(L); //return table customLines[]
+    QStringList exits = pR->customLines.keys();
+    for (int i = 0, iTotal = exits.size(); i < iTotal; ++i) {
+        lua_pushstring(L, exits.at(i).toUtf8().constData());
+        lua_newtable(L); //customLines[direction]
+        lua_pushstring(L, "attributes");
+        lua_newtable(L); //customLines[direction]["attributes"]
+        lua_pushstring(L, "style");
+        switch (pR->customLinesStyle.value(exits.at(i))) {
+        case Qt::DotLine:
+            lua_pushstring(L, "dot line");
+            break;
+        case Qt::DashLine:
+            lua_pushstring(L, "dash line");
+            break;
+        case Qt::DashDotLine:
+            lua_pushstring(L, "dash dot line");
+            break;
+        case Qt::DashDotDotLine:
+            lua_pushstring(L, "dash dot dot line");
+            break;
+        case Qt::SolidLine:
+            [[fallthrough]];
+        default:
+            lua_pushstring(L, "solid line");
+        }
+        lua_settable(L, -3); //customLines[direction]["attributes"]["style"]
+        lua_pushstring(L, "arrow");
+        lua_pushboolean(L, pR->customLinesArrow.value(exits.at(i)));
+        lua_settable(L, -3); //customLines[direction]["attributes"]["arrow"]
+        lua_pushstring(L, "color");
+        lua_newtable(L);
+        lua_pushinteger(L, 1);
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).red());
+        lua_settable(L, -3);
+        lua_pushinteger(L, 2);
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).green());
+        lua_settable(L, -3);
+        lua_pushinteger(L, 3);
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).blue());
+        lua_settable(L, -3);
+        lua_settable(L, -3); //customLines[direction]["attributes"]["color"]
+        lua_settable(L, -3); //customLines[direction]["attributes"]
+        lua_pushstring(L, "points");
+        lua_newtable(L); //customLines[direction]["points"]
+        QList<QPointF> pointL = pR->customLines.value(exits.at(i));
+        for (int k = 0, kTotal = pointL.size(); k < kTotal; ++k) {
+            // To allow the output from here to be fed back into addCustomLine
+            // we need to start the numbering from the Lua standard of 1 and
+            // NOT the C/C++ standard of 0 - otherwise the end-user has to
+            // fiddle with the zero-th entry to keep the points in order:
+            lua_pushinteger(L, k+1);
+            lua_newtable(L); //customLines[direction]["points"][3 x coordinates]
+            lua_pushinteger(L, 1);
+            lua_pushnumber(L, pointL.at(k).x());
+            lua_settable(L, -3);
+            lua_pushinteger(L, 2);
+            lua_pushnumber(L, pointL.at(k).y());
+            lua_settable(L, -3);
+            lua_pushinteger(L, 3);
+            lua_pushnumber(L, pR->z);
+            lua_settable(L, -3);
+            lua_settable(L, -3); //customLines[direction]["points"][3 x coordinates]
+        }
+        lua_settable(L, -3); //customLines[direction]["points"]
+        lua_settable(L, -3); //customLines[direction]
+    }
+    return 1;
+}
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitWeights
 int TLuaInterpreter::getExitWeights(lua_State* L)
 {
@@ -9537,6 +9629,7 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
     }
     if (!pR->userData.isEmpty()) {
         pR->userData.clear();
+        host.mpMap->mUnsavedMap = true;
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9566,6 +9659,7 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
     //        }
     /*      else */ if (pR->userData.contains(key)) {
         pR->userData.remove(key);
+        host.mpMap->mUnsavedMap = true;
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9588,6 +9682,7 @@ int TLuaInterpreter::clearAreaUserData(lua_State* L)
     }
     if (!pA->mUserData.isEmpty()) {
         pA->mUserData.clear();
+        host.mpMap->mUnsavedMap = true;
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9613,6 +9708,7 @@ int TLuaInterpreter::clearAreaUserDataItem(lua_State* L)
         return warnArgumentValue(L, __func__, "key can not be an empty string");
     }
     lua_pushboolean(L, (pA->mUserData.remove(key) > 0));
+    host.mpMap->mUnsavedMap = true;
     return 1;
 }
 
@@ -9626,6 +9722,7 @@ int TLuaInterpreter::clearMapUserData(lua_State* L)
 
     if (!host.mpMap->mUserData.isEmpty()) {
         host.mpMap->mUserData.clear();
+        host.mpMap->mUnsavedMap = true;
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9884,6 +9981,7 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid room id").arg(roomId));
     }
     pR->userData[key] = value;
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -9908,6 +10006,7 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid area id").arg(areaId));
     }
     pA->mUserData[key] = value;
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -9927,6 +10026,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
     QString value = getVerifiedString(L, __func__, 2, "value");
 
     host.mpMap->mUserData[key] = value;
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10179,6 +10279,7 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
         // handle/use/allow:
         pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
     }
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10227,6 +10328,7 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
         host.mpMap->mpMapper->mp2dMap->update();
     }
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10247,6 +10349,7 @@ int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
         host.mpMap->mpMapper->mp2dMap->update();
     }
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10334,6 +10437,7 @@ int TLuaInterpreter::setGridMode(lua_State* L)
             }
         }
     }
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -12176,7 +12280,7 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
 
     result = dlgIRC::writeIrcPassword(pHost, password);
     if (!result.first) {
-        return warnArgumentValue(L, __func__, QStringLiteral("unable to save password, reason: %1").arg(result.second));
+        return warnArgumentValue(L, __func__, qsl("unable to save password, reason: %1").arg(result.second));
     }
 
     lua_pushboolean(L, true);
@@ -15116,6 +15220,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addCustomLine", TLuaInterpreter::addCustomLine);
     lua_register(pGlobalLua, "removeCustomLine", TLuaInterpreter::removeCustomLine);
     lua_register(pGlobalLua, "getCustomLines", TLuaInterpreter::getCustomLines);
+    lua_register(pGlobalLua, "getCustomLines1", TLuaInterpreter::getCustomLines1);
     lua_register(pGlobalLua, "getMudletVersion", TLuaInterpreter::getMudletVersion);
     lua_register(pGlobalLua, "openWebPage", TLuaInterpreter::openWebPage);
     lua_register(pGlobalLua, "getAllRoomEntrances", TLuaInterpreter::getAllRoomEntrances);
@@ -15204,6 +15309,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "spellSuggestWord", TLuaInterpreter::spellSuggestWord);
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
+    lua_register(pGlobalLua, "getCharacterName", TLuaInterpreter::getCharacterName);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
     lua_register(pGlobalLua, "getHTTP", TLuaInterpreter::getHTTP);
     lua_register(pGlobalLua, "customHTTP", TLuaInterpreter::customHTTP);
@@ -16448,6 +16554,22 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
         lua_settable(L, -3);
     }
 
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#getCharacterName
+int TLuaInterpreter::getCharacterName(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    const QString name{host.getLogin()};
+    if (name.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no character name set");
+        return 2;
+    }
+
+    lua_pushstring(L, name.toUtf8().constData());
     return 1;
 }
 

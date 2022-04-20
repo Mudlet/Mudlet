@@ -947,20 +947,20 @@ void XMLimport::readHostPackage(Host* pHost)
     if (attributes().hasAttribute(QLatin1String("ControlCharacterHandling"))) {
         switch (attributes().value(QLatin1String("ControlCharacterHandling")).toInt()) {
         case 1:
-            pHost->setControlCharacterMode(TConsole::PictureControlCharacterReplacement);
+            pHost->setControlCharacterMode(ControlCharacterMode::Picture);
             break;
         case 2:
-            pHost->setControlCharacterMode(TConsole::OEMFontControlCharacterReplacement);
+            pHost->setControlCharacterMode(ControlCharacterMode::OEM);
             break;
         case 0:
             [[fallthrough]];
         default:
-            pHost->setControlCharacterMode(TConsole::NoControlCharacterReplacement);
+            pHost->setControlCharacterMode(ControlCharacterMode::AsIs);
         }
 
     } else {
         // The default value, also used up to Mudlet 4.14.1:
-        pHost->setControlCharacterMode(TConsole::NoControlCharacterReplacement);
+        pHost->setControlCharacterMode(ControlCharacterMode::AsIs);
     }
 
     if (attributes().hasAttribute(qsl("Large2DMapAreaExitArrows"))) {
@@ -968,6 +968,10 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         // The default (and for map/profile files from before 4.15.0):
         pHost->setLargeAreaExitArrows(false);
+    }
+
+    if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
+        mpHost->mMapInfoContributors.clear();
     }
 
     while (!atEnd()) {
@@ -1086,6 +1090,8 @@ void XMLimport::readHostPackage(Host* pHost)
                 pHost->mBgColor_2.setNamedColor(readElementText());
             } else if (name() == "mRoomBorderColor") {
                 pHost->mRoomBorderColor.setNamedColor(readElementText());
+            } else if (name() == "mMapInfoBg") {
+                pHost->mMapInfoBg.setNamedColor(readElementText());
             } else if (name() == "mBlack2") {
                 pHost->mBlack_2.setNamedColor(readElementText());
             } else if (name() == "mLightBlack2") {
@@ -1133,7 +1139,7 @@ void XMLimport::readHostPackage(Host* pHost)
                 Q_UNUSED(readElementText());
             } else if (name() == "mMapInfoContributors") {
                 readLegacyMapInfoContributors();
-            } else if (name() == "mMapInfoContributor") {
+            } else if (name() == "mapInfoContributor") {
                 readMapInfoContributor();
             } else if (name() == "profileShortcut") {
                 readProfileShortcut();
