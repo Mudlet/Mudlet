@@ -144,7 +144,7 @@ function RunMake([string] $makefile = "Makefile", [bool] $singleJob = $false){
     Step "Running make"
     try{
       if ($singleJob) {
-        exec "mingw32-make" @("-f", "$makefile"))
+        exec "mingw32-make" @("-f", "$makefile")
       }else{
         exec "mingw32-make" @("-f", "$makefile", "-j", $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors"))
       }
