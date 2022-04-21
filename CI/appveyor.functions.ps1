@@ -234,8 +234,10 @@ function InstallQt() {
   cd ..
   Step "Installing Qt"
   exec "aqt" @("install-qt", "windows", "desktop", "5.14.2", "win32_mingw73")
-  Step "Installing the mingw toolset we want: qt.tools.win32_mingw730"
-  exec "aqt" @("install-tool", "windows", "desktop", "qt.tools.win32_mingw730")
+  Step "Checking the mingw toolsets available:"
+  exec "aqt" @("list-tool", "windows", "desktop")
+  Step "Trying to install the mingw toolset we think we want: qt.tools.win32_mingw73"
+  exec "aqt" @("install-tool", "windows", "desktop", "qt.tools.win32_mingw73")
 }
 
 function InstallPython() {
