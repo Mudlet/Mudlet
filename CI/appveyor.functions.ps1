@@ -239,7 +239,7 @@ function InstallQt() {
   Step "Checking the mingw toolsets available:"
   exec "aqt" @("list-tool", "windows", "desktop", "tools_mingw")
   Step "Trying to install a mingw toolset we want to use: qt.tools.win32_mingw730"
-  exec "aqt" @("install-tool", "windows", "desktop", "qt.tools.win32_mingw730")
+  exec "aqt" @("install-tool", "windows", "desktop", "tools_mingw", "qt.tools.win32_mingw730")
 }
 
 function InstallPython() {
