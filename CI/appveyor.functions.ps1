@@ -296,12 +296,20 @@ function InstallLua() {
 }
 
 function InstallPcre() {
+  $Env:Path = $NoShPath
   DownloadFile "https://deac-fra.dl.sourceforge.net/project/pcre/pcre/8.45/pcre-8.45.zip" "pcre.zip"
   ExtractZip "pcre.zip" "pcre"
   Set-Location pcre\pcre-8.45
-  RunConfigure "--enable-utf --enable-unicode-properties --prefix=$Env:MINGW_BASE_DIR_BASH"
+  if (!(Test-Path -Path "build" -PathType Container)) {
+    Step "Creating yajl build path"
+    New-Item build -ItemType Directory >> "$logFile" 2>&1
+  }
+  Set-Location build
+  Step "running cmake"
+  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-D", "BUILD_SHARED_LIBS=ON", "-D", "PCRE_SUPPORT_UNICODE_PROPERTIES=ON", "-D", "CMAKE_INSTALL_PREFIX=$Env:MINGW_BASE_DIR", "..")
   RunMake
   RunMakeInstall
+  $Env:Path = $ShPath
 }
 
 function InstallSqlite() {
