@@ -9201,7 +9201,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="679"/>
       <source>Show Map</source>
-      <translation type="unfinished"/>
+      <translation>顯示地圖</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="680"/>
@@ -11347,12 +11347,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3474"/>
       <source>Shortcuts</source>
-      <translation type="unfinished"/>
+      <translation>快捷按鍵</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3489"/>
       <source>Main window shortcuts</source>
-      <translation type="unfinished"/>
+      <translation>主視窗快捷按鍵</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3501"/>
@@ -11362,7 +11362,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3520"/>
       <source>Reset to defaults</source>
-      <translation type="unfinished"/>
+      <translation>重置設定</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3776"/>
@@ -11418,7 +11418,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="265"/>
       <source>Appearance</source>
-      <translation type="unfinished"/>
+      <translation>外觀設定</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="294"/>
@@ -11480,7 +11480,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1349"/>
       <source>Advanced</source>
-      <translation type="unfinished"/>
+      <translation>進階設定</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1355"/>
