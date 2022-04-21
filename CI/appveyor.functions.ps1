@@ -301,7 +301,7 @@ function InstallPcre() {
   ExtractZip "pcre.zip" "pcre"
   Set-Location pcre\pcre-8.45
   if (!(Test-Path -Path "build" -PathType Container)) {
-    Step "Creating yajl build path"
+    Step "Creating pcre build path"
     New-Item build -ItemType Directory >> "$logFile" 2>&1
   }
   Set-Location build
@@ -348,7 +348,7 @@ function InstallLibzip() {
   }
   Set-Location build
   Step "running cmake"
-  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "-DENABLE_OPENSSL=OFF", "..")
+  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "-DENABLE_OPENSSL=OFF", "-DBUILD_REGRESS=OFF", "-DBUILD_EXAMPLES=OFF", "-DBUILD_DOC=OFF", "..")
   RunMake
   RunMakeInstall
   $Env:Path = $ShPath
