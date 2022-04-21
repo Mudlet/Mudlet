@@ -139,15 +139,11 @@ function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_D
   exec "bash" @("-c", "`"./configure $configureArguments MAKE=mingw32-make`"")
 }
 
-function RunMake([string] $makefile = "Makefile", [bool] $singleJob = $false){
+function RunMake([string] $makefile = "Makefile"){
   For ($retries=1; $retries -le 3; $retries++){
     Step "Running make"
     try{
-      if ($singleJob) {
-        exec "mingw32-make" @("-f", "$makefile")
-      }else{
-        exec "mingw32-make" @("-f", "$makefile", "-j", $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors"))
-      }
+      exec "mingw32-make" @("-f", "$makefile", "-j", $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors"))
       break
     }Catch{
       Write-Output "Attempt $retries failed." | Tee-Object -File "$logFile" -Append
@@ -234,11 +230,7 @@ function InstallQt() {
   cd ..
   Step "Installing Qt"
   exec "aqt" @("install-qt", "windows", "desktop", "5.14.2", "win32_mingw73")
-  Step "Checking the tools available:"
-  exec "aqt" @("list-tool", "windows", "desktop")
-  Step "Checking the mingw toolsets available:"
-  exec "aqt" @("list-tool", "windows", "desktop", "tools_mingw")
-  Step "Trying to install a mingw toolset we want to use: qt.tools.win32_mingw730"
+  Step "Installing Mingw 7.3.0 Win32 tools"
   exec "aqt" @("install-tool", "windows", "desktop", "tools_mingw", "qt.tools.win32_mingw730")
 }
 
@@ -309,7 +301,7 @@ function InstallPcre() {
   DownloadFile "https://deac-fra.dl.sourceforge.net/project/pcre/pcre/8.45/pcre-8.45.zip" "pcre.zip"
   ExtractZip "pcre.zip" "pcre"
   Set-Location pcre\pcre-8.45
-  RunConfigure "--disable-dependency-tracking --enable-utf --enable-unicode-properties --prefix=$Env:MINGW_BASE_DIR_BASH"
+  RunConfigure "--enable-utf --enable-unicode-properties --prefix=$Env:MINGW_BASE_DIR_BASH"
   RunMake
   RunMakeInstall
 }
@@ -351,7 +343,7 @@ function InstallLibzip() {
   Set-Location build
   Step "running cmake"
   exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "-DENABLE_OPENSSL=OFF", "-DBUILD_REGRESS=OFF", "-DBUILD_EXAMPLES=OFF", "-DBUILD_DOC=OFF", "..")
-  RunMake singleJob $true
+  RunMake
   RunMakeInstall
   $Env:Path = $ShPath
 }
