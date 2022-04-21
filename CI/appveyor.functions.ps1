@@ -139,11 +139,15 @@ function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_D
   exec "bash" @("-c", "`"./configure $configureArguments MAKE=mingw32-make`"")
 }
 
-function RunMake([string] $makefile = "Makefile"){
+function RunMake([string] $makefile = "Makefile", [bool] $singleJob = $false){
   For ($retries=1; $retries -le 3; $retries++){
     Step "Running make"
     try{
-      exec "mingw32-make" @("-f", "$makefile", "-j", $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors"))
+      if ($singleJob) {
+        exec "mingw32-make" @("-f", "$makefile"))
+      }else{
+        exec "mingw32-make" @("-f", "$makefile", "-j", $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors"))
+      }
       break
     }Catch{
       Write-Output "Attempt $retries failed." | Tee-Object -File "$logFile" -Append
@@ -341,7 +345,7 @@ function InstallLibzip() {
   Set-Location build
   Step "running cmake"
   exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "-DENABLE_OPENSSL=OFF", "-DBUILD_REGRESS=OFF", "-DBUILD_EXAMPLES=OFF", "-DBUILD_DOC=OFF", "..")
-  RunMake
+  RunMake singleJob $true
   RunMakeInstall
   $Env:Path = $ShPath
 }
