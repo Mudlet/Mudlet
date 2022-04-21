@@ -50,3 +50,6 @@ notifications:
       "message": "Appveyor {{repositoryName}}{{#isPullRequest}}#{{pullRequestId}}{{/isPullRequest}}{{^isPullRequest}} ({{branch}}){{/isPullRequest}} {{#passed}}passed{{/passed}}{{#failed}}failed{{/failed}} ({{buildNumber}})",
       "level": "{{#passed}}info{{/passed}}{{#failed}}error{{/failed}}"
     }
+
+on_finish:
+  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
