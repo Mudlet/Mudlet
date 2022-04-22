@@ -55,6 +55,10 @@ add_test(NAME TMxpTagParserTest COMMAND TMxpTagParserTest)
 add_executable(TMxpSendTagHandlerTest TMxpSendTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpSendTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
 add_test(NAME TMxpSendTagHandlerTest COMMAND TMxpSendTagHandlerTest)
 
+add_executable(TMxpEntityTagHandlerTest TMxpEntityTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpEntityTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
+add_test(NAME TMxpEntityTagHandlerTest COMMAND TMxpEntityTagHandlerTest)
+
+
 add_executable(TLuaInterfaceTest TLuaInterfaceTest.cpp ../src/LuaInterface.cpp ../src/TVar.cpp ../src/VarUnit.cpp)
 add_test(NAME TLuaInterfaceTest COMMAND TLuaInterfaceTest)
 

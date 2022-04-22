@@ -327,8 +327,8 @@ public:
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     void refreshTabBar();
     void updateDiscordNamedIcon();
-    // Has to be public as it needs to be called from dlgConnectionProfiles class:
     void updateMultiViewControls();
+    QSettings* getQSettings();
 
     bool firstLaunch = false;
     // Needed to work around a (likely only Windows) issue:
@@ -613,7 +613,6 @@ private:
     bool overwriteDictionaryFile(QFile&, const QStringList&);
     bool overwriteAffixFile(QFile&, QHash<QString, unsigned int>&);
     int getDictionaryWordCount(QFile&);
-    QSettings* getQSettings();
     void loadTranslators(const QString &languageCode);
     void loadMaps();
     void migrateDebugConsole(Host* currentHost);
