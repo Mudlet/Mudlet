@@ -7,7 +7,7 @@ branches:
 init:
 - cmd: mkdir C:\src\
 
-image: Previous Visual Studio 2019
+image: Visual Studio 2019
 environment:
   signing_password:
     secure: JJDxNdreMgNn/IOcY+UVmlaqgDT4a7vcxsY3nfcgWY4=
@@ -37,6 +37,7 @@ on_failure:
 
 cache:
   - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
+  - '%QT_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
 
 notifications:
 - provider: Webhook

@@ -230,6 +230,8 @@ function InstallQt() {
   cd ..
   Step "Installing Qt"
   exec "aqt" @("install-qt", "windows", "desktop", "5.14.2", "win32_mingw73")
+  Step "Installing Mingw 7.3.0 Win32 tools"
+  exec "aqt" @("install-tool", "windows", "desktop", "tools_mingw", "qt.tools.win32_mingw730")
 }
 
 function InstallPython() {
@@ -340,7 +342,7 @@ function InstallLibzip() {
   }
   Set-Location build
   Step "running cmake"
-  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "-DENABLE_OPENSSL=OFF", "..")
+  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "-DENABLE_OPENSSL=OFF", "-DBUILD_REGRESS=OFF", "-DBUILD_EXAMPLES=OFF", "-DBUILD_DOC=OFF", "..")
   RunMake
   RunMakeInstall
   $Env:Path = $ShPath
