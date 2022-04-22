@@ -48,7 +48,7 @@ jobs:
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
-      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
+      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.77.0/boost_1_77_0.tar.bz2/download
 
 
     steps:
@@ -59,7 +59,7 @@ jobs:
         fetch-depth: 0
 
     - name: Restore Qt cache
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
@@ -75,7 +75,7 @@ jobs:
         aqtversion: '==1.1.2'
 
     - name: Restore Boost cache
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
@@ -249,7 +249,7 @@ jobs:
         echo "WITH_FONTS=no" >> $GITHUB_ENV
 
     - name: (Linux/macOS) restore ccache
-      uses: pat-s/always-upload-cache@v2.1.5
+      uses: pat-s/always-upload-cache@v3.0.1
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
@@ -284,7 +284,7 @@ jobs:
 
     - name: Upload GitHub Actions artifact of vcpkg build logs
       if: failure()
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: vcpkg-logs-${{ runner.os }}
         path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
@@ -299,7 +299,7 @@ jobs:
       run: ctest --output-on-failure
 
     - name: (Linux/macOS) restore Luarocks for packaging
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       with:
         path: $HOME/.luarocks
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}
@@ -355,7 +355,7 @@ jobs:
         AC_PASSWORD: ${{secrets.APPLE_PASSWORD}}
 
     - name: Upload packaged Mudlet
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: env.UPLOAD_FILENAME
       with:
         name: ${{env.UPLOAD_FILENAME}}
