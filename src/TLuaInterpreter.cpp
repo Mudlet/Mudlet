@@ -15337,7 +15337,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addMouseEvent", TLuaInterpreter::addMouseEvent);
     lua_register(pGlobalLua, "removeMouseEvent", TLuaInterpreter::removeMouseEvent);
     lua_register(pGlobalLua, "getMouseEvents", TLuaInterpreter::getMouseEvents);
-    lua_register(pGlobalLua, "setPreference", TLuaInterpreter::setPreference);
+    lua_register(pGlobalLua, "setConfig", TLuaInterpreter::setConfig);
     lua_register(pGlobalLua, "addCommandLineMenuEvent", TLuaInterpreter::addCommandLineMenuEvent);
     lua_register(pGlobalLua, "removeCommandLineMenuEvent", TLuaInterpreter::removeCommandLineMenuEvent);
     lua_register(pGlobalLua, "deleteMap", TLuaInterpreter::deleteMap);
@@ -17198,7 +17198,7 @@ int TLuaInterpreter::getMouseEvents(lua_State * L)
     return 1;
 }
 
-int TLuaInterpreter::setPreference(lua_State * L)
+int TLuaInterpreter::setConfig(lua_State * L)
 {
     QString key = getVerifiedString(L, __func__, 1, "key");
     if (key.isEmpty()) {

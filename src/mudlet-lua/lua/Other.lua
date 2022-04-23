@@ -1165,16 +1165,16 @@ if not ttsSpeak then --check if ttsSpeak is defined, if not then Mudlet lacks TT
   end
 end
 
-local oldsetPreference = setPreference
-function setPreference(...)
+local oldsetConfig = setConfig
+function setConfig(...)
   local args = {...}
 
   if type(args[1]) ~= "table" then
-    oldsetPreference(...)
+    oldsetConfig(...)
     return
   end
 
   for k,v in pairs(args[1]) do
-    oldsetPreference(k, v)
+    oldsetConfig(k, v)
   end
 end
