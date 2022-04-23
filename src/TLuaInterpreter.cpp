@@ -15337,7 +15337,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addMouseEvent", TLuaInterpreter::addMouseEvent);
     lua_register(pGlobalLua, "removeMouseEvent", TLuaInterpreter::removeMouseEvent);
     lua_register(pGlobalLua, "getMouseEvents", TLuaInterpreter::getMouseEvents);
-    lua_register(pGlobalLua, "setMudletConfig", TLuaInterpreter::setMudletConfig);
+    lua_register(pGlobalLua, "setPreference", TLuaInterpreter::setPreference);
     lua_register(pGlobalLua, "addCommandLineMenuEvent", TLuaInterpreter::addCommandLineMenuEvent);
     lua_register(pGlobalLua, "removeCommandLineMenuEvent", TLuaInterpreter::removeCommandLineMenuEvent);
     lua_register(pGlobalLua, "deleteMap", TLuaInterpreter::deleteMap);
@@ -17198,7 +17198,7 @@ int TLuaInterpreter::getMouseEvents(lua_State * L)
     return 1;
 }
 
-int TLuaInterpreter::setMudletConfig(lua_State * L)
+int TLuaInterpreter::setPreference(lua_State * L)
 {
     QString key = getVerifiedString(L, __func__, 1, "key");
     if (key.isEmpty()) {
@@ -17213,84 +17213,85 @@ int TLuaInterpreter::setMudletConfig(lua_State * L)
 
     Host& host = getHostFromLua(L);
     if (host.mpMap && host.mpMap->mpMapper) {
-        if (key == "mapperRoomSize") {
+        if (key == "roomSize") {
             host.mpMap->mpMapper->slot_setRoomSize(getVerifiedInt(L, __func__, 2, "value"));
             return success();
         }
-        if (key == "mapperExitSize") {
+        if (key == "exitSize") {
             host.mpMap->mpMapper->slot_setExitSize(getVerifiedInt(L, __func__, 2, "value"));
             return success();
         }
-        if (key == "mapperRoundRooms") {
+        if (key == "roundRooms") {
             host.mpMap->mpMapper->slot_toggleRoundRooms(getVerifiedBool(L, __func__, 2, "value"));
             return success();
         }
-        if (key == "mapperShowRoomIds") {
+        if (key == "showRoomIds") {
             host.mpMap->mpMapper->slot_setShowRoomIds(getVerifiedBool(L, __func__, 2, "value"));
             return success();
         }
-        if (key == "mapperShowMapInfo") {
+        if (key == "showMapInfo") {
             host.mMapInfoContributors.insert(getVerifiedString(L, __func__, 2, "value"));
             host.mpMap->mpMapper->slot_updateInfoContributors();
             return success();
         }
-        if (key == "mapperHideMapInfo") {
+        if (key == "hideMapInfo") {
             host.mMapInfoContributors.remove(getVerifiedString(L, __func__, 2, "value"));
             host.mpMap->mpMapper->slot_updateInfoContributors();
             return success();
         }
-        if (key == "mapperShow3dView") {
+        if (key == "show3dView") {
             host.mpMap->mpMapper->slot_toggle3DView(getVerifiedBool(L, __func__, 2, "value"));
             return success();
         }
-        if (key == "mapperPanelVisible") {
+        if (key == "panelVisible") {
             host.mpMap->mpMapper->slot_setMapperPanelVisible(getVerifiedBool(L, __func__, 2, "value"));
             return success();
         }
-        if (key == "mapperShowRoomBorders") {
+        if (key == "showRoomBorders") {
             host.mMapperShowRoomBorders = (getVerifiedBool(L, __func__, 2, "value"));
             return success();
         }
-        if (key == "generalEnableGMCP") {
-            host.mEnableGMCP = getVerifiedBool(L, __func__, 2, "value");
-            return success();
-        }
-        if (key == "generalEnableMSDP") {
-            host.mEnableMSDP = getVerifiedBool(L, __func__, 2, "value");
-            return success();
-        }
-        if (key == "generalEnableMSSP") {
-            host.mEnableMSSP = getVerifiedBool(L, __func__, 2, "value");
-            return success();
-        }
-        if (key == "generalEnableMSP") {
-            host.mEnableMSP = getVerifiedBool(L, __func__, 2, "value");
-            return success();
-        }
-        if (key == "inputLineStrictUnixEndings") {
-            host.mUSE_UNIX_EOL = getVerifiedBool(L, __func__, 2, "value");
-            return success();
-        }
-        if (key == "mainDisplayFixUnnecessaryLinebreaks") {
-            host.set_USE_IRE_DRIVER_BUGFIX(getVerifiedBool(L, __func__, 2, "value"));
-            return success();
-        }
-        if (key == "specialForceCompressionOff") {
-            host.mFORCE_NO_COMPRESSION = getVerifiedBool(L, __func__, 2, "value");
-            return success();
-        }
-        if (key == "specialForceGAOff") {
-            host.mFORCE_GA_OFF = getVerifiedBool(L, __func__, 2, "value");
-            return success();
-        }
-        if (key == "specialForceCharsetNegotiationOff") {
-            host.mFORCE_CHARSET_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
-            return success();
-        }
-        if (key == "specialForceMxpNegotiationOff") {
-            host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
-            return success();
-        }
+    }
+
+    if (key == "allowGMCP") {
+        host.mEnableGMCP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == "allowMSDP") {
+        host.mEnableMSDP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == "allowMSSP") {
+        host.mEnableMSSP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == "allowMSP") {
+        host.mEnableMSP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == "inputLineStrictUnixEndings") {
+        host.mUSE_UNIX_EOL = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == "mainDisplayFixUnnecessaryLinebreaks") {
+        host.set_USE_IRE_DRIVER_BUGFIX(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
+    if (key == "specialForceCompressionOff") {
+        host.mFORCE_NO_COMPRESSION = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == "specialForceGAOff") {
+        host.mFORCE_GA_OFF = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == "specialForceCharsetNegotiationOff") {
+        host.mFORCE_CHARSET_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == "specialForceMxpNegotiationOff") {
+        host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
+        return success();
     }
 
     lua_pushboolean(L, false);
