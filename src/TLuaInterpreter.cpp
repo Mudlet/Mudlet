@@ -17242,10 +17242,12 @@ int TLuaInterpreter::setConfig(lua_State * L)
             host.mpMap->mpMapper->slot_updateInfoContributors();
             return success();
         }
+#if defined(INCLUDE_3DMAPPER)
         if (key == "show3dView") {
             host.mpMap->mpMapper->slot_toggle3DView(getVerifiedBool(L, __func__, 2, "value"));
             return success();
         }
+#endif
         if (key == "panelVisible") {
             host.mpMap->mpMapper->slot_setMapperPanelVisible(getVerifiedBool(L, __func__, 2, "value"));
             return success();
