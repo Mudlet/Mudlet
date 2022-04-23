@@ -17200,6 +17200,7 @@ int TLuaInterpreter::getMouseEvents(lua_State * L)
 
 int TLuaInterpreter::setConfig(lua_State * L)
 {
+    auto& host = getHostFromLua(L);
     QString key = getVerifiedString(L, __func__, 1, "key");
     if (key.isEmpty()) {
         return warnArgumentValue(L, __func__, "you must provide key");
@@ -17207,11 +17208,13 @@ int TLuaInterpreter::setConfig(lua_State * L)
 
     auto success = [&]()
     {
+        if (mudlet::debugMode) {
+            TDebug(Qt::white, Qt::blue) << qsl("setConfig: a script has changed %1\n").arg(key) >> &host;
+        }
         lua_pushboolean(L, true);
         return 1;
     };
 
-    Host& host = getHostFromLua(L);
     if (host.mpMap && host.mpMap->mpMapper) {
         if (key == "roomSize") {
             host.mpMap->mpMapper->slot_setRoomSize(getVerifiedInt(L, __func__, 2, "value"));
@@ -17294,8 +17297,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
 
-    lua_pushboolean(L, false);
-    return 1;
+    return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCommandLineMenuEvent
