@@ -17256,19 +17256,19 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
     }
 
-    if (key == "allowGMCP") {
+    if (key == "enableGMCP") {
         host.mEnableGMCP = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    if (key == "allowMSDP") {
+    if (key == "enableMSDP") {
         host.mEnableMSDP = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    if (key == "allowMSSP") {
+    if (key == "enableMSSP") {
         host.mEnableMSSP = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    if (key == "allowMSP") {
+    if (key == "enableMSP") {
         host.mEnableMSP = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
