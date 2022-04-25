@@ -10,12 +10,7 @@ const pr_title = danger.github.pr.title
 // Checks the title to make sure it matches expectations
 const title_type = pr_title.match(TITLE_REGEX)
 if (title_type) {
-  const type_to_readable = {
-    add: "Addition",
-    fix: "Fix",
-    improve: "Improvement",
-    infra: "Infrastructure"
-  }
+  // no-op
 } else if(pr_title.match(/^\[?WIP\]?/i)) {
   fail("PR is still a WIP, do not merge")
 } else {
