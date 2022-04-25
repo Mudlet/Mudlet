@@ -474,7 +474,7 @@ void XMLimport::readRoomFeatures(TRoom* pR)
 void XMLimport::readRoomFeature(TRoom* pR)
 {
     if (Q_LIKELY(attributes().hasAttribute(qsl("type")))) {
-        pR->userData.insert(qsl("feature_%1").arg(attributes().value(qsl("type"))), qsl("true"));
+        pR->userData.insert(qsl("feature-%1").arg(attributes().value(qsl("type"))), qsl("true"));
     }
 }
 
