@@ -16,7 +16,6 @@ if (title_type) {
     improve: "Improvement",
     infra: "Infrastructure"
   }
-  message(`PR type: \`${type_to_readable[title_type[0].toLowerCase()]}\``, {icon: ":heavy_check_mark:", line: 1})
 } else if(pr_title.match(/^\[?WIP\]?/i)) {
   fail("PR is still a WIP, do not merge")
 } else {
