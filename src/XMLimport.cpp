@@ -502,7 +502,7 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
             // If there is a "hidden" exit mark it as a locked door, otherwise
             // if there is a "door" mark it as an open/closed/locked door
             // depending on the value (I.R.E. MUD maps always uses "1" for "door"
-            // and/or "hidden" - though the latter does not alway appear with
+            // and/or "hidden" - though the latter does not always appear with
             // former):
             int door = (attributes().hasAttribute(qsl("hidden")) && attributes().value(qsl("hidden")).toString().toInt() == 1)
                     ? 3
