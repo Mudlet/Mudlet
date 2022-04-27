@@ -17248,7 +17248,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
             return success();
         }
 #endif
-        if (key == qsl("panelVisible")) {
+        if (key == qsl("mapperPanelVisible")) {
             host.mpMap->mpMapper->slot_setMapperPanelVisible(getVerifiedBool(L, __func__, 2, "value"));
             return success();
         }
