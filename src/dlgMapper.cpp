@@ -419,6 +419,7 @@ void dlgMapper::slot_updateInfoContributors()
         });
         pushButton_info->menu()->addAction(action);
     }
+    mp2dMap->update();
 }
 
 // Is the mapper contained inside a floating/dockable QDockWidget?
