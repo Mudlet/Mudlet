@@ -13055,7 +13055,8 @@ or LUA script</source>
 &lt;p&gt;&lt;i&gt;Cancelling from the file dialogue will not make any changes; to clear the file use the clear button to the right of the file name display.&lt;/i&gt;&lt;/p&gt;</source>
       <comment>This is the button used to select a sound file to be played when a trigger fires.</comment>
       <extracomment>Please ensure the text used here is duplicated within the tooltip for the QLineEdit that displays the file name selected.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;使用此选项可打开文件选择对话框，查找触发器触发时要播放的声音文件。&lt;/p&gt;
+&lt;p&gt;&lt;i&gt;取消文件对话框不会进行任何更改；要清除文件，请使用文件名显示右侧的清除按钮。&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="528"/>
