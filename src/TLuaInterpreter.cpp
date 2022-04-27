@@ -17216,19 +17216,19 @@ int TLuaInterpreter::setConfig(lua_State * L)
     };
 
     if (host.mpMap && host.mpMap->mpMapper) {
-        if (key == qsl("roomSize")) {
+        if (key == qsl("mapRoomSize")) {
             host.mpMap->mpMapper->slot_setRoomSize(getVerifiedInt(L, __func__, 2, "value"));
             return success();
         }
-        if (key == qsl("exitSize")) {
+        if (key == qsl("mapExitSize")) {
             host.mpMap->mpMapper->slot_setExitSize(getVerifiedInt(L, __func__, 2, "value"));
             return success();
         }
-        if (key == qsl("roundRooms")) {
+        if (key == qsl("mapRoundRooms")) {
             host.mpMap->mpMapper->slot_toggleRoundRooms(getVerifiedBool(L, __func__, 2, "value"));
             return success();
         }
-        if (key == qsl("showRoomIds")) {
+        if (key == qsl("showRoomIdsOnMap")) {
             host.mpMap->mpMapper->slot_setShowRoomIds(getVerifiedBool(L, __func__, 2, "value"));
             return success();
         }
@@ -17243,7 +17243,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
             return success();
         }
 #if defined(INCLUDE_3DMAPPER)
-        if (key == qsl("show3dView")) {
+        if (key == qsl("show3dMapView")) {
             host.mpMap->mpMapper->slot_toggle3DView(getVerifiedBool(L, __func__, 2, "value"));
             return success();
         }
@@ -17252,7 +17252,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
             host.mpMap->mpMapper->slot_setMapperPanelVisible(getVerifiedBool(L, __func__, 2, "value"));
             return success();
         }
-        if (key == qsl("showRoomBorders")) {
+        if (key == qsl("mapShowRoomBorders")) {
             host.mMapperShowRoomBorders = getVerifiedBool(L, __func__, 2, "value");
             return success();
         }
