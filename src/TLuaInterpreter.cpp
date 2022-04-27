@@ -17253,7 +17253,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
             return success();
         }
         if (key == qsl("showRoomBorders")) {
-            host.mMapperShowRoomBorders = (getVerifiedBool(L, __func__, 2, "value"));
+            host.mMapperShowRoomBorders = getVerifiedBool(L, __func__, 2, "value");
             return success();
         }
     }
