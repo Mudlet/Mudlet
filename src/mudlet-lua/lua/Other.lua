@@ -1164,3 +1164,39 @@ if not ttsSpeak then --check if ttsSpeak is defined, if not then Mudlet lacks TT
     _G[fn] = function() debugc(string.format("%s: Mudlet was compiled without TTS capabilities", fn)) end
   end
 end
+
+--[[
+Fixes up getExitStubs() and getExitStubs1() so they do not produce warning
+if there are no stub-exits in the room, instead return just an empty table.
+
+Disabled by default so it does not break existing scripts, but can be enabled by
+setting global noWarningForNoStubExits variable to true.
+--]]
+local oldGetExitStubs = getExitStubs
+local oldGetExitStubs1 = getExitStubs1
+noWarningForNoStubExits = noWarningForNoStubExits or false
+function getExitStubs(...)
+  if noWarningForNoStubExits then
+    local result, errMessage = oldGetExitStubs(...)
+    if result == nil and string.find(errMessage, "no stubs in this room with id") then
+      return {}
+    else
+      return result, errMessage
+    end
+  else
+    return oldGetExitStubs(...)
+  end
+end
+
+function getExitStubs1(...)
+  if noWarningForNoStubExits then
+    local result, errMessage = oldGetExitStubs1(...)
+    if result == nil and string.find(errMessage, "no stubs in this room with id") then
+      return {}
+    else
+      return result, errMessage
+    end
+  else
+    return oldGetExitStubs1(...)
+  end
+end
