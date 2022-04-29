@@ -17278,7 +17278,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mUSE_UNIX_EOL = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    if (key == qsl("mainDisplayFixUnnecessaryLinebreaks")) {
+    if (key == qsl("fixUnnecessaryLinebreaks")) {
         host.set_USE_IRE_DRIVER_BUGFIX(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
