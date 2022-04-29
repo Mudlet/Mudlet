@@ -480,7 +480,7 @@
            </property>
            <widget class="QWidget" name="tab_connection_info">
             <attribute name="title">
-             <string>Connection info</string>
+             <string>Connect to</string>
             </attribute>
             <layout class="QGridLayout" name="gridLayout">
              <item row="2" column="1">
