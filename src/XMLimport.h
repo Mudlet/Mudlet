@@ -45,7 +45,7 @@ class TScript;
 class TTimer;
 class TTrigger;
 class TVar;
-
+class TRoom;
 
 class XMLimport : public QXmlStreamReader
 {
@@ -75,6 +75,8 @@ private:
     void readMap();
     void readRoom(QMultiHash<int, int>&, unsigned int*);
     void readRooms(QMultiHash<int, int>&);
+    void readRoomFeature(TRoom*);
+    void readRoomFeatures(TRoom*);
     void readEnvColor();
     void readEnvColors();
     void readArea();
