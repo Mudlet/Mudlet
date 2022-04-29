@@ -1164,3 +1164,17 @@ if not ttsSpeak then --check if ttsSpeak is defined, if not then Mudlet lacks TT
     _G[fn] = function() debugc(string.format("%s: Mudlet was compiled without TTS capabilities", fn)) end
   end
 end
+
+local oldsetConfig = setConfig
+function setConfig(...)
+  local args = {...}
+
+  if type(args[1]) ~= "table" then
+    oldsetConfig(...)
+    return
+  end
+
+  for k,v in pairs(args[1]) do
+    oldsetConfig(k, v)
+  end
+end

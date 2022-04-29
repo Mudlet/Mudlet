@@ -61,8 +61,12 @@ public slots:
     void slot_toggleStrongHighlight(int v);
     void slot_toggle3DView(const bool);
     void slot_togglePanel();
+    void slot_setMapperPanelVisible(bool panelVisible);
     void slot_roomSize(int d);
     void slot_exitSize(int d);
+    void slot_setRoomSize(int d);
+    void slot_setExitSize(int d);
+    void slot_setShowRoomIds(bool showRoomIds);
     void slot_updateInfoContributors();
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     // Only used in newer Qt versions

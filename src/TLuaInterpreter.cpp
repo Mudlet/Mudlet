@@ -15337,6 +15337,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addMouseEvent", TLuaInterpreter::addMouseEvent);
     lua_register(pGlobalLua, "removeMouseEvent", TLuaInterpreter::removeMouseEvent);
     lua_register(pGlobalLua, "getMouseEvents", TLuaInterpreter::getMouseEvents);
+    lua_register(pGlobalLua, "setConfig", TLuaInterpreter::setConfig);
     lua_register(pGlobalLua, "addCommandLineMenuEvent", TLuaInterpreter::addCommandLineMenuEvent);
     lua_register(pGlobalLua, "removeCommandLineMenuEvent", TLuaInterpreter::removeCommandLineMenuEvent);
     lua_register(pGlobalLua, "deleteMap", TLuaInterpreter::deleteMap);
@@ -17197,6 +17198,110 @@ int TLuaInterpreter::getMouseEvents(lua_State * L)
     return 1;
 }
 
+int TLuaInterpreter::setConfig(lua_State * L)
+{
+    auto& host = getHostFromLua(L);
+    QString key = getVerifiedString(L, __func__, 1, "key");
+    if (key.isEmpty()) {
+        return warnArgumentValue(L, __func__, "you must provide key");
+    }
+
+    auto success = [&]()
+    {
+        if (mudlet::debugMode) {
+            TDebug(Qt::white, Qt::blue) << qsl("setConfig: a script has changed %1\n").arg(key) >> &host;
+        }
+        lua_pushboolean(L, true);
+        return 1;
+    };
+
+    if (host.mpMap && host.mpMap->mpMapper) {
+        if (key == qsl("mapRoomSize")) {
+            host.mpMap->mpMapper->slot_setRoomSize(getVerifiedInt(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == qsl("mapExitSize")) {
+            host.mpMap->mpMapper->slot_setExitSize(getVerifiedInt(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == qsl("mapRoundRooms")) {
+            host.mpMap->mpMapper->slot_toggleRoundRooms(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == qsl("showRoomIdsOnMap")) {
+            host.mpMap->mpMapper->slot_setShowRoomIds(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == qsl("showMapInfo")) {
+            host.mMapInfoContributors.insert(getVerifiedString(L, __func__, 2, "value"));
+            host.mpMap->mpMapper->slot_updateInfoContributors();
+            return success();
+        }
+        if (key == qsl("hideMapInfo")) {
+            host.mMapInfoContributors.remove(getVerifiedString(L, __func__, 2, "value"));
+            host.mpMap->mpMapper->slot_updateInfoContributors();
+            return success();
+        }
+#if defined(INCLUDE_3DMAPPER)
+        if (key == qsl("show3dMapView")) {
+            host.mpMap->mpMapper->slot_toggle3DView(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+#endif
+        if (key == qsl("mapperPanelVisible")) {
+            host.mpMap->mpMapper->slot_setMapperPanelVisible(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == qsl("mapShowRoomBorders")) {
+            host.mMapperShowRoomBorders = getVerifiedBool(L, __func__, 2, "value");
+            return success();
+        }
+    }
+
+    if (key == qsl("enableGMCP")) {
+        host.mEnableGMCP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableMSDP")) {
+        host.mEnableMSDP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableMSSP")) {
+        host.mEnableMSSP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableMSP")) {
+        host.mEnableMSP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("inputLineStrictUnixEndings")) {
+        host.mUSE_UNIX_EOL = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("fixUnnecessaryLinebreaks")) {
+        host.set_USE_IRE_DRIVER_BUGFIX(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
+    if (key == qsl("specialForceCompressionOff")) {
+        host.mFORCE_NO_COMPRESSION = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("specialForceGAOff")) {
+        host.mFORCE_GA_OFF = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("specialForceCharsetNegotiationOff")) {
+        host.mFORCE_CHARSET_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("specialForceMxpNegotiationOff")) {
+        host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+
+    return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCommandLineMenuEvent
 int TLuaInterpreter::addCommandLineMenuEvent(lua_State * L)
 {
@@ -17376,4 +17481,3 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 
     return 1;
 }
-
