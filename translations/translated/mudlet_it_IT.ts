@@ -5262,7 +5262,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="72"/>
       <source>Click a color to make the trigger fire only when the text&apos;s foreground color matches the color number indicated.</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona per attivare il trigger solo quando il colore del testo corrisponde al numero colore indicato.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
@@ -5366,7 +5366,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="204"/>
       <source>Characters password. Note that the password is not encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Password del personaggio. la password è salvata in CHIARO</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="254"/>
@@ -6134,12 +6134,12 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="143"/>
       <source>Reset the directory so that logs are saved to the profile&apos;s &lt;i&gt;log&lt;/i&gt; directory.</source>
-      <translation type="unfinished"/>
+      <translation>Reimposta il percorso in modo che i &lt;i&gt;log&lt;/i&gt; vengano salvati nella cartella del profilo.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="147"/>
       <source>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</source>
-      <translation type="unfinished"/>
+      <translation>Imposta un nome personalizzato per il log. (I nuovi dati vengono accodati in caso un file di log con lo stesso nome esista già).</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="168"/>
@@ -6149,7 +6149,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="195"/>
       <source>This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specified font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.</source>
-      <translation type="unfinished"/>
+      <translation>Questa impostazione permette di mostrare una finestra con tutti i simboli utilizzati nella mappa corrente e come vengono disegnati usando solo il carattere specificato, un altro carattere o se non possono essere disegnati affatto. Mostra anche la sequenza di &lt;i&gt;codici&lt;/i&gt;Unicode che compongono un determinato simbolo, in modo da poterli identificare anche se non è possibile visualizzarli; inoltre, sono elencate le prime trentadue stanze che utilizzano quel simbolo, in modo da aiutare a riconoscere eventuali casi anomali o inaspettati.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="201"/>
@@ -6159,7 +6159,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="203"/>
       <source>Using a single font is likely to produce a more consistent style but may cause the &lt;i&gt;font replacement character&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; to show if the font does not have a needed glyph (a font&apos;s individual character/symbol) to represent the grapheme (what is to be represented).  Clearing this checkbox will allow the best alternative glyph from another font to be used to draw that grapheme.</source>
-      <translation type="unfinished"/>
+      <translation>Utilizzare un singolo carattere permette di mantenere uno stile consistente, ma può causare la comparsa del carattere di errore &lt;i&gt;font replacement character&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos;. Questo viene mostrato se il carattere non dispone dei glifi necessari per rappresentare il grafema desiderato. Deseleziona questa casella per utilizzare automaticamente il migliore glifo di un altro carattere in caso di problemi a disegnare il grafema.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="216"/>
@@ -6191,7 +6191,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="688"/>
       <source>From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).</source>
-      <translation type="unfinished"/>
+      <translation>Dal file di dizionario &lt;tt&gt;%1.dic&lt;/tt&gt; (e relative inflessioni e derivazioni &lt;tt&gt;.aff&lt;tt&gt;. file).</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="822"/>
