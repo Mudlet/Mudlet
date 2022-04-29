@@ -5525,7 +5525,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1426"/>
       <source>Copying...</source>
-      <translation type="unfinished"/>
+      <translation>Копирование...</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1766"/>
