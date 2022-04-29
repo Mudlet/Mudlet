@@ -5487,7 +5487,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1426"/>
       <source>Copying...</source>
-      <translation type="unfinished"/>
+      <translation>Kopiere...</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1766"/>
