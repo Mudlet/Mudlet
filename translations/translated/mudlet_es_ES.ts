@@ -951,7 +951,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="3105"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, i.e must do the suggested action first)</comment>
-      <translation type="unfinished"/>
+      <translation>Selecciona un punto primero y luego añade un nuevo punto a mitad del segmento hacia la habitación</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3109"/>
@@ -969,7 +969,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="3120"/>
       <source>Remove last segment by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)</comment>
-      <translation type="unfinished"/>
+      <translation>Remueve el último segmento eliminando este punto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3125"/>
