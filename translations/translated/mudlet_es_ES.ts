@@ -32,12 +32,12 @@
     <message>
       <location filename="../src/glwidget.cpp" line="288"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>No hay habitaciones en el mapa: carga otro, o comience a mapear desde cero para empezar.</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="293"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Todavía no tienes un mapa: carga uno, o comienza a mapear desde cero para empezar.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="290"/>
@@ -68,7 +68,7 @@
       <location filename="../src/Host.cpp" line="960"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - %1 ¡Muchas gracias por utilizar la Versión Pública de Prueba!</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="961"/>
@@ -501,7 +501,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
       <source>%1 ranges</source>
-      <translation type="unfinished"/>
+      <translation>%1 rangos</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
@@ -831,7 +831,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2987"/>
       <source>Set color...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Establecer color...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2993"/>
@@ -879,7 +879,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="3052"/>
       <source>Create label...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Crear etiqueta...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3053"/>
@@ -903,13 +903,13 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="3069"/>
       <source>Switch to editing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Cambiar al modo de edición</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3070"/>
       <source>Switch to viewing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Cambiar al modo de visualización</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3077"/>
@@ -957,13 +957,13 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="3109"/>
       <source>Remove point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Eliminar punto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3116"/>
       <source>Merge pair of segments by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but will be able to be done again on this item)</comment>
-      <translation type="unfinished"/>
+      <translation>Fusiona un par de segmentos eliminando este punto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3120"/>
