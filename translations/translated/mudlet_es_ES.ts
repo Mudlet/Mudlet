@@ -891,7 +891,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="3059"/>
       <source>Set player location</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Establecer la ubicación del jugador</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3060"/>
@@ -945,7 +945,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="3102"/>
       <source>Divide segment by adding a new point mid-way along</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Divide el segmento añadiendo un nuevo punto a mitad de camino</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3105"/>
@@ -1059,7 +1059,7 @@ de:</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="4015"/>
       <source>Shrink in rooms</source>
-      <translation type="unfinished"/>
+      <translation>Reducir en las habitaciones</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4016"/>
@@ -1075,7 +1075,7 @@ factor of:</source>
       <location filename="../src/T2DMap.cpp" line="4158"/>
       <location filename="../src/T2DMap.cpp" line="4208"/>
       <source>Enter room weight</source>
-      <translation type="unfinished"/>
+      <translation>Definir el peso de la habitación</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4145"/>
@@ -1201,19 +1201,19 @@ rooms:</source>
       <location filename="../src/TCommandLine.cpp" line="762"/>
       <source>no suggestions (system)</source>
       <comment>used when the command spelling checker using the selected system dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>no hay sugerencias (sistema)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="789"/>
       <source>no suggestions (shared)</source>
       <comment>used when the command spelling checker using the dictionary shared between profile has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>no hay sugerencias (compartido)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="793"/>
       <source>no suggestions (profile)</source>
       <comment>used when the command spelling checker using the profile&apos;s own dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>no hay sugerencias (perfil)</translation>
     </message>
   </context>
   <context>
@@ -1256,7 +1256,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="324"/>
       <source>Show Time Stamps.</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar marcas de tiempo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="335"/>
@@ -1271,7 +1271,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="387"/>
       <source>Emergency Stop. Stops all timers and triggers.</source>
-      <translation type="unfinished"/>
+      <translation>Parada de emergencia. Detener todos los temporizadores y disparadores.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="402"/>
@@ -1302,7 +1302,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1817"/>
       <location filename="../src/TConsole.cpp" line="1856"/>
       <source>No search results, sorry!</source>
-      <translation type="unfinished"/>
+      <translation>¡No se encontraron resultados, perdón!</translation>
     </message>
   </context>
   <context>
@@ -1331,7 +1331,7 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="13910"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>objeto</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13896"/>
@@ -1343,7 +1343,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15418"/>
       <source>Some functions may not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Algunas funciones pueden no estar disponibles.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14807"/>
@@ -1353,7 +1353,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14809"/>
       <source>Lua error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Error de Lua:</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14811"/>
@@ -1395,7 +1395,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15623"/>
       <source>Lua error: %1.</source>
-      <translation type="unfinished"/>
+      <translation>Error de Lua: %1.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15625"/>
