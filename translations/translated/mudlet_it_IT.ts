@@ -1255,7 +1255,7 @@ per le stanze selezionate:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="355"/>
       <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i&gt;N:&lt;/i&gt; è la latenza del server di gioco e della rete (anche detto ping, misurato in secondi), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; è il tempo di elaborazione - quanto tempo impiegato i tuoi trigger a essere eseguiti sull'ultima linea ricevuta (misurato in secondi).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="779"/>
@@ -2948,7 +2948,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1466"/>
       <source>Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Passa il mouse su questo elemento per visualizzare la mappa caratteri Unicode della selezione &lt;i&gt;(solo la prima riga!)&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1475"/>
@@ -5527,7 +5527,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1426"/>
       <source>Copying...</source>
-      <translation type="unfinished"/>
+      <translation>Copia in corso...</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1766"/>
@@ -6430,12 +6430,12 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3433"/>
       <source>The room symbol will appear like this if only symbols (glyphs) from the specific font are used.</source>
-      <translation type="unfinished"/>
+      <translation>Il simbolo della stanza sarà visualizzato in questo modo se saranno utilizzati simboli (glifi) solo del carattere attuale.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3438"/>
       <source>The room symbol will appear like this if symbols (glyphs) from any font can be used.</source>
-      <translation type="unfinished"/>
+      <translation>Il simbolo della stanza sarà come questo in caso si possano utilizzare i simboli (glifi) del carattere in uso.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3478"/>
@@ -6445,7 +6445,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3496"/>
       <source>The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.</source>
-      <translation type="unfinished"/>
+      <translation>Stanze con questo simbolo, fino ad un massimo di trentadue. In caso ce ne siano un numero maggiore, sono indicate, ma non sono mostrate.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3504"/>
@@ -7249,7 +7249,7 @@ per tutte le %n stanze selezionate:</numerusform>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="459"/>
       <source>&lt;p&gt;Saves the selected item. (Ctrl+S)&lt;/p&gt;&lt;p&gt;Saving causes any changes to the item to take effect. It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Salva l'elemento selezionato. (Ctrl+S)&lt;/p&gt;&lt;p&gt;Il salvataggio rende effettive le modifiche all'elemento.Non saranno salvate modifiche sul disco fisso, quindi andranno perse in caso di problemi con il computer/programma (usa Salva Profilo, poco più a destra, per evitare di perdere il lavoro fatto.)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="508"/>
