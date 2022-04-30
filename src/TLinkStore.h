@@ -29,7 +29,7 @@
 class Host;
 // Keep together lists of links and hints associated
 class TLinkStore {
-    inline static const int scmMaxLinks = 2000;
+    inline static const int scmMaxLinks = 20000;
 
     QMap<int, QStringList> mLinkStore;
     QMap<int, QStringList> mHintStore;
