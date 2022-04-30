@@ -849,19 +849,19 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="3007"/>
       <source>Shrink...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Encoger...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3028"/>
       <source>Set weight...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Establecer peso...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3040"/>
       <source>Move to position...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Mover a la posición...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3041"/>
@@ -873,7 +873,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="3047"/>
       <source>Move to area...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Mueve al área...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3052"/>
