@@ -1165,6 +1165,20 @@ if not ttsSpeak then --check if ttsSpeak is defined, if not then Mudlet lacks TT
   end
 end
 
+local oldsetConfig = setConfig
+function setConfig(...)
+  local args = {...}
+
+  if type(args[1]) ~= "table" then
+    oldsetConfig(...)
+    return
+  end
+
+  for k,v in pairs(args[1]) do
+    oldsetConfig(k, v)
+  end
+end
+
 --[[
 Fixes up getExitStubs() and getExitStubs1() so they do not produce warning
 if there are no stub-exits in the room, instead return just an empty table.
