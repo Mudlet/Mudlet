@@ -6391,32 +6391,32 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3433"/>
       <source>The room symbol will appear like this if only symbols (glyphs) from the specific font are used.</source>
-      <translation type="unfinished"/>
+      <translation>Das Raumsymbol erscheint wie folgt, wenn nur Symbole (Glyphen) aus der spezifischen Schriftart verwendet werden.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3438"/>
       <source>The room symbol will appear like this if symbols (glyphs) from any font can be used.</source>
-      <translation type="unfinished"/>
+      <translation>Das Raumsymbol erscheint wie folgt, wenn Symbole (Glyphen) aus jeder Schriftart verwendet werdet dürfen.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3478"/>
       <source>How many rooms in the whole map have this symbol.</source>
-      <translation type="unfinished"/>
+      <translation>Wie viele Räume in der gesamten Karte haben dieses Symbol.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3496"/>
       <source>The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.</source>
-      <translation type="unfinished"/>
+      <translation>Die Räume mit diesem Symbol, maximal 32. Falls es mehr sind, wird es angezeigt, aber sie werden nicht gelistet.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3504"/>
       <source>The symbol can be made entirely from glyphs in the specified font.</source>
-      <translation type="unfinished"/>
+      <translation>Das Symbol kann vollständig aus Glyphen der gewählten Schriftart erstellt werden.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3522"/>
       <source>The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different systems with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.</source>
-      <translation type="unfinished"/>
+      <translation>Das Symbol kann mit keiner der Schriftarten im System gezeichnet werden. Entweder wurde eine ungültige Zeichenkette als Symbol für die angegebenen Räume eingegeben oder die Karte wurde auf einem anderen System erstellt, auf dem andere Schriftarten verwendet werden konnten. Du kannst dies möglicherweise korrigieren, indem du eine zusätzliche Schriftart installierst, die für dieses System geeignet ist, oder indem du die Karte bearbeitest, um ein anderes Symbol zu verwenden. Letzteres ist möglicherweise über ein Lua-Skript mit den Funktionen &lt;i&gt;getRoomChar&lt;/i&gt; und &lt;i&gt;setRoomChar&lt;/i&gt; möglich.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4113"/>
@@ -6734,50 +6734,50 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1168"/>
       <source>Entered number is invalid, set the number of the room northwest of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Die eingegebene Nummer ist ungültig. Stelle die Nummer des Raums nordwestlich von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1169"/>
       <location filename="../src/dlgRoomExits.cpp" line="1277"/>
       <location filename="../src/dlgRoomExits.cpp" line="1498"/>
       <source>Set the number of the room northwest of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Stelle die Nummer des Raums nordwestlich von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1177"/>
       <source>Entered number is invalid, set the number of the room north of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Die eingegebene Nummer ist ungültig. Stelle die Nummer des Raums nördlich von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1178"/>
       <location filename="../src/dlgRoomExits.cpp" line="1285"/>
       <location filename="../src/dlgRoomExits.cpp" line="1500"/>
       <source>Set the number of the room north of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Stelle die Nummer des Raums nördlich von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1186"/>
       <source>Entered number is invalid, set the number of the room northeast of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Die eingegebene Nummer ist ungültig. Stelle die Nummer des Raums nordöstlich von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1187"/>
       <location filename="../src/dlgRoomExits.cpp" line="1293"/>
       <location filename="../src/dlgRoomExits.cpp" line="1502"/>
       <source>Set the number of the room northeast of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Stelle die Nummer des Raums nordöstlich von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1195"/>
       <source>Entered number is invalid, set the number of the room up from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Die eingegebene Nummer ist ungültig. Stelle die Nummer des Raums oberhalb von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1196"/>
       <location filename="../src/dlgRoomExits.cpp" line="1301"/>
       <location filename="../src/dlgRoomExits.cpp" line="1504"/>
       <source>Set the number of the room up from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Stelle die Nummer des Raums oberhalb von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1204"/>
@@ -6866,14 +6866,14 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1267"/>
       <source>Entered number is invalid, set the number of the room out from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Die eingegebene Nummer ist ungültig. Stelle die Nummer des Raums außerhalb von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1268"/>
       <location filename="../src/dlgRoomExits.cpp" line="1365"/>
       <location filename="../src/dlgRoomExits.cpp" line="1520"/>
       <source>Set the number of the room out from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Stelle die Nummer des Raums außerhalb von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1058"/>
@@ -7218,24 +7218,25 @@ für alle %n ausgewählten Räume:</numerusform>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="459"/>
       <source>&lt;p&gt;Saves the selected item. (Ctrl+S)&lt;/p&gt;&lt;p&gt;Saving causes any changes to the item to take effect. It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Speichert das gewählte Element. (Strg+S)&lt;/p&gt;&lt;p&gt;Speichern bewirkt, dass alle Änderungen des Elements wirksam werden.
+Es speichert nicht auf die Festplatte, also können Änderungen bei einem Absturz des Computers/Programms verloren gehen (aber "Profil speichern" rechts ist sicher.)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="508"/>
       <source>&lt;p&gt;Saves your profile. (Ctrl+Shift+S)&lt;/p&gt;&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Speichert dein Profil. (Strg+Shift+S)&lt;/p&gt;&lt;p&gt;Speichert dein gesamtes Profil (Trigger, Aliase, Skripte, Timer, Buttons und Tasten, aber nicht die Karte oder Skript-spezifische Einstellungen) auf deinem Computerlaufwerk, so dass deine ganzen Änderungen bei einem Absturz des Programms oder Computers beibehalten werden.&lt;/p&gt;&lt;p&gt;Es wird auch ein Backup des Profils anlegen, so dass du beim Verbinden eine ältere Version laden kannst.&lt;/p&gt;&lt;p&gt;Sollten irgendwelche Module vorhanden und &quot;&lt;i&gt;zur Synchronisierung&lt;/i&gt;&quot; vorgemerkt sein, werden sie hierdurch auch gespeichern und in anderen Profilen neu geladen, falls diese auch aktiv sind.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="594"/>
       <source>Restore Actions toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Symbolleiste "Aktionen" wiederherstellen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="597"/>
       <source>Restore Items toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Symbolleiste "Elemente" wiederherstellen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="684"/>
