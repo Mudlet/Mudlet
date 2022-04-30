@@ -14223,20 +14223,39 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             }
             lua_setfield(L, -2, qsl("buttons").toUtf8().constData());
 
+// The Qt documentation is unclear when, precisely QWheelEvent::globalPos()
+// became obsolete, 5.14.0 is a guess
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            auto globalPosition = qME->globalPosition();
+#else
+            auto globalPosition = qME->globalPos();
+#endif
             // Push globalX()
-            lua_pushnumber(L, qME->globalX());
+            lua_pushnumber(L, globalPosition.x());
             lua_setfield(L, -2, qsl("globalX").toUtf8().constData());
 
             // Push globalY()
-            lua_pushnumber(L, qME->globalY());
+            lua_pushnumber(L, globalPosition.y());
             lua_setfield(L, -2, qsl("globalY").toUtf8().constData());
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            auto position = qME->position();
+#endif
+
             // Push x()
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            lua_pushnumber(L, position.x());
+#else
             lua_pushnumber(L, qME->x());
+#endif
             lua_setfield(L, -2, qsl("x").toUtf8().constData());
 
             // Push y()
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            lua_pushnumber(L, position.y());
+#else
             lua_pushnumber(L, qME->y());
+#endif
             lua_setfield(L, -2, qsl("y").toUtf8().constData());
 
             // Push angleDelta()
