@@ -536,7 +536,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
       <source>Error theme not found %1.</source>
-      <translation type="unfinished"/>
+      <translation>Error tema no encontrado %1.</translation>
     </message>
   </context>
   <context>
@@ -1195,7 +1195,7 @@ rooms:</source>
       <location filename="../src/TCommandLine.cpp" line="694"/>
       <source>▼System▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which is provided as part of the OS; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼Sistema▼ │ sugerencias del diccionario │ ▲Usuario▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="762"/>
