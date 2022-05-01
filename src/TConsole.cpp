@@ -267,13 +267,12 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mUpperPane->setContentsMargins(0, 0, 0, 0);
     mUpperPane->setSizePolicy(sizePolicy3);
     mUpperPane->setFocusPolicy(Qt::NoFocus);
-    mUpperPane->setAccessibleName(tr("Upper text pane"));
+    mUpperPane->setAccessibleName(tr("main window"));
 
     mLowerPane = new TTextEdit(this, splitter, &buffer, mpHost, true);
     mLowerPane->setContentsMargins(0, 0, 0, 0);
     mLowerPane->setSizePolicy(sizePolicy3);
     mLowerPane->setFocusPolicy(Qt::NoFocus);
-    mLowerPane->setAccessibleName(tr("Lower text pane"));
 
     if (mType == MainConsole) {
         setFocusProxy(mpCommandLine);
@@ -544,6 +543,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     if (mType & MainConsole) {
         mpCommandLine->adjustHeight();
     }
+
+    adjustAccessibleNames();
 }
 
 TConsole::~TConsole()
@@ -1066,6 +1067,7 @@ void TConsole::scrollDown(int lines)
         mUpperPane->updateScreenView();
         mUpperPane->forceUpdate();
     }
+    adjustAccessibleNames();
 }
 
 void TConsole::scrollUp(int lines)
@@ -1080,6 +1082,7 @@ void TConsole::scrollUp(int lines)
         QTimer::singleShot(0, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
     }
     mUpperPane->scrollUp(lines);
+    adjustAccessibleNames();
 }
 
 void TConsole::deselect()
@@ -2004,6 +2007,17 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
 void TConsole::mousePressEvent(QMouseEvent* event)
 {
     raiseMudletMousePressOrReleaseEvent(event, true);
+}
+
+void TConsole::adjustAccessibleNames()
+{
+    if (mLowerPane->isVisible()) {
+        mUpperPane->setAccessibleName(tr("main window past content", "accessibility-friendly name to describe the upper half of the Mudlet window when you've scrolled up"));
+        mLowerPane->setAccessibleName(tr("main window live content", "accessibility-friendly name to describe the lower half of the Mudlet window when you've scrolled up"));
+    } else {
+        mUpperPane->setAccessibleName(tr("main window"));
+        mLowerPane->setAccessibleName(QString());
+    }
 }
 
 void TConsole::mouseReleaseEvent(QMouseEvent* event)

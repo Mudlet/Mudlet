@@ -309,6 +309,8 @@ protected:
 
 
 private:
+    void adjustAccessibleNames();
+
     ConsoleType mType = UnknownType;
     QSize mOldSize;
 };
