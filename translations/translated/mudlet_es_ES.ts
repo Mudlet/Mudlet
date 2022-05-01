@@ -1189,7 +1189,7 @@ rooms:</source>
       <location filename="../src/TCommandLine.cpp" line="684"/>
       <source>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which we have bundled with Mudlet; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼Mudlet▼ │ sugerencias del diccionario │ ▲Usuario▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="694"/>
