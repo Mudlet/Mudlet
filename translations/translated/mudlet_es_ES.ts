@@ -1183,7 +1183,7 @@ rooms:</source>
     <message>
       <location filename="../src/TCommandLine.cpp" line="680"/>
       <source>Remove from user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Eliminar del diccionario del usuario</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="684"/>
