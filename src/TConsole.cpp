@@ -279,10 +279,14 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         setFocusProxy(mpCommandLine);
         mUpperPane->setFocusProxy(mpCommandLine);
         mLowerPane->setFocusProxy(mpCommandLine);
+        // technically this is the 'main input line' - but as it's the one most often used,
+        // it is important to keep its name short
+        mpCommandLine->setAccessibleName(qsl("input line"));
     } else if (mType == UserWindow) {
         setFocusProxy(mpHost->mpConsole->mpCommandLine);
         mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
         mLowerPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+        mpHost->mpConsole->setAccessibleName(qsl("%1 input line").arg(mpHost->mpConsole->mConsoleName));
     }
 
     splitter->addWidget(mUpperPane);
