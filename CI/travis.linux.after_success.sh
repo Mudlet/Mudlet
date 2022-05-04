@@ -134,9 +134,9 @@ then
       dblsqd release -a mudlet -c public-test-build -m "${changelog}" "${VERSION}${MUDLET_VERSION_BUILD}" || true
 
       # release registration and uploading will be manual for the time being
-    # else
-    #   echo "=== Registering release with Dblsqd ==="
-    #   dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${DEPLOY_URL}"
+    else
+      echo "=== Registering release with Dblsqd ==="
+      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${DEPLOY_URL}"
     fi
 
     if [ "${public_test_build}" != "true" ]; then
