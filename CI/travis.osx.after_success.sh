@@ -27,8 +27,8 @@ EOF
 
 }
 
-[ -n "$TRAVIS_REPO_SLUG" ] && BUILD_DIR="${TRAVIS_BUILD_DIR}" || BUILD_DIR="${BUILD_FOLDER}"
-[ -n "$TRAVIS_REPO_SLUG" ] && SOURCE_DIR="${TRAVIS_BUILD_DIR}" || SOURCE_DIR="${GITHUB_WORKSPACE}"
+BUILD_DIR="${BUILD_FOLDER}"
+SOURCE_DIR="${GITHUB_WORKSPACE}"
 
 if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
   public_test_build="true"
@@ -61,7 +61,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     echo "----"
   fi
 
-  if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${public_test_build}" != "true" ]; then
+  if [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${public_test_build}" != "true" ]; then
     echo "== Creating a snapshot build =="
     appBaseName="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}"
     if [ -n "${GITHUB_REPOSITORY}" ]; then
@@ -76,19 +76,15 @@ if [ "${DEPLOY}" = "deploy" ]; then
       sign_and_notarize "${HOME}/Desktop/${appBaseName}.dmg"
     fi
 
-    if [ -n "$TRAVIS_REPO_SLUG" ]; then
-      DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/${appBaseName}.dmg"  "https://make.mudlet.org/snapshots/${appBaseName}.dmg" -O - -q)
-    else
-      echo "=== ... later, via Github ==="
-      # Move the finished file into a folder of its own, because we ask Github to upload contents of a folder
-      mkdir "upload/"
-      mv "${HOME}/Desktop/${appBaseName}.dmg" "upload/"
-      {
-        echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
-        echo "UPLOAD_FILENAME=${appBaseName}"
-      } >> "$GITHUB_ENV"
-      DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
-    fi
+    echo "=== ... later, via Github ==="
+    # Move the finished file into a folder of its own, because we ask Github to upload contents of a folder
+    mkdir "upload/"
+    mv "${HOME}/Desktop/${appBaseName}.dmg" "upload/"
+    {
+      echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
+      echo "UPLOAD_FILENAME=${appBaseName}"
+    } >> "$GITHUB_ENV"
+    DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
   else # ptb/release build
     app="${BUILD_DIR}/build/Mudlet.app"
     if [ "${public_test_build}" == "true" ]; then
