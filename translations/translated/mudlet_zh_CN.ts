@@ -4265,7 +4265,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="630"/>
       <source>Options</source>
-      <translation type="unfinished"/>
+      <translation>选项</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="688"/>
