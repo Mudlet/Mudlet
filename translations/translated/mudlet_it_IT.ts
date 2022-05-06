@@ -4309,7 +4309,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="483"/>
       <source>Connect to</source>
-      <translation type="unfinished"/>
+      <translation>Connetti a</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="510"/>
