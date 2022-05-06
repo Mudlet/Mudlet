@@ -4314,7 +4314,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="483"/>
       <source>Connect to</source>
-      <translation type="unfinished"/>
+      <translation>Подключиться к</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="510"/>
@@ -4339,7 +4339,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="630"/>
       <source>Options</source>
-      <translation type="unfinished"/>
+      <translation>Настройки</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="688"/>
