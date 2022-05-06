@@ -657,7 +657,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="1268"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Todavía no tienes un mapa: carga uno, o comienza a mapear desde cero para empezar.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="1265"/>
@@ -670,7 +670,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="1263"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>No hay habitaciones en el mapa: carga otro, o comience a mapear desde cero para empezar.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2412"/>
@@ -4128,7 +4128,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="630"/>
       <source>Options</source>
-      <translation type="unfinished"/>
+      <translation>Opciones</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="688"/>
@@ -8529,12 +8529,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="134"/>
       <source>Foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Primer plano:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="151"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>Fondo:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="169"/>
