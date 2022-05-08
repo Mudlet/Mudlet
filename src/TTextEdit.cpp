@@ -341,15 +341,19 @@ void TTextEdit::showNewLines()
             newLines.append('\n');
         }
 
+        if (newLines.isEmpty()) {
+            return;
+        }
+
         QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(this)->textInterface();
 
-        /*
-         * By default, it is assumed that the cursor has moved to the end of the selection.
-         * So let's make this assumption true.
-         */
+        // cursor has to be moved manually - https://doc.qt.io/qt-5/qaccessibletextinsertevent.html#QAccessibleTextInsertEvent
+        auto endcount = ti->characterCount();
         ti->setCursorPosition(ti->characterCount());
 
+        auto insertedat = ti->characterCount() - newLines.length();
         QAccessibleTextInsertEvent event(this, ti->characterCount() - newLines.length(), newLines);
+        qDebug() << "moved cursor to" << endcount << "; announcing insertion at" << insertedat << newLines;
         QAccessible::updateAccessibility(&event);
     }
 }
