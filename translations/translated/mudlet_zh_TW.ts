@@ -1346,98 +1346,98 @@ rooms:</source>
       <translation>函式</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15418"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15438"/>
       <source>Some functions may not be available.</source>
       <translation>部分功能可能無法使用。</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14807"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14826"/>
       <source>No error message available from Lua</source>
       <translation>沒有來自 Lua 的錯誤訊息</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14809"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14828"/>
       <source>Lua error: %1</source>
       <translation>Lua 錯誤：%1</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14811"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14830"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
       <translation>[錯誤] - 找不到 Lua 模組 %1。%2%3%4</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14825"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14844"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name (may specify which variant) of the module.</comment>
       <translation>[ OK ] - Lua 模組 %1 已載入。</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15405"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15425"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
       <translation>可能無法使用 Mudlet Lua 代碼。</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15423"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15443"/>
       <source>Database support will not be available.</source>
       <translation>資料庫支持不可使用。</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15430"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15450"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
       <translation>utf8.* Lua 函數不可用。</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15436"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15456"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
       <translation>yajl.*Lua 函數不可用。</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15621"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15641"/>
       <source>No error message available from Lua.</source>
       <translation>沒有來自 Lua 的錯誤訊息。</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15623"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15643"/>
       <source>Lua error: %1.</source>
       <translation>Lua 錯誤：%1.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15625"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15645"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
       <translation>[ 錯誤 ] - 無法載入程式碼格式化，縮排功能無法使用。
 </translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15702"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15722"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
       <translation>%1 (不存在)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15707"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15727"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
       <translation>%1 （不是檔案或連結到檔案）</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15716"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15736"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
       <translation>%1（不是一個可讀取的檔案或檔案的超連結）</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15734"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15754"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
       <translation>%1（無法讀取檔案）</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15740"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15760"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
       <translation>[ OK ] - Mudlet-lua API 和 Geyser 佈置管理程式已載入。</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15747"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15767"/>
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
@@ -4149,214 +4149,214 @@ error message was: &quot;%2&quot;.</source>
       <translation>設定檔案清單</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="363"/>
+      <location filename="../src/ui/connection_profiles.ui" line="364"/>
       <source>Remove</source>
       <translation>移除</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="382"/>
+      <location filename="../src/ui/connection_profiles.ui" line="383"/>
       <source>Copy</source>
       <translation>複製</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="407"/>
+      <location filename="../src/ui/connection_profiles.ui" line="408"/>
       <source>New</source>
       <translation>新建</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="462"/>
+      <location filename="../src/ui/connection_profiles.ui" line="463"/>
       <source>welcome message</source>
       <translation>歡迎訊息</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="478"/>
-      <source>Required</source>
-      <translation>必要選項</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/connection_profiles.ui" line="484"/>
+      <location filename="../src/ui/connection_profiles.ui" line="596"/>
       <source>Profile name:</source>
       <translation>設定名稱：</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="500"/>
+      <location filename="../src/ui/connection_profiles.ui" line="573"/>
       <source>Profile name</source>
       <translation>設定名稱</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="503"/>
+      <location filename="../src/ui/connection_profiles.ui" line="576"/>
       <source>A unique name for the profile but which is limited to a subset of ascii characters only.</source>
       <comment>Using lower case letters for &apos;ASCII&apos; may make speech synthesisers say &apos;askey&apos; which is quicker than &apos;Aay Ess Cee Eye Eye&apos;!</comment>
       <translation>配置文件的唯一名稱，僅限指用 ASCII 字元集。</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="513"/>
+      <location filename="../src/ui/connection_profiles.ui" line="606"/>
       <source>Server address:</source>
       <translation>伺服器位址：</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="535"/>
+      <location filename="../src/ui/connection_profiles.ui" line="557"/>
       <source>Game server URL</source>
       <translation>遊戲伺服器位址</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="538"/>
+      <location filename="../src/ui/connection_profiles.ui" line="560"/>
       <source>The Internet host name or IP address</source>
       <translation>伺服器主機名稱或 IP 位址</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="545"/>
+      <location filename="../src/ui/connection_profiles.ui" line="586"/>
       <source>Port:</source>
       <translation>連接埠號：</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="573"/>
+      <location filename="../src/ui/connection_profiles.ui" line="507"/>
       <source>Game server port</source>
       <translation>遊戲伺服器端口</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="576"/>
+      <location filename="../src/ui/connection_profiles.ui" line="483"/>
+      <source>Connect to</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/connection_profiles.ui" line="510"/>
       <source>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for &quot;Telnet&quot; connections is used. Secure connections may require a different port number.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="595"/>
+      <location filename="../src/ui/connection_profiles.ui" line="529"/>
       <source>Connect via a secure protocol</source>
       <translation>透過安全協議進行連線</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="598"/>
+      <location filename="../src/ui/connection_profiles.ui" line="532"/>
       <source>Make Mudlet use a secure SSL/TLS protocol instead of an unencrypted one</source>
       <translation>讓 Mudlet 使用安全的 SSL/TLS 協定，而不是未加密的協定</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="604"/>
+      <location filename="../src/ui/connection_profiles.ui" line="538"/>
       <source>Secure:</source>
       <translation>安全：</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="611"/>
+      <location filename="../src/ui/connection_profiles.ui" line="630"/>
+      <source>Options</source>
+      <translation>选项</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/connection_profiles.ui" line="688"/>
       <source>Profile history:</source>
       <translation>歷史設定：</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="634"/>
+      <location filename="../src/ui/connection_profiles.ui" line="711"/>
       <source>load newest profile</source>
       <translation>載入最新的設定檔</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="639"/>
+      <location filename="../src/ui/connection_profiles.ui" line="716"/>
       <source>load oldest profile</source>
       <translation>載入最舊的設定檔</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="662"/>
-      <source>Optional</source>
-      <translation>可選項目</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/connection_profiles.ui" line="678"/>
+      <location filename="../src/ui/connection_profiles.ui" line="636"/>
       <source>Character name:</source>
       <translation>角色名稱：</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="688"/>
+      <location filename="../src/ui/connection_profiles.ui" line="646"/>
       <source>The characters name</source>
       <translation>人物名字</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="691"/>
+      <location filename="../src/ui/connection_profiles.ui" line="649"/>
       <source>Character name</source>
       <translation>角色名稱</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="694"/>
+      <location filename="../src/ui/connection_profiles.ui" line="652"/>
       <source>If provided will be sent, along with password to identify the user in the game.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="713"/>
+      <location filename="../src/ui/connection_profiles.ui" line="762"/>
       <source>Auto-open profile</source>
       <translation>自動開啟設定檔</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="716"/>
+      <location filename="../src/ui/connection_profiles.ui" line="765"/>
       <source>Automatically start this profile when Mudlet is run</source>
       <translation>執行 Mudlet 時自動啟動此設定檔</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="729"/>
+      <location filename="../src/ui/connection_profiles.ui" line="778"/>
       <source>Auto-reconnect</source>
       <translation>自動重連</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="732"/>
+      <location filename="../src/ui/connection_profiles.ui" line="781"/>
       <source>Automatically reconnect this profile if it should become disconnected for any reason other than the user disconnecting from the game server.</source>
       <translation>如果使用者主動段開伺服器之外的任何原因而斷開連接，則自動重新連接此設定檔。</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="748"/>
+      <location filename="../src/ui/connection_profiles.ui" line="675"/>
       <source>Password</source>
       <translation>密码</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="751"/>
+      <location filename="../src/ui/connection_profiles.ui" line="678"/>
       <source>If provided will be sent, along with the character name to identify the user in the game.</source>
       <translation>如果提供將發送，以及角色名稱，以識別遊戲中的使用者。</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="764"/>
+      <location filename="../src/ui/connection_profiles.ui" line="727"/>
       <source>Enable Discord integration (not supported by game)</source>
       <translation>启用Discord整合 (不被游戏支持)</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="770"/>
+      <location filename="../src/ui/connection_profiles.ui" line="733"/>
       <source>Allow this profile to use Mudlet&apos;s Discord &quot;Rich Presence&quot;  features</source>
       <translation>允許此配置檔使用 Mudlet 的 Discord 的 Rich Presence 功能</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="876"/>
-      <location filename="../src/ui/connection_profiles.ui" line="879"/>
+      <location filename="../src/ui/connection_profiles.ui" line="881"/>
+      <location filename="../src/ui/connection_profiles.ui" line="884"/>
       <source>Game description or your notes</source>
       <translation>遊戲描述或筆記</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="668"/>
+      <location filename="../src/ui/connection_profiles.ui" line="662"/>
       <source>Password:</source>
       <translation>密碼：</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="745"/>
+      <location filename="../src/ui/connection_profiles.ui" line="672"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
       <translation>角色密碼。注意！密碼將以明文儲存。</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="710"/>
+      <location filename="../src/ui/connection_profiles.ui" line="759"/>
       <source>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</source>
       <translation>啟用之後，每次 Mudlet 啟動時都會自動載入這份設定檔並進行連線</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="722"/>
+      <location filename="../src/ui/connection_profiles.ui" line="771"/>
       <source>Open profile on Mudlet start</source>
       <translation>啟動 Mudlet 時載入此設定</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="738"/>
+      <location filename="../src/ui/connection_profiles.ui" line="787"/>
       <source>Reconnect automatically</source>
       <translation>自動重新連線</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="767"/>
+      <location filename="../src/ui/connection_profiles.ui" line="730"/>
       <source>Discord integration</source>
       <translation>Discord 整合</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="805"/>
+      <location filename="../src/ui/connection_profiles.ui" line="810"/>
       <source>Informational</source>
       <translation>更多資訊</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="832"/>
+      <location filename="../src/ui/connection_profiles.ui" line="837"/>
       <source>Website:</source>
       <translation>网站:</translation>
     </message>
@@ -4647,145 +4647,145 @@ Count</source>
   <context>
     <name>directions</name>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15471"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15491"/>
       <source>north</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>北</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15473"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15493"/>
       <source>n</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>n</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15475"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15495"/>
       <source>east</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>东</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15477"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15497"/>
       <source>e</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>e</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15479"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15499"/>
       <source>south</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>南</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15481"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15501"/>
       <source>s</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>s</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15483"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15503"/>
       <source>west</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>西</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15485"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15505"/>
       <source>w</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>w</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15487"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15507"/>
       <source>northeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>东北</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15489"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15509"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>ne</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15491"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15511"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>东南</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15493"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15513"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>se</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15495"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15515"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>西南</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15497"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15517"/>
       <source>sw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>sw</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15499"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15519"/>
       <source>northwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>西北</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15501"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15521"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>nw</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15503"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15523"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>入口</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15505"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15525"/>
       <source>i</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>i</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15507"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15527"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>出口</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15509"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15529"/>
       <source>o</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>o</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15511"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15531"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>上</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15513"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15533"/>
       <source>u</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>u</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15515"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15535"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>下</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15517"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15537"/>
       <source>d</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>d</translation>
@@ -5270,22 +5270,22 @@ Count</source>
       <translation>遊戲編號：%1</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1024"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1023"/>
       <source>This profile is currently loaded - close it before changing the connection parameters.</source>
       <translation>本配置当前已加载——在修改连接参数前先关闭它。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1733"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1730"/>
       <source>The %1 character is not permitted. Use one of the following:</source>
       <translation>不允許使用 %1 字元。可以使用下列其中一項：</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1756"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1753"/>
       <source>You have to enter a number. Other characters are not permitted.</source>
       <translation>你必須輸入一個數字，不允許使用其他字元。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1745"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1742"/>
       <source>This profile name is already in use.</source>
       <translation>設定檔名稱已經被使用。</translation>
     </message>
@@ -5307,7 +5307,7 @@ Count</source>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="124"/>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1444"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1441"/>
       <source>Copy</source>
       <translation>複製</translation>
     </message>
@@ -5368,112 +5368,112 @@ Count</source>
       <translation>無法在電腦上創建新的設定檔資料夾。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="556"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="555"/>
       <source>new profile name</source>
       <translation>新設定檔名稱</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="669"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="668"/>
       <source>Deleting &apos;%1&apos;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1071"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1070"/>
       <source>Discord integration not available on this platform</source>
       <translation>此平台上無法使用 Discord</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1077"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1076"/>
       <source>Discord integration not supported by game</source>
       <translation>遊戲不支持 Discord 集成</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1080"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1079"/>
       <source>Check to enable Discord integration</source>
       <translation>勾选以启用整合的Discord</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1318"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1315"/>
       <source>Reset icon</source>
       <comment>Reset the custom picture for this profile in the connection dialog and show the default one instead</comment>
       <translation>重設圖示</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1321"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1318"/>
       <source>Set custom icon</source>
       <comment>Set a custom picture to show for the profile in the connection dialog</comment>
       <translation>自訂圖示</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1325"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1322"/>
       <source>Set custom color</source>
       <comment>Set a custom color to show for the profile in the connection dialog</comment>
       <translation>設定自訂顏色</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1338"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1335"/>
       <source>Select custom image for profile (should be 120x30)</source>
       <translation>選擇設定檔的自訂圖片（應為 120x30）</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1338"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1335"/>
       <source>Images (%1)</source>
       <translation>圖片（%1）</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1426"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1423"/>
       <source>Copying...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1766"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1763"/>
       <source>Port number must be above zero and below 65535.</source>
       <translation>連接埠必須大於 0 且小於 65535。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1786"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1783"/>
       <source>Mudlet can not load support for secure connections.</source>
       <translation>Mudlet 無法載入安全連線的支援。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1808"/>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1818"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1805"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1815"/>
       <source>Please enter the URL or IP address of the Game server.</source>
       <translation>請輸入遊戲伺服器的 URL 或 IP 位址。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1829"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1826"/>
       <source>SSL connections require the URL of the Game server.</source>
       <translation>SSL 連線需要遊戲伺服器的 URL</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1846"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1843"/>
       <source>Load profile without connecting.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1862"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1859"/>
       <source>Please set a valid profile name, game server address and the game port before loading.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1867"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1864"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1921"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1918"/>
       <source>Click to hide the password; it will also hide if another profile is selected.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1925"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1922"/>
       <source>Click to reveal the password for this profile.</source>
       <translation type="unfinished"/>
     </message>
     <message>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1771"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1774"/>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1777"/>
       <source>Mudlet is not configured for secure connections.</source>
       <translation type="unfinished"/>
     </message>
@@ -5617,7 +5617,7 @@ Count</source>
   <context>
     <name>dlgMapper</name>
     <message>
-      <location filename="../src/dlgMapper.cpp" line="377"/>
+      <location filename="../src/dlgMapper.cpp" line="400"/>
       <source>None</source>
       <comment>Don&apos;t show the map overlay, &apos;none&apos; meaning no map overlay styled are enabled</comment>
       <translation>無</translation>
@@ -8612,7 +8612,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="38"/>
       <source>Type:</source>
-      <translation type="unfinished"/>
+      <translation>類型:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="49"/>
@@ -8658,12 +8658,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="134"/>
       <source>Foreground:</source>
-      <translation type="unfinished"/>
+      <translation>前景:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="151"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>背景:</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="169"/>
