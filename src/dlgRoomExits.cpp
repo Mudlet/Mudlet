@@ -148,7 +148,7 @@ QWidget* RoomIdLineEditDelegate::createEditor(QWidget* parent, const QStyleOptio
             } else {
                 // Something else that isn't a positive number:
                 mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_invalidExit);
-                roomIdToolTipText = utils::richText(tr("A positive roomID of the room that this special exit leads to is expected here. "
+                roomIdToolTipText = utils::richText(tr("The roomID of the room that this special exit leads to is expected here. "
                                                        "If left like this, this exit will be deleted when <tt>save</tt> is clicked."));
             }
         }
@@ -228,7 +228,7 @@ void RoomIdLineEditDelegate::slot_specialRoomExitIdEdited(const QString& text) c
     } else {
         // Something else that isn't a positive number:
         mpDlgRoomExits->setActionOnExit(mpEditor, mpDlgRoomExits->mpAction_invalidExit);
-        roomIdToolTipText = utils::richText(tr("A positive roomID of the room that this special exit leads to is expected here. "
+        roomIdToolTipText = utils::richText(tr("The roomID of the room that this special exit leads to is expected here. "
                                                "If left like this, this exit will be deleted when <tt>save</tt> is clicked."));
     }
     mpEditor->setToolTip(roomIdToolTipText);
@@ -968,7 +968,7 @@ void dlgRoomExits::setIconAndToolTipsOnSpecialExit(QTreeWidgetItem* pSpecialExit
         // This is the toolTip text for the roomID number column (and the
         // status icons)
         const QString roomIdToolTipText{generateToolTip(pExitToRoom->name, exitAreaName, exitRoomLocked, outOfAreaExit, pExitToRoom->getWeight())};
-        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitStatus, utils::richText(tr("A positive roomID of the room that this special exit leads to is expected here. "
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitStatus, utils::richText(tr("The roomID of the room that this special exit leads to is expected here. "
                                                                                           "If left like this, this exit will be deleted when <tt>save</tt> is clicked.")));
 
         pSpecialExit->setIcon(ExitsTreeWidget::colIndex_exitStatus, !showIconOnExitStatus
@@ -993,7 +993,7 @@ void dlgRoomExits::setIconAndToolTipsOnSpecialExit(QTreeWidgetItem* pSpecialExit
     } else {
         // Something else that isn't a positive number:
         pSpecialExit->setIcon(ExitsTreeWidget::colIndex_exitStatus, showIconOnExitStatus ? mIcon_invalidExit : QIcon());
-        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, utils::richText(tr("A positive roomID of the room that this special exit leads to is expected here. "
+        pSpecialExit->setToolTip(ExitsTreeWidget::colIndex_exitRoomId, utils::richText(tr("The roomID of the room that this special exit leads to is expected here. "
                                                                                           "If left like this, this exit will be deleted when <tt>save</tt> is clicked.")));
     }
 
