@@ -49,7 +49,7 @@
          <bool>false</bool>
         </property>
         <property name="title">
-         <string>North-west</string>
+         <string>Northwest</string>
         </property>
         <layout class="QGridLayout" name="gridLayout_nw">
          <item row="0" column="0">
@@ -317,7 +317,7 @@
          </sizepolicy>
         </property>
         <property name="title">
-         <string>North-east</string>
+         <string>Northeast</string>
         </property>
         <layout class="QGridLayout" name="gridLayout_ne">
          <item row="0" column="0">
@@ -1051,7 +1051,7 @@
          </sizepolicy>
         </property>
         <property name="title">
-         <string>South-west</string>
+         <string>Southwest</string>
         </property>
         <layout class="QGridLayout" name="gridLayout_sw">
          <item row="0" column="0">
@@ -1337,7 +1337,7 @@
          </sizepolicy>
         </property>
         <property name="title">
-         <string>South-east</string>
+         <string>Southeast</string>
         </property>
         <layout class="QGridLayout" name="gridLayout_se">
          <item row="0" column="0">
