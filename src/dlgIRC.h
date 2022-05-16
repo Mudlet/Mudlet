@@ -64,7 +64,7 @@ public:
     inline static int DefaultHostPort = 6667;
     inline static bool DefaultHostSecure = false;
     inline static QString DefaultNickName = qsl("Mudlet");
-    inline static QStringList DefaultChannels = QStringList() << qsl("Mudlet");
+    inline static QStringList DefaultChannels = QStringList() << qsl("#mudlet");
     inline static int DefaultMessageBufferLimit = 5000;
 
 
