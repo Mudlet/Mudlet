@@ -1562,7 +1562,7 @@
           </widget>
          </item>
          <item row="1" column="4">
-          <widget class="QRadioButton" name="doortype_locked_in">
+          <widget class="QRadioButton" name="doortype_closed_in">
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
@@ -1578,7 +1578,7 @@
           </widget>
          </item>
          <item row="1" column="5">
-          <widget class="QRadioButton" name="doortype_closed_in">
+          <widget class="QRadioButton" name="doortype_locked_in">
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
