@@ -825,7 +825,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="144"/>
       <source>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</source>
-      <translation type="unfinished"/>
+      <translation>Fai clic con il mouse su una linea per selezionare o deselezionare il numero di stanza (con il relativo nome se è impostato) e aggiungerla o rimuoverla dalla selezione.  Fai clic con il mouse sull'intestazione della colonna per ordinare le voci utilizzandola come riferimento.  La colonna nome viene mostrata solo se almeno una delle stanze ne ha uno impostato.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2968"/>
@@ -5237,27 +5237,27 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>Click to make the color trigger ignore the text&apos;s background color - however choosing this for both foreground and background is an error.</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona per fare in modo che il trigger ignori il colore di sfondo - Non utilizzare questa opzione sia per il colore che per lo sfondo del testo.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
       <source>Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both foreground and background is an error.</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona per fare in modo che il trigger ignori il colore del testo - Non utilizzare questa opzione sia per il colore che per lo sfondo del testo.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
       <source>Click to make the color trigger when the text&apos;s background color has not been modified from its normal value.</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona per attivare il trigger anche se il colore di sfondo non è stata modificato rispetto al suo valore normale.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="67"/>
       <source>Click to make the color trigger when the text&apos;s foreground color has not been modified from its normal value.</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona per attivare il trigger anche se il colore del testo non è stata modificato rispetto al suo valore normale.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="71"/>
       <source>Click a color to make the trigger fire only when the text&apos;s background color matches the color number indicated.</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona per attivare il trigger solo quando lo sfondo del testo corrisponde al numero colore indicato.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="72"/>
@@ -12733,7 +12733,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="728"/>
       <source>This room</source>
-      <translation type="unfinished"/>
+      <translation>Questa stanza</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="747"/>
