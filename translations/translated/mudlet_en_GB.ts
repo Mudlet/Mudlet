@@ -12620,7 +12620,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="728"/>
       <source>This room</source>
-      <translation type="unfinished"/>
+      <translation>This room</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="747"/>
