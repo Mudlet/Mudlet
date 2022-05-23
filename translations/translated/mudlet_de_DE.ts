@@ -12583,7 +12583,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/room_exits.ui" line="52"/>
       <source>Northwest</source>
-      <translation>Nordwest</translation>
+      <translation>Nordwesten</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="80"/>
@@ -12662,7 +12662,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/room_exits.ui" line="320"/>
       <source>Northeast</source>
-      <translation>Nordost</translation>
+      <translation>Nordosten</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="454"/>
@@ -12701,7 +12701,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/room_exits.ui" line="728"/>
       <source>This room</source>
-      <translation type="unfinished"/>
+      <translation>Dieser Raum</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="747"/>
@@ -12726,7 +12726,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/room_exits.ui" line="1054"/>
       <source>Southwest</source>
-      <translation>Südwest</translation>
+      <translation>Südwesten</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1206"/>
@@ -12736,7 +12736,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/room_exits.ui" line="1340"/>
       <source>Southeast</source>
-      <translation>Südost</translation>
+      <translation>Südosten</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1474"/>
