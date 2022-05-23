@@ -12318,7 +12318,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="52"/>
       <source>Northwest</source>
-      <translation type="unfinished"/>
+      <translation>Noroeste</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="80"/>
@@ -12392,17 +12392,17 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="186"/>
       <source>North</source>
-      <translation type="unfinished"/>
+      <translation>Norte</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="320"/>
       <source>Northeast</source>
-      <translation type="unfinished"/>
+      <translation>Noreste</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="454"/>
       <source>Up</source>
-      <translation type="unfinished"/>
+      <translation>Arriba</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="534"/>
@@ -12431,7 +12431,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="588"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>Oeste</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="728"/>
@@ -12451,37 +12451,37 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="789"/>
       <source>East</source>
-      <translation type="unfinished"/>
+      <translation>Este</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="920"/>
       <source>Down</source>
-      <translation type="unfinished"/>
+      <translation>Down</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1054"/>
       <source>Southwest</source>
-      <translation type="unfinished"/>
+      <translation>Suroeste</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1206"/>
       <source>South</source>
-      <translation type="unfinished"/>
+      <translation>Sur</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1340"/>
       <source>Southeast</source>
-      <translation type="unfinished"/>
+      <translation>Sureste</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1474"/>
       <source>In</source>
-      <translation type="unfinished"/>
+      <translation>Adentro</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1614"/>
       <source>Key</source>
-      <translation type="unfinished"/>
+      <translation>Tecla</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1655"/>
@@ -12511,7 +12511,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1737"/>
       <source>Out</source>
-      <translation type="unfinished"/>
+      <translation>Afuera</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1877"/>
