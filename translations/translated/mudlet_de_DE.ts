@@ -12468,401 +12468,466 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <translation>Allgemeine Ausgänge:</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="93"/>
+      <location filename="../src/ui/room_exits.ui" line="90"/>
       <source>NW exit...</source>
       <translation>NW-Ausgang...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="103"/>
-      <location filename="../src/ui/room_exits.ui" line="240"/>
-      <location filename="../src/ui/room_exits.ui" line="377"/>
-      <location filename="../src/ui/room_exits.ui" line="514"/>
-      <location filename="../src/ui/room_exits.ui" line="654"/>
-      <location filename="../src/ui/room_exits.ui" line="858"/>
-      <location filename="../src/ui/room_exits.ui" line="992"/>
-      <location filename="../src/ui/room_exits.ui" line="1147"/>
-      <location filename="../src/ui/room_exits.ui" line="1284"/>
-      <location filename="../src/ui/room_exits.ui" line="1421"/>
-      <location filename="../src/ui/room_exits.ui" line="1558"/>
-      <location filename="../src/ui/room_exits.ui" line="1831"/>
+      <location filename="../src/ui/room_exits.ui" line="100"/>
+      <location filename="../src/ui/room_exits.ui" line="234"/>
+      <location filename="../src/ui/room_exits.ui" line="368"/>
+      <location filename="../src/ui/room_exits.ui" line="502"/>
+      <location filename="../src/ui/room_exits.ui" line="639"/>
+      <location filename="../src/ui/room_exits.ui" line="834"/>
+      <location filename="../src/ui/room_exits.ui" line="968"/>
+      <location filename="../src/ui/room_exits.ui" line="1120"/>
+      <location filename="../src/ui/room_exits.ui" line="1254"/>
+      <location filename="../src/ui/room_exits.ui" line="1388"/>
+      <location filename="../src/ui/room_exits.ui" line="1522"/>
+      <location filename="../src/ui/room_exits.ui" line="1785"/>
       <source>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Wähle einen positiven Wert, um die normale Gewichtung des Raums für diese Ausgangsrichtung zu setzen. Null setzt wieder den Standard.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="230"/>
+      <location filename="../src/ui/room_exits.ui" line="224"/>
       <source>N exit...</source>
       <translation>N-Ausgang...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="367"/>
+      <location filename="../src/ui/room_exits.ui" line="358"/>
       <source>NE exit...</source>
       <translation>NO-Ausgang...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="504"/>
+      <location filename="../src/ui/room_exits.ui" line="492"/>
       <source>Up exit...</source>
       <translation>Oben-Ausgang...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="644"/>
+      <location filename="../src/ui/room_exits.ui" line="629"/>
       <source>W exit...</source>
       <translation>W-Ausgang...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="752"/>
+      <location filename="../src/ui/room_exits.ui" line="734"/>
       <source>ID:</source>
       <translation>ID:</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="775"/>
+      <location filename="../src/ui/room_exits.ui" line="757"/>
       <source>Weight:</source>
       <translation>Gewicht:</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="848"/>
+      <location filename="../src/ui/room_exits.ui" line="827"/>
       <source>E exit...</source>
       <translation>O-Ausgang...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="982"/>
+      <location filename="../src/ui/room_exits.ui" line="958"/>
       <source>Down exit...</source>
       <translation>Unten-Ausgang...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1131"/>
+      <location filename="../src/ui/room_exits.ui" line="1104"/>
       <source>SW exit...</source>
       <translation>SW-Ausgang...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1274"/>
+      <location filename="../src/ui/room_exits.ui" line="1244"/>
       <source>S exit...</source>
       <translation>S-Ausgang...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1411"/>
+      <location filename="../src/ui/room_exits.ui" line="1378"/>
       <source>SE exit...</source>
       <translation>SO-Ausgang...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1548"/>
+      <location filename="../src/ui/room_exits.ui" line="1512"/>
       <source>In exit...</source>
       <translation>Rein-Ausgang...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1821"/>
+      <location filename="../src/ui/room_exits.ui" line="1775"/>
       <source>Out exit...</source>
       <translation>Raus-Ausgang...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1653"/>
-      <source>Key:</source>
-      <translation>Taste:</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/room_exits.ui" line="1671"/>
+      <location filename="../src/ui/room_exits.ui" line="1628"/>
       <source>No route</source>
       <translation>Keine Route</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1686"/>
+      <location filename="../src/ui/room_exits.ui" line="1643"/>
       <source>Stub Exit</source>
       <translation>Platzhalter</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="67"/>
-      <location filename="../src/ui/room_exits.ui" line="204"/>
-      <location filename="../src/ui/room_exits.ui" line="341"/>
-      <location filename="../src/ui/room_exits.ui" line="478"/>
-      <location filename="../src/ui/room_exits.ui" line="615"/>
-      <location filename="../src/ui/room_exits.ui" line="822"/>
-      <location filename="../src/ui/room_exits.ui" line="956"/>
-      <location filename="../src/ui/room_exits.ui" line="1099"/>
-      <location filename="../src/ui/room_exits.ui" line="1248"/>
-      <location filename="../src/ui/room_exits.ui" line="1385"/>
-      <location filename="../src/ui/room_exits.ui" line="1522"/>
-      <location filename="../src/ui/room_exits.ui" line="1795"/>
-      <location filename="../src/ui/room_exits.ui" line="1979"/>
+      <location filename="../src/ui/room_exits.ui" line="64"/>
+      <location filename="../src/ui/room_exits.ui" line="198"/>
+      <location filename="../src/ui/room_exits.ui" line="332"/>
+      <location filename="../src/ui/room_exits.ui" line="466"/>
+      <location filename="../src/ui/room_exits.ui" line="600"/>
+      <location filename="../src/ui/room_exits.ui" line="801"/>
+      <location filename="../src/ui/room_exits.ui" line="932"/>
+      <location filename="../src/ui/room_exits.ui" line="1072"/>
+      <location filename="../src/ui/room_exits.ui" line="1218"/>
+      <location filename="../src/ui/room_exits.ui" line="1352"/>
+      <location filename="../src/ui/room_exits.ui" line="1486"/>
+      <location filename="../src/ui/room_exits.ui" line="1749"/>
+      <location filename="../src/ui/room_exits.ui" line="1933"/>
       <source>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Verhindere die Erstellung von Routen durch diesen Ausgang. Das entspricht einem unendlichen Gewicht des Ausgangs.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="83"/>
-      <location filename="../src/ui/room_exits.ui" line="220"/>
-      <location filename="../src/ui/room_exits.ui" line="357"/>
-      <location filename="../src/ui/room_exits.ui" line="494"/>
-      <location filename="../src/ui/room_exits.ui" line="631"/>
-      <location filename="../src/ui/room_exits.ui" line="838"/>
-      <location filename="../src/ui/room_exits.ui" line="972"/>
-      <location filename="../src/ui/room_exits.ui" line="1121"/>
-      <location filename="../src/ui/room_exits.ui" line="1264"/>
-      <location filename="../src/ui/room_exits.ui" line="1401"/>
-      <location filename="../src/ui/room_exits.ui" line="1538"/>
-      <location filename="../src/ui/room_exits.ui" line="1811"/>
+      <location filename="../src/ui/room_exits.ui" line="52"/>
+      <source>Northwest</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/room_exits.ui" line="80"/>
+      <location filename="../src/ui/room_exits.ui" line="214"/>
+      <location filename="../src/ui/room_exits.ui" line="348"/>
+      <location filename="../src/ui/room_exits.ui" line="482"/>
+      <location filename="../src/ui/room_exits.ui" line="616"/>
+      <location filename="../src/ui/room_exits.ui" line="817"/>
+      <location filename="../src/ui/room_exits.ui" line="948"/>
+      <location filename="../src/ui/room_exits.ui" line="1094"/>
+      <location filename="../src/ui/room_exits.ui" line="1234"/>
+      <location filename="../src/ui/room_exits.ui" line="1368"/>
+      <location filename="../src/ui/room_exits.ui" line="1502"/>
+      <location filename="../src/ui/room_exits.ui" line="1765"/>
       <source>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Erstelle in diese Richtung einen Abzweig mit unbekanntem Ziel. Kann nicht gleichzeitig einen Ausgang mit echter RaumID haben.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="116"/>
-      <location filename="../src/ui/room_exits.ui" line="253"/>
-      <location filename="../src/ui/room_exits.ui" line="390"/>
-      <location filename="../src/ui/room_exits.ui" line="527"/>
-      <location filename="../src/ui/room_exits.ui" line="667"/>
-      <location filename="../src/ui/room_exits.ui" line="868"/>
-      <location filename="../src/ui/room_exits.ui" line="1005"/>
-      <location filename="../src/ui/room_exits.ui" line="1160"/>
-      <location filename="../src/ui/room_exits.ui" line="1297"/>
-      <location filename="../src/ui/room_exits.ui" line="1434"/>
-      <location filename="../src/ui/room_exits.ui" line="1571"/>
-      <location filename="../src/ui/room_exits.ui" line="1844"/>
-      <location filename="../src/ui/room_exits.ui" line="1997"/>
+      <location filename="../src/ui/room_exits.ui" line="113"/>
+      <location filename="../src/ui/room_exits.ui" line="247"/>
+      <location filename="../src/ui/room_exits.ui" line="381"/>
+      <location filename="../src/ui/room_exits.ui" line="515"/>
+      <location filename="../src/ui/room_exits.ui" line="652"/>
+      <location filename="../src/ui/room_exits.ui" line="847"/>
+      <location filename="../src/ui/room_exits.ui" line="981"/>
+      <location filename="../src/ui/room_exits.ui" line="1133"/>
+      <location filename="../src/ui/room_exits.ui" line="1267"/>
+      <location filename="../src/ui/room_exits.ui" line="1401"/>
+      <location filename="../src/ui/room_exits.ui" line="1535"/>
+      <location filename="../src/ui/room_exits.ui" line="1798"/>
+      <location filename="../src/ui/room_exits.ui" line="1951"/>
       <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Für diesen Ausgang wird kein Symbol für die Tür auf der 2D Karte gezeichnet.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="135"/>
-      <location filename="../src/ui/room_exits.ui" line="272"/>
-      <location filename="../src/ui/room_exits.ui" line="409"/>
-      <location filename="../src/ui/room_exits.ui" line="686"/>
-      <location filename="../src/ui/room_exits.ui" line="887"/>
-      <location filename="../src/ui/room_exits.ui" line="1179"/>
-      <location filename="../src/ui/room_exits.ui" line="1316"/>
-      <location filename="../src/ui/room_exits.ui" line="1453"/>
+      <location filename="../src/ui/room_exits.ui" line="132"/>
+      <location filename="../src/ui/room_exits.ui" line="266"/>
+      <location filename="../src/ui/room_exits.ui" line="400"/>
+      <location filename="../src/ui/room_exits.ui" line="671"/>
+      <location filename="../src/ui/room_exits.ui" line="866"/>
+      <location filename="../src/ui/room_exits.ui" line="1152"/>
+      <location filename="../src/ui/room_exits.ui" line="1286"/>
+      <location filename="../src/ui/room_exits.ui" line="1420"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ein grünes Symbol für die (offene) Tür wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="151"/>
-      <location filename="../src/ui/room_exits.ui" line="288"/>
-      <location filename="../src/ui/room_exits.ui" line="425"/>
-      <location filename="../src/ui/room_exits.ui" line="702"/>
-      <location filename="../src/ui/room_exits.ui" line="903"/>
-      <location filename="../src/ui/room_exits.ui" line="1195"/>
-      <location filename="../src/ui/room_exits.ui" line="1332"/>
-      <location filename="../src/ui/room_exits.ui" line="1469"/>
+      <location filename="../src/ui/room_exits.ui" line="148"/>
+      <location filename="../src/ui/room_exits.ui" line="282"/>
+      <location filename="../src/ui/room_exits.ui" line="416"/>
+      <location filename="../src/ui/room_exits.ui" line="687"/>
+      <location filename="../src/ui/room_exits.ui" line="882"/>
+      <location filename="../src/ui/room_exits.ui" line="1168"/>
+      <location filename="../src/ui/room_exits.ui" line="1302"/>
+      <location filename="../src/ui/room_exits.ui" line="1436"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ein oranges Symbol für die (geschlossene) Tür wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="167"/>
-      <location filename="../src/ui/room_exits.ui" line="304"/>
-      <location filename="../src/ui/room_exits.ui" line="441"/>
-      <location filename="../src/ui/room_exits.ui" line="718"/>
-      <location filename="../src/ui/room_exits.ui" line="919"/>
-      <location filename="../src/ui/room_exits.ui" line="1211"/>
-      <location filename="../src/ui/room_exits.ui" line="1348"/>
-      <location filename="../src/ui/room_exits.ui" line="1485"/>
+      <location filename="../src/ui/room_exits.ui" line="164"/>
+      <location filename="../src/ui/room_exits.ui" line="298"/>
+      <location filename="../src/ui/room_exits.ui" line="432"/>
+      <location filename="../src/ui/room_exits.ui" line="703"/>
+      <location filename="../src/ui/room_exits.ui" line="898"/>
+      <location filename="../src/ui/room_exits.ui" line="1184"/>
+      <location filename="../src/ui/room_exits.ui" line="1318"/>
+      <location filename="../src/ui/room_exits.ui" line="1452"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ein rotes Symbol für die (versperrte) Tür wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="546"/>
-      <location filename="../src/ui/room_exits.ui" line="1024"/>
-      <location filename="../src/ui/room_exits.ui" line="1590"/>
-      <location filename="../src/ui/room_exits.ui" line="1863"/>
+      <location filename="../src/ui/room_exits.ui" line="186"/>
+      <source>North</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/room_exits.ui" line="320"/>
+      <source>Northeast</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/room_exits.ui" line="454"/>
+      <source>Up</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/room_exits.ui" line="534"/>
+      <location filename="../src/ui/room_exits.ui" line="1000"/>
+      <location filename="../src/ui/room_exits.ui" line="1554"/>
+      <location filename="../src/ui/room_exits.ui" line="1817"/>
       <source>&lt;p&gt;A symbol is drawn with a green (Open) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ein Symbol mit grüner (offener) Füllung wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="562"/>
-      <location filename="../src/ui/room_exits.ui" line="1040"/>
-      <location filename="../src/ui/room_exits.ui" line="1606"/>
-      <location filename="../src/ui/room_exits.ui" line="1879"/>
+      <location filename="../src/ui/room_exits.ui" line="550"/>
+      <location filename="../src/ui/room_exits.ui" line="1016"/>
+      <location filename="../src/ui/room_exits.ui" line="1570"/>
+      <location filename="../src/ui/room_exits.ui" line="1833"/>
       <source>&lt;p&gt;A symbol is drawn with an orange (Closed) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ein Symbol mit oranger (geschlossener) Füllung wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="578"/>
-      <location filename="../src/ui/room_exits.ui" line="1056"/>
-      <location filename="../src/ui/room_exits.ui" line="1622"/>
-      <location filename="../src/ui/room_exits.ui" line="1895"/>
+      <location filename="../src/ui/room_exits.ui" line="566"/>
+      <location filename="../src/ui/room_exits.ui" line="1032"/>
+      <location filename="../src/ui/room_exits.ui" line="1586"/>
+      <location filename="../src/ui/room_exits.ui" line="1849"/>
       <source>&lt;p&gt;A symbol is drawn with a red (Locked) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ein Symbol mit roter (versperrter) Füllung wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="765"/>
+      <location filename="../src/ui/room_exits.ui" line="588"/>
+      <source>West</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/room_exits.ui" line="728"/>
+      <source>This room</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/room_exits.ui" line="747"/>
       <source>&lt;p&gt;This is the Room ID Number for this room - it cannot be changed here!</source>
       <translation>&lt;p&gt;Dies ist die Raum ID des aktuellen Raums - sie kann hier nicht geändert werden!</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="788"/>
+      <location filename="../src/ui/room_exits.ui" line="770"/>
       <source>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set - this value cannot be changed here.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Dies ist die normale Gewichtung dieses Raums. Sie wird für jeden Ausgang benutzt, der &lt;i&gt;zu &lt;u&gt;diesem Raum&lt;/u&gt; hinführt&lt;/i&gt; und keinen eigenen Wert gesetzt hat - Dieser Wert kann hier nicht geändert werden.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1698"/>
+      <location filename="../src/ui/room_exits.ui" line="789"/>
+      <source>East</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/room_exits.ui" line="920"/>
+      <source>Down</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/room_exits.ui" line="1054"/>
+      <source>Southwest</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/room_exits.ui" line="1206"/>
+      <source>South</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/room_exits.ui" line="1340"/>
+      <source>Southeast</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/room_exits.ui" line="1474"/>
+      <source>In</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/room_exits.ui" line="1614"/>
+      <source>Key</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/room_exits.ui" line="1655"/>
       <source>Exit RoomID number</source>
       <translation>Ausgangs RaumID Nummer</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1725"/>
+      <location filename="../src/ui/room_exits.ui" line="1682"/>
       <source>No door</source>
       <translation>Keine Tür</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1740"/>
+      <location filename="../src/ui/room_exits.ui" line="1697"/>
       <source>Open door</source>
       <translation>Offene Tür</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1752"/>
+      <location filename="../src/ui/room_exits.ui" line="1709"/>
       <source>Closed door</source>
       <translation>Geschlossene Tür</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1764"/>
+      <location filename="../src/ui/room_exits.ui" line="1721"/>
       <source>Locked door</source>
       <translation>Versperrte Tür</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1923"/>
+      <location filename="../src/ui/room_exits.ui" line="1737"/>
+      <source>Out</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/room_exits.ui" line="1877"/>
       <source>&lt;p&gt;Click on an item to edit/change it. To delete a Special Exit, ether: select it and press the keyboard Delete key; or set its Exit roomID to less than one; or clear the name/command entry.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Klicke auf ein Element, um es zu bearbeiten/ändern. Um einen Sonderausgang zu löschen, wähle ihn aus und drücke Löschen auf der Tastatur; oder setze seine Raum-ID auf weniger als eins; oder lösche den eingetragenen Namen/Befehl.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1966"/>
+      <location filename="../src/ui/room_exits.ui" line="1920"/>
       <source>Exit
 Status</source>
       <translation>Ausgang
 Status</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1970"/>
+      <location filename="../src/ui/room_exits.ui" line="1924"/>
       <source>&lt;p&gt;Indicates whether the exit is invalid, leads to another room in this area or leads to a room in another area.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Zeigt an, ob der Ausgang ungültig ist, zu einem anderen Raum in diesem Gebiet führt oder zu einem Raum in einem anderen Gebiet führt.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2006"/>
+      <location filename="../src/ui/room_exits.ui" line="1960"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ein grünes (offenes) Türsymbol wird auf der 2D Karte gezeichnet.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2015"/>
+      <location filename="../src/ui/room_exits.ui" line="1969"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ein oranges (geschlossenes) Türsymbol wird auf der 2D Karte gezeichnet.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2024"/>
+      <location filename="../src/ui/room_exits.ui" line="1978"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ein rotes (versperrtes) Türsymbol wird auf der 2D Karte gezeichnet.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2033"/>
+      <location filename="../src/ui/room_exits.ui" line="1987"/>
       <source>&lt;p&gt;(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</source>
       <translation>&lt;p&gt;(Lua-Skripte für die Profile, die das Paket &lt;tt&gt;mudlet-mapper&lt;/tt&gt; verwenden, müssen mit &quot;script:&quot; beginnen).&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2101"/>
+      <location filename="../src/ui/room_exits.ui" line="2055"/>
       <source>&lt;p&gt;Use this button to save any changes, will also remove any invalid Special exits.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Benutze diese Schaltfläche, um alle Änderungen zu speichern, und auch alle ungültigen besonderen Ausgänge zu entfernen.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2117"/>
+      <location filename="../src/ui/room_exits.ui" line="2071"/>
       <source>&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Mit dieser Schaltfläche schließt du den Dialog ohne etwas zu ändern.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1961"/>
+      <location filename="../src/ui/room_exits.ui" line="1915"/>
       <source>&lt;p&gt;Set the number of the room that this exit leads to, if set to zero the exit will be removed on saving the exits.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Wähle die ID des Raums zu dem dieser Ausgang hinführt. Bei Null wird dieser Ausgang beim Speichern entfernt.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2050"/>
+      <location filename="../src/ui/room_exits.ui" line="2004"/>
       <source>&lt;p&gt;Add an empty item to Special exits to be edited as required.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Ergänze ein leeres Element zu den besonderen Ausgängen, damit es wie benötigt bearbeitet werden kann.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2069"/>
+      <location filename="../src/ui/room_exits.ui" line="2023"/>
       <source>&lt;p&gt;Press this button to deactivate the selection of a Special exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Klicke diese Schaltfläche um die Auswahl des besonderen Ausgangs zu deaktivieren.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2104"/>
+      <location filename="../src/ui/room_exits.ui" line="2058"/>
       <source>&amp;Save</source>
       <translation>&amp;Speichern</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1710"/>
+      <location filename="../src/ui/room_exits.ui" line="1667"/>
       <source>Exit Weight (0=No override)</source>
       <translation>Gewichtung des Ausgangs (0=Nicht überschreiben)</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2120"/>
+      <location filename="../src/ui/room_exits.ui" line="2074"/>
       <source>&amp;Cancel</source>
       <translation>&amp;Abbrechen</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1914"/>
+      <location filename="../src/ui/room_exits.ui" line="1868"/>
       <source>Special exits:</source>
       <translation>Spezielle Ausgänge:</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1957"/>
+      <location filename="../src/ui/room_exits.ui" line="1911"/>
       <source>Exit
 Room ID</source>
       <translation>Ausgang
 Raum-ID</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1975"/>
+      <location filename="../src/ui/room_exits.ui" line="1929"/>
       <source>No
 Route</source>
       <translation>Keine
 Route</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1984"/>
+      <location filename="../src/ui/room_exits.ui" line="1938"/>
       <source>Exit
 Weight</source>
       <translation>Ausgang
 Gewicht</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1988"/>
+      <location filename="../src/ui/room_exits.ui" line="1942"/>
       <source>&lt;p&gt;Set to a positive integer value to override the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Wähle einen positiven Wert, um die normale Gewichtung des Raums für diese Ausgangsrichtung zu setzen. Null setzt wieder den Standard.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1993"/>
+      <location filename="../src/ui/room_exits.ui" line="1947"/>
       <source>Door
 None</source>
       <translation>Tür
 Keine</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2002"/>
+      <location filename="../src/ui/room_exits.ui" line="1956"/>
       <source>Door
 Open</source>
       <translation>Tür
 Offen</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2011"/>
+      <location filename="../src/ui/room_exits.ui" line="1965"/>
       <source>Door
 Closed</source>
       <translation>Tür
 Geschlossen</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2020"/>
+      <location filename="../src/ui/room_exits.ui" line="1974"/>
       <source>Door
 Locked</source>
       <translation>Tür
 Versperrt</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2029"/>
+      <location filename="../src/ui/room_exits.ui" line="1983"/>
       <source>Command
 or LUA script</source>
       <translation>Befehl oder 
 LUA Skript</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2053"/>
+      <location filename="../src/ui/room_exits.ui" line="2007"/>
       <source>&amp;Add special exit</source>
       <translation>Besonderen Ausgang hinzufügen</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2072"/>
+      <location filename="../src/ui/room_exits.ui" line="2026"/>
       <source>&amp;End S. Exits editing</source>
       <translation>Besonderen Auswahl abwählen</translation>
     </message>
