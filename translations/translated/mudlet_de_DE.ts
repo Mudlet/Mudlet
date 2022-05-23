@@ -12746,7 +12746,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/room_exits.ui" line="1614"/>
       <source>Key</source>
-      <translation>Taste</translation>
+      <translation>Legende</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1655"/>
