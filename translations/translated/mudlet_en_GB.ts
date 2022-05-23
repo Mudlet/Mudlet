@@ -8386,7 +8386,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="110"/>
       <source>Options</source>
-      <translation type="unfinished"/>
+      <translation>Options</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="117"/>
@@ -12502,7 +12502,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="52"/>
       <source>Northwest</source>
-      <translation type="unfinished"/>
+      <translation>Northwest</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="80"/>
@@ -12576,17 +12576,17 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="186"/>
       <source>North</source>
-      <translation type="unfinished"/>
+      <translation>North</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="320"/>
       <source>Northeast</source>
-      <translation type="unfinished"/>
+      <translation>Northeast</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="454"/>
       <source>Up</source>
-      <translation type="unfinished"/>
+      <translation>Up</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="534"/>
@@ -12615,7 +12615,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="588"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>West</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="728"/>
@@ -12635,37 +12635,37 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="789"/>
       <source>East</source>
-      <translation type="unfinished"/>
+      <translation>East</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="920"/>
       <source>Down</source>
-      <translation type="unfinished"/>
+      <translation>Down</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1054"/>
       <source>Southwest</source>
-      <translation type="unfinished"/>
+      <translation>Southwest</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1206"/>
       <source>South</source>
-      <translation type="unfinished"/>
+      <translation>South</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1340"/>
       <source>Southeast</source>
-      <translation type="unfinished"/>
+      <translation>Southeast</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1474"/>
       <source>In</source>
-      <translation type="unfinished"/>
+      <translation>In</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1614"/>
       <source>Key</source>
-      <translation type="unfinished"/>
+      <translation>Key</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1655"/>
@@ -12695,7 +12695,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1737"/>
       <source>Out</source>
-      <translation type="unfinished"/>
+      <translation>Out</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1877"/>
