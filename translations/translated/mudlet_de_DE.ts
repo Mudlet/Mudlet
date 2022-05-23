@@ -12583,7 +12583,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/room_exits.ui" line="52"/>
       <source>Northwest</source>
-      <translation type="unfinished"/>
+      <translation>Nordwest</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="80"/>
@@ -12657,17 +12657,17 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/room_exits.ui" line="186"/>
       <source>North</source>
-      <translation type="unfinished"/>
+      <translation>Norden</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="320"/>
       <source>Northeast</source>
-      <translation type="unfinished"/>
+      <translation>Nordost</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="454"/>
       <source>Up</source>
-      <translation type="unfinished"/>
+      <translation>Oben</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="534"/>
@@ -12696,7 +12696,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/room_exits.ui" line="588"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>Westen</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="728"/>
@@ -12716,37 +12716,37 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/room_exits.ui" line="789"/>
       <source>East</source>
-      <translation type="unfinished"/>
+      <translation>Osten</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="920"/>
       <source>Down</source>
-      <translation type="unfinished"/>
+      <translation>Unten</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1054"/>
       <source>Southwest</source>
-      <translation type="unfinished"/>
+      <translation>Südwest</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1206"/>
       <source>South</source>
-      <translation type="unfinished"/>
+      <translation>Süden</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1340"/>
       <source>Southeast</source>
-      <translation type="unfinished"/>
+      <translation>Südost</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1474"/>
       <source>In</source>
-      <translation type="unfinished"/>
+      <translation>Rein</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1614"/>
       <source>Key</source>
-      <translation type="unfinished"/>
+      <translation>Taste</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1655"/>
@@ -12776,7 +12776,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/room_exits.ui" line="1737"/>
       <source>Out</source>
-      <translation type="unfinished"/>
+      <translation>Raus</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1877"/>
