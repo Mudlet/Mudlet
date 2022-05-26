@@ -546,7 +546,7 @@ void dlgConnectionProfiles::slot_save_name()
 void dlgConnectionProfiles::slot_addProfile()
 {
     profile_name_entry->setReadOnly(false);
-    // while normally handled by fillout_form, due to it's asyncronous nature it is better UX to reset it here
+    // while normally handled by fillout_form, due to it's asynchronous nature it is better UX to reset it here
     character_password_entry->setText(QString());
     fillout_form();
     welcome_message->hide();
