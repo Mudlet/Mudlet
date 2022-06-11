@@ -75,6 +75,14 @@ msvc:QMAKE_CXXFLAGS += -MP
 # Mac specific flags.
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
 
+# Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
+# from windows.h - only needed on Windows builds but we cannot use Q_OS_WIN32
+# for an #ifdef because we need a symbol that is defined BEFORE we include
+# any Qt header file!
+win32 {
+    DEFINES += INCLUDE_WINSOCK2
+}
+
 QT += network uitools multimedia gui concurrent
 qtHaveModule(gamepad) {
     QT += gamepad

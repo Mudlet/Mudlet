@@ -415,6 +415,14 @@ if(USE_OWN_QT5KEYCHAIN)
     target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 
+# Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
+# from windows.h - only needed on Windows builds but we cannot use Q_OS_WIN32
+# for an #ifdef because we need a symbol that is defined BEFORE we include
+# any Qt header file!
+if(WIN32)
+    target_compile_definitions(mudlet PRIVATE INCLUDE_WINSOCK2)
+endif()
+
 # One of IRC_STATIC or IRC_SHARED must be defined for the communi IRC library
 target_compile_definitions(communi PUBLIC IRC_STATIC)
 
