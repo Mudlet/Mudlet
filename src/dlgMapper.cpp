@@ -299,6 +299,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
     }
 
 #else
+    Q_UNUSED(is3DMode)
     mp2dMap->setVisible(true);
     widget_3DControls->setVisible(false);
     widget_2DControls->setVisible(true);
