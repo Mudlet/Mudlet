@@ -4240,7 +4240,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="483"/>
       <source>Connect to</source>
-      <translation type="unfinished"/>
+      <translation>连接到</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="510"/>
@@ -5452,7 +5452,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1423"/>
       <source>Copying...</source>
-      <translation type="unfinished"/>
+      <translation>正在复制...</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1763"/>
