@@ -6686,7 +6686,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1067"/>
       <source>Exit to unnamed room in area: &quot;%1&quot;, is valid.</source>
-      <translation type="unfinished"/>
+      <translation>离开未命名房间 : &quot;%1&quot;，有效。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1075"/>
@@ -12630,7 +12630,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="728"/>
       <source>This room</source>
-      <translation type="unfinished"/>
+      <translation>这个房间</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="747"/>
@@ -12727,12 +12727,12 @@ Status</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1960"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;绿色 (开放的) 的符号在 2D 图上绘制。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1969"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;橙色（关闭的）的标志被绘制在2D地图上。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1978"/>
