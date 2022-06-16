@@ -7481,24 +7481,13 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
     int from = getVerifiedInt(L, __func__, 1, "line to start matching from");
     int howMany  = getVerifiedInt(L, __func__, 2, "how many lines to match for");
     int triggerID;
-    int expiryCount = -1;
-
-    if (lua_isnumber(L, 4)) {
-        expiryCount = lua_tonumber(L, 4);
-
-        if (expiryCount < 1) {
-            return warnArgumentValue(L, __func__, qsl(
-                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
-        }
-    } else if (!lua_isnoneornil(L, 4)) {
-        lua_pushfstring(L, "tempLineTrigger: bad argument #4 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 4));
-        return lua_error(L);
-    }
+    // temp line triggers expire naturally on their own, thus don't need the expiry mechanism applicable to all other triggers
+    int dontExpire = -1;
 
     if (lua_isstring(L, 3)) {
-        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString(lua_tostring(L, 3)), expiryCount);
+        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString(lua_tostring(L, 3)), dontExpire);
     } else if (lua_isfunction(L, 3)) {
-        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString(), expiryCount);
+        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString(), dontExpire);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
