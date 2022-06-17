@@ -234,7 +234,9 @@ function InstallQt() {
   exec "aqt" @("list-qt", "windows", "desktop", "--archives", "5.14.2", "win32_mingw73")
   Step "Installing Qt base"
   exec "aqt" @("install-qt", "windows", "desktop", "5.14.2", "win32_mingw73")
-  }
+  Step "Installing Mingw 7.3.0 Win32 tools"
+  exec "aqt" @("install-tool", "windows", "desktop", "tools_mingw", "qt.tools.win32_mingw730")
+}
 
 function InstallPython() {
   DownloadFile "https://www.python.org/ftp/python/2.7.14/python-2.7.14.msi" "python-installer.msi" $true
@@ -246,7 +248,7 @@ function InstallPython() {
 
 function InstallOpenssl() {
   # needs to be from http://wiki.overbyte.eu/wiki/index.php/ICS_Download as it includes extra binaries not available on openssl.org
-  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.1.1l-win32.zip" "openssl-win32.zip"
+  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.1.1n-win32.zip" "openssl-win32.zip"
   ExtractZip "openssl-win32.zip" "openssl"
   Step "installing"
   exec "XCOPY" @("/S", "/I", "/Q", "openssl", "$Env:MINGW_BASE_DIR\bin")
@@ -344,7 +346,7 @@ function InstallLibzip() {
   }
   Set-Location build
   Step "running cmake"
-  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "-DENABLE_OPENSSL=OFF", "..")
+  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "-DENABLE_OPENSSL=OFF", "-DBUILD_REGRESS=OFF", "-DBUILD_EXAMPLES=OFF", "-DBUILD_DOC=OFF", "..")
   RunMake
   RunMakeInstall
   $Env:Path = $ShPath

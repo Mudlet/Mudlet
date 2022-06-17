@@ -7481,24 +7481,13 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
     int from = getVerifiedInt(L, __func__, 1, "line to start matching from");
     int howMany  = getVerifiedInt(L, __func__, 2, "how many lines to match for");
     int triggerID;
-    int expiryCount = -1;
-
-    if (lua_isnumber(L, 4)) {
-        expiryCount = lua_tonumber(L, 4);
-
-        if (expiryCount < 1) {
-            return warnArgumentValue(L, __func__, qsl(
-                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
-        }
-    } else if (!lua_isnoneornil(L, 4)) {
-        lua_pushfstring(L, "tempLineTrigger: bad argument #4 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 4));
-        return lua_error(L);
-    }
+    // temp line triggers expire naturally on their own, thus don't need the expiry mechanism applicable to all other triggers
+    int dontExpire = -1;
 
     if (lua_isstring(L, 3)) {
-        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString(lua_tostring(L, 3)), expiryCount);
+        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString(lua_tostring(L, 3)), dontExpire);
     } else if (lua_isfunction(L, 3)) {
-        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString(), expiryCount);
+        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString(), dontExpire);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
@@ -12280,7 +12269,7 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
 
     result = dlgIRC::writeIrcPassword(pHost, password);
     if (!result.first) {
-        return warnArgumentValue(L, __func__, QStringLiteral("unable to save password, reason: %1").arg(result.second));
+        return warnArgumentValue(L, __func__, qsl("unable to save password, reason: %1").arg(result.second));
     }
 
     lua_pushboolean(L, true);
@@ -14223,20 +14212,39 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             }
             lua_setfield(L, -2, qsl("buttons").toUtf8().constData());
 
+// The Qt documentation is unclear when, precisely QWheelEvent::globalPos()
+// became obsolete, 5.14.0 is a guess
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            auto globalPosition = qME->globalPosition();
+#else
+            auto globalPosition = qME->globalPos();
+#endif
             // Push globalX()
-            lua_pushnumber(L, qME->globalX());
+            lua_pushnumber(L, globalPosition.x());
             lua_setfield(L, -2, qsl("globalX").toUtf8().constData());
 
             // Push globalY()
-            lua_pushnumber(L, qME->globalY());
+            lua_pushnumber(L, globalPosition.y());
             lua_setfield(L, -2, qsl("globalY").toUtf8().constData());
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            auto position = qME->position();
+#endif
+
             // Push x()
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            lua_pushnumber(L, position.x());
+#else
             lua_pushnumber(L, qME->x());
+#endif
             lua_setfield(L, -2, qsl("x").toUtf8().constData());
 
             // Push y()
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            lua_pushnumber(L, position.y());
+#else
             lua_pushnumber(L, qME->y());
+#endif
             lua_setfield(L, -2, qsl("y").toUtf8().constData());
 
             // Push angleDelta()
@@ -15337,6 +15345,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addMouseEvent", TLuaInterpreter::addMouseEvent);
     lua_register(pGlobalLua, "removeMouseEvent", TLuaInterpreter::removeMouseEvent);
     lua_register(pGlobalLua, "getMouseEvents", TLuaInterpreter::getMouseEvents);
+    lua_register(pGlobalLua, "setConfig", TLuaInterpreter::setConfig);
     lua_register(pGlobalLua, "addCommandLineMenuEvent", TLuaInterpreter::addCommandLineMenuEvent);
     lua_register(pGlobalLua, "removeCommandLineMenuEvent", TLuaInterpreter::removeCommandLineMenuEvent);
     lua_register(pGlobalLua, "deleteMap", TLuaInterpreter::deleteMap);
@@ -17197,6 +17206,110 @@ int TLuaInterpreter::getMouseEvents(lua_State * L)
     return 1;
 }
 
+int TLuaInterpreter::setConfig(lua_State * L)
+{
+    auto& host = getHostFromLua(L);
+    QString key = getVerifiedString(L, __func__, 1, "key");
+    if (key.isEmpty()) {
+        return warnArgumentValue(L, __func__, "you must provide key");
+    }
+
+    auto success = [&]()
+    {
+        if (mudlet::debugMode) {
+            TDebug(Qt::white, Qt::blue) << qsl("setConfig: a script has changed %1\n").arg(key) >> &host;
+        }
+        lua_pushboolean(L, true);
+        return 1;
+    };
+
+    if (host.mpMap && host.mpMap->mpMapper) {
+        if (key == qsl("mapRoomSize")) {
+            host.mpMap->mpMapper->slot_setRoomSize(getVerifiedInt(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == qsl("mapExitSize")) {
+            host.mpMap->mpMapper->slot_setExitSize(getVerifiedInt(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == qsl("mapRoundRooms")) {
+            host.mpMap->mpMapper->slot_toggleRoundRooms(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == qsl("showRoomIdsOnMap")) {
+            host.mpMap->mpMapper->slot_setShowRoomIds(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == qsl("showMapInfo")) {
+            host.mMapInfoContributors.insert(getVerifiedString(L, __func__, 2, "value"));
+            host.mpMap->mpMapper->slot_updateInfoContributors();
+            return success();
+        }
+        if (key == qsl("hideMapInfo")) {
+            host.mMapInfoContributors.remove(getVerifiedString(L, __func__, 2, "value"));
+            host.mpMap->mpMapper->slot_updateInfoContributors();
+            return success();
+        }
+#if defined(INCLUDE_3DMAPPER)
+        if (key == qsl("show3dMapView")) {
+            host.mpMap->mpMapper->slot_toggle3DView(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+#endif
+        if (key == qsl("mapperPanelVisible")) {
+            host.mpMap->mpMapper->slot_setMapperPanelVisible(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == qsl("mapShowRoomBorders")) {
+            host.mMapperShowRoomBorders = getVerifiedBool(L, __func__, 2, "value");
+            return success();
+        }
+    }
+
+    if (key == qsl("enableGMCP")) {
+        host.mEnableGMCP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableMSDP")) {
+        host.mEnableMSDP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableMSSP")) {
+        host.mEnableMSSP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableMSP")) {
+        host.mEnableMSP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("inputLineStrictUnixEndings")) {
+        host.mUSE_UNIX_EOL = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("fixUnnecessaryLinebreaks")) {
+        host.set_USE_IRE_DRIVER_BUGFIX(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
+    if (key == qsl("specialForceCompressionOff")) {
+        host.mFORCE_NO_COMPRESSION = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("specialForceGAOff")) {
+        host.mFORCE_GA_OFF = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("specialForceCharsetNegotiationOff")) {
+        host.mFORCE_CHARSET_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("specialForceMxpNegotiationOff")) {
+        host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+
+    return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCommandLineMenuEvent
 int TLuaInterpreter::addCommandLineMenuEvent(lua_State * L)
 {
@@ -17376,4 +17489,3 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 
     return 1;
 }
-

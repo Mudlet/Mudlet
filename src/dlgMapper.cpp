@@ -237,8 +237,13 @@ void dlgMapper::slot_toggleStrongHighlight(int v)
 
 void dlgMapper::slot_togglePanel()
 {
-    widget_panel->setVisible(!widget_panel->isVisible());
-    mpHost->mShowPanel = widget_panel->isVisible();
+    dlgMapper::slot_setMapperPanelVisible(!widget_panel->isVisible());
+}
+
+void dlgMapper::slot_setMapperPanelVisible(bool panelVisible)
+{
+    widget_panel->setVisible(panelVisible);
+    mpHost->mShowPanel = panelVisible;
 }
 
 void dlgMapper::slot_toggle3DView(const bool is3DMode)
@@ -294,6 +299,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
     }
 
 #else
+    Q_UNUSED(is3DMode)
     mp2dMap->setVisible(true);
     widget_3DControls->setVisible(false);
     widget_2DControls->setVisible(true);
@@ -311,6 +317,24 @@ void dlgMapper::slot_exitSize(int d)
 {
     mp2dMap->setExitSize(d);
     mp2dMap->update();
+}
+
+void dlgMapper::slot_setRoomSize(int d)
+{
+    dlgMapper::slot_roomSize(d);
+    spinBox_roomSize->setValue(d);
+}
+
+void dlgMapper::slot_setExitSize(int d)
+{
+    dlgMapper::slot_exitSize(d);
+    spinBox_exitSize->setValue(d);
+}
+
+void dlgMapper::slot_setShowRoomIds(bool showRoomIds)
+{
+    checkBox_showRoomIds->setChecked(showRoomIds);
+    dlgMapper::slot_toggleShowRoomIDs(showRoomIds ? Qt::Checked : Qt::Unchecked);
 }
 
 void dlgMapper::slot_toggleRoundRooms(const bool state)
@@ -396,6 +420,7 @@ void dlgMapper::slot_updateInfoContributors()
         });
         pushButton_info->menu()->addAction(action);
     }
+    mp2dMap->update();
 }
 
 // Is the mapper contained inside a floating/dockable QDockWidget?

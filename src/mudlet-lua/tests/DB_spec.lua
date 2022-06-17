@@ -371,11 +371,11 @@ describe("Tests DB.lua functions", function()
       assert.are.same(test, res[1])
     end)
 
-    it("should successfully delete columns in a non empty table.",
+    it("should successfully delete columns in a non empty table if force argument is provided.",
     function()
       local test = { name = "foo", id = 500, blubb = "bar" }
       db:add(mydb.sheet, test)
-      mydb = db:create("mydbt_testingonly", { sheet = { name = "", id = 0 }})
+      mydb = db:create("mydbt_testingonly", { sheet = { name = "", id = 0 }}, true)
       local res = db:fetch(mydb.sheet)
       test.blubb = nil -- we expect the blubb gets deleted
       assert.are.equal(1, #res)
@@ -383,6 +383,24 @@ describe("Tests DB.lua functions", function()
       assert.are.same(test, res[1])
     end)
 
+    it("should fail to delete columns in a non empty table if force argument is not provided.",
+    function()
+      local test = { name = "foo", id = 500, blubb = "bar" }
+      db:add(mydb.sheet, test)
+      assert.has_error(function() db:create("mydbt_testingonly", { sheet = { name = "", id = 0 }}) end)
+    end)
+
+    it("should successfully delete empty columns in a non empty table",
+    function()
+      local test = { name = "foo", id = 500, blubb = db:Null() }
+      db:add(mydb.sheet, test)
+      mydb = db:create("mydbt_testingonly", { sheet = { name = "", id = 0 }}, true)
+      local res = db:fetch(mydb.sheet)
+      test.blubb = nil -- we expect the blubb gets deleted
+      assert.are.equal(1, #res)
+      res[1]._row_id = nil --we get the row id back, which we don't need
+      assert.are.same(test, res[1])
+    end)
   end)
 
 
@@ -890,4 +908,129 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
+  describe("Tests, if NULL handling works as intended",
+  function()
+    before_each(function()
+      mydb = db:create("mydbt_nulltesting",
+        {
+          sheet = {
+            name = "",
+            level = 0,
+            motto = "",
+            _unique = { "name" },
+          }
+        })
+    end)
+
+    after_each(function()
+      db:close()
+      local filename = getMudletHomeDir() .. "/Database_mydbtnulltesting.db"
+      os.remove(filename)
+      mydb = nil
+    end)
+
+    it("should be able to insert NULL values",
+    function()
+      local test = {name = "Bellman", level = db:Null(), motto = ""}
+      db:add(mydb.sheet, test)
+      test.level = nil
+      local results = db:fetch(mydb.sheet)
+      assert.is_true(#results == 1)
+      results[1]._row_id = nil
+      assert.are.same(results[1], test)
+    end)
+
+    it("should be able to fetch by NULL conditions",
+    function()
+      local test1 = {name = "Boots", level = 1, motto = ""}
+      local test2 = {name = "Bellman", level = db:Null(), motto = ""}
+      db:add(mydb.sheet, test1, test2)
+      test2.level = nil
+      local results_null = db:fetch(mydb.sheet, db:is_nil(mydb.sheet.level))
+      assert.is_true(#results_null == 1)
+      results_null[1]._row_id = nil
+      assert.are.same(results_null[1], test2)
+      local results_not_null = db:fetch(mydb.sheet, db:is_not_nil(mydb.sheet.level))
+      assert.is_true(#results_not_null == 1)
+      results_not_null[1]._row_id = nil
+      assert.are.same(results_not_null[1], test1)
+    end)
+
+    it("should be able to set an existing field to NULL",
+    function()
+      local test = {name = "Bellman", level = 1, motto = "Four weeks to the month you may mark"}
+      db:add(mydb.sheet, test)
+      db:set(mydb.sheet.motto, db:Null(), db:eq(mydb.sheet.name, "Bellman"))
+      test.motto = nil
+      local results = db:fetch(mydb.sheet)
+      assert.is_true(#results == 1)
+      results[1]._row_id = nil
+      assert.are.same(results[1], test)
+    end)
+  end)
+
+  describe("Tests, if default NULL works as intended",
+  function()
+    after_each(function()
+      db:close()
+      local filename = getMudletHomeDir() .. "/Database_mydbtnulltesting.db"
+      os.remove(filename)
+      mydb = nil
+    end)
+
+    it("should be able to create a table with default NULL",
+    function()
+      mydb = db:create("mydbt_nulltesting",
+      {
+        sheet = {
+          name = "",
+          house = db:Null(),
+          _unique = { "name" },
+        }
+      })
+      local test1 = {name = "Hermione", house = "Griffindor"}
+      local test2 = {name = "Viktor"}
+      db:add(mydb.sheet, test1, test2)
+      test2.house = nil
+      results1 = db:fetch(mydb.sheet, db:is_not_nil(mydb.sheet.house))
+      results2 = db:fetch(mydb.sheet, db:is_nil(mydb.sheet.house))
+      assert.is_true(#results1 == 1)
+      results1[1]._row_id = nil
+      assert.are.same(results1[1], test1)
+      assert.is_true(#results2 == 1)
+      results2[1]._row_id = nil
+      assert.are.same(results2[1], test2)
+    end)
+
+    it("should be able to add a column with default NULL to a table",
+    function()
+      mydb = db:create("mydbt_nulltesting",
+      {
+        sheet = {
+          name = "",
+          level = 1,
+          _unique = { "name" },
+        }
+      })
+
+      mydb = db:create("mydbt_nulltesting",
+      {
+        sheet = {
+          name = "",
+          level = 1,
+          house = db:Null(),
+          _unique = { "name" },
+        }
+      })
+      local test =  { {name = "Laergon", level = 1, house = "Kharon"}, {name = "Mymla", level = 5} }
+      db:add(mydb.sheet, test[1], test[2])
+      local results = db:fetch(mydb.sheet)
+      assert.is_true(#results == 2)
+      results[1]._row_id = nil
+      results[2]._row_id = nil
+      assert.is_true(table.size(results[1]) == 3)
+      assert.is_true(table.size(results[2]) == 2)
+      assert.are.same(results, test)
+    end)
+  end)
 end)

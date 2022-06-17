@@ -2345,6 +2345,11 @@ void TMap::set3DViewCenter(const int areaId, const int xPos, const int yPos, con
     if (mpM) {
         mpM->setViewCenter(areaId, xPos, yPos, zPos);
     }
+#else
+    Q_UNUSED(areaId)
+    Q_UNUSED(xPos)
+    Q_UNUSED(yPos)
+    Q_UNUSED(zPos)
 #endif
 }
 
