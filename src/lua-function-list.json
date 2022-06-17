@@ -523,7 +523,7 @@
     "tempComplexRegexTrigger": "tempComplexRegexTrigger(name, regex, code, multiline, fg color, bg color, filter, match all, highlight fg color, highlight bg color, play sound file, fire length, line delta, expireAfter)",
     "tempExactMatchTrigger": "tempExactMatchTrigger(exact line, code, expireAfter)",
     "tempKey": "tempKey([modifier], key code, lua code)",
-    "tempLineTrigger": "tempLineTrigger(from, howMany, code, expireAfter)",
+    "tempLineTrigger": "tempLineTrigger(from, howMany, code)",
     "tempPromptTrigger": "tempPromptTrigger(code, expireAfter)",
     "tempRegexTrigger": "tempRegexTrigger(regex, code, expireAfter)",
     "tempTimer": "tempTimer(time, code to do[, repeating])",
