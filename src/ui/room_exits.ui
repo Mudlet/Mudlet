@@ -757,16 +757,62 @@
           </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QLineEdit" name="roomID">
-           <property name="cursor">
-            <cursorShape>ForbiddenCursor</cursorShape>
+          <widget class="QFrame" name="frame_roomID">
+           <property name="frameShape">
+            <enum>QFrame::StyledPanel</enum>
            </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;This is the Room ID Number for this room - it cannot be changed here!</string>
-           </property>
-           <property name="readOnly">
-            <bool>true</bool>
-           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_roomID">
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="roomID">
+              <property name="cursor">
+               <cursorShape>ForbiddenCursor</cursorShape>
+              </property>
+              <property name="toolTip">
+               <string>&lt;p&gt;This is the Room ID Number for this room - it cannot be changed here!</string>
+              </property>
+              <property name="frameShape">
+               <enum>QFrame::NoFrame</enum>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_roomLocked">
+              <property name="maximumSize">
+               <size>
+                <width>16</width>
+                <height>16</height>
+               </size>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="pixmap">
+               <pixmap resource="../mudlet.qrc">:/icons/document-encrypt.png</pixmap>
+              </property>
+              <property name="scaledContents">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </widget>
          </item>
          <item row="1" column="0">
@@ -780,15 +826,21 @@
           </widget>
          </item>
          <item row="1" column="1">
-          <widget class="QLineEdit" name="roomWeight">
+          <widget class="QLabel" name="roomWeight">
            <property name="cursor">
             <cursorShape>ForbiddenCursor</cursorShape>
            </property>
            <property name="toolTip">
             <string>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set - this value cannot be changed here.&lt;/p&gt;</string>
            </property>
-           <property name="readOnly">
-            <bool>true</bool>
+           <property name="frameShape">
+            <enum>QFrame::StyledPanel</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Plain</enum>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
            </property>
           </widget>
          </item>
@@ -1938,7 +1990,7 @@
          <bool>true</bool>
         </property>
         <property name="columnCount">
-         <number>8</number>
+         <number>9</number>
         </property>
         <attribute name="headerDefaultSectionSize">
          <number>80</number>

@@ -1522,13 +1522,14 @@ void dlgRoomExits::init()
 
     roomID->setText(QString::number(mRoomID));
     if (pR->isLocked) {
-        // Add the padlock icon to the room number display to show the locked
-        // status of the room:
-        roomID->addAction(mpAction_exitRoomLocked, QLineEdit::TrailingPosition);
-        // Also revise the tool tip:
+        // Revise the tool tip:
         roomID->setToolTip(utils::richText(tr("This is the Room ID number for this room; this <b>room is locked</b> so it will not be used for speed-walks at all. Neither of these details can be changed here!",
                                               // Intentional comment to separate arguments
                                               "This text is a revision to the default tooltip text set for this widget in the 'room_exits.ui' file. Bold HTML tags are used to emphasis that this room's locked status overrides any weight or lock (\"No route\") setting of any exit that comes to it.")));
+    } else {
+        // Hide the padlock icon to the right of the room number display to
+        // show the unlocked status of the room:
+        label_roomLocked->hide();
     }
     mAreaID = pR->getArea();
     roomWeight->setText(QString::number(pR->getWeight()));
