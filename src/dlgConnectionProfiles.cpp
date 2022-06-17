@@ -973,6 +973,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         if (it != mudlet::scmDefaultGames.end()) {
             val = it.value().websiteInfo;
         }
+        website_entry->setVisible(!val.isEmpty());
+    } else {
+        website_entry->show();
     }
     website_entry->setText(val);
 
