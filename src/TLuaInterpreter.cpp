@@ -2689,9 +2689,6 @@ int TLuaInterpreter::getExitStubs(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid room id").arg(roomId));
     }
     QList<int> stubs = pR->exitStubs;
-    if (stubs.empty()) {
-        return warnArgumentValue(L, __func__, qsl("no stubs in this room with id %1").arg(roomId));
-    }
     lua_newtable(L);
     for (int i = 0, total = stubs.size(); i < total; ++i) {
         lua_pushnumber(L, i);
@@ -2717,9 +2714,6 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid room id").arg(roomId));
     }
     QList<int> stubs = pR->exitStubs;
-    if (stubs.empty()) {
-        return warnArgumentValue(L, __func__, qsl("no stubs in this room with id %1").arg(roomId));
-    }
     lua_newtable(L);
     for (int i = 0, total = stubs.size(); i < total; ++i) {
         lua_pushnumber(L, i + 1);
