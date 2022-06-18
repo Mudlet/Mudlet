@@ -3064,14 +3064,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             popup->addSeparator();
 
-            if (selectionSize == 0) {
-                QString viewModeItem = mMapViewOnly
-                ? tr("Switch to editing mode", "2D Mapper context menu (room) item")
-                : tr("Switch to viewing mode", "2D Mapper context menu (room) item");
-                auto setMapViewOnly = new QAction(viewModeItem, this);
-                connect(setMapViewOnly, &QAction::triggered, this, &T2DMap::slot_toggleMapViewOnly);
-                popup->addAction(setMapViewOnly);
-            }
+            QString viewModeItem = mMapViewOnly ? tr("Switch to editing mode", "2D Mapper context menu (room) item") : tr("Switch to viewing mode", "2D Mapper context menu (room) item");
+            auto setMapViewOnly = new QAction(viewModeItem, this);
+            connect(setMapViewOnly, &QAction::triggered, this, &T2DMap::slot_toggleMapViewOnly);
+            popup->addAction(setMapViewOnly);
 
         } else if (mLabelHighlighted) {
             auto moveLabel = new QAction(tr("Move", "2D Mapper context menu (label) item"), this);
