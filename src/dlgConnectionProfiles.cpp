@@ -546,6 +546,8 @@ void dlgConnectionProfiles::slot_save_name()
 void dlgConnectionProfiles::slot_addProfile()
 {
     profile_name_entry->setReadOnly(false);
+    // while normally handled by fillout_form, due to it's asynchronous nature it is better UX to reset it here
+    character_password_entry->setText(QString());
     fillout_form();
     welcome_message->hide();
 
@@ -971,6 +973,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         if (it != mudlet::scmDefaultGames.end()) {
             val = it.value().websiteInfo;
         }
+        website_entry->setVisible(!val.isEmpty());
+    } else {
+        website_entry->show();
     }
     website_entry->setText(val);
 

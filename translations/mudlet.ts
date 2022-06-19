@@ -1334,97 +1334,97 @@ rooms:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15418"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15438"/>
         <source>Some functions may not be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="14807"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="14826"/>
         <source>No error message available from Lua</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="14809"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="14828"/>
         <source>Lua error: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="14811"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="14830"/>
         <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
         <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="14825"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="14844"/>
         <source>[  OK  ]  - Lua module %1 loaded.</source>
         <comment>%1 is the name (may specify which variant) of the module.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15405"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15425"/>
         <source>Probably will not be able to access Mudlet Lua code.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15423"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15443"/>
         <source>Database support will not be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15430"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15450"/>
         <source>utf8.* Lua functions won&apos;t be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15436"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15456"/>
         <source>yajl.* Lua functions won&apos;t be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15621"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15641"/>
         <source>No error message available from Lua.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15623"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15643"/>
         <source>Lua error: %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15625"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15645"/>
         <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15702"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15722"/>
         <source>%1 (doesn&apos;t exist)</source>
         <comment>This file doesn&apos;t exist</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15707"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15727"/>
         <source>%1 (isn&apos;t a file or symlink to a file)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15716"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15736"/>
         <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15734"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15754"/>
         <source>%1 (couldn&apos;t read file)</source>
         <comment>This file could not be read for some reason (for example, no permission)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15740"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15760"/>
         <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15747"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15767"/>
         <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
@@ -4036,214 +4036,214 @@ error message was: &quot;%2&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="363"/>
+        <location filename="../src/ui/connection_profiles.ui" line="364"/>
         <source>Remove</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="382"/>
+        <location filename="../src/ui/connection_profiles.ui" line="383"/>
         <source>Copy</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="407"/>
+        <location filename="../src/ui/connection_profiles.ui" line="408"/>
         <source>New</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="462"/>
+        <location filename="../src/ui/connection_profiles.ui" line="463"/>
         <source>welcome message</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="478"/>
-        <source>Required</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/connection_profiles.ui" line="484"/>
+        <location filename="../src/ui/connection_profiles.ui" line="596"/>
         <source>Profile name:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="500"/>
+        <location filename="../src/ui/connection_profiles.ui" line="573"/>
         <source>Profile name</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="503"/>
+        <location filename="../src/ui/connection_profiles.ui" line="576"/>
         <source>A unique name for the profile but which is limited to a subset of ascii characters only.</source>
         <comment>Using lower case letters for &apos;ASCII&apos; may make speech synthesisers say &apos;askey&apos; which is quicker than &apos;Aay Ess Cee Eye Eye&apos;!</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="513"/>
+        <location filename="../src/ui/connection_profiles.ui" line="606"/>
         <source>Server address:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="535"/>
+        <location filename="../src/ui/connection_profiles.ui" line="557"/>
         <source>Game server URL</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="538"/>
+        <location filename="../src/ui/connection_profiles.ui" line="560"/>
         <source>The Internet host name or IP address</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="545"/>
+        <location filename="../src/ui/connection_profiles.ui" line="586"/>
         <source>Port:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="573"/>
+        <location filename="../src/ui/connection_profiles.ui" line="507"/>
         <source>Game server port</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="576"/>
+        <location filename="../src/ui/connection_profiles.ui" line="483"/>
+        <source>Connect to</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/connection_profiles.ui" line="510"/>
         <source>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for &quot;Telnet&quot; connections is used. Secure connections may require a different port number.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="595"/>
+        <location filename="../src/ui/connection_profiles.ui" line="529"/>
         <source>Connect via a secure protocol</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="598"/>
+        <location filename="../src/ui/connection_profiles.ui" line="532"/>
         <source>Make Mudlet use a secure SSL/TLS protocol instead of an unencrypted one</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="604"/>
+        <location filename="../src/ui/connection_profiles.ui" line="538"/>
         <source>Secure:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="611"/>
-        <source>Profile history:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/connection_profiles.ui" line="634"/>
-        <source>load newest profile</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/connection_profiles.ui" line="639"/>
-        <source>load oldest profile</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/connection_profiles.ui" line="662"/>
-        <source>Optional</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/connection_profiles.ui" line="678"/>
-        <source>Character name:</source>
+        <location filename="../src/ui/connection_profiles.ui" line="630"/>
+        <source>Options</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ui/connection_profiles.ui" line="688"/>
-        <source>The characters name</source>
+        <source>Profile history:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="691"/>
-        <source>Character name</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/connection_profiles.ui" line="694"/>
-        <source>If provided will be sent, along with password to identify the user in the game.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/connection_profiles.ui" line="713"/>
-        <source>Auto-open profile</source>
+        <location filename="../src/ui/connection_profiles.ui" line="711"/>
+        <source>load newest profile</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ui/connection_profiles.ui" line="716"/>
+        <source>load oldest profile</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/connection_profiles.ui" line="636"/>
+        <source>Character name:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/connection_profiles.ui" line="646"/>
+        <source>The characters name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/connection_profiles.ui" line="649"/>
+        <source>Character name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/connection_profiles.ui" line="652"/>
+        <source>If provided will be sent, along with password to identify the user in the game.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/connection_profiles.ui" line="762"/>
+        <source>Auto-open profile</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/connection_profiles.ui" line="765"/>
         <source>Automatically start this profile when Mudlet is run</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="729"/>
+        <location filename="../src/ui/connection_profiles.ui" line="778"/>
         <source>Auto-reconnect</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="732"/>
+        <location filename="../src/ui/connection_profiles.ui" line="781"/>
         <source>Automatically reconnect this profile if it should become disconnected for any reason other than the user disconnecting from the game server.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="748"/>
+        <location filename="../src/ui/connection_profiles.ui" line="675"/>
         <source>Password</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="751"/>
+        <location filename="../src/ui/connection_profiles.ui" line="678"/>
         <source>If provided will be sent, along with the character name to identify the user in the game.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="764"/>
+        <location filename="../src/ui/connection_profiles.ui" line="727"/>
         <source>Enable Discord integration (not supported by game)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="770"/>
+        <location filename="../src/ui/connection_profiles.ui" line="733"/>
         <source>Allow this profile to use Mudlet&apos;s Discord &quot;Rich Presence&quot;  features</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="876"/>
-        <location filename="../src/ui/connection_profiles.ui" line="879"/>
+        <location filename="../src/ui/connection_profiles.ui" line="881"/>
+        <location filename="../src/ui/connection_profiles.ui" line="884"/>
         <source>Game description or your notes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="668"/>
+        <location filename="../src/ui/connection_profiles.ui" line="662"/>
         <source>Password:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="745"/>
+        <location filename="../src/ui/connection_profiles.ui" line="672"/>
         <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="710"/>
+        <location filename="../src/ui/connection_profiles.ui" line="759"/>
         <source>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="722"/>
+        <location filename="../src/ui/connection_profiles.ui" line="771"/>
         <source>Open profile on Mudlet start</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="738"/>
+        <location filename="../src/ui/connection_profiles.ui" line="787"/>
         <source>Reconnect automatically</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="767"/>
+        <location filename="../src/ui/connection_profiles.ui" line="730"/>
         <source>Discord integration</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="805"/>
+        <location filename="../src/ui/connection_profiles.ui" line="810"/>
         <source>Informational</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/connection_profiles.ui" line="832"/>
+        <location filename="../src/ui/connection_profiles.ui" line="837"/>
         <source>Website:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4529,145 +4529,145 @@ Count</source>
 <context>
     <name>directions</name>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15471"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15491"/>
         <source>north</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15473"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15493"/>
         <source>n</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15475"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15495"/>
         <source>east</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15477"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15497"/>
         <source>e</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15479"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15499"/>
         <source>south</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15481"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15501"/>
         <source>s</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15483"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15503"/>
         <source>west</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15485"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15505"/>
         <source>w</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15487"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15507"/>
         <source>northeast</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15489"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15509"/>
         <source>ne</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15491"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15511"/>
         <source>southeast</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15493"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15513"/>
         <source>se</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15495"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15515"/>
         <source>southwest</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15497"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15517"/>
         <source>sw</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15499"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15519"/>
         <source>northwest</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15501"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15521"/>
         <source>nw</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15503"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15523"/>
         <source>in</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15505"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15525"/>
         <source>i</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15507"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15527"/>
         <source>out</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15509"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15529"/>
         <source>o</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15511"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15531"/>
         <source>up</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15513"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15533"/>
         <source>u</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15515"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15535"/>
         <source>down</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15517"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15537"/>
         <source>d</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
@@ -5145,22 +5145,22 @@ Count</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1024"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1023"/>
         <source>This profile is currently loaded - close it before changing the connection parameters.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1733"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1730"/>
         <source>The %1 character is not permitted. Use one of the following:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1756"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1753"/>
         <source>You have to enter a number. Other characters are not permitted.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1745"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1742"/>
         <source>This profile name is already in use.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5182,7 +5182,7 @@ Count</source>
     </message>
     <message>
         <location filename="../src/dlgConnectionProfiles.cpp" line="124"/>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1444"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1441"/>
         <source>Copy</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5243,112 +5243,112 @@ Count</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="556"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="555"/>
         <source>new profile name</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="669"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="668"/>
         <source>Deleting &apos;%1&apos;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1071"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1070"/>
         <source>Discord integration not available on this platform</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1077"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1076"/>
         <source>Discord integration not supported by game</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1080"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1079"/>
         <source>Check to enable Discord integration</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1318"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1315"/>
         <source>Reset icon</source>
         <comment>Reset the custom picture for this profile in the connection dialog and show the default one instead</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1321"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1318"/>
         <source>Set custom icon</source>
         <comment>Set a custom picture to show for the profile in the connection dialog</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1325"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1322"/>
         <source>Set custom color</source>
         <comment>Set a custom color to show for the profile in the connection dialog</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1338"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1335"/>
         <source>Select custom image for profile (should be 120x30)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1338"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1335"/>
         <source>Images (%1)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1426"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1423"/>
         <source>Copying...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1766"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1763"/>
         <source>Port number must be above zero and below 65535.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1786"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1783"/>
         <source>Mudlet can not load support for secure connections.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1808"/>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1818"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1805"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1815"/>
         <source>Please enter the URL or IP address of the Game server.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1829"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1826"/>
         <source>SSL connections require the URL of the Game server.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1846"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1843"/>
         <source>Load profile without connecting.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1862"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1859"/>
         <source>Please set a valid profile name, game server address and the game port before loading.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1867"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1864"/>
         <source>Please set a valid profile name, game server address and the game port before connecting.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1921"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1918"/>
         <source>Click to hide the password; it will also hide if another profile is selected.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1925"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1922"/>
         <source>Click to reveal the password for this profile.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1771"/>
         <location filename="../src/dlgConnectionProfiles.cpp" line="1774"/>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1777"/>
         <source>Mudlet is not configured for secure connections.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5492,7 +5492,7 @@ Count</source>
 <context>
     <name>dlgMapper</name>
     <message>
-        <location filename="../src/dlgMapper.cpp" line="377"/>
+        <location filename="../src/dlgMapper.cpp" line="400"/>
         <source>None</source>
         <comment>Don&apos;t show the map overlay, &apos;none&apos; meaning no map overlay styled are enabled</comment>
         <translation type="unfinished"></translation>
@@ -12209,392 +12209,457 @@ you can use it but there could be issues with aligning columns of text</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="93"/>
+        <location filename="../src/ui/room_exits.ui" line="90"/>
         <source>NW exit...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="103"/>
-        <location filename="../src/ui/room_exits.ui" line="240"/>
-        <location filename="../src/ui/room_exits.ui" line="377"/>
-        <location filename="../src/ui/room_exits.ui" line="514"/>
-        <location filename="../src/ui/room_exits.ui" line="654"/>
-        <location filename="../src/ui/room_exits.ui" line="858"/>
-        <location filename="../src/ui/room_exits.ui" line="992"/>
-        <location filename="../src/ui/room_exits.ui" line="1147"/>
-        <location filename="../src/ui/room_exits.ui" line="1284"/>
-        <location filename="../src/ui/room_exits.ui" line="1421"/>
-        <location filename="../src/ui/room_exits.ui" line="1558"/>
-        <location filename="../src/ui/room_exits.ui" line="1831"/>
+        <location filename="../src/ui/room_exits.ui" line="100"/>
+        <location filename="../src/ui/room_exits.ui" line="234"/>
+        <location filename="../src/ui/room_exits.ui" line="368"/>
+        <location filename="../src/ui/room_exits.ui" line="502"/>
+        <location filename="../src/ui/room_exits.ui" line="639"/>
+        <location filename="../src/ui/room_exits.ui" line="834"/>
+        <location filename="../src/ui/room_exits.ui" line="968"/>
+        <location filename="../src/ui/room_exits.ui" line="1120"/>
+        <location filename="../src/ui/room_exits.ui" line="1254"/>
+        <location filename="../src/ui/room_exits.ui" line="1388"/>
+        <location filename="../src/ui/room_exits.ui" line="1522"/>
+        <location filename="../src/ui/room_exits.ui" line="1785"/>
         <source>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="230"/>
+        <location filename="../src/ui/room_exits.ui" line="224"/>
         <source>N exit...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="367"/>
+        <location filename="../src/ui/room_exits.ui" line="358"/>
         <source>NE exit...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="504"/>
+        <location filename="../src/ui/room_exits.ui" line="492"/>
         <source>Up exit...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="644"/>
+        <location filename="../src/ui/room_exits.ui" line="629"/>
         <source>W exit...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="752"/>
+        <location filename="../src/ui/room_exits.ui" line="734"/>
         <source>ID:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="775"/>
+        <location filename="../src/ui/room_exits.ui" line="757"/>
         <source>Weight:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="848"/>
+        <location filename="../src/ui/room_exits.ui" line="827"/>
         <source>E exit...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="982"/>
+        <location filename="../src/ui/room_exits.ui" line="958"/>
         <source>Down exit...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1131"/>
+        <location filename="../src/ui/room_exits.ui" line="1104"/>
         <source>SW exit...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1274"/>
+        <location filename="../src/ui/room_exits.ui" line="1244"/>
         <source>S exit...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1411"/>
+        <location filename="../src/ui/room_exits.ui" line="1378"/>
         <source>SE exit...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1548"/>
+        <location filename="../src/ui/room_exits.ui" line="1512"/>
         <source>In exit...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1821"/>
+        <location filename="../src/ui/room_exits.ui" line="1775"/>
         <source>Out exit...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1653"/>
-        <source>Key:</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/ui/room_exits.ui" line="1671"/>
+        <location filename="../src/ui/room_exits.ui" line="1628"/>
         <source>No route</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1686"/>
+        <location filename="../src/ui/room_exits.ui" line="1643"/>
         <source>Stub Exit</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="67"/>
-        <location filename="../src/ui/room_exits.ui" line="204"/>
-        <location filename="../src/ui/room_exits.ui" line="341"/>
-        <location filename="../src/ui/room_exits.ui" line="478"/>
-        <location filename="../src/ui/room_exits.ui" line="615"/>
-        <location filename="../src/ui/room_exits.ui" line="822"/>
-        <location filename="../src/ui/room_exits.ui" line="956"/>
-        <location filename="../src/ui/room_exits.ui" line="1099"/>
-        <location filename="../src/ui/room_exits.ui" line="1248"/>
-        <location filename="../src/ui/room_exits.ui" line="1385"/>
-        <location filename="../src/ui/room_exits.ui" line="1522"/>
-        <location filename="../src/ui/room_exits.ui" line="1795"/>
-        <location filename="../src/ui/room_exits.ui" line="1979"/>
+        <location filename="../src/ui/room_exits.ui" line="64"/>
+        <location filename="../src/ui/room_exits.ui" line="198"/>
+        <location filename="../src/ui/room_exits.ui" line="332"/>
+        <location filename="../src/ui/room_exits.ui" line="466"/>
+        <location filename="../src/ui/room_exits.ui" line="600"/>
+        <location filename="../src/ui/room_exits.ui" line="801"/>
+        <location filename="../src/ui/room_exits.ui" line="932"/>
+        <location filename="../src/ui/room_exits.ui" line="1072"/>
+        <location filename="../src/ui/room_exits.ui" line="1218"/>
+        <location filename="../src/ui/room_exits.ui" line="1352"/>
+        <location filename="../src/ui/room_exits.ui" line="1486"/>
+        <location filename="../src/ui/room_exits.ui" line="1749"/>
+        <location filename="../src/ui/room_exits.ui" line="1933"/>
         <source>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="83"/>
-        <location filename="../src/ui/room_exits.ui" line="220"/>
-        <location filename="../src/ui/room_exits.ui" line="357"/>
-        <location filename="../src/ui/room_exits.ui" line="494"/>
-        <location filename="../src/ui/room_exits.ui" line="631"/>
-        <location filename="../src/ui/room_exits.ui" line="838"/>
-        <location filename="../src/ui/room_exits.ui" line="972"/>
-        <location filename="../src/ui/room_exits.ui" line="1121"/>
-        <location filename="../src/ui/room_exits.ui" line="1264"/>
-        <location filename="../src/ui/room_exits.ui" line="1401"/>
-        <location filename="../src/ui/room_exits.ui" line="1538"/>
-        <location filename="../src/ui/room_exits.ui" line="1811"/>
+        <location filename="../src/ui/room_exits.ui" line="52"/>
+        <source>Northwest</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/room_exits.ui" line="80"/>
+        <location filename="../src/ui/room_exits.ui" line="214"/>
+        <location filename="../src/ui/room_exits.ui" line="348"/>
+        <location filename="../src/ui/room_exits.ui" line="482"/>
+        <location filename="../src/ui/room_exits.ui" line="616"/>
+        <location filename="../src/ui/room_exits.ui" line="817"/>
+        <location filename="../src/ui/room_exits.ui" line="948"/>
+        <location filename="../src/ui/room_exits.ui" line="1094"/>
+        <location filename="../src/ui/room_exits.ui" line="1234"/>
+        <location filename="../src/ui/room_exits.ui" line="1368"/>
+        <location filename="../src/ui/room_exits.ui" line="1502"/>
+        <location filename="../src/ui/room_exits.ui" line="1765"/>
         <source>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="116"/>
-        <location filename="../src/ui/room_exits.ui" line="253"/>
-        <location filename="../src/ui/room_exits.ui" line="390"/>
-        <location filename="../src/ui/room_exits.ui" line="527"/>
-        <location filename="../src/ui/room_exits.ui" line="667"/>
-        <location filename="../src/ui/room_exits.ui" line="868"/>
-        <location filename="../src/ui/room_exits.ui" line="1005"/>
-        <location filename="../src/ui/room_exits.ui" line="1160"/>
-        <location filename="../src/ui/room_exits.ui" line="1297"/>
-        <location filename="../src/ui/room_exits.ui" line="1434"/>
-        <location filename="../src/ui/room_exits.ui" line="1571"/>
-        <location filename="../src/ui/room_exits.ui" line="1844"/>
-        <location filename="../src/ui/room_exits.ui" line="1997"/>
+        <location filename="../src/ui/room_exits.ui" line="113"/>
+        <location filename="../src/ui/room_exits.ui" line="247"/>
+        <location filename="../src/ui/room_exits.ui" line="381"/>
+        <location filename="../src/ui/room_exits.ui" line="515"/>
+        <location filename="../src/ui/room_exits.ui" line="652"/>
+        <location filename="../src/ui/room_exits.ui" line="847"/>
+        <location filename="../src/ui/room_exits.ui" line="981"/>
+        <location filename="../src/ui/room_exits.ui" line="1133"/>
+        <location filename="../src/ui/room_exits.ui" line="1267"/>
+        <location filename="../src/ui/room_exits.ui" line="1401"/>
+        <location filename="../src/ui/room_exits.ui" line="1535"/>
+        <location filename="../src/ui/room_exits.ui" line="1798"/>
+        <location filename="../src/ui/room_exits.ui" line="1951"/>
         <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="135"/>
-        <location filename="../src/ui/room_exits.ui" line="272"/>
-        <location filename="../src/ui/room_exits.ui" line="409"/>
-        <location filename="../src/ui/room_exits.ui" line="686"/>
-        <location filename="../src/ui/room_exits.ui" line="887"/>
-        <location filename="../src/ui/room_exits.ui" line="1179"/>
-        <location filename="../src/ui/room_exits.ui" line="1316"/>
-        <location filename="../src/ui/room_exits.ui" line="1453"/>
+        <location filename="../src/ui/room_exits.ui" line="132"/>
+        <location filename="../src/ui/room_exits.ui" line="266"/>
+        <location filename="../src/ui/room_exits.ui" line="400"/>
+        <location filename="../src/ui/room_exits.ui" line="671"/>
+        <location filename="../src/ui/room_exits.ui" line="866"/>
+        <location filename="../src/ui/room_exits.ui" line="1152"/>
+        <location filename="../src/ui/room_exits.ui" line="1286"/>
+        <location filename="../src/ui/room_exits.ui" line="1420"/>
         <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="151"/>
-        <location filename="../src/ui/room_exits.ui" line="288"/>
-        <location filename="../src/ui/room_exits.ui" line="425"/>
-        <location filename="../src/ui/room_exits.ui" line="702"/>
-        <location filename="../src/ui/room_exits.ui" line="903"/>
-        <location filename="../src/ui/room_exits.ui" line="1195"/>
-        <location filename="../src/ui/room_exits.ui" line="1332"/>
-        <location filename="../src/ui/room_exits.ui" line="1469"/>
+        <location filename="../src/ui/room_exits.ui" line="148"/>
+        <location filename="../src/ui/room_exits.ui" line="282"/>
+        <location filename="../src/ui/room_exits.ui" line="416"/>
+        <location filename="../src/ui/room_exits.ui" line="687"/>
+        <location filename="../src/ui/room_exits.ui" line="882"/>
+        <location filename="../src/ui/room_exits.ui" line="1168"/>
+        <location filename="../src/ui/room_exits.ui" line="1302"/>
+        <location filename="../src/ui/room_exits.ui" line="1436"/>
         <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="167"/>
-        <location filename="../src/ui/room_exits.ui" line="304"/>
-        <location filename="../src/ui/room_exits.ui" line="441"/>
-        <location filename="../src/ui/room_exits.ui" line="718"/>
-        <location filename="../src/ui/room_exits.ui" line="919"/>
-        <location filename="../src/ui/room_exits.ui" line="1211"/>
-        <location filename="../src/ui/room_exits.ui" line="1348"/>
-        <location filename="../src/ui/room_exits.ui" line="1485"/>
+        <location filename="../src/ui/room_exits.ui" line="164"/>
+        <location filename="../src/ui/room_exits.ui" line="298"/>
+        <location filename="../src/ui/room_exits.ui" line="432"/>
+        <location filename="../src/ui/room_exits.ui" line="703"/>
+        <location filename="../src/ui/room_exits.ui" line="898"/>
+        <location filename="../src/ui/room_exits.ui" line="1184"/>
+        <location filename="../src/ui/room_exits.ui" line="1318"/>
+        <location filename="../src/ui/room_exits.ui" line="1452"/>
         <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="546"/>
-        <location filename="../src/ui/room_exits.ui" line="1024"/>
-        <location filename="../src/ui/room_exits.ui" line="1590"/>
-        <location filename="../src/ui/room_exits.ui" line="1863"/>
+        <location filename="../src/ui/room_exits.ui" line="186"/>
+        <source>North</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/room_exits.ui" line="320"/>
+        <source>Northeast</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/room_exits.ui" line="454"/>
+        <source>Up</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/room_exits.ui" line="534"/>
+        <location filename="../src/ui/room_exits.ui" line="1000"/>
+        <location filename="../src/ui/room_exits.ui" line="1554"/>
+        <location filename="../src/ui/room_exits.ui" line="1817"/>
         <source>&lt;p&gt;A symbol is drawn with a green (Open) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="562"/>
-        <location filename="../src/ui/room_exits.ui" line="1040"/>
-        <location filename="../src/ui/room_exits.ui" line="1606"/>
-        <location filename="../src/ui/room_exits.ui" line="1879"/>
+        <location filename="../src/ui/room_exits.ui" line="550"/>
+        <location filename="../src/ui/room_exits.ui" line="1016"/>
+        <location filename="../src/ui/room_exits.ui" line="1570"/>
+        <location filename="../src/ui/room_exits.ui" line="1833"/>
         <source>&lt;p&gt;A symbol is drawn with an orange (Closed) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="578"/>
-        <location filename="../src/ui/room_exits.ui" line="1056"/>
-        <location filename="../src/ui/room_exits.ui" line="1622"/>
-        <location filename="../src/ui/room_exits.ui" line="1895"/>
+        <location filename="../src/ui/room_exits.ui" line="566"/>
+        <location filename="../src/ui/room_exits.ui" line="1032"/>
+        <location filename="../src/ui/room_exits.ui" line="1586"/>
+        <location filename="../src/ui/room_exits.ui" line="1849"/>
         <source>&lt;p&gt;A symbol is drawn with a red (Locked) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="765"/>
+        <location filename="../src/ui/room_exits.ui" line="588"/>
+        <source>West</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/room_exits.ui" line="728"/>
+        <source>This room</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/room_exits.ui" line="747"/>
         <source>&lt;p&gt;This is the Room ID Number for this room - it cannot be changed here!</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="788"/>
+        <location filename="../src/ui/room_exits.ui" line="770"/>
         <source>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set - this value cannot be changed here.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1698"/>
+        <location filename="../src/ui/room_exits.ui" line="789"/>
+        <source>East</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/room_exits.ui" line="920"/>
+        <source>Down</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/room_exits.ui" line="1054"/>
+        <source>Southwest</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/room_exits.ui" line="1206"/>
+        <source>South</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/room_exits.ui" line="1340"/>
+        <source>Southeast</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/room_exits.ui" line="1474"/>
+        <source>In</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/room_exits.ui" line="1614"/>
+        <source>Key</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/room_exits.ui" line="1655"/>
         <source>Exit RoomID number</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1725"/>
+        <location filename="../src/ui/room_exits.ui" line="1682"/>
         <source>No door</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1740"/>
+        <location filename="../src/ui/room_exits.ui" line="1697"/>
         <source>Open door</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1752"/>
+        <location filename="../src/ui/room_exits.ui" line="1709"/>
         <source>Closed door</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1764"/>
+        <location filename="../src/ui/room_exits.ui" line="1721"/>
         <source>Locked door</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1923"/>
+        <location filename="../src/ui/room_exits.ui" line="1737"/>
+        <source>Out</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/ui/room_exits.ui" line="1877"/>
         <source>&lt;p&gt;Click on an item to edit/change it. To delete a Special Exit, ether: select it and press the keyboard Delete key; or set its Exit roomID to less than one; or clear the name/command entry.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1966"/>
+        <location filename="../src/ui/room_exits.ui" line="1920"/>
         <source>Exit
 Status</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1970"/>
+        <location filename="../src/ui/room_exits.ui" line="1924"/>
         <source>&lt;p&gt;Indicates whether the exit is invalid, leads to another room in this area or leads to a room in another area.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="2006"/>
+        <location filename="../src/ui/room_exits.ui" line="1960"/>
         <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="2015"/>
+        <location filename="../src/ui/room_exits.ui" line="1969"/>
         <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="2024"/>
+        <location filename="../src/ui/room_exits.ui" line="1978"/>
         <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="2033"/>
+        <location filename="../src/ui/room_exits.ui" line="1987"/>
         <source>&lt;p&gt;(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="2101"/>
+        <location filename="../src/ui/room_exits.ui" line="2055"/>
         <source>&lt;p&gt;Use this button to save any changes, will also remove any invalid Special exits.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="2117"/>
+        <location filename="../src/ui/room_exits.ui" line="2071"/>
         <source>&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1961"/>
+        <location filename="../src/ui/room_exits.ui" line="1915"/>
         <source>&lt;p&gt;Set the number of the room that this exit leads to, if set to zero the exit will be removed on saving the exits.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="2050"/>
+        <location filename="../src/ui/room_exits.ui" line="2004"/>
         <source>&lt;p&gt;Add an empty item to Special exits to be edited as required.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="2069"/>
+        <location filename="../src/ui/room_exits.ui" line="2023"/>
         <source>&lt;p&gt;Press this button to deactivate the selection of a Special exit.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="2104"/>
+        <location filename="../src/ui/room_exits.ui" line="2058"/>
         <source>&amp;Save</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1710"/>
+        <location filename="../src/ui/room_exits.ui" line="1667"/>
         <source>Exit Weight (0=No override)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="2120"/>
+        <location filename="../src/ui/room_exits.ui" line="2074"/>
         <source>&amp;Cancel</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1914"/>
+        <location filename="../src/ui/room_exits.ui" line="1868"/>
         <source>Special exits:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1957"/>
+        <location filename="../src/ui/room_exits.ui" line="1911"/>
         <source>Exit
 Room ID</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1975"/>
+        <location filename="../src/ui/room_exits.ui" line="1929"/>
         <source>No
 Route</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1984"/>
+        <location filename="../src/ui/room_exits.ui" line="1938"/>
         <source>Exit
 Weight</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1988"/>
+        <location filename="../src/ui/room_exits.ui" line="1942"/>
         <source>&lt;p&gt;Set to a positive integer value to override the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="1993"/>
+        <location filename="../src/ui/room_exits.ui" line="1947"/>
         <source>Door
 None</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="2002"/>
+        <location filename="../src/ui/room_exits.ui" line="1956"/>
         <source>Door
 Open</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="2011"/>
+        <location filename="../src/ui/room_exits.ui" line="1965"/>
         <source>Door
 Closed</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="2020"/>
+        <location filename="../src/ui/room_exits.ui" line="1974"/>
         <source>Door
 Locked</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="2029"/>
+        <location filename="../src/ui/room_exits.ui" line="1983"/>
         <source>Command
 or LUA script</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="2053"/>
+        <location filename="../src/ui/room_exits.ui" line="2007"/>
         <source>&amp;Add special exit</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/ui/room_exits.ui" line="2072"/>
+        <location filename="../src/ui/room_exits.ui" line="2026"/>
         <source>&amp;End S. Exits editing</source>
         <translation type="unfinished"></translation>
     </message>
