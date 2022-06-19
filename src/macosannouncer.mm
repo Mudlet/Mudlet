@@ -8,6 +8,8 @@
 #define nil nullptr
 
 #include <QDebug>
+#include <QAccessible>
+#include <QAccessibleEvent>
 
 MacOSAnnouncer::MacOSAnnouncer(QObject *parent)
     : QObject{parent}
@@ -17,7 +19,17 @@ MacOSAnnouncer::MacOSAnnouncer(QObject *parent)
 
 void MacOSAnnouncer::announce(QString text)
 {
-    auto element = mudlet::self()->effectiveWinId();
-    qDebug() << "announcing"<<text;
-    NSAccessibilityPostNotification(element, NSAccessibilityAnnouncementRequestedNotification);
+    NSView* view = reinterpret_cast<NSView*>(mudlet::self()->effectiveWinId());
+    if (!view) {
+        qDebug() << "no view found";
+    } else {
+        qDebug() << view;
+    }
+
+    NSString* msg = @"Hello World!";
+    NSDictionary *announcementInfo = @{
+        NSAccessibilityAnnouncementKey : msg,
+        NSAccessibilityPriorityKey : @(NSAccessibilityPriorityHigh),
+    };
+    NSAccessibilityPostNotificationWithUserInfo(view, NSAccessibilityAnnouncementRequestedNotification, announcementInfo);
 }
