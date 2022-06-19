@@ -783,7 +783,7 @@
                <cursorShape>ForbiddenCursor</cursorShape>
               </property>
               <property name="toolTip">
-               <string>&lt;p&gt;This is the Room ID Number for this room - it cannot be changed here!</string>
+               <string>&lt;p&gt;This is the Room ID Number for this room.</string>
               </property>
               <property name="frameShape">
                <enum>QFrame::NoFrame</enum>
@@ -831,7 +831,7 @@
             <cursorShape>ForbiddenCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set - this value cannot be changed here.&lt;/p&gt;</string>
+            <string>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set.&lt;/p&gt;</string>
            </property>
            <property name="frameShape">
             <enum>QFrame::StyledPanel</enum>
