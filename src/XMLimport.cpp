@@ -1148,7 +1148,9 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "mRoomBorderColor") {
                 pHost->mRoomBorderColor.setNamedColor(readElementText());
             } else if (name() == "mMapInfoBg") {
+                auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mMapInfoBg.setNamedColor(readElementText());
+                pHost->mMapInfoBg.setAlpha(alpha);
             } else if (name() == "mBlack2") {
                 pHost->mBlack_2.setNamedColor(readElementText());
             } else if (name() == "mLightBlack2") {
