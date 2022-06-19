@@ -3615,7 +3615,8 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
         Host& host = getHostFromLua(L);
         host.mpConsole->mUpperPane->resetHScrollbar();
         host.mpConsole->buffer.clear();
-        host.mpConsole->mUpperPane->forceUpdate();
+        host.mpConsole->mUpperPane->showNewLines();
+        //host.mpConsole->mUpperPane->forceUpdate();
         return 0;
     }
     QString text = lua_tostring(L, 1);

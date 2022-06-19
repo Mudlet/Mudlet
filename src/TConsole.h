@@ -48,7 +48,7 @@
 #include <map>
 
 
-enum ControlCharacterMode {
+enum class ControlCharacterMode {
     AsIs = 0x0,
     Picture = 0x1,
     OEM = 0x2
@@ -289,7 +289,7 @@ public:
     int mBgImageMode = 0;
     QString mBgImagePath;
     bool mHScrollBarEnabled = false;
-    ControlCharacterMode mControlCharacter = AsIs;
+    ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
 
 
 public slots:

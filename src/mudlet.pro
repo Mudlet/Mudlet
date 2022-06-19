@@ -665,6 +665,7 @@ HEADERS += \
     ircmessageformatter.h \
     KeyUnit.h \
     LuaInterface.h \
+    macosannouncer.h \
     mapInfoContributorManager.h \
     mudlet.h \
     MxpTag.h \
@@ -750,6 +751,8 @@ HEADERS += \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h
 
+
+OBJECTIVE_SOURCES += macosannouncer.mm
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \

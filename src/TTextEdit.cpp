@@ -31,9 +31,12 @@
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "mudlet.h"
+#include "macosannouncer.h"
 #include "widechar_width.h"
 
 #include "pre_guard.h"
+#include <chrono>
+#include <icecream.hpp>
 #include <QtEvents>
 #include <QtGlobal>
 #include <QAccessible>
@@ -50,7 +53,6 @@
 #include <QToolTip>
 #include <QVersionNumber>
 #include "post_guard.h"
-#include <chrono>
 
 
 TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLowerPane)
@@ -335,12 +337,26 @@ void TTextEdit::showNewLines()
 
     if (QAccessible::isActive()) {
         QString newLines;
+        IC(previousOldScrollPos, mOldScrollPos);
 
+        // content have been deleted
+        if (previousOldScrollPos > mOldScrollPos) {
+            QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(this)->textInterface();
+            auto totalCharacterCount = ti->characterCount();
+            ti->setCursorPosition(totalCharacterCount);
+            qDebug() << "moved cursor to" << totalCharacterCount << "; announcing DELETION at" << totalCharacterCount;
+            QAccessibleTextRemoveEvent event(this, totalCharacterCount, QString());
+            QAccessible::updateAccessibility(&event);
+            return;
+        }
+
+        // content has been added
         for (int i = previousOldScrollPos; i < mOldScrollPos; i++) {
             newLines.append(mpBuffer->line(i));
             newLines.append('\n');
         }
 
+        newLines = newLines.trimmed();
         if (newLines.isEmpty()) {
             return;
         }
@@ -348,13 +364,18 @@ void TTextEdit::showNewLines()
         QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(this)->textInterface();
 
         // cursor has to be moved manually - https://doc.qt.io/qt-5/qaccessibletextinsertevent.html#QAccessibleTextInsertEvent
-        auto endcount = ti->characterCount();
-        ti->setCursorPosition(ti->characterCount());
+        auto totalCharacterCount = ti->characterCount();
+        ti->setCursorPosition(totalCharacterCount);
 
-        auto insertedat = ti->characterCount() - newLines.length();
-        QAccessibleTextInsertEvent event(this, ti->characterCount() - newLines.length(), newLines);
-        qDebug() << "moved cursor to" << endcount << "; announcing insertion at" << insertedat << newLines;
-        QAccessible::updateAccessibility(&event);
+        auto insertedat = totalCharacterCount - newLines.length();
+        //QAccessibleTextInsertEvent event(this, insertedat, newLines);
+        //qDebug() << "moved cursor to" << totalCharacterCount << "; announcing INSERTION at" << insertedat << newLines;
+        //QAccessible::updateAccessibility(&event);
+
+        // update for deletions and clearWindow() !!!
+        // have to track the old text that was removed -_-
+
+        MacOSAnnouncer::announce(newLines);
     }
 }
 

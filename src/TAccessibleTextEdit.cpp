@@ -25,6 +25,7 @@
 #include "TAccessibleTextEdit.h"
 #include "TConsole.h"
 #include "mudlet.h"
+#include <icecream.hpp>
 
 TTextEdit* TAccessibleTextEdit::textEdit() const
 {
@@ -49,6 +50,7 @@ bool TAccessibleTextEdit::offsetIsInvalid(int offset) const
     return offset < 0 || offset > characterCount();
 }
 
+// performance note - this is called extremely frequently on the same line
 int TAccessibleTextEdit::lineForOffset(int offset, int *lengthSoFar = nullptr) const
 {
     const QStringList& lineBuffer = textEdit()->mpBuffer->lineBuffer;
@@ -80,6 +82,7 @@ int TAccessibleTextEdit::lineForOffset(int offset, int *lengthSoFar = nullptr) c
     return lineBuffer.length();
 }
 
+// performance note - this is called extremely frequently on the same line
 int TAccessibleTextEdit::columnForOffset(int offset) const
 {
     int lengthSoFar = 0;
@@ -92,7 +95,7 @@ int TAccessibleTextEdit::columnForOffset(int offset) const
 
     lineForOffset(offset, &lengthSoFar);
 
-    return offset - lengthSoFar;
+    return std::max(offset - lengthSoFar, 0);
 }
 
 /*
@@ -104,6 +107,7 @@ int TAccessibleTextEdit::columnForOffset(int offset) const
  */
 void TAccessibleTextEdit::selection(int selectionIndex, int *startOffset, int *endOffset) const
 {
+    IC();
     if (selectionIndex != 0) {
         *startOffset = *endOffset = 0;
         return;
@@ -125,6 +129,7 @@ void TAccessibleTextEdit::selection(int selectionIndex, int *startOffset, int *e
  */
 int TAccessibleTextEdit::selectionCount() const
 {
+    IC();
     return textEdit()->mSelectedRegion != QRegion(0, 0, 0, 0);
 }
 
@@ -140,6 +145,7 @@ int TAccessibleTextEdit::selectionCount() const
  */
 void TAccessibleTextEdit::addSelection(int startOffset, int endOffset)
 {
+    IC();
     if (offsetIsInvalid(startOffset) || offsetIsInvalid(endOffset)) {
         return;
     }
@@ -164,6 +170,7 @@ void TAccessibleTextEdit::addSelection(int startOffset, int endOffset)
  */
 void TAccessibleTextEdit::removeSelection(int selectionIndex)
 {
+    IC();
     if (selectionIndex != 0) {
         return;
     }
@@ -179,6 +186,7 @@ void TAccessibleTextEdit::removeSelection(int selectionIndex)
  */
 void TAccessibleTextEdit::setSelection(int selectionIndex, int startOffset, int endOffset)
 {
+    IC();
     if (selectionIndex != 0) {
         return;
     }
@@ -201,6 +209,7 @@ int TAccessibleTextEdit::offsetForPosition(int line, int column) const
 
     ret += column;
 
+    qDebug() << "offsetForPosition line" << line << "column" << column << "; resulting offset is" << ret;
     return ret;
 }
 
@@ -211,7 +220,10 @@ int TAccessibleTextEdit::offsetForPosition(int line, int column) const
  */
 int TAccessibleTextEdit::cursorPosition() const
 {
-    return offsetForPosition(textEdit()->mCaretLine, textEdit()->mCaretColumn);
+    IC();
+    auto position = offsetForPosition(textEdit()->mCaretLine, textEdit()->mCaretColumn);
+    qDebug() << "current cursor position is" << position;
+    return position;
 }
 
 /*
@@ -221,22 +233,28 @@ int TAccessibleTextEdit::cursorPosition() const
  */
 void TAccessibleTextEdit::setCursorPosition(int position)
 {
+    IC();
+    IC(position);
     if (offsetIsInvalid(position)) {
+        qDebug() << "quitting setCursorPosition, " << position << "is an invalid offset";
         return;
     }
 
     int line = lineForOffset(position);
     int column = columnForOffset(position);
 
+    IC(line, column);
     textEdit()->setCaretPosition(line, column);
 }
 
+// performance note - this is called extremely frequently on the same line, should be cached
 QString TAccessibleTextEdit::text(QAccessible::Text t) const
 {
     if (t != QAccessible::Value) {
         return QAccessibleWidget::text(t);
     }
 
+    // qDebug() << "asking for all text, length is" << textEdit()->mpBuffer->lineBuffer.join('\n').length();
     return textEdit()->mpBuffer->lineBuffer.join('\n');
 }
 
@@ -244,6 +262,7 @@ QString TAccessibleTextEdit::text(QAccessible::Text t) const
  * Returns the text from startOffset to endOffset. The startOffset is the
  * first character that will be returned. The endOffset is the first
  * character that will not be returned.
+ * performance note - this is called extremely frequently on the same line, should be cached
  */
 QString TAccessibleTextEdit::text(int startOffset, int endOffset) const
 {
@@ -251,21 +270,28 @@ QString TAccessibleTextEdit::text(int startOffset, int endOffset) const
         return QString();
     }
 
-    QString ret = text(QAccessible::Value).mid(startOffset, endOffset - startOffset);
+    QString ret = text(QAccessible::Value).mid(startOffset, endOffset - startOffset).trimmed();
+    if (ret.isEmpty()) {
+        return QString();
+    }
 
+    qDebug() << "asked for ::text startOffset" <<startOffset << "endOffset" << endOffset << "gave" << ret;
     return ret;
 }
 
 /*
  * Returns the length of the text (total size including spaces).
+ * performance note - this is called extremely frequently on the same line, should be cached
  */
 int TAccessibleTextEdit::characterCount() const
 {
+    // qDebug() << "character count check, have" << text(QAccessible::Value).length();
     return text(QAccessible::Value).length();
 }
 
 bool TAccessibleTextEdit::lineIsVisible(int line) const
 {
+    IC();
     TTextEdit* edit = textEdit();
     int topLine = edit->imageTopLine();
 
@@ -278,6 +304,7 @@ bool TAccessibleTextEdit::lineIsVisible(int line) const
  */
 QRect TAccessibleTextEdit::characterRect(int offset) const
 {
+    IC();
     if (offsetIsInvalid(offset)) {
         return QRect();
     }
@@ -304,6 +331,7 @@ QRect TAccessibleTextEdit::characterRect(int offset) const
  */
 int TAccessibleTextEdit::offsetAtPoint(const QPoint& point) const
 {
+    IC();
     TTextEdit* edit = textEdit();
     QPoint local = edit->mapFromGlobal(point);
     int line = edit->imageTopLine() + local.y() / edit->mFontHeight;
@@ -317,6 +345,7 @@ int TAccessibleTextEdit::offsetAtPoint(const QPoint& point) const
  */
 void TAccessibleTextEdit::scrollToSubstring(int startIndex, int endIndex)
 {
+    IC();
     int startLine = lineForOffset(startIndex);
     int endLine = lineForOffset(endIndex);
     TTextEdit* edit = textEdit();
@@ -336,6 +365,7 @@ void TAccessibleTextEdit::scrollToSubstring(int startIndex, int endIndex)
  */
 QString TAccessibleTextEdit::attributes(int offset, int *startOffset, int *endOffset) const
 {
+    IC();
     // IAccessible2 defines -1 as length and -2 as cursor position.
     if (offset == -2) {
         offset = cursorPosition();
@@ -426,6 +456,7 @@ QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp op, in
                                               QAccessible::TextBoundaryType boundaryType,
                                               int* startOffset, int* endOffset) const
 {
+    // IC(); - too spammy for now - look at this later
     // There's no code overlap between the text*Offset() methods in this case, so
     // NoBoundary is always handled by the caller.
     Q_ASSERT_X(boundaryType != QAccessible::TextBoundaryType::NoBoundary,
@@ -559,6 +590,7 @@ QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp op, in
  */
 QString TAccessibleTextEdit::textAfterOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const
 {
+    IC();
     // This is the simplest case to implement, so get it over with now.
     if (boundaryType == QAccessible::TextBoundaryType::NoBoundary) {
         *startOffset = offset;
@@ -591,6 +623,7 @@ QString TAccessibleTextEdit::textAfterOffset(int offset, QAccessible::TextBounda
 QString TAccessibleTextEdit::textAtOffset(int offset, QAccessible::TextBoundaryType boundaryType,
                                          int *startOffset, int *endOffset) const
 {
+    // IC(); - too spammy for now - look at this later
     // This is the simplest case to implement, so get it over with now.
     if (boundaryType == QAccessible::TextBoundaryType::NoBoundary) {
         // TODO: Confirm that this is indeed the expected behavior.
@@ -623,6 +656,7 @@ QString TAccessibleTextEdit::textAtOffset(int offset, QAccessible::TextBoundaryT
  */
 QString TAccessibleTextEdit::textBeforeOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const
 {
+    IC();
     // This is the simplest case to implement, so get it over with now.
     if (boundaryType == QAccessible::TextBoundaryType::NoBoundary) {
         *startOffset = 0;
