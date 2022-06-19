@@ -19,17 +19,9 @@ MacOSAnnouncer::MacOSAnnouncer(QObject *parent)
 
 void MacOSAnnouncer::announce(QString text)
 {
-    NSView* view = reinterpret_cast<NSView*>(mudlet::self()->effectiveWinId());
-    if (!view) {
-        qDebug() << "no view found";
-    } else {
-        qDebug() << view;
-    }
-
-    NSString* msg = @"Hello World!";
     NSDictionary *announcementInfo = @{
-        NSAccessibilityAnnouncementKey : msg,
+        NSAccessibilityAnnouncementKey : text.toNSString(),
         NSAccessibilityPriorityKey : @(NSAccessibilityPriorityHigh),
     };
-    NSAccessibilityPostNotificationWithUserInfo(view, NSAccessibilityAnnouncementRequestedNotification, announcementInfo);
+    NSAccessibilityPostNotificationWithUserInfo([NSApp mainWindow], NSAccessibilityAnnouncementRequestedNotification, announcementInfo);
 }
