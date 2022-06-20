@@ -389,8 +389,8 @@ if(NOT USE_OWN_QT5KEYCHAIN)
   message(STATUS "Using system QtKeyChain (Qt5) library (found version \"${Qt5Keychain_VERSION}\").")
 endif()
 
-find_package(IcecreamCpp)
-include_directories(${IcecreamCpp_INCLUDE_DIRS})
+#find_package(IcecreamCpp)
+#include_directories(${IcecreamCpp_INCLUDE_DIRS})
 
 if(USE_3DMAPPER)
   if(POLICY CMP0072)
