@@ -30,4 +30,19 @@ Announcer::Announcer(QObject *parent)
 void Announcer::announce(QString text)
 {
     qDebug() << "announcing" << text;
+    // https://github.com/mozilla/gecko-dev/blob/master/accessible/atk/AccessibleWrap.cpp#L1119
+    //case nsIAccessibleEvent::EVENT_ALERT:
+    //    // A hack using state change showing events as alert events.
+    //    atk_object_notify_state_change(atkObj, ATK_STATE_SHOWING, true);
+    //    break;
+
+
+    "announcement",                     // EVENT_ANNOUNCEMENT
+            "live region added",                // EVENT_LIVE_REGION_ADDED
+            "live region removed",              // EVENT_LIVE_REGION_REMOVED
+
+    // https://website-archive.mozilla.org/www.mozilla.org/access/access/unix/new-atk.html
+
+    // android: https://developer.android.com/reference/android/view/accessibility/AccessibilityEvent#TYPE_ANNOUNCEMENT
+
 }

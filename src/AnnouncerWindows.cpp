@@ -30,4 +30,11 @@ Announcer::Announcer(QObject *parent)
 void Announcer::announce(QString text)
 {
     qDebug() << "announcing" << text;
+    // check:
+    //FireWinAccessibilityEvent(EVENT_OBJECT_LIVEREGIONCHANGED, node); // MSAA
+    //FireUiaAccessibilityEvent(UIA_LiveRegionChangedEventId, node); // UIA
+        // UiaRaiseAutomationEvent
+
+    // also:
+    // on Windows we need to fire IA2_EVENT_TEXT_INSERTED and IA2_EVENT_TEXT_REMOVED events individually on each affected node within the changed region, with additional attributes like “container-live:polite” to indicate that the affected node was part of a live region
 }
