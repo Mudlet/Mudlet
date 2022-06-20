@@ -1,15 +1,7 @@
 #include "Announcer.h"
 
-// appkit has to be included above mudlet.h since Boost::Collections is a clash
 #include <AppKit/AppKit.h>
-// also needed to make the two play nicely
-#undef nil
-#include "mudlet.h"
-#define nil nullptr
-
 #include <QDebug>
-#include <QAccessible>
-#include <QAccessibleEvent>
 
 Announcer::Announcer(QObject *parent)
     : QObject{parent}
