@@ -134,10 +134,12 @@ public:
     QIcon mIcon_invalidExit;
     QIcon mIcon_inAreaExit;
     QIcon mIcon_otherAreaExit;
+    QIcon mIcon_exitRoomLocked;
     QAction* mpAction_noExit = nullptr;
     QAction* mpAction_invalidExit = nullptr;
     QAction* mpAction_inAreaExit = nullptr;
     QAction* mpAction_otherAreaExit = nullptr;
+    QAction* mpAction_exitRoomLocked = nullptr;
 
 public slots:
     void save();
@@ -173,7 +175,7 @@ private slots:
     void slot_checkModified();
 
 private:
-    static QString generateToolTip(const QString& exitRoomName, const QString& exitAreaName, const bool outOfAreaExit, const int exitRoomWeight);
+    static QString generateToolTip(const QString& exitRoomName, const QString& exitAreaName, const bool exitRoomLocked, const bool outOfAreaExit, const int exitRoomWeight);
     void init();
     void initExit(int direction, int exitId, QLineEdit* exitLineEdit,
                   QCheckBox* noRoute, QCheckBox* stub,
