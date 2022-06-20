@@ -234,7 +234,7 @@ int TAccessibleTextEdit::cursorPosition() const
 void TAccessibleTextEdit::setCursorPosition(int position)
 {
     //IC();
-    IC(position);
+    //IC(position);
     if (offsetIsInvalid(position)) {
         qDebug() << "quitting setCursorPosition, " << position << "is an invalid offset";
         return;
@@ -243,7 +243,7 @@ void TAccessibleTextEdit::setCursorPosition(int position)
     int line = lineForOffset(position);
     int column = columnForOffset(position);
 
-    IC(line, column);
+    //IC(line, column);
     textEdit()->setCaretPosition(line, column);
 }
 

@@ -337,7 +337,7 @@ void TTextEdit::showNewLines()
 
     if (QAccessible::isActive()) {
         QString newLines;
-        IC(previousOldScrollPos, mOldScrollPos);
+        //IC(previousOldScrollPos, mOldScrollPos);
 
         // content have been deleted
         if (previousOldScrollPos > mOldScrollPos) {
