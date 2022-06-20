@@ -1,4 +1,4 @@
-#include "macosannouncer.h"
+#include "AnnouncerMac.h"
 
 // appkit has to be included above mudlet.h since Boost::Collections is a clash
 #include <AppKit/AppKit.h>
@@ -11,13 +11,13 @@
 #include <QAccessible>
 #include <QAccessibleEvent>
 
-MacOSAnnouncer::MacOSAnnouncer(QObject *parent)
+AnnouncerMac::AnnouncerMac(QObject *parent)
     : QObject{parent}
 {
 
 }
 
-void MacOSAnnouncer::announce(QString text)
+void AnnouncerMac::announce(QString text)
 {
     NSDictionary *announcementInfo = @{
         NSAccessibilityAnnouncementKey : text.toNSString(),

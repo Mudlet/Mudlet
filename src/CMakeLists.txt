@@ -493,6 +493,9 @@ if(APPLE)
     target_link_libraries(mudlet cocoa-qt-glue "-framework AppKit")
   endif(USE_UPDATER)
 
+  list(APPEND mudlet_SRCS AnnouncerMac.mm)
+  list(APPEND mudlet_HDRS AnnouncerMac.h)
+
   set_target_properties(mudlet PROPERTIES
     MACOSX_BUNDLE ON
     MACOSX_BUNDLE_BUNDLE_NAME Mudlet

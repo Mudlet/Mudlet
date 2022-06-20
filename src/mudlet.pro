@@ -759,8 +759,9 @@ HEADERS += \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h
 
-
-OBJECTIVE_SOURCES += macosannouncer.mm
+macx {
+    OBJECTIVE_SOURCES += AnnouncerMac.mm
+}
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \

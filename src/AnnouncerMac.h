@@ -3,11 +3,11 @@
 
 #include <QObject>
 
-class MacOSAnnouncer : public QObject
+class AnnouncerMac : public QObject
 {
     Q_OBJECT
 public:
-    explicit MacOSAnnouncer(QObject *parent = nullptr);
+    explicit AnnouncerMac(QObject *parent = nullptr);
     static void announce(QString text);
 
 signals:
