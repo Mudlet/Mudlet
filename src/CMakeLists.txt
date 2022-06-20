@@ -157,6 +157,14 @@ set(mudlet_SRCS
     XMLexport.cpp
     XMLimport.cpp)
 
+if(APPLE)
+  list(APPEND mudlet_SRCS AnnouncerMac.mm)
+elseif(UNIX AND NOT APPLE)
+  list(APPEND mudlet_SRCS AnnouncerLinux.cpp)
+elseif(WIN32)
+  list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
+endif()
+
 # This is for compiled UI files, not those used at runtime
 set(mudlet_UIS
     ui/about_dialog.ui
@@ -189,6 +197,7 @@ set(mudlet_UIS
 
 set(mudlet_HDRS
     ActionUnit.h
+    Announcer.h
     AliasUnit.h
     AltFocusMenuBarDisable.h
     ctelnet.h
@@ -492,9 +501,6 @@ if(APPLE)
   if(USE_UPDATER)
     target_link_libraries(mudlet cocoa-qt-glue "-framework AppKit")
   endif(USE_UPDATER)
-
-  list(APPEND mudlet_SRCS AnnouncerMac.mm)
-  list(APPEND mudlet_HDRS AnnouncerMac.h)
 
   set_target_properties(mudlet PROPERTIES
     MACOSX_BUNDLE ON

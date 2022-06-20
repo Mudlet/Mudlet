@@ -635,6 +635,7 @@ SOURCES += \
 
 HEADERS += \
     ActionUnit.h \
+    Announcer.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
     DarkTheme.h \
@@ -673,7 +674,6 @@ HEADERS += \
     ircmessageformatter.h \
     KeyUnit.h \
     LuaInterface.h \
-    macosannouncer.h \
     mapInfoContributorManager.h \
     mudlet.h \
     MxpTag.h \

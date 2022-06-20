@@ -27,7 +27,7 @@
 #include "TAccessibleTextEdit.h"
 #include "TTextEdit.h"
 
-#include "AnnouncerMac.h"
+#include "Announcer.h"
 #include "TConsole.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
@@ -375,7 +375,7 @@ void TTextEdit::showNewLines()
         // update for deletions and clearWindow() !!!
         // have to track the old text that was removed -_-
 
-        AnnouncerMac::announce(newLines);
+        Announcer::announce(newLines);
     }
 }
 
