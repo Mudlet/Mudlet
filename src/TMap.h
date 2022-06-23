@@ -199,7 +199,7 @@ public:
     QList<QString> mDirList;
     QList<int> mWeightList;
     QMap<int, QColor> mCustomEnvColors;
-    inline const static QMap<int, QVector3D> scmUnitVectors = {
+    inline static const QMap<int, QVector3D> scmUnitVectors = {
         {DIR_NORTH, {0, -1, 0}},
         {DIR_NORTHEAST, {1, -1, 0}},
         {DIR_NORTHWEST, {-1, -1, 0}},
@@ -212,7 +212,7 @@ public:
         {DIR_DOWN, {0, 0, -1}}};
 
     // contains complementary directions of DIR_XXXX
-    inline const static QMap<int, int> scmReverseDirections = {
+    inline static const QMap<int, int> scmReverseDirections = {
         {DIR_NORTH, DIR_SOUTH},
         {DIR_NORTHEAST, DIR_SOUTHWEST},
         {DIR_NORTHWEST, DIR_SOUTHEAST},

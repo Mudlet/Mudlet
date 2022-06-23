@@ -644,7 +644,7 @@ public:
     void freeLuaRegistryIndex(int index);
     void freeAllInLuaRegistry(TEvent);
 
-    inline const static QMap<Qt::MouseButton, QString> csmMouseButtons = {
+    inline static const QMap<Qt::MouseButton, QString> csmMouseButtons = {
         {Qt::NoButton, qsl("NoButton")},
         {Qt::LeftButton, qsl("LeftButton")},
         {Qt::RightButton, qsl("RightButton")},
