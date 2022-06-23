@@ -3064,14 +3064,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             popup->addSeparator();
 
-            if (selectionSize == 0) {
-                QString viewModeItem = mMapViewOnly
-                ? tr("Switch to editing mode", "2D Mapper context menu (room) item")
-                : tr("Switch to viewing mode", "2D Mapper context menu (room) item");
-                auto setMapViewOnly = new QAction(viewModeItem, this);
-                connect(setMapViewOnly, &QAction::triggered, this, &T2DMap::slot_toggleMapViewOnly);
-                popup->addAction(setMapViewOnly);
-            }
+            QString viewModeItem = mMapViewOnly ? tr("Switch to editing mode", "2D Mapper context menu (room) item") : tr("Switch to viewing mode", "2D Mapper context menu (room) item");
+            auto setMapViewOnly = new QAction(viewModeItem, this);
+            connect(setMapViewOnly, &QAction::triggered, this, &T2DMap::slot_toggleMapViewOnly);
+            popup->addAction(setMapViewOnly);
 
         } else if (mLabelHighlighted) {
             auto moveLabel = new QAction(tr("Move", "2D Mapper context menu (label) item"), this);
@@ -3287,6 +3283,7 @@ void T2DMap::slot_createRoom()
     isCenterViewCall = true;
     update();
     isCenterViewCall = false;
+    mpMap->mUnsavedMap = true;
 }
 
 // Used both by "Properties..." context menu item for existing lines AND
@@ -3390,6 +3387,7 @@ void T2DMap::slot_customLineProperties()
             }
         }
         repaint();
+        mpMap->mUnsavedMap = true;
     } else {
         qDebug("T2DMap::slot_customLineProperties() called but no line is selected...");
     }
@@ -3445,6 +3443,7 @@ void T2DMap::slot_customLineAddPoint()
     // the painting process:
     room->calcRoomDimensions();
     repaint();
+    mpMap->mUnsavedMap = true;
 }
 
 
@@ -3468,6 +3467,7 @@ void T2DMap::slot_customLineRemovePoint()
     // the painting process:
     room->calcRoomDimensions();
     repaint();
+    mpMap->mUnsavedMap = true;
 }
 
 
@@ -3482,6 +3482,7 @@ void T2DMap::slot_undoCustomLineLastPoint()
             room->calcRoomDimensions();
         }
         repaint();
+        mpMap->mUnsavedMap = true;
     }
 }
 
@@ -3502,6 +3503,7 @@ void T2DMap::slot_doneCustomLine()
         }
     }
     update();
+    mpMap->mUnsavedMap = true;
 }
 
 void T2DMap::slot_deleteCustomExitLine()
@@ -3517,6 +3519,7 @@ void T2DMap::slot_deleteCustomExitLine()
             mCustomLineSelectedExit = "";
             mCustomLineSelectedPoint = -1;
             repaint();
+            mpMap->mUnsavedMap = true;
             room->calcRoomDimensions();
             TArea* area = mpMap->mpRoomDB->getArea(room->getArea());
             if (area) {
@@ -3554,6 +3557,7 @@ void T2DMap::slot_deleteLabel()
 
     if (updateNeeded) {
         update();
+        mpMap->mUnsavedMap = true;
     }
 }
 
@@ -3579,6 +3583,8 @@ void T2DMap::slot_setPlayerLocation()
         manualSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         mpHost->raiseEvent(manualSetEvent);
         update();
+        // don't update map on player location change, as this would cause unnecessary
+        // autosaves while just speedwalking around
     }
 }
 
@@ -3709,6 +3715,7 @@ void T2DMap::slot_movePosition()
         }
     }
     repaint();
+    mpMap->mUnsavedMap = true;
 }
 
 
@@ -3789,6 +3796,7 @@ void T2DMap::slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoo
         }
     }
     repaint();
+    mpMap->mUnsavedMap = true;
 }
 
 void T2DMap::slot_setImage()
@@ -3805,6 +3813,7 @@ void T2DMap::slot_deleteRoom()
     mMultiSelectionListWidget.clear();
     mMultiSelectionListWidget.hide();
     repaint();
+    mpMap->mUnsavedMap = true;
 }
 
 void T2DMap::slot_selectRoomColor(QListWidgetItem* pI)
@@ -3829,6 +3838,7 @@ void T2DMap::slot_defineNewColor()
         slot_changeColor();
     }
     repaint();
+    mpMap->mUnsavedMap = true;
 }
 
 void T2DMap::slot_changeColor()
@@ -3853,6 +3863,7 @@ void T2DMap::slot_changeColor()
 
             mpMap->mCustomEnvColors.remove(colour.toInt());
             repaint();
+            mpMap->mUnsavedMap = true;
         });
 
         menu.exec(QCursor::pos());
@@ -3917,6 +3928,7 @@ void T2DMap::slot_changeColor()
         }
 
         update();
+        mpMap->mUnsavedMap = true;
     }
 }
 
@@ -3978,6 +3990,7 @@ void T2DMap::slot_spread()
         pMovingR->calcRoomDimensions();
     }
     repaint();
+    mpMap->mUnsavedMap = true;
 }
 
 void T2DMap::slot_shrink()
@@ -4038,6 +4051,7 @@ void T2DMap::slot_shrink()
         pMovingR->calcRoomDimensions();
     }
     repaint();
+    mpMap->mUnsavedMap = true;
 }
 
 void T2DMap::slot_setExits()
@@ -4227,6 +4241,7 @@ void T2DMap::slot_setRoomWeight()
         }
         mpMap->mMapGraphNeedsUpdate = true;
         repaint();
+        mpMap->mUnsavedMap = true;
     }
 }
 
@@ -4282,6 +4297,7 @@ void T2DMap::slot_newMap()
     isCenterViewCall = true;
     update();
     isCenterViewCall = false;
+    mpMap->mUnsavedMap = true;
     mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
 }
 
@@ -4392,6 +4408,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                     room->customLines[mCustomLineSelectedExit][mCustomLineSelectedPoint] = pc;
                     room->calcRoomDimensions();
                     repaint();
+                    mpMap->mUnsavedMap = true;
                     return;
                 }
             }
@@ -4424,6 +4441,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
             }
             if (needUpdate) {
                 update();
+                mpMap->mUnsavedMap = true;
             }
         }
     } else {
@@ -4539,6 +4557,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         }
 
         update();
+        mpMap->mUnsavedMap = true;
         return;
     }
 
@@ -4588,6 +4607,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
             }
         }
         repaint();
+        mpMap->mUnsavedMap = true;
     }
 }
 
@@ -4743,6 +4763,7 @@ void T2DMap::setRoomSize(double f)
     }
     flushSymbolPixmapCache();
     update();
+    mpMap->mUnsavedMap = true;
 }
 
 void T2DMap::setExitSize(double f)
@@ -5118,7 +5139,6 @@ void T2DMap::slot_setCustomLine2()
     //    qDebug("   ARROW: %s", mCurrentLineArrow ? "Yes" : "No");
 
     mHelpMsg = tr("Left-click to add point, right-click to undo/change/finish...", "2D Mapper big, bottom of screen help message");
-    // This message was previously being put up AFTER first click to set first segment was made....
     update();
 }
 
@@ -5152,7 +5172,6 @@ void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
     room->customLinesArrow[exit] = mCurrentLineArrow;
     //    qDebug("   ARROW: %s", mCurrentLineArrow ? "Yes" : "No");
     mHelpMsg = tr("Left-click to add point, right-click to undo/change/finish...", "2D Mapper big, bottom of screen help message");
-    // This message was previously being put up AFTER first click to set first segment was made....
     update();
 }
 
@@ -5166,6 +5185,7 @@ void T2DMap::slot_createLabel()
     mSizeLabel = true;
     mMultiSelection = true;
     update();
+    mpMap->mUnsavedMap = true;
 }
 
 void T2DMap::slot_roomSelectionChanged()

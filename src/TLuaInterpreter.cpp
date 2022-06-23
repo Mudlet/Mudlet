@@ -2689,9 +2689,6 @@ int TLuaInterpreter::getExitStubs(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid room id").arg(roomId));
     }
     QList<int> stubs = pR->exitStubs;
-    if (stubs.empty()) {
-        return warnArgumentValue(L, __func__, qsl("no stubs in this room with id %1").arg(roomId));
-    }
     lua_newtable(L);
     for (int i = 0, total = stubs.size(); i < total; ++i) {
         lua_pushnumber(L, i);
@@ -2717,9 +2714,6 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid room id").arg(roomId));
     }
     QList<int> stubs = pR->exitStubs;
-    if (stubs.empty()) {
-        return warnArgumentValue(L, __func__, qsl("no stubs in this room with id %1").arg(roomId));
-    }
     lua_newtable(L);
     for (int i = 0, total = stubs.size(); i < total; ++i) {
         lua_pushnumber(L, i + 1);
@@ -4540,6 +4534,7 @@ int TLuaInterpreter::setRoomEnv(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("room %1 doesn't exist").arg(id));
     }
     pR->environment = env;
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4560,6 +4555,7 @@ int TLuaInterpreter::setRoomName(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid room id").arg(id));
     }
     pR->name = name;
+    host.mpMap->mUnsavedMap = true;
     updateMap(L);
     lua_pushboolean(L, true);
     return 1;
@@ -4593,6 +4589,7 @@ int TLuaInterpreter::setRoomWeight(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->setWeight(w);
+        host.mpMap->mUnsavedMap = true;
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
 
@@ -4706,6 +4703,7 @@ int TLuaInterpreter::lockRoom(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->isLocked = b;
+        host.mpMap->mUnsavedMap = true;
         host.mpMap->mMapGraphNeedsUpdate = true;
         lua_pushboolean(L, true);
     } else {
@@ -4731,6 +4729,7 @@ int TLuaInterpreter::lockExit(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->setExitLock(dir, b);
+        host.mpMap->mUnsavedMap = true;
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
@@ -4758,6 +4757,7 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     }
 
     lua_pushboolean(L, true);
+    host.mpMap->mUnsavedMap = true;
     host.mpMap->mMapGraphNeedsUpdate = true;
     return 1;
 }
@@ -7475,24 +7475,13 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
     int from = getVerifiedInt(L, __func__, 1, "line to start matching from");
     int howMany  = getVerifiedInt(L, __func__, 2, "how many lines to match for");
     int triggerID;
-    int expiryCount = -1;
-
-    if (lua_isnumber(L, 4)) {
-        expiryCount = lua_tonumber(L, 4);
-
-        if (expiryCount < 1) {
-            return warnArgumentValue(L, __func__, qsl(
-                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
-        }
-    } else if (!lua_isnoneornil(L, 4)) {
-        lua_pushfstring(L, "tempLineTrigger: bad argument #4 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 4));
-        return lua_error(L);
-    }
+    // temp line triggers expire naturally on their own, thus don't need the expiry mechanism applicable to all other triggers
+    int dontExpire = -1;
 
     if (lua_isstring(L, 3)) {
-        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString(lua_tostring(L, 3)), expiryCount);
+        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString(lua_tostring(L, 3)), dontExpire);
     } else if (lua_isfunction(L, 3)) {
-        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString(), expiryCount);
+        triggerID = pLuaInterpreter->startTempLineTrigger(from, howMany, QString(), dontExpire);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
@@ -8373,6 +8362,7 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
     int alpha = getVerifiedInt(L, __func__, 5, "a");
     Host& host = getHostFromLua(L);
     host.mpMap->mCustomEnvColors[id] = QColor(r, g, b, alpha);
+    host.mpMap->mUnsavedMap = true;
     return 0;
 }
 
@@ -8449,6 +8439,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
 
     bool result = host.mpMap->mpRoomDB->setAreaName(id, newName);
     if (result) {
+        host.mpMap->mUnsavedMap = true;
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->updateAreaComboBox();
             if (isCurrentAreaRenamed) {
@@ -8524,8 +8515,8 @@ int TLuaInterpreter::addAreaName(lua_State* L)
 
     // Note that adding an area name implicitly creates an underlying TArea instance
     lua_pushnumber(L, host.mpMap->mpRoomDB->addArea(name));
+    host.mpMap->mUnsavedMap = true;
 
-    // Update mapper Area names widget, using method designed for it...!
     if (host.mpMap->mpMapper) {
         host.mpMap->mpMapper->updateAreaComboBox();
     }
@@ -8581,6 +8572,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->updateAreaComboBox();
         }
+        host.mpMap->mUnsavedMap = true;
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     lua_pushboolean(L, result);
@@ -8596,6 +8588,7 @@ int TLuaInterpreter::deleteRoom(lua_State* L)
     }
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpMap->mpRoomDB->removeRoom(id));
+    host.mpMap->mUnsavedMap = true;
     return 1;
 }
 
@@ -8673,6 +8666,7 @@ int TLuaInterpreter::addRoom(lua_State* L)
     lua_pushboolean(L, added);
     if (added) {
         host.mpMap->setRoomArea(id, -1, false);
+        host.mpMap->mUnsavedMap = true;
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     return 1;
@@ -8902,6 +8896,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
 
     bool result = pR->setDoor(exitCmd, doorStatus);
     if (result) {
+        host.mpMap->mUnsavedMap = true;
         if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
             host.mpMap->mpMapper->mp2dMap->update();
         }
@@ -9171,6 +9166,8 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     // the painting process - and not doing that here causes the new line to not
     // show up properly:
     pR->calcRoomDimensions();
+
+    host.mpMap->mUnsavedMap = true;
 
     // Better refresh the 2D map to show the new line:
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
@@ -9615,6 +9612,7 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
     }
     if (!pR->userData.isEmpty()) {
         pR->userData.clear();
+        host.mpMap->mUnsavedMap = true;
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9644,6 +9642,7 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
     //        }
     /*      else */ if (pR->userData.contains(key)) {
         pR->userData.remove(key);
+        host.mpMap->mUnsavedMap = true;
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9666,6 +9665,7 @@ int TLuaInterpreter::clearAreaUserData(lua_State* L)
     }
     if (!pA->mUserData.isEmpty()) {
         pA->mUserData.clear();
+        host.mpMap->mUnsavedMap = true;
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9691,6 +9691,7 @@ int TLuaInterpreter::clearAreaUserDataItem(lua_State* L)
         return warnArgumentValue(L, __func__, "key can not be an empty string");
     }
     lua_pushboolean(L, (pA->mUserData.remove(key) > 0));
+    host.mpMap->mUnsavedMap = true;
     return 1;
 }
 
@@ -9704,6 +9705,7 @@ int TLuaInterpreter::clearMapUserData(lua_State* L)
 
     if (!host.mpMap->mUserData.isEmpty()) {
         host.mpMap->mUserData.clear();
+        host.mpMap->mUnsavedMap = true;
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9962,6 +9964,7 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid room id").arg(roomId));
     }
     pR->userData[key] = value;
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -9986,6 +9989,7 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid area id").arg(areaId));
     }
     pA->mUserData[key] = value;
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10005,6 +10009,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
     QString value = getVerifiedString(L, __func__, 2, "value");
 
     host.mpMap->mUserData[key] = value;
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10257,6 +10262,7 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
         // handle/use/allow:
         pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
     }
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10305,6 +10311,7 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
         host.mpMap->mpMapper->mp2dMap->update();
     }
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10325,6 +10332,7 @@ int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
         host.mpMap->mpMapper->mp2dMap->update();
     }
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10412,6 +10420,7 @@ int TLuaInterpreter::setGridMode(lua_State* L)
             }
         }
     }
+    host.mpMap->mUnsavedMap = true;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -12254,7 +12263,7 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
 
     result = dlgIRC::writeIrcPassword(pHost, password);
     if (!result.first) {
-        return warnArgumentValue(L, __func__, QStringLiteral("unable to save password, reason: %1").arg(result.second));
+        return warnArgumentValue(L, __func__, qsl("unable to save password, reason: %1").arg(result.second));
     }
 
     lua_pushboolean(L, true);
@@ -14197,20 +14206,39 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             }
             lua_setfield(L, -2, qsl("buttons").toUtf8().constData());
 
+// The Qt documentation is unclear when, precisely QWheelEvent::globalPos()
+// became obsolete, 5.14.0 is a guess
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            auto globalPosition = qME->globalPosition();
+#else
+            auto globalPosition = qME->globalPos();
+#endif
             // Push globalX()
-            lua_pushnumber(L, qME->globalX());
+            lua_pushnumber(L, globalPosition.x());
             lua_setfield(L, -2, qsl("globalX").toUtf8().constData());
 
             // Push globalY()
-            lua_pushnumber(L, qME->globalY());
+            lua_pushnumber(L, globalPosition.y());
             lua_setfield(L, -2, qsl("globalY").toUtf8().constData());
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            auto position = qME->position();
+#endif
+
             // Push x()
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            lua_pushnumber(L, position.x());
+#else
             lua_pushnumber(L, qME->x());
+#endif
             lua_setfield(L, -2, qsl("x").toUtf8().constData());
 
             // Push y()
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            lua_pushnumber(L, position.y());
+#else
             lua_pushnumber(L, qME->y());
+#endif
             lua_setfield(L, -2, qsl("y").toUtf8().constData());
 
             // Push angleDelta()
@@ -15315,6 +15343,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addMouseEvent", TLuaInterpreter::addMouseEvent);
     lua_register(pGlobalLua, "removeMouseEvent", TLuaInterpreter::removeMouseEvent);
     lua_register(pGlobalLua, "getMouseEvents", TLuaInterpreter::getMouseEvents);
+    lua_register(pGlobalLua, "setConfig", TLuaInterpreter::setConfig);
     lua_register(pGlobalLua, "addCommandLineMenuEvent", TLuaInterpreter::addCommandLineMenuEvent);
     lua_register(pGlobalLua, "removeCommandLineMenuEvent", TLuaInterpreter::removeCommandLineMenuEvent);
     lua_register(pGlobalLua, "deleteMap", TLuaInterpreter::deleteMap);
@@ -17248,6 +17277,110 @@ int TLuaInterpreter::getMouseEvents(lua_State * L)
     return 1;
 }
 
+int TLuaInterpreter::setConfig(lua_State * L)
+{
+    auto& host = getHostFromLua(L);
+    QString key = getVerifiedString(L, __func__, 1, "key");
+    if (key.isEmpty()) {
+        return warnArgumentValue(L, __func__, "you must provide key");
+    }
+
+    auto success = [&]()
+    {
+        if (mudlet::debugMode) {
+            TDebug(Qt::white, Qt::blue) << qsl("setConfig: a script has changed %1\n").arg(key) >> &host;
+        }
+        lua_pushboolean(L, true);
+        return 1;
+    };
+
+    if (host.mpMap && host.mpMap->mpMapper) {
+        if (key == qsl("mapRoomSize")) {
+            host.mpMap->mpMapper->slot_setRoomSize(getVerifiedInt(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == qsl("mapExitSize")) {
+            host.mpMap->mpMapper->slot_setExitSize(getVerifiedInt(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == qsl("mapRoundRooms")) {
+            host.mpMap->mpMapper->slot_toggleRoundRooms(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == qsl("showRoomIdsOnMap")) {
+            host.mpMap->mpMapper->slot_setShowRoomIds(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == qsl("showMapInfo")) {
+            host.mMapInfoContributors.insert(getVerifiedString(L, __func__, 2, "value"));
+            host.mpMap->mpMapper->slot_updateInfoContributors();
+            return success();
+        }
+        if (key == qsl("hideMapInfo")) {
+            host.mMapInfoContributors.remove(getVerifiedString(L, __func__, 2, "value"));
+            host.mpMap->mpMapper->slot_updateInfoContributors();
+            return success();
+        }
+#if defined(INCLUDE_3DMAPPER)
+        if (key == qsl("show3dMapView")) {
+            host.mpMap->mpMapper->slot_toggle3DView(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+#endif
+        if (key == qsl("mapperPanelVisible")) {
+            host.mpMap->mpMapper->slot_setMapperPanelVisible(getVerifiedBool(L, __func__, 2, "value"));
+            return success();
+        }
+        if (key == qsl("mapShowRoomBorders")) {
+            host.mMapperShowRoomBorders = getVerifiedBool(L, __func__, 2, "value");
+            return success();
+        }
+    }
+
+    if (key == qsl("enableGMCP")) {
+        host.mEnableGMCP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableMSDP")) {
+        host.mEnableMSDP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableMSSP")) {
+        host.mEnableMSSP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableMSP")) {
+        host.mEnableMSP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("inputLineStrictUnixEndings")) {
+        host.mUSE_UNIX_EOL = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("fixUnnecessaryLinebreaks")) {
+        host.set_USE_IRE_DRIVER_BUGFIX(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
+    if (key == qsl("specialForceCompressionOff")) {
+        host.mFORCE_NO_COMPRESSION = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("specialForceGAOff")) {
+        host.mFORCE_GA_OFF = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("specialForceCharsetNegotiationOff")) {
+        host.mFORCE_CHARSET_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("specialForceMxpNegotiationOff")) {
+        host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+
+    return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCommandLineMenuEvent
 int TLuaInterpreter::addCommandLineMenuEvent(lua_State * L)
 {
@@ -17427,4 +17560,3 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 
     return 1;
 }
-

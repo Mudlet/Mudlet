@@ -31,6 +31,7 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QtConcurrent>
 #include <QtUiTools>
 #include <QColorDialog>
 #include <QDir>
@@ -120,16 +121,16 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     auto pWelcome_document = new QTextDocument(this);
 
-    auto copyProfile = new QAction(tr("Copy"), this);
-    copyProfile->setObjectName(qsl("copyProfile"));
+    mpCopyProfile = new QAction(tr("Copy"), this);
+    mpCopyProfile->setObjectName(qsl("copyProfile"));
     auto copyProfileSettings = new QAction(tr("Copy settings only"), this);
     copyProfileSettings->setObjectName(qsl("copyProfileSettingsOnly"));
 
-    copy_profile_toolbutton->addAction(copyProfile);
+    copy_profile_toolbutton->addAction(mpCopyProfile);
     copy_profile_toolbutton->addAction(copyProfileSettings);
-    copy_profile_toolbutton->setDefaultAction(copyProfile);
-    auto widgetList = copyProfile->associatedWidgets();
-    Q_ASSERT_X(widgetList.count(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for copyProfile QAction not found.");
+    copy_profile_toolbutton->setDefaultAction(mpCopyProfile);
+    auto widgetList = mpCopyProfile->associatedWidgets();
+    Q_ASSERT_X(widgetList.count(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for mpCopyProfile QAction not found.");
     widgetList.first()->setAccessibleName(tr("copy profile"));
     widgetList.first()->setAccessibleDescription(tr("copy the entire profile to new one that will require a different new name."));
 
@@ -164,7 +165,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
         copy_profile_toolbutton->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
         copy_profile_toolbutton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-        copyProfile->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
+        mpCopyProfile->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
 
         QTextCursor cursor = pWelcome_document->find(qsl("NEW_PROFILE_ICON"), 0, QTextDocument::FindWholeWords);
         // The indicated piece of marker text should be selected by the cursor
@@ -208,7 +209,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(connect_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::accept);
     connect(abort, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_cancel);
     connect(new_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_addProfile);
-    connect(copyProfile, &QAction::triggered, this, &dlgConnectionProfiles::slot_copy_profile);
+    connect(mpCopyProfile, &QAction::triggered, this, &dlgConnectionProfiles::slot_copy_profile);
     connect(copyProfileSettings, &QAction::triggered, this, &dlgConnectionProfiles::slot_copy_profilesettings_only);
     connect(remove_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_deleteProfile);
     connect(profile_name_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_name);
@@ -542,12 +543,13 @@ void dlgConnectionProfiles::slot_save_name()
 void dlgConnectionProfiles::slot_addProfile()
 {
     profile_name_entry->setReadOnly(false);
+    // while normally handled by fillout_form, due to it's asynchronous nature it is better UX to reset it here
+    character_password_entry->setText(QString());
     fillout_form();
     welcome_message->hide();
 
-    requiredArea->show();
     informationalArea->show();
-    optionalArea->show();
+    tabWidget_connectionInfo->show();
 
     QString newname = tr("new profile name");
 
@@ -857,7 +859,7 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                               "bustling commercial district and become wealthy as part of a powerful engineering conglomerate.\n\nLOTJ offers full PVP in both ground and space combat, governed by a "
                               "set of rules to minimize griefing and ensure that all kills have sufficient in-character cause.\n\nWhat role will you play? The legend awaits!");
 
-    } else if (hostUrl == QStringLiteral("mume.org")) {
+    } else if (hostUrl == qsl("mume.org")) {
         return qsl("Multi-Users in Middle-earth (MUME) is a highly competitive world PvP DikuMUD, set in J. R. R. Tolkien’s fictional world of Middle-earth, as described in The Hobbit and "
                               "The Lord of the Rings, where players may choose to join the epic war between the forces of Sauron and the armies of the Free peoples. In MUME players can explore, "
                               "role-play, acquire achievements, and complete quests across many challenging locations across Middle-earth such as Lothlórien, the Shire, Bree, Rivendell, Goblin-town,"
@@ -968,6 +970,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         if (it != mudlet::scmDefaultGames.end()) {
             val = it.value().websiteInfo;
         }
+        website_entry->setVisible(!val.isEmpty());
+    } else {
+        website_entry->show();
     }
     website_entry->setText(val);
 
@@ -1089,9 +1094,8 @@ void dlgConnectionProfiles::fillout_form()
 
     if (mProfileList.isEmpty()) {
         welcome_message->show();
-        requiredArea->hide();
+        tabWidget_connectionInfo->hide();
         informationalArea->hide();
-        optionalArea->hide();
 
 // collapse the width as the default is too big and set the height to a reasonable default
 // to fit all of the 'Welcome' message
@@ -1104,9 +1108,8 @@ void dlgConnectionProfiles::fillout_form()
     } else {
         welcome_message->hide();
 
-        requiredArea->show();
+        tabWidget_connectionInfo->show();
         informationalArea->show();
-        optionalArea->show();
     }
 
     profiles_tree_widget->setIconSize(QSize(120, 30));
@@ -1418,20 +1421,31 @@ void dlgConnectionProfiles::slot_copy_profile()
         return;
     }
 
-    copyFolder(mudlet::getMudletPath(mudlet::profileHomePath, oldname), mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
-    mProfileList << profile_name;
-    slot_item_clicked(pItem);
-    // Clear the Discord optin on the copied profile - just because the source
-    // one may have had it enabled does not mean we can assume the new one would
-    // want it set:
-    discord_optin_checkBox->setChecked(false);
+    QApplication::setOverrideCursor(Qt::BusyCursor);
+    mpCopyProfile->setText(tr("Copying..."));
+    mpCopyProfile->setEnabled(false);
+    auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(mudlet::profileHomePath, oldname), mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
+    auto watcher = new QFutureWatcher<bool>;
+    QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
+        mProfileList << profile_name;
+        slot_item_clicked(pItem);
+        // Clear the Discord optin on the copied profile - just because the source
+        // one may have had it enabled does not mean we can assume the new one would
+        // want it set:
+        discord_optin_checkBox->setChecked(false);
 
-    // restore the password, which won't be copied by the disk copy if stored in the credential manager
-    character_password_entry->setText(oldPassword);
-    if (mudlet::self()->storingPasswordsSecurely()) {
-        writeSecurePassword(profile_name, oldPassword);
-    }
-    mCopyingProfile = false;
+        // restore the password, which won't be copied by the disk copy if stored in the credential manager
+        character_password_entry->setText(oldPassword);
+        if (mudlet::self()->storingPasswordsSecurely()) {
+            writeSecurePassword(profile_name, oldPassword);
+        }
+        mCopyingProfile = false;
+        mpCopyProfile->setText(tr("Copy"));
+        mpCopyProfile->setEnabled(true);
+        QApplication::restoreOverrideCursor();
+        validateProfile();
+    });
+    watcher->setFuture(future);
 }
 
 void dlgConnectionProfiles::slot_copy_profilesettings_only()
@@ -1686,6 +1700,11 @@ bool dlgConnectionProfiles::validateProfile()
 {
     bool valid = true;
 
+    // don't validate url duplication during copy, as information will already exist when we try to set it
+    if (mCopyingProfile) {
+        return true;
+    }
+
     validName = true, validPort = true, validUrl = true;
 
     clearNotificationArea();
@@ -1710,7 +1729,7 @@ bool dlgConnectionProfiles::validateProfile()
         }
 
         // see if there is an edit that already uses a similar name
-        if (pItem->data(csmNameRole).toString() != name && mProfileList.contains(name)) {
+        if ((QString::compare(pItem->data(csmNameRole).toString(), name, Qt::CaseInsensitive) != 0) && mProfileList.contains(name, Qt::CaseInsensitive)) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(qsl("%1\n%2").arg(notificationAreaMessageBox->text(), tr("This profile name is already in use.")));
             validName = false;
@@ -1762,6 +1781,7 @@ bool dlgConnectionProfiles::validateProfile()
             port_ssl_tsl->setToolTip(QString());
         }
 #endif
+
         QUrl check;
         QString url = host_name_entry->text().trimmed();
         check.setHost(url);
@@ -1774,11 +1794,21 @@ bool dlgConnectionProfiles::validateProfile()
 
         if (!check.isValid()) {
             notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(
-                    qsl("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server."), check.errorString()));
+            notificationAreaMessageBox->setText(qsl("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server."), check.errorString()));
             host_name_entry->setPalette(mErrorPalette);
             validUrl = false;
             valid = false;
+        }
+
+        if (url.indexOf(QRegularExpression(qsl("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
+            if (port_ssl_tsl->isChecked()) {
+                notificationAreaIconLabelError->show();
+                notificationAreaMessageBox->setText(
+                        qsl("%1\n%2\n\n%3").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server."), check.errorString()));
+                host_name_entry->setPalette(mErrorPalette);
+                validUrl = false;
+                valid = false;
+            }
         }
 
         if (url.indexOf(QRegularExpression(qsl("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
@@ -1833,11 +1863,11 @@ bool dlgConnectionProfiles::validateProfile()
 }
 
 // credit: http://www.qtcentre.org/archive/index.php/t-23469.html
-void dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QString& destFolder)
+bool dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QString& destFolder)
 {
     QDir sourceDir(sourceFolder);
     if (!sourceDir.exists()) {
-        return;
+        return false;
     }
 
     QDir destDir(destFolder);
@@ -1857,6 +1887,7 @@ void dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QStrin
         QString destName = destFolder + QDir::separator() + files[i];
         copyFolder(srcName, destName);
     }
+    return true;
 }
 
 // As it is wired to the triggered() signal it is only called that way when

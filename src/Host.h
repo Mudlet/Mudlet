@@ -681,6 +681,9 @@ private:
     void saveModules(bool backup = true);
     void updateModuleZips(const QString &zipName, const QString &moduleName);
     void reloadModules();
+    void startMapAutosave();
+    void timerEvent(QTimerEvent *event) override;
+    void autoSaveMap();
 
     QFont mDisplayFont;
     QStringList mModulesToSync;

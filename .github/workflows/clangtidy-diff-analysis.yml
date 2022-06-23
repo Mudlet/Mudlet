@@ -23,7 +23,7 @@ jobs:
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
-      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
+      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.77.0/boost_1_77_0.tar.bz2/download
 
     steps:
     - name: Checkout Mudlet source code
@@ -114,7 +114,7 @@ jobs:
           --target autogen
 
     - name: Check C++ changes against style guide
-      uses: ZedThree/clang-tidy-review@v0.8.2
+      uses: ZedThree/clang-tidy-review@v0.8.4
       id: static_analysis
       with:
         build_dir: 'b/ninja' # path is relative to checkout directory

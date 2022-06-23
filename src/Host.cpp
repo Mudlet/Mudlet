@@ -56,6 +56,7 @@
 #include <QDialog>
 #include <QtUiTools>
 #include <QNetworkProxy>
+#include <QSettings>
 #include <zip.h>
 #include <memory>
 #include "post_guard.h"
@@ -499,6 +500,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         auto entry = i.next();
         profileShortcuts.insert(entry, new QKeySequence(*mudlet::self()->mShortcutsManager->getSequence(entry)));
     }
+
+    startMapAutosave();
 }
 
 Host::~Host()
@@ -511,6 +514,28 @@ Host::~Host()
     mErrorLogStream.flush();
     mErrorLogFile.close();
     TDebug::removeHost(this);
+}
+
+void Host::startMapAutosave()
+{
+    auto settings = mudlet::self()->getQSettings();
+    if (auto interval = settings->value("autosaveIntervalMinutes", 2).toInt(); interval > 0) {
+        startTimer(interval * 1min);
+    }
+}
+
+void Host::timerEvent(QTimerEvent *event)
+{
+    Q_UNUSED(event);
+
+    autoSaveMap();
+}
+
+void Host::autoSaveMap()
+{
+    if (mpMap->mUnsavedMap) {
+        mpConsole->saveMap(mudlet::getMudletPath(mudlet::profileMapPathFileName, mHostName, qsl("autosave.dat")));
+    }
 }
 
 void Host::loadPackageInfo()

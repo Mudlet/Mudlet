@@ -1660,13 +1660,13 @@ void cTelnet::processTelnetCommand(const std::string& command)
             // Using a QByteArray means there is no consideration of encoding
             // used - it is just bytes...
             QByteArray rawData = command.c_str();
-            
+
             if (command.size() < 6) {
                 return;
             }
 
             rawData = rawData.replace(TN_BELL, QByteArray("\\\\007"));
-            
+
             rawData = rawData.replace("\x1b", QByteArray("\\\\027"));
 
             // rawData is in the Mud Server's encoding, trim off the Telnet suboption
@@ -3257,7 +3257,7 @@ void cTelnet::setPostingTimeout(const int timeout)
 
     if (readableAsOriginalFormat | readableAsModifiedFormat) {
         qDebug().nospace().noquote() << "cTelnet::testReadReplayFile() INFO - The " << (readableAsOriginalFormat ? "original" : "modified") << " format replay has: " << replayChunks
-                                     << " chunks and covers a period of: " << QTime(0, 0).addMSecs(static_cast<int>(totalElapsed)).toString(QStringLiteral("hh:mm:ss.zzz")) << " (hh:mm:ss).";
+                                     << " chunks and covers a period of: " << QTime(0, 0).addMSecs(static_cast<int>(totalElapsed)).toString(qsl("hh:mm:ss.zzz")) << " (hh:mm:ss).";
 
         return {true, readableAsModifiedFormat};
     }
