@@ -31,7 +31,7 @@ class Host;
 
 // Keep together lists of links and hints associated
 class TLinkStore {
-    inline static const int scmMaxLinks = 2000;
+    inline static const int scmMaxLinks = 20000;
 
 public:
     // We don't use explict for this one so that the default argument is used,

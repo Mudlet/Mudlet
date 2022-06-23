@@ -157,6 +157,7 @@ bool TMap::setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations
     bool result = pR->setArea(area, isToDeferAreaRelatedRecalculations);
     if (result) {
         mMapGraphNeedsUpdate = true;
+        mUnsavedMap = true;
     }
     return result;
 }
@@ -166,6 +167,7 @@ bool TMap::addRoom(int id)
     bool ret = mpRoomDB->addRoom(id);
     if (ret) {
         mMapGraphNeedsUpdate = true;
+        mUnsavedMap = true;
     }
     return ret;
 }
@@ -181,6 +183,7 @@ bool TMap::setRoomCoordinates(int id, int x, int y, int z)
     pR->y = y;
     pR->z = z;
 
+    mUnsavedMap = true;
     return true;
 }
 
@@ -305,6 +308,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
 
         setExit(fromRoomId, minDistanceRoom, dirType);
         setExit(minDistanceRoom, fromRoomId, scmReverseDirections.value(dirType));
+        mUnsavedMap = true;
         return {};
     }
 
@@ -382,6 +386,7 @@ QString TMap::connectExitStubByToId(const int fromRoomId, const int toRoomId)
     int usableStubDirection = *(usableStubDirections.constBegin());
     setExit(fromRoomId, toRoomId, usableStubDirection);
     setExit(toRoomId, fromRoomId, scmReverseDirections.value(usableStubDirection));
+    mUnsavedMap = true;
     return {};
 }
 
@@ -427,6 +432,7 @@ QString TMap::connectExitStubByDirectionAndToId(const int fromRoomId, const int 
 
     setExit(fromRoomId, toRoomId, dirType);
     setExit(toRoomId, fromRoomId, scmReverseDirections.value(dirType));
+    mUnsavedMap = true;
     return {};
 }
 
@@ -510,6 +516,7 @@ bool TMap::setExit(int from, int to, int dir)
     }
     pA->determineAreaExitsOfRoom(pR->getId());
     mpRoomDB->updateEntranceMap(pR);
+    mUnsavedMap = true;
     return ret;
 }
 
@@ -2171,6 +2178,7 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
         }
     }
 
+    mUnsavedMap = true;
     return labelId;
 }
 
@@ -2206,6 +2214,7 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
         }
     }
 
+    mUnsavedMap = true;
     return labelId;
 }
 
@@ -2216,8 +2225,11 @@ void TMap::deleteMapLabel(int area, int labelId)
         return;
     }
 
-    if (pA->mMapLabels.remove(labelId) && mpMapper) {
-        mpMapper->mp2dMap->update();
+    if (pA->mMapLabels.remove(labelId)) {
+        mUnsavedMap = true;
+        if (mpMapper) {
+            mpMapper->mp2dMap->update();
+        }
     }
 }
 
@@ -2239,6 +2251,11 @@ void TMap::set3DViewCenter(const int areaId, const int xPos, const int yPos, con
     if (mpM) {
         mpM->setViewCenter(areaId, xPos, yPos, zPos);
     }
+#else
+    Q_UNUSED(areaId)
+    Q_UNUSED(xPos)
+    Q_UNUSED(yPos)
+    Q_UNUSED(zPos)
 #endif
 }
 

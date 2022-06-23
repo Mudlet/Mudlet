@@ -157,6 +157,7 @@ public:
     std::pair<int, QString> startPermKey(QString&, QString&, int&, int&, QString&);
 
     static int getCustomLines(lua_State*);
+    static int getCustomLines1(lua_State*);
     static int addCustomLine(lua_State*);
     static int removeCustomLine(lua_State*);
     static int noop(lua_State*);
@@ -629,6 +630,7 @@ public:
     static int addMouseEvent(lua_State*);
     static int removeMouseEvent(lua_State*);
     static int getMouseEvents(lua_State*);
+    static int setConfig(lua_State*);
     static int addCommandLineMenuEvent(lua_State*);
     static int removeCommandLineMenuEvent(lua_State*);
     static int deleteMap(lua_State*);
