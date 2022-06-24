@@ -729,6 +729,8 @@ mudlet::mudlet()
     loadMaps();
 
     setupTrayIcon();
+
+    announcer = new Announcer(this);
 }
 
 QSettings* mudlet::getQSettings()

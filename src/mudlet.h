@@ -26,6 +26,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "Announcer.h"
 #include "utils.h"
 #include "HostManager.h"
 #include "FontManager.h"
@@ -329,6 +330,8 @@ public:
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
     QSettings* getQSettings();
+
+    Announcer* announcer;
 
     bool firstLaunch = false;
     // Needed to work around a (likely only Windows) issue:

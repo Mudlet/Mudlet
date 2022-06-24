@@ -20,16 +20,54 @@
 #include "Announcer.h"
 
 #include <QDebug>
+#include <QAccessible>
+#include <QAccessibleWidget>
 
-Announcer::Announcer(QObject *parent)
-: QObject{parent}
+FakeNotification::FakeNotification(QWidget *parent) : QWidget(parent) {
+    setObjectName("FakeNotification");
+    setAccessibleName("FakeNotification");
+    setAccessibleDescription("FakeNotification");
+}
+
+void FakeNotification::setText(const QString &text) {
+    this->mText = text;
+}
+
+QString FakeNotification::text() {
+    return mText;
+}
+
+FakeNotification* FakeAccessibleNotification::notification() const
 {
+    return static_cast<FakeNotification*>(object());
+}
 
+QString FakeAccessibleNotification::text(QAccessible::Text t) const {
+    return notification()->text();
+}
+
+FakeStatusbar::FakeStatusbar(QWidget *parent) : QWidget(parent) {
+    setObjectName("FakeStatusbar");
+    setAccessibleName("FakeStatusbar");
+    setAccessibleDescription("FakeStatusbar");
+}
+
+Announcer::Announcer(QWidget *parent): QWidget{parent}
+{
+#if defined(Q_OS_LINUX)
+    statusbar = new FakeStatusbar(this);
+    notification = new FakeNotification(statusbar);
+#endif
 }
 
 void Announcer::announce(QString text)
 {
     qDebug() << "announcing" << text;
+    notification->setText(text);
+
+    QAccessibleEvent event(notification, QAccessible::ObjectShow);
+    QAccessible::updateAccessibility(&event);
+
     // https://github.com/mozilla/gecko-dev/blob/master/accessible/atk/AccessibleWrap.cpp#L1119
     //case nsIAccessibleEvent::EVENT_ALERT:
     //    // A hack using state change showing events as alert events.
@@ -37,9 +75,9 @@ void Announcer::announce(QString text)
     //    break;
 
 
-    "announcement",                     // EVENT_ANNOUNCEMENT
-            "live region added",                // EVENT_LIVE_REGION_ADDED
-            "live region removed",              // EVENT_LIVE_REGION_REMOVED
+//    "announcement",                     // EVENT_ANNOUNCEMENT
+//            "live region added",                // EVENT_LIVE_REGION_ADDED
+//            "live region removed",              // EVENT_LIVE_REGION_REMOVED
 
     // https://website-archive.mozilla.org/www.mozilla.org/access/access/unix/new-atk.html
 

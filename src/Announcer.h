@@ -20,17 +20,83 @@
 #ifndef ANNOUNCER_H
 #define ANNOUNCER_H
 
+#include <QWidget>
 #include <QObject>
+#include <QAccessible>
+#include <QAccessibleInterface>
+#include <QAccessibleWidget>
 
-class Announcer : public QObject
-{
-    Q_OBJECT
+#if defined(Q_OS_LINUX)
+class FakeNotification : public QWidget {
+Q_OBJECT
+
 public:
-    explicit Announcer(QObject *parent = nullptr);
-    static void announce(QString text);
+    Q_DISABLE_COPY(FakeNotification)
+    FakeNotification(QWidget *parent);
 
-signals:
+    void setText(const QString &text);
+    QString text();
+
+private:
+    QString mText;
+};
+
+
+// create a new class FakeStatusbar based on QWidget
+class FakeStatusbar : public QWidget {
+Q_OBJECT
+
+public:
+    Q_DISABLE_COPY(FakeStatusbar)
+    FakeStatusbar(QWidget *parent);
+};
+
+class FakeAccessibleNotification: public QAccessibleWidget
+{
+public:
+    explicit FakeAccessibleNotification(QWidget* w) : QAccessibleWidget(w, QAccessible::Role::Notification) { }
+
+private:
+    FakeNotification *notification() const;
+
+protected:
+    QString text(QAccessible::Text t) const override;
 
 };
 
+class FakeAccessibleStatusbar: public QAccessibleWidget
+{
+public:
+    explicit FakeAccessibleStatusbar(QWidget* w) : QAccessibleWidget(w, QAccessible::Role::StatusBar) { }
+};
+#endif
+
+class Announcer : public QWidget
+{
+Q_OBJECT
+public:
+    explicit Announcer(QWidget *parent = nullptr);
+    void announce(QString text);
+
+#if defined(Q_OS_LINUX)
+    static QAccessibleInterface* accessibleFactory(const QString &classname, QObject *object)
+    {
+        QAccessibleInterface *interface = nullptr;
+
+        if (classname == QLatin1String("FakeNotification") && object && object->isWidgetType()) {
+            interface = new FakeAccessibleNotification(static_cast<QWidget *>(object));
+        } else if (classname == QLatin1String("FakeStatusbar") && object && object->isWidgetType()) {
+            interface = new FakeAccessibleStatusbar(static_cast<QWidget *>(object));
+        }
+
+        return interface;
+    }
+#endif
+
+private:
+#if defined(Q_OS_LINUX)
+    FakeNotification* notification;
+    FakeStatusbar* statusbar;
+#endif
+};
 #endif // ANNOUNCER_H
