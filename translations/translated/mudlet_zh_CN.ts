@@ -551,91 +551,91 @@ please wait...</source>
   <context>
     <name>RoomIdLineEditDelegate</name>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="137"/>
-      <location filename="../src/dlgRoomExits.cpp" line="212"/>
+      <location filename="../src/dlgRoomExits.cpp" line="142"/>
+      <location filename="../src/dlgRoomExits.cpp" line="222"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
       <translation>输入的数字无效。如果这样离开，该出口将在点击 &lt;tt&gt;save&lt;/tt&gt; 时删除。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="138"/>
-      <location filename="../src/dlgRoomExits.cpp" line="142"/>
-      <location filename="../src/dlgRoomExits.cpp" line="213"/>
-      <location filename="../src/dlgRoomExits.cpp" line="217"/>
+      <location filename="../src/dlgRoomExits.cpp" line="143"/>
+      <location filename="../src/dlgRoomExits.cpp" line="147"/>
+      <location filename="../src/dlgRoomExits.cpp" line="223"/>
+      <location filename="../src/dlgRoomExits.cpp" line="227"/>
       <source>Set the number of the room that this special exit goes to.</source>
       <translation>设置该出口通向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="146"/>
-      <location filename="../src/dlgRoomExits.cpp" line="221"/>
-      <source>A positive roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation>预计这里会有一个正向的房间ID，这个房间是这个特殊的出口所导致的。 如果就此离开，当 &lt;tt&gt;保存&lt;/tt&gt; 被点击时，此出口将被删除。</translation>
+      <location filename="../src/dlgRoomExits.cpp" line="151"/>
+      <location filename="../src/dlgRoomExits.cpp" line="231"/>
+      <source>The roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
     <name>T2DMap</name>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3140"/>
+      <location filename="../src/T2DMap.cpp" line="3136"/>
       <source>Change the properties of this custom line</source>
       <translation>更改此段自定义线的属性</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3369"/>
-      <location filename="../src/T2DMap.cpp" line="4998"/>
+      <location filename="../src/T2DMap.cpp" line="3365"/>
+      <location filename="../src/T2DMap.cpp" line="4994"/>
       <source>Solid line</source>
       <translation>实线</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3370"/>
-      <location filename="../src/T2DMap.cpp" line="4999"/>
+      <location filename="../src/T2DMap.cpp" line="3366"/>
+      <location filename="../src/T2DMap.cpp" line="4995"/>
       <source>Dot line</source>
       <translation>点线</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3371"/>
-      <location filename="../src/T2DMap.cpp" line="5000"/>
+      <location filename="../src/T2DMap.cpp" line="3367"/>
+      <location filename="../src/T2DMap.cpp" line="4996"/>
       <source>Dash line</source>
       <translation>虚线</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3372"/>
-      <location filename="../src/T2DMap.cpp" line="5001"/>
+      <location filename="../src/T2DMap.cpp" line="3368"/>
+      <location filename="../src/T2DMap.cpp" line="4997"/>
       <source>Dash-dot line</source>
       <translation>点虚相间线</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3373"/>
-      <location filename="../src/T2DMap.cpp" line="5002"/>
+      <location filename="../src/T2DMap.cpp" line="3369"/>
+      <location filename="../src/T2DMap.cpp" line="4998"/>
       <source>Dash-dot-dot line</source>
       <translation>点虚相间线</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3670"/>
+      <location filename="../src/T2DMap.cpp" line="3666"/>
       <source>x coordinate (was %1):</source>
       <translation>x轴坐标(之前为%1)</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3671"/>
+      <location filename="../src/T2DMap.cpp" line="3667"/>
       <source>y coordinate (was %1):</source>
       <translation>y轴坐标(之前为%1)</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3672"/>
+      <location filename="../src/T2DMap.cpp" line="3668"/>
       <source>z coordinate (was %1):</source>
       <translation>z轴坐标(之前为%1)</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3864"/>
+      <location filename="../src/T2DMap.cpp" line="3860"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
       <translation>删除颜色</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3883"/>
+      <location filename="../src/T2DMap.cpp" line="3879"/>
       <source>Define new color</source>
       <translation>定义新颜色</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4199"/>
+      <location filename="../src/T2DMap.cpp" line="4195"/>
       <source>%1 {count:%2}</source>
       <translation>%1 {计数: %2}</translation>
     </message>
@@ -908,151 +908,151 @@ please wait...</source>
       <translation>将角色的当前位置设置在此处</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3069"/>
+      <location filename="../src/T2DMap.cpp" line="3067"/>
       <source>Switch to editing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>切换到编辑模式</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3070"/>
+      <location filename="../src/T2DMap.cpp" line="3067"/>
       <source>Switch to viewing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
       <translation>切换到视图模式</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3077"/>
+      <location filename="../src/T2DMap.cpp" line="3073"/>
       <source>Move</source>
       <comment>2D Mapper context menu (label) item</comment>
       <translation>移动</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3078"/>
+      <location filename="../src/T2DMap.cpp" line="3074"/>
       <source>Move label</source>
       <comment>2D Mapper context menu item (label) tooltip</comment>
       <translation>移动标签</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3080"/>
+      <location filename="../src/T2DMap.cpp" line="3076"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (label) item</comment>
       <translation>删除</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3081"/>
+      <location filename="../src/T2DMap.cpp" line="3077"/>
       <source>Delete label</source>
       <comment>2D Mapper context menu (label) item tooltip</comment>
       <translation>删除标签</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3095"/>
+      <location filename="../src/T2DMap.cpp" line="3091"/>
       <source>Add point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
       <translation>添加点</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3102"/>
+      <location filename="../src/T2DMap.cpp" line="3098"/>
       <source>Divide segment by adding a new point mid-way along</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state)</comment>
       <translation>通过在中途添加新点以划分线段</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3105"/>
+      <location filename="../src/T2DMap.cpp" line="3101"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, i.e must do the suggested action first)</comment>
       <translation>先选择点，再在线段中间添加新点朝向房间</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3109"/>
+      <location filename="../src/T2DMap.cpp" line="3105"/>
       <source>Remove point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
       <translation>删除点</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3116"/>
+      <location filename="../src/T2DMap.cpp" line="3112"/>
       <source>Merge pair of segments by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but will be able to be done again on this item)</comment>
       <translation>通过移除此点合并线段对</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3120"/>
+      <location filename="../src/T2DMap.cpp" line="3116"/>
       <source>Remove last segment by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)</comment>
       <translation>通过移除此点移除上个线段</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3125"/>
+      <location filename="../src/T2DMap.cpp" line="3121"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action)</comment>
       <translation>使用&quot;删除连线&quot;移除以可编辑点为结尾的唯一线段。</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3131"/>
+      <location filename="../src/T2DMap.cpp" line="3127"/>
       <source>Select a point first, then remove it</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)</comment>
       <translation>先选择一个点, 然后将其删除</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3135"/>
+      <location filename="../src/T2DMap.cpp" line="3131"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</comment>
       <translation>属性</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3139"/>
+      <location filename="../src/T2DMap.cpp" line="3135"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</comment>
       <translation>属性...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3143"/>
+      <location filename="../src/T2DMap.cpp" line="3139"/>
       <source>Delete line</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
       <translation>删除线</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3144"/>
+      <location filename="../src/T2DMap.cpp" line="3140"/>
       <source>Delete all of this custom line</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip</comment>
       <translation>删除所有此自定义线</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3663"/>
+      <location filename="../src/T2DMap.cpp" line="3659"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
       <comment>Use linefeeds as necessary to format text into a reasonable rectangle of text, %1 is a room number</comment>
       <translation>移动选择，将中心从高亮房间 (%1) 移至:</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3687"/>
+      <location filename="../src/T2DMap.cpp" line="3683"/>
       <source>OK</source>
       <comment>dialog (room(s) move) button</comment>
       <translation>好</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3692"/>
+      <location filename="../src/T2DMap.cpp" line="3688"/>
       <source>Cancel</source>
       <comment>dialog (room(s) move) button</comment>
       <translation>取消</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3891"/>
+      <location filename="../src/T2DMap.cpp" line="3887"/>
       <source>OK</source>
       <comment>dialog (room(s) change color) button</comment>
       <translation>好</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3896"/>
+      <location filename="../src/T2DMap.cpp" line="3892"/>
       <source>Cancel</source>
       <comment>dialog (room(s) change color) button</comment>
       <translation>取消</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3954"/>
+      <location filename="../src/T2DMap.cpp" line="3950"/>
       <source>Spread out rooms</source>
       <translation>分散房间</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3955"/>
+      <location filename="../src/T2DMap.cpp" line="3951"/>
       <source>Increase the spacing of
 the selected rooms,
 centered on the
@@ -1061,12 +1061,12 @@ factor of:</source>
       <translation>居中高亮房间，按指定倍数增加选中房间间距：</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4015"/>
+      <location filename="../src/T2DMap.cpp" line="4011"/>
       <source>Shrink in rooms</source>
       <translation>聚拢房间</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4016"/>
+      <location filename="../src/T2DMap.cpp" line="4012"/>
       <source>Decrease the spacing of
 the selected rooms,
 centered on the
@@ -1075,14 +1075,14 @@ factor of:</source>
       <translation>居中高亮房间，按指定倍数缩小选中房间间距：</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4144"/>
-      <location filename="../src/T2DMap.cpp" line="4158"/>
-      <location filename="../src/T2DMap.cpp" line="4208"/>
+      <location filename="../src/T2DMap.cpp" line="4140"/>
+      <location filename="../src/T2DMap.cpp" line="4154"/>
+      <location filename="../src/T2DMap.cpp" line="4204"/>
       <source>Enter room weight</source>
       <translation>输入房间权重</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4145"/>
+      <location filename="../src/T2DMap.cpp" line="4141"/>
       <source>Enter new roomweight
 (= travel time), minimum
 (and default) is 1:</source>
@@ -1090,7 +1090,7 @@ factor of:</source>
       <translation>输入新的房间权重 (＝路程远近) ，最小值 (默认值) 为1：</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4159"/>
+      <location filename="../src/T2DMap.cpp" line="4155"/>
       <source>Enter new roomweight
 (= travel time) for all
 selected rooms, minimum
@@ -1101,17 +1101,17 @@ used is:</source>
       <translation>为所有选中房间输入新的房间权重 (=路程远近) ，最小值 (默认值) 为1，当前权重为：</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4197"/>
+      <location filename="../src/T2DMap.cpp" line="4193"/>
       <source>%1 {count:%2, default}</source>
       <translation>%1 {总数：%2，默认值}</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4205"/>
+      <location filename="../src/T2DMap.cpp" line="4201"/>
       <source>1 {count 0, default}</source>
       <translation>1 {count 0, default}</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4209"/>
+      <location filename="../src/T2DMap.cpp" line="4205"/>
       <source>Choose an existing
 roomweight (= travel
 time) from the list
@@ -1124,25 +1124,25 @@ rooms:</source>
       <translation>为所有选中房间设置房间权重 (=路程远近) ，可以从列表中选择一个使用过的值 (常用的值排在前面)，也可以输入一个新值 (正整数) ：</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4259"/>
+      <location filename="../src/T2DMap.cpp" line="4255"/>
       <source>Load Mudlet map</source>
       <translation>载入 Mudlet 地图</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4261"/>
+      <location filename="../src/T2DMap.cpp" line="4257"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) or the ;;s as they are used programmatically</comment>
       <translation>Mudlet 地图 (*.dat);;Xml 地图数据 (*.xml);;所有文件 (*)</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="5145"/>
-      <location filename="../src/T2DMap.cpp" line="5178"/>
+      <location filename="../src/T2DMap.cpp" line="5141"/>
+      <location filename="../src/T2DMap.cpp" line="5174"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
       <translation>单击左键添加端点，单击右键 撤销／修改／结束...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="5188"/>
+      <location filename="../src/T2DMap.cpp" line="5184"/>
       <source>Left-click and drag a square for the size and position of your label</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
       <translation>单击左键并拖动一个方形可以设置标签大小和位置</translation>
@@ -1321,123 +1321,123 @@ rooms:</source>
   <context>
     <name>TLuaInterpreter</name>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="11426"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="11409"/>
       <source>Playing %1</source>
       <translation>正在玩 %1</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13895"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="13919"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13878"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13902"/>
       <source>ERROR</source>
       <translation>错误</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13896"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="13910"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13879"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13893"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
       <translation>对象</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13896"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="13910"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13879"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13893"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
       <translation>函数</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15438"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15421"/>
       <source>Some functions may not be available.</source>
       <translation>有些功能可能无法使用。</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14826"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14809"/>
       <source>No error message available from Lua</source>
       <translation>Lua没有错误消息</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14828"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14811"/>
       <source>Lua error: %1</source>
       <translation>Lua 错误: %1</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14830"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14813"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
       <translation>[ 错误 ] - 找不到 Lua 模块 %1.%2%3%4</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14844"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14827"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name (may specify which variant) of the module.</comment>
       <translation>[ 完成 ] -已加载Lua模块 %1。</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15425"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15408"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
       <translation>可能将无法访问 Mudlet Lua 代码。</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15443"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15426"/>
       <source>Database support will not be available.</source>
       <translation>数据库支持不可用。</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15450"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15433"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
       <translation>utf8.* Lua函数不可用。</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15456"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15439"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
       <translation>yajl.* Lua函数不可用。</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15641"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15624"/>
       <source>No error message available from Lua.</source>
       <translation>Lua没有提供可用的错误信息。</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15643"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15626"/>
       <source>Lua error: %1.</source>
       <translation>Lua 错误: %1.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15645"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15628"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
       <translation>[ 错误 ] - 无法加载代码格式化程序，缩进功能将不可用。
 </translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15722"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15705"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
       <translation>%1 (不存在)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15727"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15710"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
       <translation>%1 (不是一个文件或文件的快捷方式)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15736"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15719"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
       <translation>%1 (不是一个可读文件或文件的快捷方式)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15754"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15737"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
       <translation>%1 (不能读取文件)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15760"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15743"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
       <translation>[ 完成 ] - Mudlet-lua API &amp; Geyser Layout管理器已加载。</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15767"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15750"/>
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
@@ -1854,47 +1854,47 @@ consistency details...</source>
       <translation>建立我的地图</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2414"/>
+      <location filename="../src/TMap.cpp" line="2419"/>
       <source>Map issues</source>
       <translation>地图问题</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2421"/>
+      <location filename="../src/TMap.cpp" line="2426"/>
       <source>Area issues</source>
       <translation>区域问题</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2427"/>
+      <location filename="../src/TMap.cpp" line="2432"/>
       <source>Area id: %1 &quot;%2&quot;</source>
       <translation>区域id: %1 &quot;%2&quot;</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2429"/>
+      <location filename="../src/TMap.cpp" line="2434"/>
       <source>Area id: %1</source>
       <translation>区域编号: %1</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2438"/>
+      <location filename="../src/TMap.cpp" line="2443"/>
       <source>Room issues</source>
       <translation>房间问题</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2445"/>
+      <location filename="../src/TMap.cpp" line="2450"/>
       <source>Room id: %1 &quot;%2&quot;</source>
       <translation>房间id: %1 &quot;%2&quot;</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2447"/>
+      <location filename="../src/TMap.cpp" line="2452"/>
       <source>Room id: %1</source>
       <translation>房间编号: %1</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2457"/>
+      <location filename="../src/TMap.cpp" line="2462"/>
       <source>End of report</source>
       <translation>报告结束</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2463"/>
+      <location filename="../src/TMap.cpp" line="2468"/>
       <source>[ ALERT ] - At least one thing was detected during that last map operation
 that it is recommended that you review the most recent report in
 the file:
@@ -1908,7 +1908,7 @@ the file:
 &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2471"/>
+      <location filename="../src/TMap.cpp" line="2476"/>
       <source>[ INFO ]  - The equivalent to the above information about that last map
 operation has been saved for review as the most recent report in
 the file:
@@ -1921,7 +1921,7 @@ the file:
 &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2527"/>
+      <location filename="../src/TMap.cpp" line="2532"/>
       <source>[ ERROR ] - Unable to use or create directory to store map.
 Please check that you have permissions/access to:
 &quot;%1&quot;
@@ -1932,92 +1932,92 @@ and there is enough space. The download operation has failed.</source>
 并且确认空间足够。下载失败。</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2553"/>
+      <location filename="../src/TMap.cpp" line="2558"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
       <translation>[ 信息 ]  - 己开始下载地图, 请稍等...</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2564"/>
+      <location filename="../src/TMap.cpp" line="2569"/>
       <source>Map download</source>
       <comment>This is a title of a progress window.</comment>
       <translation>地图下载</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2627"/>
+      <location filename="../src/TMap.cpp" line="2632"/>
       <source>Map import</source>
       <comment>This is a title of a progress dialog.</comment>
       <translation>地图导入</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2937"/>
-      <location filename="../src/TMap.cpp" line="3428"/>
+      <location filename="../src/TMap.cpp" line="2942"/>
+      <location filename="../src/TMap.cpp" line="3433"/>
       <source>Exporting JSON map data from %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <translation>从 %1 中导出 JSON 地图数据
 %3的 区域： %2    %5 的房间：%4    %7的标签： %6...</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2952"/>
+      <location filename="../src/TMap.cpp" line="2957"/>
       <source>Map JSON export</source>
       <comment>This is a title of a progress window.</comment>
       <translation>地图 JSON 导出</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="3087"/>
+      <location filename="../src/TMap.cpp" line="3092"/>
       <source>Exporting JSON map file from %1 - writing data to file:
 %2 ...</source>
       <translation>正在从 %1 导出JSON 地图文件 - 将数据写入文件：
 %2...</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="3113"/>
+      <location filename="../src/TMap.cpp" line="3118"/>
       <source>import or export already in progress</source>
       <translation>导入或导出正在进行中</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="3121"/>
+      <location filename="../src/TMap.cpp" line="3126"/>
       <source>could not open file</source>
       <translation>无法打开文件</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="3131"/>
+      <location filename="../src/TMap.cpp" line="3136"/>
       <source>could not parse file, reason: &quot;%1&quot; at offset %2</source>
       <translation>无法解析文件，原因: &quot;%1&quot; at offset %2</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="3140"/>
+      <location filename="../src/TMap.cpp" line="3145"/>
       <source>empty Json file, no map data detected</source>
       <translation>空的 Json 文件，未检测到地图数据</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="3155"/>
+      <location filename="../src/TMap.cpp" line="3160"/>
       <source>invalid format version &quot;%1&quot; detected</source>
       <translation>检测到无效格式版本 &quot;%1&quot;</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="3161"/>
+      <location filename="../src/TMap.cpp" line="3166"/>
       <source>no format version detected</source>
       <translation>未检测到格式版本</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="3167"/>
+      <location filename="../src/TMap.cpp" line="3172"/>
       <source>no areas detected</source>
       <translation>未检测到区域</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="3192"/>
+      <location filename="../src/TMap.cpp" line="3197"/>
       <source>Map JSON import</source>
       <comment>This is a title of a progress window.</comment>
       <translation>地图 JSON 导入</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="3288"/>
+      <location filename="../src/TMap.cpp" line="3293"/>
       <source>aborted by user</source>
       <translation>被用户终止</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="3177"/>
-      <location filename="../src/TMap.cpp" line="3438"/>
+      <location filename="../src/TMap.cpp" line="3182"/>
+      <location filename="../src/TMap.cpp" line="3443"/>
       <source>Importing JSON map data to %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <translation>从 %1 中导入 JSON 地图数据
@@ -2100,14 +2100,14 @@ please wait...</source>
       <translation>[ 信息 ] - 检查地图文件 &quot;%1&quot;, 版本: &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2563"/>
-      <location filename="../src/TMap.cpp" line="2946"/>
-      <location filename="../src/TMap.cpp" line="3186"/>
+      <location filename="../src/TMap.cpp" line="2568"/>
+      <location filename="../src/TMap.cpp" line="2951"/>
+      <location filename="../src/TMap.cpp" line="3191"/>
       <source>Abort</source>
       <translation>中止</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2561"/>
+      <location filename="../src/TMap.cpp" line="2566"/>
       <source>Downloading map file for use in %1...</source>
       <comment>%1 is the name of the current Mudlet profile</comment>
       <translation>正在下载地图文件 %1...</translation>
@@ -2118,68 +2118,68 @@ please wait...</source>
       <translation>[信息] - 忽略此地图文件。</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2595"/>
+      <location filename="../src/TMap.cpp" line="2600"/>
       <source>loadMap: unable to perform request, a map is already being downloaded or
 imported at user request.</source>
       <translation>loadMap: 无法执行请求, 地图已在下载中或已被用户导入.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2626"/>
+      <location filename="../src/TMap.cpp" line="2631"/>
       <source>Importing XML map file for use in %1...</source>
       <translation>导入XML地图文件, 该文件用于%1...</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2654"/>
+      <location filename="../src/TMap.cpp" line="2659"/>
       <source>loadMap: failure to import XML map file, further information may be available
 in main console!</source>
       <translation>loadMap: 导入XML地图文件失败, 请前往主控制台查看更多信息!</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2689"/>
+      <location filename="../src/TMap.cpp" line="2694"/>
       <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
       <translation>[警告] - 根据用户请求取消下载地图</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2708"/>
+      <location filename="../src/TMap.cpp" line="2713"/>
       <source>[ ERROR ] - Map download encountered an error:
 %1.</source>
       <translation>[错误] - 下载地图出错
 %1</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2739"/>
+      <location filename="../src/TMap.cpp" line="2744"/>
       <source>[ ALERT ] - Map download failed, error reported was:
 %1.</source>
       <translation>[警告] - 下载地图失败。报错：
 %1</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2747"/>
+      <location filename="../src/TMap.cpp" line="2752"/>
       <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
       <translation>[警告] - 下载地图失败, 无法打开目标文件: %1.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2752"/>
+      <location filename="../src/TMap.cpp" line="2757"/>
       <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
       <translation>[警告] - 下载地图失败, 无法写入目标文件: %1.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2765"/>
-      <location filename="../src/TMap.cpp" line="2782"/>
+      <location filename="../src/TMap.cpp" line="2770"/>
+      <location filename="../src/TMap.cpp" line="2787"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
       <translation>[ 信息 ]  - ... 地图下载并存储完毕, 开始分析...</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2773"/>
-      <location filename="../src/TMap.cpp" line="2808"/>
+      <location filename="../src/TMap.cpp" line="2778"/>
+      <location filename="../src/TMap.cpp" line="2813"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
       <translation>[错误] - 地图下载出现错误, 分析目标文件失败: %1.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2813"/>
+      <location filename="../src/TMap.cpp" line="2818"/>
       <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
       <translation>[错误] - 地图下载出现错误, 无法读取目标文件: %1.</translation>
@@ -4343,8 +4343,8 @@ error message was: &quot;%2&quot;.</source>
       <translation>允许该配置文件使用Mudlet的 Discord Rich Presence  功能。</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="881"/>
-      <location filename="../src/ui/connection_profiles.ui" line="884"/>
+      <location filename="../src/ui/connection_profiles.ui" line="868"/>
+      <location filename="../src/ui/connection_profiles.ui" line="871"/>
       <source>Game description or your notes</source>
       <translation>游戏描述或注释</translation>
     </message>
@@ -4382,11 +4382,6 @@ error message was: &quot;%2&quot;.</source>
       <location filename="../src/ui/connection_profiles.ui" line="810"/>
       <source>Informational</source>
       <translation>更多信息</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/connection_profiles.ui" line="837"/>
-      <source>Website:</source>
-      <translation>网站:</translation>
     </message>
   </context>
   <context>
@@ -4675,145 +4670,145 @@ Count</source>
   <context>
     <name>directions</name>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15491"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15474"/>
       <source>north</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>北</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15493"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15476"/>
       <source>n</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>n</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15495"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15478"/>
       <source>east</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>东</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15497"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15480"/>
       <source>e</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>e</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15499"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15482"/>
       <source>south</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>南</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15501"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15484"/>
       <source>s</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>s</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15503"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15486"/>
       <source>west</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>西</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15505"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15488"/>
       <source>w</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>w</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15507"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15490"/>
       <source>northeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>东北</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15509"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15492"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>ne</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15511"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15494"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>东南</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15513"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15496"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>se</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15515"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15498"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>西南</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15517"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15500"/>
       <source>sw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>sw</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15519"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15502"/>
       <source>northwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>西北</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15521"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15504"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>nw</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15523"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15506"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>in</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15525"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15508"/>
       <source>i</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>i</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15527"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15510"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>out</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15529"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15512"/>
       <source>o</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>o</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15531"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15514"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>up</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15533"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15516"/>
       <source>u</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>u</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15535"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15518"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>down</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15537"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15520"/>
       <source>d</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>d</translation>
@@ -5299,22 +5294,22 @@ Count</source>
       <translation>游戏名称: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1023"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1028"/>
       <source>This profile is currently loaded - close it before changing the connection parameters.</source>
       <translation>本配置当前已加载——在修改连接参数前先关闭它。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1730"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1735"/>
       <source>The %1 character is not permitted. Use one of the following:</source>
       <translation>字符 %1 不允许使用， 可选用下列其中一项：</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1753"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1758"/>
       <source>You have to enter a number. Other characters are not permitted.</source>
       <translation>你必须输入一个数字。 不允许使用其他字符。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1742"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1747"/>
       <source>This profile name is already in use.</source>
       <translation>此配置文件名称已经使用。</translation>
     </message>
@@ -5336,7 +5331,7 @@ Count</source>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="124"/>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1441"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1446"/>
       <source>Copy</source>
       <translation>复制</translation>
     </message>
@@ -5397,112 +5392,112 @@ Count</source>
       <translation>无法创建新的配置文件夹。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="555"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="557"/>
       <source>new profile name</source>
       <translation>新配置文件名称</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="668"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="670"/>
       <source>Deleting &apos;%1&apos;</source>
       <translation>删除 &apos;%1&apos;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1070"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1075"/>
       <source>Discord integration not available on this platform</source>
       <translation>Discord 集成在此平台上不可用</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1076"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1081"/>
       <source>Discord integration not supported by game</source>
       <translation>游戏不支持 Discord集成</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1079"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1084"/>
       <source>Check to enable Discord integration</source>
       <translation>勾选以启用整合的Discord</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1315"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1320"/>
       <source>Reset icon</source>
       <comment>Reset the custom picture for this profile in the connection dialog and show the default one instead</comment>
       <translation>重置图标</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1318"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1323"/>
       <source>Set custom icon</source>
       <comment>Set a custom picture to show for the profile in the connection dialog</comment>
       <translation>设置自定义图标</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1322"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1327"/>
       <source>Set custom color</source>
       <comment>Set a custom color to show for the profile in the connection dialog</comment>
       <translation>设置自定义颜色</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1335"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1340"/>
       <source>Select custom image for profile (should be 120x30)</source>
       <translation>为配置文件选择自定义图像（应为 120x30）</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1335"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1340"/>
       <source>Images (%1)</source>
       <translation>图像 (%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1423"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1428"/>
       <source>Copying...</source>
       <translation>正在复制...</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1763"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1768"/>
       <source>Port number must be above zero and below 65535.</source>
       <translation>端口号须大于0且不超过65535。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1783"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1788"/>
       <source>Mudlet can not load support for secure connections.</source>
       <translation>Mudlet 无法加载安全连接支持。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1805"/>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1815"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1810"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1820"/>
       <source>Please enter the URL or IP address of the Game server.</source>
       <translation>请输入游戏服务器的URL或IP地址。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1826"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1831"/>
       <source>SSL connections require the URL of the Game server.</source>
       <translation>SSL连接需要游戏服务器的URL。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1843"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1848"/>
       <source>Load profile without connecting.</source>
       <translation>在不连接的情况下加载配置文件。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1859"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1864"/>
       <source>Please set a valid profile name, game server address and the game port before loading.</source>
       <translation>请在加载前设置有效的配置文件名称、游戏服务器地址和游戏端口。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1864"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1869"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
       <translation>请在连接前设置有效的配置文件名称、游戏服务器地址和游戏端口。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1918"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1923"/>
       <source>Click to hide the password; it will also hide if another profile is selected.</source>
       <translation>单击以隐藏密码；如果选择了其他配置文件，密码也会隐藏。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1922"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1927"/>
       <source>Click to reveal the password for this profile.</source>
       <translation>点击以显示此配置文件的密码。</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1771"/>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1774"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1776"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1779"/>
       <source>Mudlet is not configured for secure connections.</source>
       <translation>Mudlet 没有配置安全连接.</translation>
     </message>
@@ -5646,7 +5641,7 @@ Count</source>
   <context>
     <name>dlgMapper</name>
     <message>
-      <location filename="../src/dlgMapper.cpp" line="400"/>
+      <location filename="../src/dlgMapper.cpp" line="401"/>
       <source>None</source>
       <comment>Don&apos;t show the map overlay, &apos;none&apos; meaning no map overlay styled are enabled</comment>
       <translation>无</translation>
@@ -6590,271 +6585,291 @@ and there is enough space. The copying operation has failed.</source>
   <context>
     <name>dlgRoomExits</name>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1053"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1060"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1069"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1076"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1068"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1075"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1099"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1106"/>
       <source>&lt;b&gt;Room&lt;/b&gt; Weight of destination: %1.</source>
       <comment>Bold HTML tags are used to emphasis that the value is destination room&apos;s weight whether overridden by a non-zero exit weight here or not.</comment>
       <translation>&lt;b&gt;房间&lt;/b&gt; 目的地权重： %1。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="258"/>
+      <location filename="../src/dlgRoomExits.cpp" line="274"/>
       <source>(roomID)</source>
       <comment>Placeholder, if no roomID is set for an exit.</comment>
       <translation>(房间ID)</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="259"/>
+      <location filename="../src/dlgRoomExits.cpp" line="275"/>
       <source>(command or Lua script)</source>
       <comment>Placeholder, if a special exit has no name/script set.</comment>
       <translation>(命令或Lua脚本)</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="447"/>
-      <location filename="../src/dlgRoomExits.cpp" line="451"/>
-      <location filename="../src/dlgRoomExits.cpp" line="988"/>
+      <location filename="../src/dlgRoomExits.cpp" line="441"/>
+      <location filename="../src/dlgRoomExits.cpp" line="445"/>
+      <location filename="../src/dlgRoomExits.cpp" line="992"/>
       <source>Set the number of the room that this special exit goes to.</source>
       <translation>设置该出口通向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="453"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1554"/>
+      <location filename="../src/dlgRoomExits.cpp" line="447"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1604"/>
       <source>Prevent a route being created via this exit, equivalent to an infinite exit weight.</source>
       <translation>禁止通过此出口创建的路由，这会创建一个死循环出口权重。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="458"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1560"/>
+      <location filename="../src/dlgRoomExits.cpp" line="452"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1610"/>
       <source>Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.</source>
       <translation>此出口路径时, 需设置一个非负值以覆盖缺省 (房间) 权重，设为 0 时指定为缺省值。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="461"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1569"/>
+      <location filename="../src/dlgRoomExits.cpp" line="455"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1619"/>
       <source>No door symbol is drawn on 2D Map for this exit (only functional choice currently).</source>
       <translation>在2D 地图上没有为此出口绘制门符号（目前该选项仅供选择）。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="463"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1570"/>
+      <location filename="../src/dlgRoomExits.cpp" line="457"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1620"/>
       <source>Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
       <translation>绿色 (打开) 门符号将在 2D Map 上的此出口的定制出口线上绘制 ( 但当前不存在) 。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="465"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1571"/>
+      <location filename="../src/dlgRoomExits.cpp" line="459"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1621"/>
       <source>Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
       <translation>橙色 (关闭) 门符号将在 2D Map 上的此出口的定制出口线上绘制 ( 但当前不存在) 。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="467"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1572"/>
+      <location filename="../src/dlgRoomExits.cpp" line="461"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1622"/>
       <source>Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
       <translation>红色 (锁住) 门符号将在 2D Map 上的此出口的定制出口线上绘制 ( 但当前不存在) 。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="983"/>
+      <location filename="../src/dlgRoomExits.cpp" line="971"/>
+      <location filename="../src/dlgRoomExits.cpp" line="996"/>
+      <source>The roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgRoomExits.cpp" line="987"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
       <translation>输入的数字无效。如果这样离开，该出口将在点击 &lt;tt&gt;save&lt;/tt&gt; 时删除。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="984"/>
+      <location filename="../src/dlgRoomExits.cpp" line="988"/>
       <source>Set the number of the room that this special exit leads to.</source>
       <translation>设置此特殊出口通向的房间的编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="992"/>
-      <source>A positive roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation>预计这里会有一个正向的房间ID，这个房间是这个特殊的出口所导致的。 如果就此离开，当 &lt;tt&gt;保存&lt;/tt&gt; 被点击时，此出口将被删除。</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgRoomExits.cpp" line="997"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1001"/>
       <source>No command or Lua script entered, if left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="999"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1003"/>
       <source>(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1051"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1052"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1066"/>
       <source>Exit to &quot;%1&quot; in area: &quot;%2&quot;.</source>
       <translation>退出区域内的 &quot;%1&quot; ： &quot;%2&quot;。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1067"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1054"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1060"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1085"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1091"/>
+      <source>&lt;b&gt;Room is locked&lt;/b&gt;, it will not be used for speed-walks for any exit that leads to it.</source>
+      <comment>Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that goes to it.</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgRoomExits.cpp" line="1083"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1097"/>
       <source>Exit to unnamed room in area: &quot;%1&quot;, is valid.</source>
       <translation>离开未命名房间 : &quot;%1&quot;，有效。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1075"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1090"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1105"/>
       <source>Exit to unnamed room is valid.</source>
       <translation>有效的出口通往未命名的房间.</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1168"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1203"/>
       <source>Entered number is invalid, set the number of the room northwest of this one.</source>
       <translation>输入的编号无效，请设置在这个房间西北方向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1169"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1277"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1498"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1204"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1312"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1548"/>
       <source>Set the number of the room northwest of this one.</source>
       <translation>设置此房间西北方向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1177"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1212"/>
       <source>Entered number is invalid, set the number of the room north of this one.</source>
       <translation>输入的编号无效，请设置在这个房间北边的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1178"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1285"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1500"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1213"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1320"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1550"/>
       <source>Set the number of the room north of this one.</source>
       <translation>设置此房间北边方向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1186"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1221"/>
       <source>Entered number is invalid, set the number of the room northeast of this one.</source>
       <translation>输入的编号无效，请设置在这个房间东北方向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1187"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1293"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1502"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1222"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1328"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1552"/>
       <source>Set the number of the room northeast of this one.</source>
       <translation>设置此房间东北方向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1195"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1230"/>
       <source>Entered number is invalid, set the number of the room up from this one.</source>
       <translation>输入的编号无效，请设置在这个房间向上出口的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1196"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1301"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1504"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1231"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1336"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1554"/>
       <source>Set the number of the room up from this one.</source>
       <translation>设置此房间向上方向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1204"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1239"/>
       <source>Entered number is invalid, set the number of the room west of this one.</source>
       <translation>输入的编号无效，请设置在这个房间西边的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1205"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1309"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1506"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1240"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1344"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1556"/>
       <source>Set the number of the room west of this one.</source>
       <translation>设置此房间西边方向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1213"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1248"/>
       <source>Entered number is invalid, set the number of the room east of this one.</source>
       <translation>输入的编号无效，请设置在这个房间东边的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1214"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1317"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1508"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1249"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1352"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1558"/>
       <source>Set the number of the room east of this one.</source>
       <translation>设置此房间东边方向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1222"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1257"/>
       <source>Entered number is invalid, set the number of the room down from this one.</source>
       <translation>输入的编号无效，请设置在这个房间向下出口的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1223"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1325"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1510"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1258"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1360"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1560"/>
       <source>Set the number of the room down from this one.</source>
       <translation>设置此房间向下方向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1231"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1266"/>
       <source>Entered number is invalid, set the number of the room southwest of this one.</source>
       <translation>输入的编号无效，请设置在这个房间西南方向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1232"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1333"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1512"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1267"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1368"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1562"/>
       <source>Set the number of the room southwest of this one.</source>
       <translation>设置此房间西南方向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1240"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1275"/>
       <source>Entered number is invalid, set the number of the room south of this one.</source>
       <translation>输入的编号无效，请设置在这个房间南边的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1241"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1341"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1514"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1276"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1376"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1564"/>
       <source>Set the number of the room south of this one.</source>
       <translation>设置此房间南边方向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1249"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1284"/>
       <source>Entered number is invalid, set the number of the room southeast of this one.</source>
       <translation>输入的编号无效，请设置在这个房间东南方向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1250"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1349"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1516"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1285"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1384"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1566"/>
       <source>Set the number of the room southeast of this one.</source>
       <translation>设置此房间东南方向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1258"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1293"/>
       <source>Entered number is invalid, set the number of the room in from this one.</source>
       <translation>输入的编号无效，请设置在这个房间in方向出口的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1259"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1357"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1518"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1294"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1392"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1568"/>
       <source>Set the number of the room in from this one.</source>
       <translation>设置此房间向 in 方向的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1267"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1302"/>
       <source>Entered number is invalid, set the number of the room out from this one.</source>
       <translation>输入的编号无效，请设置在这个房间向 out 出口的房间编号。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1268"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1365"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1520"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1303"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1400"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1570"/>
       <source>Set the number of the room out from this one.</source>
       <translation>设置此房间向 out 方向的房间编号。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1058"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1073"/>
       <source>Exit to &quot;%1&quot;.</source>
       <translation>退出到 &quot;%1&quot;。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1140"/>
-      <location filename="../src/dlgRoomExits.cpp" line="1456"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1175"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1496"/>
       <source>Clear the stub exit for this exit to enter an exit roomID.</source>
       <translation>已为当前出口清除异常未知的出口标记。</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1488"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1526"/>
+      <source>This is the Room ID number for this room; this &lt;b&gt;room is locked&lt;/b&gt; so it will not be used for speed-walks at all.</source>
+      <comment>This text is a revision to the default tooltip text set for this widget in the &apos;room_exits.ui&apos; file. Bold HTML tags are used to emphasis that this room&apos;s locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that comes to it.</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgRoomExits.cpp" line="1538"/>
       <source>Exits for room: &quot;%1&quot; [*]</source>
       <translation>房间出口: &quot;%1&quot; [*]</translation>
     </message>
     <message>
-      <location filename="../src/dlgRoomExits.cpp" line="1490"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1540"/>
       <source>Exits for room Id: %1 [*]</source>
       <translation>房间 Id 的出口: %1 [*]</translation>
     </message>
@@ -12407,13 +12422,13 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/room_exits.ui" line="368"/>
       <location filename="../src/ui/room_exits.ui" line="502"/>
       <location filename="../src/ui/room_exits.ui" line="639"/>
-      <location filename="../src/ui/room_exits.ui" line="834"/>
-      <location filename="../src/ui/room_exits.ui" line="968"/>
-      <location filename="../src/ui/room_exits.ui" line="1120"/>
-      <location filename="../src/ui/room_exits.ui" line="1254"/>
-      <location filename="../src/ui/room_exits.ui" line="1388"/>
-      <location filename="../src/ui/room_exits.ui" line="1522"/>
-      <location filename="../src/ui/room_exits.ui" line="1785"/>
+      <location filename="../src/ui/room_exits.ui" line="886"/>
+      <location filename="../src/ui/room_exits.ui" line="1020"/>
+      <location filename="../src/ui/room_exits.ui" line="1172"/>
+      <location filename="../src/ui/room_exits.ui" line="1306"/>
+      <location filename="../src/ui/room_exits.ui" line="1440"/>
+      <location filename="../src/ui/room_exits.ui" line="1574"/>
+      <location filename="../src/ui/room_exits.ui" line="1837"/>
       <source>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</source>
       <translation>此出口路径时, 需设置一个非负值以覆盖缺省 (房间) 权重，设为 0 时指定为缺省值。</translation>
     </message>
@@ -12443,52 +12458,62 @@ you can use it but there could be issues with aligning columns of text</source>
       <translation>编号:</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="757"/>
+      <location filename="../src/ui/room_exits.ui" line="768"/>
+      <source>&lt;p&gt;This is the Room ID Number for this room.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/room_exits.ui" line="803"/>
       <source>Weight:</source>
       <translation>权重:</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="827"/>
+      <location filename="../src/ui/room_exits.ui" line="816"/>
+      <source>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/room_exits.ui" line="879"/>
       <source>E exit...</source>
       <translation>E 出口...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="958"/>
+      <location filename="../src/ui/room_exits.ui" line="1010"/>
       <source>Down exit...</source>
       <translation>Down 出口...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1104"/>
+      <location filename="../src/ui/room_exits.ui" line="1156"/>
       <source>SW exit...</source>
       <translation>SW 出口...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1244"/>
+      <location filename="../src/ui/room_exits.ui" line="1296"/>
       <source>S exit...</source>
       <translation>S 出口...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1378"/>
+      <location filename="../src/ui/room_exits.ui" line="1430"/>
       <source>SE exit...</source>
       <translation>SE 出口...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1512"/>
+      <location filename="../src/ui/room_exits.ui" line="1564"/>
       <source>In exit...</source>
       <translation>In 出口...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1775"/>
+      <location filename="../src/ui/room_exits.ui" line="1827"/>
       <source>Out exit...</source>
       <translation>Out 出口...</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1628"/>
+      <location filename="../src/ui/room_exits.ui" line="1680"/>
       <source>No route</source>
       <translation>没有路线</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1643"/>
+      <location filename="../src/ui/room_exits.ui" line="1695"/>
       <source>Stub Exit</source>
       <translation>被标记为未知的出口</translation>
     </message>
@@ -12498,14 +12523,14 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/room_exits.ui" line="332"/>
       <location filename="../src/ui/room_exits.ui" line="466"/>
       <location filename="../src/ui/room_exits.ui" line="600"/>
-      <location filename="../src/ui/room_exits.ui" line="801"/>
-      <location filename="../src/ui/room_exits.ui" line="932"/>
-      <location filename="../src/ui/room_exits.ui" line="1072"/>
-      <location filename="../src/ui/room_exits.ui" line="1218"/>
-      <location filename="../src/ui/room_exits.ui" line="1352"/>
-      <location filename="../src/ui/room_exits.ui" line="1486"/>
-      <location filename="../src/ui/room_exits.ui" line="1749"/>
-      <location filename="../src/ui/room_exits.ui" line="1933"/>
+      <location filename="../src/ui/room_exits.ui" line="853"/>
+      <location filename="../src/ui/room_exits.ui" line="984"/>
+      <location filename="../src/ui/room_exits.ui" line="1124"/>
+      <location filename="../src/ui/room_exits.ui" line="1270"/>
+      <location filename="../src/ui/room_exits.ui" line="1404"/>
+      <location filename="../src/ui/room_exits.ui" line="1538"/>
+      <location filename="../src/ui/room_exits.ui" line="1801"/>
+      <location filename="../src/ui/room_exits.ui" line="1985"/>
       <source>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
@@ -12520,13 +12545,13 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/room_exits.ui" line="348"/>
       <location filename="../src/ui/room_exits.ui" line="482"/>
       <location filename="../src/ui/room_exits.ui" line="616"/>
-      <location filename="../src/ui/room_exits.ui" line="817"/>
-      <location filename="../src/ui/room_exits.ui" line="948"/>
-      <location filename="../src/ui/room_exits.ui" line="1094"/>
-      <location filename="../src/ui/room_exits.ui" line="1234"/>
-      <location filename="../src/ui/room_exits.ui" line="1368"/>
-      <location filename="../src/ui/room_exits.ui" line="1502"/>
-      <location filename="../src/ui/room_exits.ui" line="1765"/>
+      <location filename="../src/ui/room_exits.ui" line="869"/>
+      <location filename="../src/ui/room_exits.ui" line="1000"/>
+      <location filename="../src/ui/room_exits.ui" line="1146"/>
+      <location filename="../src/ui/room_exits.ui" line="1286"/>
+      <location filename="../src/ui/room_exits.ui" line="1420"/>
+      <location filename="../src/ui/room_exits.ui" line="1554"/>
+      <location filename="../src/ui/room_exits.ui" line="1817"/>
       <source>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</source>
       <translation>&lt;p&gt;在这个方向上创建一个目的地未知的出口，与实际的出口 roomID 互斥。&lt;/p&gt;</translation>
     </message>
@@ -12536,14 +12561,14 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/room_exits.ui" line="381"/>
       <location filename="../src/ui/room_exits.ui" line="515"/>
       <location filename="../src/ui/room_exits.ui" line="652"/>
-      <location filename="../src/ui/room_exits.ui" line="847"/>
-      <location filename="../src/ui/room_exits.ui" line="981"/>
-      <location filename="../src/ui/room_exits.ui" line="1133"/>
-      <location filename="../src/ui/room_exits.ui" line="1267"/>
-      <location filename="../src/ui/room_exits.ui" line="1401"/>
-      <location filename="../src/ui/room_exits.ui" line="1535"/>
-      <location filename="../src/ui/room_exits.ui" line="1798"/>
-      <location filename="../src/ui/room_exits.ui" line="1951"/>
+      <location filename="../src/ui/room_exits.ui" line="899"/>
+      <location filename="../src/ui/room_exits.ui" line="1033"/>
+      <location filename="../src/ui/room_exits.ui" line="1185"/>
+      <location filename="../src/ui/room_exits.ui" line="1319"/>
+      <location filename="../src/ui/room_exits.ui" line="1453"/>
+      <location filename="../src/ui/room_exits.ui" line="1587"/>
+      <location filename="../src/ui/room_exits.ui" line="1850"/>
+      <location filename="../src/ui/room_exits.ui" line="2003"/>
       <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
@@ -12552,10 +12577,10 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/room_exits.ui" line="266"/>
       <location filename="../src/ui/room_exits.ui" line="400"/>
       <location filename="../src/ui/room_exits.ui" line="671"/>
-      <location filename="../src/ui/room_exits.ui" line="866"/>
-      <location filename="../src/ui/room_exits.ui" line="1152"/>
-      <location filename="../src/ui/room_exits.ui" line="1286"/>
-      <location filename="../src/ui/room_exits.ui" line="1420"/>
+      <location filename="../src/ui/room_exits.ui" line="918"/>
+      <location filename="../src/ui/room_exits.ui" line="1204"/>
+      <location filename="../src/ui/room_exits.ui" line="1338"/>
+      <location filename="../src/ui/room_exits.ui" line="1472"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;绿色(打开)门符号是在二维地图上绘制的，可被标记为未知出口或一个真实房间出口. &lt;/p&gt;</translation>
     </message>
@@ -12564,10 +12589,10 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/room_exits.ui" line="282"/>
       <location filename="../src/ui/room_exits.ui" line="416"/>
       <location filename="../src/ui/room_exits.ui" line="687"/>
-      <location filename="../src/ui/room_exits.ui" line="882"/>
-      <location filename="../src/ui/room_exits.ui" line="1168"/>
-      <location filename="../src/ui/room_exits.ui" line="1302"/>
-      <location filename="../src/ui/room_exits.ui" line="1436"/>
+      <location filename="../src/ui/room_exits.ui" line="934"/>
+      <location filename="../src/ui/room_exits.ui" line="1220"/>
+      <location filename="../src/ui/room_exits.ui" line="1354"/>
+      <location filename="../src/ui/room_exits.ui" line="1488"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;橘色(打开)门符号是在二维地图上绘制的，可被标记为未知出口或一个真实房间出口. &lt;/p&gt;</translation>
     </message>
@@ -12576,10 +12601,10 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/room_exits.ui" line="298"/>
       <location filename="../src/ui/room_exits.ui" line="432"/>
       <location filename="../src/ui/room_exits.ui" line="703"/>
-      <location filename="../src/ui/room_exits.ui" line="898"/>
-      <location filename="../src/ui/room_exits.ui" line="1184"/>
-      <location filename="../src/ui/room_exits.ui" line="1318"/>
-      <location filename="../src/ui/room_exits.ui" line="1452"/>
+      <location filename="../src/ui/room_exits.ui" line="950"/>
+      <location filename="../src/ui/room_exits.ui" line="1236"/>
+      <location filename="../src/ui/room_exits.ui" line="1370"/>
+      <location filename="../src/ui/room_exits.ui" line="1504"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;红色(锁上的)门符号是在二维地图上绘制的，可被标记为未知出口或一个真实房间出口. &lt;/p&gt;</translation>
     </message>
@@ -12600,25 +12625,25 @@ you can use it but there could be issues with aligning columns of text</source>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="534"/>
-      <location filename="../src/ui/room_exits.ui" line="1000"/>
-      <location filename="../src/ui/room_exits.ui" line="1554"/>
-      <location filename="../src/ui/room_exits.ui" line="1817"/>
+      <location filename="../src/ui/room_exits.ui" line="1052"/>
+      <location filename="../src/ui/room_exits.ui" line="1606"/>
+      <location filename="../src/ui/room_exits.ui" line="1869"/>
       <source>&lt;p&gt;A symbol is drawn with a green (Open) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;在2D Map上使用绿色(Open)填充颜色绘制符号，可被标记为未知出口或一个真实房间出口.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="550"/>
-      <location filename="../src/ui/room_exits.ui" line="1016"/>
-      <location filename="../src/ui/room_exits.ui" line="1570"/>
-      <location filename="../src/ui/room_exits.ui" line="1833"/>
+      <location filename="../src/ui/room_exits.ui" line="1068"/>
+      <location filename="../src/ui/room_exits.ui" line="1622"/>
+      <location filename="../src/ui/room_exits.ui" line="1885"/>
       <source>&lt;p&gt;A symbol is drawn with an orange (Closed) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;在2D Map上使用橘色(Open)填充颜色绘制符号，可被标记为未知出口或一个真实房间出口.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="566"/>
-      <location filename="../src/ui/room_exits.ui" line="1032"/>
-      <location filename="../src/ui/room_exits.ui" line="1586"/>
-      <location filename="../src/ui/room_exits.ui" line="1849"/>
+      <location filename="../src/ui/room_exits.ui" line="1084"/>
+      <location filename="../src/ui/room_exits.ui" line="1638"/>
+      <location filename="../src/ui/room_exits.ui" line="1901"/>
       <source>&lt;p&gt;A symbol is drawn with a red (Locked) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
       <translation>&lt;p&gt;在2D Map上使用红色(锁住的)填充颜色绘制符号，可被标记为未知出口或一个真实房间出口.&lt;/p&gt;</translation>
     </message>
@@ -12633,226 +12658,216 @@ you can use it but there could be issues with aligning columns of text</source>
       <translation>这个房间</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="747"/>
-      <source>&lt;p&gt;This is the Room ID Number for this room - it cannot be changed here!</source>
-      <translation>&lt;p&gt;这是本房间的房间编号--不能在此更改!</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/room_exits.ui" line="770"/>
-      <source>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set - this value cannot be changed here.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/ui/room_exits.ui" line="789"/>
+      <location filename="../src/ui/room_exits.ui" line="841"/>
       <source>East</source>
       <translation>东</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="920"/>
+      <location filename="../src/ui/room_exits.ui" line="972"/>
       <source>Down</source>
       <translation>下</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1054"/>
+      <location filename="../src/ui/room_exits.ui" line="1106"/>
       <source>Southwest</source>
       <translation>西南</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1206"/>
+      <location filename="../src/ui/room_exits.ui" line="1258"/>
       <source>South</source>
       <translation>南</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1340"/>
+      <location filename="../src/ui/room_exits.ui" line="1392"/>
       <source>Southeast</source>
       <translation>东南</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1474"/>
+      <location filename="../src/ui/room_exits.ui" line="1526"/>
       <source>In</source>
       <translation>入口</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1614"/>
+      <location filename="../src/ui/room_exits.ui" line="1666"/>
       <source>Key</source>
       <translation>按键</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1655"/>
+      <location filename="../src/ui/room_exits.ui" line="1707"/>
       <source>Exit RoomID number</source>
       <translation>出口房间 Id</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1682"/>
+      <location filename="../src/ui/room_exits.ui" line="1734"/>
       <source>No door</source>
       <translation>没有门</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1697"/>
+      <location filename="../src/ui/room_exits.ui" line="1749"/>
       <source>Open door</source>
       <translation>开启的门</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1709"/>
+      <location filename="../src/ui/room_exits.ui" line="1761"/>
       <source>Closed door</source>
       <translation>关上的门</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1721"/>
+      <location filename="../src/ui/room_exits.ui" line="1773"/>
       <source>Locked door</source>
       <translation>被锁住的门</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1737"/>
+      <location filename="../src/ui/room_exits.ui" line="1789"/>
       <source>Out</source>
       <translation>出口</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1877"/>
+      <location filename="../src/ui/room_exits.ui" line="1929"/>
       <source>&lt;p&gt;Click on an item to edit/change it. To delete a Special Exit, ether: select it and press the keyboard Delete key; or set its Exit roomID to less than one; or clear the name/command entry.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1920"/>
+      <location filename="../src/ui/room_exits.ui" line="1972"/>
       <source>Exit
 Status</source>
       <translation>退出
 状态</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1924"/>
+      <location filename="../src/ui/room_exits.ui" line="1976"/>
       <source>&lt;p&gt;Indicates whether the exit is invalid, leads to another room in this area or leads to a room in another area.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1960"/>
+      <location filename="../src/ui/room_exits.ui" line="2012"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
       <translation>&lt;p&gt;绿色 (开放的) 的符号在 2D 图上绘制。&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1969"/>
+      <location filename="../src/ui/room_exits.ui" line="2021"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
       <translation>&lt;p&gt;橙色（关闭的）的标志被绘制在2D地图上。&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1978"/>
+      <location filename="../src/ui/room_exits.ui" line="2030"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map.&lt;/p&gt;</source>
       <translation>&lt;p&gt;红色（锁定）门的符号被绘制在2D地图上。&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1987"/>
+      <location filename="../src/ui/room_exits.ui" line="2039"/>
       <source>&lt;p&gt;(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2055"/>
+      <location filename="../src/ui/room_exits.ui" line="2107"/>
       <source>&lt;p&gt;Use this button to save any changes, will also remove any invalid Special exits.&lt;/p&gt;</source>
       <translation>&lt;p&gt;使用此按钮来保存更改，同时将除去任何无效的特殊出口。&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2071"/>
+      <location filename="../src/ui/room_exits.ui" line="2123"/>
       <source>&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;</source>
       <translation>&lt;p&gt;使用此按钮来关闭对话,但不更改任何内容。&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1915"/>
+      <location filename="../src/ui/room_exits.ui" line="1967"/>
       <source>&lt;p&gt;Set the number of the room that this exit leads to, if set to zero the exit will be removed on saving the exits.&lt;/p&gt;</source>
       <translation>&lt;p&gt;设置此出口通向的房间ID，如果设置为零，将在保存出口时被移除。&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2004"/>
+      <location filename="../src/ui/room_exits.ui" line="2056"/>
       <source>&lt;p&gt;Add an empty item to Special exits to be edited as required.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2023"/>
+      <location filename="../src/ui/room_exits.ui" line="2075"/>
       <source>&lt;p&gt;Press this button to deactivate the selection of a Special exit.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2058"/>
+      <location filename="../src/ui/room_exits.ui" line="2110"/>
       <source>&amp;Save</source>
       <translation>&amp;保存</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1667"/>
+      <location filename="../src/ui/room_exits.ui" line="1719"/>
       <source>Exit Weight (0=No override)</source>
       <translation>出口权重 (0=无覆盖)</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2074"/>
+      <location filename="../src/ui/room_exits.ui" line="2126"/>
       <source>&amp;Cancel</source>
       <translation>&amp;取消</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1868"/>
+      <location filename="../src/ui/room_exits.ui" line="1920"/>
       <source>Special exits:</source>
       <translation>特殊出口:</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1911"/>
+      <location filename="../src/ui/room_exits.ui" line="1963"/>
       <source>Exit
 Room ID</source>
       <translation>出口
 房间ID</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1929"/>
+      <location filename="../src/ui/room_exits.ui" line="1981"/>
       <source>No
 Route</source>
       <translation>没有路径</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1938"/>
+      <location filename="../src/ui/room_exits.ui" line="1990"/>
       <source>Exit
 Weight</source>
       <translation>出口权重</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1942"/>
+      <location filename="../src/ui/room_exits.ui" line="1994"/>
       <source>&lt;p&gt;Set to a positive integer value to override the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1947"/>
+      <location filename="../src/ui/room_exits.ui" line="1999"/>
       <source>Door
 None</source>
       <translation>门
 无。</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1956"/>
+      <location filename="../src/ui/room_exits.ui" line="2008"/>
       <source>Door
 Open</source>
       <translation>开启的门</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1965"/>
+      <location filename="../src/ui/room_exits.ui" line="2017"/>
       <source>Door
 Closed</source>
       <translation>门
 被关上</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1974"/>
+      <location filename="../src/ui/room_exits.ui" line="2026"/>
       <source>Door
 Locked</source>
       <translation>门
 被锁住</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="1983"/>
+      <location filename="../src/ui/room_exits.ui" line="2035"/>
       <source>Command
 or LUA script</source>
       <translation>命令或Lua脚本</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2007"/>
+      <location filename="../src/ui/room_exits.ui" line="2059"/>
       <source>&amp;Add special exit</source>
       <translation>&amp;添加特殊出口</translation>
     </message>
     <message>
-      <location filename="../src/ui/room_exits.ui" line="2026"/>
+      <location filename="../src/ui/room_exits.ui" line="2078"/>
       <source>&amp;End S. Exits editing</source>
       <translation>&amp;结束 S. 退出编辑</translation>
     </message>
