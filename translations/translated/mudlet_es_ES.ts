@@ -11833,7 +11833,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3108"/>
       <source>Expires:</source>
-      <translation type="unfinished"/>
+      <translation>Caduca:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3168"/>
