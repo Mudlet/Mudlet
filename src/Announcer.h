@@ -27,12 +27,12 @@
 #include <QAccessibleWidget>
 
 #if defined(Q_OS_LINUX)
-class FakeNotification : public QWidget {
+class InvisibleNotification : public QWidget {
 Q_OBJECT
 
 public:
-    Q_DISABLE_COPY(FakeNotification)
-    FakeNotification(QWidget *parent);
+    Q_DISABLE_COPY(InvisibleNotification)
+    InvisibleNotification(QWidget *parent);
 
     void setText(const QString &text);
     QString text();
@@ -42,22 +42,22 @@ private:
 };
 
 
-// create a new class FakeStatusbar based on QWidget
-class FakeStatusbar : public QWidget {
+// create a new class InvisibleStatusbar based on QWidget
+class InvisibleStatusbar : public QWidget {
 Q_OBJECT
 
 public:
-    Q_DISABLE_COPY(FakeStatusbar)
-    FakeStatusbar(QWidget *parent);
+    Q_DISABLE_COPY(InvisibleStatusbar)
+    InvisibleStatusbar(QWidget *parent);
 };
 
-class FakeAccessibleNotification: public QAccessibleWidget
+class InvisibleAccessibleNotification: public QAccessibleWidget
 {
 public:
-    explicit FakeAccessibleNotification(QWidget* w) : QAccessibleWidget(w, QAccessible::Role::Notification) { }
+    explicit InvisibleAccessibleNotification(QWidget* w) : QAccessibleWidget(w, QAccessible::Role::Notification) { }
 
 private:
-    FakeNotification *notification() const;
+    InvisibleNotification *notification() const;
 
 protected:
     QString text(QAccessible::Text t) const override;
@@ -76,16 +76,16 @@ class Announcer : public QWidget
 Q_OBJECT
 public:
     explicit Announcer(QWidget *parent = nullptr);
-    void announce(QString text);
+    void announce(const QString text);
 
 #if defined(Q_OS_LINUX)
     static QAccessibleInterface* accessibleFactory(const QString &classname, QObject *object)
     {
         QAccessibleInterface *interface = nullptr;
 
-        if (classname == QLatin1String("FakeNotification") && object && object->isWidgetType()) {
-            interface = new FakeAccessibleNotification(static_cast<QWidget *>(object));
-        } else if (classname == QLatin1String("FakeStatusbar") && object && object->isWidgetType()) {
+        if (classname == QLatin1String("InvisibleNotification") && object && object->isWidgetType()) {
+            interface = new InvisibleAccessibleNotification(static_cast<QWidget *>(object));
+        } else if (classname == QLatin1String("InvisibleStatusbar") && object && object->isWidgetType()) {
             interface = new FakeAccessibleStatusbar(static_cast<QWidget *>(object));
         }
 
@@ -95,8 +95,8 @@ public:
 
 private:
 #if defined(Q_OS_LINUX)
-    FakeNotification* notification;
-    FakeStatusbar* statusbar;
+    InvisibleNotification* notification;
+    InvisibleStatusbar* statusbar;
 #endif
 };
 #endif // ANNOUNCER_H

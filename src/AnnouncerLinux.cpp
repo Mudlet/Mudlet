@@ -21,66 +21,50 @@
 
 #include <QDebug>
 #include <QAccessible>
-#include <QAccessibleWidget>
 
-FakeNotification::FakeNotification(QWidget *parent) : QWidget(parent) {
-    setObjectName("FakeNotification");
-    setAccessibleName("FakeNotification");
-    setAccessibleDescription("FakeNotification");
+InvisibleNotification::InvisibleNotification(QWidget *parent) : QWidget(parent) {
+    setObjectName("InvisibleNotification");
+    setAccessibleName("InvisibleNotification");
+    setAccessibleDescription("An invisible widget used as a workaround to announce text to the screen reader");
 }
 
-void FakeNotification::setText(const QString &text) {
+void InvisibleNotification::setText(const QString &text) {
     this->mText = text;
 }
 
-QString FakeNotification::text() {
+QString InvisibleNotification::text() {
     return mText;
 }
 
-FakeNotification* FakeAccessibleNotification::notification() const
+InvisibleNotification* InvisibleAccessibleNotification::notification() const
 {
-    return static_cast<FakeNotification*>(object());
+    return static_cast<InvisibleNotification*>(object());
 }
 
-QString FakeAccessibleNotification::text(QAccessible::Text t) const {
-    return notification()->text();
+QString InvisibleAccessibleNotification::text(QAccessible::Text t) const {
+    if (t == QAccessible::Value) {
+        return notification()->text();
+    }
+
+    return QAccessibleWidget::text(t);
 }
 
-FakeStatusbar::FakeStatusbar(QWidget *parent) : QWidget(parent) {
-    setObjectName("FakeStatusbar");
-    setAccessibleName("FakeStatusbar");
-    setAccessibleDescription("FakeStatusbar");
+InvisibleStatusbar::InvisibleStatusbar(QWidget *parent) : QWidget(parent) {
+    setObjectName("InvisibleStatusbar");
+    setAccessibleName("InvisibleStatusbar");
+    setAccessibleDescription("An invisible widget used as part as a workaround to announce text to the screen reader");
 }
 
-Announcer::Announcer(QWidget *parent): QWidget{parent}
+Announcer::Announcer(QWidget *parent): QWidget{parent}, statusbar(new InvisibleStatusbar(this))
 {
-#if defined(Q_OS_LINUX)
-    statusbar = new FakeStatusbar(this);
-    notification = new FakeNotification(statusbar);
-#endif
+    notification = new InvisibleNotification(statusbar);
 }
 
-void Announcer::announce(QString text)
+void Announcer::announce(const QString text)
 {
-    qDebug() << "announcing" << text;
     notification->setText(text);
 
+    // implemented per recommendation from Orca dev: https://mail.gnome.org/archives/orca-list/2022-June/msg00027.html
     QAccessibleEvent event(notification, QAccessible::ObjectShow);
     QAccessible::updateAccessibility(&event);
-
-    // https://github.com/mozilla/gecko-dev/blob/master/accessible/atk/AccessibleWrap.cpp#L1119
-    //case nsIAccessibleEvent::EVENT_ALERT:
-    //    // A hack using state change showing events as alert events.
-    //    atk_object_notify_state_change(atkObj, ATK_STATE_SHOWING, true);
-    //    break;
-
-
-//    "announcement",                     // EVENT_ANNOUNCEMENT
-//            "live region added",                // EVENT_LIVE_REGION_ADDED
-//            "live region removed",              // EVENT_LIVE_REGION_REMOVED
-
-    // https://website-archive.mozilla.org/www.mozilla.org/access/access/unix/new-atk.html
-
-    // android: https://developer.android.com/reference/android/view/accessibility/AccessibilityEvent#TYPE_ANNOUNCEMENT
-
 }

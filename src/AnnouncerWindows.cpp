@@ -27,7 +27,7 @@ Announcer::Announcer(QObject *parent)
 
 }
 
-void Announcer::announce(QString text)
+void Announcer::announce(const QString text)
 {
     qDebug() << "announcing" << text;
     // check:

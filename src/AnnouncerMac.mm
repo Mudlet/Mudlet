@@ -28,7 +28,7 @@ Announcer::Announcer(QObject *parent)
 
 }
 
-void Announcer::announce(QString text)
+void Announcer::announce(const QString text)
 {
     NSDictionary *announcementInfo = @{
         NSAccessibilityAnnouncementKey : text.toNSString(),
