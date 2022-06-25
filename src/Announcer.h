@@ -32,7 +32,7 @@ Q_OBJECT
 
 public:
     Q_DISABLE_COPY(InvisibleNotification)
-    InvisibleNotification(QWidget *parent);
+    explicit InvisibleNotification(QWidget *parent);
 
     void setText(const QString &text);
     QString text();
@@ -48,7 +48,7 @@ Q_OBJECT
 
 public:
     Q_DISABLE_COPY(InvisibleStatusbar)
-    InvisibleStatusbar(QWidget *parent);
+    explicit InvisibleStatusbar(QWidget *parent);
 };
 
 class InvisibleAccessibleNotification: public QAccessibleWidget
