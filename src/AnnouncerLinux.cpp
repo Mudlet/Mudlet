@@ -42,11 +42,10 @@ InvisibleNotification* InvisibleAccessibleNotification::notification() const
 }
 
 QString InvisibleAccessibleNotification::text(QAccessible::Text t) const {
-    if (t == QAccessible::Value) {
-        return notification()->text();
-    }
+    Q_UNUSED(t)
 
-    return QAccessibleWidget::text(t);
+    // return the notifications contents regardless of the request as part of the workaround
+    return notification()->text();
 }
 
 InvisibleStatusbar::InvisibleStatusbar(QWidget *parent) : QWidget(parent) {
