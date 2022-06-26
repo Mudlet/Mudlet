@@ -4043,13 +4043,8 @@ void dlgTriggerEditor::saveTrigger()
         pT->mSoundTrigger = mpTriggersMainArea->groupBox_soundTrigger->isChecked();
         pT->setSound(mpTriggersMainArea->lineEdit_soundFile->text());
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         QColor fgColor(QColorConstants::Transparent);
         QColor bgColor(QColorConstants::Transparent);
-#else
-        QColor fgColor("transparent");
-        QColor bgColor("transparent");
-#endif
         if (!mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString().isEmpty()) {
             fgColor = QColor(mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString());
         }
@@ -5156,13 +5151,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
 
         QColor fgColor(pT->getFgColor());
         QColor bgColor(pT->getBgColor());
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         bool transparentFg = fgColor == QColorConstants::Transparent;
         bool transparentBg = bgColor == QColorConstants::Transparent;
-#else
-        bool transparentFg = fgColor == QColor("transparent");
-        bool transparentBg = bgColor == QColor("transparent");
-#endif
         mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(fgColor, pT->isColorizerTrigger()));
         mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, transparentFg ? qsl("transparent") : fgColor.name());
         mpTriggersMainArea->pushButtonFgColor->setText(transparentFg ? tr("keep",
@@ -8450,13 +8440,8 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
     auto color = QColorDialog::getColor(QColor(mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString()),
                                         this,
                                         tr("Select foreground color to apply to matches"));
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     color = color.isValid() ? color : QColorConstants::Transparent;
     bool keepColor = color == QColorConstants::Transparent;
-#else
-    color = color.isValid() ? color : QColor("transparent");
-    bool keepColor = color == QColor("transparent");
-#endif
     mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(color));
     mpTriggersMainArea->pushButtonFgColor->setText(keepColor ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
     mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, keepColor ? qsl("transparent") : color.name());
@@ -8476,13 +8461,8 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
     auto color = QColorDialog::getColor(QColor(mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString()),
                                         this,
                                         tr("Select background color to apply to matches"));
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     color = color.isValid() ? color : QColorConstants::Transparent;
     bool keepColor = color == QColorConstants::Transparent;
-#else
-    color = color.isValid() ? color : QColor("transparent");
-    bool keepColor = color == QColor("transparent");
-#endif
     mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(color));
     mpTriggersMainArea->pushButtonBgColor->setText(keepColor ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
     mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, keepColor ? qsl("transparent") : color.name());
@@ -8859,11 +8839,7 @@ void dlgTriggerEditor::slot_editorContextMenu()
 
 QString dlgTriggerEditor::generateButtonStyleSheet(const QColor& color, const bool isEnabled)
 {
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     if (color != QColorConstants::Transparent && color.isValid()) {
-#else
-    if (color != QColor("transparent") && color.isValid()) {
-#endif
         if (isEnabled) {
             return mudlet::self()->mTEXT_ON_BG_STYLESHEET
                     .arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"),

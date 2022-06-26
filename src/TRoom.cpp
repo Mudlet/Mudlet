@@ -872,7 +872,6 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             // operation we want to perform (obtain the directions of all custom
             // exit lines and remove those which are already included in the
             // colours) is much easier to perform on a QSet rather than a QList:
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             auto customLineKeys = customLines.keys();
             QSet<QString> missingKeys{customLineKeys.begin(), customLineKeys.end()};
             if (!customLinesColor.isEmpty()) {
@@ -880,9 +879,6 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                 QSet<QString> customLinesColorKeysSet{customLinesColorKeys.begin(), customLinesColorKeys.end()};
                 missingKeys.subtract(customLinesColorKeysSet);
             }
-#else
-            QSet<QString> missingKeys{customLines.keys().toSet().subtract(customLinesColor.keys().toSet())};
-#endif
             QSetIterator<QString> itMissingCustomLineColourKey(missingKeys);
             while (itMissingCustomLineColourKey.hasNext()) {
                 customLinesColor.insert(itMissingCustomLineColourKey.next(), QColor(Qt::red));
@@ -949,13 +945,8 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
     // members from to identify any rogue members before removing them:
 
     QMap<QString, int> exitWeightsCopy = exitWeights;
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QSet<int> exitStubsCopy{exitStubs.begin(), exitStubs.end()};
     QSet<int> exitLocksCopy{exitLocks.begin(), exitLocks.end()};
-#else
-    QSet<int> exitStubsCopy{exitStubs.toSet()};
-    QSet<int> exitLocksCopy{exitLocks.toSet()};
-#endif
     QMap<QString, int> doorsCopy = doors;
     QMap<QString, QList<QPointF>> customLinesCopy = customLines;
     QMap<QString, QColor> customLinesColorCopy = customLinesColor;

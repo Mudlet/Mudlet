@@ -338,7 +338,7 @@ endif()
 include(../3rdparty/cmake-scripts/sanitizers.cmake)
 
 find_package(
-  Qt5 5.11 REQUIRED
+  Qt5 5.14 REQUIRED
   COMPONENTS Core
              Multimedia
              Network
@@ -349,9 +349,9 @@ find_package(
 find_package(Qt5 COMPONENTS Gamepad QUIET)
 find_package(Qt5 COMPONENTS TextToSpeech QUIET)
 
-if(Qt5Core_VERSION VERSION_LESS 5.11)
+if(Qt5Core_VERSION VERSION_LESS 5.14)
   message(
-    FATAL_ERROR "Mudlet requires Qt 5.11 or later, yours is ${Qt5Core_VERSION}")
+    FATAL_ERROR "Mudlet requires Qt 5.14 or later, yours is ${Qt5Core_VERSION}")
 else()
   # Qt Speech (or at least the TTS part) was officially release in 5.10
   message(STATUS "Qt version: ${Qt5Core_VERSION}")

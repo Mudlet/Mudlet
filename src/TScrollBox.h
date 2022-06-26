@@ -47,9 +47,7 @@ class TScrollBoxWidget : public QWidget
 
 public:
     Q_DISABLE_COPY(TScrollBoxWidget)
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 13, 0))
     Q_DISABLE_MOVE(TScrollBoxWidget)
-#endif
     explicit TScrollBoxWidget(QWidget* pW = nullptr);
     ~TScrollBoxWidget();
     void childEvent(QChildEvent* event) override;

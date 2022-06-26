@@ -653,7 +653,6 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         }
     }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     // Check for existence of all areas needed by rooms
     QList<int> areaIdsFromRoomsList{areaRoomMultiHash.uniqueKeys()};
     QSet<int> areaIdSet{areaIdsFromRoomsList.begin(), areaIdsFromRoomsList.end()};
@@ -665,14 +664,6 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         QSet<int> areaIdsFromAreaNamesSet{areaIdsFromAreaNamesList.begin(), areaIdsFromAreaNamesList.end()};
         areaIdSet.unite(areaIdsFromAreaNamesSet);
     }
-#else
-    // Check for existence of all areas needed by rooms
-    QSet<int> areaIdSet = areaRoomMultiHash.keys().toSet();
-
-    // START OF TASK 3
-    // Throw in the area Ids from the areaNamesMap:
-    areaIdSet.unite(areaNamesMap.keys().toSet());
-#endif
 
     // Check the set of area Ids against the ones we actually have:
     QSetIterator<int> itUsedArea(areaIdSet);
@@ -933,14 +924,10 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             // Purges any duplicates that a QList structure DOES permit, but a QSet does NOT:
             // Exit stubs:
             int _listCount = pR->exitStubs.count();
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             // These next few construction of a QSet from a QList or vice versa
             // are probably safe as both iterators refer to the SAME instance
             // that is persistent:
             QSet<int> _set{pR->exitStubs.begin(), pR->exitStubs.end()};
-#else
-            QSet<int> _set{pR->exitStubs.toSet()};
-#endif
             if (_set.count() < _listCount) {
                 if (mudlet::self()->showMapAuditErrors()) {
                     QString infoMsg = tr("[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an\n"
@@ -950,19 +937,11 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                 }
                 mpMap->appendRoomErrorMsg(itRoom.key(), tr("[ INFO ]  - Duplicate exit stub identifiers found in room, this is an anomaly but has been cleaned up easily."), false);
             }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             pR->exitStubs = QList<int>{_set.begin(), _set.end()};
-#else
-            pR->exitStubs = _set.toList();
-#endif
 
             // Exit locks:
             _listCount = pR->exitLocks.count();
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             _set = QSet<int>{pR->exitLocks.begin(), pR->exitLocks.end()};
-#else
-            _set = pR->exitLocks.toSet();
-#endif
             if (_set.count() < _listCount) {
                 if (mudlet::self()->showMapAuditErrors()) {
                     QString infoMsg = tr("[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an\n"
@@ -972,11 +951,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                 }
                 mpMap->appendRoomErrorMsg(itRoom.key(), tr("[ INFO ]  - Duplicate exit lock identifiers found in room, this is an anomaly but has been cleaned up easily."), false);
             }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             pR->exitLocks = QList<int>{_set.begin(), _set.end()};
-#else
-            pR->exitLocks = _set.toList();
-#endif
 
             // TASK 9 IS DONE INSIDE THIS METHOD:
             pR->audit(roomRemapping, areaRemapping);
@@ -1009,14 +984,8 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             }
 
             // Now compare pA->rooms to areaRoomMultiHash.values(itArea.key())
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-            // Have to create a local copy of the list of rooms to safely make
-            // a QSet of them:
             QList<int> roomIdsInAreaList{areaRoomMultiHash.values(itArea.key())};
             QSet<int> foundRooms{roomIdsInAreaList.begin(), roomIdsInAreaList.end()};
-#else
-            QSet<int> foundRooms{areaRoomMultiHash.values(itArea.key()).toSet()};
-#endif
 
             QSetIterator<int> itFoundRoom(foundRooms);
             // Original form of code which was slower because the two sets of rooms were
@@ -1043,11 +1012,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             // Report differences:
             if (!missingRooms.isEmpty()) {
                 QStringList roomList;
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                 QList<int> missingRoomsList{missingRooms.begin(), missingRooms.end()};
-#else
-                QList<int> missingRoomsList{missingRooms.toList()};
-#endif
                 if (missingRoomsList.size() > 1) {
                     // The on-screen listing are clearer if we sort the rooms
                     std::sort(missingRoomsList.begin(), missingRoomsList.end());
@@ -1083,11 +1048,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
 
             if (!extraRooms.isEmpty()) {
                 QStringList roomList;
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                 QList<int> extraRoomsList{extraRooms.begin(), extraRooms.end()};
-#else
-                QList<int> extraRoomsList{extraRooms.toList()};
-#endif
                 if (extraRoomsList.size() > 1) {
                     std::sort(extraRoomsList.begin(), extraRoomsList.end());
                 }

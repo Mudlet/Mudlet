@@ -476,12 +476,8 @@ void dlgRoomExits::save()
         return;
     }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QList<QString> originalExitCmdsList{pR->getSpecialExits().keys()};
     QSet<QString> originalExitCmds{originalExitCmdsList.begin(), originalExitCmdsList.end()};
-#else
-    QSet<QString> originalExitCmds = pR->getSpecialExits().keys().toSet();
-#endif
 
     for (int i = 0; i < specialExits->topLevelItemCount(); ++i) {
         QTreeWidgetItem* pI = specialExits->topLevelItem(i);

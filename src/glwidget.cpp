@@ -223,11 +223,7 @@ void GLWidget::slot_setCameraPositionZ(int angle)
 
 void GLWidget::initializeGL()
 {
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QColor color(QColorConstants::Black);
-#else
-    QColor color(Qt::black);
-#endif
     glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
     xRot = 1;
     yRot = 5;
@@ -274,11 +270,7 @@ void GLWidget::paintGL()
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             QPainter painter(this);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             painter.setPen(QColorConstants::White);
-#else
-            painter.setPen(Qt::white);
-#endif
             painter.setFont(QFont("Bitstream Vera Sans Mono", 30));
             painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
 

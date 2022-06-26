@@ -165,11 +165,7 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
         mDescription->show();
         QString packageDir = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), packageName);
         description.replace(QLatin1String("$packagePath"), packageDir);
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
         mDescription->setMarkdown(description);
-#else
-        mDescription->setText(description);
-#endif
     }
 
     QStringList labelText, details;
