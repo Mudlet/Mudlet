@@ -22,8 +22,8 @@
 #include <AppKit/AppKit.h>
 #include <QDebug>
 
-Announcer::Announcer(QObject *parent)
-    : QObject{parent}
+Announcer::Announcer(QWidget *parent)
+    : QWidget{parent}
 {
 
 }
