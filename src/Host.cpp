@@ -328,6 +328,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
 , mpDlgIRC(nullptr)
 , mpDlgProfilePreferences(nullptr)
+, mTutorialForCompactLineAlreadyShown(false)
 , mDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mLuaInterface(nullptr)
 , mTriggerUnit(this)
@@ -360,7 +361,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerDiameterPercentage(70)
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
-, mTutorialForCompactLineAlreadyShown(false)
 {
     TDebug::addHost(this);
 
