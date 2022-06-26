@@ -500,7 +500,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mDisplayFontSize = mDisplayFont.pointSize();
 
         // They always use "Control Pictures" to show control characters:
-        mControlCharacter = Picture;
+        mControlCharacter = ControlCharacterMode::Picture;
         refreshView();
     } else if (mpHost) {
         connect(mpHost, &Host::signal_controlCharacterHandlingChanged, this, &TConsole::slot_changeControlCharacterHandling);
