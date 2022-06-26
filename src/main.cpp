@@ -150,7 +150,9 @@ int main(int argc, char* argv[])
 #endif // _MSC_VER && _DEBUG
     spDebugConsole = nullptr;
 
+#if defined (Q_OS_UNIX)
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+#endif
 
 #if defined(Q_OS_MACOS)
     // Workaround for horrible mac rendering issues once the mapper widget
