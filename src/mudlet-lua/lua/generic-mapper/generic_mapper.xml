@@ -53,7 +53,7 @@
 				<regexCodeList>
 					<string>(?i)^\s*\[\s*Exits:\s*(.*)\]</string>
 					<string>^\s*There (?:is|are) \w+ (?:visible|obvious) exit[s]?:\s*(.*)</string>
-					<string>^\[?\s*(?:[Vv]isible|[Oo]bvious) (?:[Pp]ath|[Ee]xit)[s]?(?: is| are)?:?\s*(.*)\]?</string>
+					<string>^\[?[\s\w]*(?:[Vv]isible|[Oo]bvious) (?:[Pp]ath|[Ee]xit)[s]?(?: is| are)?:?\s*(.*)\]?</string>
 					<string>^\s*You see[\w\s]* exit[s]? leading (.*)</string>
 					<string>Exits:\s*(.*)</string>
 					<string>There are no obvious exits.</string>
