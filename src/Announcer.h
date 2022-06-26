@@ -26,7 +26,7 @@
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
 
-#if defined(Q_OS_LINUX)
+#if defined(Q_OS_LINUX) || defined (Q_OS_WIN32)
 class InvisibleNotification : public QWidget {
 Q_OBJECT
 
@@ -54,7 +54,11 @@ public:
 class InvisibleAccessibleNotification: public QAccessibleWidget
 {
 public:
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 12, 0))
     explicit InvisibleAccessibleNotification(QWidget* w) : QAccessibleWidget(w, QAccessible::Role::Notification) { }
+#else
+    explicit InvisibleAccessibleNotification(QWidget* w) : QAccessibleWidget(w, 0x00000086) { }
+#endif
 
 private:
     InvisibleNotification *notification() const;
@@ -78,7 +82,7 @@ public:
     explicit Announcer(QWidget *parent = nullptr);
     void announce(const QString text);
 
-#if defined(Q_OS_LINUX)
+#if defined(Q_OS_LINUX) || defined (Q_OS_WIN32)
     static QAccessibleInterface* accessibleFactory(const QString &classname, QObject *object)
     {
         QAccessibleInterface *interface = nullptr;
@@ -94,7 +98,7 @@ public:
 #endif
 
 private:
-#if defined(Q_OS_LINUX)
+#if defined(Q_OS_LINUX) || defined (Q_OS_WIN32)
     InvisibleNotification* notification;
     InvisibleStatusbar* statusbar;
 #endif

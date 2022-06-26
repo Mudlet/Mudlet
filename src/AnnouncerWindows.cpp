@@ -20,21 +20,50 @@
 #include "Announcer.h"
 
 #include <QDebug>
+#include <QAccessible>
 
-Announcer::Announcer(QObject *parent)
-: QObject{parent}
+InvisibleNotification::InvisibleNotification(QWidget *parent) : QWidget(parent) {
+    setObjectName("InvisibleNotification");
+    setAccessibleName("InvisibleNotification");
+    setAccessibleDescription("An invisible widget used as a workaround to announce text to the screen reader");
+}
+
+void InvisibleNotification::setText(const QString &text) {
+    this->mText = text;
+}
+
+QString InvisibleNotification::text() {
+    return mText;
+}
+
+InvisibleNotification* InvisibleAccessibleNotification::notification() const
 {
+    return static_cast<InvisibleNotification*>(object());
+}
 
+QString InvisibleAccessibleNotification::text(QAccessible::Text t) const {
+    Q_UNUSED(t)
+
+    // return the notifications contents regardless of the request as part of the workaround
+    return notification()->text();
+}
+
+InvisibleStatusbar::InvisibleStatusbar(QWidget *parent) : QWidget(parent) {
+    setObjectName("InvisibleStatusbar");
+    setAccessibleName("InvisibleStatusbar");
+    setAccessibleDescription("An invisible widget used as part as a workaround to announce text to the screen reader");
+}
+
+Announcer::Announcer(QWidget *parent): QWidget{parent}, statusbar(new InvisibleStatusbar(this))
+{
+    notification = new InvisibleNotification(statusbar);
 }
 
 void Announcer::announce(const QString text)
 {
-    qDebug() << "announcing" << text;
-    // check:
-    //FireWinAccessibilityEvent(EVENT_OBJECT_LIVEREGIONCHANGED, node); // MSAA
-    //FireUiaAccessibilityEvent(UIA_LiveRegionChangedEventId, node); // UIA
-        // UiaRaiseAutomationEvent
+    notification->setText(text);
 
-    // also:
-    // on Windows we need to fire IA2_EVENT_TEXT_INSERTED and IA2_EVENT_TEXT_REMOVED events individually on each affected node within the changed region, with additional attributes like “container-live:polite” to indicate that the affected node was part of a live region
+    // implemented per recommendation from Orca dev: https://mail.gnome.org/archives/orca-list/2022-June/msg00027.html
+    QAccessibleEvent event(notification, QAccessible::ObjectShow);
+    QAccessible::updateAccessibility(&event);
 }
