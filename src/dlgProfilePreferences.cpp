@@ -1003,9 +1003,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         }
     }
 
-    comboBox_controlCharacterHandling->setItemData(0, static_cast<int>(ControlCharacterMode::AsIs));
-    comboBox_controlCharacterHandling->setItemData(1, static_cast<int>(ControlCharacterMode::Picture));
-    comboBox_controlCharacterHandling->setItemData(2, static_cast<int>(ControlCharacterMode::OEM));
+    comboBox_controlCharacterHandling->setItemData(0, QVariant::fromValue(ControlCharacterMode::AsIs));
+    comboBox_controlCharacterHandling->setItemData(1, QVariant::fromValue(ControlCharacterMode::Picture));
+    comboBox_controlCharacterHandling->setItemData(2, QVariant::fromValue(ControlCharacterMode::OEM));
     auto cch_index = comboBox_controlCharacterHandling->findData(static_cast<int>(pHost->getControlCharacterMode()));
     comboBox_controlCharacterHandling->setCurrentIndex((cch_index > 0) ? cch_index : 0);
     connect(comboBox_controlCharacterHandling, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeControlCharacterHandling);
