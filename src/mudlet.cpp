@@ -4688,3 +4688,8 @@ bool mudlet::desktopInDarkMode()
 
     return false;
 }
+
+void mudlet::announce(const QString& text)
+{
+    announcer->announce(text);
+}

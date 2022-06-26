@@ -375,7 +375,7 @@ void TTextEdit::showNewLines()
         // update for deletions and clearWindow() !!!
         // have to track the old text that was removed -_-
 
-        mudlet::self()->announcer->announce(newLines);
+        mudlet::self()->announce(newLines);
     }
 }
 

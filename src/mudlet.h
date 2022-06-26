@@ -275,6 +275,7 @@ public:
     void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     static bool loadLuaFunctionList();
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
+    void announce(const QString& text);
 
     // Used by a profile to tell the mudlet class
     // to tell other profiles to reload the updated
@@ -330,8 +331,6 @@ public:
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
     QSettings* getQSettings();
-
-    Announcer* announcer;
 
     bool firstLaunch = false;
     // Needed to work around a (likely only Windows) issue:
@@ -706,6 +705,7 @@ private:
     QPointer<QAction> mpActionVariables;
 
     HostManager mHostManager;
+    Announcer* announcer;
 
     bool mshowMapAuditErrors;
 
