@@ -212,17 +212,10 @@ public:
     QWidget* layerCommandLine = nullptr;
     QHBoxLayout* layoutLayer2 = nullptr;
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QColor mBgColor = QColorConstants::Black;
     QColor mFgColor = QColorConstants::LightGray;
     QColor mSystemMessageFgColor = QColorConstants::Red;
     QColor mCommandBgColor = QColorConstants::Black;
-#else
-    QColor mBgColor = Qt::black;
-    QColor mFgColor = Qt::lightGray;
-    QColor mSystemMessageFgColor = Qt::red;
-    QColor mCommandBgColor = Qt::black;
-#endif
     QColor mSystemMessageBgColor = mBgColor;
     QColor mCommandFgColor = QColor(213, 195, 0);
 

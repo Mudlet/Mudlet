@@ -77,7 +77,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mScreenOffset(0)
 , mMaxHRange(0)
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
-, mUseOldUnicode8(false)
 , mTabStopwidth(8)
 // Should be the same as the size of the timeStampFormat constant in the TBuffer
 // class:
@@ -126,10 +125,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setMouseTracking(true); // test fix for MAC
     setEnabled(true);       //test fix for MAC
 
-    QVersionNumber runTimeVersion = QVersionNumber::fromString(QLatin1String(qVersion()));
-    if (runTimeVersion.majorVersion() == 5 && runTimeVersion.minorVersion() < 11) {
-        mUseOldUnicode8 = true;
-    }
     connect(mpHost, &Host::signal_changeIsAmbigousWidthGlyphsToBeWide, this, &TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide, Qt::UniqueConnection);
 }
 
@@ -814,11 +809,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         }
         return 1;
     case widechar_widened_in_9: // -6 = Width is 1 in Unicode 8, 2 in Unicode 9+.
-        if (mUseOldUnicode8) {
-            return 1;
-        } else {
-            return 2;
-        }
+        return 2;
     default:
         return 1; // Got an uncoded return value from widechar_wcwidth(...)
     }

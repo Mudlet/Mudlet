@@ -2715,11 +2715,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         if (!newIrcChannels.isEmpty()) {
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
             QStringList tL = newIrcChannels.split(" ", Qt::SkipEmptyParts);
-#else
-            QStringList tL = newIrcChannels.split(" ", QString::SkipEmptyParts);
-#endif
             for (QString s : tL) {
                 if (s.startsWith("#") || s.startsWith("&") || s.startsWith("+")) {
                     newChanList << s;

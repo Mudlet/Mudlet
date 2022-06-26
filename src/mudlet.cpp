@@ -4299,11 +4299,7 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
     // to allow for persistent editing of it as it is not possible to obtain it
     // from the Hunspell library:
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     wordSet = QSet<QString>(wordList.begin(), wordList.end());
-#else
-    wordSet = wordList.toSet();
-#endif
 
 #if defined(Q_OS_WIN32)
     mudlet::self()->sanitizeUtf8Path(affixPathFileName, qsl("profile.dic"));
@@ -4354,11 +4350,7 @@ Hunhandle* mudlet::prepareSharedDictionary()
         return nullptr;
     }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     mWordSet_shared = QSet<QString>(wordList.begin(), wordList.end());
-#else
-    mWordSet_shared = wordList.toSet();
-#endif
 
 #if defined(Q_OS_WIN32)
     mudlet::self()->sanitizeUtf8Path(affixPathFileName, qsl("profile.dic"));
@@ -4386,11 +4378,7 @@ bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& word
         return false;
     }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QStringList wordList{wordSet.begin(), wordSet.end()};
-#else
-    QStringList wordList{wordSet.toList()};
-#endif
 
     // This also sorts wordList as a wanted side-effect:
     int wordCount = scanWordList(wordList, graphemeCounts);
