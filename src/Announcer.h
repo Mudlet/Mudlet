@@ -77,14 +77,17 @@ public:
 
 class Announcer : public QWidget
 {
-Q_OBJECT
+    Q_OBJECT
 public:
+    Q_DISABLE_COPY_MOVE(Announcer)
     explicit Announcer(QWidget *parent = nullptr);
     void announce(const QString text);
 
 #if defined(Q_OS_LINUX) || defined (Q_OS_WIN32)
     static QAccessibleInterface* accessibleFactory(const QString &classname, QObject *object)
     {
+// mingw compilation breaks without this
+#undef interface
         QAccessibleInterface *interface = nullptr;
 
         if (classname == QLatin1String("InvisibleNotification") && object && object->isWidgetType()) {
