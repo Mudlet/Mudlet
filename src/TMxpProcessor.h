@@ -38,7 +38,7 @@ class TMxpProcessor
 {
 public:
     explicit TMxpProcessor(TMxpClient* pMxpClient)
-    : mMxpTagBuilder(true) // Argument value means "ignoreText"
+    : mMxpTagBuilder(true)
     , mEntityHandler(mMxpTagProcessor.getEntityResolver())
     , mpMxpClient(pMxpClient)
     {
