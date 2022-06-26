@@ -458,18 +458,10 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
                     // otherwise highlight complete expression match
                     if (i % numberOfCaptureGroups != 1) {
                         pC->selectSection(begin, length);
-    #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                         if (mBgColor != QColorConstants::Transparent) {
-    #else
-                        if (mBgColor != QColor("transparent")) {
-    #endif
                             pC->setBgColor(r1, g1, b1, 255);
                         }
-    #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                         if (mFgColor != QColorConstants::Transparent) {
-    #else
-                        if (mFgColor != QColor("transparent")) {
-    #endif
                             pC->setFgColor(r2, g2, b2);
                         }
                     }
@@ -551,18 +543,10 @@ void TTrigger::processBeginOfLine(const QString& needle, int patternNumber, int 
             std::string& s = *its;
             int length = QString::fromStdString(s).size();
             pC->selectSection(begin, length);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             if (mBgColor != QColorConstants::Transparent) {
-#else
-            if (mBgColor != QColor("transparent")) {
-#endif
                 pC->setBgColor(r1, g1, b1, 255);
             }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             if (mFgColor != QColorConstants::Transparent) {
-#else
-            if (mFgColor != QColor("transparent")) {
-#endif
                 pC->setFgColor(r2, g2, b2);
             }
         }
@@ -695,18 +679,10 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
             std::string& s = *its;
             int length = QString::fromStdString(s).size();
             pC->selectSection(begin, length);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             if (mBgColor != QColorConstants::Transparent) {
-#else
-            if (mBgColor != QColor("transparent")) {
-#endif
                 pC->setBgColor(r1, g1, b1, 255);
             }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             if (mFgColor != QColorConstants::Transparent) {
-#else
-            if (mFgColor != QColor("transparent")) {
-#endif
                 pC->setFgColor(r2, g2, b2);
             }
         }
@@ -823,18 +799,10 @@ void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& ca
             std::string& s = *its;
             int length = QString::fromStdString(s).size();
             pC->selectSection(begin, length);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             if (mBgColor != QColorConstants::Transparent) {
-#else
-            if (mBgColor != QColor("transparent")) {
-#endif
                 pC->setBgColor(r1, g1, b1, 255);
             }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             if (mFgColor != QColorConstants::Transparent) {
-#else
-            if (mFgColor != QColor("transparent")) {
-#endif
                 pC->setFgColor(r2, g2, b2);
             }
         }
@@ -974,18 +942,10 @@ void TTrigger::processExactMatch(const QString& line, int patternNumber, int pos
             std::string& s = *its;
             int length = QString::fromStdString(s).size();
             pC->selectSection(begin, length);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             if (mBgColor != QColorConstants::Transparent) {
-#else
-            if (mBgColor != QColor("transparent")) {
-#endif
                 pC->setBgColor(r1, g1, b1, 255);
             }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             if (mFgColor != QColorConstants::Transparent) {
-#else
-            if (mFgColor != QColor("transparent")) {
-#endif
                 pC->setFgColor(r2, g2, b2);
             }
         }

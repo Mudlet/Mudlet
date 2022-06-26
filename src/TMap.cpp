@@ -351,11 +351,7 @@ QString TMap::connectExitStubByToId(const int fromRoomId, const int toRoomId)
         return qsl("toID (%1) does not have any stub exits").arg(toRoomId);
     }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QSet<int> fromRoomStubs{pFromR->exitStubs.cbegin(), pFromR->exitStubs.cend()};
-#else
-    QSet<int> fromRoomStubs{pFromR->exitStubs.toSet()};
-#endif
     QListIterator<int> itToRoomStubs{pToR->exitStubs};
     QSet<int> toReverseStubDirections;
     while (itToRoomStubs.hasNext()) {
@@ -1708,11 +1704,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 } else {
                     QList<int> oldRoomsList;
                     ifs >> oldRoomsList;
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                     pA->rooms = QSet<int>{oldRoomsList.begin(), oldRoomsList.end()};
-#else
-                    pA->rooms = oldRoomsList.toSet();
-#endif
                 }
                 // Can be useful when analysing suspect map files!
                 //                qDebug() << "TMap::restore(...)" << "Area:" << areaID;
@@ -2884,15 +2876,9 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     QList<int> areaRawIdsList{mpRoomDB->getAreaMap().keys()};
     QList<int> areaNameRawIdsList{mpRoomDB->getAreaNamesMap().keys()};
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QSet<int> areaIdsSet{areaRawIdsList.begin(), areaRawIdsList.end()};
     areaIdsSet.unite(QSet<int>{areaNameRawIdsList.begin(), areaNameRawIdsList.end()});
     QList<int> areaIdsList{areaIdsSet.begin(), areaIdsSet.end()};
-#else
-    QSet<int> areaIdsSet = areaRawIdsList.toSet();
-    areaIdsSet.unite(areaNameRawIdsList.toSet());
-    QList<int> areaIdsList = areaIdsSet.toList();
-#endif
     if (areaIdsList.count() > 1) {
         std::sort(areaIdsList.begin(), areaIdsList.end());
     }

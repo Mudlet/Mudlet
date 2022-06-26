@@ -1003,10 +1003,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         }
     }
 
-    comboBox_controlCharacterHandling->setItemData(0, ControlCharacterMode::AsIs);
-    comboBox_controlCharacterHandling->setItemData(1, ControlCharacterMode::Picture);
-    comboBox_controlCharacterHandling->setItemData(2, ControlCharacterMode::OEM);
-    auto cch_index = comboBox_controlCharacterHandling->findData(pHost->getControlCharacterMode());
+    comboBox_controlCharacterHandling->setItemData(0, QVariant::fromValue(ControlCharacterMode::AsIs));
+    comboBox_controlCharacterHandling->setItemData(1, QVariant::fromValue(ControlCharacterMode::Picture));
+    comboBox_controlCharacterHandling->setItemData(2, QVariant::fromValue(ControlCharacterMode::OEM));
+    auto cch_index = comboBox_controlCharacterHandling->findData(static_cast<int>(pHost->getControlCharacterMode()));
     comboBox_controlCharacterHandling->setCurrentIndex((cch_index > 0) ? cch_index : 0);
     connect(comboBox_controlCharacterHandling, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeControlCharacterHandling);
 
@@ -2715,11 +2715,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         if (!newIrcChannels.isEmpty()) {
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
             QStringList tL = newIrcChannels.split(" ", Qt::SkipEmptyParts);
-#else
-            QStringList tL = newIrcChannels.split(" ", QString::SkipEmptyParts);
-#endif
             for (QString s : tL) {
                 if (s.startsWith("#") || s.startsWith("&") || s.startsWith("+")) {
                     newChanList << s;

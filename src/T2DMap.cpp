@@ -866,19 +866,11 @@ inline void T2DMap::drawRoom(QPainter& painter,
     const float innerStubDoorPenThicknessFactor = 0.0125f;
 
     QColor lc;
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     if (roomColor.lightness() > 127) {
         lc = QColorConstants::Black;
     } else {
         lc = QColorConstants::White;
     }
-#else
-    if (roomColor.lightness() > 127) {
-        lc = QColor(Qt::black);
-    } else {
-        lc = QColor(Qt::white);
-    }
-#endif
     pen = painter.pen();
     pen.setColor(lc);
     pen.setCosmetic(mMapperUseAntiAlias);
@@ -2304,12 +2296,8 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
 // Work out text for information box, need to offset if room selection widget is present
 void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const int displayAreaId, QColor& infoColor)
 {
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QList<QString> contributorList = mpMap->mMapInfoContributorManager->getContributorKeys();
     QSet<QString> contributorKeys{contributorList.begin(), contributorList.end()};
-#else
-    QSet<QString> contributorKeys = mpMap->mMapInfoContributorManager->getContributorKeys().toSet();
-#endif
     if (!contributorKeys.intersects(mpHost->mMapInfoContributors)) {
         return;
     }
@@ -2648,11 +2636,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                                 tl2.setAngle(normal.angle());
                                 tl2.setLength(-0.1);
                                 QPointF pi;
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                                 if ((line.intersects(tl, &pi) == QLineF::BoundedIntersection) || (line.intersects(tl2, &pi) == QLineF::BoundedIntersection)) {
-#else
-                                if ((line.intersect(tl, &pi) == QLineF::BoundedIntersection) || (line.intersect(tl2, &pi) == QLineF::BoundedIntersection)) {
-#endif
                                     // Choose THIS line to edit as we have
                                     // clicked close enough to it...
                                     mCustomLineSelectedRoom = room->getId();
@@ -4117,11 +4101,7 @@ void T2DMap::slot_setRoomWeight()
                 weightCountsSet.insert(itWeightsUsed.value());
             }
             // Obtains a list of those weights sorted in ascending count of used
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             QList<uint> weightCountsList{weightCountsSet.begin(), weightCountsSet.end()};
-#else
-            QList<uint> weightCountsList{weightCountsSet.toList()};
-#endif
             if (weightCountsList.size() > 1) {
                 std::sort(weightCountsList.begin(), weightCountsList.end());
             }
@@ -4296,12 +4276,8 @@ void T2DMap::slot_setArea()
             if (!(mpMap->setRoomArea(currentRoomId, newAreaId, false))) {
                 // Failed on the last of multiple room area move so do the missed
                 // out recalculations for the dirtied areas
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                 QSet<TArea*> areaPtrsSet{mpMap->mpRoomDB->getAreaPtrList().begin(), mpMap->mpRoomDB->getAreaPtrList().end()};
                 QSetIterator<TArea*> itpArea{areaPtrsSet};
-#else
-                QSetIterator<TArea*> itpArea{mpMap->mpRoomDB->getAreaPtrList().toSet()};
-#endif
                 while (itpArea.hasNext()) {
                     TArea* pArea = itpArea.next();
                     if (pArea->mIsDirty) {
@@ -4446,11 +4422,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 mMultiSelectionHighlightRoomId = 0;
                 break;
             case 1:
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                 mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.begin());
-#else
-                mMultiSelectionHighlightRoomId = mMultiSelectionSet.toList().first();
-#endif
                 break;
             default:
                 getCenterSelection(); // Sets mMultiSelectionHighlightRoomId to (a) central room
@@ -4624,11 +4596,7 @@ void T2DMap::wheelEvent(QWheelEvent* e)
     // to use "globalPos()" instead and see how it lies in relation to the child
     // widget:
     QRect selectionListWidgetGlobalRect = QRect(mapToGlobal(mMultiSelectionListWidget.frameRect().topLeft()), mapToGlobal(mMultiSelectionListWidget.frameRect().bottomRight()));
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
     if (mMultiSelectionListWidget.isVisible() && selectionListWidgetGlobalRect.contains(e->globalPosition().toPoint())) {
-#else
-    if (mMultiSelectionListWidget.isVisible() && selectionListWidgetGlobalRect.contains(e->globalPos())) {
-#endif
         e->accept();
         return;
     }
@@ -4662,11 +4630,7 @@ void T2DMap::wheelEvent(QWheelEvent* e)
             }
 
             // mouse pos within the widget
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
             const QPointF pos = e->position();
-#else
-            const QPoint pos = mapFromGlobal(e->globalPos());
-#endif
 
             // Position of the mouse within the map, scaled -1 .. +1
             // i.e. if the mouse is in the center, nothing changes
