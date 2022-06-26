@@ -62,13 +62,8 @@ TChar::TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags fla
 
 TChar::TChar(Host* pH)
 : mFlags(None)
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
 , mFgColor(pH ? pH->mFgColor : QColorConstants::White)
 , mBgColor(pH ? pH->mBgColor : QColorConstants::Black)
-#else
-, mFgColor(pH ? pH->mFgColor : Qt::white)
-, mBgColor(pH ? pH->mBgColor : Qt::black)
-#endif
 {
 }
 

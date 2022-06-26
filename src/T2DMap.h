@@ -157,11 +157,7 @@ public:
 
     // Variables that hold the current or last used setting:
     Qt::PenStyle mCurrentLineStyle = Qt::SolidLine;
-# if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
     QColor mCurrentLineColor = QColorConstants::Red;
-#else
-    QColor mCurrentLineColor = Qt::red;
-#endif
     bool mCurrentLineArrow = true;
 
     bool mBubbleMode = false;

@@ -42,13 +42,8 @@ public:
     QSizeF size;
     QSizeF clickSize;
     QString text;
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
     QColor fgColor  = QColorConstants::Black;
     QColor bgColor  = QColorConstants::Black;
-#else
-    QColor fgColor  = Qt::black;
-    QColor bgColor  = Qt::black;
-#endif
     QPixmap pix;
     bool highlight = false;
     bool showOnTop = false;
