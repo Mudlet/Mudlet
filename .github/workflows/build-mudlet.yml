@@ -230,11 +230,14 @@ jobs:
         CheckAndInstallZlib
         CheckAndInstallLibzip
 
-    - name: (Linux Clang) change compiler
+    - name: (Linux Clang) change compiler & disable optional components
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
       run: |
          echo "CXX=clang++" >> $GITHUB_ENV
          echo "CC=clang" >> $GITHUB_ENV
+         echo "WITH_UPDATER=no" >> $GITHUB_ENV
+         echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
+         echo "WITH_FONTS=no" >> $GITHUB_ENV
 
     - name: (Linux/macOS) restore ccache
       uses: pat-s/always-upload-cache@v3.0.1
