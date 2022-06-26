@@ -763,6 +763,14 @@ macx {
     OBJECTIVE_SOURCES += AnnouncerMac.mm
 }
 
+win32 {
+    SOURCES += AnnouncerWindows.cpp
+}
+
+linux {
+    SOURCES += AnnouncerLinux.cpp
+}
+
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \
     ui/about_dialog.ui \
