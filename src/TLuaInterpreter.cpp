@@ -327,11 +327,7 @@ int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, c
     lua_pushstring(L, message.toUtf8().constData());
     if (mudlet::debugMode) {
         auto& host = getHostFromLua(L);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         TDebug(Qt::white, QColorConstants::Svg::orange) << "Lua: " << functionName << ": " << message << "\n" >> &host;
-#else
-        TDebug(Qt::white, QColor("orange")) << "Lua: " << functionName << ": " << message << "\n" >> &host;
-#endif
     }
     return 2;
 }
@@ -346,11 +342,7 @@ int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, c
     lua_pushstring(L, message);
     if (mudlet::debugMode) {
         auto& host = getHostFromLua(L);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         TDebug(Qt::white, QColorConstants::Svg::orange) << "Lua: " << functionName << ": " << message << "\n" >> &host;
-#else
-        TDebug(Qt::white, QColor("orange")) << "Lua: " << functionName << ": " << message << "\n" >> &host;
-#endif
     }
     return 2;
 }
@@ -5024,23 +5016,15 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
         QSet<QString> keysSet;
         while (itRoom.hasNext()) {
             itRoom.next();
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             // In the brave new world of range based initializers one must use
             // a pair of iterators that point to the SAME thing that lasts
             // long enough - using the output of a Qt method that returns a
             // QList twice is not good enough and causes seg. faults...
             QList<QString> roomDataKeysList{itRoom.value()->userData.keys()};
             keysSet.unite(QSet<QString>{roomDataKeysList.begin(), roomDataKeysList.end()});
-#else
-            keysSet.unite(itRoom.value()->userData.keys().toSet());
-#endif
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         QStringList keys{keysSet.begin(), keysSet.end()};
-#else
-        QStringList keys{keysSet.toList()};
-#endif
         if (keys.size() > 1) {
             std::sort(keys.begin(), keys.end());
         }
@@ -5062,11 +5046,7 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
             }
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         QStringList values{valuesSet.begin(), valuesSet.end()};
-#else
-        QStringList values{valuesSet.toList()};
-#endif
         if (values.size() > 1) {
             std::sort(values.begin(), values.end());
         }
@@ -5087,11 +5067,7 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
             }
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         QList<int> roomIds{roomIdsSet.begin(), roomIdsSet.end()};
-#else
-        QList<int> roomIds{roomIdsSet.toList()};
-#endif
         if (roomIds.size() > 1) {
             std::sort(roomIds.begin(), roomIds.end());
         }
@@ -5136,19 +5112,11 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
         QSet<QString> keysSet;
         while (itArea.hasNext()) {
             itArea.next();
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             QList<QString> areaDataKeysList{itArea.value()->mUserData.keys()};
             keysSet.unite(QSet<QString>{areaDataKeysList.begin(), areaDataKeysList.end()});
-#else
-            keysSet.unite(itArea.value()->mUserData.keys().toSet());
-#endif
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         QStringList keys{keysSet.begin(), keysSet.end()};
-#else
-        QStringList keys{keysSet.toList()};
-#endif
         if (keys.size() > 1) {
             std::sort(keys.begin(), keys.end());
         }
@@ -5170,11 +5138,7 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
             }
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         QStringList values{valuesSet.begin(), valuesSet.end()};
-#else
-        QStringList values{valuesSet.toList()};
-#endif
         if (values.size() > 1) {
             std::sort(values.begin(), values.end());
         }
@@ -5195,11 +5159,7 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
             }
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         QList<int> areaIds{areaIdsSet.begin(), areaIdsSet.end()};
-#else
-        QList<int> areaIds{areaIdsSet.toList()};
-#endif
         if (areaIds.size() > 1) {
             std::sort(areaIds.begin(), areaIds.end());
         }
@@ -14206,13 +14166,7 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             }
             lua_setfield(L, -2, qsl("buttons").toUtf8().constData());
 
-// The Qt documentation is unclear when, precisely QWheelEvent::globalPos()
-// became obsolete, 5.14.0 is a guess
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             auto globalPosition = qME->globalPosition();
-#else
-            auto globalPosition = qME->globalPos();
-#endif
             // Push globalX()
             lua_pushnumber(L, globalPosition.x());
             lua_setfield(L, -2, qsl("globalX").toUtf8().constData());
@@ -14221,24 +14175,14 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             lua_pushnumber(L, globalPosition.y());
             lua_setfield(L, -2, qsl("globalY").toUtf8().constData());
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             auto position = qME->position();
-#endif
 
             // Push x()
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             lua_pushnumber(L, position.x());
-#else
-            lua_pushnumber(L, qME->x());
-#endif
             lua_setfield(L, -2, qsl("x").toUtf8().constData());
 
             // Push y()
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             lua_pushnumber(L, position.y());
-#else
-            lua_pushnumber(L, qME->y());
-#endif
             lua_setfield(L, -2, qsl("y").toUtf8().constData());
 
             // Push angleDelta()
@@ -16344,12 +16288,8 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
     }
 
     lua_newtable(L);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QList<int> selectionRoomsList{pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.begin(),
                                   pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.end()};
-#else
-    QList<int> selectionRoomsList{pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.toList()};
-#endif
     if (!selectionRoomsList.isEmpty()) {
         if (selectionRoomsList.count() > 1) {
             std::sort(selectionRoomsList.begin(), selectionRoomsList.end());
@@ -16532,16 +16472,12 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
 
     // This may stall if this is accessing the shared user dictionary and that
     // is being updated by another profile, but it should eventually return...
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     // We must keep a local reference/copy of the value returned because the
     // returned item is a deep-copy in the case of a shared dictionary and two
     // calls to TConsole::getWordSet() can return two different instances which
     // is fatally dangerous if used in a range based initialiser:
     QSet<QString> wordSet{host.mpConsole->getWordSet()};
     QStringList wordList{wordSet.begin(), wordSet.end()};
-#else
-    QStringList wordList{host.mpConsole->getWordSet().toList()};
-#endif
     int wordCount = wordList.size();
     if (wordCount > 1) {
         QCollator sorter;
