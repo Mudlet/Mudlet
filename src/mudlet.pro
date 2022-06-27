@@ -727,7 +727,7 @@ HEADERS += \
     TMxpTagHandler.h \
     TMxpTagParser.h \
     TMxpTagProcessor.h \
-    TMxpSupportTagHandler.cpp \
+    TMxpSupportTagHandler.h \
     TMxpVarTagHandler.h \
     TMxpVersionTagHandler.h \
     Tree.h \
