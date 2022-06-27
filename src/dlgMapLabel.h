@@ -57,8 +57,8 @@ private:
     QColorDialog* fgColorDialog = nullptr;
     QString imagePath;
     QString text;
-    QColor bgColor;
     QColor fgColor;
+    QColor bgColor;
     QFont font;
 
 private slots:
