@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2009 by Heiko Koehn - KoehnHeiko@googlemail.com         *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017, 2922 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -39,9 +39,9 @@ TFlipButton::TFlipButton(TAction* pTAction, Host* pHost)
 , mpTAction(pTAction)
 , mID(pTAction->getID())
 , mpHost(pHost)
-, mOrientation(Qt::Horizontal)
-, mMirrored(false)
 {
+    // This should make it easier to track the button within the GammaRay tool!
+    setObjectName(qsl("flipButton_%1_%2").arg(mpHost->getName(), QString::number(mID)));
 }
 
 Qt::Orientation TFlipButton::orientation() const

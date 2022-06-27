@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,22 +25,20 @@
 class TMatchState
 {
 public:
-    TMatchState(int NumberOfConditions, int delta)
+    TMatchState(int numberOfConditions, int delta)
+    : mNumberOfConditions(numberOfConditions)
+    , mDelta(delta)
     {
-        mNumberOfConditions = NumberOfConditions;
-        mNextCondition = 1; // first condition was true when the state was created
-        mDelta = delta;
-        mLineCount = 1;
-        mSpacer = 0;
     }
 
+    // Copy constructor:
     TMatchState(const TMatchState& ms)
+    : mNumberOfConditions(ms.mNumberOfConditions)
+    , mNextCondition(ms.mNextCondition)
+    , mLineCount(ms.mLineCount)
+    , mDelta(ms.mDelta)
+    , mSpacer(ms.mSpacer)
     {
-        mNumberOfConditions = ms.mNumberOfConditions;
-        mNextCondition = ms.mNextCondition;
-        mDelta = ms.mDelta;
-        mLineCount = ms.mLineCount;
-        mSpacer = ms.mSpacer;
     }
 
     int nextCondition() { return mNextCondition; }
@@ -53,20 +52,20 @@ public:
         if (mSpacer >= lines) {
             mSpacer = 0;
             return true;
-        } else {
-            mSpacer++;
-            return false;
         }
+        ++mSpacer;
+        return false;
     }
 
-    int mSpacer;
     std::list<std::list<std::string>> multiCaptureList;
     std::list<std::list<int>> multiCapturePosList;
     QVector<NameGroupMatches> nameCaptures;
-    int mNumberOfConditions;
-    int mNextCondition;
-    int mLineCount;
-    int mDelta;
+    int mNumberOfConditions = 0;
+    // first condition was true when the state was created
+    int mNextCondition = 1;
+    int mLineCount = 1;
+    int mDelta = 0;
+    int mSpacer = 0;
 };
 
 #endif // MUDLET_TMATCHSTATE_H
