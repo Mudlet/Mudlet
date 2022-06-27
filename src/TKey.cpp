@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018, 2020-2021 by Stephen Lyons                        *
+ *   Copyright (C) 2018, 2020-2022 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -30,28 +30,14 @@
 
 TKey::TKey(TKey* parent, Host* pHost)
 : Tree<TKey>( parent )
-, exportItem(true)
-, mModuleMasterFolder(false)
-, mRegisteredAnonymousLuaFunction(false)
-, mKeyCode()
-, mKeyModifier()
 , mpHost(pHost)
-, mNeedsToBeCompiled(true)
-, mModuleMember(false)
 {
 }
 
 TKey::TKey(QString name, Host* pHost)
 : Tree<TKey>( nullptr )
-, exportItem(true)
-, mModuleMasterFolder(false)
-, mRegisteredAnonymousLuaFunction(false)
 , mName(name)
-, mKeyCode()
-, mKeyModifier()
 , mpHost(pHost)
-, mNeedsToBeCompiled(true)
-, mModuleMember(false)
 {
 }
 

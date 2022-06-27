@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2020, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -40,10 +41,8 @@ TMedia::TMedia(Host* pHost, const QString& profileName)
     mProfileName = profileName;
 
     mpNetworkAccessManager = new QNetworkAccessManager(this);
-    connect(mpNetworkAccessManager, &QNetworkAccessManager::finished, this, &TMedia::writeFile);
+    connect(mpNetworkAccessManager, &QNetworkAccessManager::finished, this, &TMedia::slot_writeFile);
 }
-
-TMedia::~TMedia() = default;
 
 void TMedia::playMedia(TMediaData& mediaData)
 {
@@ -475,7 +474,7 @@ bool TMedia::processUrl(TMediaData& mediaData)
     return continueProcessing;
 }
 
-void TMedia::writeFile(QNetworkReply* reply)
+void TMedia::slot_writeFile(QNetworkReply* reply)
 {
     TEvent event{};
     TMediaData mediaData = mMediaDownloads.value(reply);

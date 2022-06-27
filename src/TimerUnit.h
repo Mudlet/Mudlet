@@ -44,8 +44,6 @@ class TimerUnit
 public:
     explicit TimerUnit(Host* pHost)
     : mpHost(pHost)
-    , mMaxID(0)
-    , mModuleMember()
     {}
     ~TimerUnit();
 
@@ -94,11 +92,13 @@ private:
     void addTimer(TTimer* pT);
     void _removeTimerRootNode(TTimer* pT);
     void _removeTimer(TTimer*);
+
+
     QPointer<Host> mpHost;
     QMap<int, TTimer*> mTimerMap;
     std::list<TTimer*> mTimerRootNodeList;
-    int mMaxID;
-    bool mModuleMember;
+    int mMaxID = 0;
+    bool mModuleMember = false;
     QSet<TTimer*> mCleanupSet;
     int statsActiveItems = 0;
     int statsItemsTotal = 0;

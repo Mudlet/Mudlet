@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2018-2019, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -97,26 +98,26 @@ private:
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
 
     QPointer<Host> mpHost;
-    CommandLineType mType;
-    KeyUnit* mpKeyUnit;
-    TConsole* mpConsole;
+    CommandLineType mType = UnknownType;
+    KeyUnit* mpKeyUnit = nullptr;
+    TConsole* mpConsole = nullptr;
     QString mLastCompletion;
-    int mTabCompletionCount;
-    int mAutoCompletionCount;
+    int mTabCompletionCount = 0;
+    int mAutoCompletionCount = 0;
     QString mTabCompletionTyped;
-    bool mUserKeptOnTyping;
-    int mHistoryBuffer;
+    bool mUserKeptOnTyping = false;
+    int mHistoryBuffer = 0;
     QStringList mHistoryList;
     QString mSelectedText;
-    int mSelectionStart;
+    int mSelectionStart = 0;
     QString mTabCompletionOld;
     QPoint mPopupPosition;
     QString mSpellCheckedWord;
     bool mSpellChecking = false;
-    int mSystemDictionarySuggestionsCount;
-    int mUserDictionarySuggestionsCount;
-    char** mpSystemSuggestionsList;
-    char** mpUserSuggestionsList;
+    int mSystemDictionarySuggestionsCount = 0;
+    int mUserDictionarySuggestionsCount = 0;
+    char** mpSystemSuggestionsList = nullptr;
+    char** mpUserSuggestionsList = nullptr;
     QSet<QString> commandLineSuggestions;
 };
 

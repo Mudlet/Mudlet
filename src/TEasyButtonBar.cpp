@@ -35,11 +35,7 @@
 TEasyButtonBar::TEasyButtonBar(TAction* pA, QString name, QWidget* pW)
 : QWidget(pW)
 , mpTAction(pA)
-, mVerticalOrientation(false)
 , mpWidget(new QWidget(this))
-, mRecordMove(false)
-, mpLayout(nullptr)
-, mItemCount(0)
 {
     mButtonList.clear();
     auto hostName(pA->mpHost->getName());

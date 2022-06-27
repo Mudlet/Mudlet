@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018, 2021 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2018, 2021-2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2021 by Vadim Peretokin - vperetokin@gmail.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -26,15 +27,6 @@
 #include "TConsole.h"
 #include "TTabBar.h"
 #include "mudlet.h"
-
-// This is a Unicode NON-character code which is explicitly undisplayable but
-// can be embedded for our own internal purposes:
-const QChar TDebug::csmContinue = QChar(0xFFFF);
-
-QMap<const Host*, QPair<QString, QString>> TDebug::smIdentifierMap;
-QQueue<QString> TDebug::smAvailableIdentifiers;
-bool TDebug::initialised = false;
-QQueue<TDebugMessage> TDebug::smMessageQueue;
 
 TDebug::TDebug(const QColor& c, const QColor& d)
 : fgColor(c)

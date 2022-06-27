@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018, 2021 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2018, 2021-2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2021 by Vadim Peretokin - vperetokin@gmail.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -56,24 +57,25 @@ class TDebug
 {
     // A shared map that is uses to put a short identifier on each debug message
     // - the first value is used to create a table to display on changes and the
-    // second value is the short identifier is used:
-    static QMap<const Host*, QPair<QString, QString>> smIdentifierMap;
+    // second value is the short identifier used:
+    inline static QMap<const Host*, QPair<QString, QString>> smIdentifierMap;
     // Used to order identifier in the same application run:
-    static QQueue<QString> smAvailableIdentifiers;
-    static bool initialised;
+    inline static QQueue<QString> smAvailableIdentifiers;
+    inline static bool initialised = false;
     // This is a temporary bodge until we can decouple the Central Debug
     // Console from having to be associated with a Host (Profile) instance,
     // as that prevents it from being created until a profile has - which makes
     // displaying details from that first profile being loaded harder:
-    static QQueue<TDebugMessage> smMessageQueue;
+    inline static QQueue<TDebugMessage> smMessageQueue;
 
     // Used as a tag for system (non-profile) messages:
-    // Change to use U+2731 {HEAVY ASTERIX} instead of an asterix:
+    // Changed to use U+2731 {HEAVY ASTERIX} instead of an asterix:
     inline static const QString csmTagSystemMessage = qsl("[\u2731] ");
-    // If something has gone wrong and it is not possible to work out which profile it is from,
-    // don't use a tag. No need to expose the player to Mudlet internal details: fail gracefully
-    inline static const QString csmTagFault = qsl("");
-    // Used as a tag for messages on the 27th and above currently active profiles:
+    // If something has gone wrong and it is not possible to work out which
+    // profile it is from, don't use a tag:
+    inline static const QString csmTagFault = QString();
+    // Used as a tag for messages on the 27th and above currently active
+    // profiles:
     inline static const QString csmTagOverflow  = qsl("[?] ");
 
     QString msg;
@@ -108,9 +110,9 @@ public:
     TDebug& operator<<(const QList<int>&);
 
     // Prepend this to any continuation message to suppress the insertion of the
-    // profile identifying marking.
-    static const QChar csmContinue;
-
+    // profile identifying marking.  This is a Unicode NON-character code which
+    // is explicitly undisplayable but can be embedded for our own internal purposes:
+    inline static const QChar csmContinue = QChar(0xFFFF);
 
 private:
     TDebug() = default;

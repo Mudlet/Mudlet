@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2021 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2022 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -47,9 +47,7 @@ public:
     ~TMainConsole();
 
     void resizeEvent(QResizeEvent* event) override;
-
     void resetMainConsole();
-
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     TScrollBox* createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height);
     bool raiseWindow(const QString& name);
@@ -82,12 +80,9 @@ public:
     std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY);
     bool setBackgroundImage(const QString& name, const QString& path);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
-
     void setSystemSpellDictionary(const QString&);
     void setProfileSpellDictionary();
-
     void showStatistics();
-
     const QString& getSystemSpellDictionary() const { return mSpellDic; }
     QTextCodec* getHunspellCodec_system() const { return mpHunspellCodec_system; }
     Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
@@ -122,7 +117,7 @@ public:
     QFile mLogFile;
     QString mLogFileName;
     QTextStream mLogStream;
-    bool mLogToLogFile;
+    bool mLogToLogFile = false;
 
 
 public slots:
@@ -146,19 +141,19 @@ private:
     QString mSpellDic;
 
     // Cloned from Host
-    bool mEnableUserDictionary;
-    bool mUseSharedDictionary;
+    bool mEnableUserDictionary = true;
+    bool mUseSharedDictionary = false;
 
     // Three handles, one for the dictionary the user choses from the system
     // one created by the mudlet class for all profiles and the third for a per
     // profile one - the last pair are built by the user and/or lua functions:
-    Hunhandle* mpHunspell_system;
-    Hunhandle* mpHunspell_shared;
-    Hunhandle* mpHunspell_profile;
+    Hunhandle* mpHunspell_system = nullptr;
+    Hunhandle* mpHunspell_shared = nullptr;
+    Hunhandle* mpHunspell_profile = nullptr;
     // The user dictionary will always use the UTF-8 codec, but the one
     // selected from the system's ones may not:
     QByteArray mHunspellCodecName_system;
-    QTextCodec* mpHunspellCodec_system;
+    QTextCodec* mpHunspellCodec_system = nullptr;
     // To update the profile dictionary we actually have to track all the words
     // in it so we loaded the contents into this on startup and adjust it as we
     // go. Then, at the end of a session we will put the revised contents
