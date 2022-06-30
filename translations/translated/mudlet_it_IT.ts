@@ -6764,7 +6764,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
       <location filename="../src/dlgRoomExits.cpp" line="1091"/>
       <source>&lt;b&gt;Room is locked&lt;/b&gt;, it will not be used for speed-walks for any exit that leads to it.</source>
       <comment>Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that goes to it.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;La stanza è chiusa&lt;/b&gt;, non sarà utilizzata per lo speedwalk.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1083"/>
@@ -6938,7 +6938,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
       <location filename="../src/dlgRoomExits.cpp" line="1526"/>
       <source>This is the Room ID number for this room; this &lt;b&gt;room is locked&lt;/b&gt; so it will not be used for speed-walks at all.</source>
       <comment>This text is a revision to the default tooltip text set for this widget in the &apos;room_exits.ui&apos; file. Bold HTML tags are used to emphasis that this room&apos;s locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that comes to it.</comment>
-      <translation type="unfinished"/>
+      <translation>Questo è il roomID della stanza; questa stanza è &lt;b&gt;bloccata&lt;/b&gt; quindi non sarà utilizzata per lo speedwalk.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1538"/>
