@@ -571,7 +571,7 @@ attendere prego...</translation>
       <location filename="../src/dlgRoomExits.cpp" line="151"/>
       <location filename="../src/dlgRoomExits.cpp" line="231"/>
       <source>The roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Inserisci un roomID positivo della stanza a cui appartiene questa uscita speciale. Se lasciata in questo modo, l'uscita verrà cancellata alla pressione di &lt;tt&gt;salva&lt;/tt&gt;.</translation>
     </message>
   </context>
   <context>
@@ -6729,7 +6729,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
       <location filename="../src/dlgRoomExits.cpp" line="971"/>
       <location filename="../src/dlgRoomExits.cpp" line="996"/>
       <source>The roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Inserisci un roomID positivo della stanza a cui appartiene questa uscita speciale. Se lasciata in questo modo, l'uscita verrà cancellata alla pressione di &lt;tt&gt;salva&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="987"/>
@@ -12563,7 +12563,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="768"/>
       <source>&lt;p&gt;This is the Room ID Number for this room.</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Questo è il roomID per questa stanza.</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="803"/>
@@ -12573,7 +12573,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="816"/>
       <source>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Questo è il peso predefinito per questa stanza. Verrà utilizzato per qualsiasi uscita &lt;i&gt;che porta a &lt;u&gt;questa stanza&lt;/u&gt;&lt;/i&gt; e che non abbia un proprio valore impostato - non puoi modificare il peso da questa finestra.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="879"/>
