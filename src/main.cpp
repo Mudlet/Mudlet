@@ -194,7 +194,7 @@ int main(int argc, char* argv[])
     QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif
 
-    qInstallMessageHandler(myMessageOutput);
+    // qInstallMessageHandler(myMessageOutput);
 
     auto app = qobject_cast<QApplication*>(new QApplication(argc, argv));
 
