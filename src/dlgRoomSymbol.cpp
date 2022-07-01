@@ -117,11 +117,7 @@ QStringList dlgRoomSymbol::getComboBoxItems()
         itSymbolUsed.next();
         symbolCountsSet.insert(itSymbolUsed.value());
     }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QList<int> symbolCountsList{symbolCountsSet.begin(), symbolCountsSet.end()};
-#else
-    QList<int> symbolCountsList{symbolCountsSet.toList()};
-#endif
     if (symbolCountsList.size() > 1) {
         std::sort(symbolCountsList.begin(), symbolCountsList.end());
     }

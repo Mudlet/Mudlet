@@ -338,7 +338,7 @@ endif()
 include(../3rdparty/cmake-scripts/sanitizers.cmake)
 
 find_package(
-  Qt5 5.11 REQUIRED
+  Qt5 5.14 REQUIRED
   COMPONENTS Core
              Multimedia
              Network
@@ -349,9 +349,9 @@ find_package(
 find_package(Qt5 COMPONENTS Gamepad QUIET)
 find_package(Qt5 COMPONENTS TextToSpeech QUIET)
 
-if(Qt5Core_VERSION VERSION_LESS 5.11)
+if(Qt5Core_VERSION VERSION_LESS 5.14)
   message(
-    FATAL_ERROR "Mudlet requires Qt 5.11 or later, yours is ${Qt5Core_VERSION}")
+    FATAL_ERROR "Mudlet requires Qt 5.14 or later, yours is ${Qt5Core_VERSION}")
 else()
   # Qt Speech (or at least the TTS part) was officially release in 5.10
   message(STATUS "Qt version: ${Qt5Core_VERSION}")
@@ -413,6 +413,14 @@ target_compile_definitions(mudlet
 
 if(USE_OWN_QT5KEYCHAIN)
     target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+endif()
+
+# Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
+# from windows.h - only needed on Windows builds but we cannot use Q_OS_WIN32
+# for an #ifdef because we need a symbol that is defined BEFORE we include
+# any Qt header file!
+if(WIN32)
+    target_compile_definitions(mudlet PRIVATE INCLUDE_WINSOCK2)
 endif()
 
 # One of IRC_STATIC or IRC_SHARED must be defined for the communi IRC library

@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020-2021 by Stephen Lyons        #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2022 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -35,8 +35,8 @@
 #                                                                          #
 ############################################################################
 
-lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 11)) {
-    error("Mudlet requires Qt 5.11 or later")
+lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 14)) {
+    error("Mudlet requires Qt 5.14 or later")
 }
 
 # Including IRC Library
@@ -75,6 +75,14 @@ msvc:QMAKE_CXXFLAGS += -MP
 # Mac specific flags.
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
 
+# Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
+# from windows.h - only needed on Windows builds but we cannot use Q_OS_WIN32
+# for an #ifdef because we need a symbol that is defined BEFORE we include
+# any Qt header file!
+win32 {
+    DEFINES += INCLUDE_WINSOCK2
+}
+
 QT += network uitools multimedia gui concurrent
 qtHaveModule(gamepad) {
     QT += gamepad
@@ -90,7 +98,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.15.1
+VERSION = 4.16.0
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -624,11 +632,13 @@ SOURCES += \
     XMLimport.cpp
 
 HEADERS += \
+    ../3rdparty/discord/rpc/include/discord_register.h \
+    ../3rdparty/discord/rpc/include/discord_rpc.h \
     ActionUnit.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
-    DarkTheme.h \
     ctelnet.h \
+    DarkTheme.h \
     discord.h \
     dlgAboutDialog.h \
     dlgActionMainArea.h \
@@ -691,7 +701,6 @@ HEADERS += \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
-    TScrollBox.h \
     TLinkStore.h \
     TLuaInterpreter.h \
     TMainConsole.h \
@@ -699,6 +708,7 @@ HEADERS += \
     TMapLabel.h \
     TMatchState.h \
     TMedia.h \
+    TMediaData.h \
     TMxpBRTagHandler.h \
     TMxpClient.h \
     TMxpColorTagHandler.h \
@@ -719,7 +729,7 @@ HEADERS += \
     TMxpTagHandler.h \
     TMxpTagParser.h \
     TMxpTagProcessor.h \
-    TMxpSupportTagHandler.cpp \
+    TMxpSupportTagHandler.h \
     TMxpVarTagHandler.h \
     TMxpVersionTagHandler.h \
     Tree.h \
@@ -727,6 +737,7 @@ HEADERS += \
     TRoom.h \
     TRoomDB.h \
     TScript.h \
+    TScrollBox.h \
     TSplitter.h \
     TSplitterHandle.h \
     TStringUtils.h \
@@ -742,10 +753,7 @@ HEADERS += \
     utils.h \
     XMLexport.h \
     XMLimport.h \
-    widechar_width.h \
-    ../3rdparty/discord/rpc/include/discord_register.h \
-    ../3rdparty/discord/rpc/include/discord_rpc.h
-
+    widechar_width.h
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \

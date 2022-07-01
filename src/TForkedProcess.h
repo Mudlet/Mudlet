@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2009 by Benjamin Lerman - mudlet@ambre.net              *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -40,15 +41,16 @@ public:
     static int startProcess(TLuaInterpreter*, lua_State*);
 
 private:
-    TForkedProcess(TLuaInterpreter*, lua_State*);
-
-    int callBackFunctionRef;
-    TLuaInterpreter* interpreter;
-    bool running;
-
     static int closeInputOfProcess(lua_State* L);
     static int isProcessRunning(lua_State* L);
     static int sendMessage(lua_State* L);
+
+    TForkedProcess(TLuaInterpreter*, lua_State*);
+
+    int callBackFunctionRef = -1;
+    TLuaInterpreter* mpInterpreter = nullptr;
+    bool running = false;
+
 
 private slots:
     void slotReceivedData();

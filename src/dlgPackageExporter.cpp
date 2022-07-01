@@ -289,9 +289,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     mPlainDescription = packageInfo.value(qsl("description"));
     QString description{mPlainDescription};
     description.replace(QLatin1String("$packagePath"), qsl("%1/%2").arg(packagePath, packageName));
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
     ui->textEdit_description->setMarkdown(description);
-#endif
     QString version = packageInfo.value(qsl("version"));
     ui->lineEdit_version->setText(version);
     QStringList dependencies = packageInfo.value(qsl("dependencies")).split(QLatin1Char(','));
@@ -380,7 +378,6 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
 
         if (evt->type() == QEvent::FocusOut) {
             mPlainDescription = ui->textEdit_description->toPlainText();
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
             //$packagePath allows to put images in a package which will then be displayed in the description
             //during package creation it uses the profile folder. But once the package is created it will use
             //profile folder/packagename
@@ -400,7 +397,6 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
                 plainText.replace(qsl("$%1").arg(info.fileName()), fname);
             }
             ui->textEdit_description->setMarkdown(plainText);
-#endif
             return false;
         }
     }
@@ -1553,9 +1549,7 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
                 fname = QUrl::toPercentEncoding(fname).constData();
                 plainText.replace(qsl("$%1").arg(info.fileName()), fname);
             }
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
             setMarkdown(plainText);
-#endif
         }
     } else {
         QTextEdit::insertFromMimeData(source);

@@ -3,6 +3,9 @@ name: Pull request
 on:
   pull_request_target:
 
+permissions:
+  contents: read
+
 jobs:
   add-milestone:
     runs-on: ubuntu-20.04

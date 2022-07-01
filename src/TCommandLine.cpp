@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2018-2020, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -44,15 +45,6 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
 , mType(type)
 , mpKeyUnit(pHost->getKeyUnit())
 , mpConsole(pConsole)
-, mTabCompletionCount()
-, mAutoCompletionCount()
-, mUserKeptOnTyping()
-, mHistoryBuffer()
-, mSelectionStart(0)
-, mSystemDictionarySuggestionsCount()
-, mUserDictionarySuggestionsCount()
-, mpSystemSuggestionsList()
-, mpUserSuggestionsList()
 {
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -940,11 +932,7 @@ void TCommandLine::handleTabCompletion(bool direction)
     buffer.replace(QChar(0x21af), QChar::LineFeed);
     buffer.replace(QChar::LineFeed, QChar::Space);
 
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
     QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
-#else
-    QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), QString::SkipEmptyParts);
-#endif
 
     wordList.append(commandLineSuggestions.values());
 

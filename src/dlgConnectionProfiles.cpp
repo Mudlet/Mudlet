@@ -546,12 +546,13 @@ void dlgConnectionProfiles::slot_save_name()
 void dlgConnectionProfiles::slot_addProfile()
 {
     profile_name_entry->setReadOnly(false);
+    // while normally handled by fillout_form, due to it's asynchronous nature it is better UX to reset it here
+    character_password_entry->setText(QString());
     fillout_form();
     welcome_message->hide();
 
-    requiredArea->show();
     informationalArea->show();
-    optionalArea->show();
+    tabWidget_connectionInfo->show();
 
     QString newname = tr("new profile name");
 
@@ -972,6 +973,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         if (it != mudlet::scmDefaultGames.end()) {
             val = it.value().websiteInfo;
         }
+        website_entry->setVisible(!val.isEmpty());
+    } else {
+        website_entry->show();
     }
     website_entry->setText(val);
 
@@ -1093,9 +1097,8 @@ void dlgConnectionProfiles::fillout_form()
 
     if (mProfileList.isEmpty()) {
         welcome_message->show();
-        requiredArea->hide();
+        tabWidget_connectionInfo->hide();
         informationalArea->hide();
-        optionalArea->hide();
 
 // collapse the width as the default is too big and set the height to a reasonable default
 // to fit all of the 'Welcome' message
@@ -1108,9 +1111,8 @@ void dlgConnectionProfiles::fillout_form()
     } else {
         welcome_message->hide();
 
-        requiredArea->show();
+        tabWidget_connectionInfo->show();
         informationalArea->show();
-        optionalArea->show();
     }
 
     profiles_tree_widget->setIconSize(QSize(120, 30));

@@ -374,12 +374,8 @@ void XMLimport::readMap()
     QListIterator<int> itAreaWithRooms(tempAreaRoomsHash.uniqueKeys());
     while (itAreaWithRooms.hasNext()) {
         int areaId = itAreaWithRooms.next();
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         auto values = tempAreaRoomsHash.values(areaId);
         QSet<int> areaRoomsSet{values.begin(), values.end()};
-#else
-        QSet<int> areaRoomsSet{tempAreaRoomsHash.values(areaId).toSet()};
-#endif
 
         if (!mpHost->mpMap->mpRoomDB->areas.contains(areaId)) {
             // It is known for map files to have rooms with area Ids that are
@@ -1148,7 +1144,9 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "mRoomBorderColor") {
                 pHost->mRoomBorderColor.setNamedColor(readElementText());
             } else if (name() == "mMapInfoBg") {
+                auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mMapInfoBg.setNamedColor(readElementText());
+                pHost->mMapInfoBg.setAlpha(alpha);
             } else if (name() == "mBlack2") {
                 pHost->mBlack_2.setNamedColor(readElementText());
             } else if (name() == "mLightBlack2") {
@@ -1540,7 +1538,8 @@ int XMLimport::readActionGroup(TAction* pParent)
                 // or "2" (true) for backward compatibility
                 pT->mButtonState = (readElementText().toInt() == 2);
             } else if (name() == "buttonColor") {
-                pT->mButtonColor.setNamedColor(readElementText());
+                // Not longer present/used, skip over it if it is still in file:
+                skipCurrentElement();
             } else if (name() == "buttonColumn") {
                 pT->mButtonColumns = readElementText().toInt();
             } else if (name() == "posX") {

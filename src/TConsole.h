@@ -47,7 +47,7 @@
 #include <map>
 
 
-enum ControlCharacterMode {
+enum class ControlCharacterMode {
     AsIs = 0x0,
     Picture = 0x1,
     OEM = 0x2
@@ -209,17 +209,10 @@ public:
     QWidget* layerCommandLine = nullptr;
     QHBoxLayout* layoutLayer2 = nullptr;
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QColor mBgColor = QColorConstants::Black;
     QColor mFgColor = QColorConstants::LightGray;
     QColor mSystemMessageFgColor = QColorConstants::Red;
     QColor mCommandBgColor = QColorConstants::Black;
-#else
-    QColor mBgColor = Qt::black;
-    QColor mFgColor = Qt::lightGray;
-    QColor mSystemMessageFgColor = Qt::red;
-    QColor mCommandBgColor = Qt::black;
-#endif
     QColor mSystemMessageBgColor = mBgColor;
     QColor mCommandFgColor = QColor(213, 195, 0);
 
@@ -286,7 +279,7 @@ public:
     int mBgImageMode = 0;
     QString mBgImagePath;
     bool mHScrollBarEnabled = false;
-    ControlCharacterMode mControlCharacter = AsIs;
+    ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
 
 
 public slots:
