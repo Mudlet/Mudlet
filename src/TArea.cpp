@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2020-2021 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2020-2022 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -48,17 +48,7 @@ static const int kPixmapDataLineSize = 64;
 
 
 TArea::TArea(TMap* pMap, TRoomDB* pRDB)
-: min_x(0)
-, min_y(0)
-, min_z(0)
-, max_x(0)
-, max_y(0)
-, max_z(0)
-, gridMode(false)
-, isZone(false)
-, zoneAreaRef(0)
-, mpRoomDB(pRDB)
-, mIsDirty(false)
+: mpRoomDB(pRDB)
 , mpMap(pMap)
 {
 }

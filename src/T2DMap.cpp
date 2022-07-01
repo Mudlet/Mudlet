@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2021 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2016, 2018-2022 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
@@ -81,60 +81,6 @@ const QString& key_icon_dialog_cancel = qsl(":/icons/dialog-cancel.png");
 
 T2DMap::T2DMap(QWidget* parent)
 : QWidget(parent)
-, xyzoom(20)
-, mRX()
-, mRY()
-, mTarget()
-, mStartSpeedWalk()
-, mRoomBeingMoved()
-, mRoomWidth()
-, mRoomHeight()
-, mChosenRoomColor(5)
-, xspan()
-, yspan()
-, mMultiSelection()
-, mMultiRect()
-, mPopupMenu()
-, mNewMoveAction()
-, mMapInfoRect()
-, mFontHeight(20)
-, mShowRoomID(false)
-, gzoom(20)
-, rSize(0.5)
-, eSize(3.0)
-, mRoomID()
-, mAreaID()
-, mOx()
-, mOy()
-, mOz()
-, mShiftMode()
-, arealist_combobox()
-, mpCustomLinesDialog()
-, mCustomLinesRoomFrom()
-, mCustomLinesRoomTo()
-, mpCurrentLineStyle()
-, mpCurrentLineColor()
-, mpCurrentLineArrow()
-, mCurrentLineStyle(Qt::SolidLine)
-, mCurrentLineColor(Qt::red)
-, mCurrentLineArrow(true)
-, mBubbleMode()
-, mMapperUseAntiAlias(true)
-, mLabelHighlighted(false)
-, mMoveLabel()
-, mCustomLineSelectedRoom()
-, mCustomLineSelectedExit()
-, mCustomLineSelectedPoint(-1)
-, mMultiSelectionListWidget(this)
-, mSizeLabel()
-, isCenterViewCall()
-, mDialogLock()
-, mMultiSelectionHighlightRoomId(0)
-, mIsSelectionSorting(true)
-, mIsSelectionSortByNames()
-, mIsSelectionUsingNames(false)
-, mSymbolFontSize(1)
-, mMaxRoomIdDigits(0)
 {
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
@@ -170,8 +116,6 @@ void T2DMap::init()
     if (!mpHost || !mpMap) {
         return;
     }
-
-    isCenterViewCall = false;
 
     eSize = mpHost->mLineSize;
     rSize = mpHost->mRoomSize;
@@ -2080,12 +2024,11 @@ void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
         }
 
         // draw exit stubs
-        QMap<int, QVector3D> unitVectors = mpMap->unitVectors;
         for (int direction : qAsConst(room->exitStubs)) {
             if (direction >= DIR_NORTH && direction <= DIR_SOUTHWEST) {
                 // Stubs on non-XY plane exits are handled differently and we
                 // do not support special exit stubs (yet?)
-                QVector3D uDirection = unitVectors[direction];
+                QVector3D uDirection = mpMap->scmUnitVectors.value(direction);
                 QLineF stubLine(rx, ry, rx + uDirection.x() * 0.5 * mRoomWidth, ry + uDirection.y() * 0.5 * mRoomHeight);
                 const QString doorKey{TRoom::dirCodeToShortString(direction)};
                 // Draw the door lines before we draw the stub or the filled

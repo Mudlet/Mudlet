@@ -116,22 +116,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     }
     setFont(mapperFont);
     mp2dMap->mFontHeight = QFontMetrics(mpHost->getDisplayFont()).height();
-    mpMap->mCustomEnvColors[257] = mpHost->mRed_2;
-    mpMap->mCustomEnvColors[258] = mpHost->mGreen_2;
-    mpMap->mCustomEnvColors[259] = mpHost->mYellow_2;
-    mpMap->mCustomEnvColors[260] = mpHost->mBlue_2;
-    mpMap->mCustomEnvColors[261] = mpHost->mMagenta_2;
-    mpMap->mCustomEnvColors[262] = mpHost->mCyan_2;
-    mpMap->mCustomEnvColors[263] = mpHost->mWhite_2;
-    mpMap->mCustomEnvColors[264] = mpHost->mBlack_2;
-    mpMap->mCustomEnvColors[265] = mpHost->mLightRed_2;
-    mpMap->mCustomEnvColors[266] = mpHost->mLightGreen_2;
-    mpMap->mCustomEnvColors[267] = mpHost->mLightYellow_2;
-    mpMap->mCustomEnvColors[268] = mpHost->mLightBlue_2;
-    mpMap->mCustomEnvColors[269] = mpHost->mLightMagenta_2;
-    mpMap->mCustomEnvColors[270] = mpHost->mLightCyan_2;
-    mpMap->mCustomEnvColors[271] = mpHost->mLightWhite_2;
-    mpMap->mCustomEnvColors[272] = mpHost->mLightBlack_2;
+    mpMap->restore16ColorSet();
     auto menu = new QMenu(this);
     pushButton_info->setMenu(menu);
 
