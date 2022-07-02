@@ -294,7 +294,8 @@ unix:!macx {
         LIBS +=  \
             -L"$${MINGW_BASE_DIR_TEST}\\bin" \
             -llua51 \
-            -lhunspell-1.6
+            -lhunspell-1.6 \
+            -loleaut32
 
         INCLUDEPATH += \
              "C:\\Libraries\\boost_1_77_0" \
@@ -631,7 +632,8 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp
+    XMLimport.cpp \
+    uiawrapper.cpp
 
 HEADERS += \
     ../3rdparty/discord/rpc/include/discord_register.h \
@@ -755,6 +757,7 @@ HEADERS += \
     TTrigger.h \
     TVar.h \
     VarUnit.h \
+    uiawrapper.h \
     utils.h \
     XMLexport.h \
     XMLimport.h \

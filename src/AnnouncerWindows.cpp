@@ -20,6 +20,7 @@
 
 #include "Announcer.h"
 #include "mudlet.h"
+#include "uiawrapper.h"
 
 #include <QAccessible>
 #include <QDebug>
@@ -64,7 +65,9 @@ unique_ptr<UiaCore> uiaCore;
 // Provider code based on Microsoft's uiautomationSimpleProvider example.
 class Announcer::UiaProvider : public IRawElementProviderSimple {
 public:
-  UiaProvider(_In_ HWND hwnd) : refCount(0), controlHWnd(hwnd) {}
+  UiaProvider(_In_ HWND hwnd) : refCount(0), controlHWnd(hwnd) {
+      qDebug() << "initialized provider for Mudlet with" << hwnd;
+  }
 
   // IUnknown methods
   ULONG STDMETHODCALLTYPE AddRef() { return InterlockedIncrement(&refCount); }
@@ -107,7 +110,7 @@ public:
 
   HRESULT STDMETHODCALLTYPE GetPatternProvider(
       PATTERNID patternId, _Outptr_result_maybenull_ IUnknown **pRetVal) {
-    // We do not support any pattern.
+    qDebug() << "UIA requested patternId " << patternId;
     *pRetVal = NULL;
     return S_OK;
   }
@@ -138,7 +141,7 @@ public:
 
   HRESULT STDMETHODCALLTYPE
   get_HostRawElementProvider(IRawElementProviderSimple **pRetVal) {
-    return UiaHostProviderFromHwnd(controlHWnd, pRetVal);
+    return UiaWrapper::self()->hostProviderFromHwnd(controlHWnd, pRetVal);
   }
 
 private:
@@ -153,6 +156,7 @@ bool Announcer::initializeUia() {
 
   // Constructor  initializes refcount to 0, assignment to a CComPtr
   // takes it to 1.
+  qDebug() << "HWND for Mudlet is" << (HWND)mudlet::self()->effectiveWinId();
   uiaProvider = new UiaProvider((HWND)mudlet::self()->effectiveWinId());
   return true;
 }
@@ -163,10 +167,10 @@ bool Announcer::terminateUia() {
     // disconnection.
     UiaProvider *tmpProv = std::move(uiaProvider);
     uiaProvider = nullptr;
-    disconnectProvider(tmpProv);
+    UiaWrapper::self()->disconnectProvider(tmpProv);
   }
 
-  disconnectAllProviders();
+  UiaWrapper::self();
   uiaCore = nullptr;
   return true;
 }
@@ -187,42 +191,22 @@ bool Announcer::terminateUia() {
 
 ///////////////////
 
-Announcer::Announcer(QWidget *parent) : QWidget{parent} {
-  mpUiaLibrary.reset(new QLibrary(QStringLiteral("UIAutomationCore")));
-  if (mpUiaLibrary->load()) {
-    m_pUiaRaiseNotificationEvent =
-        reinterpret_cast<PtrUiaRaiseNotificationEvent>(
-            mpUiaLibrary->resolve("UiaRaiseNotificationEvent"));
-  }
-  initializeUia();
-}
+Announcer::Announcer(QWidget *parent) : QWidget{parent} { initializeUia(); }
 
 BSTR bStrFromQString(const QString &value) {
   return SysAllocString(reinterpret_cast<const wchar_t *>(value.utf16()));
 }
 
-HRESULT
-Announcer::raiseNotificationEvent(IRawElementProviderSimple *provider,
-                                  NotificationKind notificationKind,
-                                  NotificationProcessing notificationProcessing,
-                                  BSTR displayString, BSTR activityId) {
-  if (!m_pUiaRaiseNotificationEvent)
-    return UIA_E_NOTSUPPORTED;
-  return m_pUiaRaiseNotificationEvent(provider, notificationKind,
-                                      notificationProcessing, displayString,
-                                      activityId);
-}
-
 void Announcer::announce(const QString text) {
   // check UiaClientsAreListening here or much earlier on
   qDebug() << "announce" << text;
-  QAccessibleValueChangeEvent event(this, "hi");
 
   BSTR displayString = bStrFromQString(text);
   BSTR activityId = bStrFromQString(qsl("Mudlet"));
 
-  raiseNotificationEvent(uiaProvider, NotificationKind_ItemAdded,
-                         NotificationProcessing_All, displayString, activityId);
+  UiaWrapper::self()->raiseNotificationEvent(
+      uiaProvider, NotificationKind_ItemAdded, NotificationProcessing_All,
+      displayString, activityId);
 
   ::SysFreeString(displayString);
   ::SysFreeString(activityId);

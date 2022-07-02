@@ -730,7 +730,10 @@ mudlet::mudlet()
 
     setupTrayIcon();
 
-    announcer = new Announcer(this);
+    // initialize Announcer after the window is loaded, as UIA on Windows requires it
+    QTimer::singleShot(0, this, [this]() {
+        announcer = new Announcer(this);
+    });
 }
 
 QSettings* mudlet::getQSettings()

@@ -27,13 +27,6 @@
 #include <QObject>
 #include <QWidget>
 
-#if defined(Q_OS_WIN)
-#include <oleacc.h>
-#include <uiautomationclient.h>
-#include <uiautomationcore.h>
-#include <uiautomationcoreapi.h>
-#endif
-
 #if defined(Q_OS_LINUX)
 class InvisibleNotification : public QWidget {
   Q_OBJECT
@@ -77,22 +70,6 @@ public:
 };
 #endif
 
-enum NotificationProcessing {
-  NotificationProcessing_ImportantAll = 0,
-  NotificationProcessing_ImportantMostRecent = 1,
-  NotificationProcessing_All = 2,
-  NotificationProcessing_MostRecent = 3,
-  NotificationProcessing_CurrentThenMostRecent = 4
-};
-
-enum NotificationKind {
-  NotificationKind_ItemAdded = 0,
-  NotificationKind_ItemRemoved = 1,
-  NotificationKind_ActionCompleted = 2,
-  NotificationKind_ActionAborted = 3,
-  NotificationKind_Other = 4
-};
-
 class Announcer : public QWidget {
   Q_OBJECT
 public:
@@ -128,22 +105,6 @@ private:
 
 #if defined(Q_OS_WIN)
   QScopedPointer<QLibrary> mpUiaLibrary;
-  typedef HRESULT(WINAPI *PtrUiaRaiseNotificationEvent)(
-      IRawElementProviderSimple *, NotificationKind, NotificationProcessing,
-      BSTR, BSTR);
-  typedef HRESULT(WINAPI *PtrUiaDisconnectAllProviders)();
-  typedef HRESULT(WINAPI *PtrUiaDisconnectProvider)(
-      IRawElementProviderSimple *);
-  PtrUiaRaiseNotificationEvent m_pUiaRaiseNotificationEvent = nullptr;
-  PtrUiaDisconnectAllProviders m_pUiaDisconnectAllProviders = nullptr;
-  PtrUiaDisconnectProvider m_pUiaDisconnectProvider = nullptr;
-
-  HRESULT raiseNotificationEvent(IRawElementProviderSimple *provider,
-                                 NotificationKind notificationKind,
-                                 NotificationProcessing notificationProcessing,
-                                 BSTR displayString, BSTR activityId);
-  HRESULT disconnectAllProviders();
-  HRESULT disconnectProvider(IRawElementProviderSimple *pProvider);
 
   bool initializeUia();
   bool terminateUia();

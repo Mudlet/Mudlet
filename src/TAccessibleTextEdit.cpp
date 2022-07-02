@@ -275,7 +275,7 @@ QString TAccessibleTextEdit::text(int startOffset, int endOffset) const
         return QString();
     }
 
-    qDebug() << "asked for ::text startOffset" <<startOffset << "endOffset" << endOffset << "gave" << ret;
+    // qDebug() << "asked for ::text startOffset" <<startOffset << "endOffset" << endOffset << "gave" << ret;
     return ret;
 }
 
