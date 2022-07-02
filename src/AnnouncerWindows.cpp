@@ -156,8 +156,8 @@ bool Announcer::initializeUia() {
 
   // Constructor  initializes refcount to 0, assignment to a CComPtr
   // takes it to 1.
-  qDebug() << "HWND for Mudlet is" << (HWND)mudlet::self()->effectiveWinId();
-  uiaProvider = new UiaProvider((HWND)mudlet::self()->effectiveWinId());
+  qDebug() << "HWND for Mudlet is" << (HWND)mudlet::self()->winId();
+  uiaProvider = new UiaProvider((HWND)mudlet::self()->winId());
   return true;
 }
 
