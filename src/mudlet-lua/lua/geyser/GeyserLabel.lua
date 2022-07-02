@@ -79,7 +79,7 @@ function Geyser.Label:setFgColor(color)
   self:echo(nil, color, nil)
 end
 
---- sets the formatting options for test on the label using a formatting string
+--- sets the formatting options for text on the label using a formatting string
 -- @param format A format list to use. 'c' - center, 'l' - left, 'r' - right,  'b' - bold, 'i' - italics, 'u' - underline, 's' - strikethrough,  '##' - font size.  For example, "cb18" specifies center bold 18pt font be used.  Order doesn't matter.
 function Geyser.Label:setFormat(format)
   self:echo(nil, nil, format)
