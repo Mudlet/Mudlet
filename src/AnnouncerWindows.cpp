@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright 2019-2022 Leonard de Ruijter, James Teh - OSARA             *
+ *   Copyright 2017 The Qt Company Ltd.                                    *
  *   Copyright (C) 2022 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -37,39 +38,15 @@
 #include <uiautomationcore.h>
 #include <uiautomationcoreapi.h>
 
-///////////////////
-using namespace std;
-
-HWND uiaWnd = nullptr;
-
 // mingw 7.30's uiautomationclient.h is outdated, lacks this define
 #define UIA_CustomControlTypeId (50025)
 
-// Some UIA functions aren't available in earlier versions of Windows, so we
-// must fetch those at runtime. Otherwise, it will fail to load. This class
-// handles loading/freeing the dll and getting the required functions.
-class UiaCore {
-private:
-  HMODULE dll = LoadLibraryA("UIAutomationCore.dll");
-
-  template <typename FuncType> FuncType *getFunc(const char *funcName) {
-    return (FuncType *)GetProcAddress(this->dll, funcName);
-  }
-
-public:
-  ~UiaCore() { FreeLibrary(this->dll); }
-};
-
-unique_ptr<UiaCore> uiaCore;
-
-// Provider code based on Microsoft's uiautomationSimpleProvider example.
+// this class is largely inspired by OSARA's UiaProvider:
+// https://github.com/jcsteh/osara/blob/master/src/uia.cpp
 class Announcer::UiaProvider : public IRawElementProviderSimple {
 public:
-  UiaProvider(_In_ HWND hwnd) : refCount(0), controlHWnd(hwnd) {
-      qDebug() << "initialized provider for Mudlet with" << hwnd;
-  }
+  UiaProvider(_In_ HWND hwnd) : refCount(0), controlHWnd(hwnd) { }
 
-  // IUnknown methods
   ULONG STDMETHODCALLTYPE AddRef() { return InterlockedIncrement(&refCount); }
 
   ULONG STDMETHODCALLTYPE Release() {
@@ -97,12 +74,12 @@ public:
     return S_OK;
   }
 
-  // IRawElementProviderSimple methods
   HRESULT STDMETHODCALLTYPE
   get_ProviderOptions(_Out_ ProviderOptions *pRetVal) {
-    if (!pRetVal)
+    if (!pRetVal) {
       return E_INVALIDARG;
-    // We are STA, (OleInitialize()).
+    }
+
     *pRetVal = static_cast<ProviderOptions>(ProviderOptions_ServerSideProvider |
                                             ProviderOptions_UseComThreading);
     return S_OK;
@@ -131,7 +108,7 @@ public:
       break;
     case UIA_ProviderDescriptionPropertyId:
       pRetVal->vt = VT_BSTR;
-      pRetVal->bstrVal = SysAllocString(L"REAPER OSARA");
+      pRetVal->bstrVal = SysAllocString(L"Mudlet");
       break;
     default:
       pRetVal->vt = VT_EMPTY;
@@ -147,16 +124,13 @@ public:
 private:
   virtual ~UiaProvider() {}
 
-  ULONG refCount;   // Ref Count for this COM object
-  HWND controlHWnd; // The HWND for the control.
+  ULONG refCount;
+  HWND controlHWnd;
 };
 
 bool Announcer::initializeUia() {
-  uiaCore = make_unique<UiaCore>();
-
   // Constructor  initializes refcount to 0, assignment to a CComPtr
   // takes it to 1.
-  qDebug() << "HWND for Mudlet is" << (HWND)this->winId();
   uiaProvider = new UiaProvider((HWND)this->winId());
   return true;
 }
@@ -171,7 +145,6 @@ bool Announcer::terminateUia() {
   }
 
   UiaWrapper::self();
-  uiaCore = nullptr;
   return true;
 }
 
@@ -188,8 +161,6 @@ bool Announcer::terminateUia() {
 //        SysAllocString(L"REAPER_OSARA")
 //    ) == S_OK);
 //}
-
-///////////////////
 
 Announcer::Announcer(QWidget *parent) : QWidget{parent} { initializeUia(); }
 
