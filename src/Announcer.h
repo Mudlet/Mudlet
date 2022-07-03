@@ -110,7 +110,6 @@ private:
   QScopedPointer<QLibrary> mpUiaLibrary;
 
   bool initializeUia();
-  bool terminateUia();
 
   class UiaProvider;
   UiaProvider *uiaProvider{};

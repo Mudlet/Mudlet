@@ -135,33 +135,6 @@ bool Announcer::initializeUia() {
   return true;
 }
 
-bool Announcer::terminateUia() {
-  if (uiaProvider) {
-    // Null out uiaProvider so it can't be returned by WM_GETOBJECT during
-    // disconnection.
-    UiaProvider *tmpProv = std::move(uiaProvider);
-    uiaProvider = nullptr;
-    UiaWrapper::self()->disconnectProvider(tmpProv);
-  }
-
-  UiaWrapper::self();
-  return true;
-}
-
-// bool Announcer::sendUiaNotification(const string& message, bool interrupt) {
-//    if (!UiaClientsAreListening() || message.empty()) {
-//        return true;
-//    }
-//    return (raiseNotificationEvent(
-//        uiaProvider,
-//        NotificationKind::NotificationKind_Other,
-//        interrupt ? NotificationProcessing::NotificationProcessing_MostRecent
-//        : NotificationProcessing::NotificationProcessing_All,
-//        SysAllocString(widen(message).c_str()),
-//        SysAllocString(L"REAPER_OSARA")
-//    ) == S_OK);
-//}
-
 Announcer::Announcer(QWidget *parent) : QWidget{parent} { initializeUia(); }
 
 BSTR bStrFromQString(const QString &value) {
@@ -169,7 +142,6 @@ BSTR bStrFromQString(const QString &value) {
 }
 
 void Announcer::announce(const QString text) {
-  // check UiaClientsAreListening here or much earlier on
   qDebug() << "announce" << text;
 
   BSTR displayString = bStrFromQString(text);
