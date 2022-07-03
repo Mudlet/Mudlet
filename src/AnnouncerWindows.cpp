@@ -45,7 +45,7 @@
 // https://github.com/jcsteh/osara/blob/master/src/uia.cpp
 class Announcer::UiaProvider : public IRawElementProviderSimple {
 public:
-  UiaProvider(_In_ HWND hwnd) : refCount(0), controlHWnd(hwnd) { }
+  UiaProvider(_In_ HWND hwnd) : refCount(0), controlHWnd(hwnd) {}
 
   ULONG STDMETHODCALLTYPE AddRef() { return InterlockedIncrement(&refCount); }
 

@@ -19,11 +19,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
-#include "utils.h"
 #include "uiawrapper.h"
-#include <QLibrary>
+#include "utils.h"
 #include <QDebug>
+#include <QLibrary>
 
 // this class is largely inspired from Qt's QWindowsUiaWrapper:
 // https://github.com/qt/qtbase/blob/dev/src/gui/accessible/windows/apisupport/qwindowsuiawrapper.cpp
