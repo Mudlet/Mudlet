@@ -20,6 +20,7 @@
 
 #include "Announcer.h"
 #include "uiawrapper.h"
+#include "utils.h"
 
 #include <QAccessible>
 #include <QDebug>

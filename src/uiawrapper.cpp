@@ -1,9 +1,10 @@
+#include "utils.h"
 #include "uiawrapper.h"
 #include <QLibrary>
 #include <QDebug>
 
 UiaWrapper::UiaWrapper() {
-  QLibrary uiaLibrary(QStringLiteral("UIAutomationCore"));
+  QLibrary uiaLibrary(qsl("UIAutomationCore"));
   if (uiaLibrary.load()) {
     m_pUiaRaiseNotificationEvent =
         reinterpret_cast<PtrUiaRaiseNotificationEvent>(
