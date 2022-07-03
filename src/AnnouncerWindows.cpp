@@ -19,7 +19,6 @@
  ***************************************************************************/
 
 #include "Announcer.h"
-#include "mudlet.h"
 #include "uiawrapper.h"
 
 #include <QAccessible>
