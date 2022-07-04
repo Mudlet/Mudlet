@@ -1465,7 +1465,19 @@ macx {
 
     LIBS += -framework AppKit
 
-    SSACCESSIBILITY_PATH = $$PWD/../3rdparty/cocoapods/Pods/SSAccessibility
+    SSACCESSIBILITY_PATH = $$PWD/../3rdparty/cocoapods/Pods/SSAccessibility/SSAccessibility-0.2.0
+
+    SOURCES += $$SSACCESSIBILITY_PATH/SSAccessibility/SSAccessibility.m \
+        $$SSACCESSIBILITY_PATH/SSAccessibility/SSSpeechSynthesizer.m
+
+    HEADERS += $$SSACCESSIBILITY_PATH/SSAccessibility/SSAccessibility.h \
+        $$SSACCESSIBILITY_PATH/SSAccessibility/SSSpeechSynthesizer.h
+
+    LIBS += -F$$SSACCESSIBILITY_PATH
+
+    QMAKE_OBJECTIVE_CFLAGS += -fmodules
+    QMAKE_LFLAGS += -F $$SSACCESSIBILITY_PATH
+    QMAKE_OBJECTIVE_CFLAGS += -F $$SSACCESSIBILITY_PATH
 
     !exists($$SSACCESSIBILITY_PATH) {
         message("SSAccessibility CocoaPod is missing, running 'pod install' to get it...")
