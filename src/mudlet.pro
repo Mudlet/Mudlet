@@ -1464,6 +1464,13 @@ macx {
 
     LIBS += -framework AppKit
 
+    SSACCESSIBILITY_PATH = $$PWD/../3rdparty/cocoapods/Pods/SSAccessibility
+
+    !exists($$SSACCESSIBILITY_PATH) {
+        message("SSAccessibility CocoaPod is missing, running 'pod install' to get it...")
+        system("cd ../3rdparty/cocoapods && pod install");
+    }
+
     contains( DEFINES, INCLUDE_UPDATER ) {
         # allow linker to find sparkle framework if we bundle it in
         SPARKLE_PATH = $$PWD/../3rdparty/cocoapods/Pods/Sparkle
