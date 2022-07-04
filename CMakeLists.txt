@@ -154,6 +154,19 @@ if(USE_UPDATER)
 endif()
 
 if(APPLE)
+    if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/SSAccessibility")
+      message(
+        STATUS "SSAccessibility is missing, fetching it..."
+      )
+      file(DOWNLOAD "https://github.com/splinesoft/SSAccessibility/archive/refs/tags/0.2.0.tar.gz" "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/SSAccessibility-0.2.0.tar.gz"
+        TIMEOUT 60  # seconds
+        TLS_VERIFY ON
+      )
+      file(ARCHIVE_EXTRACT INPUT "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/SSAccessibility-0.2.0.tar.gz"
+        DESTINATION "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/SSAccessibility")
+      file(REMOVE "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/SSAccessibility-0.2.0.tar.gz")
+    endif()
+
   if(USE_UPDATER)
     git_submodule_init(
       CHECK_FILE "3rdparty/sparkle-glue/CMakeLists.txt" SUBMODULE_PATH
