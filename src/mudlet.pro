@@ -632,8 +632,7 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    uiawrapper.cpp
+    XMLimport.cpp
 
 HEADERS += \
     ../3rdparty/discord/rpc/include/discord_register.h \
@@ -757,7 +756,6 @@ HEADERS += \
     TTrigger.h \
     TVar.h \
     VarUnit.h \
-    uiawrapper.h \
     utils.h \
     XMLexport.h \
     XMLimport.h \
@@ -770,7 +768,10 @@ macx {
 }
 
 win32 {
-    SOURCES += AnnouncerWindows.cpp
+    SOURCES += AnnouncerWindows.cpp \
+        uiawrapper.cpp
+
+    HEADERS += uiawrapper.h
 }
 
 linux {
