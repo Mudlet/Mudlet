@@ -21,8 +21,8 @@ jobs:
           check_filenames: true
           skip: >-
             ./.git,
-            ./3rdparty
-            ,./translations,
+            ./3rdparty,
+            ./translations,
             ./src/fonts,
             ./src/mudlet-lua/lua/utf8_filenames.lua,
             ./src/AnnouncerWindows.cpp # 'Teh' is a proper last name
