@@ -398,7 +398,6 @@ bool TCommandLine::event(QEvent* event)
                 mUserKeptOnTyping = false;
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
-                setPalette(mRegularPalette);
                 mHistoryBuffer = 0;
                 ke->accept();
                 return true;
@@ -894,7 +893,6 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         } else {
             mHistoryBuffer = 1;
         }
-        setPalette(mRegularPalette);
 
         mHistoryList.removeAll(toPlainText());
         if (!mHistoryList.isEmpty()) {
