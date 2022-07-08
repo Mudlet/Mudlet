@@ -132,6 +132,8 @@ bool Announcer::initializeUia() {
   // Constructor  initializes refcount to 0, assignment to a CComPtr
   // takes it to 1.
   uiaProvider = new UiaProvider((HWND)this->winId());
+  // as we are not using CComPtr, ensure refcount is incremented to prevent the provider from being deleted early
+  uiaProvider->AddRef();
   return true;
 }
 
