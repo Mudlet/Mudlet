@@ -31,6 +31,8 @@
 #include <QWidget>
 
 #if defined(Q_OS_LINUX)
+// workaround AT-SPI2's inability to simply read out text with a fake statusbar and a notification
+// see https://mail.gnome.org/archives/orca-list/2022-June/msg00027.html
 class InvisibleNotification : public QWidget {
   Q_OBJECT
 
@@ -45,7 +47,6 @@ private:
   QString mText;
 };
 
-// create a new class InvisibleStatusbar based on QWidget
 class InvisibleStatusbar : public QWidget {
   Q_OBJECT
 
