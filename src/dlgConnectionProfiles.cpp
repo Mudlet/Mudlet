@@ -873,8 +873,7 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                 "提剑跨骑挥鬼雨，白骨如山鸟惊飞。"
                 "尘事如潮人如水，只叹江湖几人回。"
                 ""
-                "中文开源武侠MUD炎黄群侠传，游戏包括25大门派和5大世家，正邪只在一念间；近千门武学等你学习，上百种任务随你体验；让自己成为一代宗师，江湖笑，恩怨了。"
-                );
+                "中文开源武侠MUD炎黄群侠传，游戏包括25大门派和5大世家，正邪只在一念间；近千门武学等你学习，上百种任务随你体验；让自己成为一代宗师，江湖笑，恩怨了。");
     } else {
         return readProfileData(profile_name, qsl("description"));
     }
