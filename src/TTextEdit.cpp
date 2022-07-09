@@ -330,7 +330,7 @@ void TTextEdit::showNewLines()
     update();
 
 
-    if (QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole) {
+    if (QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole && mpHost->mAnnounceIncomingText) {
         QString newLines;
         //IC(previousOldScrollPos, mOldScrollPos);
 
