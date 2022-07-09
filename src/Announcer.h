@@ -26,7 +26,6 @@
 #include <QAccessible>
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
-#include <QLibrary>
 #include <QObject>
 #include <QWidget>
 
