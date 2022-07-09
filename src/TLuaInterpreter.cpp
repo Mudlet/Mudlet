@@ -12304,9 +12304,6 @@ void TLuaInterpreter::ttsBuild()
     bSpeechQueueing = false;
 
     connect(speechUnit, &QTextToSpeech::stateChanged, &TLuaInterpreter::ttsStateChanged);
-//    speechUnit->setVolume(1.0);
-//    speechUnit->setRate(0.0);
-//    speechUnit->setPitch(0.0);
     return;
 }
 
