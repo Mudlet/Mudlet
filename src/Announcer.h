@@ -83,8 +83,7 @@ public:
 #if defined(Q_OS_LINUX)
   static QAccessibleInterface *accessibleFactory(const QString &classname,
                                                  QObject *object) {
-// mingw compilation breaks without this
-#undef interface
+#undef interface // mingw compilation breaks without this
     QAccessibleInterface *interface = nullptr;
 
     if (classname == QLatin1String("InvisibleNotification") && object &&
