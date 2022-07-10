@@ -492,9 +492,9 @@ public:
         {"Luminari", {"luminarimud.com", 4100, false, "<a href='http://www.luminarimud.com/'>http://www.luminarimud.com/</a>", ":/icons/luminari_icon.png"}},
         {"StickMUD", {"stickmud.com", 7680, false, "<a href='http://www.stickmud.com/'>stickmud.com</a>", ":/icons/stickmud_icon.jpg"}},
         {"Clessidra", {"mud.clessidra.it", 4000, false, "<a href='http://www.clessidra.it/'>http://www.clessidra.it</a>", ":/icons/clessidra.jpg"}},
-        {"Reinos de Leyenda", {"reinosdeleyenda.es", 23, false, "<a href='https://www.reinosdeleyenda.es/'>Main website</a>\n"
-                                 "<a href='https://www.reinosdeleyenda.es/foro/'>Forums</a>\n"
-                                 "<a href='https://wiki.reinosdeleyenda.es/'>Wiki</a>\n", ":/icons/reinosdeleyenda_mud.png"}},
+        {"Reinos de Leyenda", {"reinosdeleyenda.es", 23, false, "<a href='https://www.reinosdeleyenda.es/'>Sitio web principal</a><br>"
+                                 "<a href='https://www.reinosdeleyenda.es/foro/'>Foros</a><br>"
+                                 "<a href='https://wiki.reinosdeleyenda.es/'>Wiki</a>", ":/icons/reinosdeleyenda_mud.png"}},
         {"Fierymud", {"fierymud.org", 4000, false, "<a href='https://www.fierymud.org/'>https://www.fierymud.org</a>", ":/icons/fiery_mud.png"}},
         {"Mudlet self-test", {"mudlet.org", 23, false, "", ""}},
         {"Carrion Fields", {"carrionfields.net", 4449, false, "<a href='http://www.carrionfields.net'>www.carrionfields.net</a>", ":/icons/carrionfields.png"}},
