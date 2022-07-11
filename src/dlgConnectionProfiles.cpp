@@ -718,7 +718,7 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
     if (hostUrl == QLatin1String("realmsofdespair.com")) {
         // clang-format off
         // wrap before the last word on a line is here so that the source text
-        // is no more than 80 characters excluding the indent for readbility in
+        // is no more than 80 characters (excluding the indent) for readbility in
         // an editor. Note that the text is autowrapped in the widget used to
         // show it so ensure lines end in a space (for locales that use spaces)
         // and use two '\n' to get a blank line between paragraphs.                          ------>|
