@@ -331,7 +331,7 @@ void TTextEdit::showNewLines()
     update();
 
 
-    if (QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole && mpHost->mAnnounceIncomingText) {
+    if (QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole && mpHost->mAnnounceIncomingText
 #if defined (Q_OS_WINDOWS)
             && UiaWrapper::self()->clientsAreListening()
 #endif
