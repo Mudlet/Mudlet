@@ -34,6 +34,5 @@ void Announcer::announce(const QString text)
         NSAccessibilityAnnouncementKey : text.toNSString(),
         NSAccessibilityPriorityKey : @(NSAccessibilityPriorityHigh),
     };
-    // AXLiveRegionChanged is also an option to look into, should this one not be good enough
-    // NSAccessibilityPostNotificationWithUserInfo([NSApp mainWindow], NSAccessibilityAnnouncementRequestedNotification, announcementInfo);
+    NSAccessibilityPostNotificationWithUserInfo([NSApp mainWindow], NSAccessibilityAnnouncementRequestedNotification, announcementInfo);
 }

@@ -12304,9 +12304,6 @@ void TLuaInterpreter::ttsBuild()
     bSpeechQueueing = false;
 
     connect(speechUnit, &QTextToSpeech::stateChanged, &TLuaInterpreter::ttsStateChanged);
-    speechUnit->setVolume(1.0);
-    speechUnit->setRate(0.0);
-    speechUnit->setPitch(0.0);
     return;
 }
 
@@ -15303,6 +15300,10 @@ void TLuaInterpreter::initLuaGlobals()
     // binary directory for both modules and binary libraries:
     additionalCPaths << qsl("%1/?.so").arg(appPath);
     additionalLuaPaths << qsl("%1/?.lua").arg(appPath);
+
+    // Luarocks installs rocks locally for developers, even with sudo
+    additionalCPaths << qsl("%1/.luarocks/lib/lua/5.1/?.so").arg(QStandardPaths::standardLocations(QStandardPaths::HomeLocation).first());
+    additionalLuaPaths << qsl("%1/.luarocks/share/lua/5.1/?.lua;%1/.luarocks/share/lua/5.1/?/init.lua").arg(QStandardPaths::standardLocations(QStandardPaths::HomeLocation).first());
 #elif defined(Q_OS_WIN32) && defined(INCLUDE_MAIN_BUILD_SYSTEM)
     // For CI builds or users/developers using the setup-windows-sdk.ps1 method:
     additionalCPaths << qsl("C:\\Qt\\Tools\\mingw730_32\\lib\\lua\\5.1\\?.dll");
@@ -17220,6 +17221,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
     }
     if (key == qsl("specialForceMxpNegotiationOff")) {
         host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("announceIncomingText")) {
+        host.mAnnounceIncomingText = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
 

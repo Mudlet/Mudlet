@@ -32,6 +32,7 @@
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "mudlet.h"
+#include "uiawrapper.h"
 #include "widechar_width.h"
 
 #include "pre_guard.h"
@@ -330,7 +331,11 @@ void TTextEdit::showNewLines()
     update();
 
 
-    if (QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole) {
+    if (QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole && mpHost->mAnnounceIncomingText
+#if defined (Q_OS_WINDOWS)
+            && UiaWrapper::self()->clientsAreListening()
+#endif
+            ) {
         QString newLines;
         //IC(previousOldScrollPos, mOldScrollPos);
 

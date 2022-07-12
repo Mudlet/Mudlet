@@ -270,10 +270,7 @@ QString TAccessibleTextEdit::text(int startOffset, int endOffset) const
         return QString();
     }
 
-    QString ret = text(QAccessible::Value).mid(startOffset, endOffset - startOffset).trimmed();
-    if (ret.isEmpty()) {
-        return QString();
-    }
+    QString ret = text(QAccessible::Value).mid(startOffset, endOffset - startOffset);
 
     // qDebug() << "asked for ::text startOffset" <<startOffset << "endOffset" << endOffset << "gave" << ret;
     return ret;
