@@ -15275,6 +15275,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getBackgroundColor", TLuaInterpreter::getBackgroundColor);
     lua_register(pGlobalLua, "getLabelStyleSheet", TLuaInterpreter::getLabelStyleSheet);
     lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
+    lua_register(pGlobalLua, "announce", TLuaInterpreter::announce);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -17409,4 +17410,11 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_settable(L, -3);
 
     return 1;
+}
+
+int TLuaInterpreter::announce(lua_State *L) {
+    const QString text = getVerifiedString(L, __func__, 1, "text to announce");
+
+    mudlet::self()->announce(text);
+    return 0;
 }
