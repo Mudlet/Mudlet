@@ -942,6 +942,17 @@
  <tabstops>
   <tabstop>profiles_tree_widget</tabstop>
   <tabstop>welcome_message</tabstop>
+  <tabstop>profile_name_entry</tabstop>
+  <tabstop>host_name_entry</tabstop>
+  <tabstop>port_entry</tabstop>
+  <tabstop>port_ssl_tsl</tabstop>
+  <tabstop>tabWidget_connectionInfo</tabstop>
+  <tabstop>login_entry</tabstop>
+  <tabstop>character_password_entry</tabstop>
+  <tabstop>profile_history</tabstop>
+  <tabstop>discord_optin_checkBox</tabstop>
+  <tabstop>autologin_checkBox</tabstop>
+  <tabstop>auto_reconnect</tabstop>
   <tabstop>mud_description_textedit</tabstop>
   <tabstop>remove_profile_button</tabstop>
   <tabstop>copy_profile_toolbutton</tabstop>
