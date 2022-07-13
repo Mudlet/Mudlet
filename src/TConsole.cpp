@@ -2039,8 +2039,8 @@ void TConsole::setCaretMode(bool enabled)
     mLowerPane->updateCaret();
 
     if (enabled) {
-        mUpperPane->setCaretPosition(mUpperPane->mCaretLine, 0);
-        qDebug() << mUpperPane->mCaretLine << mUpperPane->mCaretColumn;
+        mUpperPane->initializeCaret();
+        qDebug() << "caret mode on:" << mUpperPane->mCaretLine << mUpperPane->mCaretColumn;
         mUpperPane->setFocusPolicy(Qt::StrongFocus);
         mUpperPane->setFocusProxy(nullptr);
     } else {

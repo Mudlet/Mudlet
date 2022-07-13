@@ -2674,6 +2674,11 @@ void TTextEdit::setCaretPosition(int line, int column)
     updateCaret();
 }
 
+void TTextEdit::initializeCaret()
+{
+    setCaretPosition(mpBuffer->lineBuffer.length() - 2, 0);
+}
+
 void TTextEdit::updateCaret()
 {
     int lineOffset = imageTopLine();

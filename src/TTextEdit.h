@@ -94,6 +94,7 @@ public:
     int getColumnCount();
     int getRowCount();
     void reportCodepointErrors();
+    void initializeCaret();
     void setCaretPosition(int line, int column);
     void updateCaret();
 
