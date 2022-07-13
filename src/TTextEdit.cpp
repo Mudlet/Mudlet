@@ -2753,6 +2753,12 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             newCaretColumn = mCaretColumn + 1;
         }
         break;
+    case Qt::Key_Home:
+        newCaretColumn = 0;
+        break;
+    case Qt::Key_End:
+        newCaretColumn = mpBuffer->lineBuffer[mCaretLine].length() - 1;
+        break;
     }
 
     // Did the key press change the caret position?
