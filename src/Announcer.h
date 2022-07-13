@@ -28,6 +28,9 @@
 #include <QAccessibleWidget>
 #include <QObject>
 #include <QWidget>
+#if defined(Q_OS_WIN32)
+#include <QLibrary>
+#endif
 
 #if defined(Q_OS_LINUX)
 // workaround AT-SPI2's inability to simply read out text with a fake statusbar and a notification
