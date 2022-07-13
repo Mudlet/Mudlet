@@ -2051,7 +2051,10 @@ void TConsole::setCaretMode(bool enabled)
         qDebug() << "caret mode off";
         mUpperPane->setFocusPolicy(Qt::ClickFocus);
 #if defined(Q_OS_WIN32)
-        mUpperPane->releaseKeyboard();
+        // NVDA breaks focus reset, so do it on a timer
+        QTimer::singleShot(0, this, [this] () {
+            mUpperPane->releaseKeyboard();
+        });
 #endif
         if (mType == MainConsole) {
             mUpperPane->setFocusProxy(mpCommandLine);
