@@ -2759,6 +2759,12 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     case Qt::Key_End:
         newCaretColumn = mpBuffer->lineBuffer[mCaretLine].length() - 1;
         break;
+    case Qt::Key_PageUp:
+        newCaretLine = std::max(mCaretLine - mScreenHeight, 0);
+        break;
+    case Qt::Key_PageDown:
+        newCaretLine = std::min(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
+        break;
     }
 
     // Did the key press change the caret position?
