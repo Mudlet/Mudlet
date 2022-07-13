@@ -2043,8 +2043,16 @@ void TConsole::setCaretMode(bool enabled)
         qDebug() << "caret mode on:" << mUpperPane->mCaretLine << mUpperPane->mCaretColumn;
         mUpperPane->setFocusPolicy(Qt::StrongFocus);
         mUpperPane->setFocusProxy(nullptr);
+#if defined(Q_OS_WIN32)
+        // windows doesn't move keyboard focus to the main window without this
+        mUpperPane->grabKeyboard();
+#endif
     } else {
+        qDebug() << "caret mode off";
         mUpperPane->setFocusPolicy(Qt::ClickFocus);
+#if defined(Q_OS_WIN32)
+        mUpperPane->releaseKeyboard();
+#endif
         if (mType == MainConsole) {
             mUpperPane->setFocusProxy(mpCommandLine);
         } else if (mType == UserWindow) {
