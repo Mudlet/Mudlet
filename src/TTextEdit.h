@@ -94,6 +94,7 @@ public:
     int getColumnCount();
     int getRowCount();
     void reportCodepointErrors();
+    void setCaretPosition(int line, int column);
     void updateCaret();
 
     QColor mBgColor;
@@ -161,7 +162,6 @@ private:
     void expandSelectionToLine(int);
     inline void replaceControlCharacterWith_Picture(const uint, const QString&, const int, QVector<QString>&, int&) const;
     inline void replaceControlCharacterWith_OEMFont(const uint, const QString&, const int, QVector<QString>&, int&) const;
-    void setCaretPosition(int line, int column);
 
     int mFontHeight;
     int mFontWidth;

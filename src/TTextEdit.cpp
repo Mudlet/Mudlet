@@ -2663,6 +2663,7 @@ void TTextEdit::reportCodepointErrors()
 
 void TTextEdit::setCaretPosition(int line, int column)
 {
+    qDebug() << "TTextEdit::setCaretPosition(" << line << ", " << column << ")";
     mCaretLine = line;
     mCaretColumn = column;
 
@@ -2726,6 +2727,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
 
     int newCaretLine = -1;
     int newCaretColumn = -1;
+    qDebug() << "before keypress:" << mCaretLine << mCaretColumn;
 
     switch (event->key()) {
     case Qt::Key_Up:
@@ -2788,4 +2790,6 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     }
 
     setCaretPosition(newCaretLine, newCaretColumn);
+
+    qDebug() << "after keypress:" << mCaretLine << mCaretColumn;
 }
