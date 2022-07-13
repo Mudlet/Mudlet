@@ -2045,7 +2045,13 @@ void TConsole::setCaretMode(bool enabled)
         mUpperPane->setFocusProxy(nullptr);
 #if defined(Q_OS_WIN32)
         // windows doesn't move keyboard focus to the main window without this
+        mUpperPane->setFocus(Qt::MouseFocusReason);
         mUpperPane->grabKeyboard();
+
+        QAccessibleEvent event(mUpperPane, QAccessible::Focus);
+        qDebug() << "raising" << event;
+        QAccessible::updateAccessibility(&event);
+
 #endif
     } else {
         qDebug() << "caret mode off";
@@ -2058,8 +2064,14 @@ void TConsole::setCaretMode(bool enabled)
 #endif
         if (mType == MainConsole) {
             mUpperPane->setFocusProxy(mpCommandLine);
+            QAccessibleEvent event(mpCommandLine, QAccessible::Focus);
+            qDebug() << "raising" << event;
+            QAccessible::updateAccessibility(&event);
         } else if (mType == UserWindow) {
             mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+            QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
+            qDebug() << "raising" << event;
+            QAccessible::updateAccessibility(&event);
         }
     }
 
