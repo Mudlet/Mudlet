@@ -2703,6 +2703,7 @@ void TTextEdit::updateCaret()
         const QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(this)->textInterface();
         QAccessibleTextCursorEvent event(this, ti->cursorPosition());
 
+        qDebug() << "raising" << event;
         QAccessible::updateAccessibility(&event);
     }
 }
