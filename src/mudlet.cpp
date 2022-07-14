@@ -4684,7 +4684,7 @@ bool mudlet::desktopInDarkMode()
     return false;
 }
 
-void mudlet::announce(const QString& text)
+void mudlet::announce(const QString& text, const QString& processing)
 {
-    announcer->announce(text);
+    announcer->announce(text, processing);
 }

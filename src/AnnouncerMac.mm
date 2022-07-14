@@ -28,8 +28,9 @@ Announcer::Announcer(QWidget *parent)
 
 }
 
-void Announcer::announce(const QString text)
+void Announcer::announce(const QString& text, const QString& processing)
 {
+    Q_UNUSED(processing);
     NSDictionary *announcementInfo = @{
         NSAccessibilityAnnouncementKey : text.toNSString(),
         NSAccessibilityPriorityKey : @(NSAccessibilityPriorityHigh),

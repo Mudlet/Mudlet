@@ -143,14 +143,29 @@ BSTR bStrFromQString(const QString &value) {
   return SysAllocString(reinterpret_cast<const wchar_t *>(value.utf16()));
 }
 
-void Announcer::announce(const QString text) {
-  qDebug() << "announce" << text;
+void Announcer::announce(const QString& text, const QString& processing) {
+  qDebug() << "announce" << processing << text;
 
   BSTR displayString = bStrFromQString(text);
   BSTR activityId = bStrFromQString(qsl("Mudlet"));
 
+  int processingvalue = 0;
+  if (Q_LIKELY(processing.isEmpty() || processing == qsl("all"))) {
+    processingvalue = NotificationProcessing_All;
+  } else if (processing == qsl("importantall")) {
+    processingvalue = NotificationProcessing_ImportantAll;
+  } else if (processing == qsl("importantmostrecent")) {
+    processingvalue = NotificationProcessing_ImportantMostRecent;
+  } else if (processing == qsl("mostrecent")) {
+    processingvalue == NotificationProcessing_MostRecent;
+  } else if (processing == qsl("currentthenmostrecent")) {
+    processingvalue == NotificationProcessing_CurrentThenMostRecent;
+  } else {
+    Q_ASSERT_X(false, "Announcer::announce(...)", "invalid processing value given");
+  }
+
   UiaWrapper::self()->raiseNotificationEvent(
-      uiaProvider, NotificationKind_ItemAdded, NotificationProcessing_All,
+      uiaProvider, NotificationKind_ItemAdded, processingvalue,
       displayString, activityId);
 
   ::SysFreeString(displayString);

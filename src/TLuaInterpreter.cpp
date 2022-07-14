@@ -17414,6 +17414,19 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 
 int TLuaInterpreter::announce(lua_State *L) {
     const QString text = getVerifiedString(L, __func__, 1, "text to announce");
+    static const QStringList processingKinds{"importantall", "importantmostrecent", "all", "mostrecent", "currentthenmostrecent"};
+    QString processing;
+
+    int n = lua_gettop(L);
+    if (n > 1) {
+        processing = getVerifiedString(L, __func__, 2, "processing style");
+    }
+
+    if (!processingKinds.contains(processing)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (processing should be one of %s, got %s!)",
+                __func__, 2, processingKinds.join(qsl(", ")), processing);
+            return lua_error(L);
+        }
 
     mudlet::self()->announce(text);
     return 0;

@@ -81,7 +81,7 @@ class Announcer : public QWidget {
 public:
   Q_DISABLE_COPY_MOVE(Announcer)
   explicit Announcer(QWidget *parent = nullptr);
-  void announce(const QString text);
+  void announce(const QString& text, const QString& processing = QString());
 
 #if defined(Q_OS_LINUX)
   static QAccessibleInterface *accessibleFactory(const QString &classname,

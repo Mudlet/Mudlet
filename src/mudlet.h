@@ -275,7 +275,7 @@ public:
     void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     static bool loadLuaFunctionList();
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
-    void announce(const QString& text);
+    void announce(const QString& text, const QString& processing = QString());
 
     // Used by a profile to tell the mudlet class
     // to tell other profiles to reload the updated
