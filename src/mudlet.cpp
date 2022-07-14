@@ -2826,7 +2826,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     pHost->setPass(readProfileData(profile_name, qsl("password")));
     
     QString val = readProfileData(profile_name, qsl("autoreconnect"));
-    if (!val.isEmpty() && val.toInt() == Qt:Checked) {
+    if (!val.isEmpty() && val.toInt() == Qt::Checked) {
         pHost->setAutoReconnect(true);
     } else {
         pHost->setAutoReconnect(false);
