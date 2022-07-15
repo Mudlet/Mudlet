@@ -880,25 +880,26 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                    "multi-player games ever!");
     }
     if (hostUrl == QLatin1String("reinosdeleyenda.es")) {
-// English translation (was used prior to switch to native Spanish of the MUD)
-//        return qsl("The oldest Spanish free mud with more than 20 years of running history."
-//                   "\n\n"
-//                   "Reinos de Leyenda takes place in the ever changing world of Eirea, ravaged by the "
-//                   "mischiefs of the gods after more than a thousand years of contempt and hideous war "
-//                   "amongst their zealous mortal pawns."
-//                   "\n\n"
-//                   "History is written on a day per day basis, taking into consideration the players' "
-//                   "choices to decide the irreversible aftermath of this everlasting struggle."
-//                   "\n\n"
-//                   "This is a PvP MUD which allows the player to set how high are the stakes: the more "
-//                   "you risk losing upon death, the more glory to be earned by your heroism. RP, while "
-//                   "not enforced, is rewarded with non-PvP oriented perks and unique treasure."
-//                   "\n\n"
-//                   "A powerful character customization system allows you to choose your deity –or "
-//                   "fully disregard the gods– and join one of the player-run realms that govern the "
-//                   "land to explore a breathing world, delve into the secrets of the oceans, shape "
-//                   "your legacy, craft forgotten marvels for you –or your allies– and fight for faith, "
-//                   "glory or coin.");
+/* English translation, provided by Game:
+ *                   "The oldest Spanish free mud with more than 20 years of running history."
+ *                   "\n\n"
+ *                   "Reinos de Leyenda takes place in the ever changing world of Eirea, ravaged by the "
+ *                   "mischiefs of the gods after more than a thousand years of contempt and hideous war "
+ *                   "amongst their zealous mortal pawns."
+ *                   "\n\n"
+ *                   "History is written on a day per day basis, taking into consideration the players' "
+ *                   "choices to decide the irreversible aftermath of this everlasting struggle."
+ *                   "\n\n"
+ *                   "This is a PvP MUD which allows the player to set how high are the stakes: the more "
+ *                   "you risk losing upon death, the more glory to be earned by your heroism. RP, while "
+ *                   "not enforced, is rewarded with non-PvP oriented perks and unique treasure."
+ *                   "\n\n"
+ *                   "A powerful character customization system allows you to choose your deity –or "
+ *                   "fully disregard the gods– and join one of the player-run realms that govern the "
+ *                   "land to explore a breathing world, delve into the secrets of the oceans, shape "
+ *                   "your legacy, craft forgotten marvels for you –or your allies– and fight for faith, "
+ *                   "glory or coin.");
+ */
         return qsl("El mud Español gratis con más de 20 años de historia."
                    "\n\n"
                    "Reinos de Leyenda toma lugar en el siempre cambiante mundo de Eirea, devastado por "
@@ -921,17 +922,18 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                    "aliados- y luchar por fe, gloria o dinero.");
     }
     if (hostUrl == QLatin1String("mud.clessidra.it")) {
-// English translation (was used prior to switch to native Italian of the MUD)
-//        return qsl("Clessidra is the first all italian MUD ever created! On Clessidra you may find "
-//                   "only original Areas, all in italian! Many features make Clessidra one of the best, "
-//                   "or the best MUD in Italy: Advanced travel mode, fight one to one versus your "
-//                   "friend, or enemy, The Arena and its fight, the Mortal Challenge, the intelligent "
-//                   "MOBs and their Quest and fighting style, a random automatic mission assignament "
-//                   "and for you and your friends you must try the advanced Clan system that allows "
-//                   "wars and conquest. A mercenary system to help playing when few players are online, "
-//                   "a crafting system to create special object and a graphical user interface to help "
-//                   "newbie and expert players have a better experience. A MUD that evolves with new "
-//                   "challenge, new rules, new skills!");
+/* English translation, provided by Game:
+ *                   "Clessidra is the first all italian MUD ever created! On Clessidra you may find "
+ *                   "only original Areas, all in italian! Many features make Clessidra one of the best, "
+ *                   "or the best MUD in Italy: Advanced travel mode, fight one to one versus your "
+ *                   "friend, or enemy, The Arena and its fight, the Mortal Challenge, the intelligent "
+ *                   "MOBs and their Quest and fighting style, a random automatic mission assignament "
+ *                   "and for you and your friends you must try the advanced Clan system that allows "
+ *                   "wars and conquest. A mercenary system to help playing when few players are online, "
+ *                   "a crafting system to create special object and a graphical user interface to help "
+ *                   "newbie and expert players have a better experience. A MUD that evolves with new "
+ *                   "challenge, new rules, new skills!");
+ */
         return qsl("Clessidra e' il primo MUD completamente in italiano mai creato. Su Clessidra "
                    "potrete trovare solo aree originali ed in italiano. Molte caratteristiche rendono "
                    "Clessidra uno dei migliori, se non il migliore, MUD in Italia : Avanzati sistemi "
@@ -1012,6 +1014,14 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
     }
     if (hostUrl == QLatin1String("mud.ren")) {
         return qsl("天下风云出我辈，一入江湖岁月催。\n"
+/* English translation (courtesy of Google NOT the originator):
+ *                   "The world is out of my generation."
+ *                   "Emperor Tu Baye talked about laughter, it was drunk in life."
+ *                   "The sword rides on the ride, and the white bone is like a mountain bird to fly."
+ *                   "The dust is like a tide, and only a few people in the rivers and lakes."
+ *                   "\n\n"
+ *                   "Chinese open source martial arts MUD Yan Huang Qunxia biography, the game includes 25 masters and 5 major families. Laughing, grudge."
+ *\
                    "皇图霸业谈笑中，不胜人生一场醉。\n"
                    "提剑跨骑挥鬼雨，白骨如山鸟惊飞。\n"
                    "尘事如潮人如水，只叹江湖几人回。"
