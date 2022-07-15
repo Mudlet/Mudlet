@@ -1021,7 +1021,7 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
  *                   "The dust is like a tide, and only a few people in the rivers and lakes."
  *                   "\n\n"
  *                   "Chinese open source martial arts MUD Yan Huang Qunxia biography, the game includes 25 masters and 5 major families. Laughing, grudge."
- *\
+ */
                    "皇图霸业谈笑中，不胜人生一场醉。\n"
                    "提剑跨骑挥鬼雨，白骨如山鸟惊飞。\n"
                    "尘事如潮人如水，只叹江湖几人回。"
