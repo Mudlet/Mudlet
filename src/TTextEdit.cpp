@@ -2765,6 +2765,14 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     case Qt::Key_End:
         newCaretColumn = mpBuffer->lineBuffer[mCaretLine].length() - 1;
         break;
+    case Qt::Key_Home | Qt::CTRL:
+        newCaretLine = 0;
+        newCaretColumn = 0;
+        break;
+    case Qt::Key_End | Qt::CTRL:
+        newCaretLine = mpBuffer->lineBuffer.length() - 1;
+        newCaretColumn = mpBuffer->lineBuffer[mCaretLine].length() - 1;
+        break;
     case Qt::Key_PageUp:
         newCaretLine = std::max(mCaretLine - mScreenHeight, 0);
         break;
