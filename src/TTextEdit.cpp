@@ -2742,21 +2742,40 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
         break;
     case Qt::Key_Down: {
-            // FIXME: Is the last line in lineBuffer always empty?
             int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty();
             if (mCaretLine < mpBuffer->lineBuffer.length() - 1 - emptyLastLine) {
                 newCaretLine = mCaretLine + 1;
             }
+
         }
         break;
     case Qt::Key_Left:
-        if (mCaretColumn > 0) {
-            newCaretColumn = mCaretColumn - 1;
+        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+            if (mCaretColumn > 0) {
+                newCaretColumn = mCaretColumn - 1;
+            }
+        } else {
+            if (mCaretColumn > 0) {
+                newCaretColumn = mCaretColumn - 1;
+            } else if (mCaretLine > 0) {
+                newCaretLine = mCaretLine - 1;
+                newCaretColumn = mpBuffer->lineBuffer.at(newCaretLine).length() - 1;
+            }
         }
         break;
     case Qt::Key_Right:
-        if (mCaretColumn < mpBuffer->lineBuffer[mCaretLine].length() - 1) {
-            newCaretColumn = mCaretColumn + 1;
+        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+            if (mCaretColumn < mpBuffer->lineBuffer.at(mCaretLine).length()) {
+                newCaretColumn = mCaretColumn + 1;
+            }
+        } else {
+            if (mCaretColumn < (mpBuffer->lineBuffer.at(mCaretLine).length() - 1)) {
+                newCaretColumn = mCaretColumn + 1;
+            // last line of the buffer is empty, so we need to check for that:
+            } else if (mCaretLine < (mpBuffer->lineBuffer.length() - 2)) {
+                newCaretLine = mCaretLine + 1;
+                newCaretColumn = 0;
+            }
         }
         break;
     case Qt::Key_Home:
@@ -2787,28 +2806,10 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         return;
     }
 
+    qDebug() << "after keypress: new caret and column:" << newCaretLine << newCaretColumn;
+
     if (newCaretLine == -1) {
         newCaretLine = mCaretLine;
-    } else {
-        // If the new line is shorter, we need to adjust the column.
-        int newLineLength = mpBuffer->line(newCaretLine).length();
-        if (mCaretColumn >= newLineLength) {
-            newCaretColumn = newLineLength == 0 ? 0 : newLineLength - 1;
-
-            // Don't overwrite a previously saved old column value. We will want
-            // to return to the original column that was selected by the user.
-            if (mOldCaretColumn == 0) {
-                mOldCaretColumn = mCaretColumn;
-            }
-        } else if (mOldCaretColumn != 0) {
-            if (mOldCaretColumn < newLineLength) {
-                // Now that the line is long enough again, restore the old column value.
-                newCaretColumn = mOldCaretColumn;
-                mOldCaretColumn = 0;
-            } else {
-                newCaretColumn = newLineLength - 1;
-            }
-        }
     }
 
     if (newCaretColumn == -1) {
