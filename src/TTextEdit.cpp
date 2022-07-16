@@ -2736,9 +2736,30 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     qDebug() << "before keypress:" << mCaretLine << mCaretColumn;
 
     switch (event->key()) {
-    case Qt::Key_Up:
-        if (mCaretLine > 0) {
-            newCaretLine = mCaretLine - 1;
+    case Qt::Key_Up: {
+            if (mCaretLine > 0) {
+                newCaretLine = mCaretLine - 1;
+            }
+
+            // If the new line is shorter, we need to adjust the column.
+            int newLineLength = mpBuffer->line(newCaretLine).length();
+            if (mCaretColumn >= newLineLength) {
+                newCaretColumn = newLineLength == 0 ? 0 : newLineLength - 1;
+
+                // Don't overwrite a previously saved old column value. We will want
+                // to return to the original column that was selected by the user.
+                if (mOldCaretColumn == 0) {
+                    mOldCaretColumn = mCaretColumn;
+                }
+            } else if (mOldCaretColumn != 0) {
+                if (mOldCaretColumn < newLineLength) {
+                    // Now that the line is long enough again, restore the old column value.
+                    newCaretColumn = mOldCaretColumn;
+                    mOldCaretColumn = 0;
+                } else {
+                    newCaretColumn = newLineLength - 1;
+                }
+            }
         }
         break;
     case Qt::Key_Down: {
@@ -2814,6 +2835,8 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         } else {
             newCaretColumn = mpBuffer->lineBuffer.at(mCaretLine).length() - 1;
         }
+        break;
+    case Qt::Key_End | Qt::CTRL:
         break;
     case Qt::Key_PageUp:
         newCaretLine = std::max(mCaretLine - mScreenHeight, 0);
