@@ -2853,8 +2853,6 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         return;
     }
 
-    qDebug() << "after keypress: new caret and column:" << newCaretLine << newCaretColumn;
-
     if (newCaretLine == -1) {
         newCaretLine = mCaretLine;
     }
