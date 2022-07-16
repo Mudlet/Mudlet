@@ -2737,9 +2737,10 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
 
     switch (event->key()) {
     case Qt::Key_Up: {
-            if (mCaretLine > 0) {
-                newCaretLine = mCaretLine - 1;
+            if (mCaretLine == 0) {
+                break;
             }
+            newCaretLine = mCaretLine - 1;
 
             // If the new line is shorter, we need to adjust the column.
             int newLineLength = mpBuffer->line(newCaretLine).length();
