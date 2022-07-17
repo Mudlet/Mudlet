@@ -1054,7 +1054,7 @@ void TTextEdit::unHighlight()
     // clang-format on
 }
 
-// ensure that mPA is top-right and mPB is bottom-right
+// ensure that mPA is top-left and mPB is bottom-right
 void TTextEdit::normaliseSelection()
 {
     if (mDragStart.y() < mDragSelectionEnd.y() || ((mDragStart.y() == mDragSelectionEnd.y()) && (mDragStart.x() < mDragSelectionEnd.x()))) {
