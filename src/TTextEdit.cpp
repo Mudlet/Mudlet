@@ -333,7 +333,8 @@ void TTextEdit::showNewLines()
     update();
 
 
-    if (QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole && mpHost->mAnnounceIncomingText
+    if (QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole
+        && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost
 #if defined (Q_OS_WINDOWS)
             && UiaWrapper::self()->clientsAreListening()
 #endif
@@ -341,7 +342,7 @@ void TTextEdit::showNewLines()
         QString newLines;
         //IC(previousOldScrollPos, mOldScrollPos);
 
-        // content have been deleted
+        // content has been deleted
         if (previousOldScrollPos > mOldScrollPos) {
             QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(this)->textInterface();
             auto totalCharacterCount = ti->characterCount();
@@ -1053,7 +1054,7 @@ void TTextEdit::unHighlight()
     // clang-format on
 }
 
-// ensure that mPA is top-right and mPB is bottom-right
+// ensure that mPA is top-left and mPB is bottom-right
 void TTextEdit::normaliseSelection()
 {
     if (mDragStart.y() < mDragSelectionEnd.y() || ((mDragStart.y() == mDragSelectionEnd.y()) && (mDragStart.x() < mDragSelectionEnd.x()))) {
@@ -2735,53 +2736,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     int newCaretColumn = -1;
     qDebug() << "before keypress:" << mCaretLine << mCaretColumn;
 
-    switch (event->key()) {
-    case Qt::Key_Up:
-        if (mCaretLine > 0) {
-            newCaretLine = mCaretLine - 1;
-        }
-        break;
-    case Qt::Key_Down: {
-            // FIXME: Is the last line in lineBuffer always empty?
-            int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty();
-            if (mCaretLine < mpBuffer->lineBuffer.length() - 1 - emptyLastLine) {
-                newCaretLine = mCaretLine + 1;
-            }
-        }
-        break;
-    case Qt::Key_Left:
-        if (mCaretColumn > 0) {
-            newCaretColumn = mCaretColumn - 1;
-        }
-        break;
-    case Qt::Key_Right:
-        if (mCaretColumn < mpBuffer->lineBuffer[mCaretLine].length() - 1) {
-            newCaretColumn = mCaretColumn + 1;
-        }
-        break;
-    case Qt::Key_Home:
-        newCaretColumn = 0;
-        break;
-    case Qt::Key_End:
-        newCaretColumn = mpBuffer->lineBuffer[mCaretLine].length() - 1;
-        break;
-    case Qt::Key_PageUp:
-        newCaretLine = std::max(mCaretLine - mScreenHeight, 0);
-        break;
-    case Qt::Key_PageDown:
-        newCaretLine = std::min(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
-        break;
-    }
-
-    // Did the key press change the caret position?
-    if (newCaretLine == -1 && newCaretColumn == -1) {
-        QWidget::keyPressEvent(event);
-        return;
-    }
-
-    if (newCaretLine == -1) {
-        newCaretLine = mCaretLine;
-    } else {
+    auto adjustCaretColumn = [&]() {
         // If the new line is shorter, we need to adjust the column.
         int newLineLength = mpBuffer->line(newCaretLine).length();
         if (mCaretColumn >= newLineLength) {
@@ -2801,6 +2756,91 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 newCaretColumn = newLineLength - 1;
             }
         }
+    };
+
+    switch (event->key()) {
+    case Qt::Key_Up: {
+            if (mCaretLine == 0) {
+                break;
+            }
+            newCaretLine = mCaretLine - 1;
+
+            adjustCaretColumn();
+        }
+        break;
+    case Qt::Key_Down: {
+            int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty();
+            if (!(mCaretLine < mpBuffer->lineBuffer.length() - 1 - emptyLastLine)) {
+                break;
+            }
+            newCaretLine = mCaretLine + 1;
+
+            adjustCaretColumn();
+        }
+        break;
+    case Qt::Key_Left: {
+            if (mCaretColumn > 0) {
+                newCaretColumn = mCaretColumn - 1;
+            } else if (mCaretLine > 0) {
+                newCaretLine = mCaretLine - 1;
+                newCaretColumn = mpBuffer->lineBuffer.at(newCaretLine).length() - 1;
+            }
+
+            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+               qDebug() << "shift left";
+            }
+        }
+        break;
+    case Qt::Key_Right:
+        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+            if (mCaretColumn < mpBuffer->lineBuffer.at(mCaretLine).length()) {
+                newCaretColumn = mCaretColumn + 1;
+            }
+        } else {
+            if (mCaretColumn < (mpBuffer->lineBuffer.at(mCaretLine).length() - 1)) {
+                newCaretColumn = mCaretColumn + 1;
+            // last line of the buffer is empty, so we need to check for that:
+            } else if (mCaretLine < (mpBuffer->lineBuffer.length() - 2)) {
+                newCaretLine = mCaretLine + 1;
+                newCaretColumn = 0;
+            }
+        }
+        break;
+    case Qt::Key_Home:
+        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+            newCaretLine = 0;
+            newCaretColumn = 0;
+        } else {
+            newCaretColumn = 0;
+        }
+        newCaretColumn = 0;
+        break;
+    case Qt::Key_End:
+        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+            newCaretLine = mpBuffer->lineBuffer.length() - 1;
+            newCaretColumn = mpBuffer->lineBuffer[mCaretLine].length() - 1;
+        } else {
+            newCaretColumn = mpBuffer->lineBuffer.at(mCaretLine).length() - 1;
+        }
+        break;
+    case Qt::Key_End | Qt::CTRL:
+        break;
+    case Qt::Key_PageUp:
+        newCaretLine = std::max(mCaretLine - mScreenHeight, 0);
+        break;
+    case Qt::Key_PageDown:
+        newCaretLine = std::min(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
+        break;
+    }
+
+    // Did the key press change the caret position?
+    if (newCaretLine == -1 && newCaretColumn == -1) {
+        QWidget::keyPressEvent(event);
+        return;
+    }
+
+    if (newCaretLine == -1) {
+        newCaretLine = mCaretLine;
     }
 
     if (newCaretColumn == -1) {
