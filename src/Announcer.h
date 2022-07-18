@@ -33,8 +33,7 @@
 #endif
 
 #if defined(Q_OS_LINUX)
-// workaround AT-SPI2's inability to simply read out text with a fake statusbar and a notification
-// see https://mail.gnome.org/archives/orca-list/2022-June/msg00027.html
+  // implemented per recommendation from Orca dev: https://mail.gnome.org/archives/orca-list/2022-June/msg00027.html
 class InvisibleNotification : public QWidget {
   Q_OBJECT
 

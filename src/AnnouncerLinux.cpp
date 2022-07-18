@@ -64,7 +64,6 @@ void Announcer::announce(const QString& text, const QString& processing)
     Q_UNUSED(processing);
     notification->setText(text);
 
-    // implemented per recommendation from Orca dev: https://mail.gnome.org/archives/orca-list/2022-June/msg00027.html
     QAccessibleEvent event(notification, QAccessible::ObjectShow);
     QAccessible::updateAccessibility(&event);
 }
