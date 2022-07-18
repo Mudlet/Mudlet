@@ -599,7 +599,6 @@ QString TAccessibleTextEdit::textAtOffset(int offset, QAccessible::TextBoundaryT
 {
     // This is the simplest case to implement, so get it over with now.
     if (boundaryType == QAccessible::TextBoundaryType::NoBoundary) {
-        // TODO: Confirm that this is indeed the expected behavior.
         *startOffset = 0;
         *endOffset = characterCount();
 
