@@ -17416,15 +17416,16 @@ int TLuaInterpreter::announce(lua_State *L) {
 
     int n = lua_gettop(L);
     if (n > 1) {
+        // while this only has effect on Windows, it should fail silently in order not to spam
         processing = getVerifiedString(L, __func__, 2, "processing style");
-    }
 
-    if (!processingKinds.contains(processing)) {
+        if (!processingKinds.contains(processing)) {
             lua_pushfstring(L, "%s: bad argument #%d type (processing should be one of %s, got %s!)",
                 __func__, 2, processingKinds.join(qsl(", ")).toUtf8().constData(), processing.toUtf8().constData());
             return lua_error(L);
         }
+    }
 
-    mudlet::self()->announce(text);
+    mudlet::self()->announce(text, processing);
     return 0;
 }
