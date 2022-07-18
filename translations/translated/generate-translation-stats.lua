@@ -1,7 +1,7 @@
 -- Convert output from runs of Qt lrelease for each language into statistics
 --[[
  ############################################################################
- #    Copyright (C) 2018-2019 by Vadim Peretokin - vperetokin@gmail.com     #
+ #    Copyright (C) 2018-2019, 2022 by Vadim Peretokin - vperetokin@hey.com #
  #    Copyright (C) 2018 by Florian Scheel - keneanung@googlemail.com       #
  #    Copyright (C) 2019-2020 by Stephen Lyons - slysven@virginmedia.com    #
  #                                                                          #
@@ -31,6 +31,15 @@ if not status then
   return
 end
 
+
+local github_workspace = os.getenv("GITHUB_WORKSPACE")
+if github_workspace then
+  -- the script struggles to load the load files relatively in CI
+  loadfile(github_workspace.."/src/mudlet-lua/lua/TableUtils.lua")()
+else
+  loadfile("../../src/mudlet-lua/lua/TableUtils.lua")()
+end
+
 local yajl = result
 
 -- see if the file exists
@@ -56,7 +65,7 @@ local file = 'lrelease_output.txt'
 local lines = lines_from(file)
 
 local line = 1
-local stats = {}
+local stats, keyvaluestats, statsindex = {}, {}, {}
 
 while line <= #lines do
   local currentLine = lines[line]
@@ -101,6 +110,15 @@ while line <= #lines do
       total = translated + (untranslated or 0),
       translatedpc = math.floor((100 * translated)/(translated + (untranslated or 0)))
     }
+    keyvaluestats[lang] = {
+      translated = stats[#stats].translated,
+      untranslated = stats[#stats].untranslated,
+      finished = stats[#stats].finished,
+      unfinished = stats[#stats].unfinished,
+      total = stats[#stats].total,
+      translatedpc = stats[#stats].translatedpc
+    }
+    statsindex[lang] = keyvaluestats[lang].translatedpc
   end
 end
 
@@ -108,12 +126,12 @@ print()
 print("We have statistics for " .. #stats .. " languages:")
 print()
 print("   lang_CNTRY    trnsl  utrnsl  finish  unfin  total  done")
-for _, stat in ipairs(stats) do
+for lang, _ in spairs(statsindex, function(t,a,b) return t[a] > t[b] end) do
   local star = ' '
-  if stat.translatedpc > 94 then
+  if keyvaluestats[lang].translatedpc > 94 then
     star = '*'
   end
-  print(string.format("%1s    %-10s  %5d   %5d   %5d  %5d  %5d  %3d%%", star, stat.lang, stat.translated, stat.untranslated, stat.finished, stat.unfinished, stat.total, stat.translatedpc))
+  print(string.format("%1s    %-10s  %5d   %5d   %5d  %5d  %5d  %3d%%", star, lang, keyvaluestats[lang].translated, keyvaluestats[lang].untranslated, keyvaluestats[lang].finished, keyvaluestats[lang].unfinished, keyvaluestats[lang].total, keyvaluestats[lang].translatedpc))
 end
 print()
 
