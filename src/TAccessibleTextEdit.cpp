@@ -203,7 +203,6 @@ int TAccessibleTextEdit::offsetForPosition(int line, int column) const
 
     ret += column;
 
-    qDebug() << "offsetForPosition line" << line << "column" << column << "; resulting offset is" << ret;
     return ret;
 }
 
@@ -215,7 +214,6 @@ int TAccessibleTextEdit::offsetForPosition(int line, int column) const
 int TAccessibleTextEdit::cursorPosition() const
 {
     auto position = offsetForPosition(textEdit()->mCaretLine, textEdit()->mCaretColumn);
-    qDebug() << "current cursor position is" << position;
     return position;
 }
 
@@ -228,7 +226,6 @@ void TAccessibleTextEdit::setCursorPosition(int position)
 {
     //IC(position);
     if (offsetIsInvalid(position)) {
-        qDebug() << "quitting setCursorPosition, " << position << "is an invalid offset";
         return;
     }
 
@@ -246,7 +243,6 @@ QString TAccessibleTextEdit::text(QAccessible::Text t) const
         return QAccessibleWidget::text(t);
     }
 
-    // qDebug() << "asking for all text, length is" << textEdit()->mpBuffer->lineBuffer.join('\n').length();
     return textEdit()->mpBuffer->lineBuffer.join('\n');
 }
 
@@ -264,7 +260,6 @@ QString TAccessibleTextEdit::text(int startOffset, int endOffset) const
 
     QString ret = text(QAccessible::Value).mid(startOffset, endOffset - startOffset);
 
-    // qDebug() << "asked for ::text startOffset" <<startOffset << "endOffset" << endOffset << "gave" << ret;
     return ret;
 }
 
@@ -274,7 +269,6 @@ QString TAccessibleTextEdit::text(int startOffset, int endOffset) const
  */
 int TAccessibleTextEdit::characterCount() const
 {
-    // qDebug() << "character count check, have" << text(QAccessible::Value).length();
     return text(QAccessible::Value).length();
 }
 
