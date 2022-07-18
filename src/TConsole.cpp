@@ -2040,7 +2040,6 @@ void TConsole::setCaretMode(bool enabled)
 
     if (enabled) {
         mUpperPane->initializeCaret();
-        qDebug() << "caret mode on:" << mUpperPane->mCaretLine << mUpperPane->mCaretColumn;
         mUpperPane->setFocusPolicy(Qt::StrongFocus);
         mUpperPane->setFocusProxy(nullptr);
 #if defined(Q_OS_WIN32)
@@ -2049,12 +2048,10 @@ void TConsole::setCaretMode(bool enabled)
         mUpperPane->grabKeyboard();
 
         QAccessibleEvent event(mUpperPane, QAccessible::Focus);
-        qDebug() << "raising" << event;
         QAccessible::updateAccessibility(&event);
-
 #endif
+
     } else {
-        qDebug() << "caret mode off";
         mUpperPane->setFocusPolicy(Qt::ClickFocus);
 #if defined(Q_OS_WIN32)
         // NVDA breaks focus reset, so do it on a timer
@@ -2065,12 +2062,10 @@ void TConsole::setCaretMode(bool enabled)
         if (mType == MainConsole) {
             mUpperPane->setFocusProxy(mpCommandLine);
             QAccessibleEvent event(mpCommandLine, QAccessible::Focus);
-            qDebug() << "raising" << event;
             QAccessible::updateAccessibility(&event);
         } else if (mType == UserWindow) {
             mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
             QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
-            qDebug() << "raising" << event;
             QAccessible::updateAccessibility(&event);
         }
     }
