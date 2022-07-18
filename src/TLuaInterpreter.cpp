@@ -17421,7 +17421,7 @@ int TLuaInterpreter::announce(lua_State *L) {
 
     if (!processingKinds.contains(processing)) {
             lua_pushfstring(L, "%s: bad argument #%d type (processing should be one of %s, got %s!)",
-                __func__, 2, processingKinds.join(qsl(", ")), processing);
+                __func__, 2, processingKinds.join(qsl(", ")).toUtf8().constData(), processing.toUtf8().constData());
             return lua_error(L);
         }
 
