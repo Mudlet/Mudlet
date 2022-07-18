@@ -79,7 +79,7 @@ public:
     QString textBeforeOffset(int offset, QAccessible::TextBoundaryType boundaryType, int *startOffset, int *endOffset) const override;
 
 private:
-    enum TextOp {
+    enum class TextOp {
         BeforeOffset,
         AtOffset,
         AfterOffset,

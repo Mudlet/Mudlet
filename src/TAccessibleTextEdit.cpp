@@ -461,10 +461,10 @@ QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp op, in
 
         finder.setPosition(offset);
 
-        if (op == TAccessibleTextEdit::BeforeOffset) {
+        if (op == TAccessibleTextEdit::TextOp::BeforeOffset) {
             end = finder.toPreviousBoundary();
             start = finder.toPreviousBoundary();
-        } else if (op == TAccessibleTextEdit::AtOffset) {
+        } else if (op == TAccessibleTextEdit::TextOp::AtOffset) {
             start = finder.toPreviousBoundary();
             end = finder.toNextBoundary();
         } else {
@@ -489,9 +489,9 @@ QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp op, in
     TBuffer *buffer = textEdit()->mpBuffer;
 
     if (boundaryType == QAccessible::TextBoundaryType::CharBoundary) {
-        if (op == TAccessibleTextEdit::BeforeOffset) {
+        if (op == TAccessibleTextEdit::TextOp::BeforeOffset) {
             offset -= 1;
-        } else if (op == TAccessibleTextEdit::AfterOffset) {
+        } else if (op == TAccessibleTextEdit::TextOp::AfterOffset) {
             offset += 1;
         }
 
@@ -513,9 +513,9 @@ QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp op, in
 
         int lineNum = lineForOffset(offset);
 
-        if (op == TAccessibleTextEdit::BeforeOffset) {
+        if (op == TAccessibleTextEdit::TextOp::BeforeOffset) {
             lineNum -= 1;
-        } else if (op == TAccessibleTextEdit::AfterOffset) {
+        } else if (op == TAccessibleTextEdit::TextOp::AfterOffset) {
             lineNum += 1;
         }
 
@@ -573,7 +573,7 @@ QString TAccessibleTextEdit::textAfterOffset(int offset, QAccessible::TextBounda
         return text(QAccessible::Value).mid(offset);
     }
 
-    return textAroundOffset(TAccessibleTextEdit::AfterOffset, offset, boundaryType, startOffset, endOffset);
+    return textAroundOffset(TAccessibleTextEdit::TextOp::AfterOffset, offset, boundaryType, startOffset, endOffset);
 }
 
 /*
@@ -606,7 +606,7 @@ QString TAccessibleTextEdit::textAtOffset(int offset, QAccessible::TextBoundaryT
         return text(QAccessible::Value);
     }
 
-    return textAroundOffset(TAccessibleTextEdit::AtOffset, offset, boundaryType, startOffset, endOffset);
+    return textAroundOffset(TAccessibleTextEdit::TextOp::AtOffset, offset, boundaryType, startOffset, endOffset);
 }
 
 /*
@@ -637,5 +637,5 @@ QString TAccessibleTextEdit::textBeforeOffset(int offset, QAccessible::TextBound
         return text(QAccessible::Value).left(offset);
     }
 
-    return textAroundOffset(TAccessibleTextEdit::BeforeOffset, offset, boundaryType, startOffset, endOffset);
+    return textAroundOffset(TAccessibleTextEdit::TextOp::BeforeOffset, offset, boundaryType, startOffset, endOffset);
 }
