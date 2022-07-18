@@ -157,9 +157,9 @@ void Announcer::announce(const QString& text, const QString& processing) {
   } else if (processing == qsl("importantmostrecent")) {
     processingvalue = NotificationProcessing_ImportantMostRecent;
   } else if (processing == qsl("mostrecent")) {
-    processingvalue == NotificationProcessing_MostRecent;
+    processingvalue = NotificationProcessing_MostRecent;
   } else if (processing == qsl("currentthenmostrecent")) {
-    processingvalue == NotificationProcessing_CurrentThenMostRecent;
+    processingvalue = NotificationProcessing_CurrentThenMostRecent;
   } else {
     Q_ASSERT_X(false, "Announcer::announce(...)", "invalid processing value given");
   }
