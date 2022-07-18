@@ -339,14 +339,12 @@ void TTextEdit::showNewLines()
 #endif
             ) {
         QString newLines;
-        //IC(previousOldScrollPos, mOldScrollPos);
 
         // content has been deleted
         if (previousOldScrollPos > mOldScrollPos) {
             QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(this)->textInterface();
             auto totalCharacterCount = ti->characterCount();
             ti->setCursorPosition(totalCharacterCount);
-            qDebug() << "moved cursor to" << totalCharacterCount << "; announcing DELETION at" << totalCharacterCount;
             QAccessibleTextRemoveEvent event(this, totalCharacterCount, QString());
             QAccessible::updateAccessibility(&event);
             return;
@@ -362,20 +360,6 @@ void TTextEdit::showNewLines()
         if (newLines.isEmpty()) {
             return;
         }
-
-        QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(this)->textInterface();
-
-        // cursor has to be moved manually - https://doc.qt.io/qt-5/qaccessibletextinsertevent.html#QAccessibleTextInsertEvent
-        auto totalCharacterCount = ti->characterCount();
-        ti->setCursorPosition(totalCharacterCount);
-
-        auto insertedat = totalCharacterCount - newLines.length();
-        //QAccessibleTextInsertEvent event(this, insertedat, newLines);
-        //qDebug() << "moved cursor to" << totalCharacterCount << "; announcing INSERTION at" << insertedat << newLines;
-        //QAccessible::updateAccessibility(&event);
-
-        // update for deletions and clearWindow() !!!
-        // have to track the old text that was removed -_-
 
         mudlet::self()->announce(newLines);
     }
