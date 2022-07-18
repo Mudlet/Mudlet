@@ -65,7 +65,6 @@ HRESULT UiaWrapper::raiseNotificationEvent(
     return UIA_E_NOTSUPPORTED;
   }
 
-  qDebug() << "calling m_pUiaRaiseNotificationEvent" << provider;
   return m_pUiaRaiseNotificationEvent(provider, notificationKind,
                                       notificationProcessing, displayString,
                                       activityId);
