@@ -149,7 +149,7 @@ void Announcer::announce(const QString& text, const QString& processing) {
   BSTR displayString = bStrFromQString(text);
   BSTR activityId = bStrFromQString(qsl("Mudlet"));
 
-  int processingvalue = 0;
+  auto processingvalue = NotificationProcessing_All;
   if (Q_LIKELY(processing.isEmpty() || processing == qsl("all"))) {
     processingvalue = NotificationProcessing_All;
   } else if (processing == qsl("importantall")) {
