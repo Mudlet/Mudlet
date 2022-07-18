@@ -2778,17 +2778,16 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             adjustCaretColumn();
         }
         break;
-    case Qt::Key_Left:
-        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
-            if (mCaretColumn > 0) {
-                newCaretColumn = mCaretColumn - 1;
-            }
-        } else {
+    case Qt::Key_Left: {
             if (mCaretColumn > 0) {
                 newCaretColumn = mCaretColumn - 1;
             } else if (mCaretLine > 0) {
                 newCaretLine = mCaretLine - 1;
                 newCaretColumn = mpBuffer->lineBuffer.at(newCaretLine).length() - 1;
+            }
+
+            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+               qDebug() << "shift left";
             }
         }
         break;
