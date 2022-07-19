@@ -179,6 +179,8 @@ private:
     // 1/2/3 for single/double/triple click seen so far
     int  mMouseTrackLevel;
     bool mCtrlSelecting {};
+    // tracks status of the Shift key for keyboard-based selection
+    bool mShiftSelection {};
     int mCtrlDragStartY {};
     QPoint mDragStart, mDragSelectionEnd;
     int mOldScrollPos;
