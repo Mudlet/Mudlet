@@ -24,7 +24,6 @@
 #include "utils.h"
 
 #include <QAccessible>
-#include <QDebug>
 #include <QLibrary>
 
 #include <memory>
@@ -87,7 +86,6 @@ public:
 
   HRESULT STDMETHODCALLTYPE GetPatternProvider(
       PATTERNID patternId, _Outptr_result_maybenull_ IUnknown **pRetVal) {
-    qDebug() << "UIA requested patternId " << patternId;
     *pRetVal = NULL;
     return S_OK;
   }
@@ -129,7 +127,7 @@ private:
 };
 
 bool Announcer::initializeUia() {
-  // Constructor  initializes refcount to 0, assignment to a CComPtr
+  // Constructor initializes refcount to 0, assignment to a CComPtr
   // takes it to 1.
   uiaProvider = new UiaProvider((HWND)this->winId());
   // as we are not using CComPtr, ensure refcount is incremented to prevent the provider from being deleted early
@@ -144,8 +142,6 @@ BSTR bStrFromQString(const QString &value) {
 }
 
 void Announcer::announce(const QString& text, const QString& processing) {
-  qDebug() << "announce" << processing << text;
-
   BSTR displayString = bStrFromQString(text);
   BSTR activityId = bStrFromQString(qsl("Mudlet"));
 
