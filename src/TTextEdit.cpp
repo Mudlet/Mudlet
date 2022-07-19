@@ -2647,7 +2647,6 @@ void TTextEdit::reportCodepointErrors()
 
 void TTextEdit::setCaretPosition(int line, int column)
 {
-    qDebug() << "TTextEdit::setCaretPosition(" << line << ", " << column << ")";
     mCaretLine = line;
     mCaretColumn = column;
 
@@ -2687,7 +2686,6 @@ void TTextEdit::updateCaret()
         const QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(this)->textInterface();
         QAccessibleTextCursorEvent event(this, ti->cursorPosition());
 
-        qDebug() << "raising" << event;
         QAccessible::updateAccessibility(&event);
     }
 }
@@ -2717,7 +2715,6 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
 
     int newCaretLine = -1;
     int newCaretColumn = -1;
-    qDebug() << "before keypress:" << mCaretLine << mCaretColumn;
 
     auto adjustCaretColumn = [&]() {
         // If the new line is shorter, we need to adjust the column.
@@ -2767,10 +2764,6 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             } else if (mCaretLine > 0) {
                 newCaretLine = mCaretLine - 1;
                 newCaretColumn = mpBuffer->lineBuffer.at(newCaretLine).length() - 1;
-            }
-
-            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
-               qDebug() << "shift left";
             }
         }
         break;
@@ -2829,6 +2822,4 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     }
 
     setCaretPosition(newCaretLine, newCaretColumn);
-
-    qDebug() << "after keypress:" << mCaretLine << mCaretColumn;
 }
