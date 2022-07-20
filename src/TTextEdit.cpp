@@ -1878,7 +1878,6 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
     if (textLines.isEmpty()) {
         return {};
     }
-    qDebug() << textLines;
 
     if (mPA.y() == mPB.y()) {
         // Is a single line, so trim characters off the beginning and end
@@ -2777,6 +2776,8 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             unHighlight();
             normaliseSelection();
             highlightSelection();
+        } else {
+            unHighlight();
         }
     };
 
