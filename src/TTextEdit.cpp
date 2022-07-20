@@ -2750,7 +2750,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         break;
     case Qt::Key_Down: {
             int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty();
-            if (!(mCaretLine < mpBuffer->lineBuffer.length() - 1 - emptyLastLine)) {
+            if (mCaretLine >= mpBuffer->lineBuffer.length() - 1 - emptyLastLine) {
                 break;
             }
             newCaretLine = mCaretLine + 1;
