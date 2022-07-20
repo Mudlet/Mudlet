@@ -2767,14 +2767,12 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 qDebug() << "shift selection disabled";
                 mDragSelectionEnd.setY(mCaretLine);
                 mDragSelectionEnd.setX(mCaretColumn);
-                normaliseSelection();
-                highlightSelection();
             } else {
                 mDragSelectionEnd.setY(newCaretLine);
                 mDragSelectionEnd.setX(newCaretColumn);
-                normaliseSelection();
-                highlightSelection();
             }
+            normaliseSelection();
+            highlightSelection();
         }
     };
 
@@ -2784,8 +2782,10 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 break;
             }
             newCaretLine = mCaretLine - 1;
+            newCaretColumn = mCaretColumn;
 
             adjustCaretColumn();
+            updateSelection();
         }
         break;
     case Qt::Key_Down: {
@@ -2794,8 +2794,10 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 break;
             }
             newCaretLine = mCaretLine + 1;
+            newCaretColumn = mCaretColumn;
 
             adjustCaretColumn();
+            updateSelection();
         }
         break;
     case Qt::Key_Left: {
