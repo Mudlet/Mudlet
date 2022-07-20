@@ -512,7 +512,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     // If caret mode is enabled and the line is empty, still draw the caret.
     if (mudlet::self()->isCaretModeEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
         auto textRect = QRect(0, mFontHeight * lineOfScreen, mFontWidth, mFontHeight);
-        painter.fillRect(textRect, mFgColor);
+        painter.fillRect(textRect, mCaretColor);
     }
 }
 
@@ -659,11 +659,11 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
         bgColor = charStyle.background();
     }
     if (caretIsHere) {
-        bgColor = QColorConstants::LightGray;
+        bgColor = mCaretColor;
     }
     if (!textRect.isNull()) {
         painter.fillRect(textRect, bgColor);
-    }
+}
     return charWidth;
 }
 
@@ -1139,6 +1139,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         mPB = mDragSelectionEnd;
     }
 
+    // how does this work? Abstract and use it for keyboard selection too.
     for (int yIndex = mPA.y(), total = mPB.y(); yIndex <= total; ++yIndex) {
         if (yIndex >= static_cast<int>(mpBuffer->buffer.size()) || yIndex < 0) {
             // Abort if we are considering a line not in the buffer:
@@ -1153,6 +1154,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         }
     }
 
+    // TODO: this looks like normaliseSelection()
     if ((mDragStart.y() < cursorLocation.y() || (mDragStart.y() == cursorLocation.y() && mDragStart.x() < cursorLocation.x()))) {
         mPA = mDragStart;
         mPB = cursorLocation;
@@ -2759,6 +2761,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             mDragStart.setY(mCaretLine);
             mDragStart.setX(mCaretColumn);
             mDragSelectionEnd = mDragStart;
+            unHighlight();
             normaliseSelection();
             highlightSelection();
         } else if (mShiftSelection) {
@@ -2771,6 +2774,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 mDragSelectionEnd.setY(newCaretLine);
                 mDragSelectionEnd.setX(newCaretColumn);
             }
+            unHighlight();
             normaliseSelection();
             highlightSelection();
         }

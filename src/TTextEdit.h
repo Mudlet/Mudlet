@@ -167,6 +167,7 @@ private:
     int mFontHeight;
     int mFontWidth;
     bool mForceUpdate;
+    const QColor mCaretColor = QColorConstants::Gray;
 
     // Each TConsole instance uses two instances of this class, one above the
     // other but they need to behave differently in some ways; this flag is set
