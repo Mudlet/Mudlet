@@ -540,6 +540,7 @@ public slots:
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_handleToolbarVisibilityChanged(bool);
     void slot_newDataOnHost(const QString&, bool isLowerPriorityChange = false);
+    void slot_compact_input_line(const bool);
 
 
 protected:
@@ -595,7 +596,6 @@ private slots:
     void slot_report_issue();
 #endif
     void slot_toggle_compact_input_line();
-    void slot_compact_input_line(const bool);
     void slot_password_migrated_to_secure(QKeychain::Job *job);
     void slot_password_migrated_to_profile(QKeychain::Job *job);
     void slot_tabMoved(const int oldPos, const int newPos);

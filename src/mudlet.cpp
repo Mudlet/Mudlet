@@ -2988,7 +2988,7 @@ void mudlet::slot_toggle_compact_input_line()
 void mudlet::slot_compact_input_line(const bool state)
 {
     if (dactionInputLine->isChecked() != state) {
-        // Ensure the menu item reflectes the actual state:
+        // Ensure the menu item reflects the actual state:
         dactionInputLine->setChecked(state);
     }
     if (mpCurrentActiveHost) {

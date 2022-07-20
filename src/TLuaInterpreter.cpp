@@ -17218,6 +17218,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("compactInputLine")) {
+        mudlet::self()->slot_compact_input_line(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
 
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
