@@ -2789,10 +2789,12 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     switch (event->key()) {
     case Qt::Key_Up: {
             if (mCaretLine == 0) {
-                break;
+                newCaretLine = mCaretLine;
+                newCaretColumn = 0;
+            } else {
+                newCaretLine = mCaretLine - 1;
+                newCaretColumn = mCaretColumn;
             }
-            newCaretLine = mCaretLine - 1;
-            newCaretColumn = mCaretColumn;
 
             adjustCaretColumn();
             updateSelection(event->key());
