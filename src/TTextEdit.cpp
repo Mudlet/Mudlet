@@ -1018,7 +1018,7 @@ void TTextEdit::highlightSelection()
     QClipboard* clipboard = QApplication::clipboard();
     if (clipboard->supportsSelection()) {
         // X11 has a second clipboard that's updated on any selection
-        // clipboard->setText(getSelectedText(QChar::LineFeed), QClipboard::Selection);
+        clipboard->setText(getSelectedText(QChar::LineFeed), QClipboard::Selection);
     }
 }
 
