@@ -2750,7 +2750,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
     };
 
-    auto updateSelection = [&]() {
+    auto updateSelection = [&](int key = -1) {
         if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
             qDebug() << "shift selection enabled";
             unHighlight();
@@ -2759,7 +2759,12 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             mShiftSelection = true;
             mDragStart.setY(mCaretLine);
             mDragStart.setX(mCaretColumn);
-            mDragSelectionEnd = mDragStart;
+            if (key == Qt::Key_Down || key == Qt::Key_Up) {
+                mDragSelectionEnd.setY(newCaretLine);
+                mDragSelectionEnd.setX(newCaretColumn);
+            } else {
+                mDragSelectionEnd = mDragStart;
+            }
             unHighlight();
             normaliseSelection();
             highlightSelection();
@@ -2790,19 +2795,21 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             newCaretColumn = mCaretColumn;
 
             adjustCaretColumn();
-            updateSelection();
+            updateSelection(event->key());
         }
         break;
     case Qt::Key_Down: {
             int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty();
             if (mCaretLine >= mpBuffer->lineBuffer.length() - 1 - emptyLastLine) {
-                break;
+                newCaretLine = mCaretLine;
+                newCaretColumn = mpBuffer->line(mCaretLine).length() - 1;
+            } else {
+                newCaretLine = mCaretLine + 1;
+                newCaretColumn = mCaretColumn;
             }
-            newCaretLine = mCaretLine + 1;
-            newCaretColumn = mCaretColumn;
 
             adjustCaretColumn();
-            updateSelection();
+            updateSelection(event->key());
         }
         break;
     case Qt::Key_Left: {
