@@ -1048,6 +1048,13 @@ void TTextEdit::unHighlight()
         }
     }
     // clang-format on
+
+    if (QAccessible::isActive()) {
+        qDebug() << "clearing selection";
+        QAccessibleTextSelectionEvent event(this, -1, -1);
+
+        QAccessible::updateAccessibility(&event);
+    }
 }
 
 // ensure that mPA is top-left and mPB is bottom-right
