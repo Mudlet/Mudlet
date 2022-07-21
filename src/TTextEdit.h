@@ -163,6 +163,7 @@ private:
     void expandSelectionToLine(int);
     inline void replaceControlCharacterWith_Picture(const uint, const QString&, const int, QVector<QString>&, int&) const;
     inline void replaceControlCharacterWith_OEMFont(const uint, const QString&, const int, QVector<QString>&, int&) const;
+    int offsetForPosition(int line, int column) const;
 
     int mFontHeight;
     int mFontWidth;

@@ -1020,6 +1020,14 @@ void TTextEdit::highlightSelection()
         // X11 has a second clipboard that's updated on any selection
         clipboard->setText(getSelectedText(QChar::LineFeed), QClipboard::Selection);
     }
+
+    if (QAccessible::isActive()) {
+        qDebug() << "start offset" << offsetForPosition(mPA.y(), mPA.x()) << "end offset" << offsetForPosition(mPB.y(), mPB.x());
+        QAccessibleTextSelectionEvent event(this, offsetForPosition(mPA.y(), mPA.x()), offsetForPosition(mPB.y(), mPB.x()));
+        qDebug() << event;
+
+        QAccessible::updateAccessibility(&event);
+    }
 }
 
 void TTextEdit::unHighlight()
@@ -2694,6 +2702,7 @@ void TTextEdit::updateCaret()
 
     if (QAccessible::isActive()) {
         const QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(this)->textInterface();
+        qDebug() << "cursor position is now" << ti->cursorPosition();
         QAccessibleTextCursorEvent event(this, ti->cursorPosition());
 
         QAccessible::updateAccessibility(&event);
@@ -2879,4 +2888,18 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     }
 
     setCaretPosition(newCaretLine, newCaretColumn);
+}
+
+int TTextEdit::offsetForPosition(int line, int column) const {
+    int ret = 0;
+
+    for (int i = 0; i < line; i++) {
+        // The text() method adds a '\n' to the end of every line, so account
+        // for it with the '+ 1' below.
+        ret += mpBuffer->line(i).length() + 1;
+    }
+
+    ret += column;
+
+    return ret;
 }
