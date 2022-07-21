@@ -2760,6 +2760,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
 
     auto updateSelection = [&](int key = -1) {
         if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
+            qDebug() << "selection enabled";
             unHighlight();
             mSelectedRegion = QRegion(0, 0, 0, 0);
 
@@ -2777,10 +2778,12 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             highlightSelection();
         } else if (mShiftSelection) {
             if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+                qDebug() << "selection disabled";
                 mShiftSelection = false;
-                mDragSelectionEnd.setY(mCaretLine);
-                mDragSelectionEnd.setX(mCaretColumn);
+                mDragSelectionEnd.setY(mDragSelectionEnd.y());
+                mDragSelectionEnd.setX(mDragSelectionEnd.x());
             } else {
+                qDebug() << "continuing selection";
                 mDragSelectionEnd.setY(newCaretLine);
                 mDragSelectionEnd.setX(newCaretColumn);
             }
@@ -2788,6 +2791,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             normaliseSelection();
             highlightSelection();
         } else {
+            qDebug() << "selection already off";
             unHighlight();
             mSelectedRegion = QRegion(0, 0, 0, 0);
         }
