@@ -2798,6 +2798,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             highlightSelection();
         } else {
             unHighlight();
+            mSelectedRegion = QRegion(0, 0, 0, 0);
         }
     };
 
