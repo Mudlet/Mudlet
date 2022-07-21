@@ -1020,6 +1020,7 @@ void TTextEdit::highlightSelection()
     }
 
     if (QAccessible::isActive()) {
+        qDebug() << "selection is from" << offsetForPosition(mPA.y(), mPA.x()) << "to" << offsetForPosition(mPB.y(), mPB.x());
         QAccessibleTextSelectionEvent event(this, offsetForPosition(mPA.y(), mPA.x()), offsetForPosition(mPB.y(), mPB.x()));
         QAccessible::updateAccessibility(&event);
     }
@@ -2757,21 +2758,14 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
     };
 
-    auto updateSelection = [&](int key = -1) {
+    auto updateSelection = [&]() {
         if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
             qDebug() << "selection enabled";
-            unHighlight();
-            mSelectedRegion = QRegion(0, 0, 0, 0);
-
             mShiftSelection = true;
             mDragStart.setY(mCaretLine);
             mDragStart.setX(mCaretColumn);
-            if (key == Qt::Key_Down || key == Qt::Key_Up) {
-                mDragSelectionEnd.setY(newCaretLine);
-                mDragSelectionEnd.setX(newCaretColumn);
-            } else {
-                mDragSelectionEnd = mDragStart;
-            }
+            mDragSelectionEnd.setY(newCaretLine);
+            mDragSelectionEnd.setX(newCaretColumn);
             unHighlight();
             normaliseSelection();
             highlightSelection();
@@ -2808,7 +2802,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             }
 
             adjustCaretColumn();
-            updateSelection(event->key());
+            updateSelection();
         }
         break;
     case Qt::Key_Down: {
@@ -2822,7 +2816,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             }
 
             adjustCaretColumn();
-            updateSelection(event->key());
+            updateSelection();
         }
         break;
     case Qt::Key_Left: {
