@@ -1162,8 +1162,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         }
     }
 
-    // TODO: this looks like normaliseSelection()
-    if ((mDragStart.y() < cursorLocation.y() || (mDragStart.y() == cursorLocation.y() && mDragStart.x() < cursorLocation.x()))) {
+    if (mDragStart.y() < cursorLocation.y() || (mDragStart.y() == cursorLocation.y() && mDragStart.x() < cursorLocation.x())) {
         mPA = mDragStart;
         mPB = cursorLocation;
     } else {
