@@ -958,8 +958,6 @@ void TTextEdit::highlightSelection()
 {
     QRegion newRegion;
 
-    // qdebug print mpa and mpb
-    qDebug() << "highlighting mPA" << mPA << "mPB" << mPB;
     int lineDelta = abs(mPA.y() - mPB.y()) - 1;
     if (lineDelta > 0) {
         QRect rectFirstLine(mPA.x() * mFontWidth, (mPA.y() - imageTopLine()) * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
@@ -1022,10 +1020,7 @@ void TTextEdit::highlightSelection()
     }
 
     if (QAccessible::isActive()) {
-        qDebug() << "start offset" << offsetForPosition(mPA.y(), mPA.x()) << "end offset" << offsetForPosition(mPB.y(), mPB.x());
         QAccessibleTextSelectionEvent event(this, offsetForPosition(mPA.y(), mPA.x()), offsetForPosition(mPB.y(), mPB.x()));
-        qDebug() << event;
-
         QAccessible::updateAccessibility(&event);
     }
 }
@@ -1050,7 +1045,6 @@ void TTextEdit::unHighlight()
     // clang-format on
 
     if (QAccessible::isActive()) {
-        qDebug() << "clearing selection";
         QAccessibleTextSelectionEvent event(this, -1, -1);
 
         QAccessible::updateAccessibility(&event);
@@ -2708,7 +2702,6 @@ void TTextEdit::updateCaret()
 
     if (QAccessible::isActive()) {
         const QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(this)->textInterface();
-        qDebug() << "cursor position is now" << ti->cursorPosition();
         QAccessibleTextCursorEvent event(this, ti->cursorPosition());
 
         QAccessible::updateAccessibility(&event);
@@ -2767,7 +2760,6 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
 
     auto updateSelection = [&](int key = -1) {
         if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
-            qDebug() << "shift selection enabled";
             unHighlight();
             mSelectedRegion = QRegion(0, 0, 0, 0);
 
@@ -2786,7 +2778,6 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         } else if (mShiftSelection) {
             if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
                 mShiftSelection = false;
-                qDebug() << "shift selection disabled";
                 mDragSelectionEnd.setY(mCaretLine);
                 mDragSelectionEnd.setX(mCaretColumn);
             } else {
