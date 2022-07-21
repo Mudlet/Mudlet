@@ -1046,7 +1046,6 @@ void TTextEdit::unHighlight()
 
     if (QAccessible::isActive()) {
         QAccessibleTextSelectionEvent event(this, -1, -1);
-
         QAccessible::updateAccessibility(&event);
     }
 }
@@ -2780,8 +2779,13 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
                 qDebug() << "selection disabled";
                 mShiftSelection = false;
-                mDragSelectionEnd.setY(mDragSelectionEnd.y());
-                mDragSelectionEnd.setX(mDragSelectionEnd.x());
+                unHighlight();
+                mSelectedRegion = QRegion(0, 0, 0, 0);
+
+                // keep cursor position as-is because it is only the selection that should be cleared
+                newCaretLine = mCaretLine;
+                newCaretColumn = mCaretColumn;
+                return;
             } else {
                 qDebug() << "continuing selection";
                 mDragSelectionEnd.setY(newCaretLine);
@@ -2790,10 +2794,6 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             unHighlight();
             normaliseSelection();
             highlightSelection();
-        } else {
-            qDebug() << "selection already off";
-            unHighlight();
-            mSelectedRegion = QRegion(0, 0, 0, 0);
         }
     };
 
