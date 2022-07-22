@@ -2867,6 +2867,11 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     case Qt::Key_PageDown:
         newCaretLine = std::min(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
         break;
+    case Qt::Key_C:
+        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+            slot_copySelectionToClipboard();
+        }
+        break;
     }
 
     // Did the key press change the caret position?
