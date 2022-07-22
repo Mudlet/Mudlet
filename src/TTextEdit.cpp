@@ -2786,11 +2786,11 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 newCaretLine = mCaretLine;
                 newCaretColumn = mCaretColumn;
                 return;
-            } else {
-                qDebug() << "continuing selection";
-                mDragSelectionEnd.setY(newCaretLine);
-                mDragSelectionEnd.setX(newCaretColumn);
             }
+            qDebug() << "continuing selection";
+            mDragSelectionEnd.setY(newCaretLine);
+            mDragSelectionEnd.setX(newCaretColumn);
+
             unHighlight();
             normaliseSelection();
             highlightSelection();
