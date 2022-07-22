@@ -958,6 +958,7 @@ void TTextEdit::highlightSelection()
 {
     QRegion newRegion;
 
+    qDebug() << "mPA" << mPA << "mPB" << mPB;
     int lineDelta = abs(mPA.y() - mPB.y()) - 1;
     if (lineDelta > 0) {
         QRect rectFirstLine(mPA.x() * mFontWidth, (mPA.y() - imageTopLine()) * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
@@ -1622,6 +1623,7 @@ void TTextEdit::slot_copySelectionToClipboard()
     }
 
     QString selectedText = getSelectedText(QChar::LineFeed);
+    qDebug() << "TTextEdit::slot_copySelectionToClipboard() - selectedText: " << selectedText;
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(selectedText);
 }
@@ -2724,8 +2726,7 @@ void TTextEdit::updateCaret()
 // Note that QKeyEvent starts with isAccepted() == true, so you do not need to
 // call QKeyEvent::accept() - just do not call the base class implementation if
 // you act upon the key.
-void TTextEdit::keyPressEvent(QKeyEvent* event)
-{
+void TTextEdit::keyPressEvent(QKeyEvent *event) {
     if (!mudlet::self()->isCaretModeEnabled()) {
         QWidget::keyPressEvent(event);
         return;
@@ -2765,7 +2766,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             mDragStart.setY(mCaretLine);
             mDragStart.setX(mCaretColumn);
             mDragSelectionEnd.setY(newCaretLine);
-            mDragSelectionEnd.setX(newCaretColumn);
+            mDragSelectionEnd.setX(mCaretColumn);
             unHighlight();
             normaliseSelection();
             highlightSelection();
@@ -2783,16 +2784,17 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             }
             qDebug() << "continuing selection";
             mDragSelectionEnd.setY(newCaretLine);
-            mDragSelectionEnd.setX(newCaretColumn);
+            mDragSelectionEnd.setX(mCaretColumn);
 
             unHighlight();
             normaliseSelection();
             highlightSelection();
         }
+        slot_copySelectionToClipboard();
     };
 
     switch (event->key()) {
-    case Qt::Key_Up: {
+        case Qt::Key_Up: {
             if (mCaretLine == 0) {
                 newCaretLine = mCaretLine;
                 newCaretColumn = 0;
@@ -2802,10 +2804,42 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             }
 
             adjustCaretColumn();
-            updateSelection();
+//            updateSelection();
+
+            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
+                qDebug() << "selection enabled";
+                mShiftSelection = true;
+                mDragStart.setY(mCaretLine);
+                mDragStart.setX(mCaretColumn);
+                mDragSelectionEnd.setY(newCaretLine);
+                mDragSelectionEnd.setX(mCaretColumn);
+                unHighlight();
+                normaliseSelection();
+                highlightSelection();
+            } else if (mShiftSelection) {
+                if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+                    qDebug() << "selection disabled";
+                    mShiftSelection = false;
+                    unHighlight();
+                    mSelectedRegion = QRegion(0, 0, 0, 0);
+
+                    // keep cursor position as-is because it is only the selection that should be cleared
+                    newCaretLine = mCaretLine;
+                    newCaretColumn = mCaretColumn;
+                    return;
+                }
+                qDebug() << "continuing selection";
+                mDragSelectionEnd.setY(newCaretLine);
+                mDragSelectionEnd.setX(newCaretColumn);
+
+                unHighlight();
+                normaliseSelection();
+                highlightSelection();
+            }
+            slot_copySelectionToClipboard();
         }
-        break;
-    case Qt::Key_Down: {
+            break;
+        case Qt::Key_Down: {
             int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty();
             if (mCaretLine >= mpBuffer->lineBuffer.length() - 1 - emptyLastLine) {
                 newCaretLine = mCaretLine;
@@ -2816,62 +2850,166 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             }
 
             adjustCaretColumn();
-            updateSelection();
+//            updateSelection();
+            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
+                qDebug() << "selection enabled";
+                mShiftSelection = true;
+                mDragStart.setY(mCaretLine);
+                mDragStart.setX(mCaretColumn);
+                mDragSelectionEnd.setY(newCaretLine);
+                mDragSelectionEnd.setX(mCaretColumn);
+                unHighlight();
+                normaliseSelection();
+                highlightSelection();
+            } else if (mShiftSelection) {
+                if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+                    qDebug() << "selection disabled";
+                    mShiftSelection = false;
+                    unHighlight();
+                    mSelectedRegion = QRegion(0, 0, 0, 0);
+
+                    // keep cursor position as-is because it is only the selection that should be cleared
+                    newCaretLine = mCaretLine;
+                    newCaretColumn = mCaretColumn;
+                    return;
+                }
+                qDebug() << "continuing selection";
+                mDragSelectionEnd.setY(newCaretLine);
+                mDragSelectionEnd.setX(newCaretColumn);
+
+                unHighlight();
+                normaliseSelection();
+                highlightSelection();
+            }
+            slot_copySelectionToClipboard();
+
         }
-        break;
-    case Qt::Key_Left: {
+            break;
+        case Qt::Key_Left: {
+            // select the previous letter, unless the cursor jumps back up to the previous line
+            bool jumpedLines = false;
             if (mCaretColumn > 0) {
                 newCaretLine = mCaretLine;
                 newCaretColumn = mCaretColumn - 1;
+                jumpedLines = false;
             } else if (mCaretLine > 0) {
                 newCaretLine = mCaretLine - 1;
                 newCaretColumn = mpBuffer->lineBuffer.at(newCaretLine).length() - 1;
+                jumpedLines = true;
             }
 
-            updateSelection();
+            qDebug() << "left, newCaretColumn: " << newCaretColumn << "mCaretColumn: " << mCaretColumn << "jumpedLines: " << jumpedLines;
+//            updateSelection();
+            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
+                qDebug() << "selection enabled";
+                mShiftSelection = true;
+                mDragStart.setY(mCaretLine);
+                mDragStart.setX(mCaretColumn);
+                mDragSelectionEnd.setY(newCaretLine);
+                mDragSelectionEnd.setX(mCaretColumn);
+                unHighlight();
+                normaliseSelection();
+                highlightSelection();
+            } else if (mShiftSelection) {
+                if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+                    qDebug() << "selection disabled";
+                    mShiftSelection = false;
+                    unHighlight();
+                    mSelectedRegion = QRegion(0, 0, 0, 0);
+
+                    // keep cursor position as-is because it is only the selection that should be cleared
+                    newCaretLine = mCaretLine;
+                    newCaretColumn = mCaretColumn;
+                    return;
+                }
+                qDebug() << "continuing selection";
+                mDragSelectionEnd.setY(newCaretLine);
+                mDragSelectionEnd.setX(jumpedLines ? newCaretColumn : mCaretColumn);
+
+                unHighlight();
+                normaliseSelection();
+                highlightSelection();
+            }
+            slot_copySelectionToClipboard();
+            qDebug() << "left2, newCaretColumn: " << newCaretColumn << "mCaretColumn: " << mCaretColumn;
         }
-        break;
-    case Qt::Key_Right: {
+            break;
+        case Qt::Key_Right: {
+            // select the previous letter, unless the cursor jumps down to the next line
+            bool jumpedLines = false;
             if (mCaretColumn < (mpBuffer->lineBuffer.at(mCaretLine).length() - 1)) {
                 newCaretColumn = mCaretColumn + 1;
                 newCaretLine = mCaretLine;
-            // last line of the buffer is empty, so we need to check for that:
+                jumpedLines = false;
+                // last line of the buffer is empty, so we need to check for that:
             } else if (mCaretLine < (mpBuffer->lineBuffer.length() - 2)) {
                 newCaretLine = mCaretLine + 1;
                 newCaretColumn = 0;
+                jumpedLines = true;
             }
 
-            updateSelection();
-        }
-        break;
-    case Qt::Key_Home:
-        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-            newCaretLine = 0;
-            newCaretColumn = 0;
-        } else {
-            newCaretColumn = 0;
-        }
-        newCaretColumn = 0;
-        break;
-    case Qt::Key_End:
-        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-            newCaretLine = mpBuffer->lineBuffer.length() - 1;
-            newCaretColumn = mpBuffer->lineBuffer[mCaretLine].length() - 1;
-        } else {
-            newCaretColumn = mpBuffer->lineBuffer.at(mCaretLine).length() - 1;
-        }
-        break;
-    case Qt::Key_PageUp:
-        newCaretLine = std::max(mCaretLine - mScreenHeight, 0);
-        break;
-    case Qt::Key_PageDown:
-        newCaretLine = std::min(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
-        break;
-    case Qt::Key_C:
-        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+//            updateSelection();
+            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
+                qDebug() << "selection enabled";
+                mShiftSelection = true;
+                mDragStart.setY(mCaretLine);
+                mDragStart.setX(mCaretColumn);
+                mDragSelectionEnd.setY(newCaretLine);
+                mDragSelectionEnd.setX(mCaretColumn);
+                unHighlight();
+                normaliseSelection();
+                highlightSelection();
+            } else if (mShiftSelection) {
+                if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+                    qDebug() << "selection disabled";
+                    mShiftSelection = false;
+                    unHighlight();
+                    mSelectedRegion = QRegion(0, 0, 0, 0);
+
+                    // keep cursor position as-is because it is only the selection that should be cleared
+                    newCaretLine = mCaretLine;
+                    newCaretColumn = mCaretColumn;
+                    return;
+                }
+                qDebug() << "continuing selection";
+                mDragSelectionEnd.setY(newCaretLine);
+                mDragSelectionEnd.setX(jumpedLines ? newCaretColumn : mCaretColumn);
+
+                unHighlight();
+                normaliseSelection();
+                highlightSelection();
+            }
             slot_copySelectionToClipboard();
         }
-        break;
+            break;
+        case Qt::Key_Home:
+            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+                newCaretLine = 0;
+                newCaretColumn = 0;
+            } else {
+                newCaretColumn = 0;
+            }
+            newCaretColumn = 0;
+            break;
+        case Qt::Key_End:
+            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+                newCaretLine = mpBuffer->lineBuffer.length() - 1;
+                newCaretColumn = mpBuffer->lineBuffer[mCaretLine].length() - 1;
+            } else {
+                newCaretColumn = mpBuffer->lineBuffer.at(mCaretLine).length() - 1;
+            }
+            break;
+        case Qt::Key_PageUp:
+            newCaretLine = std::max(mCaretLine - mScreenHeight, 0);
+            break;
+        case Qt::Key_PageDown:
+            newCaretLine = std::min(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
+            break;
+        case Qt::Key_C:
+            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+                slot_copySelectionToClipboard();
+            }
+            break;
     }
 
     // Did the key press change the caret position?
