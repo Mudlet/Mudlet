@@ -2823,9 +2823,17 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
         case Qt::Key_Left: {
             bool jumpedLines = false;
             if (mCaretColumn > 0) {
-                newCaretLine = mCaretLine;
-                newCaretColumn = mCaretColumn - 1;
-                jumpedLines = false;
+                if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+                    QTextBoundaryFinder finder(QTextBoundaryFinder::Word, mpBuffer->line(mCaretLine));
+                    finder.setPosition(mCaretColumn);
+                    const int nextBoundary = finder.toPreviousBoundary();
+                    newCaretColumn = nextBoundary;
+                    jumpedLines = false;
+                } else {
+                    newCaretLine = mCaretLine;
+                    newCaretColumn = mCaretColumn - 1;
+                    jumpedLines = false;
+                }
             } else if (mCaretLine > 0) {
                 newCaretLine = mCaretLine - 1;
                 newCaretColumn = mpBuffer->lineBuffer.at(newCaretLine).length() - 1;
@@ -2841,15 +2849,24 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
         case Qt::Key_Right: {
             bool jumpedLines = false;
             if (mCaretColumn < (mpBuffer->lineBuffer.at(mCaretLine).length() - 1)) {
-                newCaretColumn = mCaretColumn + 1;
-                newCaretLine = mCaretLine;
-                jumpedLines = false;
+                if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+                    QTextBoundaryFinder finder(QTextBoundaryFinder::Word, mpBuffer->line(mCaretLine));
+                    finder.setPosition(mCaretColumn);
+                    const int nextBoundary = finder.toNextBoundary();
+                    newCaretColumn = nextBoundary;
+                    jumpedLines = false;
+                } else {
+                    newCaretColumn = mCaretColumn + 1;
+                    newCaretLine = mCaretLine;
+                    jumpedLines = false;
+                }
                 // last line of the buffer is empty, so we need to check for that:
             } else if (mCaretLine < (mpBuffer->lineBuffer.length() - 2)) {
                 newCaretLine = mCaretLine + 1;
                 newCaretColumn = 0;
                 jumpedLines = true;
             }
+            
 
             // use newCaretColumn if we jumped lines or the selection extends to the right of the cursor
             const bool selectionBehindCursor = newCaretColumn > mCaretColumn;
