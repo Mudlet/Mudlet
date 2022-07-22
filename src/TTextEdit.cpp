@@ -3004,7 +3004,11 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
             break;
         case Qt::Key_C:
             if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-                slot_copySelectionToClipboard();
+                if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+                    slot_copySelectionToClipboard();
+                } else {
+                    slot_copySelectionToClipboardHTML();
+                }
             }
             break;
     }
