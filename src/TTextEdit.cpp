@@ -2827,6 +2827,7 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                     QTextBoundaryFinder finder(QTextBoundaryFinder::Word, mpBuffer->line(mCaretLine));
                     finder.setPosition(mCaretColumn);
                     const int nextBoundary = finder.toPreviousBoundary();
+                    newCaretLine = mCaretLine;
                     newCaretColumn = nextBoundary;
                     jumpedLines = false;
                 } else {
@@ -2854,6 +2855,7 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                     finder.setPosition(mCaretColumn);
                     const int nextBoundary = finder.toNextBoundary();
                     newCaretColumn = nextBoundary;
+                    newCaretLine = mCaretLine;
                     jumpedLines = false;
                 } else {
                     newCaretColumn = mCaretColumn + 1;
