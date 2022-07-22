@@ -2790,7 +2790,6 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
             normaliseSelection();
             highlightSelection();
         }
-        slot_copySelectionToClipboard();
     };
 
     switch (event->key()) {
@@ -2836,7 +2835,6 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                 normaliseSelection();
                 highlightSelection();
             }
-            slot_copySelectionToClipboard();
         }
             break;
         case Qt::Key_Down: {
@@ -2881,7 +2879,6 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                 normaliseSelection();
                 highlightSelection();
             }
-            slot_copySelectionToClipboard();
 
         }
             break;
@@ -2931,7 +2928,6 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                 normaliseSelection();
                 highlightSelection();
             }
-            slot_copySelectionToClipboard();
             qDebug() << "left2, newCaretColumn: " << newCaretColumn << "mCaretColumn: " << mCaretColumn;
         }
             break;
@@ -2981,7 +2977,6 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                 normaliseSelection();
                 highlightSelection();
             }
-            slot_copySelectionToClipboard();
         }
             break;
         case Qt::Key_Home:
