@@ -2924,7 +2924,8 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                 }
                 qDebug() << "continuing selection";
                 mDragSelectionEnd.setY(newCaretLine);
-                mDragSelectionEnd.setX(jumpedLines ? newCaretColumn : mCaretColumn);
+                // use newCaretColumn if we jumped lines or the selection extends to the left of the cursor
+                mDragSelectionEnd.setX(jumpedLines || newCaretColumn < mCaretColumn ? newCaretColumn : mCaretColumn);
 
                 unHighlight();
                 normaliseSelection();
@@ -2973,7 +2974,8 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                 }
                 qDebug() << "continuing selection";
                 mDragSelectionEnd.setY(newCaretLine);
-                mDragSelectionEnd.setX(jumpedLines ? newCaretColumn : mCaretColumn);
+                // use newCaretColumn if we jumped lines or the selection extends to the right of the cursor
+                mDragSelectionEnd.setX(jumpedLines || newCaretColumn > mCaretColumn ? newCaretColumn : mCaretColumn);
 
                 unHighlight();
                 normaliseSelection();
