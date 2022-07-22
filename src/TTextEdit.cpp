@@ -2867,6 +2867,10 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                 newCaretLine = mCaretLine + 1;
                 newCaretColumn = 0;
                 jumpedLines = true;
+            } else {
+                // last line, last character in the buffer
+                newCaretLine = mCaretLine;
+                newCaretColumn = mCaretColumn;
             }
             
 
