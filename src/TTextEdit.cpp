@@ -2759,37 +2759,37 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
         }
     };
 
-    auto updateSelection = [&]() {
-        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
-            qDebug() << "selection enabled";
-            mShiftSelection = true;
-            mDragStart.setY(mCaretLine);
-            mDragStart.setX(mCaretColumn);
-            mDragSelectionEnd.setY(newCaretLine);
-            mDragSelectionEnd.setX(mCaretColumn);
-            unHighlight();
-            normaliseSelection();
-            highlightSelection();
-        } else if (mShiftSelection) {
-            if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
-                qDebug() << "selection disabled";
-                mShiftSelection = false;
+    auto updateSelection = [&](bool useNewColumn) {
+                    if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
+                qDebug() << "selection enabled";
+                mShiftSelection = true;
+                mDragStart.setY(mCaretLine);
+                mDragStart.setX(mCaretColumn);
+                mDragSelectionEnd.setY(newCaretLine);
+                mDragSelectionEnd.setX(mCaretColumn);
                 unHighlight();
-                mSelectedRegion = QRegion(0, 0, 0, 0);
+                normaliseSelection();
+                highlightSelection();
+            } else if (mShiftSelection) {
+                if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+                    qDebug() << "selection disabled";
+                    mShiftSelection = false;
+                    unHighlight();
+                    mSelectedRegion = QRegion(0, 0, 0, 0);
 
-                // keep cursor position as-is because it is only the selection that should be cleared
-                newCaretLine = mCaretLine;
-                newCaretColumn = mCaretColumn;
-                return;
+                    // keep cursor position as-is because it is only the selection that should be cleared
+                    newCaretLine = mCaretLine;
+                    newCaretColumn = mCaretColumn;
+                    return;
+                }
+                qDebug() << "continuing selection";
+                mDragSelectionEnd.setY(newCaretLine);
+                mDragSelectionEnd.setX(useNewColumn ? newCaretColumn : mCaretColumn);
+
+                unHighlight();
+                normaliseSelection();
+                highlightSelection();
             }
-            qDebug() << "continuing selection";
-            mDragSelectionEnd.setY(newCaretLine);
-            mDragSelectionEnd.setX(mCaretColumn);
-
-            unHighlight();
-            normaliseSelection();
-            highlightSelection();
-        }
     };
 
     switch (event->key()) {
@@ -2803,38 +2803,7 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
             }
 
             adjustCaretColumn();
-//            updateSelection();
-
-            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
-                qDebug() << "selection enabled";
-                mShiftSelection = true;
-                mDragStart.setY(mCaretLine);
-                mDragStart.setX(mCaretColumn);
-                mDragSelectionEnd.setY(newCaretLine);
-                mDragSelectionEnd.setX(mCaretColumn);
-                unHighlight();
-                normaliseSelection();
-                highlightSelection();
-            } else if (mShiftSelection) {
-                if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
-                    qDebug() << "selection disabled";
-                    mShiftSelection = false;
-                    unHighlight();
-                    mSelectedRegion = QRegion(0, 0, 0, 0);
-
-                    // keep cursor position as-is because it is only the selection that should be cleared
-                    newCaretLine = mCaretLine;
-                    newCaretColumn = mCaretColumn;
-                    return;
-                }
-                qDebug() << "continuing selection";
-                mDragSelectionEnd.setY(newCaretLine);
-                mDragSelectionEnd.setX(newCaretColumn);
-
-                unHighlight();
-                normaliseSelection();
-                highlightSelection();
-            }
+            updateSelection(true);
         }
             break;
         case Qt::Key_Down: {
@@ -2848,38 +2817,7 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
             }
 
             adjustCaretColumn();
-//            updateSelection();
-            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
-                qDebug() << "selection enabled";
-                mShiftSelection = true;
-                mDragStart.setY(mCaretLine);
-                mDragStart.setX(mCaretColumn);
-                mDragSelectionEnd.setY(newCaretLine);
-                mDragSelectionEnd.setX(mCaretColumn);
-                unHighlight();
-                normaliseSelection();
-                highlightSelection();
-            } else if (mShiftSelection) {
-                if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
-                    qDebug() << "selection disabled";
-                    mShiftSelection = false;
-                    unHighlight();
-                    mSelectedRegion = QRegion(0, 0, 0, 0);
-
-                    // keep cursor position as-is because it is only the selection that should be cleared
-                    newCaretLine = mCaretLine;
-                    newCaretColumn = mCaretColumn;
-                    return;
-                }
-                qDebug() << "continuing selection";
-                mDragSelectionEnd.setY(newCaretLine);
-                mDragSelectionEnd.setX(newCaretColumn);
-
-                unHighlight();
-                normaliseSelection();
-                highlightSelection();
-            }
-
+            updateSelection(true);
         }
             break;
         case Qt::Key_Left: {
@@ -2895,40 +2833,10 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                 jumpedLines = true;
             }
 
-            qDebug() << "left, newCaretColumn: " << newCaretColumn << "mCaretColumn: " << mCaretColumn << "jumpedLines: " << jumpedLines;
-//            updateSelection();
-            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
-                qDebug() << "selection enabled";
-                mShiftSelection = true;
-                mDragStart.setY(mCaretLine);
-                mDragStart.setX(mCaretColumn);
-                mDragSelectionEnd.setY(newCaretLine);
-                mDragSelectionEnd.setX(mCaretColumn);
-                unHighlight();
-                normaliseSelection();
-                highlightSelection();
-            } else if (mShiftSelection) {
-                if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
-                    qDebug() << "selection disabled";
-                    mShiftSelection = false;
-                    unHighlight();
-                    mSelectedRegion = QRegion(0, 0, 0, 0);
+            // use newCaretColumn if we jumped lines or the selection extends to the left of the cursor
+            const bool selectionBehindCursor = newCaretColumn < mCaretColumn;
 
-                    // keep cursor position as-is because it is only the selection that should be cleared
-                    newCaretLine = mCaretLine;
-                    newCaretColumn = mCaretColumn;
-                    return;
-                }
-                qDebug() << "continuing selection";
-                mDragSelectionEnd.setY(newCaretLine);
-                // use newCaretColumn if we jumped lines or the selection extends to the left of the cursor
-                mDragSelectionEnd.setX(jumpedLines || newCaretColumn < mCaretColumn ? newCaretColumn : mCaretColumn);
-
-                unHighlight();
-                normaliseSelection();
-                highlightSelection();
-            }
-            qDebug() << "left2, newCaretColumn: " << newCaretColumn << "mCaretColumn: " << mCaretColumn;
+            updateSelection(jumpedLines || selectionBehindCursor);
         }
             break;
         case Qt::Key_Right: {
@@ -2945,38 +2853,10 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                 jumpedLines = true;
             }
 
-//            updateSelection();
-            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
-                qDebug() << "selection enabled";
-                mShiftSelection = true;
-                mDragStart.setY(mCaretLine);
-                mDragStart.setX(mCaretColumn);
-                mDragSelectionEnd.setY(newCaretLine);
-                mDragSelectionEnd.setX(mCaretColumn);
-                unHighlight();
-                normaliseSelection();
-                highlightSelection();
-            } else if (mShiftSelection) {
-                if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
-                    qDebug() << "selection disabled";
-                    mShiftSelection = false;
-                    unHighlight();
-                    mSelectedRegion = QRegion(0, 0, 0, 0);
+            // use newCaretColumn if we jumped lines or the selection extends to the right of the cursor
+            const bool selectionBehindCursor = newCaretColumn > mCaretColumn;
 
-                    // keep cursor position as-is because it is only the selection that should be cleared
-                    newCaretLine = mCaretLine;
-                    newCaretColumn = mCaretColumn;
-                    return;
-                }
-                qDebug() << "continuing selection";
-                mDragSelectionEnd.setY(newCaretLine);
-                // use newCaretColumn if we jumped lines or the selection extends to the right of the cursor
-                mDragSelectionEnd.setX(jumpedLines || newCaretColumn > mCaretColumn ? newCaretColumn : mCaretColumn);
-
-                unHighlight();
-                normaliseSelection();
-                highlightSelection();
-            }
+            updateSelection(jumpedLines || selectionBehindCursor);
         }
             break;
         case Qt::Key_Home:
