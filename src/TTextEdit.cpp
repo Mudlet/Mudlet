@@ -2829,11 +2829,9 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                     const int nextBoundary = finder.toPreviousBoundary();
                     newCaretLine = mCaretLine;
                     newCaretColumn = nextBoundary;
-                    jumpedLines = false;
                 } else {
                     newCaretLine = mCaretLine;
                     newCaretColumn = mCaretColumn - 1;
-                    jumpedLines = false;
                 }
             } else if (mCaretLine > 0) {
                 newCaretLine = mCaretLine - 1;
@@ -2856,11 +2854,9 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                     const int nextBoundary = finder.toNextBoundary();
                     newCaretColumn = nextBoundary;
                     newCaretLine = mCaretLine;
-                    jumpedLines = false;
                 } else {
                     newCaretColumn = mCaretColumn + 1;
                     newCaretLine = mCaretLine;
-                    jumpedLines = false;
                 }
                 // last line of the buffer is empty, so we need to check for that:
             } else if (mCaretLine < (mpBuffer->lineBuffer.length() - 2)) {
