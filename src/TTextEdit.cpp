@@ -2821,7 +2821,7 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
         }
             break;
         case Qt::Key_Left: {
-            // select the previous letter, unless the cursor jumps back up to the previous line
+            // when selecting, select the previous letter, unless the cursor jumps back up to the previous line
             bool jumpedLines = false;
             if (mCaretColumn > 0) {
                 newCaretLine = mCaretLine;
@@ -2840,7 +2840,7 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
         }
             break;
         case Qt::Key_Right: {
-            // select the previous letter, unless the cursor jumps down to the next line
+            // when selecting, select the previous letter, unless the cursor jumps down to the next line
             bool jumpedLines = false;
             if (mCaretColumn < (mpBuffer->lineBuffer.at(mCaretLine).length() - 1)) {
                 newCaretColumn = mCaretColumn + 1;
