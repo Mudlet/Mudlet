@@ -24,7 +24,6 @@
 #include "TBuffer.h"
 
 #include "mudlet.h"
-#include "TConsole.h"
 #include "TStringUtils.h"
 
 #include "pre_guard.h"
@@ -680,8 +679,9 @@ COMMIT_LINE:
             // which sort of seems to be implied by the current value of ch:
 
             if (Q_UNLIKELY(mMudLine.isEmpty())) {
-                const bool skipBlankLines = false;
-                if (skipBlankLines) {
+                if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Show) {
+                    // no-op
+                } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
                     localBufferPosition++;
                     continue;
                 } else {
@@ -695,12 +695,11 @@ COMMIT_LINE:
 
                     // Note: we are using the background color for the
                     // foreground color as well so that we are transparent:
-                    TChar c(mBackGroundColor, mBackGroundColor, attributeFlags);
+                    const TChar c(mBackGroundColor, mBackGroundColor, attributeFlags);
                     mMudLine.append(QChar::Space);
                     mMudBuffer.push_back(c);
                 }
             }
-            qDebug() << mMudLine;
 
             if (static_cast<size_t>(mMudLine.size()) != mMudBuffer.size()) {
                 qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
