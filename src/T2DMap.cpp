@@ -1349,7 +1349,62 @@ void T2DMap::paintEvent(QPaintEvent* e)
         QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * mRoomWidth + mRX, mapLabel.pos.y() * mRoomHeight * -1 + mRY, labelWidth, labelHeight);
         if (!mapLabel.showOnTop) {
             if (!mapLabel.noScaling) {
-                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize()));
+                QSize scaledSize = labelPaintRectangle.size().toSize();
+                QSize originalSize = mapLabel.pix.size();
+                qreal sourceWidth = originalSize.width();
+                qreal sourceHeight = originalSize.height();
+                qreal desiredWidth = scaledSize.width();
+                qreal desiredHeight = scaledSize.height();
+                qreal desiredX = labelPosition.x();
+                qreal desiredY = labelPosition.y();
+                qreal cropX, cropY, cropWidth, cropHeight;
+                qreal xFactor, yFactor;
+                qreal finalX, finalY, finalWidth, finalHeight;
+                if (desiredX < 0) {
+                    cropX = desiredX * -1;
+                    finalX = 0;
+                    finalWidth = desiredWidth + desiredX;
+                    if (finalWidth > widgetWidth) {
+                        finalWidth = widgetWidth;
+                    }
+                } else {
+                    cropX = 0;
+                    finalX = desiredX;
+                    finalWidth = desiredWidth + desiredX;
+                    if (finalWidth > widgetWidth) {
+                        finalWidth = widgetWidth - desiredX;
+                    } else {
+                        finalWidth = desiredWidth;
+                    }
+                }
+                if (desiredY < 0) {
+                    cropY = desiredY * -1;
+                    finalY = 0;
+                    finalHeight = desiredHeight + desiredY;
+                    if (finalHeight > widgetHeight) {
+                        finalHeight = widgetHeight;
+                    }
+                } else {
+                    cropY = 0;
+                    finalY = desiredY;
+                    finalHeight = desiredHeight + desiredY;
+                    if (finalHeight > widgetHeight) {
+                        finalHeight = widgetHeight - desiredY;
+                    } else {
+                        finalHeight = desiredHeight;
+                    }
+                }
+                xFactor = desiredWidth / sourceWidth;
+                yFactor = desiredHeight / sourceHeight;
+                cropX = cropX / xFactor;
+                cropY = cropY / yFactor;
+                cropWidth = finalWidth / xFactor;
+                cropHeight = finalHeight / yFactor;
+                
+                QPixmap scaledImage = mapLabel.pix.copy(cropX, cropY, cropWidth, cropHeight).scaled(finalWidth, finalHeight);
+                labelPosition.setX(finalX);
+                labelPosition.setY(finalY);
+                painter.drawPixmap(labelPosition, scaledImage);
                 mapLabel.clickSize = QSizeF(labelPaintRectangle.width(), labelPaintRectangle.height());
             } else {
                 painter.drawPixmap(labelPosition, mapLabel.pix);
@@ -1470,7 +1525,60 @@ void T2DMap::paintEvent(QPaintEvent* e)
         QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * mRoomWidth + mRX, mapLabel.pos.y() * mRoomHeight * -1 + mRY, labelWidth, labelHeight);
         if (mapLabel.showOnTop) {
             if (!mapLabel.noScaling) {
-                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize()));
+                QSize scaledSize = labelPaintRectangle.size().toSize();
+                QSize originalSize = mapLabel.pix.size();
+                qreal sourceWidth = originalSize.width();
+                qreal sourceHeight = originalSize.height();
+                qreal desiredWidth = scaledSize.width();
+                qreal desiredHeight = scaledSize.height();
+                qreal desiredX = labelPosition.x();
+                qreal desiredY = labelPosition.y();
+                qreal cropX, cropY, cropWidth, cropHeight, xFactor, yFactor, finalX, finalY, finalWidth, finalHeight;
+                if (desiredX < 0) {
+                    cropX = desiredX * -1;
+                    finalX = 0;
+                    finalWidth = desiredWidth + desiredX;
+                    if (finalWidth > widgetWidth) {
+                        finalWidth = widgetWidth;
+                    }
+                } else {
+                    cropX = 0;
+                    finalX = desiredX;
+                    finalWidth = desiredWidth + desiredX;
+                    if (finalWidth > widgetWidth) {
+                        finalWidth = widgetWidth - desiredX;
+                    } else {
+                        finalWidth = desiredWidth;
+                    }
+                }
+                if (desiredY < 0) {
+                    cropY = desiredY * -1;
+                    finalY = 0;
+                    finalHeight = desiredHeight + desiredY;
+                    if (finalHeight > widgetHeight) {
+                        finalHeight = widgetHeight;
+                    }
+                } else {
+                    cropY = 0;
+                    finalY = desiredY;
+                    finalHeight = desiredHeight + desiredY;
+                    if (finalHeight > widgetHeight) {
+                        finalHeight = widgetHeight - desiredY;
+                    } else {
+                        finalHeight = desiredHeight;
+                    }
+                }
+                xFactor = desiredWidth / sourceWidth;
+                yFactor = desiredHeight / sourceHeight;
+                cropX = cropX / xFactor;
+                cropY = cropY / yFactor;
+                cropWidth = finalWidth / xFactor;
+                cropHeight = finalHeight / yFactor;
+                
+                QPixmap scaledImage = mapLabel.pix.copy(cropX, cropY, cropWidth, cropHeight).scaled(finalWidth, finalHeight);
+                labelPosition.setX(finalX);
+                labelPosition.setY(finalY);
+                painter.drawPixmap(labelPosition, scaledImage);
                 mapLabel.clickSize = QSizeF(labelPaintRectangle.width(), labelPaintRectangle.height());
             } else {
                 painter.drawPixmap(labelPosition, mapLabel.pix);
