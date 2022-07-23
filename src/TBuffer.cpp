@@ -679,6 +679,29 @@ COMMIT_LINE:
             // line there should not be any changes to text before a line feed
             // which sort of seems to be implied by the current value of ch:
 
+            if (Q_UNLIKELY(mMudLine.isEmpty())) {
+                const bool skipBlankLines = false;
+                if (skipBlankLines) {
+                    localBufferPosition++;
+                    continue;
+                } else {
+                    const TChar::AttributeFlags attributeFlags =
+                            ((mIsDefaultColor ? mBold : false) ? TChar::Bold : TChar::None)
+                            | (mItalics ? TChar::Italic : TChar::None)
+                            | (mOverline ? TChar::Overline : TChar::None)
+                            | (mReverse ? TChar::Reverse : TChar::None)
+                            | (mStrikeOut ? TChar::StrikeOut : TChar::None)
+                            | (mUnderline ? TChar::Underline : TChar::None);
+
+                    // Note: we are using the background color for the
+                    // foreground color as well so that we are transparent:
+                    TChar c(mBackGroundColor, mBackGroundColor, attributeFlags);
+                    mMudLine.append(QChar::Space);
+                    mMudBuffer.push_back(c);
+                }
+            }
+            qDebug() << mMudLine;
+
             if (static_cast<size_t>(mMudLine.size()) != mMudBuffer.size()) {
                 qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
                               "data character and attribute data items!";
