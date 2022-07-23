@@ -111,6 +111,7 @@
     </property>
     <addaction name="dactionOptions"/>
     <addaction name="dactionMultiView"/>
+    <addaction name="dactionCaretMode"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -361,6 +362,23 @@
   <action name="dactionCloseProfile">
    <property name="text">
     <string>Close profile</string>
+   </property>
+  </action>
+  <action name="dactionCaretMode">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Caret Mode</string>
+   </property>
+   <property name="toolTip">
+    <string>Move through the MUD text with the keyboard.</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Tab</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::WindowShortcut</enum>
    </property>
   </action>
  </widget>

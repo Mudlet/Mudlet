@@ -3586,7 +3586,8 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
         Host& host = getHostFromLua(L);
         host.mpConsole->mUpperPane->resetHScrollbar();
         host.mpConsole->buffer.clear();
-        host.mpConsole->mUpperPane->forceUpdate();
+        host.mpConsole->mUpperPane->showNewLines();
+        //host.mpConsole->mUpperPane->forceUpdate();
         return 0;
     }
     QString text = lua_tostring(L, 1);
@@ -15274,6 +15275,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getBackgroundColor", TLuaInterpreter::getBackgroundColor);
     lua_register(pGlobalLua, "getLabelStyleSheet", TLuaInterpreter::getLabelStyleSheet);
     lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
+    lua_register(pGlobalLua, "announce", TLuaInterpreter::announce);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -15299,6 +15301,7 @@ void TLuaInterpreter::initLuaGlobals()
     // binary directory for both modules and binary libraries:
     additionalCPaths << qsl("%1/?.so").arg(appPath);
     additionalLuaPaths << qsl("%1/?.lua").arg(appPath);
+
 #elif defined(Q_OS_WIN32) && defined(INCLUDE_MAIN_BUILD_SYSTEM)
     // For CI builds or users/developers using the setup-windows-sdk.ps1 method:
     additionalCPaths << qsl("C:\\Qt\\Tools\\mingw730_32\\lib\\lua\\5.1\\?.dll");
@@ -17218,6 +17221,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("announceIncomingText")) {
+        host.mAnnounceIncomingText = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
 
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
@@ -17400,4 +17407,25 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_settable(L, -3);
 
     return 1;
+}
+
+int TLuaInterpreter::announce(lua_State *L) {
+    const QString text = getVerifiedString(L, __func__, 1, "text to announce");
+    static const QStringList processingKinds{"importantall", "importantmostrecent", "all", "mostrecent", "currentthenmostrecent"};
+    QString processing;
+
+    int n = lua_gettop(L);
+    if (n > 1) {
+        // while this only has effect on Windows, it should fail silently in order not to spam
+        processing = getVerifiedString(L, __func__, 2, "processing style");
+
+        if (!processingKinds.contains(processing)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (processing should be one of %s, got %s!)",
+                __func__, 2, processingKinds.join(qsl(", ")).toUtf8().constData(), processing.toUtf8().constData());
+            return lua_error(L);
+        }
+    }
+
+    mudlet::self()->announce(text, processing);
+    return 0;
 }

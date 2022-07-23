@@ -882,6 +882,11 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->setEditorShowBidi(true);
     }
+    if (attributes().hasAttribute("announceIncomingText")) {
+        pHost->mAnnounceIncomingText = attributes().value(qsl("announceIncomingText")) == YES;
+    } else {
+        pHost->mAnnounceIncomingText = true;
+    }
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
     pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();

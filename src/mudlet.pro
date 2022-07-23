@@ -4,6 +4,7 @@
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
+#    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
 #    Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -293,7 +294,8 @@ unix:!macx {
         LIBS +=  \
             -L"$${MINGW_BASE_DIR_TEST}\\bin" \
             -llua51 \
-            -lhunspell-1.6
+            -lhunspell-1.6 \
+            -loleaut32
 
         INCLUDEPATH += \
              "C:\\Libraries\\boost_1_77_0" \
@@ -622,6 +624,7 @@ SOURCES += \
     TTabBar.cpp \
     TTextCodec.cpp \
     TTextEdit.cpp \
+    TAccessibleTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
     TTreeWidget.cpp \
@@ -635,6 +638,7 @@ HEADERS += \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h \
     ActionUnit.h \
+    Announcer.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
     ctelnet.h \
@@ -688,6 +692,7 @@ HEADERS += \
     TBuffer.h \
     TCommandLine.h \
     TConsole.h \
+    TAccessibleConsole.h \
     TDebug.h \
     TDockWidget.h \
     TEasyButtonBar.h \
@@ -744,6 +749,7 @@ HEADERS += \
     TTabBar.h \
     TTextCodec.h \
     TTextEdit.h \
+    TAccessibleTextEdit.h \
     TTimer.h \
     TToolBar.h \
     TTreeWidget.h \
@@ -753,7 +759,24 @@ HEADERS += \
     utils.h \
     XMLexport.h \
     XMLimport.h \
-    widechar_width.h
+    widechar_width.h \
+    ../3rdparty/discord/rpc/include/discord_register.h \
+    ../3rdparty/discord/rpc/include/discord_rpc.h
+
+macx {
+    OBJECTIVE_SOURCES += AnnouncerMac.mm
+}
+
+win32 {
+    SOURCES += AnnouncerWindows.cpp \
+        uiawrapper.cpp
+
+    HEADERS += uiawrapper.h
+}
+
+linux {
+    SOURCES += AnnouncerLinux.cpp
+}
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \

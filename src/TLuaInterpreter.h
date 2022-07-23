@@ -639,6 +639,7 @@ public:
     static int getBackgroundColor(lua_State*);
     static int getLabelStyleSheet(lua_State*);
     static int getLabelSizeHint(lua_State*);
+    static int announce(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
     void freeLuaRegistryIndex(int index);

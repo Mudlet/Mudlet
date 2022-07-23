@@ -499,6 +499,7 @@ void dlgProfilePreferences::disableHostDetails()
     // This acts on a label within this groupBox:
     hidePasswordMigrationLabel();
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
+    checkBox_announceIncomingText->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
     label_networkPacketTimeout->setEnabled(false);
     doubleSpinBox_networkPacketTimeout->setEnabled(false);
@@ -580,6 +581,7 @@ void dlgProfilePreferences::enableHostDetails()
 #else
     groupBox_ssl->setEnabled(QSslSocket::supportsSsl());
 #endif
+    checkBox_announceIncomingText->setEnabled(true);
 
     // ===== tab_chat =====
     groupBox_ircOptions->setEnabled(true);
@@ -737,6 +739,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_debugShowAllCodepointProblems->setChecked(pHost->debugShowAllProblemCodepoints());
     // the GMCP warning is hidden by default and is only enabled when the value is toggled
     need_reconnect_for_data_protocol->hide();
+
+    checkBox_announceIncomingText->setChecked(pHost->mAnnounceIncomingText);
 
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
@@ -1411,6 +1415,7 @@ void dlgProfilePreferences::clearHostDetails()
     lineEdit_discordUserDiscriminator->clear();
 
     checkBox_debugShowAllCodepointProblems->setChecked(false);
+    checkBox_announceIncomingText->setChecked(false);
 
     groupBox_ssl_certificate->hide();
     frame_notificationArea->hide();
@@ -2834,6 +2839,8 @@ void dlgProfilePreferences::slot_save_and_exit()
         } else {
             pHost->mRequiredDiscordUserDiscriminator.clear();
         }
+
+        pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
