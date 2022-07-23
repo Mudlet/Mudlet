@@ -8,6 +8,7 @@
  *   Copyright (C) 2015-2016, 2018-2019, 2021-2022 by Stephen Lyons        *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,6 +26,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "Announcer.h"
 #include "utils.h"
 #include "HostManager.h"
 #include "FontManager.h"
@@ -39,6 +41,7 @@
 #include "ShortcutsManager.h"
 
 #include "pre_guard.h"
+#include <QAction>
 #include <QDir>
 #include <QFlags>
 #ifdef QT_GAMEPAD_LIB
@@ -272,6 +275,7 @@ public:
     void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     static bool loadLuaFunctionList();
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
+    void announce(const QString& text, const QString& processing = QString());
 
     // Used by a profile to tell the mudlet class
     // to tell other profiles to reload the updated
@@ -505,6 +509,8 @@ public:
     };
     // clang-format on
 
+    bool isCaretModeEnabled() { return dactionCaretMode->isChecked(); }
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();
@@ -518,6 +524,7 @@ public slots:
     void slot_show_help_dialog_irc();
     void slot_open_mappingscripts_page();
     void slot_multi_view(const bool);
+    void slot_caret_mode(bool) const;
     void slot_toggle_multi_view();
     void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
     void slot_timer_fires();
@@ -699,6 +706,7 @@ private:
     QPointer<QAction> mpActionVariables;
 
     HostManager mHostManager;
+    Announcer* announcer;
 
     bool mshowMapAuditErrors;
 

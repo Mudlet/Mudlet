@@ -895,7 +895,16 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         mHistoryList.push_front(QString());
     }
     if (mpHost->mAutoClearCommandLineAfterSend) {
+#if defined (Q_OS_MACOS)
+        // clearing the input line on macOS 11.6 makes VoiceOver announce the removed text,
+        // essentially re-announcing everything we've typed. This workaround fixes this behaviour
+        // and does not seem to negatively affect other platforms
+        hide();
+#endif
         clear();
+#if defined (Q_OS_MACOS)
+        show();
+#endif
     } else {
         selectAll();
     }

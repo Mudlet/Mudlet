@@ -644,6 +644,8 @@ public:
 
     bool mTutorialForCompactLineAlreadyShown;
 
+    bool mAnnounceIncomingText = true;
+
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:

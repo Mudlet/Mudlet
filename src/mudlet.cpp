@@ -6,6 +6,7 @@
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *   Copyright (C) 2011-2021 by Vadim Peretokin - vperetokin@gmail.com     *
+ *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -632,6 +633,7 @@ mudlet::mudlet()
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
     connect(dactionModuleManager, &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
+    connect(dactionCaretMode, &QAction::triggered, this, &mudlet::slot_caret_mode);
     connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_compact_input_line);
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_editor_dialog);
@@ -727,6 +729,11 @@ mudlet::mudlet()
     loadMaps();
 
     setupTrayIcon();
+
+    // initialize Announcer after the window is loaded, as UIA on Windows requires it
+    QTimer::singleShot(0, this, [this]() {
+        announcer = new Announcer(this);
+    });
 }
 
 QSettings* mudlet::getQSettings()
@@ -2976,6 +2983,16 @@ void mudlet::slot_multi_view(const bool state)
     }
 }
 
+void mudlet::slot_caret_mode(bool state) const
+{
+    // FIXME: Support multiple hosts.
+    if (!mpCurrentActiveHost) {
+        return;
+    }
+
+    mpCurrentActiveHost->mpConsole->setCaretMode(state);
+}
+
 // Called by the short-cut to the menu item that doesn't pass the checked state
 // of the menu-item that it provides a short-cut to:
 void mudlet::slot_toggle_compact_input_line()
@@ -4665,4 +4682,9 @@ bool mudlet::desktopInDarkMode()
 #endif
 
     return false;
+}
+
+void mudlet::announce(const QString& text, const QString& processing)
+{
+    announcer->announce(text, processing);
 }
