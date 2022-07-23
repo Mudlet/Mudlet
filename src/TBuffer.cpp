@@ -679,12 +679,10 @@ COMMIT_LINE:
             // which sort of seems to be implied by the current value of ch:
 
             if (Q_UNLIKELY(mMudLine.isEmpty())) {
-                if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Show) {
-                    // no-op
-                } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
+                if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
                     localBufferPosition++;
                     continue;
-                } else {
+                } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
                     const TChar::AttributeFlags attributeFlags =
                             ((mIsDefaultColor ? mBold : false) ? TChar::Bold : TChar::None)
                             | (mItalics ? TChar::Italic : TChar::None)
