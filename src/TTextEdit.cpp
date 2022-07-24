@@ -510,7 +510,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     }
 
     // If caret mode is enabled and the line is empty, still draw the caret.
-    if (mudlet::self()->isCaretModeEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
+    if (mpHost->caretEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
         auto textRect = QRect(0, mFontHeight * lineOfScreen, mFontWidth, mFontHeight);
         painter.fillRect(textRect, mFgColor);
     }
@@ -650,7 +650,7 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     }
     textRects.append(textRect);
     QColor bgColor;
-    bool caretIsHere = mudlet::self()->isCaretModeEnabled() && mCaretLine == line && mCaretColumn == column;
+    bool caretIsHere = mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
     if (Q_UNLIKELY(static_cast<bool>(attributes & TChar::Reverse) != (charStyle.isSelected() != caretIsHere))) {
         fgColors.append(charStyle.background());
         bgColor = charStyle.foreground();
@@ -2650,7 +2650,7 @@ void TTextEdit::setCaretPosition(int line, int column)
     mCaretLine = line;
     mCaretColumn = column;
 
-    if (!mudlet::self()->isCaretModeEnabled()) {
+    if (!mpHost->caretEnabled()) {
         return;
     }
 
@@ -2708,7 +2708,7 @@ void TTextEdit::updateCaret()
 // you act upon the key.
 void TTextEdit::keyPressEvent(QKeyEvent* event)
 {
-    if (!mudlet::self()->isCaretModeEnabled()) {
+    if (!mpHost->caretEnabled()) {
         QWidget::keyPressEvent(event);
         return;
     }

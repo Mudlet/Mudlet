@@ -887,6 +887,18 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->mAnnounceIncomingText = true;
     }
+    if (attributes().hasAttribute("caretShortcut")) {
+        const QStringRef caretShortcut(attributes().value(qsl("caretShortcut")));
+        if (caretShortcut == qsl("None")) {
+            pHost->mCaretShortcut = Host::CaretShortcut::None;
+        } else if (caretShortcut == qsl("Tab")) {
+            pHost->mCaretShortcut = Host::CaretShortcut::Tab;
+        } else if (caretShortcut == qsl("CtrlTab")) {
+            pHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+        } else if (caretShortcut == qsl("F6")) {
+            pHost->mCaretShortcut = Host::CaretShortcut::F6;
+        }
+    }
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
     pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();

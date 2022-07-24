@@ -503,6 +503,7 @@ void dlgProfilePreferences::disableHostDetails()
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
     label_networkPacketTimeout->setEnabled(false);
     doubleSpinBox_networkPacketTimeout->setEnabled(false);
+    comboBox_caretModeKey->setEnabled(false);
 }
 
 void dlgProfilePreferences::enableHostDetails()
@@ -599,6 +600,7 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_debugShowAllCodepointProblems->setEnabled(true);
     label_networkPacketTimeout->setEnabled(true);
     doubleSpinBox_networkPacketTimeout->setEnabled(true);
+    comboBox_caretModeKey->setEnabled(true);
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
@@ -1101,6 +1103,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
     doubleSpinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout() / 1000.0);
+    comboBox_caretModeKey->setCurrentIndex(static_cast<int>(pHost->mCaretShortcut));
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
 
     // Enable the controls that would be disabled if there wasn't a Host instance
@@ -2845,6 +2848,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
         pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
+        pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
 
         if (widget_playerRoomStyle->isVisible()) {
             // Although the controls have been interactively modifying the
