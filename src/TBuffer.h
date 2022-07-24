@@ -193,7 +193,7 @@ public:
 
 
     std::deque<TChar> bufferLine;
-    // stores the sequence of TChars that make up a line in a buffer
+    // stores the text attributes (TChars) that make up each line of text in the buffer
     std::deque<std::deque<TChar>> buffer;
     // stores the actual content of lines
     QStringList lineBuffer;
