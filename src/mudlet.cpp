@@ -633,7 +633,6 @@ mudlet::mudlet()
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
     connect(dactionModuleManager, &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
-    connect(dactionCaretMode, &QAction::triggered, this, &mudlet::slot_caret_mode);
     connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_compact_input_line);
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_editor_dialog);

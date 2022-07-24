@@ -509,8 +509,6 @@ public:
     };
     // clang-format on
 
-    bool isCaretModeEnabled() { return dactionCaretMode->isChecked(); }
-
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();

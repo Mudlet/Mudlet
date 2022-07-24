@@ -178,6 +178,13 @@ bool TCommandLine::event(QEvent* event)
             break;
 
         case Qt::Key_Tab:
+            // check if tab is the caret shortcut key
+            if (mpHost->mCaretShortcut == Host::CaretShortcut::Tab) {
+                mpHost->setCaretEnabled(true);
+                ke->accept();
+                return true;
+            }
+
             if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
                 // Switch to NEXT profile tab
                 int currentIndex = mudlet::self()->mpTabBar->currentIndex();
@@ -189,14 +196,12 @@ bool TCommandLine::event(QEvent* event)
                 }
                 ke->accept();
                 return true;
-
             }
 
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
                 handleTabCompletion(true);
                 ke->accept();
                 return true;
-
             }
 
             // Process as a possible key binding if there are ANY modifiers

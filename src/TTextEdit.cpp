@@ -2708,6 +2708,7 @@ void TTextEdit::updateCaret()
 // you act upon the key.
 void TTextEdit::keyPressEvent(QKeyEvent* event)
 {
+    qDebug() << "TTextEdit::keyPressEvent()" << event->key();
     if (!mpHost->caretEnabled()) {
         QWidget::keyPressEvent(event);
         return;
@@ -2805,6 +2806,12 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     case Qt::Key_PageDown:
         newCaretLine = std::min(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
         break;
+    case Qt::Key_Tab: {
+            if (mpHost->mCaretShortcut == Host::CaretShortcut::Tab) {
+                mpHost->setCaretEnabled(false);
+                break;
+            }
+        }
     }
 
     // Did the key press change the caret position?
