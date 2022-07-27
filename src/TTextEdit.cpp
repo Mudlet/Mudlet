@@ -2817,9 +2817,15 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
             bool jumpedLines = false;
             if (mCaretColumn > 0) {
                 if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-                    QTextBoundaryFinder finder(QTextBoundaryFinder::Word, mpBuffer->line(mCaretLine));
+                    const auto& line = mpBuffer->line(mCaretLine);
+                    QTextBoundaryFinder finder(QTextBoundaryFinder::Word, line);
                     finder.setPosition(mCaretColumn);
-                    const int nextBoundary = finder.toPreviousBoundary();
+                    int nextBoundary = finder.toPreviousBoundary();
+                    while (nextBoundary != 0 && !mCtrlSelectionIgnores.contains(line.at(nextBoundary))) {
+                        auto currentLetter = line.midRef(nextBoundary, 1);
+                        qDebug() << currentLetter << nextBoundary << line.length();
+                        nextBoundary = finder.toPreviousBoundary();
+                    }
                     newCaretLine = mCaretLine;
                     newCaretColumn = nextBoundary;
                 } else {
@@ -2842,9 +2848,16 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
             bool jumpedLines = false;
             if (mCaretColumn < (mpBuffer->lineBuffer.at(mCaretLine).length() - 1)) {
                 if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-                    QTextBoundaryFinder finder(QTextBoundaryFinder::Word, mpBuffer->line(mCaretLine));
+                    const auto& line = mpBuffer->line(mCaretLine);
+                    QTextBoundaryFinder finder(QTextBoundaryFinder::Word, line);
                     finder.setPosition(mCaretColumn);
-                    const int nextBoundary = finder.toNextBoundary();
+                    int nextBoundary = finder.toNextBoundary();
+                    while (nextBoundary != line.length() && !mCtrlSelectionIgnores.contains(line.at(nextBoundary))) {
+                        auto currentLetter = line.midRef(nextBoundary, 1);
+                        qDebug() << currentLetter << nextBoundary << line.length();
+                        nextBoundary = finder.toNextBoundary();
+                    }
+                    nextBoundary = std::min(nextBoundary, line.length() - 1);
                     newCaretColumn = nextBoundary;
                     newCaretLine = mCaretLine;
                 } else {
