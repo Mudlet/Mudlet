@@ -2852,10 +2852,12 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                     QTextBoundaryFinder finder(QTextBoundaryFinder::Word, line);
                     finder.setPosition(mCaretColumn);
                     int nextBoundary = finder.toNextBoundary();
-                    while (nextBoundary != line.length() && !mCtrlSelectionIgnores.contains(line.at(nextBoundary))) {
-                        auto currentLetter = line.midRef(nextBoundary, 1);
-                        qDebug() << currentLetter << nextBoundary << line.length();
+                    QStringRef currentLetter = line.midRef(nextBoundary, 1);
+                    qDebug() << "starting currentLetter" << currentLetter << "nextBoundary" << nextBoundary << "mCtrlSelectionIgnores.contains(currentLetter)" << mCtrlSelectionIgnores.contains(currentLetter);
+                    while (nextBoundary != line.length() && mCtrlSelectionIgnores.contains(currentLetter)) {
                         nextBoundary = finder.toNextBoundary();
+                        currentLetter = line.midRef(nextBoundary, 1);
+                        qDebug() << "looping currentLetter" << currentLetter << "nextBoundary" << nextBoundary;
                     }
                     nextBoundary = std::min(nextBoundary, line.length() - 1);
                     newCaretColumn = nextBoundary;
