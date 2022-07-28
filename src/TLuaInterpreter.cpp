@@ -17225,6 +17225,24 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mAnnounceIncomingText = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("blankLinesBehaviour")) {
+        static const QStringList behaviours{"show", "hide", "replacewithspace"};
+        const auto behaviour = getVerifiedString(L, __func__, 2, "value");
+
+        if (!behaviours.contains(behaviour)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
+                __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
+            return lua_error(L);
+        }
+
+        if (behaviour == qsl("show")) {
+            host.mBlankLineBehaviour = Host::BlankLineBehaviour::Show;
+        } else if (behaviour == qsl("hide")) {
+            host.mBlankLineBehaviour = Host::BlankLineBehaviour::Hide;
+        } else if (behaviour == qsl("replacewithspace")) {
+            host.mBlankLineBehaviour = Host::BlankLineBehaviour::ReplaceWithSpace;
+        }
+    }
 
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }

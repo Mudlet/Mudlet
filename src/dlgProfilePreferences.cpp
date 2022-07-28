@@ -500,6 +500,7 @@ void dlgProfilePreferences::disableHostDetails()
     hidePasswordMigrationLabel();
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
     checkBox_announceIncomingText->setEnabled(false);
+    comboBox_blankLinesBehaviour->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
     label_networkPacketTimeout->setEnabled(false);
     doubleSpinBox_networkPacketTimeout->setEnabled(false);
@@ -582,6 +583,7 @@ void dlgProfilePreferences::enableHostDetails()
     groupBox_ssl->setEnabled(QSslSocket::supportsSsl());
 #endif
     checkBox_announceIncomingText->setEnabled(true);
+    comboBox_blankLinesBehaviour->setEnabled(true);
 
     // ===== tab_chat =====
     groupBox_ircOptions->setEnabled(true);
@@ -1102,6 +1104,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
     doubleSpinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout() / 1000.0);
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
+    comboBox_blankLinesBehaviour->setCurrentIndex(static_cast<int>(pHost->mBlankLineBehaviour));
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -1416,6 +1419,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     checkBox_debugShowAllCodepointProblems->setChecked(false);
     checkBox_announceIncomingText->setChecked(false);
+    comboBox_blankLinesBehaviour->setCurrentIndex(0);
 
     groupBox_ssl_certificate->hide();
     frame_notificationArea->hide();
@@ -2796,6 +2800,8 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mSearchEngineName = search_engine_combobox->currentText();
 
         pHost->mTimerDebugOutputSuppressionInterval = timeEdit_timerDebugOutputMinimumInterval->time();
+
+        pHost->mBlankLineBehaviour = static_cast<Host::BlankLineBehaviour>(comboBox_blankLinesBehaviour->currentIndex());
 
         auto hideSmallIcon = false, hideSmallIconText = false;
         if (comboBox_discordSmallIconPrivacy->currentIndex() == 0) {

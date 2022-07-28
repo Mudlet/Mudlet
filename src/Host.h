@@ -645,6 +645,13 @@ public:
     bool mTutorialForCompactLineAlreadyShown;
 
     bool mAnnounceIncomingText = true;
+    enum class BlankLineBehaviour {
+        Show,
+        Hide,
+        ReplaceWithSpace
+    };
+    Q_ENUM(BlankLineBehaviour)
+    BlankLineBehaviour mBlankLineBehaviour = BlankLineBehaviour::Show;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous

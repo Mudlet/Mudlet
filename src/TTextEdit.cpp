@@ -663,7 +663,7 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     }
     if (!textRect.isNull()) {
         painter.fillRect(textRect, bgColor);
-    }
+}
     return charWidth;
 }
 
@@ -2878,7 +2878,6 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                 newCaretLine = mCaretLine;
                 newCaretColumn = mCaretColumn;
             }
-
 
             // use newCaretColumn if we jumped lines or the selection extends to the right of the cursor
             const bool selectionBehindCursor = newCaretColumn > mCaretColumn;
