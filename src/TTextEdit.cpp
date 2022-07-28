@@ -958,7 +958,6 @@ void TTextEdit::highlightSelection()
 {
     QRegion newRegion;
 
-    qDebug() << "mPA" << mPA << "mPB" << mPB;
     int lineDelta = abs(mPA.y() - mPB.y()) - 1;
     if (lineDelta > 0) {
         QRect rectFirstLine(mPA.x() * mFontWidth, (mPA.y() - imageTopLine()) * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
@@ -1148,7 +1147,6 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         mPB = mDragSelectionEnd;
     }
 
-    // how does this work? Abstract and use it for keyboard selection too.
     for (int yIndex = mPA.y(), total = mPB.y(); yIndex <= total; ++yIndex) {
         if (yIndex >= static_cast<int>(mpBuffer->buffer.size()) || yIndex < 0) {
             // Abort if we are considering a line not in the buffer:
@@ -1622,7 +1620,6 @@ void TTextEdit::slot_copySelectionToClipboard()
     }
 
     QString selectedText = getSelectedText(QChar::LineFeed);
-    qDebug() << "TTextEdit::slot_copySelectionToClipboard() - selectedText: " << selectedText;
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(selectedText);
 }
