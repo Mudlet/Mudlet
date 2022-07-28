@@ -887,6 +887,16 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->mAnnounceIncomingText = true;
     }
+    if (attributes().hasAttribute("blankLineBehaviour")) {
+        const QStringRef blankLineBehaviour(attributes().value(qsl("blankLineBehaviour")));
+        if (blankLineBehaviour == qsl("Hide")) {
+            pHost->mBlankLineBehaviour = Host::BlankLineBehaviour::Hide;
+        } else if (blankLineBehaviour == qsl("Show")) {
+            pHost->mBlankLineBehaviour = Host::BlankLineBehaviour::Show;
+        } else if (blankLineBehaviour == qsl("ReplaceWithSpace")) {
+            pHost->mBlankLineBehaviour = Host::BlankLineBehaviour::ReplaceWithSpace;
+        }
+    }
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
     pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
