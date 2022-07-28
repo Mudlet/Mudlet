@@ -164,6 +164,15 @@ void TTextEdit::focusInEvent(QFocusEvent* event)
     QWidget::focusInEvent(event);
 }
 
+void TTextEdit::focusOutEvent(QFocusEvent *event)
+{
+    if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+    }
+
+    QWidget::focusOutEvent(event);
+}
+// debug using gammaray to see which events are raised
 
 void TTextEdit::slot_toggleTimeStamps(const bool state)
 {
@@ -2708,9 +2717,10 @@ void TTextEdit::updateCaret()
 // you act upon the key.
 void TTextEdit::keyPressEvent(QKeyEvent* event)
 {
-    qDebug() << "TTextEdit::keyPressEvent()" << event->key();
+    qDebug() << "TTextEdit::keyPressEvent()" << event;
     if (!mpHost->caretEnabled()) {
         QWidget::keyPressEvent(event);
+        qDebug() << "no caret - quitting";
         return;
     }
 
@@ -2807,12 +2817,23 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         newCaretLine = std::min(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
         break;
     case Qt::Key_Tab: {
-            if (mpHost->mCaretShortcut == Host::CaretShortcut::Tab) {
+            qDebug() << "TTextEdit::keyPressEvent() - tab";
+            if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(event->modifiers() & Qt::ControlModifier)) ||
+                (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (event->modifiers() & Qt::ControlModifier))){
+                mpHost->setCaretEnabled(false);
+                break;
+            }
+        }
+
+    case Qt::Key_F6: {
+            qDebug() << "TTextEdit::keyPressEvent() - F6";
+            if (mpHost->mCaretShortcut == Host::CaretShortcut::F6) {
                 mpHost->setCaretEnabled(false);
                 break;
             }
         }
     }
+
 
     // Did the key press change the caret position?
     if (newCaretLine == -1 && newCaretColumn == -1) {

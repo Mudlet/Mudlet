@@ -178,8 +178,8 @@ bool TCommandLine::event(QEvent* event)
             break;
 
         case Qt::Key_Tab:
-            // check if tab is the caret shortcut key
-            if (mpHost->mCaretShortcut == Host::CaretShortcut::Tab) {
+            if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(ke->modifiers() & Qt::ControlModifier)) ||
+                (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (ke->modifiers() & Qt::ControlModifier))) {
                 mpHost->setCaretEnabled(true);
                 ke->accept();
                 return true;
@@ -208,6 +208,14 @@ bool TCommandLine::event(QEvent* event)
             // other than just the Ctrl one
             // CHECKME: What about system foreground application switching?
             if (keybindingMatched(ke)) {
+                return true;
+            }
+            break;
+
+        case Qt::Key_F6:
+            if (mpHost->mCaretShortcut == Host::CaretShortcut::F6) {
+                mpHost->setCaretEnabled(true);
+                ke->accept();
                 return true;
             }
             break;
