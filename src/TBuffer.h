@@ -193,9 +193,13 @@ public:
 
 
     std::deque<TChar> bufferLine;
+    // stores the text attributes (TChars) that make up each line of text in the buffer
     std::deque<std::deque<TChar>> buffer;
-    QStringList timeBuffer;
+    // stores the actual content of lines
     QStringList lineBuffer;
+    // stores timestamps associated with lines
+    QStringList timeBuffer;
+    // stores a boolean whenever the line is a prompt one
     QList<bool> promptBuffer;
     TLinkStore mLinkStore;
     int mLinesLimit = 10000;

@@ -1021,7 +1021,6 @@ void TTextEdit::highlightSelection()
     }
 
     if (QAccessible::isActive()) {
-        qDebug() << "selection is from" << offsetForPosition(mPA.y(), mPA.x()) << "to" << offsetForPosition(mPB.y(), mPB.x());
         QAccessibleTextSelectionEvent event(this, offsetForPosition(mPA.y(), mPA.x()), offsetForPosition(mPB.y(), mPB.x()));
         QAccessible::updateAccessibility(&event);
     }
@@ -2760,36 +2759,33 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
     };
 
     auto updateSelection = [&](bool useNewColumn) {
-                    if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
-                qDebug() << "selection enabled";
-                mShiftSelection = true;
-                mDragStart.setY(mCaretLine);
-                mDragStart.setX(mCaretColumn);
-                mDragSelectionEnd.setY(newCaretLine);
-                mDragSelectionEnd.setX(mCaretColumn);
+        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
+            mShiftSelection = true;
+            mDragStart.setY(mCaretLine);
+            mDragStart.setX(mCaretColumn);
+            mDragSelectionEnd.setY(newCaretLine);
+            mDragSelectionEnd.setX(mCaretColumn);
+            unHighlight();
+            normaliseSelection();
+            highlightSelection();
+        } else if (mShiftSelection) {
+            if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+                mShiftSelection = false;
                 unHighlight();
-                normaliseSelection();
-                highlightSelection();
-            } else if (mShiftSelection) {
-                if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
-                    qDebug() << "selection disabled";
-                    mShiftSelection = false;
-                    unHighlight();
-                    mSelectedRegion = QRegion(0, 0, 0, 0);
+                mSelectedRegion = QRegion(0, 0, 0, 0);
 
-                    // keep cursor position as-is because it is only the selection that should be cleared
-                    newCaretLine = mCaretLine;
-                    newCaretColumn = mCaretColumn;
-                    return;
-                }
-                qDebug() << "continuing selection";
-                mDragSelectionEnd.setY(newCaretLine);
-                mDragSelectionEnd.setX(useNewColumn ? newCaretColumn : mCaretColumn);
-
-                unHighlight();
-                normaliseSelection();
-                highlightSelection();
+                // keep cursor position as-is because it is only the selection that should be cleared
+                newCaretLine = mCaretLine;
+                newCaretColumn = mCaretColumn;
+                return;
             }
+            mDragSelectionEnd.setY(newCaretLine);
+            mDragSelectionEnd.setX(useNewColumn ? newCaretColumn : mCaretColumn);
+
+            unHighlight();
+            normaliseSelection();
+            highlightSelection();
+        }
     };
 
     switch (event->key()) {
@@ -2824,9 +2820,17 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
             bool jumpedLines = false;
             if (mCaretColumn > 0) {
                 if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-                    QTextBoundaryFinder finder(QTextBoundaryFinder::Word, mpBuffer->line(mCaretLine));
+                    const auto& line = mpBuffer->line(mCaretLine);
+                    QTextBoundaryFinder finder(QTextBoundaryFinder::Word, line);
                     finder.setPosition(mCaretColumn);
-                    const int nextBoundary = finder.toPreviousBoundary();
+                    int nextBoundary {};
+                    QStringRef currentLetter {};
+
+                    do {
+                        nextBoundary = finder.toPreviousBoundary();
+                        currentLetter = line.midRef(nextBoundary, 1);
+                    } while (nextBoundary != 0 && mCtrlSelectionIgnores.contains(currentLetter));
+
                     newCaretLine = mCaretLine;
                     newCaretColumn = nextBoundary;
                 } else {
@@ -2849,9 +2853,18 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
             bool jumpedLines = false;
             if (mCaretColumn < (mpBuffer->lineBuffer.at(mCaretLine).length() - 1)) {
                 if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-                    QTextBoundaryFinder finder(QTextBoundaryFinder::Word, mpBuffer->line(mCaretLine));
+                    const auto& line = mpBuffer->line(mCaretLine);
+                    QTextBoundaryFinder finder(QTextBoundaryFinder::Word, line);
                     finder.setPosition(mCaretColumn);
-                    const int nextBoundary = finder.toNextBoundary();
+                    int nextBoundary {};
+                    QStringRef currentLetter {};
+
+                    do {
+                        nextBoundary = finder.toNextBoundary();
+                        currentLetter = line.midRef(nextBoundary, 1);
+                    } while (nextBoundary != line.length() && mCtrlSelectionIgnores.contains(currentLetter));
+
+                    nextBoundary = std::min(nextBoundary, line.length() - 1);
                     newCaretColumn = nextBoundary;
                     newCaretLine = mCaretLine;
                 } else {
@@ -2868,7 +2881,6 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                 newCaretLine = mCaretLine;
                 newCaretColumn = mCaretColumn;
             }
-            
 
             // use newCaretColumn if we jumped lines or the selection extends to the right of the cursor
             const bool selectionBehindCursor = newCaretColumn > mCaretColumn;

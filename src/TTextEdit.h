@@ -231,6 +231,9 @@ private:
     // where it's available."
     // We use the following to store the remainder (modulus 120):
     QPoint mMouseWheelRemainder;
+
+    // skip over the following characters when searching for a word
+    const QStringList mCtrlSelectionIgnores = {" ", ".", ",", ";", ":", "\"", "'", "`", "!", "?", "\\", "/", "|", "~", "*", "(", ")", "[", "]", "{", "}", "<", ">"};
 };
 
 #endif // MUDLET_TTEXTEDIT_H
