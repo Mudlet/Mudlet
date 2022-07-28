@@ -163,10 +163,12 @@ private:
     void expandSelectionToLine(int);
     inline void replaceControlCharacterWith_Picture(const uint, const QString&, const int, QVector<QString>&, int&) const;
     inline void replaceControlCharacterWith_OEMFont(const uint, const QString&, const int, QVector<QString>&, int&) const;
+    int offsetForPosition(int line, int column) const;
 
     int mFontHeight;
     int mFontWidth;
     bool mForceUpdate;
+    const QColor mCaretColor = QColorConstants::Gray;
 
     // Each TConsole instance uses two instances of this class, one above the
     // other but they need to behave differently in some ways; this flag is set
@@ -179,6 +181,8 @@ private:
     // 1/2/3 for single/double/triple click seen so far
     int  mMouseTrackLevel;
     bool mCtrlSelecting {};
+    // tracks status of the Shift key for keyboard-based selection
+    bool mShiftSelection {};
     int mCtrlDragStartY {};
     QPoint mDragStart, mDragSelectionEnd;
     int mOldScrollPos;
@@ -227,6 +231,9 @@ private:
     // where it's available."
     // We use the following to store the remainder (modulus 120):
     QPoint mMouseWheelRemainder;
+
+    // skip over the following characters when searching for a word
+    const QStringList mCtrlSelectionIgnores = {" ", ".", ",", ";", ":", "\"", "'", "`", "!", "?", "\\", "/", "|", "~", "*", "(", ")", "[", "]", "{", "}", "<", ">"};
 };
 
 #endif // MUDLET_TTEXTEDIT_H
