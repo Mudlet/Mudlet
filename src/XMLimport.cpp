@@ -897,8 +897,8 @@ void XMLimport::readHostPackage(Host* pHost)
             pHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
         } else if (caretShortcut == qsl("F6")) {
             pHost->mCaretShortcut = Host::CaretShortcut::F6;
-		}
-	}
+        }
+    }
     if (attributes().hasAttribute("blankLineBehaviour")) {
         const QStringRef blankLineBehaviour(attributes().value(qsl("blankLineBehaviour")));
         if (blankLineBehaviour == qsl("Hide")) {
