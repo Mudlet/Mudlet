@@ -2905,40 +2905,31 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 newCaretColumn = 0;
             }
             newCaretColumn = 0;
-        break;
-    case Qt::Key_Home:
-        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-            newCaretLine = 0;
-            newCaretColumn = 0;
-        } else {
-            newCaretColumn = 0;
-        }
-        newCaretColumn = 0;
-        break;
-    case Qt::Key_End:
-        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-            newCaretLine = mpBuffer->lineBuffer.length() - 1;
-            newCaretColumn = mpBuffer->lineBuffer[mCaretLine].length() - 1;
-        } else {
-            newCaretColumn = mpBuffer->lineBuffer.at(mCaretLine).length() - 1;
-        }
-        break;
-    case Qt::Key_PageUp:
-        newCaretLine = std::max(mCaretLine - mScreenHeight, 0);
-        break;
-    case Qt::Key_PageDown:
-        newCaretLine = std::min(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
-        break;
-    case Qt::Key_Tab: {
+            break;
+        case Qt::Key_End:
+            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+                newCaretLine = mpBuffer->lineBuffer.length() - 1;
+                newCaretColumn = mpBuffer->lineBuffer[mCaretLine].length() - 1;
+            } else {
+                newCaretColumn = mpBuffer->lineBuffer.at(mCaretLine).length() - 1;
+            }
+            break;
+        case Qt::Key_PageUp:
+            newCaretLine = std::max(mCaretLine - mScreenHeight, 0);
+            break;
+        case Qt::Key_PageDown:
+            newCaretLine = std::min(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
+            break;
+        case Qt::Key_Tab: {
             qDebug() << "TTextEdit::keyPressEvent() - tab";
-            if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(event->modifiers() & Qt::ControlModifier)) ||
-                (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (event->modifiers() & Qt::ControlModifier))){
+            if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(event->modifiers() & Qt::ControlModifier))
+                || (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (event->modifiers() & Qt::ControlModifier))) {
                 mpHost->setCaretEnabled(false);
                 break;
             }
         }
 
-    case Qt::Key_F6: {
+        case Qt::Key_F6: {
             qDebug() << "TTextEdit::keyPressEvent() - F6";
             if (mpHost->mCaretShortcut == Host::CaretShortcut::F6) {
                 mpHost->setCaretEnabled(false);
@@ -2946,7 +2937,6 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             }
         }
     }
-
 
     // Did the key press change the caret position?
     if (newCaretLine == -1 && newCaretColumn == -1) {
