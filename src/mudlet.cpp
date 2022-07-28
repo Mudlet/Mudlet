@@ -2982,15 +2982,6 @@ void mudlet::slot_multi_view(const bool state)
     }
 }
 
-void mudlet::slot_caret_mode(bool state) const
-{
-    if (!mpCurrentActiveHost) {
-        return;
-    }
-
-    mpCurrentActiveHost->setCaretEnabled(state);
-}
-
 // Called by the short-cut to the menu item that doesn't pass the checked state
 // of the menu-item that it provides a short-cut to:
 void mudlet::slot_toggle_compact_input_line()
