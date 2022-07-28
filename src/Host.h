@@ -647,6 +647,13 @@ public:
     bool mTutorialForCompactLineAlreadyShown;
 
     bool mAnnounceIncomingText = true;
+    enum class BlankLineBehaviour {
+        Show,
+        Hide,
+        ReplaceWithSpace
+    };
+    Q_ENUM(BlankLineBehaviour)
+    BlankLineBehaviour mBlankLineBehaviour = BlankLineBehaviour::Show;
 
     // shortcuts options visually impaired players have to switch between the input line and the main window
     enum class CaretShortcut {

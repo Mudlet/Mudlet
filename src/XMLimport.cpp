@@ -897,6 +897,16 @@ void XMLimport::readHostPackage(Host* pHost)
             pHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
         } else if (caretShortcut == qsl("F6")) {
             pHost->mCaretShortcut = Host::CaretShortcut::F6;
+		}
+	}
+    if (attributes().hasAttribute("blankLineBehaviour")) {
+        const QStringRef blankLineBehaviour(attributes().value(qsl("blankLineBehaviour")));
+        if (blankLineBehaviour == qsl("Hide")) {
+            pHost->mBlankLineBehaviour = Host::BlankLineBehaviour::Hide;
+        } else if (blankLineBehaviour == qsl("Show")) {
+            pHost->mBlankLineBehaviour = Host::BlankLineBehaviour::Show;
+        } else if (blankLineBehaviour == qsl("ReplaceWithSpace")) {
+            pHost->mBlankLineBehaviour = Host::BlankLineBehaviour::ReplaceWithSpace;
         }
     }
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
