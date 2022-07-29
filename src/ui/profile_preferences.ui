@@ -3876,7 +3876,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="2" column="0">
            <widget class="QLabel" name="label_caretModeKey">
             <property name="text">
-             <string>smaller text here</string>
+             <string>Switch between input line and main window using:</string>
             </property>
            </widget>
           </item>
