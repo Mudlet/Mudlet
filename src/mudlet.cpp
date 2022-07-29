@@ -1108,7 +1108,7 @@ void mudlet::migrateDebugConsole(Host* currentHost)
 void mudlet::scanForMudletTranslations(const QString& path)
 {
     mMudletTranslationsPathName = path;
-    qDebug().nospace().noquote() << "mudlet::scanForMudletTranslations(\"" << path << "\") INFO - Seeking Mudlet translation files:";
+    // qDebug().nospace().noquote() << "mudlet::scanForMudletTranslations(\"" << path << "\") INFO - Seeking Mudlet translation files:";
     mTranslationsMap.clear();
 
     QDir translationDir(path);
@@ -1136,7 +1136,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
 
         std::unique_ptr<QTranslator> pMudletTranslator = std::make_unique<QTranslator>();
         if (Q_LIKELY(pMudletTranslator->load(translationFileName, path))) {
-            qDebug().noquote().nospace() << "    found a Mudlet translation for locale code: \"" << languageCode << "\".";
+            // qDebug().noquote().nospace() << "    found a Mudlet translation for locale code: \"" << languageCode << "\".";
             if (!translationStats.isEmpty()) {
                 // For this to not be empty then we are reading the translations
                 // from the expected resource file and the translation
@@ -1206,7 +1206,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
 void mudlet::scanForQtTranslations(const QString& path)
 {
     mQtTranslationsPathName = path;
-    qDebug().nospace().noquote() << "mudlet::scanForQtTranslations(\"" << path << "\") INFO - Seeking Qt translation files:";
+    // qDebug().nospace().noquote() << "mudlet::scanForQtTranslations(\"" << path << "\") INFO - Seeking Qt translation files:";
     QMutableMapIterator<QString, translation> itTranslation(mTranslationsMap);
     while (itTranslation.hasNext()) {
         itTranslation.next();
@@ -1214,7 +1214,7 @@ void mudlet::scanForQtTranslations(const QString& path)
         std::unique_ptr<QTranslator> pQtTranslator = std::make_unique<QTranslator>();
         QString translationFileName(qsl("qt_%1.qm").arg(languageCode));
         if (pQtTranslator->load(translationFileName, path)) {
-            qDebug().noquote().nospace() << "    found a Qt translation for locale code: \"" << languageCode << "\"";
+            // qDebug().noquote().nospace() << "    found a Qt translation for locale code: \"" << languageCode << "\"";
             /*
              * Unfortunately, success in this operation does not mean that
              * a qt_xx_YY.qm translation file has been located, as the
@@ -1230,7 +1230,7 @@ void mudlet::scanForQtTranslations(const QString& path)
             current.mQtTranslationFileName = translationFileName;
             itTranslation.setValue(current);
         } else {
-            qDebug().noquote().nospace() << "    no Qt translation found for locale code: \"" << languageCode << "\"";
+            // qDebug().noquote().nospace() << "    no Qt translation found for locale code: \"" << languageCode << "\"";
         }
     }
 }
@@ -1238,7 +1238,7 @@ void mudlet::scanForQtTranslations(const QString& path)
 void mudlet::loadTranslators(const QString& languageCode)
 {
     if (!mTranslatorsLoadedList.isEmpty()) {
-        qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - uninstalling existing translation previously loaded...";
+        // qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - uninstalling existing translation previously loaded...";
         QMutableListIterator<QPointer<QTranslator>> itTranslator(mTranslatorsLoadedList);
         itTranslator.toBack();
         while (itTranslator.hasPrevious()) {
@@ -1261,7 +1261,7 @@ void mudlet::loadTranslators(const QString& languageCode)
         // up the process of locating the file:
         pQtTranslator->load(qtTranslatorFileName, mQtTranslationsPathName);
         if (!pQtTranslator->isEmpty()) {
-            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Qt libraries' translation from a path and file name specified as: \"" << mQtTranslationsPathName << "/"<< qtTranslatorFileName << "\"...";
+            // qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Qt libraries' translation from a path and file name specified as: \"" << mQtTranslationsPathName << "/"<< qtTranslatorFileName << "\"...";
             qApp->installTranslator(pQtTranslator);
             mTranslatorsLoadedList.append(pQtTranslator);
         }
@@ -1272,8 +1272,8 @@ void mudlet::loadTranslators(const QString& languageCode)
     if (!mudletTranslatorFileName.isEmpty()) {
         pMudletTranslator->load(mudletTranslatorFileName, mMudletTranslationsPathName);
         if (!pMudletTranslator->isEmpty()) {
-            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translation from: \"" << mMudletTranslationsPathName << "/"
-                                         << mudletTranslatorFileName << "\"...";
+//            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translation from: \"" << mMudletTranslationsPathName << "/"
+//                                         << mudletTranslatorFileName << "\"...";
             qApp->installTranslator(pMudletTranslator);
             mTranslatorsLoadedList.append(pMudletTranslator);
         }
@@ -1959,9 +1959,10 @@ void mudlet::readEarlySettings(const QSettings& settings)
     mUserLocale = QLocale(mInterfaceLanguage);
     if (mUserLocale == QLocale::c()) {
         qWarning().nospace().noquote() << "mudlet::readEarlySettings(...) WARNING - Unable to convert language code \"" << mInterfaceLanguage << "\" to a recognised locale, reverting to the POSIX 'C' one.";
-    } else {
-        qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+        return;
     }
+
+//    qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
