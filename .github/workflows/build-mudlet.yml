@@ -129,13 +129,6 @@ jobs:
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
-        # workaround for https://github.com/mitchellh/gon/issues/56
-        pushd .
-        cd /usr/local/Homebrew
-        git fetch --tags
-        git checkout 3.3.9
-        popd
-
         # these aren't available or don't work well in vcpkg
         brew install pkg-config libzzip libzip ccache luarocks expect mitchellh/gon/gon
 
