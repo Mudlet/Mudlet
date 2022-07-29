@@ -2736,7 +2736,6 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     qDebug() << "TTextEdit::keyPressEvent()" << event;
     if (!mpHost->caretEnabled()) {
         QWidget::keyPressEvent(event);
-        qDebug() << "no caret - quitting";
         return;
     }
 
@@ -2921,7 +2920,6 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             newCaretLine = std::min(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
             break;
         case Qt::Key_Tab: {
-            qDebug() << "TTextEdit::keyPressEvent() - tab";
             if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(event->modifiers() & Qt::ControlModifier))
                 || (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (event->modifiers() & Qt::ControlModifier))) {
                 mpHost->setCaretEnabled(false);
@@ -2930,7 +2928,6 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
 
         case Qt::Key_F6: {
-            qDebug() << "TTextEdit::keyPressEvent() - F6";
             if (mpHost->mCaretShortcut == Host::CaretShortcut::F6) {
                 mpHost->setCaretEnabled(false);
                 break;
