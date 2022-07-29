@@ -2733,7 +2733,6 @@ void TTextEdit::updateCaret()
 // you act upon the key.
 void TTextEdit::keyPressEvent(QKeyEvent* event)
 {
-    qDebug() << "TTextEdit::keyPressEvent()" << event;
     if (!mpHost->caretEnabled()) {
         QWidget::keyPressEvent(event);
         return;
