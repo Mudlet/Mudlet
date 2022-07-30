@@ -448,7 +448,7 @@ function InstallCcache() {
     DownloadFile "https://github.com/ccache/ccache/releases/download/v4.6.1/ccache-4.6.1-windows-x86_64.zip" "ccache.zip"
     ExtractZip "ccache.zip" "ccache"
     Set-Location "ccache/ccache-4.6.1-windows-x86_64"
-    Copy-Item "ccache.exe" "C:\Program Files\ccache"
+    Copy-Item "ccache.exe" "C:\Program Files\ccache" -Force
 }
 
 function InstallLuaModules(){
