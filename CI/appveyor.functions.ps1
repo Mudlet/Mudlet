@@ -448,7 +448,7 @@ function InstallCcache() {
     DownloadFile "https://github.com/ccache/ccache/releases/download/v4.6.1/ccache-4.6.1-windows-x86_64.zip" "ccache.zip"
     ExtractZip "ccache.zip" "ccache"
     Set-Location "ccache/ccache-4.6.1-windows-x86_64"
-    Copy-Item "ccache.exe" "$Env:MINGW_BASE_DIR\bin"
+    Copy-Item "ccache.exe" "C:\Program Files\ccache"
 }
 
 function InstallLuaModules(){
@@ -463,7 +463,7 @@ function InstallLuaModules(){
 }
 
 function CheckAndInstallCcache(){
-  CheckAndInstall "ccache" "$Env:MINGW_BASE_DIR\bin\ccache.exe" { InstallCcache }
+  CheckAndInstall "ccache" "C:\Program Files\ccache" { InstallCcache }
 }
 
 function CheckAndInstall7z(){
