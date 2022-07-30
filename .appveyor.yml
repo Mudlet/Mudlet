@@ -11,7 +11,7 @@ image: Visual Studio 2019
 environment:
   global:
     CCACHE_DIR: "%APPVEYOR_BUILD_FOLDER%\\.ccache"
-    CCACHE_MAXSIZE: 2G
+    CCACHE_MAXSIZE: 1G
   signing_password:
     secure: JJDxNdreMgNn/IOcY+UVmlaqgDT4a7vcxsY3nfcgWY4=
   DEPLOY_KEY_PASS:
