@@ -12,7 +12,6 @@ SetQtBaseDir "$logFile"
 $Env:PATH = "$CMakePath;C:\MinGW\bin;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;C:\Program Files\ccache;$Env:PATH"
 
 # install dependencies
-
 CheckAndInstallCcache
 CheckAndInstall7z
 CheckAndInstallCmake
