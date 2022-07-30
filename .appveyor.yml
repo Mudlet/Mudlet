@@ -30,7 +30,7 @@ install:
 - powershell ".\appveyor.install.ps1"
 
 before_build:
-- $Env:PATH = "$CMakePath;C:\MinGW\bin;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;C:\Program Files\ccache;$Env:PATH"
+- set PATH=C:\Program Files\ccache;%PATH%
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
 - echo "ccache stats before building:"
 - ccache -s
@@ -39,7 +39,6 @@ build_script:
 - powershell ".\appveyor.build.ps1"
 
 after_build:
-- $Env:PATH = "$CMakePath;C:\MinGW\bin;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;C:\Program Files\ccache;$Env:PATH"
 - echo "ccache stats after building:"
 - ccache -s
 
