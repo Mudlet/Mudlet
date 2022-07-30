@@ -31,7 +31,11 @@ install:
 
 build_script:
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
+- echo "ccache stats before building:"
+- ccache -s
 - powershell ".\appveyor.build.ps1"
+- echo "ccache stats after building:"
+- ccache -s
 
 on_failure:
 - cd C:\src
