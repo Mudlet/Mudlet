@@ -3982,3 +3982,12 @@ void Host::setEditorShowBidi(const bool state)
         }
     }
 }
+
+bool Host::caretEnabled() const {
+    return mCaretEnabled;
+}
+
+void Host::setCaretEnabled(bool enabled) {
+    mCaretEnabled = enabled;
+    mpConsole->setCaretMode(enabled);
+}
