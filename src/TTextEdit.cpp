@@ -164,6 +164,15 @@ void TTextEdit::focusInEvent(QFocusEvent* event)
     QWidget::focusInEvent(event);
 }
 
+void TTextEdit::focusOutEvent(QFocusEvent *event)
+{
+    if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+    }
+
+    QWidget::focusOutEvent(event);
+}
+// debug using gammaray to see which events are raised
 
 void TTextEdit::slot_toggleTimeStamps(const bool state)
 {
@@ -510,7 +519,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     }
 
     // If caret mode is enabled and the line is empty, still draw the caret.
-    if (mudlet::self()->isCaretModeEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
+    if (mpHost->caretEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
         auto textRect = QRect(0, mFontHeight * lineOfScreen, mFontWidth, mFontHeight);
         painter.fillRect(textRect, mCaretColor);
     }
@@ -650,7 +659,7 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     }
     textRects.append(textRect);
     QColor bgColor;
-    bool caretIsHere = mudlet::self()->isCaretModeEnabled() && mCaretLine == line && mCaretColumn == column;
+    bool caretIsHere = mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
     if (Q_UNLIKELY(static_cast<bool>(attributes & TChar::Reverse) != (charStyle.isSelected() != caretIsHere))) {
         fgColors.append(charStyle.background());
         bgColor = charStyle.foreground();
@@ -2666,7 +2675,7 @@ void TTextEdit::setCaretPosition(int line, int column)
     mCaretLine = line;
     mCaretColumn = column;
 
-    if (!mudlet::self()->isCaretModeEnabled()) {
+    if (!mpHost->caretEnabled()) {
         return;
     }
 
@@ -2722,8 +2731,9 @@ void TTextEdit::updateCaret()
 // Note that QKeyEvent starts with isAccepted() == true, so you do not need to
 // call QKeyEvent::accept() - just do not call the base class implementation if
 // you act upon the key.
-void TTextEdit::keyPressEvent(QKeyEvent *event) {
-    if (!mudlet::self()->isCaretModeEnabled()) {
+void TTextEdit::keyPressEvent(QKeyEvent* event)
+{
+    if (!mpHost->caretEnabled()) {
         QWidget::keyPressEvent(event);
         return;
     }
@@ -2917,6 +2927,20 @@ void TTextEdit::keyPressEvent(QKeyEvent *event) {
                 }
             }
             break;
+        case Qt::Key_Tab: {
+            if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(event->modifiers() & Qt::ControlModifier))
+                || (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (event->modifiers() & Qt::ControlModifier))) {
+                mpHost->setCaretEnabled(false);
+                break;
+            }
+        }
+
+        case Qt::Key_F6: {
+            if (mpHost->mCaretShortcut == Host::CaretShortcut::F6) {
+                mpHost->setCaretEnabled(false);
+                break;
+            }
+        }
     }
 
     // Did the key press change the caret position?

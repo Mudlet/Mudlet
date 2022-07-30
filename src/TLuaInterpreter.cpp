@@ -17246,6 +17246,26 @@ int TLuaInterpreter::setConfig(lua_State * L)
             host.mBlankLineBehaviour = Host::BlankLineBehaviour::ReplaceWithSpace;
         }
     }
+    if (key == qsl("caretShortcut")) {
+        static const QStringList keys{"none", "tab", "ctrltab", "f6"};
+        const auto key = getVerifiedString(L, __func__, 2, "value");
+
+        if (!keys.contains(key)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (key should be one of %s, got %s!)",
+                __func__, 2, keys.join(qsl(", ")).toUtf8().constData(), key.toUtf8().constData());
+            return lua_error(L);
+        }
+
+        if (key == qsl("none")) {
+            host.mCaretShortcut = Host::CaretShortcut::None;
+        } else if (key == qsl("tab")) {
+            host.mCaretShortcut = Host::CaretShortcut::Tab;
+        } else if (key == qsl("ctrltab")) {
+            host.mCaretShortcut = Host::CaretShortcut::CtrlTab;
+        } else if (key == qsl("f6")) {
+            host.mCaretShortcut = Host::CaretShortcut::F6;
+        }
+    }
 
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }

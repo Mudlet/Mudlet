@@ -144,6 +144,7 @@ public slots:
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
 
 private slots:
     void slot_copySelectionToClipboardImage();
