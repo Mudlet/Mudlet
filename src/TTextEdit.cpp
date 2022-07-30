@@ -2918,6 +2918,15 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         case Qt::Key_PageDown:
             newCaretLine = std::min(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
             break;
+        case Qt::Key_C:
+            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+                if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+                    slot_copySelectionToClipboard();
+                } else {
+                    slot_copySelectionToClipboardHTML();
+                }
+            }
+            break;
         case Qt::Key_Tab: {
             if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(event->modifiers() & Qt::ControlModifier))
                 || (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (event->modifiers() & Qt::ControlModifier))) {
