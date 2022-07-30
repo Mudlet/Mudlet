@@ -443,6 +443,14 @@ function InstallLuaZip () {
   Copy-Item "zip.dll" "$Env:MINGW_BASE_DIR\lib\lua\5.1"
 }
 
+function InstallCcache() {
+    Step "installing ccache"
+    DownloadFile "https://github.com/ccache/ccache/releases/download/v4.6.1/ccache-4.6.1-windows-x86_64.zip" "ccache.zip"
+    ExtractZip "ccache.zip" "ccache"
+    Set-Location "ccache/ccache-4.6.1-windows-x86_64"
+    Copy-Item "ccache.exe" "$Env:MINGW_BASE_DIR\bin"
+}
+
 function InstallLuaModules(){
   CheckAndInstall "lfs" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lfs.dll" { InstallLfs }
   CheckAndInstall "luasql.sqlite3" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\luasql\sqlite3.dll" { InstallLuasql }
@@ -452,6 +460,10 @@ function InstallLuaModules(){
   CheckAndInstall "luazip" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\zip.dll" { InstallLuaZip }
   CheckAndInstall "argparse" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\argparse" { InstallLuaArgparse }
   CheckAndInstall "lunajson" "$Env:MINGW_BASE_DIR\\lib\luarocks\rocks-5.1\lunajson" { InstallLuaLunajson }
+}
+
+function CheckAndInstallCcache(){
+  CheckAndInstall "ccache" "$Env:MINGW_BASE_DIR\bin\ccache.exe" { InstallCcache }
 }
 
 function CheckAndInstall7z(){

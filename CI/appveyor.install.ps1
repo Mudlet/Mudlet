@@ -17,6 +17,7 @@ CheckAndInstall7z
 CheckAndInstallCmake
 CheckAndInstallMingwGet
 CheckAndInstallMsys
+CheckAndInstallCcache
 CheckAndInstallBoost
 CheckAndInstallQt
 CheckAndInstallPython
