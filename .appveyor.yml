@@ -47,8 +47,9 @@ on_failure:
 - powershell "Push-AppveyorArtifact ./verbose_output.log"
 - echo "Build failed - see verbose_output.log artifact upload for more information."
 
-on_finish:
-  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+# enable to debug build process
+#on_finish:
+#  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 cache:
   - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
