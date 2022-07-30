@@ -458,7 +458,6 @@ public:
     };
 
     // clang-format off
-    // games are to be added here in alphabetical order
     inline static const OrderedMap<QString, GameDetails> scmDefaultGames = {
         {"Avalon.de", {"avalon.mud.de", 23, false,
                         "<a href='http://avalon.mud.de'>http://avalon.mud.de</a>",
@@ -485,7 +484,6 @@ public:
         {"Materia Magica", {"materiamagica.com", 23, false,
                         "<a href='http://www.materiamagica.com'>http://www.materiamagica.com</a>",
                         ":/materiaMagicaIcon"}},
-        {"Mudren", {"mud.ren", 6666, false, "<a href='https://mud.ren/'>https://mud.ren/</a>", ":/icons/mudren.png"}},
         {"Realms of Despair", {"realmsofdespair.com", 4000, false, "<a href='http://www.realmsofdespair.com/'>http://www.realmsofdespair.com</a>", ":/icons/120x30RoDLogo.png"}},
         {"ZombieMUD", {"zombiemud.org", 3000, false, "<a href='http://www.zombiemud.org/'>http://www.zombiemud.org</a>", ":/icons/zombiemud.png"}},
         {"Aetolia", {"aetolia.com", 23, false, "<a href='http://www.aetolia.com/'>http://www.aetolia.com</a>", ":/icons/aetolia_120_30.png"}},
@@ -505,6 +503,8 @@ public:
         {"Cleft of Dimensions", {"cleftofdimensions.net", 4354, false, "<a href='https://www.cleftofdimensions.net/'>cleftofdimensions.net</a>", ":/icons/cleftofdimensions.png"}},
         {"Legends of the Jedi", {"legendsofthejedi.com", 5656, false, "<a href='https://www.legendsofthejedi.com/'>legendsofthejedi.com</a>", ":/icons/legendsofthejedi_120x30.png"}},
         {"CoreMUD", {"coremud.org", 4020, true, "<a href='https://coremud.org/'>coremud.org</a>", ":/icons/coremud_icon.jpg"}},
+        // new games are to be added here in alphabetical order
+        {"Mudren", {"mud.ren", 6666, false, "<a href='https://mud.ren/'>https://mud.ren/</a>", ":/icons/mudren.png"}},
         {"Multi-Users in Middle-earth", {"mume.org", 4242, true, "<a href='https://mume.org/'>mume.org</a>", ":/icons/mume.png"}},
     };
     // clang-format on
