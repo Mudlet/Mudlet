@@ -14,6 +14,7 @@ $Env:PATH = "$CMakePath;C:\MinGW\bin;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zi
 # install dependencies
 
 CheckAndInstallCcache
+ls ":\Program Files\ccache"
 ccache -s
 CheckAndInstall7z
 CheckAndInstallCmake
