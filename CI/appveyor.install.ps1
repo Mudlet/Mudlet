@@ -9,17 +9,18 @@ $global:ErrorActionPreference = "Stop"
 
 SetQtBaseDir "$logFile"
 
-$Env:PATH = "$CMakePath;C:\MinGW\bin;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;$Env:PATH"
+$Env:PATH = "$CMakePath;C:\MinGW\bin;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;C:\Program Files\ccache;$Env:PATH"
 
 # install dependencies
 
+CheckAndInstallCcache
+ccache -s
 CheckAndInstall7z
 CheckAndInstallCmake
 CheckAndInstallMingwGet
 CheckAndInstallMsys
 CheckAndInstallBoost
 CheckAndInstallQt
-CheckAndInstallCcache
 CheckAndInstallPython
 
 # Adapt the PATH variable again as we may have installed some dependencies just now and can determine their location.
