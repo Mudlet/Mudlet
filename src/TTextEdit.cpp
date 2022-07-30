@@ -2925,6 +2925,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 } else {
                     slot_copySelectionToClipboardHTML();
                 }
+                mpHost->setCaretEnabled(false);
             }
             break;
         case Qt::Key_Tab: {
