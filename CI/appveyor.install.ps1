@@ -17,9 +17,9 @@ CheckAndInstall7z
 CheckAndInstallCmake
 CheckAndInstallMingwGet
 CheckAndInstallMsys
-CheckAndInstallCcache
 CheckAndInstallBoost
 CheckAndInstallQt
+CheckAndInstallCcache
 CheckAndInstallPython
 
 # Adapt the PATH variable again as we may have installed some dependencies just now and can determine their location.
