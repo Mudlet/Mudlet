@@ -33,14 +33,14 @@ before_build:
 - set PATH=C:\Program Files\ccache;%PATH%
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
 - echo "ccache stats before building:"
-- ccache -s
+- ccache -s -v
 
 build_script:
 - powershell ".\appveyor.build.ps1"
 
 after_build:
 - echo "ccache stats after building:"
-- ccache -s
+- ccache -s -v
 
 on_failure:
 - cd C:\src
