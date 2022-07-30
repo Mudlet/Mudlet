@@ -367,12 +367,12 @@ macx {
 
 # use ccache if available
 BASE_CXX = $$QMAKE_CXX
+BASE_C = $$QMAKE_C
 # common linux location
-exists(/usr/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
-# common macos location
-exists(/usr/local/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
-# windows location in appveyor
-exists(C:/Program Files/ccache/ccache.exe):QMAKE_CXX = ccache $$BASE_CXX
+exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe) {
+    QMAKE_CXX = ccache $$BASE_CXX
+    QMAKE_C = ccache $$BASE_C
+}
 
 # There does not seem to be an obvious pkg-config option for this one, it is
 # for the zlib that is used in cTelnet to expand MCCP1/2 compressed data streams:
