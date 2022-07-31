@@ -44,7 +44,8 @@ jobs:
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
       BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.77.0/boost_1_77_0.tar.bz2/download
-
+      # APP_BUILD embeds the git sha which changes on every commit, throwing the cache off - ignore it
+      CCACHE_IGNOREOPTIONS: "-DAPP_BUILD=*"
 
     steps:
     - name: Checkout Mudlet source code
@@ -248,7 +249,7 @@ jobs:
 
     - name: (Linux/macOS) check ccache stats prior to build
       if: runner.os == 'Linux' || runner.os == 'macOS'
-      run: ccache --show-stats
+      run: ccache --zero-stats --show-stats
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
