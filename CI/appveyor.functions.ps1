@@ -14,7 +14,8 @@ if (-not $(Test-Path "$workingBaseDir")) {
 }
 
 $64Bit = (Get-WmiObject Win32_OperatingSystem).OSArchitecture -eq "64-bit"
-# Appveyor installs its CMake in C:\Program Files\CMake despite being a 64bit system
+# Appveyor's CMake is in C:\Program Files\CMake
+
 if($64Bit -and ($Env:APPVEYOR -ne "True")){
   $CMakePath = "C:\Program Files (x86)\CMake\bin"
 } else {
