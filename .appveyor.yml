@@ -6,14 +6,16 @@ branches:
   - /^Mudlet-.+/   # build release tags (yes, the option also applies to tags)
 init:
 - cmd: mkdir C:\src\
-- ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+# enable to debug build process on start
+# - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
   
 image: Visual Studio 2019
 environment:
   global:
     CCACHE_DIR: "%APPVEYOR_BUILD_FOLDER%\\.ccache"
+    # our appveyor cache size is 1G
     CCACHE_MAXSIZE: 1G
-    # CCACHE_DEBUG: true
+    # APP_BUILD embeds the git sha which changes on every commit, throwing the cache off - ignore it
     CCACHE_IGNOREOPTIONS: "-DAPP_BUILD=*"
   signing_password:
     secure: JJDxNdreMgNn/IOcY+UVmlaqgDT4a7vcxsY3nfcgWY4=
@@ -50,7 +52,7 @@ on_failure:
 - powershell "Push-AppveyorArtifact ./verbose_output.log"
 - echo "Build failed - see verbose_output.log artifact upload for more information."
 
-# enable to debug build process
+# enable to debug build process on completion
 #on_finish:
 #  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
