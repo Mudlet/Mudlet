@@ -185,7 +185,7 @@ jobs:
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 7
         sudo update-alternatives --set gcc /usr/bin/gcc-7
         sudo update-alternatives --set g++ /usr/bin/g++-7
-        
+
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
