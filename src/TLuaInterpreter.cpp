@@ -17204,6 +17204,14 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mUSE_UNIX_EOL = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("autoClearInputLine")) {
+        host.mAutoClearCommandLineAfterSend = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("showSentText")) {
+        host.mPrintCommand = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("fixUnnecessaryLinebreaks")) {
         host.set_USE_IRE_DRIVER_BUGFIX(getVerifiedBool(L, __func__, 2, "value"));
         return success();
