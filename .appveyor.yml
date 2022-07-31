@@ -6,9 +6,17 @@ branches:
   - /^Mudlet-.+/   # build release tags (yes, the option also applies to tags)
 init:
 - cmd: mkdir C:\src\
+# enable to debug build process on start
+# - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 image: Visual Studio 2019
 environment:
+  global:
+    CCACHE_DIR: "%APPVEYOR_BUILD_FOLDER%\\.ccache"
+    # our appveyor cache size is 1G
+    CCACHE_MAXSIZE: 1G
+    # APP_BUILD embeds the git sha which changes on every commit, throwing the cache off - ignore it
+    CCACHE_IGNOREOPTIONS: "-DAPP_BUILD=*"
   signing_password:
     secure: JJDxNdreMgNn/IOcY+UVmlaqgDT4a7vcxsY3nfcgWY4=
   DEPLOY_KEY_PASS:
@@ -26,18 +34,32 @@ install:
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
 - powershell ".\appveyor.install.ps1"
 
-build_script:
+before_build:
+- set PATH=C:\Program Files\ccache;%PATH%
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
+- echo "ccache stats before building:"
+- ccache --zero-stats --show-stats --verbose
+
+build_script:
 - powershell ".\appveyor.build.ps1"
+
+after_build:
+- echo "ccache stats after building:"
+- ccache --show-stats --verbose
 
 on_failure:
 - cd C:\src
 - powershell "Push-AppveyorArtifact ./verbose_output.log"
 - echo "Build failed - see verbose_output.log artifact upload for more information."
 
+# enable to debug build process on completion
+#on_finish:
+#  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+
 cache:
   - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
   - '%QT_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
+  - .ccache
 
 notifications:
 - provider: Webhook
