@@ -464,7 +464,8 @@ function InstallLuaModules(){
 }
 
 function CheckAndInstallCcache(){
-  CheckAndInstall "ccache" "C:\Program Files\ccache" { InstallCcache }
+  CheckAndInstall "ccache" "C:\Program Files\ccache\ccache.exe" { InstallCcache }
+
 }
 
 function CheckAndInstall7z(){
