@@ -44,7 +44,6 @@ jobs:
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
       BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.77.0/boost_1_77_0.tar.bz2/download
-      CCACHE_DIR: ${{runner.workspace}}/ccache
       # APP_BUILD embeds the git sha which changes on every commit, throwing the cache off - ignore it
       CCACHE_IGNOREOPTIONS: "-DAPP_BUILD=*"
 
@@ -135,6 +134,7 @@ jobs:
         brew install pkg-config libzzip libzip ccache luarocks expect mitchellh/gon/gon
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
+        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
@@ -185,6 +185,8 @@ jobs:
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 7
         sudo update-alternatives --set gcc /usr/bin/gcc-7
         sudo update-alternatives --set g++ /usr/bin/g++-7
+        
+        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
