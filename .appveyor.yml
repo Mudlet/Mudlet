@@ -14,6 +14,7 @@ environment:
     CCACHE_DIR: "%APPVEYOR_BUILD_FOLDER%\\.ccache"
     CCACHE_MAXSIZE: 1G
     CCACHE_DEBUG: true
+    CCACHE_IGNOREOPTIONS: "-DAPP_BUILD=*"
   signing_password:
     secure: JJDxNdreMgNn/IOcY+UVmlaqgDT4a7vcxsY3nfcgWY4=
   DEPLOY_KEY_PASS:
