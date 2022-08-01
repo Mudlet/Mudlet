@@ -23,7 +23,6 @@
 /src/generic_mapper_script.xml  @Mudlet/lua-interface
 /src/mudlet-mapper.xml          @Mudlet/lua-interface
 /src/run-lua-code-v4.xml        @Mudlet/lua-interface
-/src/enableAccessibility.mpackage @Mudlet/lua-interface
 
 # CI and compiler files are reviewed by the infrastructure team
 .travis.yml                     @Mudlet/infrastructure
