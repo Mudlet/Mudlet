@@ -191,7 +191,7 @@
         <file>icons/zombiemud.png</file>
         <file>lua-function-list.json</file>
         <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
-        <file>mudlet-lua/lua-enable-accessibility/enableAccessibility.xml</file>
+        <file>mudlet-lua/lua/enable-accessibility/enableAccessibility.xml</file>
         <file>mudlet-lua/lua/utf8_filenames.lua</file>
         <file>mudlet-mapper.xml</file>
         <file>Mudlet_splashscreen_development.png</file>
