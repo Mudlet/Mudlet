@@ -3096,6 +3096,9 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
     mUnnamedAreaName = mapObj[QLatin1String("anonymousAreaName")].toString();
+    if (mapObj.contains(QLatin1String("userData"))) {
+        readJsonUserData(mapObj[QLatin1String("userData")].toObject());
+    }
     QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
     float mapSymbolFontFudgeFactor = (qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0)) / 1000;
     bool isOnlyMapSymbolFontToBeUsed = mapObj[QLatin1String("onlyMapSymbolFontToBeUsed")].toBool();
