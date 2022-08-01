@@ -164,6 +164,15 @@ void TTextEdit::focusInEvent(QFocusEvent* event)
     QWidget::focusInEvent(event);
 }
 
+void TTextEdit::focusOutEvent(QFocusEvent *event)
+{
+    if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+    }
+
+    QWidget::focusOutEvent(event);
+}
+// debug using gammaray to see which events are raised
 
 void TTextEdit::slot_toggleTimeStamps(const bool state)
 {
@@ -510,9 +519,9 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     }
 
     // If caret mode is enabled and the line is empty, still draw the caret.
-    if (mudlet::self()->isCaretModeEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
+    if (mpHost->caretEnabled() && mCaretLine == lineNumber && lineText.isEmpty()) {
         auto textRect = QRect(0, mFontHeight * lineOfScreen, mFontWidth, mFontHeight);
-        painter.fillRect(textRect, mFgColor);
+        painter.fillRect(textRect, mCaretColor);
     }
 }
 
@@ -650,7 +659,7 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     }
     textRects.append(textRect);
     QColor bgColor;
-    bool caretIsHere = mudlet::self()->isCaretModeEnabled() && mCaretLine == line && mCaretColumn == column;
+    bool caretIsHere = mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
     if (Q_UNLIKELY(static_cast<bool>(attributes & TChar::Reverse) != (charStyle.isSelected() != caretIsHere))) {
         fgColors.append(charStyle.background());
         bgColor = charStyle.foreground();
@@ -658,9 +667,12 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
         fgColors.append(charStyle.foreground());
         bgColor = charStyle.background();
     }
+    if (caretIsHere) {
+        bgColor = mCaretColor;
+    }
     if (!textRect.isNull()) {
         painter.fillRect(textRect, bgColor);
-    }
+}
     return charWidth;
 }
 
@@ -1015,6 +1027,11 @@ void TTextEdit::highlightSelection()
         // X11 has a second clipboard that's updated on any selection
         clipboard->setText(getSelectedText(QChar::LineFeed), QClipboard::Selection);
     }
+
+    if (QAccessible::isActive()) {
+        QAccessibleTextSelectionEvent event(this, offsetForPosition(mPA.y(), mPA.x()), offsetForPosition(mPB.y(), mPB.x()));
+        QAccessible::updateAccessibility(&event);
+    }
 }
 
 void TTextEdit::unHighlight()
@@ -1035,6 +1052,11 @@ void TTextEdit::unHighlight()
         }
     }
     // clang-format on
+
+    if (QAccessible::isActive()) {
+        QAccessibleTextSelectionEvent event(this, -1, -1);
+        QAccessible::updateAccessibility(&event);
+    }
 }
 
 // ensure that mPA is top-left and mPB is bottom-right
@@ -1148,7 +1170,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         }
     }
 
-    if ((mDragStart.y() < cursorLocation.y() || (mDragStart.y() == cursorLocation.y() && mDragStart.x() < cursorLocation.x()))) {
+    if (mDragStart.y() < cursorLocation.y() || (mDragStart.y() == cursorLocation.y() && mDragStart.x() < cursorLocation.x())) {
         mPA = mDragStart;
         mPB = cursorLocation;
     } else {
@@ -1868,6 +1890,9 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
     int startPos = std::max(0, mPA.x());
     int endPos = std::min(mPB.x(), (mpBuffer->lineBuffer.at(endLine).size() - 1));
     QStringList textLines = mpBuffer->lineBuffer.mid(startLine, endLine - startLine + 1);
+    if (textLines.isEmpty()) {
+        return {};
+    }
 
     if (mPA.y() == mPB.y()) {
         // Is a single line, so trim characters off the beginning and end
@@ -2650,7 +2675,7 @@ void TTextEdit::setCaretPosition(int line, int column)
     mCaretLine = line;
     mCaretColumn = column;
 
-    if (!mudlet::self()->isCaretModeEnabled()) {
+    if (!mpHost->caretEnabled()) {
         return;
     }
 
@@ -2708,13 +2733,15 @@ void TTextEdit::updateCaret()
 // you act upon the key.
 void TTextEdit::keyPressEvent(QKeyEvent* event)
 {
-    if (!mudlet::self()->isCaretModeEnabled()) {
+    if (!mpHost->caretEnabled()) {
         QWidget::keyPressEvent(event);
         return;
     }
 
     int newCaretLine = -1;
     int newCaretColumn = -1;
+    int oldCaretLine = -1;
+    int oldCaretColumn = -1;
 
     auto adjustCaretColumn = [&]() {
         // If the new line is shorter, we need to adjust the column.
@@ -2738,73 +2765,182 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
     };
 
-    switch (event->key()) {
-    case Qt::Key_Up: {
-            if (mCaretLine == 0) {
-                break;
+    auto updateSelection = [&](bool useNewColumn) {
+        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
+            mShiftSelection = true;
+            mDragStart.setY(mCaretLine);
+            mDragStart.setX(mCaretColumn);
+            mDragSelectionEnd.setY(newCaretLine);
+            mDragSelectionEnd.setX(mCaretColumn);
+            unHighlight();
+            normaliseSelection();
+            highlightSelection();
+        } else if (mShiftSelection) {
+            if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+                mShiftSelection = false;
+                unHighlight();
+                mSelectedRegion = QRegion(0, 0, 0, 0);
+
+                // keep cursor position as-is because it is only the selection that should be cleared
+                newCaretLine = mCaretLine;
+                newCaretColumn = mCaretColumn;
+                return;
             }
-            newCaretLine = mCaretLine - 1;
+            mDragSelectionEnd.setY(newCaretLine);
+            mDragSelectionEnd.setX(useNewColumn ? newCaretColumn : mCaretColumn);
+
+            unHighlight();
+            normaliseSelection();
+            highlightSelection();
+        }
+    };
+
+    switch (event->key()) {
+        case Qt::Key_Up: {
+            if (mCaretLine == 0) {
+                newCaretLine = mCaretLine;
+                newCaretColumn = 0;
+            } else {
+                newCaretLine = mCaretLine - 1;
+                newCaretColumn = mCaretColumn;
+            }
 
             adjustCaretColumn();
+            updateSelection(true);
         }
-        break;
-    case Qt::Key_Down: {
+            break;
+        case Qt::Key_Down: {
             int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty();
             if (mCaretLine >= mpBuffer->lineBuffer.length() - 1 - emptyLastLine) {
-                break;
+                newCaretLine = mCaretLine;
+                newCaretColumn = mpBuffer->line(mCaretLine).length() - 1;
+            } else {
+                newCaretLine = mCaretLine + 1;
+                newCaretColumn = mCaretColumn;
             }
-            newCaretLine = mCaretLine + 1;
 
             adjustCaretColumn();
+            updateSelection(true);
         }
-        break;
-    case Qt::Key_Left: {
+            break;
+        case Qt::Key_Left: {
+            bool jumpedLines = false;
             if (mCaretColumn > 0) {
-                newCaretColumn = mCaretColumn - 1;
+                if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+                    const auto& line = mpBuffer->line(mCaretLine);
+                    QTextBoundaryFinder finder(QTextBoundaryFinder::Word, line);
+                    finder.setPosition(mCaretColumn);
+                    int nextBoundary {};
+                    QStringRef currentLetter {};
+
+                    do {
+                        nextBoundary = finder.toPreviousBoundary();
+                        currentLetter = line.midRef(nextBoundary, 1);
+                    } while (nextBoundary != 0 && mCtrlSelectionIgnores.contains(currentLetter));
+
+                    newCaretLine = mCaretLine;
+                    newCaretColumn = nextBoundary;
+                } else {
+                    newCaretLine = mCaretLine;
+                    newCaretColumn = mCaretColumn - 1;
+                }
             } else if (mCaretLine > 0) {
                 newCaretLine = mCaretLine - 1;
                 newCaretColumn = mpBuffer->lineBuffer.at(newCaretLine).length() - 1;
+                jumpedLines = true;
             }
+
+            // use newCaretColumn if we jumped lines or the selection extends to the left of the cursor
+            const bool selectionBehindCursor = newCaretColumn < mCaretColumn;
+
+            updateSelection(jumpedLines || selectionBehindCursor);
         }
-        break;
-    case Qt::Key_Right:
-        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
-            if (mCaretColumn < mpBuffer->lineBuffer.at(mCaretLine).length()) {
-                newCaretColumn = mCaretColumn + 1;
-            }
-        } else {
+            break;
+        case Qt::Key_Right: {
+            bool jumpedLines = false;
             if (mCaretColumn < (mpBuffer->lineBuffer.at(mCaretLine).length() - 1)) {
-                newCaretColumn = mCaretColumn + 1;
-            // last line of the buffer is empty, so we need to check for that:
+                if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+                    const auto& line = mpBuffer->line(mCaretLine);
+                    QTextBoundaryFinder finder(QTextBoundaryFinder::Word, line);
+                    finder.setPosition(mCaretColumn);
+                    int nextBoundary {};
+                    QStringRef currentLetter {};
+
+                    do {
+                        nextBoundary = finder.toNextBoundary();
+                        currentLetter = line.midRef(nextBoundary, 1);
+                    } while (nextBoundary != line.length() && mCtrlSelectionIgnores.contains(currentLetter));
+
+                    nextBoundary = std::min(nextBoundary, line.length() - 1);
+                    newCaretColumn = nextBoundary;
+                    newCaretLine = mCaretLine;
+                } else {
+                    newCaretColumn = mCaretColumn + 1;
+                    newCaretLine = mCaretLine;
+                }
+                // last line of the buffer is empty, so we need to check for that:
             } else if (mCaretLine < (mpBuffer->lineBuffer.length() - 2)) {
                 newCaretLine = mCaretLine + 1;
                 newCaretColumn = 0;
+                jumpedLines = true;
+            } else {
+                // last line, last character in the buffer
+                newCaretLine = mCaretLine;
+                newCaretColumn = mCaretColumn;
+            }
+
+            // use newCaretColumn if we jumped lines or the selection extends to the right of the cursor
+            const bool selectionBehindCursor = newCaretColumn > mCaretColumn;
+
+            updateSelection(jumpedLines || selectionBehindCursor);
+        }
+            break;
+        case Qt::Key_Home:
+            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+                newCaretLine = 0;
+                newCaretColumn = 0;
+            } else {
+                newCaretColumn = 0;
+            }
+            newCaretColumn = 0;
+            break;
+        case Qt::Key_End:
+            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+                newCaretLine = mpBuffer->lineBuffer.length() - 1;
+                newCaretColumn = mpBuffer->lineBuffer[mCaretLine].length() - 1;
+            } else {
+                newCaretColumn = mpBuffer->lineBuffer.at(mCaretLine).length() - 1;
+            }
+            break;
+        case Qt::Key_PageUp:
+            newCaretLine = std::max(mCaretLine - mScreenHeight, 0);
+            break;
+        case Qt::Key_PageDown:
+            newCaretLine = std::min(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
+            break;
+        case Qt::Key_C:
+            if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+                if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
+                    slot_copySelectionToClipboard();
+                } else {
+                    slot_copySelectionToClipboardHTML();
+                }
+            }
+            break;
+        case Qt::Key_Tab: {
+            if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(event->modifiers() & Qt::ControlModifier))
+                || (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (event->modifiers() & Qt::ControlModifier))) {
+                mpHost->setCaretEnabled(false);
+                break;
             }
         }
-        break;
-    case Qt::Key_Home:
-        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-            newCaretLine = 0;
-            newCaretColumn = 0;
-        } else {
-            newCaretColumn = 0;
+
+        case Qt::Key_F6: {
+            if (mpHost->mCaretShortcut == Host::CaretShortcut::F6) {
+                mpHost->setCaretEnabled(false);
+                break;
+            }
         }
-        newCaretColumn = 0;
-        break;
-    case Qt::Key_End:
-        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-            newCaretLine = mpBuffer->lineBuffer.length() - 1;
-            newCaretColumn = mpBuffer->lineBuffer[mCaretLine].length() - 1;
-        } else {
-            newCaretColumn = mpBuffer->lineBuffer.at(mCaretLine).length() - 1;
-        }
-        break;
-    case Qt::Key_PageUp:
-        newCaretLine = std::max(mCaretLine - mScreenHeight, 0);
-        break;
-    case Qt::Key_PageDown:
-        newCaretLine = std::min(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
-        break;
     }
 
     // Did the key press change the caret position?
@@ -2822,4 +2958,18 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     }
 
     setCaretPosition(newCaretLine, newCaretColumn);
+}
+
+int TTextEdit::offsetForPosition(int line, int column) const {
+    int ret = 0;
+
+    for (int i = 0; i < line; i++) {
+        // The text() method adds a '\n' to the end of every line, so account
+        // for it with the '+ 1' below.
+        ret += mpBuffer->line(i).length() + 1;
+    }
+
+    ret += column;
+
+    return ret;
 }
