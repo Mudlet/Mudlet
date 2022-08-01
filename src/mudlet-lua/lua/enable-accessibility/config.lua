@@ -1,4 +1,4 @@
-mpackage = [[enableAccessibility]]
+mpackage = [[enable-accessibility]]
 author = [[Mudlet]]
 title = [[Enables better accessibility on demand]]
 description = [[`mudlet accessibility on` will toggle a few settings for a better visually impaired experience:
