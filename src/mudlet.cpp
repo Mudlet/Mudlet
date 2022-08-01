@@ -4621,7 +4621,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         {qsl(":/run-lua-code-v4.xml"),    {qsl("*")}},
         {qsl(":/echo.xml"),               {qsl("*")}},
         {qsl(":/deleteOldProfiles.xml"),  {qsl("*")}},
-        {qsl(":/enableAccessibility.mpackage"), {qsl("*")}},
+        {qsl(":/enableAccessibility.xml"), {qsl("*")}},
         {qsl(":/CF-loader.xml"),          {qsl("carrionfields.net")}},
         {qsl(":/run-tests.xml"),          {qsl("mudlet.org")}},
         {qsl(":/mudlet-mapper.xml"),      {qsl("aetolia.com"),

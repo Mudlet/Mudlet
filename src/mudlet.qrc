@@ -7,7 +7,6 @@
         <file>echo.xml</file>
         <file>edbee_defaults/Lua.tmLanguage</file>
         <file>edbee_defaults/Mudlet.tmTheme</file>
-        <file>enableAccessibility.mpackage</file>
         <file>icons/120x30RoDLogo.png</file>
         <file>icons/3klogo.png</file>
         <file>icons/3slogo.png</file>
@@ -192,6 +191,7 @@
         <file>icons/zombiemud.png</file>
         <file>lua-function-list.json</file>
         <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
+        <file>mudlet-lua/lua-enable-accessibility/enableAccessibility.xml</file>
         <file>mudlet-lua/lua/utf8_filenames.lua</file>
         <file>mudlet-mapper.xml</file>
         <file>Mudlet_splashscreen_development.png</file>
