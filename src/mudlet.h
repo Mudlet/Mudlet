@@ -464,7 +464,7 @@ public:
                         "<a href='http://avalon.mud.de'>http://avalon.mud.de</a>",
                         ":/icons/avalon.png"}},
         {"Achaea", {"achaea.com", 23, false, "<a href='http://www.achaea.com/'>http://www.achaea.com</a>", ":/icons/achaea_120_30.png"}},
-        {"3Kingdoms", {"3k.org", 3200, false, "<a href='http://www.3k.org/'>http://www.3k.org</a>", ":/icons/3klogo.png"}},
+        {"3Kingdoms", {"3k.org", 3000, false, "<a href='http://www.3k.org/'>http://www.3k.org</a>", ":/icons/3klogo.png"}},
         {"3Scapes", {
             "3k.org",   // address to connect to
             3200,       // port to connect on
