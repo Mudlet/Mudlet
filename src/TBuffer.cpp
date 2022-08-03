@@ -2030,15 +2030,15 @@ void TBuffer::resetColors()
 
 void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar format, int linkID)
 {
-    // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
-    const QString lineBreaks = qsl(",.- ");
-
     if (static_cast<int>(buffer.size()) > mLinesLimit) {
         shrinkBuffer();
     }
+
+    // This is index to the previous line
     int last = buffer.size() - 1;
+
+    // Prevent instance where buffer is empty
     if (last < 0) {
-        // buffer is completely empty
         std::deque<TChar> newLine;
         // The ternary operator is used here to set/reset only the TChar::Echo bit in the flags:
         TChar c(format.mFgColor,
@@ -2052,19 +2052,37 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         promptBuffer << false;
         last = 0;
     }
-    bool firstChar = (lineBuffer.back().isEmpty());
+
+    // Whethere this is the first character in the line
+    bool firstChar = (lineBuffer.back().size() == 0);
+
+    // Length of the text we are appending
     int length = text.size();
+
+    // Zero length means nothing to do
     if (length < 1) {
         return;
     }
+
+    // If we are looking to append more character than what is allowed
     length = std::min(length, MAX_CHARACTERS_PER_ECHO);
     if (sub_end >= length) {
         sub_end = text.size() - 1;
     }
 
+    
+    const auto hostFont = mpHost->getDisplayFont();
+    int mFontWidth = QFontMetrics(hostFont).averageCharWidth();
+    int wrapByPixel = mWrapAt * mFontWidth;
+    QFontMetrics qfm(hostFont);
+
+    // Loop through each character
     for (int i = sub_start; i < length; ++i) {
-        //FIXME <=substart+sub_end must check whether sub-ranges are still needed
-        if (text.at(i) == QChar::LineFeed) {
+        // Look at what's on lineBuffer, and determine if it needs to be wrapped
+        int lineWidth = qfm.horizontalAdvance(lineBuffer.back());
+
+        // detect new line and instance where this line is filled already
+        if (text.at(i) == '\n') {
             log(size() - 1, size() - 1);
             std::deque<TChar> newLine;
             buffer.push_back(newLine);
@@ -2074,44 +2092,64 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             firstChar = true;
             continue;
         }
-
-        // FIXME: (I18n) Need to measure painted line width and compare that
-        // to "unit" character width (whatever we work THAT out to be)
-        // multiplied by mWrap:
-        if (lineBuffer.back().size() >= mWrapAt) {
-            for (int i = lineBuffer.back().size() - 1; i >= 0; --i) {
-                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1) {
-                    const int linebreakPos = (i != 0) ? i + 1 : lineBuffer.back().size();
-                    QString tmp = lineBuffer.back().mid(0, linebreakPos);
-                    QString lineRest = lineBuffer.back().mid(linebreakPos);
-                    lineBuffer.back() = tmp;
-                    std::deque<TChar> newLine;
-
-                    int k = lineRest.size();
-                    if (k > 0) {
-                        while (k > 0) {
-                            newLine.push_front(buffer.back().back());
-                            buffer.back().pop_back();
-                            k--;
-                        }
-                    }
-
-                    buffer.push_back(newLine);
-                    if (lineRest.size() > 0) {
-                        lineBuffer.append(lineRest);
-                    } else {
-                        lineBuffer.append(QString());
-                    }
-                    timeBuffer << blankTimeStamp;
-                    promptBuffer << false;
-                    log(size() - 2, size() - 2);
-                    // Was absent causing loss of all but last line of wrapped
-                    // long lines of user input and some other console displayed
-                    // text from log file.
-                    break;
+        
+        // The way wrapping works, is we wait until it's exceeded, and then take away content until it's below the limit
+        if (lineWidth > wrapByPixel) {
+            QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Word, lineBuffer.back());
+            int lineSize = lineBuffer.back().size();
+            wordFinder.setPosition(lineSize-1);
+            // How character is chopped off (aka wrapped to next line)
+            int chopCounter = 1;
+            int wrapPos = 0;
+            if (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) {
+                wrapPos = wordFinder.position();
+            } else {
+                while(! (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) ) {
+                    wrapPos =  wordFinder.toPreviousBoundary();
                 }
             }
+
+            if (wrapPos <= 0) {
+                chopCounter = 1;
+            } else {
+                chopCounter = lineSize - wrapPos;
+                qDebug() << "\t\tfinal chopCounter at " << chopCounter << " (calculated)\n";
+            }
+            wrapPos = lineSize - chopCounter;
+            
+            std::deque<TChar> newLine;
+            buffer.push_back(newLine);
+            lineBuffer.push_back(QString());
+            timeBuffer << blankTimeStamp;
+            promptBuffer << false;
+            firstChar = true;
+            int currentLineIndex = lineBuffer.size() - 2;
+            // We shift character down into next line
+            for (int i2=wrapPos; i2 < lineSize; i2++) {
+                TChar c(format.mFgColor,
+                        format.mBgColor,
+                        (mEchoingText ? (TChar::Echo | (format.mFlags & TChar::TestMask))
+                        : (format.mFlags & TChar::TestMask)),
+                        linkID);
+                lineBuffer.back().append(lineBuffer.at(currentLineIndex).at(i2));
+                buffer.back().push_back(c);
+                if (firstChar) {
+                    timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
+                    firstChar = false;
+                } else {
+                    timeBuffer << blankTimeStamp;
+                    promptBuffer << false;
+                }
+            }
+
+            // We chop off however many character we are supposed to, off of lineBuffer
+            for (int i3 = 0; i3 < chopCounter; ++i3) {
+                lineBuffer[currentLineIndex].chop(1);
+                buffer.at(currentLineIndex).pop_back();
+            }
         }
+
+        // Append one character, this is placed here at the very end becuase one character can't be wrapped anyway, so edge case is irrelevant
         lineBuffer.back().append(text.at(i));
         TChar c(format.mFgColor,
                 format.mBgColor,
@@ -2126,15 +2164,17 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
     }
 }
 
+// This function adds text to existing buffer, it needs to ensure wrapping is done properly
 void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
 {
-    // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
-    const QString lineBreaks = qsl(",.- ");
-
     if (static_cast<int>(buffer.size()) > mLinesLimit) {
         shrinkBuffer();
     }
+
+    // This is index to the previous line
     int last = buffer.size() - 1;
+
+    // Prevent instance where buffer is empty
     if (last < 0) {
         std::deque<TChar> newLine;
         TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
@@ -2145,17 +2185,36 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         promptBuffer << false;
         last = 0;
     }
+
+    // Whethere this is the first character in the line
     bool firstChar = (lineBuffer.back().size() == 0);
+
+    // Length of the text we are appending
     int length = text.size();
+
+    // Zero length means nothing to do
     if (length < 1) {
         return;
     }
+
+    // If we are looking to append more character than what is allowed
     length = std::min(length, MAX_CHARACTERS_PER_ECHO);
     if (sub_end >= length) {
         sub_end = text.size() - 1;
     }
 
+    
+    const auto hostFont = mpHost->getDisplayFont();
+    int mFontWidth = QFontMetrics(hostFont).averageCharWidth();
+    int wrapByPixel = mWrapAt * mFontWidth;
+    QFontMetrics qfm(hostFont);
+
+    // Loop through each character
     for (int i = sub_start; i < length; ++i) {
+        // Look at what's on lineBuffer, and determine if it needs to be wrapped
+        int lineWidth = qfm.horizontalAdvance(lineBuffer.back());
+
+        // detect new line and instance where this line is filled already
         if (text.at(i) == '\n') {
             log(size() - 1, size() - 1);
             std::deque<TChar> newLine;
@@ -2166,45 +2225,60 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             firstChar = true;
             continue;
         }
-
-        // FIXME: (I18n) Need to measure painted line width and compare that
-        // to "unit" character width (whatever we work THAT out to be)
-        // multiplied by mWrap:
-        if (lineBuffer.back().size() >= mWrapAt) {
-            for (int i = lineBuffer.back().size() - 1; i >= 0; --i) {
-                // insert linebreak either at linebreaking character location or at last character of line
-                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1 || i == 0) {
-                    const int linebreakPos = (i != 0) ? i + 1 : lineBuffer.back().size();
-                    QString tmp = lineBuffer.back().mid(0, linebreakPos);
-                    QString lineRest = lineBuffer.back().mid(linebreakPos);
-                    lineBuffer.back() = tmp;
-                    std::deque<TChar> newLine;
-
-                    int k = lineRest.size();
-                    if (k > 0) {
-                        while (k > 0) {
-                            newLine.push_front(buffer.back().back());
-                            buffer.back().pop_back();
-                            k--;
-                        }
-                    }
-
-                    buffer.push_back(newLine);
-                    if (lineRest.size() > 0) {
-                        lineBuffer.append(lineRest);
-                    } else {
-                        lineBuffer.append(QString());
-                    }
-                    timeBuffer << blankTimeStamp;
-                    promptBuffer << false;
-                    log(size() - 2, size() - 2);
-                    // Was absent causing loss of all but last line of wrapped
-                    // long lines of user input and some other console displayed
-                    // text from log file.
-                    break;
+        
+        // The way wrapping works, is we wait until it's exceeded, and then take away content until it's below the limit
+        if (lineWidth > wrapByPixel) {
+            QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Word, lineBuffer.back());
+            int lineSize = lineBuffer.back().size();
+            wordFinder.setPosition(lineSize-1);
+            // How character is chopped off (aka wrapped to next line)
+            int chopCounter = 1;
+            int wrapPos = 0;
+            if (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) {
+                wrapPos = wordFinder.position();
+            } else {
+                while(! (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) ) {
+                    wrapPos =  wordFinder.toPreviousBoundary();
                 }
             }
+
+            if (wrapPos <= 0) {
+                chopCounter = 1;
+            } else {
+                chopCounter = lineSize - wrapPos;
+                qDebug() << "\t\tfinal chopCounter at " << chopCounter << " (calculated)\n";
+            }
+            wrapPos = lineSize - chopCounter;
+            
+            std::deque<TChar> newLine;
+            buffer.push_back(newLine);
+            lineBuffer.push_back(QString());
+            timeBuffer << blankTimeStamp;
+            promptBuffer << false;
+            firstChar = true;
+            int currentLineIndex = lineBuffer.size() - 2;
+            // We shift character down into next line
+            for (int i2=wrapPos; i2 < lineSize; i2++) {
+                TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
+                lineBuffer.back().append(lineBuffer.at(currentLineIndex).at(i2));
+                buffer.back().push_back(c);
+                if (firstChar) {
+                    timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
+                    firstChar = false;
+                } else {
+                    timeBuffer << blankTimeStamp;
+                    promptBuffer << false;
+                }
+            }
+
+            // We chop off however many character we are supposed to, off of lineBuffer
+            for (int i3 = 0; i3 < chopCounter; ++i3) {
+                lineBuffer[currentLineIndex].chop(1);
+                buffer.at(currentLineIndex).pop_back();
+            }
         }
+
+        // Append one character, this is placed here at the very end becuase one character can't be wrapped anyway, so edge case is irrelevant
         lineBuffer.back().append(text.at(i));
         TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
@@ -2447,7 +2521,6 @@ inline int TBuffer::wrap(int startLine)
     QStringList timeList;
     QList<bool> promptList;
     int lineCount = 0;
-    const QString lineBreaks = qsl(",.- ，。　()");
 
     const auto hostFont = mpHost->getDisplayFont();
     int mFontWidth = QFontMetrics(hostFont).averageCharWidth();
@@ -2480,6 +2553,7 @@ inline int TBuffer::wrap(int startLine)
         // Track the current width in pixel
         int lineWidth = QFontMetrics(hostFont).horizontalAdvance(lineBuffer.at(i));
         if (lineWidth >= wrapByPixel) {
+            //qDebug() << "Wrapping lineBuffer: " << lineBuffer.at(i) << "\n";
             // This is where actual wrapping occurs
             for (int i2 = 0, total = static_cast<int>(buffer[i].size()); i2 < total;) {
                 // Append next character
@@ -2490,21 +2564,27 @@ inline int TBuffer::wrap(int startLine)
                 hasContent = true;
                 i2++;
                 if (lineWidth > wrapByPixel) { // Need to wrap
+                    //qDebug() << "\tlineText: " << lineText << "\n";
                     QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Word, lineText);
                     wordFinder.setPosition(lineText.size() - 1);
                     int chopCounter = 1;
                     if (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) {
                         wrapPos = lineText.size() - 1;
+                        //qDebug() << "\t\tStarted at boundary, will wrap at " << wrapPos << "\n";
                     } else {
                         while(! (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) ) {
                             wrapPos =  wordFinder.toPreviousBoundary();
+                            //qDebug() << "\t\tnext potential wrapPos at " << wrapPos << "\n";
                         }
+                        //qDebug() << "\t\twrapPos ended at " << wrapPos << "\n";
                     }
 
                     if (wrapPos <= 0) {
                         chopCounter = 1;
+                        //qDebug() << "\t\tfinal chopCounter at " << chopCounter << " (default)\n";
                     } else {
                         chopCounter = lineText.size() - wrapPos;
+                        //qDebug() << "\t\tfinal chopCounter at " << chopCounter << " (calculated)\n";
                     }
                     
                     // We chop off however many character we are supposed to

@@ -128,6 +128,10 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setEnabled(true);       //test fix for MAC
 
     connect(mpHost, &Host::signal_changeIsAmbigousWidthGlyphsToBeWide, this, &TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide, Qt::UniqueConnection);
+    
+    // mpHost->mWrapAt <= 0 means AutoWrap
+    if (mpHost->mWrapAt <= 10)
+        mpBuffer->setWrapAt(width() / mFontWidth);
 }
 
 void TTextEdit::forceUpdate()
