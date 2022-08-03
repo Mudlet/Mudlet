@@ -2456,14 +2456,14 @@ inline int TBuffer::wrap(int startLine)
     // Loop from current line up to the last line sitting in buffer
     for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
         // Capture isPrompt
-        bool isPrompt = promptBuffer[i];
+        bool isPrompt = promptBuffer.at(i);
         std::deque<TChar> newLine;
         QString lineText = "";
-        QString time = timeBuffer[i];
+        QString time = timeBuffer.at(i);
         // Index where wrap should happen
         int wrapPos = 0;
         // Number of character in this line
-        int length = buffer[i].size();
+        int length = buffer.at(i).size();
 
         // If number of character is zero, this is just blank line, which actually means the for loop after the if statement won't happen
         if (length == 0) {
@@ -2478,41 +2478,35 @@ inline int TBuffer::wrap(int startLine)
         bool hasContent = false;
 
         // Track the current width in pixel
-        int lineWidth = QFontMetrics(hostFont).horizontalAdvance(lineBuffer[i]);
+        int lineWidth = QFontMetrics(hostFont).horizontalAdvance(lineBuffer.at(i));
         if (lineWidth >= wrapByPixel) {
             // This is where actual wrapping occurs
             for (int i2 = 0, total = static_cast<int>(buffer[i].size()); i2 < total;) {
                 // Append next character
-                newLine.push_back(buffer[i][i2]);
-                lineText.append(lineBuffer[i].at(i2));
+                newLine.push_back(buffer.at(i).at(i2));
+                lineText.append(lineBuffer.at(i).at(i2));
                 // Get current length
                 lineWidth = QFontMetrics(hostFont).horizontalAdvance(lineText);
                 hasContent = true;
                 i2++;
                 if (lineWidth > wrapByPixel) { // Need to wrap
-                    // We look at the character right beyond the wrap to determine whethere it is appropriate for wrapping
-                    wrapPos = lineText.size() - 1;
-                    // Count how many character we are chopping off
-                    int chopCounter = 0;
-                    for (; wrapPos >= 0; --wrapPos) {
-                        chopCounter++;
-                        if (chopCounter == 1 && 
-                             ((QFontMetrics(hostFont).horizontalAdvance(lineText.at(wrapPos)) > mFontWidth && wrapPos - 1 >= 0 && QFontMetrics(hostFont).horizontalAdvance(lineText.at(wrapPos-1)) > mFontWidth) || 
-                              (QFontMetrics(hostFont).horizontalAdvance(lineText.at(wrapPos)) <= mFontWidth && wrapPos - 1 >= 0 && QFontMetrics(hostFont).horizontalAdvance(lineText.at(wrapPos-1)) > mFontWidth) ||
-                              (QFontMetrics(hostFont).horizontalAdvance(lineText.at(wrapPos)) > mFontWidth && wrapPos - 1 >= 0 && QFontMetrics(hostFont).horizontalAdvance(lineText.at(wrapPos-1)) <= mFontWidth))) {
-                            break;
+                    QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Word, lineText);
+                    wordFinder.setPosition(lineText.size() - 1);
+                    int chopCounter = 1;
+                    if (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) {
+                        wrapPos = lineText.size() - 1;
+                    } else {
+                        while(! (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) ) {
+                            wrapPos =  wordFinder.toPreviousBoundary();
                         }
-                        if (lineBreaks.indexOf(lineText.at(wrapPos)) > -1) {
-                            break;
-                        }
-                    }
-                    
-                    // If wrapPos indicate we are chopping off the entire string, it means it did not find any lineBreaks,
-                    // which actually means we just wrap it where it's supposed to wrap (which is just the last character)
-                    if (wrapPos <= 0) {
-                        chopCounter = 1;
                     }
 
+                    if (wrapPos <= 0) {
+                        chopCounter = 1;
+                    } else {
+                        chopCounter = lineText.size() - wrapPos;
+                    }
+                    
                     // We chop off however many character we are supposed to
                     for (int i3 = 0; i3 < chopCounter; ++i3) {
                         newLine.pop_back();
@@ -2545,7 +2539,7 @@ inline int TBuffer::wrap(int startLine)
             }
         } else {
             queue.push(buffer[i]);
-            tempList.append(lineBuffer[i]);
+            tempList.append(lineBuffer.at(i));
             timeList.append(time);
             promptList.append(isPrompt);
         }

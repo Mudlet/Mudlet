@@ -281,6 +281,7 @@ void TTextEdit::updateScreenView()
         updateScrollBar(mpBuffer->mCursorY);
     }
     int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
+
     if (mpConsole->getType() == TConsole::MainConsole) {
         // This is the MAIN console - we do not want it to ever disappear!
         mScreenWidth = qMax(40, currentScreenWidth);
@@ -293,6 +294,11 @@ void TTextEdit::updateScreenView()
     } else {
         mScreenWidth = currentScreenWidth;
     }
+
+    // mpHost->mWrapAt <= 0 means AutoWrap
+    if (mpHost->mWrapAt <= 10)
+        mpBuffer->setWrapAt(mScreenWidth);
+
     mOldScrollPos = mpBuffer->getLastLineNumber();
 }
 
