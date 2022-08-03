@@ -366,12 +366,12 @@ macx {
 }
 
 # use ccache if available
-unix {
-    BASE_CXX = $$QMAKE_CXX
-    # common linux location
-    exists(/usr/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
-    # common macos location
-    exists(/usr/local/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
+BASE_CXX = $$QMAKE_CXX
+BASE_C = $$QMAKE_C
+# common linux location
+exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe) {
+    QMAKE_CXX = ccache $$BASE_CXX
+    QMAKE_C = ccache $$BASE_C
 }
 
 # There does not seem to be an obvious pkg-config option for this one, it is
