@@ -2677,7 +2677,7 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                     hasContent = false;
                     // Start the next line by indent
                     for (int i3 = 0; i3 < indentSize; ++i3) {
-                        TChar pSpace = pSpace;
+                        TChar pSpace = format;
                         newLine.push_back(pSpace);
                         lineText.append(QChar::Space);
                     }
