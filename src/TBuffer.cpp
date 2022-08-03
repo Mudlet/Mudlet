@@ -2135,7 +2135,6 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                 chopCounter = 1;
             } else {
                 chopCounter = lineSize - wrapPos;
-                qDebug() << "\t\tfinal chopCounter at " << chopCounter << " (calculated)\n";
             }
             wrapPos = lineSize - chopCounter;
             
@@ -2268,7 +2267,6 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
                 chopCounter = 1;
             } else {
                 chopCounter = lineSize - wrapPos;
-                qDebug() << "\t\tfinal chopCounter at " << chopCounter << " (calculated)\n";
             }
             wrapPos = lineSize - chopCounter;
             
@@ -2534,138 +2532,11 @@ inline int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
 
 inline int TBuffer::wrap(int startLine)
 {
-    if (static_cast<int>(buffer.size()) < startLine || startLine < 0) {
-        return 0;
-    }
-
-    std::queue<std::deque<TChar>> queue;
-    QStringList tempList;
-    QStringList timeList;
-    QList<bool> promptList;
-    int lineCount = 0;
-
     const auto hostFont = mpHost->getDisplayFont();
     int mFontWidth = QFontMetrics(hostFont).averageCharWidth();
     int wrapByPixel = mWrapAt * mFontWidth;
-    
-    // Loop from current line up to the last line sitting in buffer
-    for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
-        // Capture isPrompt
-        bool isPrompt = promptBuffer.at(i);
-        std::deque<TChar> newLine;
-        QString lineText = "";
-        QString time = timeBuffer.at(i);
-        // Index where wrap should happen
-        int wrapPos = 0;
-        // Number of character in this line
-        int length = buffer.at(i).size();
-
-        // If number of character is zero, this is just blank line, which actually means the for loop after the if statement won't happen
-        if (length == 0) {
-            tempList.append(QString());
-            std::deque<TChar> emptyLine;
-            queue.push(emptyLine);
-            timeList.append(time);
-            promptList.append(false);
-        }
-
-        // Track whether there is data that needs to be appended
-        bool hasContent = false;
-
-        // Track the current width in pixel
-        int lineWidth = QFontMetrics(hostFont).horizontalAdvance(lineBuffer.at(i));
-        if (lineWidth >= wrapByPixel) {
-            // This is where actual wrapping occurs
-            for (int i2 = 0, total = static_cast<int>(buffer[i].size()); i2 < total;) {
-                // Append next character
-                newLine.push_back(buffer.at(i).at(i2));
-                lineText.append(lineBuffer.at(i).at(i2));
-                // Get current length
-                lineWidth = QFontMetrics(hostFont).horizontalAdvance(lineText);
-                hasContent = true;
-                i2++;
-                if (lineWidth > wrapByPixel) { // Need to wrap
-                    QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Word, lineText);
-                    wordFinder.setPosition(lineText.size() - 1);
-                    int chopCounter = 1;
-                    if (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) {
-                        wrapPos = lineText.size() - 1;
-                    } else {
-                        while (!(wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0)) {
-                            wrapPos =  wordFinder.toPreviousBoundary();
-                        }
-                    }
-
-                    if (wrapPos <= 0) {
-                        chopCounter = 1;
-                    } else {
-                        chopCounter = lineText.size() - wrapPos;
-                    }
-                    
-                    // We chop off however many character we are supposed to
-                    for (int i3 = 0; i3 < chopCounter; ++i3) {
-                        newLine.pop_back();
-                        lineText.chop(1);
-                        i2--;
-                    }
-
-                    queue.push(newLine);
-                    tempList.append(lineText);
-                    timeList.append(time);
-                    promptList.append(isPrompt);
-                    newLine.clear();
-                    lineText = "";
-                    hasContent = false;
-                    // Start the next line by indent
-                    for (int i3 = 0; i3 < mWrapIndent; ++i3) {
-                        TChar pSpace;
-                        newLine.push_back(pSpace);
-                        lineText.append(" ");
-                    }
-                }
-            }
-            // This push in whatever content remaining
-            if (hasContent) {
-                // this is guaranteed not to exceed the wrapByPixel
-                queue.push(newLine);
-                tempList.append(lineText);
-                timeList.append(time);
-                promptList.append(isPrompt);
-            }
-        } else {
-            queue.push(buffer[i]);
-            tempList.append(lineBuffer.at(i));
-            timeList.append(time);
-            promptList.append(isPrompt);
-        }
-        lineCount++;
-    }
-    for (int i = 0; i < lineCount; ++i) {
-        buffer.pop_back();
-        lineBuffer.pop_back();
-        timeBuffer.pop_back();
-        promptBuffer.pop_back();
-    }
-
-    int insertedLines = queue.size() - 1;
-    while (!queue.empty()) {
-        buffer.push_back(queue.front());
-        queue.pop();
-    }
-    for (int i = 0, total = tempList.size(); i < total; ++i) {
-        if (tempList[i].size() < 1) {
-            lineBuffer.append(QString());
-            timeBuffer.append(QString());
-            promptBuffer.push_back(false);
-        } else {
-            lineBuffer.append(tempList[i]);
-            timeBuffer.append(timeList[i]);
-            promptBuffer.push_back(promptList[i]);
-        }
-    }
-
-    log(startLine, startLine + tempList.size());
-    return insertedLines > 0 ? insertedLines : 0;
+    TChar pSpace;
+    return wrapLine(startLine, wrapByPixel, mWrapIndent, pSpace, false);
 }
 
 void TBuffer::log(int fromLine, int toLine)
@@ -2717,109 +2588,142 @@ void TBuffer::logRemainingOutput()
 }
 
 // returns how many new lines have been inserted by the wrapping action
-int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& format)
+inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& format, bool onlyWrapOneLine)
 {
-    if (startLine < 0) {
+    if (static_cast<int>(buffer.size()) < startLine || startLine < 0) {
         return 0;
     }
-    if (static_cast<int>(buffer.size()) <= startLine) {
-        return 0;
-    }
+
     std::queue<std::deque<TChar>> queue;
     QStringList tempList;
+    QStringList timeList;
+    QList<bool> promptList;
     int lineCount = 0;
 
-    for (int line = startLine, total = static_cast<int>(buffer.size()); line < total; ++line) {
-        if (line > startLine) {
+    const auto hostFont = mpHost->getDisplayFont();
+    int mFontWidth = QFontMetrics(hostFont).averageCharWidth();
+    int wrapByPixel = mWrapAt * mFontWidth;
+    
+    // Loop from current line up to the last line sitting in buffer
+    for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
+        if (onlyWrapOneLine && i > startLine) {
             break; //only wrap one line of text
         }
+        // Capture isPrompt
+        bool isPrompt = promptBuffer.at(i);
         std::deque<TChar> newLine;
-        QString lineText;
+        QString lineText = "";
+        QString time = timeBuffer.at(i);
+        // Index where wrap should happen
+        int wrapPos = 0;
+        // Number of character in this line
+        int length = buffer.at(i).size();
 
-        int indent = 0;
-        if (static_cast<int>(buffer[line].size()) >= screenWidth) {
-            for (int prependSpaces = 0; prependSpaces < indentSize; ++prependSpaces) {
-                TChar pSpace = format;
-                newLine.push_back(pSpace);
-                lineText.append(QChar::Space);
-            }
-            indent = indentSize;
+        // If number of character is zero, this is just blank line, which actually means the for loop after the if statement won't happen
+        if (length == 0) {
+            tempList.append(QString());
+            std::deque<TChar> emptyLine;
+            queue.push(emptyLine);
+            timeList.append(time);
+            promptList.append(false);
         }
-        int lastSpace = -1;
-        int wrapPos = -1;
-        auto lineLength = static_cast<int>(buffer[line].size());
 
-        for (int characterPosition = 0, total = static_cast<int>(buffer[line].size()); characterPosition < total;) {
-            if (lineLength - characterPosition > screenWidth - indent) {
-                wrapPos = calculateWrapPosition(line, characterPosition, characterPosition + screenWidth - indent);
-                lastSpace = qMax(-1, wrapPos);
-            } else {
-                lastSpace = -1;
-            }
-            for (int i3 = 0, total = screenWidth - indent; i3 < total; ++i3) {
-                if (lastSpace > 0) {
-                    if (characterPosition >= lastSpace) {
-                        characterPosition++;
-                        break;
-                    }
-                }
-                if (characterPosition >= static_cast<int>(buffer[line].size())) {
-                    break;
-                }
-                if (lineBuffer[line][characterPosition] == QChar::LineFeed) {
-                    characterPosition++;
+        // Track whether there is data that needs to be appended
+        bool hasContent = false;
 
-                    if (newLine.empty()) {
-                        tempList.append(QString());
-                        std::deque<TChar> emptyLine;
-                        queue.push(emptyLine);
+        // Track the current width in pixel
+        int lineWidth = QFontMetrics(hostFont).horizontalAdvance(lineBuffer.at(i));
+        if (lineWidth >= screenWidth) {
+            // This is where actual wrapping occurs
+            for (int i2 = 0, total = static_cast<int>(buffer[i].size()); i2 < total;) {
+                // Append next character
+                newLine.push_back(buffer.at(i).at(i2));
+                lineText.append(lineBuffer.at(i).at(i2));
+                // Get current length
+                lineWidth = QFontMetrics(hostFont).horizontalAdvance(lineText);
+                hasContent = true;
+                i2++;
+                if (lineWidth > screenWidth) { // Need to wrap
+                    QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Word, lineText);
+                    wordFinder.setPosition(lineText.size() - 1);
+                    int chopCounter = 1;
+                    if (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) {
+                        wrapPos = lineText.size() - 1;
                     } else {
-                        queue.push(newLine);
-                        tempList.append(lineText);
+                        while (!(wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0)) {
+                            wrapPos =  wordFinder.toPreviousBoundary();
+                        }
                     }
-                    goto OPT_OUT_CLEAN;
-                }
-                newLine.push_back(buffer[line][characterPosition]);
-                lineText.append(lineBuffer[line].at(characterPosition));
-                characterPosition++;
-            }
-            queue.push(newLine);
-            tempList.append(lineText);
 
-        OPT_OUT_CLEAN:
-            newLine.clear();
-            lineText.clear();
-            indent = 0;
+                    if (wrapPos <= 0) {
+                        chopCounter = 1;
+                    } else {
+                        chopCounter = lineText.size() - wrapPos;
+                    }
+                    
+                    // We chop off however many character we are supposed to
+                    for (int i3 = 0; i3 < chopCounter; ++i3) {
+                        newLine.pop_back();
+                        lineText.chop(1);
+                        i2--;
+                    }
+
+                    queue.push(newLine);
+                    tempList.append(lineText);
+                    timeList.append(time);
+                    promptList.append(isPrompt);
+                    newLine.clear();
+                    lineText = "";
+                    hasContent = false;
+                    // Start the next line by indent
+                    for (int i3 = 0; i3 < indentSize; ++i3) {
+                        TChar pSpace = pSpace;
+                        newLine.push_back(pSpace);
+                        lineText.append(QChar::Space);
+                    }
+                }
+            }
+            // This push in whatever content remaining
+            if (hasContent) {
+                // this is guaranteed not to exceed the screenWidth
+                queue.push(newLine);
+                tempList.append(lineText);
+                timeList.append(time);
+                promptList.append(isPrompt);
+            }
+        } else {
+            queue.push(buffer[i]);
+            tempList.append(lineBuffer.at(i));
+            timeList.append(time);
+            promptList.append(isPrompt);
         }
         lineCount++;
     }
-
-    if (lineCount < 1) {
-        log(startLine, startLine);
-        return 0;
+    for (int i = 0; i < lineCount; ++i) {
+        buffer.pop_back();
+        lineBuffer.pop_back();
+        timeBuffer.pop_back();
+        promptBuffer.pop_back();
     }
-
-    buffer.erase(buffer.begin() + startLine);
-    lineBuffer.removeAt(startLine);
-    QString time = timeBuffer.at(startLine);
-    timeBuffer.removeAt(startLine);
-    bool isPrompt = promptBuffer.at(startLine);
-    promptBuffer.removeAt(startLine);
 
     int insertedLines = queue.size() - 1;
-    int i = 0;
     while (!queue.empty()) {
-        buffer.insert(buffer.begin() + startLine + i, queue.front());
+        buffer.push_back(queue.front());
         queue.pop();
-        i++;
+    }
+    for (int i = 0, total = tempList.size(); i < total; ++i) {
+        if (tempList[i].size() < 1) {
+            lineBuffer.append(QString());
+            timeBuffer.append(QString());
+            promptBuffer.push_back(false);
+        } else {
+            lineBuffer.append(tempList[i]);
+            timeBuffer.append(timeList[i]);
+            promptBuffer.push_back(promptList[i]);
+        }
     }
 
-    for (int i = 0, total = tempList.size(); i < total; ++i) {
-        lineBuffer.insert(startLine + i, tempList[i]);
-        timeBuffer.insert(startLine + i, time);
-        promptBuffer.insert(startLine + i, isPrompt);
-    }
-    log(startLine, startLine + tempList.size() - 1);
+    log(startLine, startLine + tempList.size());
     return insertedLines > 0 ? insertedLines : 0;
 }
 
