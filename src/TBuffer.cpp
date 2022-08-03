@@ -2601,8 +2601,6 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
     int lineCount = 0;
 
     const auto hostFont = mpHost->getDisplayFont();
-    int mFontWidth = QFontMetrics(hostFont).averageCharWidth();
-    int wrapByPixel = mWrapAt * mFontWidth;
     
     // Loop from current line up to the last line sitting in buffer
     for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
