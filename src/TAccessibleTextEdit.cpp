@@ -393,7 +393,7 @@ QString TAccessibleTextEdit::attributes(int offset, int *startOffset, int *endOf
     const bool isStrikeOut = attributes & TChar::StrikeOut;
     const bool isUnderline = attributes & TChar::Underline;
     const bool isReverse = attributes & TChar::Reverse;
-    const bool caretIsHere = mudlet::self()->isCaretModeEnabled() && textEdit()->mCaretLine == line &&
+    const bool caretIsHere = textEdit()->mpHost->caretEnabled() && textEdit()->mCaretLine == line &&
         textEdit()->mCaretColumn == column;
 
     // Different weight values are not handled.

@@ -24,7 +24,6 @@
 #include "TBuffer.h"
 
 #include "mudlet.h"
-#include "TConsole.h"
 #include "TStringUtils.h"
 
 #include "pre_guard.h"
@@ -678,6 +677,29 @@ COMMIT_LINE:
             // text would alter the prior contents but as that is on a separate
             // line there should not be any changes to text before a line feed
             // which sort of seems to be implied by the current value of ch:
+
+            // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
+            // https://bugreports.qt.io/browse/QTBUG-105035
+            if (Q_UNLIKELY(mMudLine.isEmpty())) {
+                if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
+                    localBufferPosition++;
+                    continue;
+                } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
+                    const TChar::AttributeFlags attributeFlags =
+                            ((mIsDefaultColor ? mBold : false) ? TChar::Bold : TChar::None)
+                            | (mItalics ? TChar::Italic : TChar::None)
+                            | (mOverline ? TChar::Overline : TChar::None)
+                            | (mReverse ? TChar::Reverse : TChar::None)
+                            | (mStrikeOut ? TChar::StrikeOut : TChar::None)
+                            | (mUnderline ? TChar::Underline : TChar::None);
+
+                    // Note: we are using the background color for the
+                    // foreground color as well so that we are transparent:
+                    const TChar c(mBackGroundColor, mBackGroundColor, attributeFlags);
+                    mMudLine.append(QChar::Space);
+                    mMudBuffer.push_back(c);
+                }
+            }
 
             if (static_cast<size_t>(mMudLine.size()) != mMudBuffer.size()) {
                 qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "

@@ -464,7 +464,7 @@ public:
                         "<a href='http://avalon.mud.de'>http://avalon.mud.de</a>",
                         ":/icons/avalon.png"}},
         {"Achaea", {"achaea.com", 23, false, "<a href='http://www.achaea.com/'>http://www.achaea.com</a>", ":/icons/achaea_120_30.png"}},
-        {"3Kingdoms", {"3k.org", 3200, false, "<a href='http://www.3k.org/'>http://www.3k.org</a>", ":/icons/3klogo.png"}},
+        {"3Kingdoms", {"3k.org", 3000, false, "<a href='http://www.3k.org/'>http://www.3k.org</a>", ":/icons/3klogo.png"}},
         {"3Scapes", {
             "3k.org",   // address to connect to
             3200,       // port to connect on
@@ -496,9 +496,9 @@ public:
         {"Luminari", {"luminarimud.com", 4100, false, "<a href='http://www.luminarimud.com/'>http://www.luminarimud.com/</a>", ":/icons/luminari_icon.png"}},
         {"StickMUD", {"stickmud.com", 7680, false, "<a href='http://www.stickmud.com/'>stickmud.com</a>", ":/icons/stickmud_icon.jpg"}},
         {"Clessidra", {"mud.clessidra.it", 4000, false, "<a href='http://www.clessidra.it/'>http://www.clessidra.it</a>", ":/icons/clessidra.jpg"}},
-        {"Reinos de Leyenda", {"reinosdeleyenda.es", 23, false, "<a href='https://www.reinosdeleyenda.es/'>Main website</a>\n"
-                                 "<a href='https://www.reinosdeleyenda.es/foro/'>Forums</a>\n"
-                                 "<a href='https://wiki.reinosdeleyenda.es/'>Wiki</a>\n", ":/icons/reinosdeleyenda_mud.png"}},
+        {"Reinos de Leyenda", {"reinosdeleyenda.es", 23, false, "<a href='https://www.reinosdeleyenda.es/'>Sitio web principal</a><br>"
+                                 "<a href='https://www.reinosdeleyenda.es/foro/'>Foros</a><br>"
+                                 "<a href='https://wiki.reinosdeleyenda.es/'>Wiki</a>", ":/icons/reinosdeleyenda_mud.png"}},
         {"Fierymud", {"fierymud.org", 4000, false, "<a href='https://www.fierymud.org/'>https://www.fierymud.org</a>", ":/icons/fiery_mud.png"}},
         {"Mudlet self-test", {"mudlet.org", 23, false, "", ""}},
         {"Carrion Fields", {"carrionfields.net", 4449, false, "<a href='http://www.carrionfields.net'>www.carrionfields.net</a>", ":/icons/carrionfields.png"}},
@@ -508,8 +508,6 @@ public:
         {"Multi-Users in Middle-earth", {"mume.org", 4242, true, "<a href='https://mume.org/'>mume.org</a>", ":/icons/mume.png"}},
     };
     // clang-format on
-
-    bool isCaretModeEnabled() { return dactionCaretMode->isChecked(); }
 
 public slots:
     void processEventLoopHack_timerRun();
@@ -524,7 +522,6 @@ public slots:
     void slot_show_help_dialog_irc();
     void slot_open_mappingscripts_page();
     void slot_multi_view(const bool);
-    void slot_caret_mode(bool) const;
     void slot_toggle_multi_view();
     void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
     void slot_timer_fires();
