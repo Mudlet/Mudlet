@@ -2126,7 +2126,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             if (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) {
                 wrapPos = wordFinder.position();
             } else {
-                while(! (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) ) {
+                while (!(wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0)) {
                     wrapPos =  wordFinder.toPreviousBoundary();
                 }
             }
@@ -2259,7 +2259,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             if (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) {
                 wrapPos = wordFinder.position();
             } else {
-                while(! (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) ) {
+                while (!(wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0)) {
                     wrapPos =  wordFinder.toPreviousBoundary();
                 }
             }
@@ -2575,7 +2575,6 @@ inline int TBuffer::wrap(int startLine)
         // Track the current width in pixel
         int lineWidth = QFontMetrics(hostFont).horizontalAdvance(lineBuffer.at(i));
         if (lineWidth >= wrapByPixel) {
-            //qDebug() << "Wrapping lineBuffer: " << lineBuffer.at(i) << "\n";
             // This is where actual wrapping occurs
             for (int i2 = 0, total = static_cast<int>(buffer[i].size()); i2 < total;) {
                 // Append next character
@@ -2586,27 +2585,21 @@ inline int TBuffer::wrap(int startLine)
                 hasContent = true;
                 i2++;
                 if (lineWidth > wrapByPixel) { // Need to wrap
-                    //qDebug() << "\tlineText: " << lineText << "\n";
                     QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Word, lineText);
                     wordFinder.setPosition(lineText.size() - 1);
                     int chopCounter = 1;
                     if (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) {
                         wrapPos = lineText.size() - 1;
-                        //qDebug() << "\t\tStarted at boundary, will wrap at " << wrapPos << "\n";
                     } else {
-                        while(! (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) ) {
+                        while (!(wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0)) {
                             wrapPos =  wordFinder.toPreviousBoundary();
-                            //qDebug() << "\t\tnext potential wrapPos at " << wrapPos << "\n";
                         }
-                        //qDebug() << "\t\twrapPos ended at " << wrapPos << "\n";
                     }
 
                     if (wrapPos <= 0) {
                         chopCounter = 1;
-                        //qDebug() << "\t\tfinal chopCounter at " << chopCounter << " (default)\n";
                     } else {
                         chopCounter = lineText.size() - wrapPos;
-                        //qDebug() << "\t\tfinal chopCounter at " << chopCounter << " (calculated)\n";
                     }
                     
                     // We chop off however many character we are supposed to
