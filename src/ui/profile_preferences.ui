@@ -42,7 +42,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -999,6 +999,9 @@ you can use it but there could be issues with aligning columns of text</string>
              <enum>QFrame::NoFrame</enum>
             </property>
             <layout class="QHBoxLayout" name="horizontalLayout_frame_wrap_at">
+             <property name="spacing">
+              <number>0</number>
+             </property>
              <item>
               <widget class="QLabel" name="label_wrap_at_spinBox">
                <property name="sizePolicy">
@@ -1014,7 +1017,21 @@ you can use it but there could be issues with aligning columns of text</string>
                 </size>
                </property>
                <property name="text">
-                <string>Wrap lines at:</string>
+                <string>Wrap lines:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="checkBox_autoWrap">
+               <property name="text">
+                <string>automatically</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_6">
+               <property name="text">
+                <string>or at</string>
                </property>
               </widget>
              </item>
@@ -1032,7 +1049,7 @@ you can use it but there could be issues with aligning columns of text</string>
               </widget>
              </item>
              <item>
-              <widget class="QLabel" name="label_23">
+              <widget class="QLabel" name="label_wrapCharacters">
                <property name="text">
                 <string>characters</string>
                </property>
@@ -4145,5 +4162,38 @@ you can use it but there could be issues with aligning columns of text</string>
  <resources>
   <include location="../mudlet.qrc"/>
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>checkBox_autoWrap</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>wrap_at_spinBox</receiver>
+   <slot>setDisabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>174</x>
+     <y>345</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>270</x>
+     <y>346</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkBox_autoWrap</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>label_wrapCharacters</receiver>
+   <slot>setDisabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>163</x>
+     <y>345</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>349</x>
+     <y>346</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

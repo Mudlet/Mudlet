@@ -418,6 +418,8 @@ void dlgProfilePreferences::disableHostDetails()
 
     groupBox_doubleClick->setEnabled(false);
 
+    checkBox_autoWrap->setEnabled(false);
+
     // Some of groupBox_displayOptions are usable, so must pick out and
     // disable the others:
     // ----- groupBox_displayOptions -----
@@ -537,6 +539,8 @@ void dlgProfilePreferences::enableHostDetails()
     groupBox_wrapping->setEnabled(true);
 
     groupBox_doubleClick->setEnabled(true);
+
+    checkBox_autoWrap->setEnabled(true);
 
     // ----- groupBox_displayOptions -----
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
@@ -775,6 +779,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     command_separator_lineedit->setText(pHost->mCommandSeparator);
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
+    checkBox_autoWrap->setChecked(pHost->mAutoWrap);
     checkBox_enableTextAnalyzer->setChecked(pHost->mEnableTextAnalyzer);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
@@ -1364,6 +1369,7 @@ void dlgProfilePreferences::clearHostDetails()
     command_separator_lineedit->clear();
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(false);
+    checkBox_autoWrap->setChecked(false);
     checkBox_enableTextAnalyzer->setChecked(false);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(false);
     USE_UNIX_EOL->setChecked(false);
@@ -2617,6 +2623,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
         pHost->mAcceptServerMedia = acceptServerMedia->isChecked();
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
+        pHost->mAutoWrap = checkBox_autoWrap->isChecked();
         pHost->mEnableTextAnalyzer = checkBox_enableTextAnalyzer->isChecked();
         pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
         pHost->mUSE_UNIX_EOL = USE_UNIX_EOL->isChecked();

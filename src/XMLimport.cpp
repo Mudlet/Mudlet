@@ -882,6 +882,9 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->setEditorShowBidi(true);
     }
+    if (attributes().hasAttribute("mAutoWrap")) {
+        pHost->mAutoWrap = attributes().value(qsl("mAutoWrap")) == YES;
+    }
     if (attributes().hasAttribute("announceIncomingText")) {
         pHost->mAnnounceIncomingText = attributes().value(qsl("announceIncomingText")) == YES;
     } else {

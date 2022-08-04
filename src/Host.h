@@ -516,7 +516,11 @@ public:
     bool mUSE_FORCE_LF_AFTER_PROMPT;
     bool mUSE_IRE_DRIVER_BUGFIX;
     bool mUSE_UNIX_EOL;
+    // automatically calculate wrapping?
+    bool mAutoWrap = true;
+    // or wrap at a specific amount of characters:
     int mWrapAt;
+    // after wrapping a line, intent it by how many spaces:
     int mWrapIndentCount;
 
     bool mEditorAutoComplete;
