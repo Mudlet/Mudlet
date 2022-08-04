@@ -2587,7 +2587,10 @@ void TBuffer::logRemainingOutput()
     mpHost->mpConsole->mLogStream.flush();
 }
 
-// returns how many new lines have been inserted by the wrapping action
+// The difference between this and wrap is, wrap does it from startLine all the way to the end
+// while wrapLine only does it for one line.
+// Thus, wrap uses pop_back and push_back while wrapLine uses remove_at and insert.
+// Returns how many new lines have been added by the wrapping action
 inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& format, bool onlyWrapOneLine)
 {
     if (static_cast<int>(buffer.size()) < startLine || startLine < 0) {
@@ -2731,7 +2734,6 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
             promptBuffer.pop_back();
         }
     }
-
 
     int insertedLines = queue.size() - 1;
     int i = 0;
