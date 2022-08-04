@@ -27,12 +27,14 @@ Write-Output "Running qmake"
 $Env:PATH="C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;$Env:QT_BASE_DIR\bin;$Env:MINGW_BASE_DIR\bin;" + (($Env:PATH.Split(';') | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';')
 qmake CONFIG+=debug ../src/mudlet.pro
 if("$LastExitCode" -ne "0"){
+  Read-Host
   exit 1
 }
 
 Write-Output "Running make"
 mingw32-make -j $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors")
 if("$LastExitCode" -ne "0"){
+  Read-Host
   exit 1
 }
 
