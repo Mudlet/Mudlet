@@ -2117,7 +2117,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         
         // The way wrapping works, is we wait until it's exceeded, and then take away content until it's below the limit
         if (lineWidth > wrapByPixel) {
-            QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Word, lineBuffer.back());
+            QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Line, lineBuffer.back());
             int lineSize = lineBuffer.back().size();
             wordFinder.setPosition(lineSize-1);
             // How character is chopped off (aka wrapped to next line)
@@ -2249,7 +2249,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         
         // The way wrapping works, is we wait until it's exceeded, and then take away content until it's below the limit
         if (lineWidth > wrapByPixel) {
-            QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Word, lineBuffer.back());
+            QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Line, lineBuffer.back());
             int lineSize = lineBuffer.back().size();
             wordFinder.setPosition(lineSize-1);
             // How character is chopped off (aka wrapped to next line)
@@ -2662,7 +2662,7 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                 hasContent = true;
                 i2++;
                 if (lineWidth > screenWidth) { // Need to wrap
-                    QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Word, lineText);
+                    QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Line, lineText);
                     wordFinder.setPosition(lineText.size() - 1);
                     int chopCounter = 1;
                     if (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) {
