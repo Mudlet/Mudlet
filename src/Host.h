@@ -395,6 +395,8 @@ public:
     std::optional<QString> windowType(const QString& name) const;
     bool getEditorShowBidi() const { return mEditorShowBidi; }
     void setEditorShowBidi(const bool);
+    bool caretEnabled() const;
+    void setCaretEnabled(bool enabled);
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -644,6 +646,26 @@ public:
 
     bool mTutorialForCompactLineAlreadyShown;
 
+    bool mAnnounceIncomingText = true;
+    enum class BlankLineBehaviour {
+        Show,
+        Hide,
+        ReplaceWithSpace
+    };
+    Q_ENUM(BlankLineBehaviour)
+    BlankLineBehaviour mBlankLineBehaviour = BlankLineBehaviour::Show;
+
+    // shortcuts options visually impaired players have to switch between the input line and the main window
+    enum class CaretShortcut {
+        None,
+        Tab,
+        CtrlTab,
+        F6
+    };
+    Q_ENUM(CaretShortcut)
+    // shortcut to switch between the input line and the main window
+    CaretShortcut mCaretShortcut = CaretShortcut::None;
+
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
@@ -817,6 +839,8 @@ private:
 
     bool mLargeAreaExitArrows = false;
     bool mEditorShowBidi = true;
+    // should focus should be on the main window with the caret enabled?
+    bool mCaretEnabled = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

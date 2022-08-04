@@ -9,6 +9,7 @@
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
+ *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -51,6 +52,8 @@ class TTextEdit : public QWidget
 {
     Q_OBJECT
 
+    friend class TAccessibleTextEdit;
+
 public:
     Q_DISABLE_COPY(TTextEdit)
     TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isLowerPane);
@@ -59,7 +62,7 @@ public:
     void drawForeground(QPainter&, const QRect&);
     uint getGraphemeBaseCharacter(const QString& str) const;
     void drawLine(QPainter& painter, int lineNumber, int rowOfScreen, int *offset = nullptr) const;
-    int drawGraphemeBackground(QPainter&, QVector<QColor>&, QVector<QRect>&, QVector<QString>&, QVector<int>&, QPoint&, const QString&, const int, TChar&) const;
+    int drawGraphemeBackground(QPainter&, QVector<QColor>&, QVector<QRect>&, QVector<QString>&, QVector<int>&, QPoint&, const QString&, const int, const int, TChar&) const;
     void drawGraphemeForeground(QPainter&, const QColor&, const QRect&, const QString&, TChar &) const;
     void showNewLines();
     void forceUpdate();
@@ -91,11 +94,23 @@ public:
     int getColumnCount();
     int getRowCount();
     void reportCodepointErrors();
+    void initializeCaret();
+    void setCaretPosition(int line, int column);
+    void updateCaret();
 
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer
     int mCursorY;
     int mCursorX;
+
+    // Position of "caret", the cursor used for accessibility purposes.
+    int mCaretLine;
+    int mCaretColumn;
+    // If the current line is shorter than the previous one, hold here the
+    // previous column value so that we can return to it if the next line is
+    // long enough again.
+    int mOldCaretColumn;
+
     QFont mDisplayFont;
     QColor mFgColor;
     int mFontAscent;
@@ -108,6 +123,7 @@ public:
     // See, e.g.: https://en.wikipedia.org/wiki/Tail_(Unix)#File_monitoring
     bool mIsTailMode;
     QMap<QString, std::pair<QString, int>> mPopupCommands;
+    // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
     QRegion mSelectedRegion;
     bool mShowTimeStamps;
@@ -125,6 +141,10 @@ public slots:
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
     void slot_changeDebugShowAllProblemCodepoints(const bool);
     void slot_mouseAction(const QString&);
+
+protected:
+    void keyPressEvent(QKeyEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
 
 private slots:
     void slot_copySelectionToClipboardImage();
@@ -144,10 +164,12 @@ private:
     void expandSelectionToLine(int);
     inline void replaceControlCharacterWith_Picture(const uint, const QString&, const int, QVector<QString>&, int&) const;
     inline void replaceControlCharacterWith_OEMFont(const uint, const QString&, const int, QVector<QString>&, int&) const;
+    int offsetForPosition(int line, int column) const;
 
     int mFontHeight;
     int mFontWidth;
     bool mForceUpdate;
+    const QColor mCaretColor = QColorConstants::Gray;
 
     // Each TConsole instance uses two instances of this class, one above the
     // other but they need to behave differently in some ways; this flag is set
@@ -155,11 +177,13 @@ private:
     // which one this instance is:
     const bool mIsLowerPane;
     // last line offset rendered
-    int mLastRenderBottom;
+    int mLastRenderedOffset;
     bool mMouseTracking;
     // 1/2/3 for single/double/triple click seen so far
     int  mMouseTrackLevel;
     bool mCtrlSelecting {};
+    // tracks status of the Shift key for keyboard-based selection
+    bool mShiftSelection {};
     int mCtrlDragStartY {};
     QPoint mDragStart, mDragSelectionEnd;
     int mOldScrollPos;
@@ -208,6 +232,9 @@ private:
     // where it's available."
     // We use the following to store the remainder (modulus 120):
     QPoint mMouseWheelRemainder;
+
+    // skip over the following characters when searching for a word
+    const QStringList mCtrlSelectionIgnores = {" ", ".", ",", ";", ":", "\"", "'", "`", "!", "?", "\\", "/", "|", "~", "*", "(", ")", "[", "]", "{", "}", "<", ">"};
 };
 
 #endif // MUDLET_TTEXTEDIT_H

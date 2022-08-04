@@ -178,6 +178,13 @@ bool TCommandLine::event(QEvent* event)
             break;
 
         case Qt::Key_Tab:
+            if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(ke->modifiers() & Qt::ControlModifier)) ||
+                (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (ke->modifiers() & Qt::ControlModifier))) {
+                mpHost->setCaretEnabled(true);
+                ke->accept();
+                return true;
+            }
+
             if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
                 // Switch to NEXT profile tab
                 int currentIndex = mudlet::self()->mpTabBar->currentIndex();
@@ -189,20 +196,26 @@ bool TCommandLine::event(QEvent* event)
                 }
                 ke->accept();
                 return true;
-
             }
 
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
                 handleTabCompletion(true);
                 ke->accept();
                 return true;
-
             }
 
             // Process as a possible key binding if there are ANY modifiers
             // other than just the Ctrl one
             // CHECKME: What about system foreground application switching?
             if (keybindingMatched(ke)) {
+                return true;
+            }
+            break;
+
+        case Qt::Key_F6:
+            if (mpHost->mCaretShortcut == Host::CaretShortcut::F6) {
+                mpHost->setCaretEnabled(true);
+                ke->accept();
                 return true;
             }
             break;
@@ -895,7 +908,16 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         mHistoryList.push_front(QString());
     }
     if (mpHost->mAutoClearCommandLineAfterSend) {
+#if defined (Q_OS_MACOS)
+        // clearing the input line on macOS 11.6 makes VoiceOver announce the removed text,
+        // essentially re-announcing everything we've typed. This workaround fixes this behaviour
+        // and does not seem to negatively affect other platforms
+        hide();
+#endif
         clear();
+#if defined (Q_OS_MACOS)
+        show();
+#endif
     } else {
         selectAll();
     }
