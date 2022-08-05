@@ -15,8 +15,9 @@ environment:
     CCACHE_DIR: "%APPVEYOR_BUILD_FOLDER%\\.ccache"
     # our appveyor cache size is 1G
     CCACHE_MAXSIZE: 1G
-    # APP_BUILD embeds the git sha which changes on every commit, throwing the cache off - ignore it
-    CCACHE_IGNOREOPTIONS: "-DAPP_BUILD=*"
+    # APP_BUILD embeds the git sha which changes on every commit, throwing the cache off
+    # ignore it for snapshots but not for PTBs or releases
+    CCACHE_IGNOREOPTIONS: "-DAPP_BUILD=-testing*"
   signing_password:
     secure: JJDxNdreMgNn/IOcY+UVmlaqgDT4a7vcxsY3nfcgWY4=
   DEPLOY_KEY_PASS:
