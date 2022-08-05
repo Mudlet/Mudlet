@@ -1290,53 +1290,53 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="87"/>
       <source>Debug messages are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>Отладочные сообщения отображаются здесь.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="103"/>
       <source>Error Console</source>
-      <translation type="unfinished"/>
+      <translation>Консоль ошибок</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="104"/>
       <source>Error messages are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>Сообщения об ошибках отображаются здесь.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="106"/>
       <source>Sub Console</source>
-      <translation type="unfinished"/>
+      <translation>Субконсоль</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="107"/>
       <source>Sub console messages are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>Здесь показаны сообщения субконсоля.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="109"/>
       <source>User Window</source>
-      <translation type="unfinished"/>
+      <translation>Окно пользователя</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="110"/>
       <source>User window messages are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>Здесь показаны сообщения окна пользователя.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="123"/>
       <source>Main Window</source>
-      <translation type="unfinished"/>
+      <translation>Главное окно</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="124"/>
       <source>Game content is shown here. It may contain subconsoles and a mapper window.</source>
-      <translation type="unfinished"/>
+      <translation>Игровой контент показан здесь. Он может содержать подконсоли и окно маппера.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="270"/>
       <location filename="../src/TConsole.cpp" line="2018"/>
       <source>main window</source>
-      <translation type="unfinished"/>
+      <translation>главное окно</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="359"/>
@@ -1388,13 +1388,13 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="2015"/>
       <source>main window past content</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet window when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>основное окно прошлое содержание</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2016"/>
       <source>main window live content</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet window when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>живое содержимое главного окна</translation>
     </message>
   </context>
   <context>
@@ -12578,62 +12578,62 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3834"/>
       <source>Accessibility</source>
-      <translation type="unfinished"/>
+      <translation>Доступность</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3840"/>
       <source>On some platforms, like macOS, the screen reader tool has issues announcing incoming text fully, without skipping. You can opt into disabling announcing new text from the game with this option to use a custom TTS instead which avoids such issues</source>
-      <translation type="unfinished"/>
+      <translation>На некоторых платформах, таких как macOS, в инструменте чтения с экрана возникают проблемы с полным объявлением входящего текста без пропуска. Вы можете отключить объявление нового текста из игры с помощью этой опции, чтобы вместо этого использовать пользовательский TTS, чтобы избежать таких проблем</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3843"/>
       <source>Announce incoming text in screen reader</source>
-      <translation type="unfinished"/>
+      <translation>Анонсировать входящий текст в экранном чтении</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3851"/>
       <source>show them</source>
-      <translation type="unfinished"/>
+      <translation>показать их</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3856"/>
       <source>hide them</source>
-      <translation type="unfinished"/>
+      <translation>скрыть их</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3861"/>
       <source>replace with a space</source>
-      <translation type="unfinished"/>
+      <translation>заменить пробелом</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3869"/>
       <source>When the game sends blank lines:</source>
-      <translation type="unfinished"/>
+      <translation>Когда игра посылает пустые строки:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3879"/>
       <source>Switch between input line and main window using:</source>
-      <translation type="unfinished"/>
+      <translation>Переключение между линией ввода и основным окном с помощью:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3890"/>
       <source>no key</source>
-      <translation type="unfinished"/>
+      <translation>нет ключа</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3895"/>
       <source>Tab</source>
-      <translation type="unfinished"/>
+      <translation>Tab</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3900"/>
       <source>Ctrl+Tab</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+Tab</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3905"/>
       <source>F6</source>
-      <translation type="unfinished"/>
+      <translation>F6</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3961"/>
