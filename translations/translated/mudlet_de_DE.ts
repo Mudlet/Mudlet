@@ -12546,52 +12546,52 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3843"/>
       <source>Announce incoming text in screen reader</source>
-      <translation type="unfinished"/>
+      <translation>Eingehenden Text im Screenreader ansagen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3851"/>
       <source>show them</source>
-      <translation type="unfinished"/>
+      <translation>Anzeigen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3856"/>
       <source>hide them</source>
-      <translation type="unfinished"/>
+      <translation>Ausblenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3861"/>
       <source>replace with a space</source>
-      <translation type="unfinished"/>
+      <translation>Durch ein Leerzeichen ersetzen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3869"/>
       <source>When the game sends blank lines:</source>
-      <translation type="unfinished"/>
+      <translation>Wenn das Spiel leere Zeilen sendet:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3879"/>
       <source>Switch between input line and main window using:</source>
-      <translation type="unfinished"/>
+      <translation>Wechsle zwischen Eingabezeile und Hauptfenster mit:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3890"/>
       <source>no key</source>
-      <translation type="unfinished"/>
+      <translation>Keiner Taste</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3895"/>
       <source>Tab</source>
-      <translation type="unfinished"/>
+      <translation>Tabulatortaste</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3900"/>
       <source>Ctrl+Tab</source>
-      <translation type="unfinished"/>
+      <translation>Strg + Tabulatortaste</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3905"/>
       <source>F6</source>
-      <translation type="unfinished"/>
+      <translation>F6-Taste</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3961"/>
