@@ -1289,53 +1289,53 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="87"/>
       <source>Debug messages are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>Hier werden Debug-Meldungen angezeigt.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="103"/>
       <source>Error Console</source>
-      <translation type="unfinished"/>
+      <translation>Fehler-Konsole</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="104"/>
       <source>Error messages are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>Hier werden Fehlermeldungen angezeigt.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="106"/>
       <source>Sub Console</source>
-      <translation type="unfinished"/>
+      <translation>Unterkonsole</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="107"/>
       <source>Sub console messages are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>Hier werden die Meldungen der Unterkonsole angezeigt.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="109"/>
       <source>User Window</source>
-      <translation type="unfinished"/>
+      <translation>Benutzerfenster</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="110"/>
       <source>User window messages are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>Hier werden die Meldungen des Benutzerfensters angezeigt.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="123"/>
       <source>Main Window</source>
-      <translation type="unfinished"/>
+      <translation>Hautpfenster</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="124"/>
       <source>Game content is shown here. It may contain subconsoles and a mapper window.</source>
-      <translation type="unfinished"/>
+      <translation>Hier wird der Spielinhalt angezeigt. Er kann Unterkonsolen und ein Mapper-Fenster enthalten.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="270"/>
       <location filename="../src/TConsole.cpp" line="2018"/>
       <source>main window</source>
-      <translation type="unfinished"/>
+      <translation>Hautpfenster</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="359"/>
@@ -1387,13 +1387,13 @@ Ganzzahl eingeben:</translation>
       <location filename="../src/TConsole.cpp" line="2015"/>
       <source>main window past content</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet window when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>Hauptfenster, vergangener Inhalt</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2016"/>
       <source>main window live content</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet window when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>Hauptfenster, aktueller Inhalt</translation>
     </message>
   </context>
   <context>
@@ -12536,12 +12536,12 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3834"/>
       <source>Accessibility</source>
-      <translation type="unfinished"/>
+      <translation>Barrierefreiheit</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3840"/>
       <source>On some platforms, like macOS, the screen reader tool has issues announcing incoming text fully, without skipping. You can opt into disabling announcing new text from the game with this option to use a custom TTS instead which avoids such issues</source>
-      <translation type="unfinished"/>
+      <translation>Auf einigen Plattformen, wie z. B. macOS, hat das Screenreader-Tool Probleme damit, eingehenden Text vollständig und ohne Überspringen anzusagen. Mit dieser Option kannst du die Ansage von neuem Text im Spiel deaktivieren und stattdessen ein benutzerdefiniertes TTS verwenden, das solche Probleme vermeidet</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3843"/>
