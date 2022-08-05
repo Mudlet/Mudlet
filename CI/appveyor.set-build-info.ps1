@@ -5,7 +5,7 @@ if ($Env:APPVEYOR_REPO_TAG -eq "false") {
   if ($Env:APPVEYOR_SCHEDULED_BUILD -eq "True") {
     $Env:MUDLET_VERSION_BUILD = "-ptb"
     # PTB build, don't use ccache to ensure Mudlet version is embedded correctly
-    $Env:CCACHE_IGNOREOPTIONS = ""
+    # $Env:CCACHE_IGNOREOPTIONS = ""
   } else {
     $Env:MUDLET_VERSION_BUILD = "-testing"
   }
@@ -25,7 +25,7 @@ if ($Env:APPVEYOR_REPO_TAG -eq "false") {
   }
 } else {
   # release build, don't use ccache to ensure Mudlet version is embedded correctly
-  $Env:CCACHE_IGNOREOPTIONS = ""
+  # $Env:CCACHE_IGNOREOPTIONS = ""
 }
 
 # not all systems we deal with allow uppercase ascii characters
