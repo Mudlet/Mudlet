@@ -6754,7 +6754,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="967"/>
       <location filename="../src/dlgRoomExits.cpp" line="992"/>
       <source>The roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Hier wird die Raum-ID des Raums erwartet, zu dem dieser spezielle Ausgang führt. Wenn sie so bleibt, wird dieser Ausgang gelöscht, wenn &lt;tt&gt;speichern&lt;/tt&gt; angeklickt wird.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="983"/>
