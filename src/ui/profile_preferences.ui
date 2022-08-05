@@ -4162,38 +4162,4 @@ you can use it but there could be issues with aligning columns of text</string>
  <resources>
   <include location="../mudlet.qrc"/>
  </resources>
- <connections>
-  <connection>
-   <sender>checkBox_autoWrap</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>wrap_at_spinBox</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>174</x>
-     <y>345</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>270</x>
-     <y>346</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>checkBox_autoWrap</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>label_wrapCharacters</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>163</x>
-     <y>345</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>349</x>
-     <y>346</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
 </ui>

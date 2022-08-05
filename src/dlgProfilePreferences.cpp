@@ -100,6 +100,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     checkBox_USE_SMALL_SCREEN->setChecked(pMudlet->mEnableFullScreenMode);
 
+    connect(checkBox_autoWrap, &QAbstractButton::toggled, wrap_at_spinBox, &QWidget::setDisabled);
+    connect(checkBox_autoWrap, &QAbstractButton::toggled, label_wrapCharacters, &QWidget::setDisabled);
+
     // As we demonstrate the options that these next two checkboxes control in
     // the editor "preview" widget (on another tab) we will need to track
     // changes and update the edbee widget straight away. As we can have
