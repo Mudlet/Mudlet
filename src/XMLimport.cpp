@@ -883,7 +883,10 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->setEditorShowBidi(true);
     }
     if (attributes().hasAttribute("mAutoWrap")) {
-        pHost->mAutoWrap = attributes().value(qsl("mAutoWrap")) == YES;
+        pHost->setAutoWrap(attributes().value(qsl("mAutoWrap")) == YES);
+    } else {
+        // keep existing behaviour of no autowrap for existing profiles
+        pHost->setAutoWrap(false);
     }
     if (attributes().hasAttribute("announceIncomingText")) {
         pHost->mAnnounceIncomingText = attributes().value(qsl("announceIncomingText")) == YES;

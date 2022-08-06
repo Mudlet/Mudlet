@@ -2072,3 +2072,16 @@ void TConsole::setCaretMode(bool enabled)
 
     mUpperPane->setFocus();
 }
+
+bool TConsole::autoWrap() const {
+    return mAutoWrap;
+}
+
+void TConsole::setAutoWrap(bool enabled) {
+    mAutoWrap = enabled;
+
+    if (enabled) {
+        mUpperPane->updateWrap();
+        mLowerPane->updateWrap();
+    }
+}

@@ -129,9 +129,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 
     connect(mpHost, &Host::signal_changeIsAmbigousWidthGlyphsToBeWide, this, &TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide, Qt::UniqueConnection);
     
-    if (mpHost->mAutoWrap) {
-        mpBuffer->setWrapAt(width() / mFontWidth);
-    }
+    updateWrap();
 }
 
 void TTextEdit::forceUpdate()
@@ -308,11 +306,15 @@ void TTextEdit::updateScreenView()
         mScreenWidth = currentScreenWidth;
     }
 
-    if (mpHost->mAutoWrap) {
-        mpBuffer->setWrapAt(mScreenWidth);
-    }
+    updateWrap();
 
     mOldScrollPos = mpBuffer->getLastLineNumber();
+}
+
+void TTextEdit::updateWrap() {
+    if (mpConsole->autoWrap()) {
+        mpBuffer->setWrapAt(mScreenWidth);
+    }
 }
 
 void TTextEdit::showNewLines()
