@@ -41,13 +41,16 @@ public:
 
     static QAccessibleInterface* textEditFactory(const QString &classname, QObject *object)
     {
-        QAccessibleInterface *interface = nullptr;
+        // The original identifier "interface" was no good as it is an existing
+        // macro (on MSYS2/Mingw-w64) and breaks compilation on that platform in
+        // an obsecure way:
+        QAccessibleInterface* pInterface = nullptr;
 
         if (classname == QLatin1String("TTextEdit") && object && object->isWidgetType()) {
-            interface = new TAccessibleTextEdit(static_cast<QWidget *>(object));
+            pInterface = new TAccessibleTextEdit(static_cast<QWidget *>(object));
         }
 
-        return interface;
+        return pInterface;
     }
 
     void* interface_cast(QAccessible::InterfaceType t) override
