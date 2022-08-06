@@ -2076,7 +2076,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
     }
 
     // Whethere this is the first character in the line
-    bool firstChar = (lineBuffer.back().size() == 0);
+    bool firstChar = (lineBuffer.back().isEmpty());
 
     // Length of the text we are appending
     int length = text.size();
@@ -2208,7 +2208,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     }
 
     // Whethere this is the first character in the line
-    bool firstChar = (lineBuffer.back().size() == 0);
+    bool firstChar = (lineBuffer.back().isEmpty());
 
     // Length of the text we are appending
     int length = text.size();
@@ -2332,7 +2332,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         lastLine = 0;
     }
 
-    bool firstChar = (lineBuffer.back().size() == 0);
+    bool firstChar = (lineBuffer.back().isEmpty());
     int length = text.size();
     if (length < 1) {
         return;
