@@ -544,7 +544,6 @@ void dlgProfilePreferences::enableHostDetails()
     groupBox_doubleClick->setEnabled(true);
 
     checkBox_autoWrap->setEnabled(true);
-
     // ----- groupBox_displayOptions -----
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
     checkBox_enableTextAnalyzer->setEnabled(true);
