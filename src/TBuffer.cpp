@@ -102,7 +102,7 @@ TChar::TChar(const TChar& copy)
 const QString timeStampFormat = qsl("hh:mm:ss.zzz ");
 const QString blankTimeStamp  = qsl("------------ ");
 
-// Store for text, attributes (such as character colour) and the lines to be drawn on screen 
+// Store for text and attributes (such as character color) to be drawn on screen 
 // Contents are rendered by a TTextEdit
 TBuffer::TBuffer(Host* pH)
 : mBlack(pH->mBlack)
