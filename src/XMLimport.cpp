@@ -882,12 +882,14 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->setEditorShowBidi(true);
     }
+    bool autoWrap = false;
     if (attributes().hasAttribute("mAutoWrap")) {
-        pHost->setAutoWrap(attributes().value(qsl("mAutoWrap")) == YES);
-    } else {
-        // keep existing behaviour of no autowrap for existing profiles
-        pHost->setAutoWrap(false);
+        autoWrap = attributes().value(qsl("mAutoWrap")) == YES;
     }
+    // don't call wrap function during profile load as the console won't exist yet
+    QTimer::singleShot(0, pHost, [autoWrap, pHost]() {
+        pHost->setAutoWrap(autoWrap);
+    });
     if (attributes().hasAttribute("announceIncomingText")) {
         pHost->mAnnounceIncomingText = attributes().value(qsl("announceIncomingText")) == YES;
     } else {
