@@ -294,8 +294,7 @@ unix:!macx {
         LIBS +=  \
             -L"$${MINGW_BASE_DIR_TEST}\\bin" \
             -llua51 \
-            -lhunspell-1.6 \
-            -loleaut32
+            -lhunspell-1.6
 
         INCLUDEPATH += \
              "C:\\Libraries\\boost_1_77_0" \
@@ -327,7 +326,8 @@ unix:!macx {
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
         -lpugixml \
-        -lWs2_32
+        -lws2_32 \
+        -loleaut32
 
     # Leave this unset - we do not need it on Windows:
     # LUA_DEFAULT_DIR =
