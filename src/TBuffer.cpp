@@ -2604,7 +2604,7 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
     int lineCount = 0;
 
     const auto hostFont = mpHost->getDisplayFont();
-    
+    QFontMetrics qfm(hostFont);
     // Loop from current line up to the last line sitting in buffer
     for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
         if (onlyWrapOneLine && i > startLine) {
@@ -2613,7 +2613,8 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
         // Capture isPrompt
         bool isPrompt = promptBuffer.at(i);
         std::deque<TChar> newLine;
-        QString lineText = "";
+        QString lineText;
+        QString lineIndent="";
         QString time = timeBuffer.at(i);
         // Index where wrap should happen
         int wrapPos = 0;
@@ -2633,73 +2634,66 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
         bool hasContent = false;
 
         // Track the current width in pixel
-        int lineWidth = QFontMetrics(hostFont).horizontalAdvance(lineBuffer.at(i));
-        if (lineWidth >= screenWidth) {
+        int lineWidth = qfm.horizontalAdvance(lineBuffer.at(i));
+        if (lineWidth > screenWidth) {
+            // Track where subStringStart
+            int subStringStart = 0, characterCount = 1;
             // This is where actual wrapping occurs
-            for (int i2 = 0, total = static_cast<int>(buffer[i].size()); i2 < total;) {
+            
+            QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Line, lineBuffer.at(i));
+            for (int i2 = 0, total2 = static_cast<int>(buffer[i].size()); i2 < total2;) {
                 // Append next character
-                // Special case if character is linefeed
-                if (lineBuffer.at(i).at(i2) == QChar::LineFeed) {
-                    i2++;
-                    if (newLine.empty()) {
-                        tempList.append(QString());
-                        std::deque<TChar> emptyLine;
-                        queue.push(emptyLine);
-                    } else {
-                        queue.push(newLine);
-                        tempList.append(lineText);
-                    }
-                    timeList.append(time);
-                    promptList.append(isPrompt);
-                    newLine.clear();
-                    lineText = "";
-                    continue;
-                }
                 newLine.push_back(buffer.at(i).at(i2));
-                lineText.append(lineBuffer.at(i).at(i2));
+                lineText = lineBuffer.at(i).mid(subStringStart, characterCount);
                 // Get current length
-                lineWidth = QFontMetrics(hostFont).horizontalAdvance(lineText);
+                lineWidth = qfm.horizontalAdvance(lineIndent + lineText);
                 hasContent = true;
-                i2++;
                 if (lineWidth > screenWidth) { // Need to wrap
-                    QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Line, lineText);
-                    wordFinder.setPosition(lineText.size() - 1);
-                    int chopCounter = 1;
-                    if (wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) {
-                        wrapPos = lineText.size() - 1;
-                    } else {
-                        while (!(wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0)) {
-                            wrapPos =  wordFinder.toPreviousBoundary();
-                        }
+                    wordFinder.setPosition(subStringStart + characterCount - 1);
+
+                    while (wordFinder.position() >= i2 || (!(wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) && wordFinder.position() > subStringStart ) ) {
+                        wrapPos =  wordFinder.toPreviousBoundary();
                     }
 
-                    if (wrapPos <= 0) {
-                        chopCounter = 1;
-                    } else {
-                        chopCounter = lineText.size() - wrapPos;
-                    }
-                    
-                    // We chop off however many character we are supposed to
-                    for (int i3 = 0; i3 < chopCounter; ++i3) {
+                    // This is a special case, we need to remove character one at a time until we fall below the screenWidth
+                    if (wrapPos <= subStringStart) {
                         newLine.pop_back();
                         lineText.chop(1);
                         i2--;
+                        while (qfm.horizontalAdvance(lineText) > screenWidth) {
+                            newLine.pop_back();
+                            lineText.chop(1);
+                            i2--;
+                        }
+                    } else {
+                        int chopCounter = i2 - wrapPos;
+                        // We chop off however many character we are supposed to
+                        for (int i3 = 0; i3 <= chopCounter; ++i3) {
+                            newLine.pop_back();
+                            lineText.chop(1);
+                            i2--;
+                        }
                     }
 
                     queue.push(newLine);
+                    subStringStart += lineText.size();
+                    characterCount = 0;
                     tempList.append(lineText);
                     timeList.append(time);
                     promptList.append(isPrompt);
                     newLine.clear();
-                    lineText = "";
+                    lineIndent = "";
                     hasContent = false;
                     // Start the next line by indent
                     for (int i3 = 0; i3 < indentSize; ++i3) {
                         TChar pSpace = format;
                         newLine.push_back(pSpace);
-                        lineText.append(QChar::Space);
+                        lineIndent.append(QChar::Space);
                     }
                 }
+                
+                i2++;
+                characterCount += 1;
             }
             // This push in whatever content remaining
             if (hasContent) {
