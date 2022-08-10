@@ -24,7 +24,7 @@ if(-NOT (Test-Path "$sourceDir\build")){
 cd "$sourceDir\build"
 
 Write-Output "Running qmake"
-$Env:PATH="C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;$Env:QT_BASE_DIR\bin;$Env:MINGW_BASE_DIR\bin;" + (($Env:PATH.Split(';') | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';')
+$Env:PATH="C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;C:\Program Files\ccache;$Env:QT_BASE_DIR\bin;$Env:MINGW_BASE_DIR\bin;" + (($Env:PATH.Split(';') | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';')
 qmake CONFIG+=debug ../src/mudlet.pro
 if("$LastExitCode" -ne "0"){
   Read-Host
