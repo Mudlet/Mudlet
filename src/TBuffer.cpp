@@ -2605,7 +2605,7 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
     const auto hostFont = mpHost->getDisplayFont();
     QFontMetrics qfm(hostFont);
     QStringRef lineText;
-    QString lineIndent="";
+    QString lineIndent = "";
     std::deque<TChar> newLine;
     QString time;
     bool isPrompt;
@@ -2647,7 +2647,7 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                 if (lineWidth > screenWidth) { // Need to wrap
                     wordFinder.setPosition(subStringStart + characterCount - 1);
 
-                    while (wordFinder.position() >= i2 || (!(wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) && wordFinder.position() > subStringStart ) ) {
+                    while (wordFinder.position() >= i2 || (!(wordFinder.isAtBoundary() && (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) != 0) && wordFinder.position() > subStringStart)) {
                         wrapPos =  wordFinder.toPreviousBoundary();
                     }
 
