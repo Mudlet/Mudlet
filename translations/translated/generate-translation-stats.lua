@@ -109,7 +109,7 @@ while line <= #lines do
       unfinished = unfinished,
       total = translated + (untranslated or 0),
       translated_fraction = (100 * translated)/(translated + (untranslated or 0)),
-      translated_percent = math.floor(translated_fraction)
+      translated_percent = math.floor((100 * translated)/(translated + (untranslated or 0)))
     }
     keyvaluestats[lang] = {
       translated = stats[#stats].translated,
