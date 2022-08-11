@@ -117,7 +117,7 @@ while line <= #lines do
       finished = stats[#stats].finished,
       unfinished = stats[#stats].unfinished,
       total = stats[#stats].total,
-      translated_fraction = stats[#stats].translated_fraction
+      translated_fraction = stats[#stats].translated_fraction,
       translated_percent = stats[#stats].translated_percent
     }
     statsindex[lang] = keyvaluestats[lang].translated_fraction
