@@ -108,7 +108,7 @@ while line <= #lines do
       finished = finished,
       unfinished = unfinished,
       total = translated + (untranslated or 0),
-      translated_fraction = (100 * translated)/(translated + (untranslated or 0))
+      translated_fraction = (100 * translated)/(translated + (untranslated or 0)),
       translated_percent = math.floor(translated_fraction)
     }
     keyvaluestats[lang] = {
