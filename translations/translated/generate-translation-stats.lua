@@ -108,7 +108,8 @@ while line <= #lines do
       finished = finished,
       unfinished = unfinished,
       total = translated + (untranslated or 0),
-      translatedpc = math.floor((100 * translated)/(translated + (untranslated or 0)))
+      translated_fraction = (100 * translated)/(translated + (untranslated or 0))
+      translated_percent = math.floor(translated_fraction)
     }
     keyvaluestats[lang] = {
       translated = stats[#stats].translated,
@@ -116,9 +117,10 @@ while line <= #lines do
       finished = stats[#stats].finished,
       unfinished = stats[#stats].unfinished,
       total = stats[#stats].total,
-      translatedpc = stats[#stats].translatedpc
+      translated_fraction = stats[#stats].translated_fraction
+      translated_percent = stats[#stats].translated_percent
     }
-    statsindex[lang] = keyvaluestats[lang].translatedpc
+    statsindex[lang] = keyvaluestats[lang].translated_fraction
   end
 end
 
@@ -128,16 +130,29 @@ print()
 print("   lang_CNTRY    trnsl  utrnsl  finish  unfin  total  done")
 for lang, _ in spairs(statsindex, function(t,a,b) return t[a] > t[b] end) do
   local star = ' '
-  if keyvaluestats[lang].translatedpc > 94 then
+  if keyvaluestats[lang].translated_percent > 94 then
     star = '*'
   end
-  print(string.format("%1s    %-10s  %5d   %5d   %5d  %5d  %5d  %3d%%", star, lang, keyvaluestats[lang].translated, keyvaluestats[lang].untranslated, keyvaluestats[lang].finished, keyvaluestats[lang].unfinished, keyvaluestats[lang].total, keyvaluestats[lang].translatedpc))
+  print(string.format("%1s    %-10s  %5d   %5d   %5d  %5d  %5d  %3d%%",
+    star,
+    lang,
+    keyvaluestats[lang].translated,
+    keyvaluestats[lang].untranslated,
+    keyvaluestats[lang].finished,
+    keyvaluestats[lang].unfinished,
+    keyvaluestats[lang].total,
+    keyvaluestats[lang].translated_percent))
 end
 print()
 
 serialise_stats = {}
 for _, stat in ipairs(stats) do
-  serialise_stats[stat.lang] = {translated = stat.translated, untranslated = stat.untranslated, total = stat.total, translatedpc = stat.translatedpc}
+  serialise_stats[stat.lang] = {
+    translated = stat.translated,
+    untranslated = stat.untranslated,
+    total = stat.total,
+    translated_percent = stat.translated_percent
+  }
 end
 
 io.output("translation-stats.json")
