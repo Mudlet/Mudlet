@@ -2085,8 +2085,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     int mFontWidth = QFontMetrics(hostFont).averageCharWidth();
     int wrapByPixel = mWrapAt * mFontWidth;
     QFontMetrics qfm(hostFont);
-    int lineWidth = qfm.horizontalAdvance(lineBuffer.back());
-    if (lineWidth > wrapByPixel || lineText.indexOf("\n") != -1) {
+    if (qfm.horizontalAdvance(lineBuffer.back()) > wrapByPixel || lineText.indexOf("\n") != -1) {
         TChar format(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         wrapLine(getLastLineNumber(), wrapByPixel, mWrapIndent, format);
     }
@@ -2367,21 +2366,63 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
             QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Line, lineBuffer.at(i));
 
             for (int lineCharIterator = 0, lineCharTotal = static_cast<int>(buffer.at(i).size()); lineCharIterator < lineCharTotal;) {
-                // Append next block, but first check if there is a \n before the next block
-                int nextNewLine = lineBuffer.at(i).indexOf("\n", lineCharIterator);
+                // Binary Search to find the boundary that caused the width to exceed screenWidth
+                int bSearchStart = subStringStart;
+                int bSearchEnd = lineCharTotal;
+                int bSearchIteratorPrev = (bSearchStart + bSearchEnd) / 2;
+                int lastType = 0; //-1 is <, 0 is =, 1 is >, really this is only use for -1 and 1, since = is guaranteed to not happen at this stage
+                while (true) {
+                    int bSearchIteratorCurrent = (bSearchStart + bSearchEnd) / 2;
+                    int thisType = 0;
+                    lineText = lineBuffer.at(i).midRef(subStringStart, bSearchIteratorCurrent - subStringStart);
+                    int calculatedWidth = (indentSize > 0) ? qfm.horizontalAdvance(lineIndent + lineText) : qfm.horizontalAdvance(lineText.toString());
+                    
+                    if ((bSearchEnd - bSearchIteratorCurrent) <= 1) {
+                        // this line doesn't even need wrapping
+                        lineCharIterator = bSearchIteratorCurrent;
+                        break;
+                    } else if (calculatedWidth > screenWidth) {
+                        // String still too long, decrement
+                        bSearchEnd = bSearchIteratorCurrent;
+                        thisType = 1;
+                    } else if (calculatedWidth < screenWidth) {
+                        // String still too short, cincrment
+                        bSearchStart = bSearchIteratorCurrent;
+                        thisType = -1;
+                    } else {
+                        // string just long enough
+                        lineCharIterator = bSearchIteratorCurrent;
+                        break;
+                    }
+
+                    if (abs(bSearchIteratorCurrent - bSearchIteratorPrev) == 1) {
+                        if (lastType == -1 and thisType == 1) {
+                            lineCharIterator = bSearchIteratorCurrent;
+                            break;
+                        } else if (lastType == 1 and thisType == -1) {
+                            lineCharIterator = bSearchIteratorPrev;
+                            break;
+                        }
+                    }
+                    lastType = thisType;
+                    bSearchIteratorPrev = bSearchIteratorCurrent;
+                }
+                wordFinder.setPosition(lineCharIterator);
+                
+                // Check if there is newLine before the current boundary
+                int previousNewLine = lineBuffer.at(i).lastIndexOf("\n", lineCharIterator);
                 int nextBoundary = wordFinder.toNextBoundary();
                 // Indicate whethere we are chopping \n, which requires skipping the iterator
                 bool newLineChop = false;
-                if (nextNewLine != -1 && nextNewLine < nextBoundary) {
-                    lineCharIterator = nextNewLine;
-                    lineText = lineBuffer.at(i).midRef(subStringStart, lineCharIterator - subStringStart);
+                if (previousNewLine != -1) {
+                    lineCharIterator = previousNewLine;
                     newLineChop = true;
                 } else {
                     lineCharIterator = nextBoundary;
-                    lineText = lineBuffer.at(i).midRef(subStringStart, lineCharIterator - subStringStart);
                     hasContent = true;
                 }
-
+                
+                lineText = lineBuffer.at(i).midRef(subStringStart, lineCharIterator - subStringStart);
                 if ((indentSize > 0 ? qfm.horizontalAdvance(lineIndent + lineText) : qfm.horizontalAdvance(lineText.toString())) > screenWidth) { // Need to wrap
                     while (wordFinder.position() >= lineCharIterator || (wordFinder.position() > subStringStart && (!wordFinder.isAtBoundary() || (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) == 0))) {
                         wordFinder.toPreviousBoundary();
@@ -2390,16 +2431,14 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                     if (wordFinder.position() <= subStringStart) {
                         // This potentially can be costly, as we are running horizontalAdvance, we do a binary search instead
                         // The space we are covering is between subStringStart and lineCharIterator
-                        int bSearchStart = subStringStart;
-                        int bSearchEnd = lineCharIterator;
-                        int bSearchIteratorPrev = (bSearchStart + bSearchEnd) / 2;
-                        int lastType = 0; //-1 is <, 0 is =, 1 is >, really this is only use for -1 and 1, since = is guaranteed to not happen at this stage
+                        bSearchStart = subStringStart;
+                        bSearchEnd = lineCharIterator;
+                        bSearchIteratorPrev = (bSearchStart + bSearchEnd) / 2;
+                        lastType = 0; //-1 is <, 0 is =, 1 is >, really this is only use for -1 and 1, since = is guaranteed to not happen at this stage
                         // This is the binary search, basically we keep track of the lineText, and look for the following
                         // When we cross from textLine < width into textLine > width AND step is 1, we take previous
                         // When we cross from textLine > width into textLine < width AND step is 1, we take current
-                        int searchCount = 0;
                         while (true) {
-                            ++searchCount;
                             int bSearchIteratorCurrent = (bSearchStart + bSearchEnd) / 2;
                             int thisType = 0;
                             lineText = lineBuffer.at(i).midRef(subStringStart, bSearchIteratorCurrent - subStringStart);
