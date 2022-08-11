@@ -2398,7 +2398,7 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                         // When we cross from textLine < width into textLine > width AND step is 1, we take previous
                         // When we cross from textLine > width into textLine < width AND step is 1, we take current
                         int searchCount = 0;
-                        while(true) {
+                        while (true) {
                             ++searchCount;
                             int bSearchIteratorCurrent = (bSearchStart + bSearchEnd) / 2;
                             int thisType = 0;
