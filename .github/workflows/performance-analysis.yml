@@ -2,9 +2,7 @@ name: "Performance analysis"
 
 on:
   push:
-  #  branches: [development, main]
-  schedule:
-    - cron: '0 7 * * 3'
+    branches: development
   workflow_dispatch:
 
 jobs:
