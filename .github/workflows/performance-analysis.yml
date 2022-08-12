@@ -34,13 +34,6 @@ jobs:
         fetch-depth: 0
         submodules: true
 
-    - name: Restore ccache
-      uses: pat-s/always-upload-cache@v3.0.1
-      with:
-        path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
-
       # run-vcpkg action does not run on arm64 (https://github.com/lukka/run-vcpkg/issues/152)
       # so install dependencies manually
     - name: Install dependencies
@@ -49,8 +42,6 @@ jobs:
         sudo apt-get install build-essential git liblua5.1-dev zlib1g-dev libhunspell-dev libpcre3-dev \
           libzip-dev libboost-graph-dev libyajl-dev libpulse-dev lua-rex-pcre lua-filesystem lua-zip \
           lua-sql-sqlite3 qtmultimedia5-dev qttools5-dev luarocks ccache libpugixml-dev cmake -y
-
-        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         sudo luarocks install luautf8  
         sudo luarocks install lua-yajl YAJL_LIBDIR=`find /usr -name "libyajl.so" -printf '%h\n'` YAJL_INCDIR=/usr/include
