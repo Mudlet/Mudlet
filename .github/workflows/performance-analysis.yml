@@ -50,12 +50,6 @@ jobs:
           libzip-dev libboost-graph-dev libyajl-dev libpulse-dev lua-rex-pcre lua-filesystem lua-zip \
           lua-sql-sqlite3 qtmultimedia5-dev qttools5-dev luarocks ccache libpugixml-dev cmake -y
 
-        # switch to GCC that supports C++17 while retaining support for older OS's
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 7
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 7
-        sudo update-alternatives --set gcc /usr/bin/gcc-7
-        sudo update-alternatives --set g++ /usr/bin/g++-7
-
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         sudo luarocks install luautf8  
