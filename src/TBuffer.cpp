@@ -2087,7 +2087,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     QFontMetrics qfm(hostFont);
     if (qfm.horizontalAdvance(lineBuffer.back()) > wrapByPixel || lineText.indexOf("\n") != -1) {
         TChar format(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
-        wrapLine(getLastLineNumber(), wrapByPixel, mWrapIndent, format);
+        wrapLine(getLastLineNumber(), wrapByPixel, mWrapIndent, format, true, true);
     }
 }
 
@@ -2208,7 +2208,7 @@ void TBuffer::paste(QPoint& P, const TBuffer& chunk)
 
     if (hasAppended && y != -1) {
         TChar format;
-        wrapLine(y, mWrapAt, mWrapIndent, format);
+        wrapLine(y, mWrapAt, mWrapIndent, format, true, true);
     }
 }
 
@@ -2332,7 +2332,7 @@ void TBuffer::logRemainingOutput()
 // while wrapLine only does it for one line.
 // Thus, wrap uses pop_back and push_back while wrapLine uses remove_at and insert.
 // Returns how many new lines have been added by the wrapping action
-inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& format, bool onlyWrapOneLine)
+inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& format, bool onlyWrapOneLine, bool containNewLine)
 {
     const int bufferSize = static_cast<int>(buffer.size());
     if (bufferSize < startLine || startLine < 0) {
@@ -2350,7 +2350,7 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
         if (onlyWrapOneLine && i > startLine) {
             break; //only wrap one line of text
         }
-        int newLineIndex = lineBuffer.at(i).indexOf("\n") != -1;
+        int newLineIndex = containNewLine ? lineBuffer.at(i).indexOf("\n") : -1;
         int lineWidth = qfm.horizontalAdvance(lineBuffer.at(i));
         if (lineWidth > screenWidth || newLineIndex != -1) {
             // Track where subStringStart
@@ -2413,23 +2413,25 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                         bSearchIteratorPrev = bSearchIteratorCurrent;
                     }
                     wordFinder.setPosition(lineCharIterator);
-                    // This is the new line check, check if there is newLine before the current boundary
-                    newLineBoundary = lineBuffer.at(i).lastIndexOf("\n", lineCharIterator);
-                    // This is for case where there is multiple newLine before the current boundary
-                    if (newLineBoundary != -1) {
-                        int firstNewLine = lineBuffer.at(i).indexOf("\n", subStringStart);
-                        if (firstNewLine < newLineBoundary) {
-                            newLineBoundary = firstNewLine;
+                    if (containNewLine) {
+                        // This is the new line check, check if there is newLine before the current boundary
+                        newLineBoundary = lineBuffer.at(i).lastIndexOf("\n", lineCharIterator);
+                        // This is for case where there is multiple newLine before the current boundary
+                        if (newLineBoundary != -1) {
+                            int firstNewLine = lineBuffer.at(i).indexOf("\n", subStringStart);
+                            if (firstNewLine < newLineBoundary) {
+                                newLineBoundary = firstNewLine;
+                            }
                         }
                     }
-                } else {
+                } else if (containNewLine) {
                     // For instance where this is being ran only for newLine, and not for wrapping
                     newLineBoundary = lineBuffer.at(i).indexOf("\n", subStringStart);
                 }
 
                 // Indicate whethere we are chopping \n, which requires skipping the iterator
                 bool newLineChop = false;
-                if (newLineBoundary != -1) {
+                if (containNewLine && newLineBoundary != -1) {
                     lineCharIterator = newLineBoundary;
                     newLineChop = true;
                 } else {
