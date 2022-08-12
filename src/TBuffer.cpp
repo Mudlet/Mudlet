@@ -2373,7 +2373,6 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                 int bSearchEnd = lineCharTotal;
                 int bSearchIteratorPrev = (bSearchStart + bSearchEnd) / 2;
                 int lastType = 0; //-1 is <, 0 is =, 1 is >, really this is only use for -1 and 1, since = is guaranteed to not happen at this stage
-                int cou = 0;
 
                 // This is the horizontal advance check
                 if (lineWidth > screenWidth) {
@@ -2454,11 +2453,9 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                         // This is the binary search, basically we keep track of the lineText, and look for the following
                         // When we cross from textLine < width into textLine > width AND step is 1, we take previous
                         // When we cross from textLine > width into textLine < width AND step is 1, we take current
-                        cou = 0;
                         while (true) {
                             int bSearchIteratorCurrent = (bSearchStart + bSearchEnd) / 2;
                             int thisType = 0;
-                            
                             lineText = lineBuffer.at(i).midRef(subStringStart, bSearchIteratorCurrent - subStringStart);
                             int calculatedWidth = (indentSize > 0) ? qfm.horizontalAdvance(lineIndent + lineText) : qfm.horizontalAdvance(lineText.toString());
 
@@ -2482,7 +2479,6 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                             if (abs(bSearchIteratorCurrent - bSearchIteratorPrev) == 1) {
                                 if (lastType == -1 and thisType == 1) {
                                     lineCharIterator = bSearchIteratorPrev;
-                                    lineText = lineBuffer.at(i).midRef(subStringStart, lineCharIterator - subStringStart);
                                     break;
                                 } else if (lastType == 1 and thisType == -1) {
                                     lineCharIterator = bSearchIteratorCurrent;
@@ -2491,19 +2487,12 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                             }
                             lastType = thisType;
                             bSearchIteratorPrev = bSearchIteratorCurrent;
-                            if (bSearchEnd <= bSearchStart) {
-                                if (cou > 4) {
-                                    lineCharIterator = lineCharTotal;
-                                    break;
-                                }
-                                cou++;
-                            }
                         }
                         wordFinder.setPosition(lineCharIterator);
                     } else {
                         lineCharIterator = wordFinder.position();
-                        lineText = lineBuffer.at(i).midRef(subStringStart, lineCharIterator - subStringStart);
                     }
+                    lineText = lineBuffer.at(i).midRef(subStringStart, lineCharIterator - subStringStart);
                     for (int i3 = subStringStart; i3 < lineCharIterator; ++i3) {
                         newLine.push_back(buffer.at(i).at(i3));
                     }
