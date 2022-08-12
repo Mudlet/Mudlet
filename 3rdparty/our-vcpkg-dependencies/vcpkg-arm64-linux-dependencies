@@ -1,8 +1,0 @@
---triplet
-arm64-linux
-yajl
-hunspell
-pugixml
---overlay-ports=../our-vcpkg-dependencies/lua
-lua[core]
-sqlite3
