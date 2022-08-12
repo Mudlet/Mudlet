@@ -2328,6 +2328,52 @@ void TBuffer::logRemainingOutput()
     mpHost->mpConsole->mLogStream.flush();
 }
 
+inline int TBuffer::binarySearchHorizontalAdvance(const int& lineIndex, const int& indentSize, const QString& lineIndent, const int& screenWidth, const int& subStringStart, const int& lineCharTotal, const QFontMetrics& qfm, int& lineCharIterator, const bool isBefore)
+{
+    // This potentially can be costly, as we are running horizontalAdvance, we do a binary search instead
+    // The space we are covering is between subStringStart and where the boundary was
+    int bSearchStart = subStringStart;
+    int bSearchEnd = lineCharTotal;
+    int bSearchIteratorPrev = (bSearchStart + bSearchEnd) / 2;
+    int lastType = 0; //-1 is <, 0 is =, 1 is >, really this is only use for -1 and 1, since = is guaranteed to not happen at this stage
+    while (true) {
+        int bSearchIteratorCurrent = (bSearchStart + bSearchEnd) / 2;
+        int thisType = 0;
+        QStringRef lineText = lineBuffer.at(lineIndex).midRef(subStringStart, bSearchIteratorCurrent - subStringStart);
+        int calculatedWidth = (indentSize > 0) ? qfm.horizontalAdvance(lineIndent + lineText) : qfm.horizontalAdvance(lineText.toString());
+
+        if ((bSearchEnd - bSearchIteratorCurrent) <= 1) {
+            // this line doesn't even need wrapping
+            lineCharIterator = bSearchIteratorCurrent;
+            break;
+        } else if (calculatedWidth > screenWidth) {
+            // String still too long, decrement
+            bSearchEnd = bSearchIteratorCurrent;
+            thisType = 1;
+        } else if (calculatedWidth < screenWidth) {
+            // String still too short, cincrment
+            bSearchStart = bSearchIteratorCurrent;
+            thisType = -1;
+        } else {
+            // string just long enough
+            lineCharIterator = bSearchIteratorCurrent;
+            break;
+        }
+
+        if (abs(bSearchIteratorCurrent - bSearchIteratorPrev) == 1) {
+            if (lastType == -1 and thisType == 1) {
+                lineCharIterator = isBefore ? bSearchIteratorPrev : bSearchIteratorCurrent;
+                break;
+            } else if (lastType == 1 and thisType == -1) {
+                lineCharIterator = isBefore ? bSearchIteratorCurrent : bSearchIteratorPrev;
+                break;
+            }
+        }
+        lastType = thisType;
+        bSearchIteratorPrev = bSearchIteratorCurrent;
+    }
+}
+
 // The difference between this and wrap is, wrap does it from startLine all the way to the end
 // while wrapLine only does it for one line.
 // Thus, wrap uses pop_back and push_back while wrapLine uses remove_at and insert.
@@ -2368,50 +2414,9 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
             // There is two condition, one requires horizontal advance, another require newline check
             for (int lineCharIterator = 0, lineCharTotal = static_cast<int>(buffer.at(i).size()); lineCharIterator < lineCharTotal;) {
                 int newLineBoundary;
-                // Binary Search to find the boundary that caused the width to exceed screenWidth
-                int bSearchStart = subStringStart;
-                int bSearchEnd = lineCharTotal;
-                int bSearchIteratorPrev = (bSearchStart + bSearchEnd) / 2;
-                int lastType = 0; //-1 is <, 0 is =, 1 is >, really this is only use for -1 and 1, since = is guaranteed to not happen at this stage
-
                 // This is the horizontal advance check
                 if (lineWidth > screenWidth) {
-                    while (true) {
-                        int bSearchIteratorCurrent = (bSearchStart + bSearchEnd) / 2;
-                        int thisType = 0;
-                        lineText = lineBuffer.at(i).midRef(subStringStart, bSearchIteratorCurrent - subStringStart);
-                        int calculatedWidth = (indentSize > 0) ? qfm.horizontalAdvance(lineIndent + lineText) : qfm.horizontalAdvance(lineText.toString());
-
-                        if ((bSearchEnd - bSearchIteratorCurrent) <= 1) {
-                            // this line doesn't even need wrapping
-                            lineCharIterator = bSearchIteratorCurrent;
-                            break;
-                        } else if (calculatedWidth > screenWidth) {
-                            // String still too long, decrement
-                            bSearchEnd = bSearchIteratorCurrent;
-                            thisType = 1;
-                        } else if (calculatedWidth < screenWidth) {
-                            // String still too short, cincrment
-                            bSearchStart = bSearchIteratorCurrent;
-                            thisType = -1;
-                        } else {
-                            // string just long enough
-                            lineCharIterator = bSearchIteratorCurrent;
-                            break;
-                        }
-
-                        if (abs(bSearchIteratorCurrent - bSearchIteratorPrev) == 1) {
-                            if (lastType == -1 and thisType == 1) {
-                                lineCharIterator = bSearchIteratorCurrent;
-                                break;
-                            } else if (lastType == 1 and thisType == -1) {
-                                lineCharIterator = bSearchIteratorPrev;
-                                break;
-                            }
-                        }
-                        lastType = thisType;
-                        bSearchIteratorPrev = bSearchIteratorCurrent;
-                    }
+                    binarySearchHorizontalAdvance(i, indentSize, lineIndent, screenWidth, subStringStart, lineCharTotal, qfm, lineCharIterator, false);
                     wordFinder.setPosition(lineCharIterator);
                     if (containNewLine) {
                         // This is the new line check, check if there is newLine before the current boundary
@@ -2446,50 +2451,7 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                     }
                     // This is a special case, we need to remove character one at a time until we fall below the screenWidth
                     if (wordFinder.position() <= subStringStart) {
-                        // This potentially can be costly, as we are running horizontalAdvance, we do a binary search instead
-                        // The space we are covering is between subStringStart and where the boundary was
-                        bSearchStart = subStringStart;
-                        bSearchEnd = lineCharTotal;
-                        bSearchIteratorPrev = (bSearchStart + bSearchEnd) / 2;
-                        lastType = 0; //-1 is <, 0 is =, 1 is >, really this is only use for -1 and 1, since = is guaranteed to not happen at this stage
-                        // This is the binary search, basically we keep track of the lineText, and look for the following
-                        // When we cross from textLine < width into textLine > width AND step is 1, we take previous
-                        // When we cross from textLine > width into textLine < width AND step is 1, we take current
-                        while (true) {
-                            int bSearchIteratorCurrent = (bSearchStart + bSearchEnd) / 2;
-                            int thisType = 0;
-                            lineText = lineBuffer.at(i).midRef(subStringStart, bSearchIteratorCurrent - subStringStart);
-                            int calculatedWidth = (indentSize > 0) ? qfm.horizontalAdvance(lineIndent + lineText) : qfm.horizontalAdvance(lineText.toString());
-
-                            if ((bSearchEnd - bSearchIteratorCurrent) <= 1) {
-                                // this line doesn't even need wrapping
-                                lineCharIterator = bSearchIteratorCurrent;
-                                break;
-                            } else if (calculatedWidth > screenWidth) {
-                                // String still too long, decrement
-                                bSearchEnd = bSearchIteratorCurrent;
-                                thisType = 1;
-                            } else if (calculatedWidth < screenWidth) {
-                                // String still too short, cincrment
-                                bSearchStart = bSearchIteratorCurrent;
-                                thisType = -1;
-                            } else {
-                                // string just long enough
-                                lineCharIterator = bSearchIteratorCurrent;
-                                break;
-                            }
-                            if (abs(bSearchIteratorCurrent - bSearchIteratorPrev) == 1) {
-                                if (lastType == -1 and thisType == 1) {
-                                    lineCharIterator = bSearchIteratorPrev;
-                                    break;
-                                } else if (lastType == 1 and thisType == -1) {
-                                    lineCharIterator = bSearchIteratorCurrent;
-                                    break;
-                                }
-                            }
-                            lastType = thisType;
-                            bSearchIteratorPrev = bSearchIteratorCurrent;
-                        }
+                        binarySearchHorizontalAdvance(i, indentSize, lineIndent, screenWidth, subStringStart, lineCharTotal, qfm, lineCharIterator, true);
                         wordFinder.setPosition(lineCharIterator);
                     } else {
                         lineCharIterator = wordFinder.position();
@@ -2589,11 +2551,9 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
             timeBuffer.pop_back();
             promptBuffer.pop_back();
         }
-        while (!queue.empty()) {
+        for (int i = 0, tempListSize = static_cast<int>(tempList.size()); i < tempListSize; ++i) {
             buffer.push_back(queue.front());
             queue.pop_front();
-        }
-        for (int i = 0, tempListSize = static_cast<int>(tempList.size()); i < tempListSize; ++i) {
             if (tempList.at(i).isEmpty()) {
                 lineBuffer.append(QString());
                 timeBuffer.append(QString());
