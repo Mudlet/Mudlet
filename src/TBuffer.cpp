@@ -2564,16 +2564,24 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
         }
         ++lineCount;
     }
-    
-    bool isPrompt;
-    QString time;
+
+    int insertedLines = queue.size() - 1;
+
     if (onlyWrapOneLine) {
         buffer.erase(buffer.begin() + startLine);
         lineBuffer.removeAt(startLine);
-        time = timeBuffer.at(startLine);
+        const QString time = timeBuffer.at(startLine);
         timeBuffer.removeAt(startLine);
-        isPrompt = promptBuffer.at(startLine);
+        const bool isPrompt = promptBuffer.at(startLine);
         promptBuffer.removeAt(startLine);
+
+        buffer.insert(buffer.begin() + startLine, queue.begin(), queue.end());
+        for (int i = 0, tempListSize = static_cast<int>(tempList.size()); i < tempListSize; ++i) {
+            lineBuffer.insert(startLine + i, tempList.at(i));
+            timeBuffer.insert(startLine + i, time);
+            promptBuffer.insert(startLine + i, isPrompt);
+        }
+        log(startLine, startLine + tempList.size() - 1);
     } else {
         for (int i = 0; i < lineCount; ++i) {
             buffer.pop_back();
@@ -2581,27 +2589,12 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
             timeBuffer.pop_back();
             promptBuffer.pop_back();
         }
-    }
-
-    int insertedLines = queue.size() - 1;
-
-    if (onlyWrapOneLine) {
-        buffer.insert(buffer.begin() + startLine, queue.begin(), queue.end());
-    } else {
         while (!queue.empty()) {
             buffer.push_back(queue.front());
             queue.pop_front();
         }
-    }
-    
-    const int tempListSize = static_cast<int>(tempList.size());
-    for (int i = 0; i < tempListSize; ++i) {
-        if (onlyWrapOneLine) {
-            lineBuffer.insert(startLine + i, tempList.at(i));
-            timeBuffer.insert(startLine + i, time);
-            promptBuffer.insert(startLine + i, isPrompt);
-        } else {
-            if (tempList.at(i).size() < 1) {
+        for (int i = 0, tempListSize = static_cast<int>(tempList.size()); i < tempListSize; ++i) {
+            if (tempList.at(i).isEmpty()) {
                 lineBuffer.append(QString());
                 timeBuffer.append(QString());
                 promptBuffer.push_back(false);
@@ -2611,12 +2604,9 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                 promptBuffer.push_back(promptList.at(i));
             }
         }
-    }
-    if (onlyWrapOneLine) {
-        log(startLine, startLine + tempList.size() - 1);
-    } else {
         log(startLine, startLine + tempList.size());
     }
+    
     return insertedLines > 0 ? insertedLines : 0;
 }
 
