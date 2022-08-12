@@ -38,7 +38,7 @@ jobs:
           libzip-dev libboost-graph-dev libyajl-dev libpulse-dev lua-rex-pcre lua-filesystem lua-zip \
           lua-sql-sqlite3 qtmultimedia5-dev qttools5-dev luarocks ccache libpugixml-dev cmake -y
 
-        sudo luarocks install luautf8  
+        sudo luarocks install luautf8
         sudo luarocks install lua-yajl YAJL_LIBDIR=`find /usr -name "libyajl.so" -printf '%h\n'` YAJL_INCDIR=/usr/include
 
     - name: Set build info
@@ -58,3 +58,4 @@ jobs:
     - name: Check ccache stats post build
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: ccache --show-stats
+
