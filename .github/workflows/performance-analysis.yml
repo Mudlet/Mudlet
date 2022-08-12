@@ -22,6 +22,12 @@ jobs:
             compiler: gcc_64
             os: [ self-hosted, pi4 ]
 
+
+    env:
+      # APP_BUILD embeds the git sha which changes on every commit, throwing the cache off - ignore it
+      CCACHE_IGNOREOPTIONS: "-DAPP_BUILD=*"
+
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
