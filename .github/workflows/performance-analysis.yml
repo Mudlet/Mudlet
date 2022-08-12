@@ -66,7 +66,7 @@ jobs:
 
     - name: Build Mudlet
       run : |
-        WITH_UPDATER=NO WITH_3DMAPPER=NO qmake ../src/mudlet.pro
+        WITH_UPDATER=NO WITH_3DMAPPER=NO qmake ./src/mudlet.pro
         make -j $(expr `nproc` - 1)
 
     - name: Check ccache stats post build
