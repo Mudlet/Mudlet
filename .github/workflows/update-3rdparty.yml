@@ -251,7 +251,7 @@ jobs:
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
           branch: update-singleshot-connect-${{ github.sha }}
-          path: src/
+          path: 3rdparty/kdtoolbox
           commit-message: (autocommit) Update singleshot_connect.h to latest upstream
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
 
@@ -291,6 +291,6 @@ jobs:
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
           branch: update-cmake-scripts-${{ github.sha }}
-          path: src/
+          path: 3rdparty/cmake-scripts
           commit-message: (autocommit) Update sanitizers.cmake to latest upstream
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
