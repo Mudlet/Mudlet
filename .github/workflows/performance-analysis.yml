@@ -22,11 +22,6 @@ jobs:
             compiler: gcc_64
             os: [ self-hosted, pi4 ]
 
-    env:
-      BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
-      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.77.0/boost_1_77_0.tar.bz2/download
-
-
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
