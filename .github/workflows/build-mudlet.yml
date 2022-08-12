@@ -40,11 +40,6 @@ jobs:
 #            triplet: x64-mingw-dynamic
 #            # compiler: flag not used in windows pipeline
 #            qt: '5.14.2'
-          - os: [ self-hosted, pi4 ]
-            buildname: 'raspberrypi'
-            triplet: arm64-linux
-            compiler: gcc_64
-            qt: '5.14.2'
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
