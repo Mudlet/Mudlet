@@ -34,21 +34,6 @@ jobs:
         fetch-depth: 0
         submodules: true
 
-    - name: Restore Qt cache
-      uses: actions/cache@v3
-      id: cache-qt
-      with:
-        path: ${{runner.workspace}}/Qt/${{matrix.qt}}
-        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
-
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v2
-      with:
-        version: ${{matrix.qt}}
-        dir: ${{runner.workspace}}
-        cached: ${{steps.cache-qt.outputs.cache-hit}}
-        aqtversion: '==1.1.2'
-
     - name: Restore Boost cache
       uses: actions/cache@v3
       id: cache-boost
@@ -93,7 +78,8 @@ jobs:
       run: |
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
-        sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 -y
+        sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev \
+          libpulse-dev g++-7 qt5-default qtmultimedia5-dev qttools5-dev -y
 
         # switch to GCC that supports C++17 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 7
