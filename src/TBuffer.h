@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2018, 2020 by Stephen Lyons                  *
+ *   Copyright (C) 2015, 2017-2018, 2020, 2022 by Stephen Lyons            *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -85,7 +85,7 @@ public:
     // Default constructor - the default argument means it can be used with no
     // supplied arguments, but it must NOT be marked 'explicit' so as to allow
     // this:
-    TChar(Host* pH = nullptr);
+    explicit TChar(Host* pH = nullptr);
     // A non-default constructor:
     TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkIndex = 0);
     // User defined copy-constructor:
@@ -122,10 +122,10 @@ public:
 private:
     QColor mFgColor;
     QColor mBgColor;
-    AttributeFlags mFlags;
+    AttributeFlags mFlags = None;
     // Kept as a separate flag because it must often be handled separately
-    bool mIsSelected;
-    int mLinkIndex;
+    bool mIsSelected = false;
+    int mLinkIndex = 0;
 
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
@@ -143,7 +143,7 @@ class TBuffer
     inline static const int MAX_CHARACTERS_PER_ECHO = 1000000;
 
 public:
-    TBuffer(Host* pH);
+    explicit TBuffer(Host* pH);
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
@@ -193,20 +193,21 @@ public:
 
 
     std::deque<TChar> bufferLine;
+    // stores the text attributes (TChars) that make up each line of text in the buffer
     std::deque<std::deque<TChar>> buffer;
-    QStringList timeBuffer;
+    // stores the actual content of lines
     QStringList lineBuffer;
+    // stores timestamps associated with lines
+    QStringList timeBuffer;
+    // stores a boolean whenever the line is a prompt one
     QList<bool> promptBuffer;
     TLinkStore mLinkStore;
-    int mLinesLimit;
-    int mBatchDeleteSize;
-    int mWrapAt;
-    int mWrapIndent;
-
-    int mCursorY;
-
-    // State of MXP system:
-    bool mEchoingText;
+    int mLinesLimit = 10000;
+    int mBatchDeleteSize = 1000;
+    int mWrapAt = 99999999;
+    int mWrapIndent = 0;
+    int mCursorY = 0;
+    bool mEchoingText = false;
 
 
 private:
@@ -225,14 +226,14 @@ private:
 
     // First stage in decoding SGR/OCS sequences - set true when we see the
     // ASCII ESC character:
-    bool mGotESC;
+    bool mGotESC = false;
     // Second stage in decoding SGR sequences - set true when we see the ASCII
     // ESC character followed by the '[' one:
-    bool mGotCSI;
+    bool mGotCSI = false;
     // Second stage in decoding OSC sequences - set true when we see the ASCII
     // ESC character followed by the ']' one:
-    bool mGotOSC;
-    bool mIsDefaultColor;
+    bool mGotOSC = false;
+    bool mIsDefaultColor = true;
 
 
     QColor mBlack;
@@ -263,13 +264,13 @@ private:
 
     QPointer<Host> mpHost;
 
-    bool mBold;
-    bool mItalics;
-    bool mOverline;
-    bool mReverse;
-    bool mStrikeOut;
-    bool mUnderline;
-    bool mItalicBeforeBlink;
+    bool mBold = false;
+    bool mItalics = false;
+    bool mOverline = false;
+    bool mReverse = false;
+    bool mStrikeOut = false;
+    bool mUnderline = false;
+    bool mItalicBeforeBlink = false;
 
     QString mMudLine;
     std::deque<TChar> mMudBuffer;
@@ -282,12 +283,12 @@ private:
 
     // keeps track of the previously logged buffer lines to ensure no log duplication
     // happens when you enter a command
-    int lastLoggedFromLine;
-    int lastloggedToLine;
+    int lastLoggedFromLine = 0;
+    int lastloggedToLine = 0;
     QString lastTextToLog;
 
     QByteArray mEncoding;
-    QTextCodec* mMainIncomingCodec;
+    QTextCodec* mMainIncomingCodec = nullptr;
 };
 
 #ifndef QT_NO_DEBUG_STREAM

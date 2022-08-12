@@ -30,12 +30,12 @@ jobs:
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
-      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
+      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.77.0/boost_1_77_0.tar.bz2/download
 
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         # We must fetch at least the immediate parents so that if this is
         # a pull request then we can checkout the head.
@@ -43,7 +43,7 @@ jobs:
         submodules: true
 
     - name: Restore Qt cache
-      uses: actions/cache@v2.1.6
+      uses: actions/cache@v3
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
@@ -59,7 +59,7 @@ jobs:
         aqtversion: '==1.1.2'
 
     - name: Restore Boost cache
-      uses: actions/cache@v2.1.6
+      uses: actions/cache@v3
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
@@ -82,7 +82,7 @@ jobs:
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v1
+      uses: github/codeql-action/init@v2
       with:
         config-file: ./.github/codeql/codeql-config.yml
         languages: ${{ matrix.language }}
@@ -95,7 +95,12 @@ jobs:
     - name: Use CMake 3.20.1
       uses: lukka/get-cmake@v3.20.1
 
-    # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
+    - name: (Linux) Install non-vcpkg dependencies (1/2)
+      if: runner.os == 'Linux'
+      run: |
+        # dependencies needed for vcpkg specifically
+        sudo apt-get install gettext -y
+
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v7
       env:
@@ -105,7 +110,7 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
 
-    - name: (Linux) Install non-vcpkg dependencies
+    - name: (Linux) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'Linux'
       run: |
         # Install from vcpkg everything we can for cross-platform consistency
@@ -156,4 +161,4 @@ jobs:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v1
+      uses: github/codeql-action/analyze@v2

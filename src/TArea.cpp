@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2020-2021 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2020-2022 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -48,17 +48,7 @@ static const int kPixmapDataLineSize = 64;
 
 
 TArea::TArea(TMap* pMap, TRoomDB* pRDB)
-: min_x(0)
-, min_y(0)
-, min_z(0)
-, max_x(0)
-, max_y(0)
-, max_z(0)
-, gridMode( false )
-, isZone( false )
-, zoneAreaRef( 0 )
-, mpRoomDB( pRDB )
-, mIsDirty( false )
+: mpRoomDB(pRDB)
 , mpMap(pMap)
 {
 }
@@ -568,10 +558,10 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
                 itSpecialExit.next();
                 QPair<QString, int> exitData;
                 exitData.first = itSpecialExit.key();
+                exitData.second = itSpecialExit.value();
                 TRoom* pToRoom = mpRoomDB->getRoom(exitData.second);
                 if (pToRoom && mpRoomDB->getArea(pToRoom->getArea()) != this) {
                     // Note that pToRoom->getArea() is misnamed, should be getAreaId() !
-                    exitData.second = itSpecialExit.value();
                     if (!exitData.first.isEmpty()) {
                         results.insert(fromRoomId, exitData);
                     }
@@ -607,11 +597,7 @@ void TArea::writeJsonArea(QJsonArray& array) const
 
     writeJsonUserData(areaObj);
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QList<int> roomList{rooms.begin(), rooms.end()};
-#else
-    QList<int> roomList = rooms.toList();
-#endif
     int roomCount = roomList.count();
     if (roomCount > 1) {
         std::sort(roomList.begin(), roomList.end());
@@ -771,9 +757,11 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
     if (!(pLabel->fgColor.red() == defaultLabelForeground.red()
           && pLabel->fgColor.green() == defaultLabelForeground.green()
           && pLabel->fgColor.blue() == defaultLabelForeground.blue()
+          && pLabel->fgColor.alpha() == defaultLabelForeground.alpha()
           && pLabel->bgColor.red() == defaultLabelBackground.red()
-          && pLabel->bgColor.red() == defaultLabelBackground.green()
-          && pLabel->bgColor.red() == defaultLabelBackground.blue())) {
+          && pLabel->bgColor.green() == defaultLabelBackground.green()
+          && pLabel->bgColor.blue() == defaultLabelBackground.blue()
+          && pLabel->bgColor.alpha() == defaultLabelBackground.alpha())) {
 
         // For an image the colors are not used and tend to be set to black, if
         // so skip them. Unfortunately because of the way QColour s are

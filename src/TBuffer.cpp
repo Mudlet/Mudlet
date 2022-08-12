@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018, 2020 by Stephen Lyons                        *
+ *   Copyright (C) 2014-2018, 2020, 2022 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -24,7 +24,6 @@
 #include "TBuffer.h"
 
 #include "mudlet.h"
-#include "TConsole.h"
 #include "TStringUtils.h"
 
 #include "pre_guard.h"
@@ -56,23 +55,15 @@ TChar::TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags fla
 : mFgColor(fg)
 , mBgColor(bg)
 , mFlags(flags)
-, mIsSelected(false)
 , mLinkIndex(linkIndex)
 {
 }
 
 TChar::TChar(Host* pH)
 : mFlags(None)
-, mIsSelected(false)
-, mLinkIndex(0)
+, mFgColor(pH ? pH->mFgColor : QColorConstants::White)
+, mBgColor(pH ? pH->mBgColor : QColorConstants::Black)
 {
-    if (pH) {
-        mFgColor = pH->mFgColor;
-        mBgColor = pH->mBgColor;
-    } else {
-        mFgColor = Qt::white;
-        mBgColor = Qt::black;
-    }
 }
 
 // Note: this operator compares ALL aspects of 'this' against 'other' which may
@@ -108,21 +99,11 @@ TChar::TChar(const TChar& copy)
 {
 }
 
-const QString timeStampFormat = QStringLiteral("hh:mm:ss.zzz ");
-const QString blankTimeStamp  = QStringLiteral("------------ ");
+const QString timeStampFormat = qsl("hh:mm:ss.zzz ");
+const QString blankTimeStamp  = qsl("------------ ");
 
 TBuffer::TBuffer(Host* pH)
-: mLinesLimit(10000)
-, mBatchDeleteSize(1000)
-, mWrapAt(99999999)
-, mWrapIndent(0)
-, mCursorY(0)
-, mEchoingText(false)
-, mGotESC(false)
-, mGotCSI(false)
-, mGotOSC(false)
-, mIsDefaultColor(true)
-, mBlack(pH->mBlack)
+: mBlack(pH->mBlack)
 , mLightBlack(pH->mLightBlack)
 , mRed(pH->mRed)
 , mLightRed(pH->mLightRed)
@@ -142,17 +123,6 @@ TBuffer::TBuffer(Host* pH)
 , mForeGroundColorLight(pH->mFgColor)
 , mBackGroundColor(pH->mBgColor)
 , mpHost(pH)
-, mBold(false)
-, mItalics(false)
-, mOverline(false)
-, mReverse(false)
-, mStrikeOut(false)
-, mUnderline(false)
-, mItalicBeforeBlink(false)
-, lastLoggedFromLine(0)
-, lastloggedToLine(0)
-, mEncoding()
-, mMainIncomingCodec(nullptr)
 {
     clear();
 
@@ -707,6 +677,29 @@ COMMIT_LINE:
             // text would alter the prior contents but as that is on a separate
             // line there should not be any changes to text before a line feed
             // which sort of seems to be implied by the current value of ch:
+
+            // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
+            // https://bugreports.qt.io/browse/QTBUG-105035
+            if (Q_UNLIKELY(mMudLine.isEmpty())) {
+                if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
+                    localBufferPosition++;
+                    continue;
+                } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
+                    const TChar::AttributeFlags attributeFlags =
+                            ((mIsDefaultColor ? mBold : false) ? TChar::Bold : TChar::None)
+                            | (mItalics ? TChar::Italic : TChar::None)
+                            | (mOverline ? TChar::Overline : TChar::None)
+                            | (mReverse ? TChar::Reverse : TChar::None)
+                            | (mStrikeOut ? TChar::StrikeOut : TChar::None)
+                            | (mUnderline ? TChar::Underline : TChar::None);
+
+                    // Note: we are using the background color for the
+                    // foreground color as well so that we are transparent:
+                    const TChar c(mBackGroundColor, mBackGroundColor, attributeFlags);
+                    mMudLine.append(QChar::Space);
+                    mMudBuffer.push_back(c);
+                }
+            }
 
             if (static_cast<size_t>(mMudLine.size()) != mMudBuffer.size()) {
                 qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
@@ -2060,7 +2053,7 @@ void TBuffer::resetColors()
 void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar format, int linkID)
 {
     // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
-    const QString lineBreaks = QStringLiteral(",.- ");
+    const QString lineBreaks = qsl(",.- ");
 
     if (static_cast<int>(buffer.size()) > mLinesLimit) {
         shrinkBuffer();
@@ -2081,7 +2074,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         promptBuffer << false;
         last = 0;
     }
-    bool firstChar = (lineBuffer.back().size() == 0);
+    bool firstChar = (lineBuffer.back().isEmpty());
     int length = text.size();
     if (length < 1) {
         return;
@@ -2110,8 +2103,9 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         if (lineBuffer.back().size() >= mWrapAt) {
             for (int i = lineBuffer.back().size() - 1; i >= 0; --i) {
                 if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1) {
-                    QString tmp = lineBuffer.back().mid(0, i + 1);
-                    QString lineRest = lineBuffer.back().mid(i + 1);
+                    const int linebreakPos = (i != 0) ? i + 1 : lineBuffer.back().size();
+                    QString tmp = lineBuffer.back().mid(0, linebreakPos);
+                    QString lineRest = lineBuffer.back().mid(linebreakPos);
                     lineBuffer.back() = tmp;
                     std::deque<TChar> newLine;
 
@@ -2157,7 +2151,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
 void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
 {
     // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
-    const QString lineBreaks = QStringLiteral(",.- ");
+    const QString lineBreaks = qsl(",.- ");
 
     if (static_cast<int>(buffer.size()) > mLinesLimit) {
         shrinkBuffer();
@@ -2200,9 +2194,11 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         // multiplied by mWrap:
         if (lineBuffer.back().size() >= mWrapAt) {
             for (int i = lineBuffer.back().size() - 1; i >= 0; --i) {
-                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1) {
-                    QString tmp = lineBuffer.back().mid(0, i + 1);
-                    QString lineRest = lineBuffer.back().mid(i + 1);
+                // insert linebreak either at linebreaking character location or at last character of line
+                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1 || i == 0) {
+                    const int linebreakPos = (i != 0) ? i + 1 : lineBuffer.back().size();
+                    QString tmp = lineBuffer.back().mid(0, linebreakPos);
+                    QString lineRest = lineBuffer.back().mid(linebreakPos);
                     lineBuffer.back() = tmp;
                     std::deque<TChar> newLine;
 
@@ -2425,7 +2421,7 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
 
 int TBuffer::calculateWrapPosition(int lineNumber, int begin, int end)
 {
-    const QString lineBreaks = QStringLiteral("- \n");
+    const QString lineBreaks = qsl("- \n");
     if (lineBuffer.size() < lineNumber) {
         return 0;
     }
@@ -2439,7 +2435,8 @@ int TBuffer::calculateWrapPosition(int lineNumber, int begin, int end)
             return i;
         }
     }
-    return 0;
+
+    return lineSize;
 }
 
 inline int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
@@ -2742,7 +2739,7 @@ bool TBuffer::moveCursor(QPoint& where)
 
 // Needed, at least, as a filler for missing lines past end of the lineBuffer
 // requested by lua function getLines(...):
-QString badLineError = QStringLiteral("ERROR: invalid line number");
+QString badLineError = qsl("ERROR: invalid line number");
 
 QString& TBuffer::line(int n)
 {
@@ -3119,7 +3116,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // we will NOT need a closing "</span>"
     if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
         // TODO: formatting according to TTextEdit.cpp: if( i2 < timeOffset ) - needs updating if we allow the colours to be user set:
-        s.append(QStringLiteral("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(timeStampFormat.length())));
+        s.append(qsl("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(timeStampFormat.length())));
         // Set the current idea of what the formatting is so we can spot if it
         // changes:
         currentFgColor = QColor(200, 150, 0);
@@ -3141,7 +3138,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
         }
 
         // Pad out with spaces to the right so a partial first line lines up
-        s.append(QStringLiteral("<span>%1").arg(QString(spacePadding, QChar::Space)));
+        s.append(qsl("<span>%1").arg(QString(spacePadding, QChar::Space)));
     }
 
     for (auto cookedPos = static_cast<unsigned long>(pos); pos < lastPos; ++cookedPos, ++pos) {
@@ -3163,25 +3160,25 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
             // clang-format off
             if (currentFlags & TChar::Reverse) {
                 // Swap the fore and background colours:
-                s.append(QStringLiteral("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
+                s.append(qsl("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
                          .arg(QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 1 to 3
                               QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
                               currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
-                              ? QStringLiteral(" text-decoration:%1%2%3")
+                              ? qsl(" text-decoration:%1%2%3")
                                 .arg(currentFlags & TChar::Underline ? QLatin1String(" underline") : QString(),
                                      currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
                                      currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
                               : QString()));
             } else {
-                s.append(QStringLiteral("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
+                s.append(qsl("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
                          .arg(QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 1 to 3
                               QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 4 to 6
                               currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
                               currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
-                              ? QStringLiteral(" text-decoration:%1%2%3")
+                              ? qsl(" text-decoration:%1%2%3")
                                 .arg(currentFlags & TChar::Underline ? QLatin1String(" underline") : QString(),
                                      currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
                                      currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
@@ -3424,7 +3421,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
 #if defined(DEBUG_UTF8_PROCESSING)
             QString debugMsg;
             for (size_t i = 0; i < utf8SequenceLength; ++i) {
-                debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
+                debugMsg.append(qsl("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
             }
             qDebug().nospace() << "    Sequence bytes are: " << debugMsg;
 #endif
@@ -3867,7 +3864,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 #if defined(DEBUG_GB_PROCESSING)
         QString debugMsg;
         for (size_t i = 0; i < gbSequenceLength; ++i) {
-            debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
+            debugMsg.append(qsl("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
         }
         qDebug().nospace() << "    Sequence bytes are: " << debugMsg;
 #endif
@@ -3992,7 +3989,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
 #if defined(DEBUG_BIG5_PROCESSING)
         QString debugMsg;
         for (size_t i = 0; i < big5SequenceLength; ++i) {
-            debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
+            debugMsg.append(qsl("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
         }
         qDebug().nospace() << "    Invalid.  Sequence bytes are: " << debugMsg;
 #endif

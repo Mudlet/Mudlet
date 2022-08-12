@@ -3,6 +3,8 @@
 #    Copyright (C) 2015-2018, 2020 by Stephen Lyons                        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
+#    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
+#    Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -58,6 +60,7 @@ set(mudlet_SRCS
     dlgIRC.cpp
     dlgKeysMainArea.cpp
     dlgMapper.cpp
+    dlgMapLabel.cpp
     dlgModuleManager.cpp
     dlgNotepad.cpp
     dlgPackageExporter.cpp
@@ -85,8 +88,10 @@ set(mudlet_SRCS
     main.cpp
     mapInfoContributorManager.cpp
     mudlet.cpp
+    ShortcutsManager.cpp
     ScriptUnit.cpp
     T2DMap.cpp
+    TAccessibleTextEdit.cpp
     TAction.cpp
     TAlias.cpp
     TArea.cpp
@@ -104,6 +109,7 @@ set(mudlet_SRCS
     TimerUnit.cpp
     TKey.cpp
     TLabel.cpp
+    TScrollBox.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
     TMap.cpp
@@ -151,6 +157,14 @@ set(mudlet_SRCS
     XMLexport.cpp
     XMLimport.cpp)
 
+if(APPLE)
+  list(APPEND mudlet_SRCS AnnouncerMac.mm)
+elseif(UNIX AND NOT APPLE)
+  list(APPEND mudlet_SRCS AnnouncerLinux.cpp)
+elseif(WIN32)
+  list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
+endif()
+
 # This is for compiled UI files, not those used at runtime
 set(mudlet_UIS
     ui/about_dialog.ui
@@ -164,6 +178,7 @@ set(mudlet_UIS
     ui/keybindings_main_area.ui
     ui/main_window.ui
     ui/module_manager.ui
+    ui/map_label.ui
     ui/mapper.ui
     ui/notes_editor.ui
     ui/package_manager.ui
@@ -182,6 +197,7 @@ set(mudlet_UIS
 
 set(mudlet_HDRS
     ActionUnit.h
+    Announcer.h
     AliasUnit.h
     AltFocusMenuBarDisable.h
     ctelnet.h
@@ -195,6 +211,7 @@ set(mudlet_HDRS
     dlgConnectionProfiles.h
     dlgIRC.h
     dlgKeysMainArea.h
+    dlgMapLabel.h
     dlgMapper.h
     dlgModuleManager.h
     dlgNotepad.h
@@ -224,8 +241,11 @@ set(mudlet_HDRS
     mudlet.h
     post_guard.h
     pre_guard.h
+    ShortcutsManager.h
     ScriptUnit.h
     T2DMap.h
+    TAccessibleConsole.h
+    TAccessibleTextEdit.h
     TAction.h
     TAlias.h
     TArea.h
@@ -246,6 +266,7 @@ set(mudlet_HDRS
     TimerUnit.h
     TKey.h
     TLabel.h
+    TScrollBox.h
     TLinkStore.h
     TLuaInterpreter.h
     TMainConsole.h
@@ -294,6 +315,7 @@ set(mudlet_HDRS
     TTrigger.h
     TVar.h
     VarUnit.h
+    utils.h
     widechar_width.h
     XMLexport.h
     XMLimport.h)
@@ -308,12 +330,28 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_HDRS glwidget.h)
 endif(USE_3DMAPPER)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+macro(set_alternate_linker linker)
+  find_program(LINKER_EXECUTABLE ld.${USE_ALTERNATE_LINKER} ${USE_ALTERNATE_LINKER})
+  if(LINKER_EXECUTABLE)
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 12.0.0)
+      add_link_options("-ld-path=${USE_ALTERNATE_LINKER}")
+    else()
+      add_link_options("-fuse-ld=${USE_ALTERNATE_LINKER}")
+    endif()
+  else()
+    set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker" FORCE)
+  endif()
+endmacro()
+
+set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker. Leave empty for system default; alternatives are 'gold', 'lld', 'bfd', 'mold'")
+if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
+  set_alternate_linker(${USE_ALTERNATE_LINKER})
+endif()
+
+include(../3rdparty/cmake-scripts/sanitizers.cmake)
 
 find_package(
-  Qt5 5.11 REQUIRED
+  Qt5 5.14 REQUIRED
   COMPONENTS Core
              Multimedia
              Network
@@ -324,9 +362,9 @@ find_package(
 find_package(Qt5 COMPONENTS Gamepad QUIET)
 find_package(Qt5 COMPONENTS TextToSpeech QUIET)
 
-if(Qt5Core_VERSION VERSION_LESS 5.11)
+if(Qt5Core_VERSION VERSION_LESS 5.14)
   message(
-    FATAL_ERROR "Mudlet requires Qt 5.11 or later, yours is ${Qt5Core_VERSION}")
+    FATAL_ERROR "Mudlet requires Qt 5.14 or later, yours is ${Qt5Core_VERSION}")
 else()
   # Qt Speech (or at least the TTS part) was officially release in 5.10
   message(STATUS "Qt version: ${Qt5Core_VERSION}")
@@ -360,8 +398,7 @@ endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS}
-                      ${mudlet_UIS})
+add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS})
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
 set_target_properties(mudlet PROPERTIES
@@ -389,6 +426,14 @@ target_compile_definitions(mudlet
 
 if(USE_OWN_QT5KEYCHAIN)
     target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+endif()
+
+# Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
+# from windows.h - only needed on Windows builds but we cannot use Q_OS_WIN32
+# for an #ifdef because we need a symbol that is defined BEFORE we include
+# any Qt header file!
+if(WIN32)
+    target_compile_definitions(mudlet PRIVATE INCLUDE_WINSOCK2)
 endif()
 
 # One of IRC_STATIC or IRC_SHARED must be defined for the communi IRC library

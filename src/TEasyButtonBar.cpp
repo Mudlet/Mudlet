@@ -35,11 +35,7 @@
 TEasyButtonBar::TEasyButtonBar(TAction* pA, QString name, QWidget* pW)
 : QWidget(pW)
 , mpTAction(pA)
-, mVerticalOrientation(false)
 , mpWidget(new QWidget(this))
-, mRecordMove(false)
-, mpLayout(nullptr)
-, mItemCount(0)
 {
     mButtonList.clear();
     auto hostName(pA->mpHost->getName());
@@ -64,8 +60,8 @@ TEasyButtonBar::TEasyButtonBar(TAction* pA, QString name, QWidget* pW)
     }
     setStyleSheet(mpTAction->css);
     mpWidget->setStyleSheet(mpTAction->css);
-    setObjectName(QStringLiteral("easyButtonBar_%1_%2").arg(hostName, name));
-    mpWidget->setObjectName(QStringLiteral("easyButtonBar_Widget_%1_%2").arg(hostName, name));
+    setObjectName(qsl("easyButtonBar_%1_%2").arg(hostName, name));
+    mpWidget->setObjectName(qsl("easyButtonBar_Widget_%1_%2").arg(hostName, name));
     // It is not entirely clear if this is ever visible:
     setWindowTitle(tr("Easybutton Bar - %1 - %2").arg(hostName, name));
 }

@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -45,17 +45,18 @@ public:
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
 
+    QStyleOptionButton getStyleOption() const;
+
+    TAction* mpTAction = nullptr;
+
 protected:
     void paintEvent(QPaintEvent*) override;
 
-public:
-    QStyleOptionButton getStyleOption() const;
-
-    TAction* mpTAction;
-    int mID;
+private:
+    int mID = 0;
     QPointer<Host> mpHost;
-    Qt::Orientation mOrientation;
-    bool mMirrored;
+    Qt::Orientation mOrientation = Qt::Horizontal;
+    bool mMirrored = false;
 };
 
 #endif // MUDLET_TFLIPBUTTON_H

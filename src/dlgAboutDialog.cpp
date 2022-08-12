@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2014, 2017-2019, 2022 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
@@ -41,11 +41,11 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
     // Copied from main():
 
 #if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
-    QImage splashImage(mudlet::scmIsReleaseVersion ? QStringLiteral(":/Mudlet_splashscreen_main.png")
-                                                   : mudlet::scmIsPublicTestVersion ? QStringLiteral(":/Mudlet_splashscreen_ptb.png")
-                                                                                    : QStringLiteral(":/Mudlet_splashscreen_development.png"));
+    QImage splashImage(mudlet::scmIsReleaseVersion ? qsl(":/Mudlet_splashscreen_main.png")
+                                                   : mudlet::scmIsPublicTestVersion ? qsl(":/Mudlet_splashscreen_ptb.png")
+                                                                                    : qsl(":/Mudlet_splashscreen_development.png"));
 #else
-    QImage splashImage(QStringLiteral(":/Mudlet_splashscreen_main.png"));
+    QImage splashImage(qsl(":/Mudlet_splashscreen_main.png"));
 #endif
 
     { // Brace code using painter to ensure it is freed at right time...
@@ -56,7 +56,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
-            QFont font(QStringLiteral("DejaVu Serif"), fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+            QFont font(qsl("DejaVu Serif"), fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
             QTextLayout versionTextLayout(sourceVersionText, font, painter.device());
             versionTextLayout.beginLayout();
             // Start work in this text item
@@ -90,8 +90,8 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2021");
-        QFont font(QStringLiteral("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2022");
+        QFont font(qsl("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
@@ -120,7 +120,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
     // A uniform header for all tabs:
     // clang-format off
-    QString htmlHead(QStringLiteral(R"(
+    QString htmlHead(qsl(R"(
         <head><style type="text/css">
         h1 { font-family: "DejaVu Serif"; text-align: center; }
         h2 { font-family: "DejaVu Serif"; text-align: center; }
@@ -151,92 +151,92 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
            "<tr><td><span style=\"color:#40b040;\"><b>Features/bugs</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet/issues\">github.com/Mudlet/Mudlet/issues</a></td></tr>"));
 
     QVector<aboutMaker> aboutMakers; // [big?, name, discord, github, email, description]
-    aboutMakers.append({true, QStringLiteral("Heiko Köhn"), QString(), QString(), QStringLiteral("KoehnHeiko@googlemail.com"),
+    aboutMakers.append({true, qsl("Heiko Köhn"), QString(), QString(), qsl("KoehnHeiko@googlemail.com"),
                         tr("Original author, original project lead, Mudlet core coding, retired.",
                            "about:Heiko")});
-    aboutMakers.append({true, QStringLiteral("Vadim Peretokin"), QStringLiteral("Vadi#3695"), QStringLiteral("vadi2"), QStringLiteral("vadim.peretokin@mudlet.org"),
+    aboutMakers.append({true, qsl("Vadim Peretokin"), qsl("Vadi#3695"), qsl("vadi2"), qsl("vadim.peretokin@mudlet.org"),
                         tr("GUI design and initial feature planning. He is responsible for the project homepage and the user manual. "
                            "Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. "
                            "Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp; user help. "
                            "With the project from the very beginning and is an official spokesman of the project. "
                            "Since the retirement of Heiko, he has become the head of the Mudlet project.",
                            "about:Vadi")});
-    aboutMakers.append({true, QStringLiteral("Stephen Lyons"), QStringLiteral("SlySven#2703"), QStringLiteral("SlySven"), QStringLiteral("slysven@virginmedia.com"),
+    aboutMakers.append({true, qsl("Stephen Lyons"), qsl("SlySven#2703"), qsl("SlySven"), qsl("slysven@virginmedia.com"),
                         tr("After joining in 2013, he has been poking various bits of the C++ code and GUI with a pointy stick; "
                            "subsequently trying to patch over some of the holes made/found. "
                            "Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language "
                            "other than American English you will be seeing the results of him getting fed up with the spelling differences "
                            "between what was being used and the British English his brain wanted to see.",
                            "about:SlySven")});
-    aboutMakers.append({true, QStringLiteral("Damian Monogue"), QStringLiteral("demonnic#4307"), QStringLiteral("demonnic"), QStringLiteral("demonnic@gmail.com"),
+    aboutMakers.append({true, qsl("Damian Monogue"), qsl("demonnic#4307"), qsl("demonnic"), qsl("demonnic@gmail.com"),
                         tr("Former maintainer of the early Windows and Apple OSX packages. "
                            "He also administers our server and helps the project in many ways.",
                            "about:demonnic")});
-    aboutMakers.append({true, QStringLiteral("Florian Scheel"), QStringLiteral("keneanung#2803"), QStringLiteral("keneanung"), QStringLiteral("keneanung@googlemail.com"),
+    aboutMakers.append({true, qsl("Florian Scheel"), qsl("keneanung#2803"), qsl("keneanung"), qsl("keneanung@googlemail.com"),
                         tr("Contributed many improvements to Mudlet's db: interface, event system, "
                            "and has been around the project for a very long while assisting users.",
                            "about:keneanung")});
-    aboutMakers.append({true, QStringLiteral("Leris"), QStringLiteral("Leris#5152"), QStringLiteral("Kebap"), QStringLiteral("kebap_spam@gmx.net"),
+    aboutMakers.append({true, qsl("Leris"), qsl("Leris#5152"), qsl("Kebap"), qsl("kebap_spam@gmx.net"),
                         tr("Does a ton of work in making Mudlet, the website and the wiki accessible to you "
                            "regardless of the language you speak - and promoting our genre!",
                            "about:Leris")});
-    aboutMakers.append({false, QStringLiteral("Ahmed Charles"), QString(), QStringLiteral("ahmedcharles"), QStringLiteral("acharles@outlook.com"),
+    aboutMakers.append({false, qsl("Ahmed Charles"), QString(), qsl("ahmedcharles"), qsl("acharles@outlook.com"),
                         tr("Contributions to the Travis integration, CMake and Visual C++ build, "
                            "a lot of code quality and memory management improvements.",
                            "about:ahmedcharles")});
-    aboutMakers.append({false, QStringLiteral("Chris Mitchell"), QString("Chris7#6113"), QStringLiteral("Chris7"), QStringLiteral("chris.mit7@gmail.com"),
+    aboutMakers.append({false, qsl("Chris Mitchell"), QString("Chris7#6113"), qsl("Chris7"), qsl("chris.mit7@gmail.com"),
                         tr("Developed a shared module system that allows script packages to be shared among profiles, "
                            "a UI for viewing Lua variables, improvements in the mapper and all around.",
                            "about:Chris7")});
-    aboutMakers.append({false, QStringLiteral("Ben Carlsen"), QString(), QString(), QStringLiteral("arkholt@gmail.com"),
+    aboutMakers.append({false, qsl("Ben Carlsen"), QString(), QString(), qsl("arkholt@gmail.com"),
                         tr("Developed the first version of our Mac OSX installer. "
                            "He is the former maintainer of the Mac version of Mudlet.",
                            "about:Ben Carlsen")});
-    aboutMakers.append({false, QStringLiteral("Ben Smith"), QString(), QString(), QString(),
+    aboutMakers.append({false, qsl("Ben Smith"), QString(), QString(), QString(),
                         tr("Joined in December 2009 though he's been around much longer. "
                            "Contributed to the Lua API and is the former maintainer of the Lua API.",
                            "about:Ben Smith")});
-    aboutMakers.append({false, QStringLiteral("Blaine von Roeder"), QString(), QString(), QString(),
+    aboutMakers.append({false, qsl("Blaine von Roeder"), QString(), QString(), QString(),
                         tr("Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches "
                            "and has helped with release management of 1.0.5.",
                            "about:Blaine von Roeder")});
-    aboutMakers.append({false, QStringLiteral("Bruno Bigras"), QString(), QString(), QStringLiteral("bruno@burnbox.net"),
+    aboutMakers.append({false, qsl("Bruno Bigras"), QString(), QString(), qsl("bruno@burnbox.net"),
                         tr("Developed the original cmake build script and he has committed a number of patches.",
                            "about:Bruno Bigras")});
-    aboutMakers.append({false, QStringLiteral("Carter Dewey"), QString(), QString(), QStringLiteral("eldarerathis@gmail.com"),
+    aboutMakers.append({false, qsl("Carter Dewey"), QString(), QString(), qsl("eldarerathis@gmail.com"),
                         tr("Contributed to the Lua API.",
                            "about:Carter Dewey")});
-    aboutMakers.append({false, QStringLiteral("Erik Pettis"), QStringLiteral("Etomyutikos#9266"), QStringLiteral("Oneymus"), QString(),
+    aboutMakers.append({false, qsl("Erik Pettis"), qsl("Etomyutikos#9266"), qsl("Oneymus"), QString(),
                         tr("Developed the Vyzor GUI Manager for Mudlet.",
                            "about:Oneymus")});
-    aboutMakers.append({false, QStringLiteral("ItsTheFae"), QStringLiteral("TheFae#9971"), QStringLiteral("Kae"), QString(),
+    aboutMakers.append({false, qsl("ItsTheFae"), qsl("TheFae#9971"), qsl("Kae"), QString(),
                         tr("Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - "
                            "if you are a <i>SpamBot</i> you will not get onto our Fora now. They have also made some useful "
                            "C++ core code contributions and we look forward to future reviews on and work in that area.",
                            "about:TheFae")});
-    aboutMakers.append({false, QStringLiteral("Ian Adkins"), QStringLiteral("Dicene#1533"), QStringLiteral("dicene"), QStringLiteral("ieadkins@gmail.com"),
+    aboutMakers.append({false, qsl("Ian Adkins"), qsl("Dicene#1533"), qsl("dicene"), qsl("ieadkins@gmail.com"),
                         tr("Joining us 2017 they have given us some useful C++ and Lua contributions.",
                            "about:Dicene")});
-    aboutMakers.append({false, QStringLiteral("James Younquist"), QString(), QString(), QStringLiteral("daemacles@yahoo.com"),
+    aboutMakers.append({false, qsl("James Younquist"), QString(), QString(), qsl("daemacles@yahoo.com"),
                         tr("Contributed the Geyser layout manager for Mudlet in March 2010. "
                            "It is written in Lua and aims at simplifying user GUI scripting.",
                            "about:James Younquist")});
-    aboutMakers.append({false, QStringLiteral("John Dahlström"), QString(), QString(), QStringLiteral("email@johndahlstrom.se"),
+    aboutMakers.append({false, qsl("John Dahlström"), QString(), QString(), qsl("email@johndahlstrom.se"),
                         tr("Helped develop and debug the Lua API.",
                            "about:John Dahlström")});
-    aboutMakers.append({false, QStringLiteral("Karsten Bock"), QString(), QStringLiteral("Beliaar"), QString(),
+    aboutMakers.append({false, qsl("Karsten Bock"), QString(), qsl("Beliaar"), QString(),
                         tr("Contributed several improvements and new features for Geyser.",
                            "about:Beliaar")});
-    aboutMakers.append({false, QStringLiteral("Leigh Stillard"), QString(), QString(), QStringLiteral("leigh.stillard@gmail.com"),
+    aboutMakers.append({false, qsl("Leigh Stillard"), QString(), QString(), qsl("leigh.stillard@gmail.com"),
                         tr("The original author of our Windows installer.",
                            "about:Leigh Stillard")});
-    aboutMakers.append({false, QStringLiteral("Maksym Grinenko"), QString(), QString(), QStringLiteral("maksym.grinenko@gmail.com"),
+    aboutMakers.append({false, qsl("Maksym Grinenko"), QString(), QString(), qsl("maksym.grinenko@gmail.com"),
                         tr("Worked on the manual, forum help and helps with GUI design and documentation.",
                            "about:Maksym Grinenko")});
-    aboutMakers.append({false, QStringLiteral("Stephen Hansen"), QString(), QString(), QStringLiteral("me+mudlet@ixokai.io"),
+    aboutMakers.append({false, qsl("Stephen Hansen"), QString(), QString(), qsl("me+mudlet@ixokai.io"),
                         tr("Developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.",
                            "about:Stephen Hansen")});
-    aboutMakers.append({false, QStringLiteral("Thorsten Wilms"), QString(), QString(), QStringLiteral("t_w_@freenet.de"),
+    aboutMakers.append({false, qsl("Thorsten Wilms"), QString(), QString(), qsl("t_w_@freenet.de"),
                         tr("Designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. "
                            "Visit his homepage at <a href=\"http://thorwil.wordpress.com/\">thorwil.wordpress.com</a>.",
                            "about:Thorsten Wilms")});
@@ -254,7 +254,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
            "<p>Special thanks to <span style=\"color:#bc8942;\"><b>Nick Gammon</b></span> (<a href=\"http://www.gammon.com.au/mushclient/mushclient.htm\">www.gammon.com.au/mushclient/mushclient.htm</a>) for giving us some valued pieces of advice.</p>"));
 
     textBrowser_mudlet->setHtml(
-            QStringLiteral("<html>%1<body><table border=\"0\" style=\"margin:18px 36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
+            qsl("<html>%1<body><table border=\"0\" style=\"margin:18px 36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
                            "%2</table>\n"
                            "%3"
                            "%4</body></html>")
@@ -264,23 +264,23 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
 
 QString dlgAboutDialog::createMakerHTML(const aboutMaker& maker) const
 {
-    QString coloredText = QStringLiteral("<span style=\"color:#%1;\">%2</span>");
+    QString coloredText = qsl("<span style=\"color:#%1;\">%2</span>");
     QStringList contactDetails;
     if (!maker.discord.isEmpty()) {
-        contactDetails.append(coloredText.arg(QStringLiteral("7289DA"), maker.discord));
+        contactDetails.append(coloredText.arg(qsl("7289DA"), maker.discord));
     }
     if (!maker.github.isEmpty()) {
-        contactDetails.append(coloredText.arg(QStringLiteral("40b040"), maker.github));
+        contactDetails.append(coloredText.arg(qsl("40b040"), maker.github));
     }
     if (!maker.email.isEmpty()) {
-        contactDetails.append(coloredText.arg(QStringLiteral("0000ff"), maker.email));
+        contactDetails.append(coloredText.arg(qsl("0000ff"), maker.email));
     }
 
-    return QStringLiteral("<p>%1%2 %3</p>\n") // name (big?), contacts (if any?), description
-        .arg(coloredText.arg(QStringLiteral("bc8942"), QStringLiteral("<b>%1</b>")
-             .arg((maker.big) ? QStringLiteral("<big>%1</big>").arg(maker.name) : maker.name)),
+    return qsl("<p>%1%2 %3</p>\n") // name (big?), contacts (if any?), description
+        .arg(coloredText.arg(qsl("bc8942"), qsl("<b>%1</b>")
+             .arg((maker.big) ? qsl("<big>%1</big>").arg(maker.name) : maker.name)),
         (contactDetails.isEmpty()) ? QString() :
-             QStringLiteral(" (%1)").arg(contactDetails.join(QChar::Space)),
+             qsl(" (%1)").arg(contactDetails.join(QChar::Space)),
         maker.description);
 }
 
@@ -299,7 +299,7 @@ void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
                           "following is reproduced in that language:' to replace 'which is reproduced below:'..."));
 
     QString gplText(
-                QStringLiteral("<h1>GNU GENERAL PUBLIC LICENSE</h1>"
+                qsl("<h1>GNU GENERAL PUBLIC LICENSE</h1>"
                                "<h2>Version 2, June 1991</h2>"
                                "<h3>Copyright © 1989, 1991 Free Software Foundation, Inc.\n"
                                "59 Temple Place, Suite 330, Boston, MA  02111-1307 USA</h3>"
@@ -574,9 +574,9 @@ void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
                                "<a href=\"https://www.gnu.org/licenses/lgpl.html\">GNU Lesser General Public "
                                "License</a> instead of this License.</p>"));
 
-    //    textBrowser_license->setFont(QFont(QStringLiteral("Bitstream Vera Serif"), 14));
+    //    textBrowser_license->setFont(QFont(qsl("Bitstream Vera Serif"), 14));
     textBrowser_license->setHtml(
-                QStringLiteral("<html>%1<body>%2<hr>%3</body></html>")
+                qsl("<html>%1<body>%2<hr>%3</body></html>")
                 .arg(htmlHead, headerText, gplText));
     // clang-format on
 }
@@ -599,7 +599,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     // %3 either "COPYRIGHT HOLDERS OR CONTRIBUTORS" or "AUTHOR"
     // depending on the particular situation:
     QString BSD3Clause_Body(
-            QStringLiteral("<h4>The [3-Clause] BSD Licence</h4>"
+            qsl("<h4>The [3-Clause] BSD Licence</h4>"
                            "<p>Redistribution and use in source and binary forms, with or without "
                            "modification, are permitted provided that the following conditions are met:"
                            "<ul><li>Redistributions of source code must retain the above copyright notice, "
@@ -627,7 +627,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     // %2 either "COPYRIGHT HOLDERS OR CONTRIBUTORS" or "AUTHOR"
     // depending on the particular situation:
     QString BSD2Clause_Body(
-            QStringLiteral("<h4>The [2-Clause] BSD Licence</h4>"
+            qsl("<h4>The [2-Clause] BSD Licence</h4>"
                            "<p>Redistribution and use in source and binary forms, with or without "
                            "modification, are permitted provided that the following conditions are met:</p>"
                            "<ol><li>Redistributions of source code must retain the above copyright notice, "
@@ -648,7 +648,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 
 #if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
     QString APACHE2_Body(
-            QStringLiteral("<h4>Apache Licence</h4>"
+            qsl("<h4>Apache Licence</h4>"
                            "<p>Licensed under the Apache License, Version 2.0 (the &quot;License&quot;); "
                            "you may not use this file except in compliance with the License. You may obtain "
                            "a copy of the License at:</p>"
@@ -658,10 +658,10 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                            "WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the "
                            "License for the specific language governing permissions and limitations under "
                            "the License.</p>"));
-#endif
+#endif // defined(INCLUDE_UPDATER)
 
     QString MIT_Body(
-            QStringLiteral("<h4>The MIT License</h4>"
+            qsl("<h4>The MIT License</h4>"
                            "<p>Permission is hereby granted, free of charge, to any person obtaining a copy "
                            "of this software and associated documentation files (the &quot;Software&quot;), "
                            "to deal in the Software without restriction, including without limitation the "
@@ -680,7 +680,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 
 #if defined(INCLUDE_FONTS) || defined(DEBUG_SHOWALL)
     QString UbuntuFontText(
-                QStringLiteral("<h3>UBUNTU FONT LICENCE Version 1.0</h3>"
+                qsl("<h3>UBUNTU FONT LICENCE Version 1.0</h3>"
                                "<p>PREAMBLE</p>"
                                "<p>This licence allows the licensed fonts to be used, studied, modified and "
                                "redistributed freely. The fonts, including any derivative works, can be "
@@ -758,7 +758,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                "SOFTWARE.</p>"));
 
     QString SILOpenFontText(
-                QStringLiteral("<h3>SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007</h3>"
+                qsl("<h3>SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007</h3>"
                                "<p>PREAMBLE</p>"
                                "<p>The goals of the Open Font License (OFL) are to stimulate worldwide "
                                "development of collaborative font projects, to support the font "
@@ -827,7 +827,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                "ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR "
                                "INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT "
                                "SOFTWARE.</p>"));
-#endif
+#endif // defined(INCLUDE_FONTS)
 
     QString communiHeader(tr("<h2><u>Communi IRC Library</u></h2>"
                              "<h3>Copyright © 2008-2020 The Communi Project</h3>"));
@@ -838,20 +838,34 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                             "Copyright © 2006-2008 Eike Hein &lt;hein@kde.org&gt;<br>"
                                             "Copyright © 2004-2009 Eli Mackenzie &lt;argonel@gmail.com&gt;</p>"));
 
-    QString luaHeader(tr("<h2><u>lua - Lua 5.1</u></h2>"
+    QString luaHeader(tr("<h2><u>Lua - Lua 5.1</u></h2>"
                          "<h3>Copyright © 1994–2017 Lua.org, PUC-Rio.</h3>"));
 
-    QString luaYajlHeader(tr("<h2><u>lua_yajl - Lua 5.1 interface to yajl</u></h2>"
+    QString luaFileSystemHeader(tr("<h2><u>LuaFileSystem</u></h2>"
+                                   "<h3>Copyright © 2003-2020, Kepler Project</h3>"));
+
+    QString luaYajlHeader(tr("<h2><u>Lua_yajl - Lua 5.1 interface to yajl</u></h2>"
                              "<h3>Author: Brian Maher &lt;maherb at brimworks dot com&gt;<br>"
                              "Copyright © 2009 Brian Maher</h3>"));
+
+    QString luaUTF8Header(tr("<h2><u>Luautf8 - A UTF-8 support module for Lua.</u></h2>"
+                             "<h3>Copyright © 2018 Xavier Wang</h3>"));
+
+    QString luaSql_Sqlite3Header(tr("<h2><u>LuaSql-Sqlite3 - Database connectivity for the Lua programming language (Sqlite3 component).</u></h2>"
+                                    "<h3>Copyright © 2003-2019, The Kepler Project</h3>"));
+
+    QString lrexlib_pcreHeader(tr("<h2><u>Lrexlib-pcre -  Regular expression library binding (PCRE flavour).</u></h2>"
+                                  "<h3>Copyright © Reuben Thomas 2000-2020<br>"
+                                  "Copyright © Shmuel Zeigerman 2004-2020 </h3>"));
 
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     QString luaZipHeader(tr("<h2><u>LuaZip - Reading files inside zip files</u></h2>"
                             "<h3>Author: Danilo Tuler<br>"
                             "Copyright © 2003-2007 Kepler Project</h3>"));
-#endif
+#endif // defined(Q_OS_MACOS)
 
-    QString edbeeHeader(tr("<h2><u>edbee - multi-feature editor widget</u></h2>"
+
+    QString edbeeHeader(tr("<h2><u>Edbee - multi-feature editor widget</u></h2>"
                            "<h3>Copyright © 2012-2014 by Reliable Bits Software by Blommers IT</h3>"));
 
     QString edbeeSuppliment(tr("The <b>edbee-lib</b> widget itself incorporates other components with licences that must be noted as well, they are:"));
@@ -871,12 +885,12 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 
     QString QsLogHeader(tr("<h2><u>Qt-Components, QsLog</u></h2>"
                            "<h3>(<span style=\"color:red\"><u>https://bitbucket.org/razvapetru/qt-components [broken link]</u></span></h3>"
-                           "<small><a href=\"https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components\"> {&quot;Wayback Machine&quot; archived version}</a></small>)<br>"
+                           "<h3><small><a href=\"https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components\"> {&quot;Wayback Machine&quot; archived version}</a></small>)<br>"
                            "Copyright © 2013, Razvan Petru<br>"
                            "All rights reserved.</h3>"));
 
 #if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
-    QString DblsqdHeader(tr("<h2><u>dblsqd</u></h2>"
+    QString DblsqdHeader(tr("<h2><u>Dblsqd</u></h2>"
                             "<h3>Copyright © 2017 Philipp Medien</h3>"));
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     QString SparkleHeader(tr("<h2><u>Sparkle - macOS updater</u></h2>"
@@ -897,7 +911,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                      "<h3>Copyright © 2011 Mark Hamlin.<br>"
                                      "All rights reserved.</h3>"));
 
-    QString SparkleGlueHeader(tr("<h2><u>sparkle-glue</u></h2>"
+    QString SparkleGlueHeader(tr("<h2><u>Sparkle-glue</u></h2>"
                                  "<h3>Copyright © 2008 Remko Troncon<br>"
                                  "Copyright © 2017 Vadim Peretokin</h3>"));
 #endif // defined(Q_OS_MACOS)
@@ -909,97 +923,116 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     QString QtKeyChainHeader(tr("<h2><u>QtKeyChain - Platform-independent Qt API for storing passwords securely</u></h2>"
                                  "<h3>Copyright © 2011-2019 Frank Osterfeld &lt;frank.osterfeld@gmail.com&gt;.</h3>"));
 
+    QString SingleConnectHeader(tr("<h2><u>singleshot_connect.h - part of KDToolBox</u><br>"
+                                   "Github: <a href=\"https://github.com/KDAB/KDToolBox\">KDToolBox</a></h2>"
+                                   "<h3>Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &lt;info@kdab.comF&gt;.</h3>"));
+
+    QString Utf8_filenamesHeader(tr("<h2><u>utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows</u><br>"
+                                    "<a href=\"https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0\">Github GIST</a></h2>"
+                                    "<h3>Copyright © 2019 Egor-Skriptunoff</h3>"));
+
     // Now start to assemble the fragments above:
     QStringList license_3rdParty_texts;
-    license_3rdParty_texts.append(QStringLiteral("<html>%1<body>%2<hr>")
+    license_3rdParty_texts.append(qsl("<html>%1<body>%2<hr>")
                                           .arg(htmlHead,                       //  1 - Html Header
                                                thirdPartiesHeader));           //  2 - Introductory header - translatable
 
-    license_3rdParty_texts.append(QStringLiteral("%3%4%5<hr>")
+    license_3rdParty_texts.append(qsl("%3%4%5<hr>")
                                           .arg(communiHeader,                  //  3 - Communi (IRC) header - translatable
                                                BSD3Clause_Body                 //  4 - Communi (IRC) body BSD3 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
-                                                       .arg(QStringLiteral("Neither the name of the Communi Project nor the names of its contributors may"),
-                                                            QStringLiteral("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
-                                                            QStringLiteral("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
+                                                       .arg(qsl("Neither the name of the Communi Project nor the names of its contributors may"),
+                                                            qsl("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
+                                                            qsl("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
                                                communiKonverstionSuppliment)); //  5 - Communi supplimentary about Konversation - translatable
 
-    license_3rdParty_texts.append(QStringLiteral("%6%7<hr>%8%9<hr>")
+    license_3rdParty_texts.append(qsl("%6%12<hr>%7%12<hr>%8%12<hr>%9%12<hr>%10%12<hr>%11%12<hr>")
                                           .arg(luaHeader,                      //  6 - lua header - translatable
-                                               MIT_Body,                       //  7 - lua body MIT - not translatable
+                                               luaFileSystemHeader,            //  7 - luaFileSystem header - translatable
                                                luaYajlHeader,                  //  8 - lua_yajl header - translatable
-                                               MIT_Body));                     //  9 - lua_yajl body MIT - not translatable
+                                               luaUTF8Header,                  //  9 - luautf8 header - translatable
+                                               luaSql_Sqlite3Header,           // 10 - luaSql_Sqlite3 header - translatable
+                                               lrexlib_pcreHeader,             // 11 - lrexlib_pcre header - translatable
+                                               MIT_Body));                     // 12 - six copies of the body MIT for all of the above - not translatable
+
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(QStringLiteral("%10%11<hr>")
-                                          .arg(luaZipHeader,                   // 10 - macOS luazip header - translatable
-                                               MIT_Body));                     // 11 - macOS luazip body MIT - not translatable
-#endif
+    license_3rdParty_texts.append(qsl("%13%14<hr>")
+                                          .arg(luaZipHeader,                   // 13 - macOS luazip header - translatable
+                                               MIT_Body));                     // 14 - macOS luazip body MIT - not translatable
+#endif // defined(Q_OS_MACOS)
 
-    license_3rdParty_texts.append(QStringLiteral("%12%13")
-                                          .arg(edbeeHeader,                    // 12 - edbee header - translatable
-                                               MIT_Body));                     // 13 - edbee body MIT - not translatable
+    license_3rdParty_texts.append(qsl("%15%16")
+                                          .arg(edbeeHeader,                    // 15 - edbee header - translatable
+                                               MIT_Body));                     // 16 - edbee body MIT - not translatable
 
-    license_3rdParty_texts.append(QStringLiteral("<hr width=\"50%\">%14"
-                                                 "%15%16<hr width=\"33%\">"
-                                                 "%17%18<hr width=\"33%\">"
-                                                 "%19%20<hr width=\"33%\">"
-                                                 "%21%22")
-                                          .arg(edbeeSuppliment,                // 14 - edbee other components:
-                                               OnigmoHeader,                   // 15 - Onigmo (Oniguruma-mod) header - translatable
-                                               BSD2Clause_Body                 // 16 - Onigmo (Oniguruma-mod) body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
-                                                       .arg(QStringLiteral("AUTHOR AND CONTRIBUTORS"),
-                                                            QStringLiteral("AUTHOR OR CONTRIBUTORS")),
-                                               OnigurumaHeader,                // 17 - Oniguruma header - translatable
-                                               BSD2Clause_Body                 // 18 - Oniguruma body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
-                                                       .arg(QStringLiteral("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
-                                                            QStringLiteral("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
-                                               RubyHeader,                     // 19 - Ruby Header - translatable
-                                               BSD2Clause_Body                 // 20 - Ruby body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
-                                                       .arg(QStringLiteral("AUTHOR AND CONTRIBUTORS"),
-                                                            QStringLiteral("AUTHOR OR CONTRIBUTORS")),
-                                               QsLogHeader,                    // 21 - QsLog header - translatable
-                                               BSD3Clause_Body                 // 22 - QsLog body BSD3 ("The name of the contributors may not" / "COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
-                                                       .arg(QStringLiteral("The name of the contributors may not"),
-                                                            QStringLiteral("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
-                                                            QStringLiteral("COPYRIGHT HOLDERS OR CONTRIBUTORS"))));
+    license_3rdParty_texts.append(qsl("<hr width=\"50%\">%17"
+                                                 "%18%19<hr width=\"33%\">"
+                                                 "%20%21<hr width=\"33%\">"
+                                                 "%22%23<hr width=\"33%\">"
+                                                 "%24%25")
+                                          .arg(edbeeSuppliment,                // 17 - edbee other components:
+                                               OnigmoHeader,                   // 18 - Onigmo (Oniguruma-mod) header - translatable
+                                               BSD2Clause_Body                 // 19 - Onigmo (Oniguruma-mod) body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
+                                                       .arg(qsl("AUTHOR AND CONTRIBUTORS"),
+                                                            qsl("AUTHOR OR CONTRIBUTORS")),
+                                               OnigurumaHeader,                // 20 - Oniguruma header - translatable
+                                               BSD2Clause_Body                 // 21 - Oniguruma body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
+                                                       .arg(qsl("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
+                                                            qsl("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
+                                               RubyHeader,                     // 21 - Ruby Header - translatable
+                                               BSD2Clause_Body                 // 22 - Ruby body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
+                                                       .arg(qsl("AUTHOR AND CONTRIBUTORS"),
+                                                            qsl("AUTHOR OR CONTRIBUTORS")),
+                                               QsLogHeader,                    // 23 - QsLog header - translatable
+                                               BSD3Clause_Body                 // 24 - QsLog body BSD3 ("The name of the contributors may not" / "COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
+                                                       .arg(qsl("The name of the contributors may not"),
+                                                            qsl("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
+                                                            qsl("COPYRIGHT HOLDERS OR CONTRIBUTORS"))));
 
 #if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(QStringLiteral("<hr>%23%24")
-                                          .arg(DblsqdHeader,                   // 23 - dblsqd Header - translatable
-                                               APACHE2_Body));                 // 24 - dblsqd body APACHE2 - not translatable
+    license_3rdParty_texts.append(qsl("<hr>%25%26")
+                                          .arg(DblsqdHeader,                   // 25 - dblsqd Header - translatable
+                                               APACHE2_Body));                 // 26 - dblsqd body APACHE2 - not translatable
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(QStringLiteral("<hr width=\"50%\">%25%26<hr width=\"33%\">%27%28<hr width=\"33%\">%29%30")
-                                          .arg(SparkleHeader,                  // 25 - Sparkle header - translatable
-                                               MIT_Body,                       // 26 - Sparkle body MIT - not translatable
-                                               Sparkle3rdPartyHeader,          // 27 - Sparkle 3rd Party headers - translatable
-                                               BSD2Clause_Body                 // 28 - Sparkle 3rd Party body BSD2 ("AUTHOR") - not translatable
+    license_3rdParty_texts.append(qsl("<hr width=\"50%\">%27%28<hr width=\"33%\">%29%30<hr width=\"33%\">%31%32")
+                                          .arg(SparkleHeader,                  // 27 - Sparkle header - translatable
+                                               MIT_Body,                       // 28 - Sparkle body MIT - not translatable
+                                               Sparkle3rdPartyHeader,          // 29 - Sparkle 3rd Party headers - translatable
+                                               BSD2Clause_Body                 // 30 - Sparkle 3rd Party body BSD2 ("AUTHOR") - not translatable
                                                        .arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR")),
-                                               SparkleGlueHeader, // 29 - Sparkle glue header - translatable
-                                               BSD2Clause_Body    // 30 - Sparkle glue body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
+                                               SparkleGlueHeader, // 31 - Sparkle glue header - translatable
+                                               BSD2Clause_Body    // 32 - Sparkle glue body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
                                                        .arg(QLatin1String("AUTHOR AND CONTRIBUTORS"), QLatin1String("AUTHOR OR CONTRIBUTORS"))));
 #endif // defined(Q_OS_MACOS))
 #endif // defined(INCLUDE_UPDATER)
 
 #if defined(INCLUDE_FONTS) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(QStringLiteral("<hr>%31")
-                                  .arg(UbuntuFontText));                       // 31 - Ubuntu Font Text - not translatable
-    license_3rdParty_texts.append(QStringLiteral("<hr>%32")
-                                  .arg(SILOpenFontText));                      // 32 - SIL Open Font Text - not translatable
+    license_3rdParty_texts.append(qsl("<hr>%33")
+                                  .arg(UbuntuFontText));                       // 33 - Ubuntu Font Text - not translatable
+    license_3rdParty_texts.append(qsl("<hr>%34")
+                                  .arg(SILOpenFontText));                      // 34 - SIL Open Font Text - not translatable
 
-#endif
+#endif // defined(INCLUDE_FONTS)
 
-    license_3rdParty_texts.append(QStringLiteral("<hr><br>"
-                                                 "<center><img src=\":/icons/Discord-Logo+Wordmark-Color_438x120px.png\"/></center><br>"
-                                                 "%33%34")
-                                  .arg(DiscordHeader,                          // 33 - Discord header - translatable
-                                       MIT_Body));                             // 34 - Discord body MIT - not translatable
+    license_3rdParty_texts.append(qsl("<hr><center><img src=\":/icons/Discord-Logo+Wordmark-Color_438x120px.png\"/></center><br>"
+                                      "%35%36")
+                                  .arg(DiscordHeader,                          // 35 - Discord header - translatable
+                                       MIT_Body));                             // 36 - Discord body MIT - not translatable
 
-    license_3rdParty_texts.append(QStringLiteral("<hr><br>"
-                                                 "%35%36")
-                                  .arg(QtKeyChainHeader,                       // 35 - QtKeyChain header - translatable
-                                       BSD2Clause_Body                         // 36 - QtKeyChain body BSD2 ("AUTHOR") - not translatable
+    license_3rdParty_texts.append(qsl("<hr>%37%38")
+                                  .arg(QtKeyChainHeader,                       // 37 - QtKeyChain header - translatable
+                                       BSD2Clause_Body                         // 38 - QtKeyChain body BSD2 ("AUTHOR") - not translatable
                                        .arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR"))));
 
-    license_3rdParty_texts.append(QStringLiteral("</body></html>"));
+    license_3rdParty_texts.append(qsl("<hr>%39%40")
+                                  .arg(SingleConnectHeader,                    // 39 - singleshot_connect header - translatable
+                                       MIT_Body));                             // 40 - singleshot_connect body MIT - not translatable
+
+    // Although this is only effective on Windows it is bundled in ALL builds
+    license_3rdParty_texts.append(qsl("<hr>%41%42")
+                                  .arg(Utf8_filenamesHeader,                   // 41 - utf8_filename header - translatable
+                                       MIT_Body));                             // 42 - utf8_filename body MIT - not translatable
+
+    license_3rdParty_texts.append(qsl("</body></html>"));
 
     textBrowser_license_3rdparty->setHtml(license_3rdParty_texts.join(QString()));
     // clang-format on
@@ -1009,7 +1042,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 {
     // see https://www.patreon.com/mudlet if you'd like to be added!
     QStringList mightier_than_swords = {"Joshua C. Burt", "Maiyannah Bishop", "Qwindor Rousseau", "Stick In the MUD 🎙"};
-    QStringList on_a_plaque = {"Vadim Peretokin"};
+    QStringList on_a_plaque = {"demonnic", "Henry Hsiao"};
     int image_counter{1};
 
     if (!supportersDocument) {
@@ -1018,23 +1051,23 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 
     QFont nameFont;
     nameFont.setPixelSize(32);
-    nameFont.setFamily(QStringLiteral("Bitstream Vera Sans"));
+    nameFont.setFamily(qsl("Bitstream Vera Sans"));
 
     for (const auto& name: qAsConst(mightier_than_swords)) {
-        QImage background(QStringLiteral(":/icons/frame_swords.png"));
+        QImage background(qsl(":/icons/frame_swords.png"));
         QPainter painter(&background);
         painter.setFont(nameFont);
         painter.drawText(0, 0, background.width(), background.height(), Qt::AlignCenter, name);
-        supportersDocument->addResource(QTextDocument::ImageResource, QUrl(QStringLiteral("data://image%1").arg(image_counter)), background);
+        supportersDocument->addResource(QTextDocument::ImageResource, QUrl(qsl("data://image%1").arg(image_counter)), background);
         image_counter++;
     }
 
     for (const auto& name: qAsConst(on_a_plaque)) {
-        QImage background(QStringLiteral(":/icons/frame_plaque.png"));
+        QImage background(qsl(":/icons/frame_plaque.png"));
         QPainter painter(&background);
         painter.setFont(nameFont);
         painter.drawText(0, 0, background.width(), background.height(), Qt::AlignCenter, name);
-        supportersDocument->addResource(QTextDocument::ImageResource, QUrl(QStringLiteral("data://image%1").arg(image_counter)), background);
+        supportersDocument->addResource(QTextDocument::ImageResource, QUrl(qsl("data://image%1").arg(image_counter)), background);
         image_counter++;
     }
 
@@ -1042,7 +1075,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
     auto supporters_amount = mightier_than_swords.size() + on_a_plaque.size();
     for (auto counter = 1; counter <= supporters_amount; counter++) {
         // clang-format off
-        supporters_image_html.append(QStringLiteral(R"(
+        supporters_image_html.append(qsl(R"(
             <div class="container">
                 <img src="data://image%1"/>
             </div>
@@ -1050,7 +1083,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
         // clang-format on
     }
 
-    QString supporters_text(QStringLiteral(R"(
+    QString supporters_text(qsl(R"(
                <p align="center"><br>%1<br></p>
                %2
                )")
@@ -1058,16 +1091,16 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
                           These formidable folks will be fondly remembered forever<br>for their generous financial support on <a href="https://www.patreon.com/mudlet">Mudlet's patreon</a>:
                           )"), supporters_image_html));
 
-    supportersDocument->setHtml(QStringLiteral("<html>%1<body>%2</body></html>").arg(htmlHead, supporters_text));
+    supportersDocument->setHtml(qsl("<html>%1<body>%2</body></html>").arg(htmlHead, supporters_text));
     textBrowser_supporters->setDocument(supportersDocument.get());
     textBrowser_supporters->setOpenExternalLinks(true);
 }
 
 QString dlgAboutDialog::createBuildInfo() const {
-    return QStringLiteral("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n")
-        .append(QStringLiteral("<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>").arg(tr("Technical information:")))
-        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1<td>%2</td></tr>").arg(tr("Version"), mudlet::self()->version))
-        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("OS"), QSysInfo::prettyProductName()))
-        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("CPU"), QSysInfo::currentCpuArchitecture()))
-        .append(QStringLiteral("</table>"));
+    return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n")
+        .append(qsl("<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>").arg(tr("Technical information:")))
+        .append(qsl("<tr><td style=\"padding-right: 10px;\">%1<td>%2</td></tr>").arg(tr("Version"), mudlet::self()->version))
+        .append(qsl("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("OS"), QSysInfo::prettyProductName()))
+        .append(qsl("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("CPU"), QSysInfo::currentCpuArchitecture()))
+        .append(qsl("</table>"));
 }

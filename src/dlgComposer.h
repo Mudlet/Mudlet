@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -36,7 +37,7 @@ class dlgComposer : public QMainWindow, public Ui::composer
 
 public:
     Q_DISABLE_COPY(dlgComposer)
-    dlgComposer(Host*);
+    explicit dlgComposer(Host*);
 
     void init(const QString &title, const QString &newText);
 

@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2019-2020, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -134,19 +135,19 @@ private:
     static void cleanupUnusedImages(const QString& tempPath, const QString& plainDescription);
     void checkToEnableExportButton();
 
-    Ui::dlgPackageExporter* ui;
+    Ui::dlgPackageExporter* ui = nullptr;
     QPointer<Host> mpHost;
-    QTreeWidget* mpExportSelection;
+    QTreeWidget* mpExportSelection = nullptr;
     QPointer<QPushButton> mExportButton;
     QPointer<QPushButton> mCancelButton;
     QPointer<QPushButton> mCloseButton;
-    QTreeWidgetItem* mpTriggers;
-    QTreeWidgetItem* mpAliases;
-    QTreeWidgetItem* mpTimers;
-    QTreeWidgetItem* mpScripts;
-    QTreeWidgetItem* mpKeys;
-    QTreeWidgetItem* mpButtons;
-    QGroupBox* mpSelectionText;
+    QTreeWidgetItem* mpTriggers = nullptr;
+    QTreeWidgetItem* mpAliases = nullptr;
+    QTreeWidgetItem* mpTimers = nullptr;
+    QTreeWidgetItem* mpScripts = nullptr;
+    QTreeWidgetItem* mpKeys = nullptr;
+    QTreeWidgetItem* mpButtons = nullptr;
+    QGroupBox* mpSelectionText = nullptr;
     QString mPackageName;
     QString mPackagePath;
     QString mPackagePathFileName;
@@ -166,9 +167,7 @@ class dlgPackageExporterDescription : public QTextEdit
 
 public:
     Q_DISABLE_COPY(dlgPackageExporterDescription)
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 13, 0))
     Q_DISABLE_MOVE(dlgPackageExporterDescription)
-#endif
     explicit dlgPackageExporterDescription(QWidget* pW = nullptr);
     ~dlgPackageExporterDescription();
     bool canInsertFromMimeData(const QMimeData* source) const override;

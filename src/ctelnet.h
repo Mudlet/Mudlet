@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2019, 2021 by Stephen Lyons                  *
+ *   Copyright (C) 2015, 2017-2019, 2021-2022 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -25,6 +25,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+// (1 of 2) This must be included before any Qt library tries to include
+// windows.h which pulls in winsock.h to avoid (multiple):
+// "#warning Please include winsock2.h before windows.h [-Wcpp]" warnings
+#if defined(INCLUDE_WINSOCK2)
+#include <winsock2.h>
+#endif
 
 #include "pre_guard.h"
 #include <QElapsedTimer>
@@ -155,7 +161,7 @@ public:
     bool purgeMediaCache();
     void atcpComposerCancel();
     void atcpComposerSave(QString);
-    void setDisplayDimensions();
+    void checkNAWS();
     void setAutoReconnect(bool status);
     void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
@@ -180,6 +186,7 @@ public:
     bool isCHARSETEnabled() const { return enableCHARSET; }
     bool isATCPEnabled() const { return enableATCP; }
     bool isGMCPEnabled() const { return enableGMCP; }
+    bool isMSDPEnabled() const { return enableMSDP; }
     bool isMSSPEnabled() const { return enableMSSP; }
     bool isMSPEnabled() const { return enableMSP; }
     bool isChannel102Enabled() const { return enableChannel102; }
@@ -192,15 +199,15 @@ public:
 
 
     QMap<int, bool> supportedTelnetOptions;
-    bool mResponseProcessed;
-    double networkLatencyTime;
+    bool mResponseProcessed = true;
+    double networkLatencyTime = 0.0;
     QElapsedTimer networkLatencyTimer;
-    bool mAlertOnNewData;
-    bool mGA_Driver;
-    bool mFORCE_GA_OFF;
+    bool mAlertOnNewData = true;
+    bool mGA_Driver = false;
+    bool mFORCE_GA_OFF = false;
     QPointer<dlgComposer> mpComposer;
-    QNetworkAccessManager* mpDownloader;
-    QProgressDialog* mpProgressDialog;
+    QNetworkAccessManager* mpDownloader = nullptr;
+    QProgressDialog* mpProgressDialog = nullptr;
     QString mServerPackage;
     QString mProfileName;
 
@@ -241,6 +248,8 @@ private:
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void setKeepAlive(int socketHandle);
     void processChunks();
+    void sendNAWS(int x, int y);
+    static std::pair<bool, bool> testReadReplayFile();
 
 
     QPointer<Host> mpHost;
@@ -251,22 +260,22 @@ private:
 #endif
     QHostAddress mHostAddress;
 //    QTextCodec* incomingDataCodec;
-    QTextCodec* mpOutOfBandDataIncomingCodec;
-    QTextCodec* outgoingDataCodec;
+    QTextCodec* mpOutOfBandDataIncomingCodec = nullptr;
+    QTextCodec* outgoingDataCodec = nullptr;
 //    QTextDecoder* incomingDataDecoder;
-    QTextEncoder* outgoingDataEncoder;
+    QTextEncoder* outgoingDataEncoder = nullptr;
     QString hostName;
-    int hostPort;
-    bool mWaitingForResponse;
+    int hostPort = 0;
+    bool mWaitingForResponse = false;
     std::queue<int> mCommandQueue;
 
-    z_stream mZstream;
+    z_stream mZstream = {};
 
-    bool mNeedDecompression;
+    bool mNeedDecompression = false;
     std::string command;
-    bool iac;
-    bool iac2;
-    bool insb;
+    bool iac = false;
+    bool iac2 = false;
+    bool insb = false;
     // Set if we have negotiated the use of the option by us:
     bool myOptionState[256];
     // Set if he has negotiated the use of the option by him:
@@ -278,59 +287,67 @@ private:
     // BUG: never set to be true - but seems to hold our intention to want to
     // enable our use of the option!
     bool triedToEnable[256];
-    bool recvdGA;
+    bool recvdGA = false;
 
     QString termType;
     QByteArray mEncoding;
-    QTimer* mpPostingTimer;
+    QTimer* mpPostingTimer = nullptr;
     // We do not directly adjust the interval for the above because doing so
     // while it is active changes the timerId which might have unforeseen
     // effects - so instead we change the following and the revised value is
     // then used the next time the timer is stopped and then started:
     int mTimeOut = 300;
-    bool mUSE_IRE_DRIVER_BUGFIX;
+    bool mUSE_IRE_DRIVER_BUGFIX = false;
 
     QNetworkReply* mpPackageDownloadReply = nullptr;
 
-    int mCommands;
-    bool mMCCP_version_1;
-    bool mMCCP_version_2;
+    int mCommands = 0;
+    bool mMCCP_version_1 = false;
+    bool mMCCP_version_2 = false;
 
 
     std::string mMudData;
-    bool mIsTimerPosting;
-    QTimer* mTimerLogin;
-    QTimer* mTimerPass;
+    bool mIsTimerPosting = false;
+    QTimer* mTimerLogin = nullptr;
+    QTimer* mTimerPass = nullptr;
     QElapsedTimer mRecordingChunkTimer;
     QElapsedTimer mConnectionTimer;
-    int mRecordLastChunkMSecTimeOffset;
-    bool enableCHARSET;
-    bool enableATCP;
-    bool enableGMCP;
-    bool enableMSSP;
-    bool enableMSP;
-    bool enableChannel102;
-    bool mDontReconnect;
-    bool mAutoReconnect;
+    qint32 mRecordLastChunkMSecTimeOffset = 0;
+    int mRecordingChunkCount = 0;
+    bool mReplayHasFaultyFormat = false;
+    bool enableCHARSET = false;
+    bool enableATCP = false;
+    bool enableGMCP = false;
+    bool enableMSSP = false;
+    bool enableMSDP = false;
+    bool enableMSP = false;
+    bool enableChannel102 = false;
+    bool mDontReconnect = false;
+    bool mAutoReconnect = false;
     QStringList messageStack;
     // True if THIS profile is playing a replay, does not know about any OTHER
     // active profile...
-    bool loadingReplay;
+    bool loadingReplay = false;
     // Used to disable the TConsole ending messages if run from lua:
-    bool mIsReplayRunFromLua;
+    bool mIsReplayRunFromLua = false;
     QByteArrayList mAcceptableEncodings;
     // Used to prevent more than one warning being shown in the event of a bad
     // encoding (when the user wants to use characters that cannot be encoded in
     // the current Server Encoding) - gets reset when the encoding is changed:
-    bool mEncodingWarningIssued;
+    bool mEncodingWarningIssued = false;
     // Same sort of thing if an encoder fails to be found/loaded:
-    bool mEncoderFailureNoticeIssued;
+    bool mEncoderFailureNoticeIssued = false;
 
     // Set if the current connection is via a proxy
-    bool mConnectViaProxy;
+    bool mConnectViaProxy = false;
 
     // server problem w/ not terminating IAC SB: only warn once
-    bool mIncompleteSB;
+    bool mIncompleteSB = false;
+
+    // Need to track the current width and height of the TMainConsole so that
+    // we can send NAWS data when it changes:
+    int mNaws_x = 0;
+    int mNaws_y = 0;
 
 private slots:
 #if !defined(QT_NO_SSL)

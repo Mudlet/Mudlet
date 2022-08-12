@@ -147,6 +147,7 @@
         <file>icons/mudlet_ptb_256px.png</file>
         <file>icons/mudlet_room_exits.png</file>
         <file>icons/mume.png</file>
+        <file>icons/mudren.png</file>
         <file>icons/offsettimer-off.png</file>
         <file>icons/offsettimer-on.png</file>
         <file>icons/package-exporter.png</file>
@@ -157,6 +158,7 @@
         <file>icons/place_of_interest.png</file>
         <file>icons/preferences-desktop-keyboard.png</file>
         <file>icons/preferences-web-browser-cache.png</file>
+        <file>icons/profile-close.png</file>
         <file>icons/rating.png</file>
         <file>icons/red-bomb.png</file>
         <file>icons/reinosdeleyenda_mud.png</file>
@@ -189,6 +191,7 @@
         <file>icons/zombiemud.png</file>
         <file>lua-function-list.json</file>
         <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
+        <file>mudlet-lua/lua/enable-accessibility/enable-accessibility.xml</file>
         <file>mudlet-lua/lua/utf8_filenames.lua</file>
         <file>mudlet-mapper.xml</file>
         <file>Mudlet_splashscreen_development.png</file>
