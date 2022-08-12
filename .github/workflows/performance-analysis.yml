@@ -35,7 +35,7 @@ jobs:
         submodules: true
 
     - name: Restore Boost cache
-      uses: actions/cache@v3
+      uses: pat-s/always-upload-cache@v3.0.1
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
