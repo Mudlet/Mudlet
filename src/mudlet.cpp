@@ -1475,6 +1475,15 @@ void mudlet::slot_tabChanged(int tabID)
     mpTabBar->setTabUnderline(tabID, false);
 
     if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
+        // Tell the profile that it is losing focus:
+        TEvent focusLostEvent {};
+        focusLostEvent.mArgumentList << QLatin1String("sysProfileFocusChangeEvent");
+        // Boolean arguments are carried as "0" for false or "1" for true,
+        // This is for the profile that is losing focus:
+        focusLostEvent.mArgumentList << QLatin1String("0");
+        focusLostEvent.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_BOOLEAN;
+        mpCurrentActiveHost->raiseEvent(focusLostEvent);
+
         if (!mMultiView) {
             // We only have to hide the current tab if NOT in multi-view mode:
             mpCurrentActiveHost->mpConsole->hide();
@@ -1510,6 +1519,14 @@ void mudlet::slot_tabChanged(int tabID)
     mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
     mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
 
+    // This is a Mudlet event:
+    TEvent focusGainedEvent {};
+    focusGainedEvent.mArgumentList << QLatin1String("sysProfileFocusChangeEvent");
+    focusGainedEvent.mArgumentList << QLatin1String("1");
+    focusGainedEvent.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_BOOLEAN;
+    mpCurrentActiveHost->raiseEvent(focusGainedEvent);
+
+    // And this is a Qt event:
     int x = mpCurrentActiveHost->mpConsole->width();
     int y = mpCurrentActiveHost->mpConsole->height();
     QSize s = QSize(x, y);

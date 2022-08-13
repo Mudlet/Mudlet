@@ -16,5 +16,16 @@ function GeyserReposition(event, w, h, arg)
   end
 end
 
+function GeyserRepaint(event, gainedNotLostFocus)
+  if event == "sysProfileFocusChangeEvent" then
+    for _, window in pairs(Geyser.windowList) do
+--      if window.type ~= "userwindow" then
+        window:reposition()
+--      end
+    end
+  end
+end
+
 registerAnonymousEventHandler("sysWindowResizeEvent", "GeyserReposition")
 registerAnonymousEventHandler("sysUserWindowResizeEvent", "GeyserReposition")
+registerAnonymousEventHandler("sysProfileFocusChangeEvent", "GeyserRepaint")
