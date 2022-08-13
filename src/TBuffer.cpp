@@ -2330,47 +2330,54 @@ void TBuffer::logRemainingOutput()
 
 inline void TBuffer::binarySearchHorizontalAdvance(const int& lineIndex, const int& indentSize, const QString& lineIndent, const int& screenWidth, const int& subStringStart, const int& lineCharTotal, const QFontMetrics& qfm, int& lineCharIterator, const bool isBefore)
 {
-    // This potentially can be costly, as we are running horizontalAdvance, we do a binary search instead
-    // The space we are covering is between subStringStart and where the boundary was
-    int bSearchStart = subStringStart;
-    int bSearchEnd = lineCharTotal;
-    int bSearchIteratorPrev = (bSearchStart + bSearchEnd) / 2;
-    int lastType = 0; //-1 is <, 0 is =, 1 is >, really this is only use for -1 and 1, since = is guaranteed to not happen at this stage
-    while (true) {
-        int bSearchIteratorCurrent = (bSearchStart + bSearchEnd) / 2;
-        int thisType = 0;
-        QStringRef lineText = lineBuffer.at(lineIndex).midRef(subStringStart, bSearchIteratorCurrent - subStringStart);
-        int calculatedWidth = (indentSize > 0) ? qfm.horizontalAdvance(lineIndent + lineText) : qfm.horizontalAdvance(lineText.toString());
+    // Does an initial entire string check to ensure we are not searching for no reason
+    QStringRef lineText = lineBuffer.at(lineIndex).midRef(subStringStart, lineCharTotal - subStringStart);
+    int calculatedWidth = (indentSize > 0) ? qfm.horizontalAdvance(lineIndent + lineText) : qfm.horizontalAdvance(lineText.toString());
+    if (calculatedWidth <= screenWidth) {
+        lineCharIterator = lineCharTotal;
+    } else {
+        // This potentially can be costly, as we are running horizontalAdvance, we do a binary search instead
+        // The space we are covering is between subStringStart and where the boundary was
+        int bSearchStart = subStringStart;
+        int bSearchEnd = lineCharTotal;
+        int bSearchIteratorPrev = (bSearchStart + bSearchEnd) / 2;
+        int lastType = 0; //-1 is <, 0 is =, 1 is >, really this is only use for -1 and 1, since = is guaranteed to not happen at this stage
+        while (true) {
+            int bSearchIteratorCurrent = (bSearchStart + bSearchEnd) / 2;
+            int thisType = 0;
+            lineText = lineBuffer.at(lineIndex).midRef(subStringStart, bSearchIteratorCurrent - subStringStart);
+            calculatedWidth = (indentSize > 0) ? qfm.horizontalAdvance(lineIndent + lineText) : qfm.horizontalAdvance(lineText.toString());
 
-        if ((bSearchEnd - bSearchIteratorCurrent) <= 1) {
-            // this line doesn't even need wrapping
-            lineCharIterator = bSearchIteratorCurrent;
-            break;
-        } else if (calculatedWidth > screenWidth) {
-            // String still too long, decrement
-            bSearchEnd = bSearchIteratorCurrent;
-            thisType = 1;
-        } else if (calculatedWidth < screenWidth) {
-            // String still too short, cincrment
-            bSearchStart = bSearchIteratorCurrent;
-            thisType = -1;
-        } else {
-            // string just long enough
-            lineCharIterator = bSearchIteratorCurrent;
-            break;
-        }
-
-        if (abs(bSearchIteratorCurrent - bSearchIteratorPrev) == 1) {
-            if (lastType == -1 and thisType == 1) {
-                lineCharIterator = isBefore ? bSearchIteratorPrev : bSearchIteratorCurrent;
+            if ((bSearchEnd - bSearchIteratorCurrent) <= 1) {
+                // this line doesn't even need wrapping
+                lineCharIterator = bSearchIteratorCurrent;
                 break;
-            } else if (lastType == 1 and thisType == -1) {
-                lineCharIterator = isBefore ? bSearchIteratorCurrent : bSearchIteratorPrev;
+            } else if (calculatedWidth > screenWidth) {
+                // String still too long, decrement
+                bSearchEnd = bSearchIteratorCurrent;
+                thisType = 1;
+            } else if (calculatedWidth < screenWidth) {
+                // String still too short, incrment
+                bSearchStart = bSearchIteratorCurrent;
+                thisType = -1;
+            } else {
+                // string just long enough
+                lineCharIterator = bSearchIteratorCurrent;
                 break;
             }
+
+            if (abs(bSearchIteratorCurrent - bSearchIteratorPrev) == 1) {
+                if (lastType == -1 and thisType == 1) {
+                    lineCharIterator = isBefore ? bSearchIteratorPrev : bSearchIteratorCurrent;
+                    break;
+                } else if (lastType == 1 and thisType == -1) {
+                    lineCharIterator = isBefore ? bSearchIteratorCurrent : bSearchIteratorPrev;
+                    break;
+                }
+            }
+            lastType = thisType;
+            bSearchIteratorPrev = bSearchIteratorCurrent;
         }
-        lastType = thisType;
-        bSearchIteratorPrev = bSearchIteratorCurrent;
     }
 }
 
@@ -2399,6 +2406,8 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
         int newLineIndex = containNewLine ? lineBuffer.at(i).indexOf("\n") : -1;
         int lineWidth = qfm.horizontalAdvance(lineBuffer.at(i));
         if (lineWidth > screenWidth || newLineIndex != -1) {
+            // Track for dangling items, this is really only for instance where last character is "\n"
+            bool insertEmptyLine;
             // Track where subStringStart
             int subStringStart = 0;
             // Use to indent the wrapped content
@@ -2407,64 +2416,61 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
             QStringRef lineText;
             // this is to build the buffer
             std::deque<TChar> newLine;
-            // Track whether there is data that needs to be appended
-            bool hasContent = false;
             // This is where actual wrapping occurs
             QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Line, lineBuffer.at(i));
             // There is two condition, one requires horizontal advance, another require newline check
             for (int lineCharIterator = 0, lineCharTotal = static_cast<int>(buffer.at(i).size()); lineCharIterator < lineCharTotal;) {
-                int newLineBoundary;
-                // This is the horizontal advance check
+                // trigger skipping of '\n'
+                bool newLineChop = false;
+                insertEmptyLine = false;
+                // First run gets lineWidth from outside
                 if (lineWidth > screenWidth) {
-                    binarySearchHorizontalAdvance(i, indentSize, lineIndent, screenWidth, subStringStart, lineCharTotal, qfm, lineCharIterator, false);
+                    // This sets lineCharIterator to the position right before it breach screenWidth
+                    binarySearchHorizontalAdvance(i, indentSize, lineIndent, screenWidth, subStringStart, lineCharTotal, qfm, lineCharIterator, true);
                     wordFinder.setPosition(lineCharIterator);
+                    // If current position is not at a boundary, we move to the previous one
+                    if (!wordFinder.isAtBoundary() || (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) == 0) {
+                        const int previousBoundary = wordFinder.toPreviousBoundary();
+                        if (previousBoundary > subStringStart) {
+                            lineCharIterator = previousBoundary;
+                        }
+                    }
+                    // Special check to see whether there is newLine before the boundary
                     if (containNewLine) {
-                        // This is the new line check, check if there is newLine before the current boundary
-                        newLineBoundary = lineBuffer.at(i).lastIndexOf("\n", lineCharIterator);
-                        // This is for case where there is multiple newLine before the current boundary
-                        if (newLineBoundary != -1) {
-                            int firstNewLine = lineBuffer.at(i).indexOf("\n", subStringStart);
-                            if (firstNewLine < newLineBoundary) {
-                                newLineBoundary = firstNewLine;
-                            }
+                        int firstNewLine = lineBuffer.at(i).indexOf("\n", subStringStart);
+                        // If next new line happen before the chop off point
+                        if (firstNewLine == -1) {
+                            containNewLine = false;
+                        } else if (firstNewLine <= lineCharIterator) {
+                            lineCharIterator = firstNewLine;
+                            newLineChop = true;
                         }
                     }
                 } else if (containNewLine) {
                     // For instance where this is being ran only for newLine, and not for wrapping
-                    newLineBoundary = lineBuffer.at(i).indexOf("\n", subStringStart);
-                }
-
-                // Indicate whethere we are chopping \n, which requires skipping the iterator
-                bool newLineChop = false;
-                if (containNewLine && newLineBoundary != -1) {
-                    lineCharIterator = newLineBoundary;
+                    lineCharIterator = lineBuffer.at(i).indexOf("\n", subStringStart);
+                    // Check for instance where we are looking for just new line, but there is no more new line
+                    if (lineCharIterator == -1) {
+                        lineCharIterator = lineCharTotal;
+                    }
                     newLineChop = true;
-                } else {
-                    lineCharIterator = wordFinder.toNextBoundary();;
-                    hasContent = true;
                 }
                 
                 lineText = lineBuffer.at(i).midRef(subStringStart, lineCharIterator - subStringStart);
-                if ((indentSize > 0 ? qfm.horizontalAdvance(lineIndent + lineText) : qfm.horizontalAdvance(lineText.toString())) > screenWidth) { // Need to wrap
-                    while (wordFinder.position() >= lineCharIterator || (wordFinder.position() > subStringStart && (!wordFinder.isAtBoundary() || (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) == 0))) {
-                        wordFinder.toPreviousBoundary();
-                    }
-                    // This is a special case, we need to remove character one at a time until we fall below the screenWidth
-                    if (wordFinder.position() <= subStringStart) {
-                        binarySearchHorizontalAdvance(i, indentSize, lineIndent, screenWidth, subStringStart, lineCharTotal, qfm, lineCharIterator, true);
-                        wordFinder.setPosition(lineCharIterator);
-                    } else {
-                        lineCharIterator = wordFinder.position();
-                    }
-                    lineText = lineBuffer.at(i).midRef(subStringStart, lineCharIterator - subStringStart);
-                    for (int i3 = subStringStart; i3 < lineCharIterator; ++i3) {
-                        newLine.push_back(buffer.at(i).at(i3));
-                    }
-                    queue.push_back(newLine);
+                for (int i3 = subStringStart; i3 < lineCharIterator; ++i3) {
+                    newLine.push_back(buffer.at(i).at(i3));
+                }
+                queue.push_back(newLine);
+                timeList.append(timeBuffer.at(i));
+                promptList.append(promptBuffer.at(i));
+                newLine.clear();
+                if (newLineChop) {
+                    subStringStart += lineText.size() + 1;
+                    tempList.append(lineText.toString());
+                    ++lineCharIterator;
+                    insertEmptyLine = true;
+                } else {
                     subStringStart += lineText.size();
-                    timeList.append(timeBuffer.at(i));
-                    promptList.append(promptBuffer.at(i));
-                    newLine.clear();
                     if (indentSize > 0) {
                         tempList.append(lineIndent + lineText);
                         if (lineIndent.isEmpty()) {
@@ -2482,41 +2488,13 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                     } else {
                         tempList.append(lineText.toString());
                     }
-                    hasContent = false;                    
-                } else if (newLineChop) {
-                    for (int i3 = subStringStart; i3 < lineCharIterator; ++i3) {
-                        newLine.push_back(buffer.at(i).at(i3));
-                    }
-                    queue.push_back(newLine);
-                    // Skip over the newLine
-                    subStringStart += lineText.size() + 1;
-                    timeList.append(timeBuffer.at(i));
-                    promptList.append(promptBuffer.at(i));
-                    newLine.clear();
-                    tempList.append(lineText.toString());
-                    ++lineCharIterator;
-                    hasContent = true;
                 }
             }
-            // This push in whatever content remaining
-            if (hasContent) {
-                // this is guaranteed not to exceed the screenWidth
-                for (int i3 = subStringStart, lineCharIterator = static_cast<int>(buffer.at(i).size()); i3 < lineCharIterator; ++i3) {
-                    newLine.push_back(buffer.at(i).at(i3));
-                }
+            if (insertEmptyLine) {
                 queue.push_back(newLine);
-                if (newLine.empty()) {
-                    tempList.append(QString());
-                    timeList.append(QString());
-                } else {
-                    if (indentSize > 0) {
-                        tempList.append(lineIndent + lineText);
-                    } else {
-                        tempList.append(lineText.toString());
-                    }
-                    timeList.append(timeBuffer.at(i));
-                }
+                timeList.append(timeBuffer.at(i));
                 promptList.append(promptBuffer.at(i));
+                tempList.append(QString());
             }
         } else {
             queue.push_back(buffer.at(i));
