@@ -2328,7 +2328,7 @@ void TBuffer::logRemainingOutput()
     mpHost->mpConsole->mLogStream.flush();
 }
 
-inline int TBuffer::binarySearchHorizontalAdvance(const int& lineIndex, const int& indentSize, const QString& lineIndent, const int& screenWidth, const int& subStringStart, const int& lineCharTotal, const QFontMetrics& qfm, int& lineCharIterator, const bool isBefore)
+inline void TBuffer::binarySearchHorizontalAdvance(const int& lineIndex, const int& indentSize, const QString& lineIndent, const int& screenWidth, const int& subStringStart, const int& lineCharTotal, const QFontMetrics& qfm, int& lineCharIterator, const bool isBefore)
 {
     // This potentially can be costly, as we are running horizontalAdvance, we do a binary search instead
     // The space we are covering is between subStringStart and where the boundary was
