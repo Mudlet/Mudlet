@@ -2011,12 +2011,60 @@ void TConsole::mousePressEvent(QMouseEvent* event)
 
 void TConsole::adjustAccessibleNames()
 {
-    if (mLowerPane->isVisible()) {
-        mUpperPane->setAccessibleName(tr("main window past content", "accessibility-friendly name to describe the upper half of the Mudlet window when you've scrolled up"));
-        mLowerPane->setAccessibleName(tr("main window live content", "accessibility-friendly name to describe the lower half of the Mudlet window when you've scrolled up"));
-    } else {
-        mUpperPane->setAccessibleName(tr("main window"));
-        mLowerPane->setAccessibleName(QString());
+    // FIXME: for the per profile windows do we need to also include the profile's name - or perhaps only if there is more than one profile loaded?
+    switch (mType) {
+    case CentralDebugConsole:
+        if (mLowerPane->isVisible()) {
+            mUpperPane->setAccessibleName(tr("central debug console past content", "accessibility-friendly name to describe the upper half of the Mudlet central debug window when you've scrolled up"));
+            mLowerPane->setAccessibleName(tr("central debug console live content", "accessibility-friendly name to describe the lower half of the Mudlet central debug when you've scrolled up"));
+        } else {
+            mUpperPane->setAccessibleName(tr("central debug console", "accessibility-friendly name to describe the upper half of the Mudlet central debug window when it is not scrolled up"));
+            mLowerPane->setAccessibleName(QString());
+        }
+        return;
+    case ErrorConsole:
+        if (mLowerPane->isVisible()) {
+            mUpperPane->setAccessibleName(tr("profile editor's error window past content", "accessibility-friendly name to describe the upper half of the Mudlet profile's editor error window when you've scrolled up"));
+            mLowerPane->setAccessibleName(tr("profile editor's error window live content", "accessibility-friendly name to describe the lower half of the Mudlet profile's editor error window when you've scrolled up"));
+        } else {
+            mUpperPane->setAccessibleName(tr("profile editor's error window", "accessibility-friendly name to describe the upper half of the Mudlet profile's editor error window when it is not scrolled up"));
+            mLowerPane->setAccessibleName(QString());
+        }
+        return;
+    case MainConsole:
+        if (mLowerPane->isVisible()) {
+            mUpperPane->setAccessibleName(tr("main window past content", "accessibility-friendly name to describe the upper half of a Mudlet profile's main window when you've scrolled up"));
+            mLowerPane->setAccessibleName(tr("main window live content", "accessibility-friendly name to describe the lower half of a Mudlet profile's main window when you've scrolled up"));
+        } else {
+            mUpperPane->setAccessibleName(tr("main window", "accessibility-friendly name to describe the upper half of a Mudlet profile's main window when it is not scrolled up"));
+            mLowerPane->setAccessibleName(QString());
+        }
+        return;
+    case SubConsole:
+        if (mLowerPane->isVisible()) {
+            mUpperPane->setAccessibleName(tr("embedded window %1 past content", "accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when you've scrolled up").arg(mConsoleName));
+            mLowerPane->setAccessibleName(tr("embedded window %1 live content", "accessibility-friendly name to describe the lower half of a Mudlet profile's sub-console window when you've scrolled up").arg(mConsoleName));
+        } else {
+            mUpperPane->setAccessibleName(tr("embedded window %1", "accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when it is full-screen").arg(mConsoleName));
+            mLowerPane->setAccessibleName(QString());
+        }
+        return;
+    case UserWindow:
+        if (mLowerPane->isVisible()) {
+            mUpperPane->setAccessibleName(tr("main window past content", "accessibility-friendly name to describe the upper half of a Mudlet profile's floating/dockable user window when you've scrolled up").arg(mConsoleName));
+            mLowerPane->setAccessibleName(tr("main window live content", "accessibility-friendly name to describe the lower half of a Mudlet profile's floating/dockable user window when you've scrolled up").arg(mConsoleName));
+        } else {
+            mUpperPane->setAccessibleName(tr("main window", "accessibility-friendly name to describe the upper half of a Mudlet profile's floating/dockable user window when it is full-screen").arg(mConsoleName));
+            mLowerPane->setAccessibleName(QString());
+        }
+        return;
+    case Buffer:
+        // This is not a visible thing so is not accessible to screen readers
+        [[fallthrough]];
+    case UnknownType:
+        // Should never be used -  and since we have now handled ALL enum values
+        // we do not need a "default:" entry
+        Q_UNREACHABLE();
     }
 }
 
