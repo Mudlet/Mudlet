@@ -2403,10 +2403,10 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
         if (onlyWrapOneLine && i > startLine) {
             break; //only wrap one line of text
         }
-        int newLineIndex = containNewLine ? lineBuffer.at(i).indexOf("\n") : -1;
         int lineWidth = qfm.horizontalAdvance(lineBuffer.at(i));
-        if (lineWidth > screenWidth || newLineIndex != -1) {
-            // Track for dangling items, this is really only for instance where last character is "\n"
+        bool stillContainNewLine = containNewLine ? lineBuffer.at(i).indexOf(QChar::LineFeed) != -1 : false;
+        if (lineWidth > screenWidth || stillContainNewLine) {
+            // Track for dangling items, this is really only for instance where last character is QChar::LineFeed
             bool insertEmptyLine;
             // Track where subStringStart
             int subStringStart = 0;
@@ -2420,7 +2420,7 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
             QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Line, lineBuffer.at(i));
             // There is two condition, one requires horizontal advance, another require newline check
             for (int lineCharIterator = 0, lineCharTotal = static_cast<int>(buffer.at(i).size()); lineCharIterator < lineCharTotal;) {
-                // trigger skipping of '\n'
+                // trigger skipping of QChar::LineFeed
                 bool newLineChop = false;
                 insertEmptyLine = false;
                 // First run gets lineWidth from outside
@@ -2436,19 +2436,19 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                         }
                     }
                     // Special check to see whether there is newLine before the boundary
-                    if (containNewLine) {
-                        int firstNewLine = lineBuffer.at(i).indexOf("\n", subStringStart);
+                    if (stillContainNewLine) {
+                        int firstNewLine = lineBuffer.at(i).indexOf(QChar::LineFeed, subStringStart);
                         // If next new line happen before the chop off point
                         if (firstNewLine == -1) {
-                            containNewLine = false;
+                            stillContainNewLine = false;
                         } else if (firstNewLine <= lineCharIterator) {
                             lineCharIterator = firstNewLine;
                             newLineChop = true;
                         }
                     }
-                } else if (containNewLine) {
+                } else {
                     // For instance where this is being ran only for newLine, and not for wrapping
-                    lineCharIterator = lineBuffer.at(i).indexOf("\n", subStringStart);
+                    lineCharIterator = lineBuffer.at(i).indexOf(QChar::LineFeed, subStringStart);
                     // Check for instance where we are looking for just new line, but there is no more new line
                     if (lineCharIterator == -1) {
                         lineCharIterator = lineCharTotal;
