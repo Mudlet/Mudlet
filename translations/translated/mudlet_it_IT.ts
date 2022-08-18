@@ -12568,7 +12568,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3834"/>
       <source>Accessibility</source>
-      <translation type="unfinished"/>
+      <translation>Accessibilità</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3840"/>
@@ -12613,17 +12613,17 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3895"/>
       <source>Tab</source>
-      <translation type="unfinished"/>
+      <translation>Tab</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3900"/>
       <source>Ctrl+Tab</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+Tab</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3905"/>
       <source>F6</source>
-      <translation type="unfinished"/>
+      <translation>F6</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3961"/>
