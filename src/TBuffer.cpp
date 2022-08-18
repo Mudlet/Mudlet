@@ -2332,10 +2332,18 @@ inline void TBuffer::binarySearchHorizontalAdvance(const int& lineIndex, const i
 {
     // Does an initial entire string check to ensure we are not searching for no reason
     QStringRef lineText = lineBuffer.at(lineIndex).midRef(subStringStart, lineCharTotal - subStringStart);
-    int calculatedWidth = (indentSize > 0) ? qfm.horizontalAdvance(lineIndent + lineText) : qfm.horizontalAdvance(lineText.toString());
+    int indentWidth = (indentSize > 0) ? qfm.horizontalAdvance(lineIndent) : 0;
+    int calculatedWidth = qfm.horizontalAdvance(lineText.toString()) + indentWidth;
     if (calculatedWidth <= screenWidth) {
         lineCharIterator = lineCharTotal;
     } else {
+        const int averageCharWidth = qfm.averageCharWidth();
+        bool useHorizontalAdvance = true;
+        const int actualAverageCharWidth = calculatedWidth / lineText.size();
+        const int charWidthFactor = actualAverageCharWidth / averageCharWidth;
+        if (charWidthFactor > 0 && actualAverageCharWidth % averageCharWidth == 0) {
+            useHorizontalAdvance = false;
+        }
         // This potentially can be costly, as we are running horizontalAdvance, we do a binary search instead
         // The space we are covering is between subStringStart and where the boundary was
         int bSearchStart = subStringStart;
@@ -2345,8 +2353,13 @@ inline void TBuffer::binarySearchHorizontalAdvance(const int& lineIndex, const i
         while (true) {
             int bSearchIteratorCurrent = (bSearchStart + bSearchEnd) / 2;
             int thisType = 0;
-            lineText = lineBuffer.at(lineIndex).midRef(subStringStart, bSearchIteratorCurrent - subStringStart);
-            calculatedWidth = (indentSize > 0) ? qfm.horizontalAdvance(lineIndent + lineText) : qfm.horizontalAdvance(lineText.toString());
+            const int newStringSize = bSearchIteratorCurrent - subStringStart;
+            lineText = lineBuffer.at(lineIndex).midRef(subStringStart, newStringSize);
+            if (useHorizontalAdvance) {
+                calculatedWidth = qfm.horizontalAdvance(lineText.toString()) + indentWidth;
+            } else {
+                calculatedWidth = (newStringSize * averageCharWidth * charWidthFactor) + indentWidth;
+            }
 
             if ((bSearchEnd - bSearchIteratorCurrent) <= 1) {
                 // this line doesn't even need wrapping
@@ -2404,7 +2417,7 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
             break; //only wrap one line of text
         }
         int lineWidth = qfm.horizontalAdvance(lineBuffer.at(i));
-        bool stillContainNewLine = containNewLine ? lineBuffer.at(i).indexOf(QChar::LineFeed) != -1 : false;
+        bool stillContainNewLine = containNewLine ? lineBuffer.at(i).contains(QChar::LineFeed) : false;
         if (lineWidth > screenWidth || stillContainNewLine) {
             // Track for dangling items, this is really only for instance where last character is QChar::LineFeed
             bool insertEmptyLine;
