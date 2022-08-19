@@ -6966,7 +6966,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1289"/>
       <location filename="../src/dlgRoomExits.cpp" line="1298"/>
       <source>Entered number is invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Введенный номер недействителен.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1522"/>
