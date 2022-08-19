@@ -206,9 +206,6 @@ void TBuffer::updateColors()
     mForeGroundColor = pH->mFgColor;
     mForeGroundColorLight = pH->mFgColor;
     mBackGroundColor = pH->mBgColor;
-
-    // test change
-    int a;
 }
 
 QPoint TBuffer::getEndPos()
