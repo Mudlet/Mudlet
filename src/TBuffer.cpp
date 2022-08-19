@@ -2425,23 +2425,26 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
             // Track for dangling items, this is really only for instance where last character is QChar::LineFeed
             bool insertEmptyLine;
             // Track where subStringStart
+            // what is subStringStart?
             int subStringStart = 0;
             // Use to indent the wrapped content
             QString lineIndent;
-            // Reference to the line, used to calculate width
+            // Reference to the line being wrapped, used to calculate width
             QStringRef lineText;
             // this is to build the buffer
             std::deque<TChar> newLine;
             // This is where actual wrapping occurs
             QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Line, lineBuffer.at(i));
-            // There is two condition, one requires horizontal advance, another require newline check
+            // There are two conditions, one requires horizontal advance, another require newline check
+            // but what are the conditions?
             for (int lineCharIterator = 0, lineCharTotal = static_cast<int>(buffer.at(i).size()); lineCharIterator < lineCharTotal;) {
                 // trigger skipping of QChar::LineFeed
+                // what exactly does this variable track?
                 bool newLineChop = false;
                 insertEmptyLine = false;
                 // First run gets lineWidth from outside
                 if (lineWidth > screenWidth) {
-                    // This sets lineCharIterator to the position right before it breach screenWidth
+                    // This sets lineCharIterator to the position right before it breaches screenWidth
                     binarySearchHorizontalAdvance(i, indentSize, lineIndent, screenWidth, subStringStart, lineCharTotal, qfm, lineCharIterator, true);
                     wordFinder.setPosition(lineCharIterator);
                     // If current position is not at a boundary, we move to the previous one
@@ -2463,7 +2466,7 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                         }
                     }
                 } else {
-                    // For instance where this is being ran only for newLine, and not for wrapping
+                    // For instance where this is being run only for newLine, and not for wrapping
                     lineCharIterator = lineBuffer.at(i).indexOf(QChar::LineFeed, subStringStart);
                     // Check for instance where we are looking for just new line, but there is no more new line
                     if (lineCharIterator == -1) {
