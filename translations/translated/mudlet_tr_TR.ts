@@ -6718,7 +6718,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1289"/>
       <location filename="../src/dlgRoomExits.cpp" line="1298"/>
       <source>Entered number is invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Girilen numara geçersiz.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1522"/>
@@ -10174,7 +10174,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="395"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Tuşlar</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="396"/>
@@ -10194,7 +10194,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="407"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Anahtarlar</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="408"/>
