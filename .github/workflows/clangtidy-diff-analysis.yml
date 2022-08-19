@@ -77,6 +77,12 @@ jobs:
     - name: Use CMake 3.20.1
       uses: lukka/get-cmake@v3.20.1
 
+    - name: (Linux) Install non-vcpkg dependencies (1/2)
+      if: runner.os == 'Linux'
+      run: |
+        # gettext is needed for vcpkg
+        sudo apt-get install gettext -y
+
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v7
@@ -87,7 +93,7 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
 
-    - name: (Linux) Install non-vcpkg dependencies
+    - name: (Linux) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'Linux'
       run: |
         # Install from vcpkg everything we can for cross-platform consistency
