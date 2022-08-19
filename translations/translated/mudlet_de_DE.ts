@@ -6805,10 +6805,6 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1199"/>
-      <source>Entered number is invalid, set the number of the room northwest of this one.</source>
-      <translation>Die eingegebene Nummer ist ungültig. Stelle die Nummer des Raums nordwestlich von diesem ein.</translation>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1200"/>
       <location filename="../src/dlgRoomExits.cpp" line="1308"/>
       <location filename="../src/dlgRoomExits.cpp" line="1544"/>
@@ -6817,10 +6813,6 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1208"/>
-      <source>Entered number is invalid, set the number of the room north of this one.</source>
-      <translation>Die eingegebene Nummer ist ungültig. Stelle die Nummer des Raums nördlich von diesem ein.</translation>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1209"/>
       <location filename="../src/dlgRoomExits.cpp" line="1316"/>
       <location filename="../src/dlgRoomExits.cpp" line="1546"/>
@@ -6829,10 +6821,6 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1217"/>
-      <source>Entered number is invalid, set the number of the room northeast of this one.</source>
-      <translation>Die eingegebene Nummer ist ungültig. Stelle die Nummer des Raums nordöstlich von diesem ein.</translation>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1218"/>
       <location filename="../src/dlgRoomExits.cpp" line="1324"/>
       <location filename="../src/dlgRoomExits.cpp" line="1548"/>
@@ -6841,10 +6829,6 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1226"/>
-      <source>Entered number is invalid, set the number of the room up from this one.</source>
-      <translation>Die eingegebene Nummer ist ungültig. Stelle die Nummer des Raums oberhalb von diesem ein.</translation>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1227"/>
       <location filename="../src/dlgRoomExits.cpp" line="1332"/>
       <location filename="../src/dlgRoomExits.cpp" line="1550"/>
@@ -6853,10 +6837,6 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1235"/>
-      <source>Entered number is invalid, set the number of the room west of this one.</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1236"/>
       <location filename="../src/dlgRoomExits.cpp" line="1340"/>
       <location filename="../src/dlgRoomExits.cpp" line="1552"/>
@@ -6865,10 +6845,6 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1244"/>
-      <source>Entered number is invalid, set the number of the room east of this one.</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1245"/>
       <location filename="../src/dlgRoomExits.cpp" line="1348"/>
       <location filename="../src/dlgRoomExits.cpp" line="1554"/>
@@ -6877,10 +6853,6 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1253"/>
-      <source>Entered number is invalid, set the number of the room down from this one.</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1254"/>
       <location filename="../src/dlgRoomExits.cpp" line="1356"/>
       <location filename="../src/dlgRoomExits.cpp" line="1556"/>
@@ -6889,10 +6861,6 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1262"/>
-      <source>Entered number is invalid, set the number of the room southwest of this one.</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1263"/>
       <location filename="../src/dlgRoomExits.cpp" line="1364"/>
       <location filename="../src/dlgRoomExits.cpp" line="1558"/>
@@ -6901,10 +6869,6 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1271"/>
-      <source>Entered number is invalid, set the number of the room south of this one.</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1272"/>
       <location filename="../src/dlgRoomExits.cpp" line="1372"/>
       <location filename="../src/dlgRoomExits.cpp" line="1560"/>
@@ -6913,10 +6877,6 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1280"/>
-      <source>Entered number is invalid, set the number of the room southeast of this one.</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1281"/>
       <location filename="../src/dlgRoomExits.cpp" line="1380"/>
       <location filename="../src/dlgRoomExits.cpp" line="1562"/>
@@ -6925,10 +6885,6 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1289"/>
-      <source>Entered number is invalid, set the number of the room in from this one.</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1290"/>
       <location filename="../src/dlgRoomExits.cpp" line="1388"/>
       <location filename="../src/dlgRoomExits.cpp" line="1564"/>
@@ -6937,10 +6893,6 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1298"/>
-      <source>Entered number is invalid, set the number of the room out from this one.</source>
-      <translation>Die eingegebene Nummer ist ungültig. Stelle die Nummer des Raums außerhalb von diesem ein.</translation>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1299"/>
       <location filename="../src/dlgRoomExits.cpp" line="1396"/>
       <location filename="../src/dlgRoomExits.cpp" line="1566"/>
@@ -6958,6 +6910,22 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1492"/>
       <source>Clear the stub exit for this exit to enter an exit roomID.</source>
       <translation>Deaktiviere die Abzweigung, um einen Ausgang per ID einzugeben.</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgRoomExits.cpp" line="1199"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1208"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1217"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1226"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1235"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1244"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1253"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1262"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1271"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1280"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1289"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1298"/>
+      <source>Entered number is invalid.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1522"/>
@@ -9399,7 +9367,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="537"/>
-      <location filename="../src/mudlet.cpp" line="3655"/>
+      <location filename="../src/mudlet.cpp" line="3662"/>
       <source>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
       <translation>Informiere dich über diese Version von Mudlet, die Menschen, die daran beteiligt waren, und die Lizenz, unter der du es teilen kannst.</translation>
@@ -10377,22 +10345,22 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <translation>Zulu</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3065"/>
+      <location filename="../src/mudlet.cpp" line="3072"/>
       <source>Cannot load a replay as one is already in progress in this or another profile.</source>
       <translation>Wiederholung kann nicht geladen werden, da schon eine in diesem oder einem anderen Profil läuft.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3084"/>
+      <location filename="../src/mudlet.cpp" line="3091"/>
       <source>Replay each step with a shorter time interval between steps.</source>
       <translation>Jeden Schritt mit kürzerem zeitlichen Abstand abspielen.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3090"/>
+      <location filename="../src/mudlet.cpp" line="3097"/>
       <source>Replay each step with a longer time interval between steps.</source>
       <translation>Jeden Schritt mit längerem zeitlichen Abstand abspielen.</translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3689"/>
+      <location filename="../src/mudlet.cpp" line="3696"/>
       <source>Review the update(s) available...</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
       <translation>
@@ -10401,12 +10369,12 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       </translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4564"/>
+      <location filename="../src/mudlet.cpp" line="4571"/>
       <source>Hide tray icon</source>
       <translation>Tray-Symbol ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4569"/>
+      <location filename="../src/mudlet.cpp" line="4576"/>
       <source>Quit Mudlet</source>
       <translation>Mudlet beenden</translation>
     </message>
@@ -10589,7 +10557,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="536"/>
-      <location filename="../src/mudlet.cpp" line="3672"/>
+      <location filename="../src/mudlet.cpp" line="3679"/>
       <source>About</source>
       <translation>Über</translation>
     </message>
@@ -10830,7 +10798,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1705"/>
-      <location filename="../src/mudlet.cpp" line="3161"/>
+      <location filename="../src/mudlet.cpp" line="3168"/>
       <source>Load a Mudlet replay.</source>
       <translation>Lade eine Mudlet-Wiederholung.</translation>
     </message>
@@ -10895,41 +10863,41 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <translation>*.dat</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2924"/>
+      <location filename="../src/mudlet.cpp" line="2931"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
       <translation>[  OK  ]  - Profil &quot;%1&quot; im Offline-Modus geladen.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3005"/>
+      <location filename="../src/mudlet.cpp" line="3012"/>
       <source>[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.</source>
       <comment>Here %1 will be replaced with the keyboard shortcut, default is ALT+L.</comment>
       <translation>[ INFO ]  - Kompakte Eingabezeile aktiviert. Drücke %1, um die Buttons unten rechts wieder anzuzeigen.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3082"/>
+      <location filename="../src/mudlet.cpp" line="3089"/>
       <source>Faster</source>
       <translation>Schneller</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3088"/>
+      <location filename="../src/mudlet.cpp" line="3095"/>
       <source>Slower</source>
       <translation>Langsamer</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3100"/>
-      <location filename="../src/mudlet.cpp" line="3169"/>
-      <location filename="../src/mudlet.cpp" line="3182"/>
+      <location filename="../src/mudlet.cpp" line="3107"/>
+      <location filename="../src/mudlet.cpp" line="3176"/>
+      <location filename="../src/mudlet.cpp" line="3189"/>
       <source>Speed: X%1</source>
       <translation>Geschwindigkeit: X%1</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3107"/>
-      <location filename="../src/mudlet.cpp" line="3124"/>
+      <location filename="../src/mudlet.cpp" line="3114"/>
+      <location filename="../src/mudlet.cpp" line="3131"/>
       <source>Time: %1</source>
       <translation>Zeit: %1</translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3666"/>
+      <location filename="../src/mudlet.cpp" line="3673"/>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
       <translation>
@@ -10938,7 +10906,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       </translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3684"/>
+      <location filename="../src/mudlet.cpp" line="3691"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
       <translation>
@@ -10947,12 +10915,12 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       </translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3714"/>
+      <location filename="../src/mudlet.cpp" line="3721"/>
       <source>Update installed - restart to apply</source>
       <translation>Update installiert - Neustart zum Übernehmen</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3750"/>
+      <location filename="../src/mudlet.cpp" line="3757"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
       <translation>[ WARNUNG ] - Kann Wiederholung nicht ausführen. Eine andere könnte bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
