@@ -6925,7 +6925,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1289"/>
       <location filename="../src/dlgRoomExits.cpp" line="1298"/>
       <source>Entered number is invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Die eingegebene Nummer ist ungültig.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1522"/>
