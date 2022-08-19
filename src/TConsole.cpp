@@ -55,6 +55,8 @@
 
 const QString TConsole::cmLuaLineVariable("line");
 
+// A high-performance text widget with split screen ability for scrolling back
+// Contains two TTextEdits, each backed by a TBuffer
 TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 : QWidget(parent)
 , mpHost(pH)
