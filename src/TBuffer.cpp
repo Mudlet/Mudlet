@@ -2074,12 +2074,10 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         timeBuffer << QTime::currentTime().toString(timeStampFormat);
         promptBuffer << false;
     }
-    
-    int counter = 0;
+
     for (int i = sub_start; i < sub_end; ++i) {
         TChar format(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(format);
-        counter += 1;
     }
     QStringRef lineText = text.midRef(sub_start, sub_end - sub_start);
     lineBuffer.back().append(lineText);
