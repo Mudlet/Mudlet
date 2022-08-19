@@ -56,7 +56,8 @@
 #include <QVersionNumber>
 #include "post_guard.h"
 
-
+// Renders text on screen
+// Text data stored separately in a TBuffer
 TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLowerPane)
 : QWidget(pW)
 , mCursorY(0)
