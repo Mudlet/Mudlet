@@ -6846,10 +6846,6 @@ and there is enough space. The copying operation has failed.</source>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1199"/>
-      <source>Entered number is invalid, set the number of the room northwest of this one.</source>
-      <translation>Введенный номер недействителен, задайте номер комнаты к северо-западу от этого номера.</translation>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1200"/>
       <location filename="../src/dlgRoomExits.cpp" line="1308"/>
       <location filename="../src/dlgRoomExits.cpp" line="1544"/>
@@ -6858,10 +6854,6 @@ and there is enough space. The copying operation has failed.</source>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1208"/>
-      <source>Entered number is invalid, set the number of the room north of this one.</source>
-      <translation>Введенный номер недействителен, задайте номер комнаты к северу от этогой комнаты.</translation>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1209"/>
       <location filename="../src/dlgRoomExits.cpp" line="1316"/>
       <location filename="../src/dlgRoomExits.cpp" line="1546"/>
@@ -6870,10 +6862,6 @@ and there is enough space. The copying operation has failed.</source>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1217"/>
-      <source>Entered number is invalid, set the number of the room northeast of this one.</source>
-      <translation>Введенный номер недействителен, задайте номер комнаты к северо-востоку от этого номера.</translation>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1218"/>
       <location filename="../src/dlgRoomExits.cpp" line="1324"/>
       <location filename="../src/dlgRoomExits.cpp" line="1548"/>
@@ -6882,10 +6870,6 @@ and there is enough space. The copying operation has failed.</source>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1226"/>
-      <source>Entered number is invalid, set the number of the room up from this one.</source>
-      <translation>Введенный номер недействителен, задайте номер комнаты выше этой.</translation>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1227"/>
       <location filename="../src/dlgRoomExits.cpp" line="1332"/>
       <location filename="../src/dlgRoomExits.cpp" line="1550"/>
@@ -6894,10 +6878,6 @@ and there is enough space. The copying operation has failed.</source>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1235"/>
-      <source>Entered number is invalid, set the number of the room west of this one.</source>
-      <translation>Введенный номер недействителен, задайте номер комнаты к западу от этой комнаты.</translation>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1236"/>
       <location filename="../src/dlgRoomExits.cpp" line="1340"/>
       <location filename="../src/dlgRoomExits.cpp" line="1552"/>
@@ -6906,10 +6886,6 @@ and there is enough space. The copying operation has failed.</source>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1244"/>
-      <source>Entered number is invalid, set the number of the room east of this one.</source>
-      <translation>Введенный номер недействителен, задайте номер комнаты к востоку от этой.</translation>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1245"/>
       <location filename="../src/dlgRoomExits.cpp" line="1348"/>
       <location filename="../src/dlgRoomExits.cpp" line="1554"/>
@@ -6918,10 +6894,6 @@ and there is enough space. The copying operation has failed.</source>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1253"/>
-      <source>Entered number is invalid, set the number of the room down from this one.</source>
-      <translation>Введенный номер недействителен, установите номер комнаты ниже этой.</translation>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1254"/>
       <location filename="../src/dlgRoomExits.cpp" line="1356"/>
       <location filename="../src/dlgRoomExits.cpp" line="1556"/>
@@ -6930,10 +6902,6 @@ and there is enough space. The copying operation has failed.</source>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1262"/>
-      <source>Entered number is invalid, set the number of the room southwest of this one.</source>
-      <translation>Введенный номер недействителен, задайте номер комнаты к юго-западу от этой комнаты.</translation>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1263"/>
       <location filename="../src/dlgRoomExits.cpp" line="1364"/>
       <location filename="../src/dlgRoomExits.cpp" line="1558"/>
@@ -6942,10 +6910,6 @@ and there is enough space. The copying operation has failed.</source>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1271"/>
-      <source>Entered number is invalid, set the number of the room south of this one.</source>
-      <translation>Введенный номер недействителен, задайте номер комнаты к югу от этой комнаты.</translation>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1272"/>
       <location filename="../src/dlgRoomExits.cpp" line="1372"/>
       <location filename="../src/dlgRoomExits.cpp" line="1560"/>
@@ -6954,10 +6918,6 @@ and there is enough space. The copying operation has failed.</source>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1280"/>
-      <source>Entered number is invalid, set the number of the room southeast of this one.</source>
-      <translation>Введенный номер недействителен, задайте номер комнаты к юго-востоку от этой комнаты.</translation>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1281"/>
       <location filename="../src/dlgRoomExits.cpp" line="1380"/>
       <location filename="../src/dlgRoomExits.cpp" line="1562"/>
@@ -6966,10 +6926,6 @@ and there is enough space. The copying operation has failed.</source>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1289"/>
-      <source>Entered number is invalid, set the number of the room in from this one.</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1290"/>
       <location filename="../src/dlgRoomExits.cpp" line="1388"/>
       <location filename="../src/dlgRoomExits.cpp" line="1564"/>
@@ -6978,10 +6934,6 @@ and there is enough space. The copying operation has failed.</source>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1298"/>
-      <source>Entered number is invalid, set the number of the room out from this one.</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1299"/>
       <location filename="../src/dlgRoomExits.cpp" line="1396"/>
       <location filename="../src/dlgRoomExits.cpp" line="1566"/>
@@ -6999,6 +6951,22 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1492"/>
       <source>Clear the stub exit for this exit to enter an exit roomID.</source>
       <translation>Удалите незавершённый выход сначала перед тем как ввести номер выхода.</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgRoomExits.cpp" line="1199"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1208"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1217"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1226"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1235"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1244"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1253"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1262"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1271"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1280"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1289"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1298"/>
+      <source>Entered number is invalid.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1522"/>
@@ -9436,7 +9404,7 @@ There is NO WARRANTY, to the extent permitted by law.
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="537"/>
-      <location filename="../src/mudlet.cpp" line="3655"/>
+      <location filename="../src/mudlet.cpp" line="3662"/>
       <source>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
       <translation>Проинформируй себя об этой версии Mudlet, о людях, которые ее сделали, и о лицензии, по которой ты можешь поделиться ею.</translation>
@@ -10414,22 +10382,22 @@ There is NO WARRANTY, to the extent permitted by law.
       <translation>Зулу</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3065"/>
+      <location filename="../src/mudlet.cpp" line="3072"/>
       <source>Cannot load a replay as one is already in progress in this or another profile.</source>
       <translation>Невозможно загрузить повтор, как он уже находится в процессе в этом или другом профиле.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3084"/>
+      <location filename="../src/mudlet.cpp" line="3091"/>
       <source>Replay each step with a shorter time interval between steps.</source>
       <translation>Повторите каждый шаг с более коротким интервалом времени между шагами.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3090"/>
+      <location filename="../src/mudlet.cpp" line="3097"/>
       <source>Replay each step with a longer time interval between steps.</source>
       <translation>Повторять каждый шаг с более длительным интервалом времени между шагами.</translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3689"/>
+      <location filename="../src/mudlet.cpp" line="3696"/>
       <source>Review the update(s) available...</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
       <translation>
@@ -10440,12 +10408,12 @@ There is NO WARRANTY, to the extent permitted by law.
       </translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4564"/>
+      <location filename="../src/mudlet.cpp" line="4571"/>
       <source>Hide tray icon</source>
       <translation>Скрыть значок в трее</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4569"/>
+      <location filename="../src/mudlet.cpp" line="4576"/>
       <source>Quit Mudlet</source>
       <translation>Выйти из Mudlet</translation>
     </message>
@@ -10628,7 +10596,7 @@ There is NO WARRANTY, to the extent permitted by law.
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="536"/>
-      <location filename="../src/mudlet.cpp" line="3672"/>
+      <location filename="../src/mudlet.cpp" line="3679"/>
       <source>About</source>
       <translation>О программе</translation>
     </message>
@@ -10869,7 +10837,7 @@ There is NO WARRANTY, to the extent permitted by law.
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1705"/>
-      <location filename="../src/mudlet.cpp" line="3161"/>
+      <location filename="../src/mudlet.cpp" line="3168"/>
       <source>Load a Mudlet replay.</source>
       <translation>Загрузить повтор Mudlet.</translation>
     </message>
@@ -10934,41 +10902,41 @@ There is NO WARRANTY, to the extent permitted by law.
       <translation>*.dat</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2924"/>
+      <location filename="../src/mudlet.cpp" line="2931"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
       <translation>[  OK  ]  - Профиль &quot;%1&quot; загружен в оффлайн режиме.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3005"/>
+      <location filename="../src/mudlet.cpp" line="3012"/>
       <source>[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.</source>
       <comment>Here %1 will be replaced with the keyboard shortcut, default is ALT+L.</comment>
       <translation>[ ИНФО ] - Компактный вид вводной линий включен. Нажмите %1, чтобы снова отобразить кнопки в правом нижнем углу.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3082"/>
+      <location filename="../src/mudlet.cpp" line="3089"/>
       <source>Faster</source>
       <translation>Быстрее</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3088"/>
+      <location filename="../src/mudlet.cpp" line="3095"/>
       <source>Slower</source>
       <translation>Медленнее</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3100"/>
-      <location filename="../src/mudlet.cpp" line="3169"/>
-      <location filename="../src/mudlet.cpp" line="3182"/>
+      <location filename="../src/mudlet.cpp" line="3107"/>
+      <location filename="../src/mudlet.cpp" line="3176"/>
+      <location filename="../src/mudlet.cpp" line="3189"/>
       <source>Speed: X%1</source>
       <translation>Скорость: Х%1</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3107"/>
-      <location filename="../src/mudlet.cpp" line="3124"/>
+      <location filename="../src/mudlet.cpp" line="3114"/>
+      <location filename="../src/mudlet.cpp" line="3131"/>
       <source>Time: %1</source>
       <translation>Время: %1</translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3666"/>
+      <location filename="../src/mudlet.cpp" line="3673"/>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
       <translation>
@@ -10979,7 +10947,7 @@ There is NO WARRANTY, to the extent permitted by law.
       </translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3684"/>
+      <location filename="../src/mudlet.cpp" line="3691"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
       <translation>
@@ -10990,12 +10958,12 @@ There is NO WARRANTY, to the extent permitted by law.
       </translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3714"/>
+      <location filename="../src/mudlet.cpp" line="3721"/>
       <source>Update installed - restart to apply</source>
       <translation>Обновление установлено - перезапустите приложение</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3750"/>
+      <location filename="../src/mudlet.cpp" line="3757"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
       <translation>[ ВНИМ ] - Невозможно выполнить повтор, возможно, уже выполняется другой.
