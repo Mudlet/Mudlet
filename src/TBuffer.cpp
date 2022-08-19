@@ -2401,7 +2401,7 @@ TBuffer::binarySearchHorizontalAdvance(const int &lineIndex, const int &indentSi
 // while wrapLine only does it for one line.
 // Thus, wrap uses pop_back and push_back while wrapLine uses remove_at and insert.
 // Returns how many new lines have been added by the wrapping action
-inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& format, bool onlyWrapOneLine, bool containNewLine)
+inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& format, bool onlyWrapOneLine, bool containsNewLine)
 {
     const int bufferSize = static_cast<int>(buffer.size());
     if (bufferSize < startLine || startLine < 0) {
@@ -2420,8 +2420,8 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
             break; //only wrap one line of text
         }
         int lineWidth = qfm.horizontalAdvance(lineBuffer.at(i));
-        bool stillContainNewLine = containNewLine ? lineBuffer.at(i).contains(QChar::LineFeed) : false;
-        if (lineWidth > screenWidth || stillContainNewLine) {
+        bool stillContainsNewLine = containsNewLine ? lineBuffer.at(i).contains(QChar::LineFeed) : false;
+        if (lineWidth > screenWidth || stillContainsNewLine) {
             // Track for dangling items, this is really only for instance where last character is QChar::LineFeed
             bool insertEmptyLine;
             // Track where subStringStart
@@ -2452,11 +2452,11 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                         }
                     }
                     // Special check to see whether there is newLine before the boundary
-                    if (stillContainNewLine) {
+                    if (stillContainsNewLine) {
                         int firstNewLine = lineBuffer.at(i).indexOf(QChar::LineFeed, subStringStart);
                         // If next new line happen before the chop off point
                         if (firstNewLine == -1) {
-                            stillContainNewLine = false;
+                            stillContainsNewLine = false;
                         } else if (firstNewLine <= lineCharIterator) {
                             lineCharIterator = firstNewLine;
                             newLineChop = true;
