@@ -2429,7 +2429,7 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
             // Track where subStringStart
             int subStringStart = 0;
             // Use to indent the wrapped content
-            QString lineIndent = "";
+            QString lineIndent;
             // Reference to the line, used to calculate width
             QStringRef lineText;
             // this is to build the buffer
