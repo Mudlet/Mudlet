@@ -4,6 +4,8 @@ if ($Env:APPVEYOR_REPO_TAG -eq "false") {
   # The only scheduled Appveyor builds are public test builds
   if ($Env:APPVEYOR_SCHEDULED_BUILD -eq "True") {
     $Env:MUDLET_VERSION_BUILD = "-ptb"
+    # Don't cache PTB builds in order to ensure correct version number in them
+    $Env:CCACHE_IGNOREOPTIONS = ""
   } else {
     $Env:MUDLET_VERSION_BUILD = "-testing"
   }
