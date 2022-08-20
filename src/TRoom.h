@@ -131,6 +131,7 @@ public:
     int y = 0;
     int z = 0;
     int environment = -1;
+    int test = 5;
 
     bool isLocked = false;
     qreal min_x = 0.0;
