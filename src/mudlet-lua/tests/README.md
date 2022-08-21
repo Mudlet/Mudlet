@@ -1,6 +1,6 @@
 # Setting up for tests
 
-**Ubuntu**, have Mudlet and [Busted](http://olivinelabs.com/busted/) installed:
+**Ubuntu**, have Mudlet and [Busted](https://lunarmodules.github.io/busted/) installed:
 
 	sudo apt-get install luarocks
 	sudo luarocks install busted
@@ -48,7 +48,7 @@ runTests <full path>/src/mudlet-lua/tests/StringUtils_spec.lua
 
 # Creating tests
 
-See [Busted manual](http://olivinelabs.com/busted/) and currently existing tests for examples on how to write tests.
+See [Busted manual](https://lunarmodules.github.io/busted/) and currently existing tests for examples on how to write tests.
 
 ## Test structure
 
