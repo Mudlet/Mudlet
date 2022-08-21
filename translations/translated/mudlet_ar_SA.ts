@@ -493,12 +493,12 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="371"/>
       <source>Error parsing %1: %2 </source>
-      <translation type="unfinished"/>
+      <translation>خطأ في تحليل %1:%2 </translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.cpp" line="306"/>
       <source>Error reading file %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>خطأ في قراءة الملف %1:%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
