@@ -1234,22 +1234,22 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="805"/>
       <source>Save profile?</source>
-      <translation type="unfinished"/>
+      <translation>حفظ ملف التعريف؟</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="805"/>
       <source>Do you want to save the profile %1?</source>
-      <translation type="unfinished"/>
+      <translation>هل تريد حفظ ملف التعريف %1؟</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="818"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>لا يمكن حفظ ملف التعريف</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="818"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>للأسف, لا يمكن حفظ ملف التعريف بسبب الخطأ التالي: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1737"/>
@@ -1299,7 +1299,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="123"/>
       <source>Main Window</source>
-      <translation type="unfinished"/>
+      <translation>النافذة الرئيسية</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="124"/>
@@ -1310,7 +1310,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="270"/>
       <location filename="../src/TConsole.cpp" line="2018"/>
       <source>main window</source>
-      <translation type="unfinished"/>
+      <translation>النافذة الرئيسية</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="359"/>
@@ -1425,13 +1425,13 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="14740"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
-      <translation type="unfinished"/>
+      <translation>خطأ لم نتمكن من أيجاد وحدة lua %1 %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14754"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name (may specify which variant) of the module.</comment>
-      <translation type="unfinished"/>
+      <translation>حسنا لقد تحملت وحدة lua %1.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15340"/>
@@ -1501,7 +1501,7 @@ rooms:</source>
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
-      <translation type="unfinished"/>
+      <translation>خطأ لم يمكننا أيجاد وتحميل وتشغيل LuaGlobal.lua بنجاح. هناك ب mudlet الخاص بك خلل. جربنا هذه المسارات %1</translation>
     </message>
   </context>
   <context>
@@ -2218,57 +2218,57 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="86"/>
       <location filename="../src/TRoom.cpp" line="967"/>
       <source>North</source>
-      <translation type="unfinished"/>
+      <translation>شمال</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="87"/>
       <source>North-east</source>
-      <translation type="unfinished"/>
+      <translation>شمال شرق</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="88"/>
       <source>North-west</source>
-      <translation type="unfinished"/>
+      <translation>شمال غرب</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="89"/>
       <location filename="../src/TRoom.cpp" line="1009"/>
       <source>South</source>
-      <translation type="unfinished"/>
+      <translation>جنوب</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="90"/>
       <source>South-east</source>
-      <translation type="unfinished"/>
+      <translation>جنوب شرق</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="91"/>
       <source>South-west</source>
-      <translation type="unfinished"/>
+      <translation>جنوب غرب</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="92"/>
       <location filename="../src/TRoom.cpp" line="1051"/>
       <source>East</source>
-      <translation type="unfinished"/>
+      <translation>شرق</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="93"/>
       <location filename="../src/TRoom.cpp" line="1065"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>غرب</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="94"/>
       <location filename="../src/TRoom.cpp" line="1079"/>
       <source>Up</source>
-      <translation type="unfinished"/>
+      <translation>فوق</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="95"/>
       <location filename="../src/TRoom.cpp" line="1093"/>
       <source>Down</source>
-      <translation type="unfinished"/>
+      <translation>أسفل</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="96"/>
@@ -2904,13 +2904,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2122"/>
       <source>{carriage-return}</source>
       <comment>Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.</comment>
-      <translation type="unfinished"/>
+      <translation>حد السطر</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2123"/>
       <source>{space}</source>
       <comment>Unicode U+0020 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>مسافة</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2124"/>
@@ -3470,62 +3470,63 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="113"/>
       <source>%APPNAME% %UPDATE_VERSION% is available (you have %CURRENT_VERSION%).
 Would you like to update now?</source>
-      <translation type="unfinished"/>
+      <translation>%APPNAME% %UPDATE_VERSION% متوفر الآن (لديك الإصدار %CURRENT_VERSION%).
+هل تود التحديث الآن؟</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="151"/>
       <source>Changelog for %APPNAME%</source>
-      <translation type="unfinished"/>
+      <translation>مستجدات %APPNAME%</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="161"/>
       <source>You are using version %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>أنت تستخدم اللإصدار %CURRENT_VERSION%.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="192"/>
       <source>There are currently no updates available.</source>
-      <translation type="unfinished"/>
+      <translation>لا يوجد تحديثات متوفرة حاليا.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="208"/>
       <source>You are using %APPNAME% %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>أنت تستخدم %APPNAME% الأصدار %CURRENT_VERSION%.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="321"/>
       <source>Automatically download future updates</source>
-      <translation type="unfinished"/>
+      <translation>تحميل التحديثات المستقبلية آليا</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="368"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>إلغاء</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="388"/>
       <source>Install update now</source>
-      <translation type="unfinished"/>
+      <translation>تثبيت التحديث الآن</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="395"/>
       <source>OK</source>
-      <translation type="unfinished"/>
+      <translation>حسنا</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="405"/>
       <source>Remind me later</source>
-      <translation type="unfinished"/>
+      <translation>ذكرني لاحقا</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="410"/>
       <source>Skip this version</source>
-      <translation type="unfinished"/>
+      <translation>تخطي هذا الإصدار</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.cpp" line="555"/>
       <source>Could not open downloaded file %1</source>
-      <translation type="unfinished"/>
+      <translation>لم نتمكن من فتح الملف المحمل %1</translation>
     </message>
   </context>
   <context>
@@ -3535,12 +3536,12 @@ Would you like to update now?</source>
       <location filename="../src/updater.cpp" line="195"/>
       <location filename="../src/updater.cpp" line="261"/>
       <source>Update</source>
-      <translation type="unfinished"/>
+      <translation>التحديث</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="359"/>
       <source>Restart to apply update</source>
-      <translation type="unfinished"/>
+      <translation>إعادة التشغيل لتطبيق التحديث</translation>
     </message>
   </context>
   <context>
@@ -3548,7 +3549,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../src/VarUnit.cpp" line="88"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation type="unfinished"/>
+      <translation>المتغيرات المحددة سيتم تحديثها وتحميلها مع ملف التعريف الخاص بك.</translation>
     </message>
   </context>
   <context>
@@ -3592,27 +3593,27 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="41"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>حول mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="122"/>
       <source>Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="185"/>
       <source>Supporters</source>
-      <translation type="unfinished"/>
+      <translation>الداعمين</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="214"/>
       <source>License</source>
-      <translation type="unfinished"/>
+      <translation>الترخيص</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="249"/>
       <source>Third Party</source>
-      <translation type="unfinished"/>
+      <translation>الأطراف الثالثة</translation>
     </message>
   </context>
   <context>
@@ -3860,12 +3861,12 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1661"/>
       <location filename="../src/ctelnet.cpp" line="2023"/>
       <source>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ معلومة ]  - يعرض الخادم واجهة مستخدم رسومية يمكن تحميلها (الرابط=&apos;%1&apos;) (package=&apos;%2&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="381"/>
       <source>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ معلومة ]  - جاري البحث عن عنوان الخادم: %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="479"/>
@@ -3884,7 +3885,8 @@ Reason: </source>
       <location filename="../src/ctelnet.cpp" line="574"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 ...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ معلومة ]  - نحاول الاتصال ب %1:%2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="576"/>
@@ -4075,7 +4077,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="86"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>إلغاء</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="99"/>
@@ -4085,7 +4087,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="102"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>حفظ</translation>
     </message>
   </context>
   <context>
@@ -4093,42 +4095,42 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="20"/>
       <source>Select a profile to connect with</source>
-      <translation type="unfinished"/>
+      <translation>اختار ملف تعريف للاتصال به</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="101"/>
       <source>profiles list</source>
-      <translation type="unfinished"/>
+      <translation>قائمة ملفات التعريف</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="364"/>
       <source>Remove</source>
-      <translation type="unfinished"/>
+      <translation>إزالة</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="383"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>نسخ</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="408"/>
       <source>New</source>
-      <translation type="unfinished"/>
+      <translation>جديد</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="463"/>
       <source>welcome message</source>
-      <translation type="unfinished"/>
+      <translation>رسالة ترحيبية</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="596"/>
       <source>Profile name:</source>
-      <translation type="unfinished"/>
+      <translation>اسم ملف التعريف:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="573"/>
       <source>Profile name</source>
-      <translation type="unfinished"/>
+      <translation>اسم ملف التعريف</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="576"/>
@@ -4139,7 +4141,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="606"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>عنوان الخادم:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="557"/>
@@ -4214,12 +4216,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="646"/>
       <source>The characters name</source>
-      <translation type="unfinished"/>
+      <translation>اسم الشخصية</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="649"/>
       <source>Character name</source>
-      <translation type="unfinished"/>
+      <translation>اسم الشخصية</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="652"/>
