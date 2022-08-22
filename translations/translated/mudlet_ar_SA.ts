@@ -4226,83 +4226,83 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="652"/>
       <source>If provided will be sent, along with password to identify the user in the game.</source>
-      <translation type="unfinished"/>
+      <translation>إذا تم توفيره سوف يتم إرسالها مع كلمة المرور التي قد تم تزويدها لكي يتم إرسالها مع الخادم لتحديد المستخدم في اللعبة.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="762"/>
       <source>Auto-open profile</source>
-      <translation type="unfinished"/>
+      <translation>فتح ملف التعريف آليا</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="765"/>
       <source>Automatically start this profile when Mudlet is run</source>
-      <translation type="unfinished"/>
+      <translation>تشغيل ملف التعريف هذا عند يتم تشغيل mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="778"/>
       <source>Auto-reconnect</source>
-      <translation type="unfinished"/>
+      <translation>الاتصال الآلي</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="781"/>
       <source>Automatically reconnect this profile if it should become disconnected for any reason other than the user disconnecting from the game server.</source>
-      <translation type="unfinished"/>
+      <translation>إعادة الاتصال بملف التعريف هذا إذا تم فقدان الاتصال لأي سبب إلا إذا قام المستخدم نفسه بإلغاء الاتصال.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="675"/>
       <source>Password</source>
-      <translation type="unfinished"/>
+      <translation>كلمة المرور</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="678"/>
       <source>If provided will be sent, along with the character name to identify the user in the game.</source>
-      <translation type="unfinished"/>
+      <translation>إذا تم تزويده سيتم إرساله مع اسم الشخصية لتحديد المستخدم في اللعبة.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="727"/>
       <source>Enable Discord integration (not supported by game)</source>
-      <translation type="unfinished"/>
+      <translation>تشغيل التكامل مع discord (غير مدعوم في اللعبة)</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="733"/>
       <source>Allow this profile to use Mudlet&apos;s Discord &quot;Rich Presence&quot;  features</source>
-      <translation type="unfinished"/>
+      <translation>السماح بملف التعريف هذا باستخدام مميزات mudlet في التكامل مع مميزات discord rich presence</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="868"/>
       <location filename="../src/ui/connection_profiles.ui" line="871"/>
       <source>Game description or your notes</source>
-      <translation type="unfinished"/>
+      <translation>وصف اللعبة أو ملاحظاتك</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="662"/>
       <source>Password:</source>
-      <translation type="unfinished"/>
+      <translation>كلمة المرور:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="672"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>كلمة مرور الشخصية, ملاحظة هذا ليس مشفر في الذاكرة</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="759"/>
       <source>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</source>
-      <translation type="unfinished"/>
+      <translation>عندما يكون هذا مفعلا سيتصل mudlet بهذا الملف التعريفي عند تشغيله</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="771"/>
       <source>Open profile on Mudlet start</source>
-      <translation type="unfinished"/>
+      <translation>فتح ملف التعريف هذا عندما يتم تشغيل mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="787"/>
       <source>Reconnect automatically</source>
-      <translation type="unfinished"/>
+      <translation>إعادة الاتصال آليا</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="730"/>
       <source>Discord integration</source>
-      <translation type="unfinished"/>
+      <translation>التكامل مع discord</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="810"/>
